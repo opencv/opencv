@@ -4178,45 +4178,6 @@ typedef struct
     HT fine[16][16];
 } Histogram;
 
-
-#if CV_SIMD128
-
-static inline void histogram_add_simd( const HT x[16], HT y[16] )
-{
-    v_store(y, v_load(x) + v_load(y));
-    v_store(y + 8, v_load(x + 8) + v_load(y + 8));
-}
-
-static inline void histogram_sub_simd( const HT x[16], HT y[16] )
-{
-    v_store(y, v_load(y) - v_load(x));
-    v_store(y + 8, v_load(y + 8) - v_load(x + 8));
-}
-
-#endif
-
-
-static inline void histogram_add( const HT x[16], HT y[16] )
-{
-    int i;
-    for( i = 0; i < 16; ++i )
-        y[i] = (HT)(y[i] + x[i]);
-}
-
-static inline void histogram_sub( const HT x[16], HT y[16] )
-{
-    int i;
-    for( i = 0; i < 16; ++i )
-        y[i] = (HT)(y[i] - x[i]);
-}
-
-static inline void histogram_muladd( int a, const HT x[16],
-        HT y[16] )
-{
-    for( int i = 0; i < 16; ++i )
-        y[i] = (HT)(y[i] + a * x[i]);
-}
-
 static void
 medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 {
@@ -4244,9 +4205,6 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
     HT* h_coarse = alignPtr(&_h_coarse[0], 16);
     HT* h_fine = alignPtr(&_h_fine[0], 16);
-#if CV_SIMD128
-    volatile bool useSIMD = hasSIMD128();
-#endif
 
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
     {
@@ -4288,136 +4246,170 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 }
 
                 // First column initialization
-                for( k = 0; k < 16; ++k )
-                    histogram_muladd( 2*r+1, &h_fine[16*n*(16*c+k)], &H[c].fine[k][0] );
-
-#if CV_SIMD128
-                if( useSIMD )
+                for (k = 0; k < 16; ++k)
                 {
-                    for( j = 0; j < 2*r; ++j )
-                        histogram_add_simd( &h_coarse[16*(n*c+j)], H[c].coarse );
-
-                    for( j = r; j < n-r; j++ )
-                    {
-                        int t = 2*r*r + 2*r, b, sum = 0;
-                        HT* segment;
-
-                        histogram_add_simd( &h_coarse[16*(n*c + std::min(j+r,n-1))], H[c].coarse );
-
-                        // Find median at coarse level
-                        for ( k = 0; k < 16 ; ++k )
-                        {
-                            sum += H[c].coarse[k];
-                            if ( sum > t )
-                            {
-                                sum -= H[c].coarse[k];
-                                break;
-                            }
-                        }
-                        CV_Assert( k < 16 );
-
-                        /* Update corresponding histogram segment */
-                        if ( luc[c][k] <= j-r )
-                        {
-                            memset( &H[c].fine[k], 0, 16 * sizeof(HT) );
-                            for ( luc[c][k] = cv::HT(j-r); luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
-                                histogram_add_simd( &h_fine[16*(n*(16*c+k)+luc[c][k])], H[c].fine[k] );
-
-                            if ( luc[c][k] < j+r+1 )
-                            {
-                                histogram_muladd( j+r+1 - n, &h_fine[16*(n*(16*c+k)+(n-1))], &H[c].fine[k][0] );
-                                luc[c][k] = (HT)(j+r+1);
-                            }
-                        }
-                        else
-                        {
-                            for ( ; luc[c][k] < j+r+1; ++luc[c][k] )
-                            {
-                                histogram_sub_simd( &h_fine[16*(n*(16*c+k)+MAX(luc[c][k]-2*r-1,0))], H[c].fine[k] );
-                                histogram_add_simd( &h_fine[16*(n*(16*c+k)+MIN(luc[c][k],n-1))], H[c].fine[k] );
-                            }
-                        }
-
-                        histogram_sub_simd( &h_coarse[16*(n*c+MAX(j-r,0))], H[c].coarse );
-
-                        /* Find median in segment */
-                        segment = H[c].fine[k];
-                        for ( b = 0; b < 16 ; b++ )
-                        {
-                            sum += segment[b];
-                            if ( sum > t )
-                            {
-                                dst[dstep*i+cn*j+c] = (uchar)(16*k + b);
-                                break;
-                            }
-                        }
-                        CV_Assert( b < 16 );
-                    }
-                }
-                else
+#if CV_SIMD256
+                    v_store(H[c].fine[k], v_mul_wrap(v256_load(h_fine + 16 * n*(16 * c + k)), v256_setall_u16(2 * r + 1)) + v256_load(H[c].fine[k]));
+#elif CV_SIMD128
+                    v_store(H[c].fine[k], v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k)), v_setall_u16(2 * r + 1)) + v_load(H[c].fine[k]));
+                    v_store(H[c].fine[k] + 8, v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k) + 8), v_setall_u16(2 * r + 1)) + v_load(H[c].fine[k] + 8));
+#else
+                    for (int ind = 0; ind < 16; ++ind)
+                        H[c].fine[k][ind] += (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind];
 #endif
+                }
+
+#if CV_SIMD256
+                v_uint16x16 v_coarse = v256_load(H[c].coarse);
+#elif CV_SIMD128
+                v_uint16x8 v_coarsel = v_load(H[c].coarse);
+                v_uint16x8 v_coarseh = v_load(H[c].coarse + 8);
+#endif
+                HT* px = h_coarse + 16 * n*c;
+                for( j = 0; j < 2*r; ++j, px += 16 )
                 {
-                    for( j = 0; j < 2*r; ++j )
-                        histogram_add( &h_coarse[16*(n*c+j)], H[c].coarse );
+#if CV_SIMD256
+                    v_coarse += v256_load(px);
+#elif CV_SIMD128
+                    v_coarsel += v_load(px);
+                    v_coarseh += v_load(px + 8);
+#else
+                    for (int ind = 0; ind < 16; ++ind)
+                        H[c].coarse[ind] += px[ind];
+#endif
+                }
 
-                    for( j = r; j < n-r; j++ )
+                for( j = r; j < n-r; j++ )
+                {
+                    int t = 2*r*r + 2*r, b, sum = 0;
+                    HT* segment;
+
+                    px = h_coarse + 16 * (n*c + std::min(j + r, n - 1));
+#if CV_SIMD256
+                    v_coarse += v256_load(px);
+                    v_store(H[c].coarse, v_coarse);
+#elif CV_SIMD128
+                    v_coarsel += v_load(px);
+                    v_coarseh += v_load(px + 8);
+                    v_store(H[c].coarse, v_coarsel);
+                    v_store(H[c].coarse + 8, v_coarseh);
+#else
+                    for (int ind = 0; ind < 16; ++ind)
+                        H[c].coarse[ind] += px[ind];
+#endif
+
+                    // Find median at coarse level
+                    for ( k = 0; k < 16 ; ++k )
                     {
-                        int t = 2*r*r + 2*r, b, sum = 0;
-                        HT* segment;
-
-                        histogram_add( &h_coarse[16*(n*c + std::min(j+r,n-1))], H[c].coarse );
-
-                        // Find median at coarse level
-                        for ( k = 0; k < 16 ; ++k )
+                        sum += H[c].coarse[k];
+                        if ( sum > t )
                         {
-                            sum += H[c].coarse[k];
-                            if ( sum > t )
-                            {
-                                sum -= H[c].coarse[k];
-                                break;
-                            }
+                            sum -= H[c].coarse[k];
+                            break;
                         }
-                        CV_Assert( k < 16 );
-
-                        /* Update corresponding histogram segment */
-                        if ( luc[c][k] <= j-r )
-                        {
-                            memset( &H[c].fine[k], 0, 16 * sizeof(HT) );
-                            for ( luc[c][k] = cv::HT(j-r); luc[c][k] < MIN(j+r+1,n); ++luc[c][k] )
-                                histogram_add( &h_fine[16*(n*(16*c+k)+luc[c][k])], H[c].fine[k] );
-
-                            if ( luc[c][k] < j+r+1 )
-                            {
-                                histogram_muladd( j+r+1 - n, &h_fine[16*(n*(16*c+k)+(n-1))], &H[c].fine[k][0] );
-                                luc[c][k] = (HT)(j+r+1);
-                            }
-                        }
-                        else
-                        {
-                            for ( ; luc[c][k] < j+r+1; ++luc[c][k] )
-                            {
-                                histogram_sub( &h_fine[16*(n*(16*c+k)+MAX(luc[c][k]-2*r-1,0))], H[c].fine[k] );
-                                histogram_add( &h_fine[16*(n*(16*c+k)+MIN(luc[c][k],n-1))], H[c].fine[k] );
-                            }
-                        }
-
-                        histogram_sub( &h_coarse[16*(n*c+MAX(j-r,0))], H[c].coarse );
-
-                        /* Find median in segment */
-                        segment = H[c].fine[k];
-                        for ( b = 0; b < 16 ; b++ )
-                        {
-                            sum += segment[b];
-                            if ( sum > t )
-                            {
-                                dst[dstep*i+cn*j+c] = (uchar)(16*k + b);
-                                break;
-                            }
-                        }
-                        CV_Assert( b < 16 );
                     }
+                    CV_Assert( k < 16 );
+
+                    /* Update corresponding histogram segment */
+#if CV_SIMD256
+                    v_uint16x16 v_fine;
+#elif CV_SIMD128
+                    v_uint16x8 v_finel;
+                    v_uint16x8 v_fineh;
+#endif
+                    if ( luc[c][k] <= j-r )
+                    {
+#if CV_SIMD256
+                        v_fine = v256_setzero_u16();
+#elif CV_SIMD128
+                        v_finel = v_setzero_u16();
+                        v_fineh = v_setzero_u16();
+#else
+                        memset(&H[c].fine[k], 0, 16 * sizeof(HT));
+#endif
+                        px = h_fine + 16 * (n*(16 * c + k) + j - r);
+                        for (luc[c][k] = cv::HT(j - r); luc[c][k] < MIN(j + r + 1, n); ++luc[c][k], px += 16)
+                        {
+#if CV_SIMD256
+                            v_fine += v256_load(px);
+#elif CV_SIMD128
+                            v_finel += v_load(px);
+                            v_fineh += v_load(px + 8);
+#else
+                            for (int ind = 0; ind < 16; ++ind)
+                                H[c].fine[k][ind] += px[ind];
+#endif
+                        }
+
+                        if ( luc[c][k] < j+r+1 )
+                        {
+                            px = h_fine + 16 * (n*(16 * c + k) + (n - 1));
+#if CV_SIMD256
+                            v_fine += v_mul_wrap(v256_load(px), v256_setall_u16(j + r + 1 - n));
+#elif CV_SIMD128
+                            v_finel += v_mul_wrap(v_load(px), v_setall_u16(j + r + 1 - n));
+                            v_fineh += v_mul_wrap(v_load(px + 8), v_setall_u16(j + r + 1 - n));
+#else
+                            for (int ind = 0; ind < 16; ++ind)
+                                H[c].fine[k][ind] += (j + r + 1 - n) * px[ind];
+#endif
+                            luc[c][k] = (HT)(j+r+1);
+                        }
+                    }
+                    else
+                    {
+#if CV_SIMD256
+                        v_fine = v256_load(H[c].fine[k]);
+#elif CV_SIMD128
+                        v_finel = v_load(H[c].fine[k]);
+                        v_fineh = v_load(H[c].fine[k] + 8);
+#endif
+                        px = h_fine + 16*n*(16 * c + k);
+                        for ( ; luc[c][k] < j+r+1; ++luc[c][k] )
+                        {
+#if CV_SIMD256
+                            v_fine += v256_load(px + 16 * MIN(luc[c][k], n - 1)) - v256_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
+#elif CV_SIMD128
+                            v_finel += v_load(px + 16 * MIN(luc[c][k], n - 1)    ) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
+                            v_fineh += v_load(px + 16 * MIN(luc[c][k], n - 1) + 8) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0) + 8);
+#else
+                            for (int ind = 0; ind < 16; ++ind)
+                                H[c].fine[k][ind] += px[16 * MIN(luc[c][k], n - 1) + ind] - px[16 * MAX(luc[c][k] - 2 * r - 1, 0) + ind];
+#endif
+                        }
+                    }
+
+                    px = h_coarse + 16 * (n*c + MAX(j - r, 0));
+#if CV_SIMD256
+                    v_store(H[c].fine[k], v_fine);
+                    v_coarse -= v256_load(px);
+#elif CV_SIMD128
+                    v_store(H[c].fine[k], v_finel);
+                    v_store(H[c].fine[k] + 8, v_fineh);
+                    v_coarsel -= v_load(px);
+                    v_coarseh -= v_load(px + 8);
+#else
+                    for (int ind = 0; ind < 16; ++ind)
+                        H[c].coarse[ind] -= px[ind];
+#endif
+
+                    /* Find median in segment */
+                    segment = H[c].fine[k];
+                    for ( b = 0; b < 16 ; b++ )
+                    {
+                        sum += segment[b];
+                        if ( sum > t )
+                        {
+                            dst[dstep*i+cn*j+c] = (uchar)(16*k + b);
+                            break;
+                        }
+                    }
+                    CV_Assert( b < 16 );
                 }
             }
+#if CV_SIMD
+            vx_cleanup();
+#endif
         }
     }
 
@@ -4629,13 +4621,13 @@ struct MinMax32f
     }
 };
 
-#if CV_SIMD128
+#if CV_SIMD
 
 struct MinMaxVec8u
 {
     typedef uchar value_type;
     typedef v_uint8x16 arg_type;
-    enum { SIZE = 16 };
+    enum { SIZE = v_uint8x16::nlanes };
     arg_type load(const uchar* ptr) { return v_load(ptr); }
     void store(uchar* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -4644,6 +4636,18 @@ struct MinMaxVec8u
         a = v_min(a, b);
         b = v_max(b, t);
     }
+#if CV_SIMD_WIDTH > 16
+    typedef v_uint8 warg_type;
+    enum { WSIZE = v_uint8::nlanes };
+    warg_type wload(const uchar* ptr) { return vx_load(ptr); }
+    void store(uchar* ptr, const warg_type &val) { v_store(ptr, val); }
+    void operator()(warg_type& a, warg_type& b) const
+    {
+        warg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
+    }
+#endif
 };
 
 
@@ -4651,7 +4655,7 @@ struct MinMaxVec16u
 {
     typedef ushort value_type;
     typedef v_uint16x8 arg_type;
-    enum { SIZE = 8 };
+    enum { SIZE = v_uint16x8::nlanes };
     arg_type load(const ushort* ptr) { return v_load(ptr); }
     void store(ushort* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -4660,6 +4664,18 @@ struct MinMaxVec16u
         a = v_min(a, b);
         b = v_max(b, t);
     }
+#if CV_SIMD_WIDTH > 16
+    typedef v_uint16 warg_type;
+    enum { WSIZE = v_uint16::nlanes };
+    warg_type wload(const ushort* ptr) { return vx_load(ptr); }
+    void store(ushort* ptr, const warg_type &val) { v_store(ptr, val); }
+    void operator()(warg_type& a, warg_type& b) const
+    {
+        warg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
+    }
+#endif
 };
 
 
@@ -4667,7 +4683,7 @@ struct MinMaxVec16s
 {
     typedef short value_type;
     typedef v_int16x8 arg_type;
-    enum { SIZE = 8 };
+    enum { SIZE = v_int16x8::nlanes };
     arg_type load(const short* ptr) { return v_load(ptr); }
     void store(short* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -4676,6 +4692,18 @@ struct MinMaxVec16s
         a = v_min(a, b);
         b = v_max(b, t);
     }
+#if CV_SIMD_WIDTH > 16
+    typedef v_int16 warg_type;
+    enum { WSIZE = v_int16::nlanes };
+    warg_type wload(const short* ptr) { return vx_load(ptr); }
+    void store(short* ptr, const warg_type &val) { v_store(ptr, val); }
+    void operator()(warg_type& a, warg_type& b) const
+    {
+        warg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
+    }
+#endif
 };
 
 
@@ -4683,7 +4711,7 @@ struct MinMaxVec32f
 {
     typedef float value_type;
     typedef v_float32x4 arg_type;
-    enum { SIZE = 4 };
+    enum { SIZE = v_float32x4::nlanes };
     arg_type load(const float* ptr) { return v_load(ptr); }
     void store(float* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -4692,6 +4720,18 @@ struct MinMaxVec32f
         a = v_min(a, b);
         b = v_max(b, t);
     }
+#if CV_SIMD_WIDTH > 16
+    typedef v_float32 warg_type;
+    enum { WSIZE = v_float32::nlanes };
+    warg_type wload(const float* ptr) { return vx_load(ptr); }
+    void store(float* ptr, const warg_type &val) { v_store(ptr, val); }
+    void operator()(warg_type& a, warg_type& b) const
+    {
+        warg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
+    }
+#endif
 };
 
 #else
@@ -4710,6 +4750,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     typedef typename Op::value_type T;
     typedef typename Op::arg_type WT;
     typedef typename VecOp::arg_type VT;
+    typedef typename VecOp::warg_type WVT;
 
     const T* src = _src.ptr<T>();
     T* dst = _dst.ptr<T>();
@@ -4719,7 +4760,6 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     int i, j, k, cn = _src.channels();
     Op op;
     VecOp vop;
-    volatile bool useSIMD = hasSIMD128();
 
     if( m == 3 )
     {
@@ -4749,7 +4789,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
             const T* row0 = src + std::max(i - 1, 0)*sstep;
             const T* row1 = src + i*sstep;
             const T* row2 = src + std::min(i + 1, size.height-1)*sstep;
-            int limit = useSIMD ? cn : size.width;
+            int limit = cn;
 
             for(j = 0;; )
             {
@@ -4772,6 +4812,21 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
+#if CV_SIMD_WIDTH > 16
+                for( ; j <= size.width - VecOp::WSIZE - cn; j += VecOp::WSIZE )
+                {
+                    WVT p0 = vop.wload(row0+j-cn), p1 = vop.wload(row0+j), p2 = vop.wload(row0+j+cn);
+                    WVT p3 = vop.wload(row1+j-cn), p4 = vop.wload(row1+j), p5 = vop.wload(row1+j+cn);
+                    WVT p6 = vop.wload(row2+j-cn), p7 = vop.wload(row2+j), p8 = vop.wload(row2+j+cn);
+
+                    vop(p1, p2); vop(p4, p5); vop(p7, p8); vop(p0, p1);
+                    vop(p3, p4); vop(p6, p7); vop(p1, p2); vop(p4, p5);
+                    vop(p7, p8); vop(p0, p3); vop(p5, p8); vop(p4, p7);
+                    vop(p3, p6); vop(p1, p4); vop(p2, p5); vop(p4, p7);
+                    vop(p4, p2); vop(p6, p4); vop(p4, p2);
+                    vop.store(dst+j, p4);
+                }
+#endif
                 for( ; j <= size.width - VecOp::SIZE - cn; j += VecOp::SIZE )
                 {
                     VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
@@ -4789,6 +4844,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 limit = size.width;
             }
         }
+#if CV_SIMD
+        vx_cleanup();
+#endif
     }
     else if( m == 5 )
     {
@@ -4824,7 +4882,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
             row[2] = src + i*sstep;
             row[3] = src + std::min(i + 1, size.height-1)*sstep;
             row[4] = src + std::min(i + 2, size.height-1)*sstep;
-            int limit = useSIMD ? cn*2 : size.width;
+            int limit = cn*2;
 
             for(j = 0;; )
             {
@@ -4872,6 +4930,44 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
+#if CV_SIMD_WIDTH > 16
+                for( ; j <= size.width - VecOp::WSIZE - cn*2; j += VecOp::WSIZE )
+                {
+                    WVT p[25];
+                    for( k = 0; k < 5; k++ )
+                    {
+                        const T* rowk = row[k];
+                        p[k*5] = vop.wload(rowk+j-cn*2); p[k*5+1] = vop.wload(rowk+j-cn);
+                        p[k*5+2] = vop.wload(rowk+j); p[k*5+3] = vop.wload(rowk+j+cn);
+                        p[k*5+4] = vop.wload(rowk+j+cn*2);
+                    }
+
+                    vop(p[1], p[2]); vop(p[0], p[1]); vop(p[1], p[2]); vop(p[4], p[5]); vop(p[3], p[4]);
+                    vop(p[4], p[5]); vop(p[0], p[3]); vop(p[2], p[5]); vop(p[2], p[3]); vop(p[1], p[4]);
+                    vop(p[1], p[2]); vop(p[3], p[4]); vop(p[7], p[8]); vop(p[6], p[7]); vop(p[7], p[8]);
+                    vop(p[10], p[11]); vop(p[9], p[10]); vop(p[10], p[11]); vop(p[6], p[9]); vop(p[8], p[11]);
+                    vop(p[8], p[9]); vop(p[7], p[10]); vop(p[7], p[8]); vop(p[9], p[10]); vop(p[0], p[6]);
+                    vop(p[4], p[10]); vop(p[4], p[6]); vop(p[2], p[8]); vop(p[2], p[4]); vop(p[6], p[8]);
+                    vop(p[1], p[7]); vop(p[5], p[11]); vop(p[5], p[7]); vop(p[3], p[9]); vop(p[3], p[5]);
+                    vop(p[7], p[9]); vop(p[1], p[2]); vop(p[3], p[4]); vop(p[5], p[6]); vop(p[7], p[8]);
+                    vop(p[9], p[10]); vop(p[13], p[14]); vop(p[12], p[13]); vop(p[13], p[14]); vop(p[16], p[17]);
+                    vop(p[15], p[16]); vop(p[16], p[17]); vop(p[12], p[15]); vop(p[14], p[17]); vop(p[14], p[15]);
+                    vop(p[13], p[16]); vop(p[13], p[14]); vop(p[15], p[16]); vop(p[19], p[20]); vop(p[18], p[19]);
+                    vop(p[19], p[20]); vop(p[21], p[22]); vop(p[23], p[24]); vop(p[21], p[23]); vop(p[22], p[24]);
+                    vop(p[22], p[23]); vop(p[18], p[21]); vop(p[20], p[23]); vop(p[20], p[21]); vop(p[19], p[22]);
+                    vop(p[22], p[24]); vop(p[19], p[20]); vop(p[21], p[22]); vop(p[23], p[24]); vop(p[12], p[18]);
+                    vop(p[16], p[22]); vop(p[16], p[18]); vop(p[14], p[20]); vop(p[20], p[24]); vop(p[14], p[16]);
+                    vop(p[18], p[20]); vop(p[22], p[24]); vop(p[13], p[19]); vop(p[17], p[23]); vop(p[17], p[19]);
+                    vop(p[15], p[21]); vop(p[15], p[17]); vop(p[19], p[21]); vop(p[13], p[14]); vop(p[15], p[16]);
+                    vop(p[17], p[18]); vop(p[19], p[20]); vop(p[21], p[22]); vop(p[23], p[24]); vop(p[0], p[12]);
+                    vop(p[8], p[20]); vop(p[8], p[12]); vop(p[4], p[16]); vop(p[16], p[24]); vop(p[12], p[16]);
+                    vop(p[2], p[14]); vop(p[10], p[22]); vop(p[10], p[14]); vop(p[6], p[18]); vop(p[6], p[10]);
+                    vop(p[10], p[12]); vop(p[1], p[13]); vop(p[9], p[21]); vop(p[9], p[13]); vop(p[5], p[17]);
+                    vop(p[13], p[17]); vop(p[3], p[15]); vop(p[11], p[23]); vop(p[11], p[15]); vop(p[7], p[19]);
+                    vop(p[7], p[11]); vop(p[11], p[13]); vop(p[11], p[12]);
+                    vop.store(dst+j, p[12]);
+                }
+#endif
                 for( ; j <= size.width - VecOp::SIZE - cn*2; j += VecOp::SIZE )
                 {
                     VT p[25];
@@ -4912,6 +5008,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 limit = size.width;
             }
         }
+#if CV_SIMD
+        vx_cleanup();
+#endif
     }
 }
 
@@ -5173,7 +5272,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 #endif
 
     bool useSortNet = ksize == 3 || (ksize == 5
-#if !(CV_SIMD128)
+#if !(CV_SIMD)
             && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
@@ -5208,7 +5307,7 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
         if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
-            (CV_SIMD128 && hasSIMD128() ? 1 : 3))
+            (CV_SIMD ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else
             medianBlur_8u_O1( src, dst, ksize );
