@@ -307,9 +307,13 @@ icvLoadWindowPos( const char* name, CvRect& rect )
 {
     HKEY hkey;
     char szKey[1024];
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    strcpy( szKey, icvWindowPosRootKey );
+    strcat( szKey, name );
+#else
     strcpy_s( szKey, 1024, icvWindowPosRootKey );
     strcat_s( szKey, 1024, name );
-
+#endif
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
 
@@ -368,8 +372,13 @@ icvSaveWindowPos( const char* name, CvRect rect )
     HKEY hkey;
     char szKey[1024];
     char rootKey[1024];
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    strcpy( szKey, icvWindowPosRootKey );
+    strcat( szKey, name );
+#else
     strcpy_s( szKey, 1024, icvWindowPosRootKey );
     strcat_s( szKey, 1024, name );
+#endif
 
     if( RegOpenKeyEx( HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS )
     {
@@ -379,7 +388,11 @@ icvSaveWindowPos( const char* name, CvRect rect )
         char oldestKey[1024];
         char currentKey[1024];
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+        strcpy( rootKey, icvWindowPosRootKey );
+#else
         strcpy_s( rootKey, 1024, icvWindowPosRootKey );
+#endif
         rootKey[strlen(rootKey)-1] = '\0';
         if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS )
             //RegOpenKeyEx( HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS )
@@ -398,7 +411,11 @@ icvSaveWindowPos( const char* name, CvRect rect )
                 oldestTime.dwLowDateTime > accesstime.dwLowDateTime) )
             {
                 oldestTime = accesstime;
+#if defined(__MINGW32__) || defined(__MINGW64__)
+                strcpy( oldestKey, currentKey );
+#else
                 strcpy_s( oldestKey, 1024, currentKey );
+#endif
             }
         }
 
