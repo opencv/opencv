@@ -13,16 +13,9 @@
 
 namespace opencv_test
 {
-class AbsExactFluid : public Wrappable<AbsExactFluid>
-{
-public:
-    AbsExactFluid() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2) == 0; }
-private:
-};
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestFluid, MathOperatorMatMatTest,
-                        Combine(Values(AbsExactFluid().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values( opPlusM, opMinusM, opDivM,
                                         opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq),
                                 Values(CV_8UC1, CV_16SC1, CV_32FC1),
@@ -35,7 +28,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestFluid, MathOperatorMatMatTest,
 
 //FIXME: Some Mat/Scalar Fluid kernels are not there yet!
 INSTANTIATE_TEST_CASE_P(DISABLED_MathOperatorTestFluid, MathOperatorMatScalarTest,
-                        Combine(Values(AbsExactFluid().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR, opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER),
@@ -48,7 +41,7 @@ INSTANTIATE_TEST_CASE_P(DISABLED_MathOperatorTestFluid, MathOperatorMatScalarTes
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestFluid, MathOperatorMatMatTest,
-                        Combine(Values(AbsExactFluid().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values( opAnd, opOr, opXor ),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),
@@ -60,7 +53,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestFluid, MathOperatorMatMatTest,
 
 //FIXME: Some Mat/Scalar Fluid kernels are not there yet!
 INSTANTIATE_TEST_CASE_P(DISABLED_BitwiseOperatorTestFluid, MathOperatorMatScalarTest,
-                        Combine(Values(AbsExactFluid().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR ),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1280, 720),

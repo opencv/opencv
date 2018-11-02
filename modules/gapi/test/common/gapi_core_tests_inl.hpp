@@ -848,9 +848,8 @@ TEST_P(ThresholdTest, AccuracyTestBinary)
     int tt = std::get<2>(param);
 
     auto compile_args = std::get<4>(param);
-    auto& rng = cv::theRNG();
-    cv::Scalar thr = cv::Scalar(rng(50),rng(50),rng(50),rng(50));
-    cv::Scalar maxval = cv::Scalar(50 + rng(50),50 + rng(50),50 + rng(50),50 + rng(50));
+    cv::Scalar thr = initScalarRandU(50);
+    cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
     initMatrixRandU(type, sz_in, type, std::get<3>(param));
     cv::Scalar out_scalar;
 

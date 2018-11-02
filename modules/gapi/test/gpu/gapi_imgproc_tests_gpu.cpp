@@ -15,98 +15,9 @@
 namespace opencv_test
 {
 
-class AbsExactGPU : public Wrappable<AbsExactGPU>
-{
-public:
-    AbsExactGPU() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2) == 0; }
-private:
-};
-
-class AbsToleranceGPU : public Wrappable<AbsToleranceGPU>
-{
-public:
-    AbsToleranceGPU(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
-        return cv::countNonZero(absDiff > _tol) == 0;
-    }
-private:
-    double _tol;
-};
-
-class AbsTolerance32FGPU : public Wrappable<AbsTolerance32FGPU>
-{
-public:
-    AbsTolerance32FGPU(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F)
-            return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
-        else
-            return ((cv::countNonZero(in1 != in2) <= (_tol8u) * in2.total()) ? true : false);
-    }
-private:
-    double _tol;
-    double _tol8u;
-};
-
-class AbsToleranceSepFilterGPU : public Wrappable<AbsToleranceSepFilterGPU>
-{
-public:
-    AbsToleranceSepFilterGPU(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)* cv::abs(in2)) <= 0.01 * in2.total()) ? true : false);
-    }
-private:
-    double _tol;
-};
-
-class AbsToleranceGaussianBlurGPU : public Wrappable<AbsToleranceGaussianBlurGPU>
-{
-public:
-    AbsToleranceGaussianBlurGPU(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F || CV_MAT_DEPTH(in1.type()) == CV_64F)
-        {
-            return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
-        }
-        else
-        {
-            if (CV_MAT_DEPTH(in1.type()) == CV_8U)
-            {
-                bool a = (cv::countNonZero(cv::abs(in1 - in2) > 1) <= _tol8u * in2.total());
-                return ((a == 1 ? 0 : 1) && ((cv::countNonZero(cv::abs(in1 - in2) > 2) <= 0) == 1 ? 0 : 1)) == 1 ? false : true;
-            }
-            else return cv::countNonZero(in1 != in2) == 0;
-        }
-    }
-private:
-    double _tol;
-    double _tol8u;
-};
-
-class ToleranceTripleGPU : public Wrappable<ToleranceTripleGPU>
-{
-public:
-    ToleranceTripleGPU(double tol1, double tol2, double tol3) : _tol1(tol1), _tol2(tol2), _tol3(tol3) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        bool a = (cv::countNonZero((in1 - in2) > 0) <= _tol1 * in2.total());
-        return (((a == 1 ? 0 : 1) &&
-            ((cv::countNonZero((in1 - in2) > 1) <= _tol2 * in2.total()) == 1 ? 0 : 1) &&
-            ((cv::countNonZero((in1 - in2) > 2) <= _tol3 * in2.total()) == 1 ? 0 : 1))) == 1 ? false : true;
-    }
-private:
-    double _tol1, _tol2, _tol3;
-};
-
 
 INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-3).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 4, 5, 7),
                                 Values(cv::Size(1280, 720),
@@ -118,7 +29,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BoxFilterTestGPU, BoxFilterTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-3).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
                                 Values(/*CV_8UC1,*/ CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3,5),
                                 Values(cv::Size(1280, 720),
@@ -129,7 +40,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterTestGPU, BoxFilterTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));  //TODO: 8UC1 doesn't work
 
 INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_8U, SepFilterTest,
-                        Combine(Values(AbsToleranceSepFilterGPU(1e-4f).to_compare_f()),
+                        Combine(Values(AbsToleranceSepFilter(1e-4f).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),
                                 Values(3),
                                 Values(cv::Size(1280, 720),
@@ -139,7 +50,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_8U, SepFilterTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_other, SepFilterTest,
-                        Combine(Values(AbsToleranceSepFilterGPU(1e-4f).to_compare_f()),
+                        Combine(Values(AbsToleranceSepFilter(1e-4f).to_compare_f()),
                                 Values(CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3),
                                 Values(cv::Size(1280, 720),
@@ -149,7 +60,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_other, SepFilterTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BlurTestGPU, BlurTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-4, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3,5),
                                 Values(cv::Size(1280, 720),
@@ -159,7 +70,7 @@ INSTANTIATE_TEST_CASE_P(BlurTestGPU, BlurTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(gaussBlurTestGPU, GaussianBlurTest,
-                        Combine(Values(AbsToleranceGaussianBlurGPU(1e-5, 0.05).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsToleranceGaussianBlur_Float_Int(1e-5, 0.05).to_compare_f()), //TODO: too relaxed?
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
@@ -168,7 +79,7 @@ INSTANTIATE_TEST_CASE_P(gaussBlurTestGPU, GaussianBlurTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(MedianBlurTestGPU, MedianBlurTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
@@ -177,7 +88,7 @@ INSTANTIATE_TEST_CASE_P(MedianBlurTestGPU, MedianBlurTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ErodeTestGPU, ErodeTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
@@ -189,7 +100,7 @@ INSTANTIATE_TEST_CASE_P(ErodeTestGPU, ErodeTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Erode3x3TestGPU, Erode3x3Test,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -198,7 +109,7 @@ INSTANTIATE_TEST_CASE_P(Erode3x3TestGPU, Erode3x3Test,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(DilateTestGPU, DilateTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
@@ -210,7 +121,7 @@ INSTANTIATE_TEST_CASE_P(DilateTestGPU, DilateTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Dilate3x3TestGPU, Dilate3x3Test,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -219,7 +130,7 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3TestGPU, Dilate3x3Test,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(SobelTestGPU, SobelTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-4, 1e-4).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-4).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1/*, CV_32FC1*/), //TODO: CV_32FC1 fails accuracy
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
@@ -231,14 +142,14 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU, SobelTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(EqHistTestGPU, EqHistTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                 cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(CannyTestGPU, CannyTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-4, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
@@ -250,63 +161,63 @@ INSTANTIATE_TEST_CASE_P(CannyTestGPU, CannyTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestGPU, RGB2GrayTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                 cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2GrayTestGPU, BGR2GrayTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUVTestGPU, RGB2YUVTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(YUV2RGBTestGPU, YUV2RGBTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2LabTestGPU, RGB2LabTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2LUVTestGPU, BGR2LUVTest,
-                        Combine(Values(ToleranceTripleGPU(0.25 * 3, 0.01 * 3, 0.0001 * 3).to_compare_f()),
+                        Combine(Values(ToleranceTriple(0.25 * 3, 0.01 * 3, 0.0001 * 3).to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(LUV2BGRTestGPU, LUV2BGRTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2YUVTestGPU, BGR2YUVTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(YUV2BGRTestGPU, YUV2BGRTest,
-                        Combine(Values(AbsExactGPU().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
 /*init output matrices or not*/ testing::Bool(),

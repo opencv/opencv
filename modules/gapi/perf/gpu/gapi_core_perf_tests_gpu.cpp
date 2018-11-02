@@ -14,35 +14,6 @@
 namespace opencv_test
 {
 
-class AbsToleranceGPU : public Wrappable<AbsToleranceGPU>
-{
-public:
-    AbsToleranceGPU(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
-        return cv::countNonZero(absDiff > _tol) == 0;
-    }
-private:
-    double _tol;
-};
-
-class AbsTolerance32FGPU : public Wrappable<AbsTolerance32FGPU>
-{
-public:
-    AbsTolerance32FGPU(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F)
-            return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
-        else
-            return ((cv::countNonZero(in1 != in2) <= (_tol8u)* in2.total()) ? true : false);
-    }
-private:
-    double _tol;
-    double _tol8u;
-};
-
 INSTANTIATE_TEST_CASE_P(AddPerfTestGPU, AddPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -92,7 +63,7 @@ INSTANTIATE_TEST_CASE_P(MulCPerfTestGPU, MulCPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(DivPerfTestGPU, DivPerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-2).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
@@ -105,7 +76,7 @@ INSTANTIATE_TEST_CASE_P(DivCPerfTestGPU, DivCPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(DivRCPerfTestGPU, DivRCPerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-2).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
@@ -124,12 +95,12 @@ INSTANTIATE_TEST_CASE_P(MeanPerfTestGPU, MeanPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartPerfTestGPU, Polar2CartPerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-5, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-2).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(Cart2PolarPerfTestGPU, Cart2PolarPerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-2, 1e-2).to_compare_f()),
+                        Combine(Values(AbsTolerance_Float_Int(1e-2, 1e-2).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values(cv::compile_args(CORE_GPU))));
 
@@ -301,7 +272,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToPerfTestGPU, ConvertToPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestGPU, ResizePerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsTolerance_Float_Int(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
@@ -310,7 +281,7 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestGPU, ResizePerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestGPU, ResizeFxFyPerfTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsTolerance_Float_Int(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),

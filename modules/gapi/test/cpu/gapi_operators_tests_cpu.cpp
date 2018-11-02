@@ -14,13 +14,6 @@
 namespace opencv_test
 {
 
-class AbsExact : public Wrappable<AbsExact>
-{
-public:
-    AbsExact() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2) == 0; }
-private:
-};
 
 // FIXME: CPU test runs are disabled since Fluid is an exclusive plugin now!
 INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatMatTest,

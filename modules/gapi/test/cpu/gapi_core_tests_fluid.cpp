@@ -14,15 +14,6 @@ namespace opencv_test
 
 #define CORE_FLUID cv::gapi::core::fluid::kernels()
 
-class AbsExactFluid : public Wrappable<AbsExactFluid>
-{
-public:
-    AbsExactFluid() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2) == 0; }
-private:
-
-};
-
 
 // FIXME: Windows accuracy problems after recent update!
 INSTANTIATE_TEST_CASE_P(MathOpTestFluid, MathOpTest,
@@ -225,7 +216,7 @@ INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
 
 INSTANTIATE_TEST_CASE_P(
                         ResizeTestFluid, ResizeTest,
-                        Combine(Values(AbsExactFluid().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),
                                 Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
                                 Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
                                 Values(cv::Size(1280, 720),

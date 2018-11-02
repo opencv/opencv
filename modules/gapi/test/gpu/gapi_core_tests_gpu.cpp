@@ -14,36 +14,6 @@
 namespace opencv_test
 {
 
-class AbsToleranceGPU : public Wrappable<AbsToleranceGPU>
-{
-public:
-    AbsToleranceGPU(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
-        return cv::countNonZero(absDiff > _tol) == 0;
-    }
-private:
-    double _tol;
-};
-
-class AbsTolerance32FGPU : public Wrappable<AbsTolerance32FGPU>
-{
-public:
-    AbsTolerance32FGPU(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F)
-            return ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2))) ? false : true);
-        else
-            return ((cv::countNonZero(in1 != in2) <= (_tol8u)* in2.total()) ? true : false);
-    }
-private:
-    double _tol;
-    double _tol8u;
-};
-
-
 // FIXME: Wut? See MulTestGPU/MathOpTest below (duplicate?)
 INSTANTIATE_TEST_CASE_P(AddTestGPU, MathOpTest,
                         Combine(Values(ADD, MUL),
@@ -307,7 +277,7 @@ INSTANTIATE_TEST_CASE_P(Split4TestGPU, Split4Test,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
-                        Combine(Values(AbsTolerance32FGPU(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsTolerance_Float_Int(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
@@ -318,7 +288,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
-                        Combine(Values(AbsTolerance32FGPU(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsTolerance_Float_Int(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),

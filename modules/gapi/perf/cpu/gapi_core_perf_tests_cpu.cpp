@@ -14,13 +14,6 @@
 namespace opencv_test
 {
 
-class AbsExact : public Wrappable<AbsExact>
-{
-public:
-    AbsExact() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2) == 0; }
-private:
-};
 
 INSTANTIATE_TEST_CASE_P(AddPerfTestCPU, AddPerfTest,
     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
