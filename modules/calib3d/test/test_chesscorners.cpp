@@ -468,5 +468,24 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetector
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
 #endif
 
+TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
+{
+    cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/circles/";
+
+    cv::Mat expected;
+    FileStorage fs(dataDir + "circles_corners15.dat", FileStorage::READ);
+    fs["corners"] >> expected;
+    fs.release();
+
+    cv::Mat image = cv::imread(dataDir + "circles15.png");
+
+    std::vector<Point2f> centers;
+    cv::findCirclesGrid(image, Size(10, 8), centers, CALIB_CB_SYMMETRIC_GRID | CALIB_CB_CLUSTERING);
+    ASSERT_EQ(expected.total(), centers.size());
+
+    double error = calcError(centers, expected);
+    ASSERT_LE(error, precise_success_error_level);
+}
+
 }} // namespace
 /* End of file. */
