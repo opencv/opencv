@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include <float.h>
 #include <algorithm>
 #include <cmath>
@@ -271,7 +272,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() ||
+               backendId == DNN_BACKEND_VKCOM && haveVulkan();
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -478,6 +480,19 @@ public:
                 }
             }
         }
+    }
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPriorBox(_stepX, _stepY,
+                                                                _clip, _numPriors,
+                                                                _variance, _offsetsX,
+                                                                _offsetsY, _boxWidths,
+                                                                _boxHeights));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+#endif // HAVE_VULKAN
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE

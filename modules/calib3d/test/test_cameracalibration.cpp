@@ -51,7 +51,7 @@ public:
     CV_ProjectPointsTest();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void fill_array( int test_case_idx, int i, int j, Mat& arr );
     int prepare_test_case( int test_case_idx );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -83,7 +83,7 @@ CV_ProjectPointsTest::CV_ProjectPointsTest()
 }
 
 
-int CV_ProjectPointsTest::read_params( CvFileStorage* fs )
+int CV_ProjectPointsTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     return code;
@@ -542,14 +542,16 @@ void CV_CameraCalibrationTest::run( int start_from )
             values_read = fscanf(file, "%lf", goodStdDevs + i);
             CV_Assert(values_read == 1);
         }
-        if( releaseObject )
+        for( i = CV_CALIB_NINTRINSIC + numImages*6; i < CV_CALIB_NINTRINSIC + numImages*6
+                                                        + numbers[0]*3; i++ )
         {
-            for( i = CV_CALIB_NINTRINSIC + numImages*6; i < CV_CALIB_NINTRINSIC + numImages*6
-                                                            + numbers[0]*3; i++ )
+            if( releaseObject )
             {
                 values_read = fscanf(file, "%lf", goodStdDevs + i);
                 CV_Assert(values_read == 1);
             }
+            else
+                goodStdDevs[i] = 0.0;
         }
 
         memset( cameraMatrix, 0, 9*sizeof(cameraMatrix[0]) );

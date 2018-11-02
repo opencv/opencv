@@ -945,6 +945,13 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
 }
 
+void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    _src.copyTo(_dst, _mask);
+}
+
 /****************************************************************************************\
 *                                    multiply/divide                                     *
 \****************************************************************************************/

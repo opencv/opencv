@@ -237,6 +237,7 @@ OCV_OPTION(WITH_GTK            "Include GTK support"                         ON 
 OCV_OPTION(WITH_GTK_2_X        "Use GTK version 2"                           OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)  IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS )
 OCV_OPTION(WITH_HALIDE         "Include Halide support"                      OFF)
+OCV_OPTION(WITH_VULKAN         "Include Vulkan support"                      OFF)
 OCV_OPTION(WITH_INF_ENGINE     "Include Intel Inference Engine support"      OFF)
 OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
@@ -683,6 +684,11 @@ endif()
 # --- Halide ---
 if(WITH_HALIDE)
   include(cmake/OpenCVDetectHalide.cmake)
+endif()
+
+# --- VkCom ---
+if(WITH_VULKAN)
+  include(cmake/OpenCVDetectVulkan.cmake)
 endif()
 
 # --- Inference Engine ---
@@ -1453,6 +1459,15 @@ if(WITH_CUDA OR HAVE_CUDA)
   if(HAVE_CUDA)
     status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
+  endif()
+endif()
+
+if(WITH_VULKAN OR HAVE_VULKAN)
+  status("")
+  status("  Vulkan:"     HAVE_VULKAN THEN "YES" ELSE "NO")
+  if(HAVE_VULKAN)
+    status("    Include path:"  VULKAN_INCLUDE_DIRS THEN "${VULKAN_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:" VULKAN_LIBRARIES THEN "${VULKAN_LIBRARIES}" ELSE "Dynamic load")
   endif()
 endif()
 

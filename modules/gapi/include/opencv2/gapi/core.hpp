@@ -581,7 +581,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa add, sub, div, addWeighted
 */
-GAPI_EXPORTS GMat mul(const GMat& src1, const GMat& src2, double scale, int ddepth = -1);
+GAPI_EXPORTS GMat mul(const GMat& src1, const GMat& src2, double scale = 1.0, int ddepth = -1);
 
 /** @brief Multiplies matrix by scalar.
 

@@ -102,26 +102,6 @@ typedef struct CvHidHaarClassifierCascade
 const int icv_object_win_border = 1;
 const float icv_stage_threshold_bias = 0.0001f;
 
-static CvHaarClassifierCascade*
-icvCreateHaarClassifierCascade( int stage_count )
-{
-    CvHaarClassifierCascade* cascade = 0;
-
-    int block_size = sizeof(*cascade) + stage_count*sizeof(*cascade->stage_classifier);
-
-    if( stage_count <= 0 )
-        CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
-
-    cascade = (CvHaarClassifierCascade*)cvAlloc( block_size );
-    memset( cascade, 0, block_size );
-
-    cascade->stage_classifier = (CvHaarStageClassifier*)(cascade + 1);
-    cascade->flags = CV_HAAR_MAGIC_VAL;
-    cascade->count = stage_count;
-
-    return cascade;
-}
-
 static void
 icvReleaseHidHaarClassifierCascade( CvHidHaarClassifierCascade** _cascade )
 {
@@ -1057,7 +1037,6 @@ public:
 
 }
 
-
 CvSeq*
 cvHaarDetectObjectsForROC( const CvArr* _img,
                      CvHaarClassifierCascade* cascade, CvMemStorage* storage,
@@ -1373,6 +1352,32 @@ cvHaarDetectObjects( const CvArr* _img,
 
 }
 
+CV_IMPL void
+cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** _cascade )
+{
+    if( _cascade && *_cascade )
+    {
+        int i, j;
+        CvHaarClassifierCascade* cascade = *_cascade;
+
+        for( i = 0; i < cascade->count; i++ )
+        {
+            for( j = 0; j < cascade->stage_classifier[i].count; j++ )
+                cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
+            cvFree( &cascade->stage_classifier[i].classifier );
+        }
+        icvReleaseHidHaarClassifierCascade( &cascade->hid_cascade );
+        cvFree( _cascade );
+    }
+}
+
+CV_IMPL CvHaarClassifierCascade*
+cvLoadHaarClassifierCascade( const char*, CvSize )
+{
+    return 0;
+}
+
+#if 0
 
 static CvHaarClassifierCascade*
 icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
@@ -1398,7 +1403,7 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
         CV_Assert( count > 0 && count < CV_HAAR_STAGE_MAX);
         cascade->stage_classifier[i].count = count;
         cascade->stage_classifier[i].classifier =
-            (CvHaarClassifier*)cvAlloc( count*sizeof(cascade->stage_classifier[i].classifier[0]));
+        (CvHaarClassifier*)cvAlloc( count*sizeof(cascade->stage_classifier[i].classifier[0]));
 
         for( j = 0; j < count; j++ )
         {
@@ -1411,11 +1416,11 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
 
             CV_Assert( classifier->count > 0 && classifier->count< CV_HAAR_STAGE_MAX);
             classifier->haar_feature = (CvHaarFeature*) cvAlloc(
-                classifier->count * ( sizeof( *classifier->haar_feature ) +
-                                      sizeof( *classifier->threshold ) +
-                                      sizeof( *classifier->left ) +
-                                      sizeof( *classifier->right ) ) +
-                (classifier->count + 1) * sizeof( *classifier->alpha ) );
+                                                                classifier->count * ( sizeof( *classifier->haar_feature ) +
+                                                                                     sizeof( *classifier->threshold ) +
+                                                                                     sizeof( *classifier->left ) +
+                                                                                     sizeof( *classifier->right ) ) +
+                                                                (classifier->count + 1) * sizeof( *classifier->alpha ) );
             classifier->threshold = (float*) (classifier->haar_feature+classifier->count);
             classifier->left = (int*) (classifier->threshold + classifier->count);
             classifier->right = (int*) (classifier->left + classifier->count);
@@ -1433,8 +1438,8 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
                     cv::Rect r;
                     int band = 0;
                     sscanf( stage, "%d%d%d%d%d%f%n",
-                            &r.x, &r.y, &r.width, &r.height, &band,
-                            &(classifier->haar_feature[l].rect[k].weight), &dl );
+                           &r.x, &r.y, &r.width, &r.height, &band,
+                           &(classifier->haar_feature[l].rect[k].weight), &dl );
                     stage += dl;
                     classifier->haar_feature[l].rect[k].r = cvRect(r);
                 }
@@ -1446,12 +1451,12 @@ icvLoadCascadeCART( const char** input_cascade, int n, CvSize orig_window_size )
                 for( k = rects; k < CV_HAAR_FEATURE_MAX; k++ )
                 {
                     memset( classifier->haar_feature[l].rect + k, 0,
-                            sizeof(classifier->haar_feature[l].rect[k]) );
+                           sizeof(classifier->haar_feature[l].rect[k]) );
                 }
 
                 sscanf( stage, "%f%d%d%n", &(classifier->threshold[l]),
-                                       &(classifier->left[l]),
-                                       &(classifier->right[l]), &dl );
+                       &(classifier->left[l]),
+                       &(classifier->right[l]), &dl );
                 stage += dl;
             }
             for( l = 0; l <= classifier->count; l++ )
@@ -1557,27 +1562,6 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
     return cascade;
 }
 
-
-CV_IMPL void
-cvReleaseHaarClassifierCascade( CvHaarClassifierCascade** _cascade )
-{
-    if( _cascade && *_cascade )
-    {
-        int i, j;
-        CvHaarClassifierCascade* cascade = *_cascade;
-
-        for( i = 0; i < cascade->count; i++ )
-        {
-            for( j = 0; j < cascade->stage_classifier[i].count; j++ )
-                cvFree( &cascade->stage_classifier[i].classifier[j].haar_feature );
-            cvFree( &cascade->stage_classifier[i].classifier );
-        }
-        icvReleaseHidHaarClassifierCascade( &cascade->hid_cascade );
-        cvFree( _cascade );
-    }
-}
-
-
 /****************************************************************************************\
 *                                  Persistence functions                                 *
 \****************************************************************************************/
@@ -1603,6 +1587,26 @@ static int
 icvIsHaarClassifier( const void* struct_ptr )
 {
     return CV_IS_HAAR_CLASSIFIER( struct_ptr );
+}
+
+static CvHaarClassifierCascade*
+icvCreateHaarClassifierCascade( int stage_count )
+{
+    CvHaarClassifierCascade* cascade = 0;
+
+    int block_size = sizeof(*cascade) + stage_count*sizeof(*cascade->stage_classifier);
+
+    if( stage_count <= 0 )
+        CV_Error( CV_StsOutOfRange, "Number of stages should be positive" );
+
+    cascade = (CvHaarClassifierCascade*)cvAlloc( block_size );
+    memset( cascade, 0, block_size );
+
+    cascade->stage_classifier = (CvHaarStageClassifier*)(cascade + 1);
+    cascade->flags = CV_HAAR_MAGIC_VAL;
+    cascade->count = stage_count;
+
+    return cascade;
 }
 
 static void*
@@ -2123,5 +2127,7 @@ CvType haar_type( CV_TYPE_NAME_HAAR, icvIsHaarClassifier,
                   (CvReleaseFunc)cvReleaseHaarClassifierCascade,
                   icvReadHaarClassifier, icvWriteHaarClassifier,
                   icvCloneHaarClassifier );
+
+#endif
 
 /* End of file. */

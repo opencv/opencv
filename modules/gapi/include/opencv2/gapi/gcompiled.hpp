@@ -50,6 +50,9 @@ public:
     const GMetaArgs& metas() const; // Meta passed to compile()
     const GMetaArgs& outMetas() const; // Inferred output metadata
 
+    bool canReshape() const; // is reshape mechanism supported by GCompiled
+    void reshape(const GMetaArgs& inMetas, const GCompileArgs& args); // run reshape procedure
+
 protected:
     std::shared_ptr<Priv> m_priv;
 };

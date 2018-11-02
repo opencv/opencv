@@ -421,10 +421,9 @@ CV_MLBaseTest::~CV_MLBaseTest()
     theRNG().state = initSeed;
 }
 
-int CV_MLBaseTest::read_params( CvFileStorage* __fs )
+int CV_MLBaseTest::read_params( const cv::FileStorage& _fs )
 {
     CV_TRACE_FUNCTION();
-    FileStorage _fs(__fs, false);
     if( !_fs.isOpened() )
         test_case_count = -1;
     else
@@ -452,7 +451,7 @@ void CV_MLBaseTest::run( int )
     string filename = ts->get_data_path();
     filename += get_validation_filename();
     validationFS.open( filename, FileStorage::READ );
-    read_params( *validationFS );
+    read_params( validationFS );
 
     int code = cvtest::TS::OK;
     for (int i = 0; i < test_case_count; i++)
