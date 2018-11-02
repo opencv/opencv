@@ -153,7 +153,6 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
 
 } // namespace cv
 
-int checkChessboard(const cv::Mat & img, const cv::Size & size);
 int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
 
 #endif

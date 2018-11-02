@@ -134,6 +134,9 @@ if(CV_GCC OR CV_CLANG)
     if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
       add_extra_compiler_option(-Wno-strict-overflow) # Issue appears when compiling surf.cpp from opencv_contrib/modules/xfeatures2d
     endif()
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+      add_extra_compiler_option(-Wno-missing-field-initializers)  # GCC 4.x emits warnings about {}, fixed in GCC 5+
+    endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 

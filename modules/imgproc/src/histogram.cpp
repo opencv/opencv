@@ -3386,6 +3386,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
         lutBody(heightRange);
 }
 
+#if 0
 // ----------------------------------------------------------------------
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
@@ -3537,5 +3538,6 @@ static void icvWriteHist( CvFileStorage* fs, const char* name,
 
 CvType hist_type( CV_TYPE_NAME_HIST, icvIsHist, (CvReleaseFunc)cvReleaseHist,
                   icvReadHist, icvWriteHist, (CvCloneFunc)icvCloneHist );
+#endif
 
 /* End of file. */

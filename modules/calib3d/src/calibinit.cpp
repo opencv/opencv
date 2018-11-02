@@ -526,7 +526,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         //image is binarised using a threshold dependent on the image histogram
         if (checkChessboardBinary(thresh_img_new, pattern_size) <= 0) //fall back to the old method
         {
-            if (checkChessboard(img, pattern_size) <= 0)
+            if (!checkChessboard(img, pattern_size))
             {
                 corners_.release();
                 return false;

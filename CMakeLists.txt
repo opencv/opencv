@@ -220,7 +220,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        NOT MIN
 # ===================================================
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O (iOS/Mac)"    ON   IF APPLE)
-OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
+OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa (OBSOLETE)"                               OFF IF APPLE )
 OCV_OPTION(WITH_CAROTENE       "Use NVidia carotene acceleration library for ARM platform"                   ON  IF (ARM OR AARCH64) AND NOT IOS AND NOT (CMAKE_VERSION VERSION_LESS "2.8.11"))
 OCV_OPTION(WITH_CPUFEATURES    "Use cpufeatures Android library"             ON   IF ANDROID)
 OCV_OPTION(WITH_VTK            "Include VTK library support (and build opencv_viz module eiher)"             ON  IF (NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
@@ -254,7 +254,7 @@ OCV_OPTION(WITH_GIGEAPI        "Include Smartek GigE support"                OFF
 OCV_OPTION(WITH_ARAVIS         "Include Aravis GigE support"                 OFF   IF (NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT WIN32) )
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_WIN32UI        "Build with Win32 UI Backend support"         ON   IF WIN32 AND NOT WINRT)
-OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O"                 OFF  IF APPLE )
+OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O (OBSOLETE)"      OFF  IF APPLE )
 OCV_OPTION(WITH_QTKIT          "Use QTKit Video I/O backend"                 OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_HPX            "Include Ste||ar Group HPX support"           OFF)
@@ -630,6 +630,8 @@ if(ANDROID AND WITH_CPUFEATURES)
   add_subdirectory(3rdparty/cpufeatures)
   set(HAVE_CPUFEATURES 1)
 endif()
+
+include(cmake/OpenCVFindFrameworks.cmake)
 
 include(cmake/OpenCVFindLibsGrfmt.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
