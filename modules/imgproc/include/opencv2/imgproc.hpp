@@ -4378,7 +4378,7 @@ CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar&
 /* ----------------------------------------------------------------------------------------- */
 
 /** @overload */
-CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
+CV_EXPORTS void fillConvexPoly(InputOutputArray img, const Point* pts, int npts,
                                const Scalar& color, int lineType = LINE_8,
                                int shift = 0);
 
@@ -4400,7 +4400,7 @@ CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
                                  int shift = 0);
 
 /** @overload */
-CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
+CV_EXPORTS void fillPoly(InputOutputArray img, const Point** pts,
                          const int* npts, int ncontours,
                          const Scalar& color, int lineType = LINE_8, int shift = 0,
                          Point offset = Point() );
@@ -4428,7 +4428,7 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset = Point() );
 
 /** @overload */
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
+CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
