@@ -15,12 +15,3 @@ add_subdirectory(tutorial-1-camerapreview)
 add_subdirectory(tutorial-2-mixedprocessing)
 add_subdirectory(tutorial-3-cameracontrol)
 add_subdirectory(tutorial-4-opencl)
-
-# hello-android sample
-if(HAVE_opencv_highgui)
-  add_executable(hello-android hello-android/main.cpp)
-  ocv_target_include_modules_recurse(hello-android opencv_imgcodecs opencv_videoio opencv_highgui opencv_core opencv_imgproc)
-  ocv_target_link_libraries(hello-android ${OPENCV_LINKER_LIBS} opencv_imgcodecs opencv_videoio opencv_highgui opencv_core opencv_imgproc)
-  set_target_properties(hello-android PROPERTIES OUTPUT_NAME hello-android RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}")
-  add_dependencies(opencv_android_examples hello-android)
-endif()
