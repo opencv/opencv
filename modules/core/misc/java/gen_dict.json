@@ -765,6 +765,15 @@
             "v_type": "Mat",
             "j_import": "org.opencv.core.MatOfRect2d"
         },
+        "vector_RotatedRect": {
+            "j_type": "MatOfRotatedRect",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector< RotatedRect > %(n)s",
+            "suffix": "J",
+            "v_type": "Mat",
+            "j_import": "org.opencv.core.MatOfRotatedRect"
+        },
         "vector_String": {
             "j_type": "List<String>",
             "jn_type": "List<String>",
