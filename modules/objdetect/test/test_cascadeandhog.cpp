@@ -404,7 +404,6 @@ protected:
     virtual void readDetector( const FileNode& fn );
     virtual void writeDetector( FileStorage& fs, int di );
     virtual int detectMultiScale( int di, const Mat& img, vector<Rect>& objects );
-    virtual int detectMultiScale_C( const string& filename, int di, const Mat& img, vector<Rect>& objects );
     vector<int> flags;
 };
 
@@ -434,47 +433,12 @@ void CV_CascadeDetectorTest::writeDetector( FileStorage& fs, int di )
     fs << C_SCALE_CASCADE << sc;
 }
 
-
-int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
-                                                int di, const Mat& img,
-                                                vector<Rect>& objects )
-{
-    Ptr<CvHaarClassifierCascade> c_cascade(cvLoadHaarClassifierCascade(filename.c_str(), cvSize(0,0)));
-    Ptr<CvMemStorage> storage(cvCreateMemStorage());
-
-    if( !c_cascade )
-    {
-        ts->printf( cvtest::TS::LOG, "cascade %s can not be opened");
-        return cvtest::TS::FAIL_INVALID_TEST_DATA;
-    }
-    Mat grayImg;
-    cvtColor( img, grayImg, COLOR_BGR2GRAY );
-    equalizeHist( grayImg, grayImg );
-
-    CvMat c_gray = cvMat(grayImg);
-    CvSeq* rs = cvHaarDetectObjects(&c_gray, c_cascade, storage, 1.1, 3, flags[di] );
-
-    objects.clear();
-    for( int i = 0; i < rs->total; i++ )
-    {
-        Rect r = *(Rect*)cvGetSeqElem(rs, i);
-        objects.push_back(r);
-    }
-
-    return cvtest::TS::OK;
-}
-
 int CV_CascadeDetectorTest::detectMultiScale( int di, const Mat& img,
                                               vector<Rect>& objects)
 {
     string dataPath = ts->get_data_path(), filename;
     filename = dataPath + detectorFilenames[di];
     const string pattern = "haarcascade_frontalface_default.xml";
-
-    if( filename.size() >= pattern.size() &&
-        strcmp(filename.c_str() + (filename.size() - pattern.size()),
-              pattern.c_str()) == 0 )
-        return detectMultiScale_C(filename, di, img, objects);
 
     CascadeClassifier cascade( filename );
     if( cascade.empty() )
