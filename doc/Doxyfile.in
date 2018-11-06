@@ -107,7 +107,7 @@ RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m */opencl/runtime/*
-EXCLUDE_SYMBOLS        = cv::DataType<*> cv::traits::* int void CV__*
+EXCLUDE_SYMBOLS        = cv::DataType<*> cv::traits::* int void CV__* T __CV*
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = YES
@@ -250,6 +250,8 @@ PREDEFINED             = __cplusplus=1 \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
                          CV_SSE2=1 \
+                         CV__DEBUG_NS_BEGIN= \
+                         CV__DEBUG_NS_END= \
                          CV_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES
