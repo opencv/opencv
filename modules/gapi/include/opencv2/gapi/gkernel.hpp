@@ -342,6 +342,8 @@ namespace gapi {
 
         // Check if package contains ANY implementation of a kernel API
         // by API type.
+        // FIXME: Rename to includes() and distinguish API/impl case by
+        //     statically?
         template<typename KAPI>
         bool includesAPI() const
         {
