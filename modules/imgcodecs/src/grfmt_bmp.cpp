@@ -55,7 +55,7 @@ BmpDecoder::BmpDecoder()
     m_signature = fmtSignBmp;
     m_offset = -1;
     m_buf_supported = true;
-    m_origin = 0;
+    m_origin = ORIGIN_TL;
     m_bpp = 0;
     m_rle_code = BMP_RGB;
 }
@@ -179,7 +179,7 @@ bool  BmpDecoder::readHeader()
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
-    m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
+    m_origin = m_height > 0 ? ORIGIN_BL : ORIGIN_TL;
     m_height = std::abs(m_height);
 
     if( !result )
@@ -206,7 +206,7 @@ bool  BmpDecoder::readData( Mat& img )
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    if( m_origin == IPL_ORIGIN_BL )
+    if( m_origin == ORIGIN_BL )
     {
         data += (m_height - 1)*(size_t)step;
         step = -step;
@@ -238,7 +238,7 @@ bool  BmpDecoder::readData( Mat& img )
                 m_strm.getBytes( src, src_pitch );
                 FillColorRow1( color ? data : bgr, src, m_width, m_palette );
                 if( !color )
-                    icvCvt_BGR2Gray_8u_C3C1R( bgr, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR2Gray_8u_C3C1R( bgr, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -441,9 +441,9 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if( !color )
-                    icvCvt_BGR5552Gray_8u_C2C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5552Gray_8u_C2C1R( src, 0, data, 0, Size(m_width,1) );
                 else
-                    icvCvt_BGR5552BGR_8u_C2C3R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5552BGR_8u_C2C3R( src, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -453,9 +453,9 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if( !color )
-                    icvCvt_BGR5652Gray_8u_C2C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5652Gray_8u_C2C1R( src, 0, data, 0, Size(m_width,1) );
                 else
-                    icvCvt_BGR5652BGR_8u_C2C3R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5652BGR_8u_C2C3R( src, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -465,7 +465,7 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if(!color)
-                    icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, Size(m_width,1) );
                 else
                     memcpy( data, src, m_width*3 );
             }
@@ -478,9 +478,9 @@ decode_rle8_bad: ;
                 m_strm.getBytes( src, src_pitch );
 
                 if( !color )
-                    icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
                 else if( img.channels() == 3 )
-                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, cvSize(m_width, 1));
+                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
                 else if( img.channels() == 4 )
                     memcpy(data, src, m_width * 4);
             }

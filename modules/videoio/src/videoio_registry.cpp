@@ -521,7 +521,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         break;
 #endif
     case CAP_IMAGES:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_Images(filename.c_str()))
+        TRY_OPEN(createFileCapture_Images(filename))
         break;
 #ifdef HAVE_FFMPEG
     case CAP_FFMPEG:
