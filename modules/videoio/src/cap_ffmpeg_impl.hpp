@@ -48,7 +48,10 @@
 #include <algorithm>
 #include <limits>
 
-#define OPENCV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
+#ifndef __OPENCV_BUILD
+#define CV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
+#endif
+
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -1197,7 +1200,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
             return codec_tag;
         }
 
-        return (double) OPENCV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
+        return (double) CV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
