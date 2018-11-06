@@ -218,7 +218,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
-                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
