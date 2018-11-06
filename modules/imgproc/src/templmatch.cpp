@@ -947,7 +947,12 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
 
             if( isNormed )
             {
-                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                double diff2 = MAX(wndSum2 - wndMean2, 0);
+                if (diff2 <= std::min(0.5, 10 * FLT_EPSILON * wndSum2))
+                    t = 0; // avoid rounding errors
+                else
+                    t = std::sqrt(diff2)*templNorm;
+
                 if( fabs(num) < t )
                     num /= t;
                 else if( fabs(num) < t*1.125 )
