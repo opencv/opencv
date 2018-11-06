@@ -1976,13 +1976,15 @@ cvWaitKey( int delay )
         MSG message;
         int is_processed = 0;
 
-        if( delay <= 0 )
+        if (delay <= 0 && hg_windows != 0)
+        {
             GetMessage(&message, 0, 0, 0);
+        }
         else if( PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE )
         {
             int64 t = cv::getTickCount();
-            if (t - timeEnd >= 0)
-                return -1;  // no messages and no more time
+            if ((delay > 0 && t - timeEnd >= 0) || (delay <= 0 && hg_windows == 0))
+                return -1;  // no messages and no more time (or no more opened windows with infinite wait)
             Sleep(1);
             continue;
         }
