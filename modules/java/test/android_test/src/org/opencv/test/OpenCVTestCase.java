@@ -17,6 +17,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.DMatch;
@@ -336,12 +337,30 @@ public class OpenCVTestCase extends TestCase {
             assertRectEquals(list1.get(i), list2.get(i));
     }
 
+    public static void assertListRotatedRectEquals(List<RotatedRect> list1, List<RotatedRect> list2) {
+        if (list1.size() != list2.size()) {
+            throw new UnsupportedOperationException();
+        }
+
+        for (int i = 0; i < list1.size(); i++)
+            assertRotatedRectEquals(list1.get(i), list2.get(i));
+    }
+
     public static void assertRectEquals(Rect expected, Rect actual) {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
         assertEquals(msg, expected.x, actual.x);
         assertEquals(msg, expected.y, actual.y);
         assertEquals(msg, expected.width, actual.width);
         assertEquals(msg, expected.height, actual.height);
+    }
+
+    public static void assertRotatedRectEquals(RotatedRect expected, RotatedRect actual) {
+        String msg = "expected:<" + expected + "> but was:<" + actual + ">";
+        assertEquals(msg, expected.center.x, actual.center.x);
+        assertEquals(msg, expected.center.y, actual.center.y);
+        assertEquals(msg, expected.size.width, actual.size.width);
+        assertEquals(msg, expected.size.height, actual.size.height);
+        assertEquals(msg, expected.angle, actual.angle);
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {
