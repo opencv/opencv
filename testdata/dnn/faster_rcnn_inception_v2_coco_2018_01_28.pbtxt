@@ -3387,7 +3387,7 @@ node {
   attr {
     key: "nms_threshold"
     value {
-      f: 0.7
+      f: 0.699999988079
     }
   }
   attr {
