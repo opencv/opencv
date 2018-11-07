@@ -81,10 +81,10 @@ public:
     {
         init();
     }
-    CvCapture_Images(const String& filename)
+    CvCapture_Images(const String& _filename)
     {
         init();
-        open(filename);
+        open(_filename);
     }
 
     virtual ~CvCapture_Images() CV_OVERRIDE
@@ -102,7 +102,7 @@ public:
     void close();
 protected:
 
-    std::string  filename; // actually a printf-pattern
+    std::string filename; // actually a printf-pattern
     unsigned currentframe;
     unsigned firstframe; // number of first frame
     unsigned length; // length of sequence

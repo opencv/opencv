@@ -1155,7 +1155,7 @@ cvShowImage( const char* name, const CvArr* arr )
     void* dst_ptr = 0;
     const int channels0 = 3;
     int origin = 0;
-    CvMat stub, dst, *image;
+    CvMat stub, *image;
     bool changed_size = false; // philipg
 
     if( !name )
@@ -1209,9 +1209,26 @@ cvShowImage( const char* name, const CvArr* arr )
                                       DIB_RGB_COLORS, &dst_ptr, 0, 0));
     }
 
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3,
-                     dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
+    {
+        cv::Mat src = cv::cvarrToMat(image);
+        cv::Mat dst(size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4);
+        if (src.channels() == 1)
+        {
+            cv::cvtColor(src, dst, cv::COLOR_GRAY2BGR);
+            cv::flip(dst, dst, 0);
+        }
+        else if (src.channels() == 4)
+        {
+            cv::cvtColor(src, dst, cv::COLOR_BGRA2BGR);
+            cv::flip(dst, dst, 0);
+        }
+        else
+        {
+            CV_Assert(src.channels() == 3);
+            cv::flip(src, dst, 0);
+        }
+        CV_Assert(dst.data == (uchar*)dst_ptr);
+    }
 
     // ony resize window if needed
     if (changed_size)
@@ -1222,86 +1239,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     __END__;
 }
-
-#if 0
-CV_IMPL void
-cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
-{
-    CV_FUNCNAME( "cvShowImageHWND" );
-
-    __BEGIN__;
-
-    SIZE size = { 0, 0 };
-    int channels = 0;
-    void* dst_ptr = 0;
-    const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
-    bool changed_size = false;
-    BITMAPINFO tempbinfo;
-    HDC hdc = NULL;
-
-    if( !arr )
-        EXIT;
-    if( !w_hWnd )
-        EXIT;
-
-    hdc = GetDC(w_hWnd);
-
-    if( CV_IS_IMAGE_HDR( arr ) )
-        origin = ((IplImage*)arr)->origin;
-
-    CV_CALL( image = cvGetMat( arr, &stub ) );
-
-    if ( hdc )
-    {
-            //GetBitmapData
-            BITMAP bmp;
-            GdiFlush();
-            HGDIOBJ h = GetCurrentObject( hdc, OBJ_BITMAP );
-
-            if (h == NULL)
-            EXIT;
-            if (GetObject(h, sizeof(bmp), &bmp) == 0) //GetObject(): returns size of object, 0 if error
-            EXIT;
-
-            channels = bmp.bmBitsPixel/8;
-            dst_ptr = bmp.bmBits;
-     }
-
-    if( size.cx != image->width || size.cy != image->height || channels != channels0 )
-    {
-        changed_size = true;
-
-        uchar buffer[sizeof(BITMAPINFO) + 255*sizeof(RGBQUAD)];
-        BITMAPINFO* binfo = (BITMAPINFO*)buffer;
-
-        BOOL bDeleteObj = DeleteObject(GetCurrentObject(hdc, OBJ_BITMAP));
-                CV_Assert( FALSE != bDeleteObj );
-
-        size.cx = image->width;
-        size.cy = image->height;
-        channels = channels0;
-
-        FillBitmapInfo( binfo, size.cx, size.cy, channels*8, 1 );
-
-        SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
-    }
-
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
-
-    // Image stretching to fit the window
-    RECT rect;
-    GetClientRect(w_hWnd, &rect);
-    StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
-
-    // ony resize window if needed
-    InvalidateRect(w_hWnd, 0, 0);
-
-    __END__;
-}
-#endif
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
