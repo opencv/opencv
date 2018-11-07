@@ -220,7 +220,6 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        NOT MIN
 # ===================================================
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS AND NOT WINRT) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O (iOS/Mac)"    ON   IF APPLE)
-OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa (OBSOLETE)"                               OFF IF APPLE )
 OCV_OPTION(WITH_CAROTENE       "Use NVidia carotene acceleration library for ARM platform"                   ON  IF (ARM OR AARCH64) AND NOT IOS AND NOT (CMAKE_VERSION VERSION_LESS "2.8.11"))
 OCV_OPTION(WITH_CPUFEATURES    "Use cpufeatures Android library"             ON   IF ANDROID)
 OCV_OPTION(WITH_VTK            "Include VTK library support (and build opencv_viz module eiher)"             ON  IF (NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING) )
@@ -1157,12 +1156,8 @@ if(WITH_WIN32UI)
   status("    Win32 UI:" HAVE_WIN32UI THEN YES ELSE NO)
 endif()
 
-if(APPLE)
-  if(WITH_CARBON)
-    status("    Carbon:" YES)
-  else()
-    status("    Cocoa:"  YES)
-  endif()
+if(HAVE_COCOA)  # APPLE
+  status("    Cocoa:"  YES)
 endif()
 
 if(WITH_GTK OR HAVE_GTK)
