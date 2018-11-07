@@ -255,13 +255,18 @@ namespace cv {
 
 /* Device Capture Objects */
 /* V4L2 structure */
-struct buffer
+struct Buffer
 {
     void *  start;
     size_t  length;
     // This is dequeued buffer. It used for to put it back in the queue.
     // The buffer is valid only if capture->bufferIndex >= 0
     v4l2_buffer buffer;
+
+    Buffer() : start(NULL), length(0)
+    {
+        buffer = v4l2_buffer();
+    }
 };
 
 struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
@@ -296,7 +301,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool normalizePropRange;
 
     /* V4L2 variables */
-    buffer buffers[MAX_V4L_BUFFERS + 1];
+    Buffer buffers[MAX_V4L_BUFFERS + 1];
     v4l2_capability capability;
     v4l2_input videoInput;
     v4l2_format form;
@@ -336,7 +341,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     void v4l2_create_frame();
     bool read_frame_v4l2();
     bool convertableToRgb() const;
-    void convertToRgb(const buffer &currentBuffer);
+    void convertToRgb(const Buffer &currentBuffer);
     void releaseFrame();
 };
 
@@ -1336,7 +1341,7 @@ static int sonix_decompress(int width, int height, unsigned char *inp, unsigned 
     return 0;
 }
 
-void CvCaptureCAM_V4L::convertToRgb(const buffer &currentBuffer)
+void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
 {
     cv::Size imageSize(form.fmt.pix.width, form.fmt.pix.height);
     // Not found conversion
@@ -1870,7 +1875,7 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
         return &frame;
 
     /* Now get what has already been captured as a IplImage return */
-    const buffer &currentBuffer = buffers[bufferIndex];
+    const Buffer &currentBuffer = buffers[bufferIndex];
     if (convert_rgb) {
         if (!frame_allocated)
             v4l2_create_frame();
