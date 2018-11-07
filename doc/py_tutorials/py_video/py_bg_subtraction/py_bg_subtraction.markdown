@@ -20,7 +20,7 @@ extract the moving foreground from static background.
 If you have an image of background alone, like an image of the room without visitors, image of the road
 without vehicles etc, it is an easy job. Just subtract the new image from the background. You get
 the foreground objects alone. But in most of the cases, you may not have such an image, so we need
-to extract the background from whatever images we have. It become more complicated when there are
+to extract the background from whatever images we have. It becomes more complicated when there are
 shadows of the vehicles. Since shadows also move, simple subtraction will mark that also as
 foreground. It complicates things.
 
@@ -72,7 +72,7 @@ papers by Z.Zivkovic, "Improved adaptive Gaussian mixture model for background s
 and "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction"
 in 2006. One important feature of this algorithm is that it selects the appropriate number of
 gaussian distribution for each pixel. (Remember, in last case, we took a K gaussian distributions
-throughout the algorithm). It provides better adaptibility to varying scenes due illumination
+throughout the algorithm). It provides better adaptability to varying scenes due illumination
 changes etc.
 
 As in previous case, we have to create a background subtractor object. Here, you have an option of
