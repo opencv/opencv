@@ -15,7 +15,7 @@ I/O APIs used as backend.
 
 ![Video I/O with OpenCV](pics/videoio_overview.svg)
 
-Some backends such as (DSHOW) Direct Show, Video For Windows (VFW), Microsoft Media Foundation (MSMF),
+Some backends such as (DSHOW) Direct Show, Microsoft Media Foundation (MSMF),
 Video 4 Linux (V4L), etc... are interfaces to the video I/O library provided by the operating system.
 
 Some others backends like OpenNI2 for Kinect, Intel Perceptual Computing SDK, GStreamer,
@@ -62,11 +62,11 @@ cap.open(filename, cv::CAP_DSHOW);
 Backends are available only if they have been built with your OpenCV binaries.
 
 Check in `opencv2/cvconfig.h` to know which APIs are currently available
-(e.g. `HAVE_MSMF, HAVE_VFW, HAVE_LIBV4L`, etc...).
+(e.g. `HAVE_MSMF, HAVE_V4L2`, etc...).
 
 To enable/disable APIs, you have to:
   1. re-configure OpenCV using appropriates CMake switches
-     (e.g. `-DWITH_MSMF=ON -DWITH_VFW=ON ... `) or checking related switch in cmake-gui
+     (e.g. `-DWITH_MSMF=ON -DWITH_DSHOW=ON ... `) or checking related switch in cmake-gui
   2. rebuild OpenCV itself
 
 #### Use 3rd party drivers or cameras
