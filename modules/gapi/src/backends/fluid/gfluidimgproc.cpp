@@ -832,7 +832,11 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                             const Scalar  & /* borderValue */,
                                   Buffer  &    scratch)
     {
-        cv::gapi::own::Size bufsize(ksize + ksize, 1);
+        // TODO: support kernel height 3, 5, 7, 9, ...
+        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
+
+        int ksz = (ksize == CV_SCHARR) ? 3 : ksize;
+        cv::gapi::own::Size bufsize(ksz + ksz, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
@@ -859,7 +863,7 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                                       int          borderType,
                             const cv::Scalar  &    borderValue)
     {
-        return { borderType, borderValue};
+        return {borderType, borderValue};
     }
 };
 
