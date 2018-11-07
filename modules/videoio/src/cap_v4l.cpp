@@ -283,12 +283,14 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool convert_rgb;
     bool frame_allocated;
     bool returnFrame;
-    // To select a video input set cv::CAP_PROP_MODE to channel number.
-    // If the new channel number is greater than 32768 or less than 0, then a video input will not change
+    // To select a video input set cv::CAP_PROP_CHANNEL to channel number.
+    // If the new channel number is than 0, then a video input will not change
     int channelNumber;
     // Backward compatibility for parameters. If set parameters will be converted to/from [0,1) range.
-    // To select real parameters mode set cv::CAP_PROP_MODE to 65536
-    // any other value greater than 32768 revert backward compatibility mode.
+    // Default mode is set by the environment variable `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED`:
+    // - disable backward compatibility mode: `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED=0`
+    // To select real parameters mode after devise is open set cv::CAP_PROP_MODE to 0
+    // any other value revert the backward compatibility mode.
     // Backward compatibility mode affects the following parameters:
     // cv::CAP_PROP_*: BRIGHTNESS,CONTRAST,SATURATION,HUE,GAIN,EXPOSURE,FOCUS,AUTOFOCUS,AUTO_EXPOSURE.
     bool compatibilityMode;
@@ -767,7 +769,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
-    compatibilityMode = true;
+    compatibilityMode = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
     channelNumber = -1;
     bufferIndex = -1;
 
@@ -1677,6 +1679,8 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
     case cv::CAP_PROP_FORMAT:
         return CV_MAKETYPE(IPL2CV_DEPTH(frame.depth), frame.nChannels);
     case cv::CAP_PROP_MODE:
+        if (compatibilityMode)
+            return palette;
         return compatibilityMode;
     case cv::CAP_PROP_CONVERT_RGB:
         return convert_rgb;
