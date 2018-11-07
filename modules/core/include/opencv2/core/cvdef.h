@@ -425,7 +425,7 @@ as well as exposing the C++11 enum class members for backwards compatibility
 
 @code
     // Provides operators required for flag enums
-    CV_ENUM_FLAGS(AccessFlag);
+    CV_ENUM_FLAGS(AccessFlag)
 
     // Exposes the listed members of the enum class AccessFlag to the current namespace
     CV_ENUM_CLASS_EXPOSE(AccessFlag, ACCESS_READ [, ACCESS_WRITE [, ...] ]);
@@ -539,18 +539,18 @@ static inline EnumType& operator^=(EnumType& _this, const Arg1Type& val)        
 __CV_EXPAND(__CV_CAT(__CV_ENUM_CLASS_EXPOSE_, __CV_VA_NUM_ARGS(__VA_ARGS__))(EnumType, __VA_ARGS__)); \
 
 #define CV_ENUM_FLAGS(EnumType)                                                                       \
-__CV_ENUM_FLAGS_LOGICAL_NOT      (EnumType);                                                          \
-__CV_ENUM_FLAGS_LOGICAL_EQ       (EnumType, int);                                                     \
-__CV_ENUM_FLAGS_LOGICAL_NOT_EQ   (EnumType, int);                                                     \
+__CV_ENUM_FLAGS_LOGICAL_NOT      (EnumType)                                                           \
+__CV_ENUM_FLAGS_LOGICAL_EQ       (EnumType, int)                                                      \
+__CV_ENUM_FLAGS_LOGICAL_NOT_EQ   (EnumType, int)                                                      \
                                                                                                       \
-__CV_ENUM_FLAGS_BITWISE_NOT      (EnumType);                                                          \
-__CV_ENUM_FLAGS_BITWISE_OR       (EnumType, EnumType, EnumType);                                      \
-__CV_ENUM_FLAGS_BITWISE_AND      (EnumType, EnumType, EnumType);                                      \
-__CV_ENUM_FLAGS_BITWISE_XOR      (EnumType, EnumType, EnumType);                                      \
+__CV_ENUM_FLAGS_BITWISE_NOT      (EnumType)                                                           \
+__CV_ENUM_FLAGS_BITWISE_OR       (EnumType, EnumType, EnumType)                                       \
+__CV_ENUM_FLAGS_BITWISE_AND      (EnumType, EnumType, EnumType)                                       \
+__CV_ENUM_FLAGS_BITWISE_XOR      (EnumType, EnumType, EnumType)                                       \
                                                                                                       \
-__CV_ENUM_FLAGS_BITWISE_OR_EQ    (EnumType, EnumType);                                                \
-__CV_ENUM_FLAGS_BITWISE_AND_EQ   (EnumType, EnumType);                                                \
-__CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType);                                                \
+__CV_ENUM_FLAGS_BITWISE_OR_EQ    (EnumType, EnumType)                                                 \
+__CV_ENUM_FLAGS_BITWISE_AND_EQ   (EnumType, EnumType)                                                 \
+__CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                                                 \
 
 /****************************************************************************************\
 *                                    static analysys                                     *

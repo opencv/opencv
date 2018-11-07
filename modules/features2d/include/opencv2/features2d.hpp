@@ -1199,7 +1199,7 @@ enum struct DrawMatchesFlags
   DRAW_RICH_KEYPOINTS = 4 //!< For each keypoint the circle around keypoint with keypoint size and
                           //!< orientation will be drawn.
 };
-CV_ENUM_FLAGS(DrawMatchesFlags);
+CV_ENUM_FLAGS(DrawMatchesFlags)
 
 /** @brief Draws keypoints.
 
