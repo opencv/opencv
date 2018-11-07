@@ -286,14 +286,14 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     // To select a video input set cv::CAP_PROP_CHANNEL to channel number.
     // If the new channel number is than 0, then a video input will not change
     int channelNumber;
-    // Backward compatibility for parameters. If set parameters will be converted to/from [0,1) range.
-    // Default mode is set by the environment variable `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED`:
-    // - disable backward compatibility mode: `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED=0`
+    // Normalize properties. If set parameters will be converted to/from [0,1) range.
+    // Enabled by default (as OpenCV 3.x does).
+    // Value is initialized from the environment variable `OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED`:
     // To select real parameters mode after devise is open set cv::CAP_PROP_MODE to 0
-    // any other value revert the backward compatibility mode.
-    // Backward compatibility mode affects the following parameters:
+    // any other value revert the backward compatibility mode (with normalized properties).
+    // Range normalization affects the following parameters:
     // cv::CAP_PROP_*: BRIGHTNESS,CONTRAST,SATURATION,HUE,GAIN,EXPOSURE,FOCUS,AUTOFOCUS,AUTO_EXPOSURE.
-    bool compatibilityMode;
+    bool normalizePropRange;
 
     /* V4L2 variables */
     buffer buffers[MAX_V4L_BUFFERS + 1];
@@ -539,6 +539,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
             break;
         case V4L2_PIX_FMT_Y16:
             depth = IPL_DEPTH_16U;
+            /* fallthru */
         case V4L2_PIX_FMT_GREY:
             channels = 1;
             break;
@@ -769,7 +770,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
-    compatibilityMode = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
+    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
     channelNumber = -1;
     bufferIndex = -1;
 
@@ -1624,7 +1625,7 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
     }
     _v4l2id = __u32(v4l2id);
     range = cv::Range(queryctrl.minimum, queryctrl.maximum);
-    if (compatibilityMode) {
+    if (normalizePropRange) {
         if (property_id == cv::CAP_PROP_AUTOFOCUS)
             range = Range(0, 1);
         else if (property_id == cv::CAP_PROP_AUTO_EXPOSURE)
@@ -1679,9 +1680,9 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
     case cv::CAP_PROP_FORMAT:
         return CV_MAKETYPE(IPL2CV_DEPTH(frame.depth), frame.nChannels);
     case cv::CAP_PROP_MODE:
-        if (compatibilityMode)
+        if (normalizePropRange)
             return palette;
-        return compatibilityMode;
+        return normalizePropRange;
     case cv::CAP_PROP_CONVERT_RGB:
         return convert_rgb;
     case cv::CAP_PROP_BUFFERSIZE:
@@ -1712,7 +1713,7 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         int value = 0;
         if(!icvControl(v4l2id, value, false))
             return -1.0;
-        if (compatibilityMode && compatibleRange(property_id))
+        if (normalizePropRange && compatibleRange(property_id))
             return ((double)value - range.start) / range.size();
         return  value;
     }
@@ -1773,7 +1774,7 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         return false;
     }
     case cv::CAP_PROP_MODE:
-        compatibilityMode = bool(value);
+        normalizePropRange = bool(value);
         return true;
     case cv::CAP_PROP_BUFFERSIZE:
         if (bufferSize == value)
@@ -1809,7 +1810,7 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         __u32 v4l2id;
         if (!controlInfo(property_id, v4l2id, range))
             return false;
-        if (compatibilityMode && compatibleRange(property_id))
+        if (normalizePropRange && compatibleRange(property_id))
             value = cv::saturate_cast<int>(_value * range.size() + range.start);
         return icvControl(v4l2id, value, true);
     }
