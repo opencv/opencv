@@ -93,7 +93,7 @@ struct CvCapture
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
     virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
 };
 
 /*************************** CvVideoWriter structure ****************************/
@@ -107,18 +107,12 @@ struct CvVideoWriter
 
 CvCapture * cvCreateCameraCapture_V4L( int index );
 CvCapture * cvCreateCameraCapture_V4L( const char* deviceName );
-CvCapture * cvCreateCameraCapture_DC1394( int index );
 CvCapture * cvCreateCameraCapture_DC1394_2( int index );
 CvCapture* cvCreateCameraCapture_MIL( int index );
 CvCapture* cvCreateCameraCapture_Giganetix( int index );
-CvCapture * cvCreateCameraCapture_CMU( int index );
 CvCapture* cvCreateFileCapture_Win32( const char* filename );
-CvCapture* cvCreateCameraCapture_VFW( int index );
-CvCapture* cvCreateFileCapture_VFW( const char* filename );
 CvVideoWriter* cvCreateVideoWriter_Win32( const char* filename, int fourcc,
                                           double fps, CvSize frameSize, int is_color );
-CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
 CvCapture* cvCreateCameraCapture_DShow( int index );
 CvCapture* cvCreateCameraCapture_OpenNI( int index );
 CvCapture* cvCreateCameraCapture_OpenNI2( int index );
@@ -150,7 +144,6 @@ CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourc
                                                 double fps, CvSize frameSize, int is_color );
 
 
-CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
 CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
 CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
@@ -167,7 +160,7 @@ namespace cv
         virtual bool grabFrame() = 0;
         virtual bool retrieveFrame(int, OutputArray) = 0;
         virtual bool isOpened() const = 0;
-        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
     };
 
     class IVideoWriter
