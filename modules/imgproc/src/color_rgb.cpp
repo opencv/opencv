@@ -111,7 +111,7 @@ struct RGB2RGB
         {
             _Tp t0 = src[0], t1 = src[1], t2 = src[2];
             dst[bi  ] = t0;
-            dst[1]         = t1;
+            dst[1]    = t1;
             dst[bi^2] = t2;
             if(dcn == 4)
             {
@@ -127,11 +127,11 @@ struct RGB2RGB
 
 /////////// Transforming 16-bit (565 or 555) RGB to/from 24/32-bit (888[8]) RGB //////////
 
-struct RGB5x52RGB
+struct RGB5x52RGBold
 {
     typedef uchar channel_type;
 
-    RGB5x52RGB(int _dstcn, int _blueIdx, int _greenBits)
+    RGB5x52RGBold(int _dstcn, int _blueIdx, int _greenBits)
         : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits)
     {
         #if CV_NEON
@@ -234,6 +234,117 @@ struct RGB5x52RGB
     uint16x8_t v_n3, v_n7, v_mask;
     uint8x16_t v_255, v_0;
     #endif
+};
+
+
+struct RGB5x52RGB
+{
+    typedef uchar channel_type;
+
+    RGB5x52RGB(int _dstcn, int _blueIdx, int _greenBits)
+        : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits)
+    { }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int dcn = dstcn, bidx = blueIdx, gb = greenBits;
+        int i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+
+        for(; i < n-vsize+1;
+            i += vsize, src += vsize*sizeof(ushort), dst += vsize*dcn)
+        {
+            v_uint16 t0 = v_reinterpret_as_u16(vx_load(src));
+            v_uint16 t1 = v_reinterpret_as_u16(vx_load(src +
+                                                       sizeof(ushort)*v_uint16::nlanes));
+
+            v_uint8 r, g, b, a;
+            v_uint16 v255 = vx_setall_u16(255);
+
+            v_uint16 b0 = (t0 << 3) & v255;
+            v_uint16 b1 = (t1 << 3) & v255;
+            b = v_pack(b0, b1);
+
+            v_uint16 g0, g1, r0, r1, a0, a1;
+
+            if( gb == 6 )
+            {
+                g0 = (t0 >> 3) & v255;
+                g1 = (t1 >> 3) & v255;
+                g = v_pack(g0, g1);
+                g &= vx_setall_u8(~3);
+
+                r0 = (t0 >> 8) & v255;
+                r1 = (t1 >> 8) & v255;
+                r = v_pack(r0, r1);
+                r &= vx_setall_u8(~7);
+
+                a = vx_setall_u8(255);
+            }
+            else
+            {
+                g0 = (t0 >> 2) & v255;
+                g1 = (t1 >> 2) & v255;
+                g = v_pack(g0, g1);
+                g &= vx_setall_u8(~7);
+
+                r0 = (t0 >> 7) & v255;
+                r1 = (t1 >> 7) & v255;
+                r = v_pack(r0, r1);
+                r &= vx_setall_u8(~7);
+
+                a0 = t0 >> 15;
+                a1 = t1 >> 15;
+                a = v_pack(a0, a1);
+                a *= vx_setall_u8(255);
+            }
+
+            if(bidx == 2)
+                swap(b, r);
+
+            if(dcn == 4)
+            {
+                v_store_interleave(dst, b, g, r, a);
+            }
+            else
+            {
+                v_store_interleave(dst, b, g, r);
+            }
+        }
+        vx_cleanup();
+#endif
+
+        for( ; i < n; i++, src += sizeof(ushort), dst += dcn )
+        {
+            unsigned t = ((const ushort*)src)[0];
+            uchar b, g, r, a;
+
+            b = (uchar)(t << 3);
+
+            if( gb == 6 )
+            {
+                g = (uchar)((t >> 3) & ~3);
+                r = (uchar)((t >> 8) & ~7);
+                a = 255;
+            }
+            else
+            {
+                g = (uchar)((t >> 2) & ~7);
+                r = (uchar)((t >> 7) & ~7);
+                a = (uchar)(((t & 0x8000) >> 15) * 255);
+            }
+
+            dst[bidx]     = b;
+            dst[1]        = g;
+            dst[bidx ^ 2] = r;
+            if( dcn == 4 )
+                dst[3] = a;
+        }
+    }
+
+    int dstcn, blueIdx, greenBits;
 };
 
 
