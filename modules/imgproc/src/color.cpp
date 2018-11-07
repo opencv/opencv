@@ -191,7 +191,10 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
         case COLOR_RGBA2BGR: case COLOR_RGB2BGR:  case COLOR_BGRA2RGBA:
-            cvtColorBGR2BGR(_src, _dst, dcn, swapBlue(code));
+            if(_src.channels() == 1)
+                cvtColorGray2BGR(_src, _dst, dcn);
+            else
+                cvtColorBGR2BGR(_src, _dst, dcn, swapBlue(code));
             break;
 
         case COLOR_BGR2BGR565:  case COLOR_BGR2BGR555: case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555:
