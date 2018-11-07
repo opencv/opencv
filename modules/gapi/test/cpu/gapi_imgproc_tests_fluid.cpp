@@ -36,6 +36,24 @@ private:
     double _tol;
 };
 
+class AbsToleranceSobelFluid : public Wrappable<AbsToleranceSobelFluid>
+{
+public:
+    AbsToleranceSobelFluid(double tol) : tolerance(tol) {}
+    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
+    {
+        cv::Mat diff, a1, a2, b, base;
+        cv::absdiff(in1, in2, diff);
+        a1 = cv::abs(in1);
+        a2 = cv::abs(in2);
+        cv::max(a1, a2, b);
+        cv::max(1, b, base);  // base = max{1, |in1|, |in2|}
+        return cv::countNonZero(diff > tolerance*base) == 0;
+    }
+private:
+    double tolerance;
+};
+
 class AbsTolerance32FFluid : public Wrappable<AbsTolerance32FFluid>
 {
 public:
@@ -217,6 +235,18 @@ INSTANTIATE_TEST_CASE_P(SobelTestFluid, SobelTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1, CV_32F),
+                                Values(0, 1),
+                                Values(1, 2),
+                                Values(true, false),
+                                Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SobelTestFluid32F, SobelTest,
+                        Combine(Values(AbsToleranceSobelFluid(1e-3).to_compare_f()),
+                                Values(CV_32FC1),
+                                Values(3), // add kernel size=5 when implementation is ready
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_32F),
                                 Values(0, 1),
                                 Values(1, 2),
                                 Values(true, false),

@@ -817,6 +817,7 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         UNARY_( float, uchar , run_sobel, dst, src, kx, ky, ksize, scale, delta);
         UNARY_( float, ushort, run_sobel, dst, src, kx, ky, ksize, scale, delta);
         UNARY_( float,  short, run_sobel, dst, src, kx, ky, ksize, scale, delta);
+        UNARY_( float,  float, run_sobel, dst, src, kx, ky, ksize, scale, delta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
