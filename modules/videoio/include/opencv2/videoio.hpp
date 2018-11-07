@@ -649,6 +649,18 @@ public:
     */
     CV_WRAP VideoCapture(int index);
 
+    /** @overload
+    @brief  Opens a camera for video capturing
+
+    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
+    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L2.
+
+    @sa The list of supported API backends cv::VideoCaptureAPIs
+    */
+    CV_WRAP VideoCapture(int index, int apiPreference);
+
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.

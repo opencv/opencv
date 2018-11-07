@@ -75,6 +75,12 @@ VideoCapture::VideoCapture(int index)
     open(index);
 }
 
+VideoCapture::VideoCapture(int index, int apiPreference)
+{
+    CV_TRACE_FUNCTION();
+    open(index, apiPreference);
+}
+
 VideoCapture::~VideoCapture()
 {
     CV_TRACE_FUNCTION();
@@ -127,6 +133,17 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
 
     if (isOpened()) release();
 
+    if (apiPreference == CAP_ANY)
+    {
+        // interpret preferred interface (0 = autodetect)
+        int backendID = (cameraNum / 100) * 100;
+        if (backendID)
+        {
+            cameraNum %= 100;
+            apiPreference = backendID;
+        }
+    }
+
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
@@ -156,14 +173,7 @@ bool VideoCapture::open(int index)
 {
     CV_TRACE_FUNCTION();
 
-    // interpret preferred interface (0 = autodetect)
-    int backendID = (index / 100) * 100;
-    if (backendID)
-    {
-        index %= 100;
-    }
-
-    return open(index, backendID);
+    return open(index, CAP_ANY);
 }
 
 bool VideoCapture::isOpened() const
