@@ -1221,8 +1221,6 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     return kernel.run(2, globalsize, (localsize[0] == 0) ? NULL : localsize, false);
 }
 
-#define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
-
 static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                            Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
@@ -1298,12 +1296,12 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[1] = size.height / pxPerWorkItemY;
 
         // Need some padding in the private array for pixels
-        int privDataWidth = ROUNDUP(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
+        int privDataWidth = roundUp(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
 
         // Make the global size a nice round number so the runtime can pick
         // from reasonable choices for the workgroup size
         const int wgRound = 256;
-        globalsize[0] = ROUNDUP(globalsize[0], wgRound);
+        globalsize[0] = roundUp(globalsize[0], wgRound);
 
         char build_options[1024], cvt[2][40];
         sprintf(build_options, "-D cn=%d "
@@ -1395,9 +1393,6 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     return kernel.run(2, globalsize, localsize, false);
 }
-
-#undef DIVUP
-#undef ROUNDUP
 
 #endif
 
