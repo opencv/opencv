@@ -13,7 +13,9 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
+import org.opencv.core.Size;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Rect2d;
 import org.opencv.core.DMatch;
 import org.opencv.core.KeyPoint;
@@ -769,5 +771,42 @@ public class Converters {
             mi.release();
         }
         mats.clear();
+    }
+
+    public static Mat vector_RotatedRect_to_Mat(List<RotatedRect> rs) {
+        Mat res;
+        int count = (rs != null) ? rs.size() : 0;
+        if (count > 0) {
+            res = new Mat(count, 1, CvType.CV_32FC(5));
+            float[] buff = new float[5 * count];
+            for (int i = 0; i < count; i++) {
+                RotatedRect r = rs.get(i);
+                buff[5 * i] = (float)r.center.x;
+                buff[5 * i + 1] = (float)r.center.y;
+                buff[5 * i + 2] = (float)r.size.width;
+                buff[5 * i + 3] = (float)r.size.height;
+                buff[5 * i + 4] = (float)r.angle;
+            }
+            res.put(0, 0, buff);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    public static void Mat_to_vector_RotatedRect(Mat m, List<RotatedRect> rs) {
+        if (rs == null)
+            throw new java.lang.IllegalArgumentException("rs == null");
+        int count = m.rows();
+        if (CvType.CV_32FC(5) != m.type() || m.cols() != 1)
+            throw new java.lang.IllegalArgumentException(
+                    "CvType.CV_32FC5 != m.type() ||  m.rows()!=1\n" + m);
+
+        rs.clear();
+        float[] buff = new float[5 * count];
+        m.get(0, 0, buff);
+        for (int i = 0; i < count; i++) {
+            rs.add(new RotatedRect(new Point(buff[5 * i], buff[5 * i + 1]), new Size(buff[5 * i + 2], buff[5 * i + 3]), buff[5 * i + 4]));
+        }
     }
 }

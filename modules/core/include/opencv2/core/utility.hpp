@@ -521,7 +521,7 @@ static inline size_t divUp(size_t a, unsigned int b)
 
 /** @brief Enables or disables the optimized code.
 
-The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX,
+The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,
 and other instructions on the platforms that support it). It sets a global flag that is further
 checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only
 safe to call the function on the very top level in your application where you can be sure that no

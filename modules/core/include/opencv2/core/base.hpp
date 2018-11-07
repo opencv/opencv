@@ -325,7 +325,7 @@ This macro can be used to construct an error message on-fly to include some dyna
 for example:
 @code
     // note the extra parentheses around the formatted text message
-    CV_Error_( CV_StsOutOfRange,
+    CV_Error_(Error::StsOutOfRange,
     ("the value at (%d, %d)=%g is out of range", badPt.x, badPt.y, badValue));
 @endcode
 @param code one of Error::Code
