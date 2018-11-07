@@ -2505,7 +2505,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
     _mm_storeu_si128((__m128i*)ptr, ah);
 }
 
-inline void v256_cleanup() { _mm256_zeroupper(); }
+inline void v256_cleanup() { _mm256_zeroall(); }
 
 //! @name Check SIMD256 support
 //! @{

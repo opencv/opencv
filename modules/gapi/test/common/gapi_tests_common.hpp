@@ -347,5 +347,36 @@ private:
     double _tol1, _tol2, _tol3;
 };
 
+class AbsToleranceSobel : public Wrappable<AbsToleranceSobel>
+{
+public:
+    AbsToleranceSobel(double tol) : _tol(tol) {}
+    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
+    {
+        cv::Mat diff, a1, a2, b, base;
+        cv::absdiff(in1, in2, diff);
+        a1 = cv::abs(in1);
+        a2 = cv::abs(in2);
+        cv::max(a1, a2, b);
+        cv::max(1, b, base);  // base = max{1, |in1|, |in2|}
+
+        if(cv::countNonZero(diff > _tol*base) != 0)
+        {
+            std::cout << "AbsToleranceSobel error: Number of pixels in" << std::endl;
+            std::cout << "G-API output and reference output matrixes with absolute difference which is more than relative threshold defined by tolerance * max{1, |in1|, |in2|}" << std::endl;
+            std::cout << "relative threshold defined by tolerance * max{1, |in1|, |in2|} exceeds 0"<< std::endl;
+            std::cout << "for tolerance " << _tol << std::endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+
+    }
+private:
+    double _tol;
+};
+
 
 }
