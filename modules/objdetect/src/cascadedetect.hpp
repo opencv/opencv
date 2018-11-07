@@ -89,7 +89,7 @@ public:
                           double scaleFactor = 1.1,
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
-                          Size maxSize = Size() ) CV_OVERRIDE;
+                          Size maxSize = Size() ) const CV_OVERRIDE;
 
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -97,7 +97,7 @@ public:
                           double scaleFactor=1.1,
                           int minNeighbors=3, int flags=0,
                           Size minSize=Size(),
-                          Size maxSize=Size() ) CV_OVERRIDE;
+                          Size maxSize=Size() ) const CV_OVERRIDE;
 
     void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -107,16 +107,16 @@ public:
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
                           Size maxSize = Size(),
-                          bool outputRejectLevels = false ) CV_OVERRIDE;
+                          bool outputRejectLevels = false ) const CV_OVERRIDE;
 
 
     bool isOldFormatCascade() const CV_OVERRIDE;
     Size getOriginalWindowSize() const CV_OVERRIDE;
     int getFeatureType() const CV_OVERRIDE;
-    void* getOldCascade() CV_OVERRIDE;
+    void* getOldCascade() const CV_OVERRIDE;
 
     void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) CV_OVERRIDE;
-    Ptr<MaskGenerator> getMaskGenerator() CV_OVERRIDE;
+    Ptr<MaskGenerator> getMaskGenerator() const CV_OVERRIDE;
 
 protected:
     enum { SUM_ALIGN = 64 };
@@ -124,15 +124,15 @@ protected:
     bool detectSingleScale( InputArray image, Size processingRectSize,
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
-                            Size sumSize0, bool outputRejectLevels = false );
+                            Size sumSize0, bool outputRejectLevels = false ) const;
 #ifdef HAVE_OPENCL
     bool ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
-                                         std::vector<Rect>& candidates );
+                                         std::vector<Rect>& candidates ) const;
 #endif
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
-                                    bool outputRejectLevels = false );
+                                    bool outputRejectLevels = false ) const;
 
     enum { MAX_FACES = 10000 };
     enum { BOOST = 0 };
@@ -146,18 +146,18 @@ protected:
     friend class SparseCascadeClassifierInvoker;
 
     template<class FEval>
-    friend int predictOrdered( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
+    friend int predictOrdered(const CascadeClassifierImpl& cascade, const Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictCategorical( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
+    friend int predictCategorical(const CascadeClassifierImpl& cascade, const Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictOrderedStump( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
+    friend int predictOrderedStump(const CascadeClassifierImpl& cascade, const Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
     template<class FEval>
-    friend int predictCategoricalStump( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
+    friend int predictCategoricalStump(const CascadeClassifierImpl& cascade, const Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
-    int runAt( Ptr<FeatureEvaluator>& feval, Point pt, int scaleIdx, double& weight );
+    int runAt(const Ptr<FeatureEvaluator>& feval, Point pt, int scaleIdx, double& weight ) const;
 
     class Data
     {
@@ -217,14 +217,14 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 
     Ptr<MaskGenerator> maskGenerator;
-    UMat ugrayImage;
-    UMat ufacepos, ustages, unodes, uleaves, usubsets;
+    mutable UMat ugrayImage;
+    mutable UMat ufacepos, ustages, unodes, uleaves, usubsets;
 #ifdef HAVE_OPENCL
-    ocl::Kernel haarKernel, lbpKernel;
-    bool tryOpenCL;
+    mutable ocl::Kernel haarKernel, lbpKernel;
+    mutable bool tryOpenCL;
 #endif
 
-    Mutex mtx;
+    mutable Mutex mtx;
 };
 
 #define CC_CASCADE_PARAMS "cascadeParams"
@@ -481,33 +481,33 @@ inline int LBPEvaluator::OptFeature :: calc( const int* p ) const
 //----------------------------------------------  predictor functions -------------------------------------
 
 template<class FEval>
-inline int predictOrdered( CascadeClassifierImpl& cascade,
-                           Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
+inline int predictOrdered(const CascadeClassifierImpl& cascade,
+                          const Ptr<FeatureEvaluator> &_featureEvaluator, double& sum)
 {
     CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
-    float* cascadeLeaves = &cascade.data.leaves[0];
-    CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
-    CascadeClassifierImpl::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
-    CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
+    const float* cascadeLeaves = &cascade.data.leaves[0];
+    const CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
+    const CascadeClassifierImpl::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
+    const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
     for( int si = 0; si < nstages; si++ )
     {
-        CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
+        const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
         sum = 0;
 
         for( wi = 0; wi < ntrees; wi++ )
         {
-            CascadeClassifierImpl::Data::DTree& weak = cascadeWeaks[stage.first + wi];
+            const CascadeClassifierImpl::Data::DTree& weak = cascadeWeaks[stage.first + wi];
             int idx = 0, root = nodeOfs;
 
             do
             {
-                CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[root + idx];
+                const CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[root + idx];
                 double val = featureEvaluator(node.featureIdx);
                 idx = val < node.threshold ? node.left : node.right;
             }
@@ -523,34 +523,34 @@ inline int predictOrdered( CascadeClassifierImpl& cascade,
 }
 
 template<class FEval>
-inline int predictCategorical( CascadeClassifierImpl& cascade,
-                               Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
+inline int predictCategorical(const CascadeClassifierImpl& cascade,
+                              const Ptr<FeatureEvaluator> &_featureEvaluator, double& sum)
 {
     CV_INSTRUMENT_REGION();
 
     int nstages = (int)cascade.data.stages.size();
     int nodeOfs = 0, leafOfs = 0;
-    FEval& featureEvaluator = (FEval&)*_featureEvaluator;
+    const FEval& featureEvaluator = (FEval&)*_featureEvaluator;
     size_t subsetSize = (cascade.data.ncategories + 31)/32;
-    int* cascadeSubsets = &cascade.data.subsets[0];
-    float* cascadeLeaves = &cascade.data.leaves[0];
-    CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
-    CascadeClassifierImpl::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
-    CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
+    const int* cascadeSubsets = &cascade.data.subsets[0];
+    const float* cascadeLeaves = &cascade.data.leaves[0];
+    const CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
+    const CascadeClassifierImpl::Data::DTree* cascadeWeaks = &cascade.data.classifiers[0];
+    const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
     for(int si = 0; si < nstages; si++ )
     {
-        CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
+        const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
         sum = 0;
 
         for( wi = 0; wi < ntrees; wi++ )
         {
-            CascadeClassifierImpl::Data::DTree& weak = cascadeWeaks[stage.first + wi];
+            const CascadeClassifierImpl::Data::DTree& weak = cascadeWeaks[stage.first + wi];
             int idx = 0, root = nodeOfs;
             do
             {
-                CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[root + idx];
+                const CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[root + idx];
                 int c = featureEvaluator(node.featureIdx);
                 const int* subset = &cascadeSubsets[(root + idx)*subsetSize];
                 idx = (subset[c>>5] & (1 << (c & 31))) ? node.left : node.right;
@@ -567,8 +567,8 @@ inline int predictCategorical( CascadeClassifierImpl& cascade,
 }
 
 template<class FEval>
-inline int predictOrderedStump( CascadeClassifierImpl& cascade,
-                                Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
+inline int predictOrderedStump(const CascadeClassifierImpl& cascade,
+                               const Ptr<FeatureEvaluator> &_featureEvaluator, double& sum)
 {
     CV_INSTRUMENT_REGION();
 
@@ -606,8 +606,8 @@ inline int predictOrderedStump( CascadeClassifierImpl& cascade,
 }
 
 template<class FEval>
-inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
-                                    Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
+inline int predictCategoricalStump(const CascadeClassifierImpl& cascade,
+                                   const Ptr<FeatureEvaluator> &_featureEvaluator, double& sum)
 {
     CV_INSTRUMENT_REGION();
 

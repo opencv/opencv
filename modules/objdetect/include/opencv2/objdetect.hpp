@@ -181,14 +181,14 @@ public:
                            CV_OUT std::vector<Rect>& objects,
                            double scaleFactor,
                            int minNeighbors, int flags,
-                           Size minSize, Size maxSize ) = 0;
+                           Size minSize, Size maxSize ) const = 0;
 
     virtual void detectMultiScale( InputArray image,
                            CV_OUT std::vector<Rect>& objects,
                            CV_OUT std::vector<int>& numDetections,
                            double scaleFactor,
                            int minNeighbors, int flags,
-                           Size minSize, Size maxSize ) = 0;
+                           Size minSize, Size maxSize ) const = 0;
 
     virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
@@ -197,12 +197,12 @@ public:
                                    double scaleFactor,
                                    int minNeighbors, int flags,
                                    Size minSize, Size maxSize,
-                                   bool outputRejectLevels ) = 0;
+                                   bool outputRejectLevels ) const = 0;
 
     virtual bool isOldFormatCascade() const = 0;
     virtual Size getOriginalWindowSize() const = 0;
     virtual int getFeatureType() const = 0;
-    virtual void* getOldCascade() = 0;
+    virtual void* getOldCascade() const = 0;
 
     class CV_EXPORTS MaskGenerator
     {
@@ -212,7 +212,7 @@ public:
         virtual void initializeMask(const Mat& /*src*/) { }
     };
     virtual void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) = 0;
-    virtual Ptr<MaskGenerator> getMaskGenerator() = 0;
+    virtual Ptr<MaskGenerator> getMaskGenerator() const = 0;
 };
 
 /** @example samples/cpp/facedetect.cpp
@@ -272,7 +272,7 @@ public:
                           double scaleFactor = 1.1,
                           int minNeighbors = 3, int flags = 0,
                           Size minSize = Size(),
-                          Size maxSize = Size() );
+                          Size maxSize = Size() ) const;
 
     /** @overload
     @param image Matrix of the type CV_8U containing an image where objects are detected.
@@ -295,7 +295,7 @@ public:
                           double scaleFactor=1.1,
                           int minNeighbors=3, int flags=0,
                           Size minSize=Size(),
-                          Size maxSize=Size() );
+                          Size maxSize=Size() ) const;
 
     /** @overload
     This function allows you to retrieve the final stage decision certainty of classification.
@@ -322,17 +322,17 @@ public:
                                   int minNeighbors = 3, int flags = 0,
                                   Size minSize = Size(),
                                   Size maxSize = Size(),
-                                  bool outputRejectLevels = false );
+                                  bool outputRejectLevels = false ) const;
 
     CV_WRAP bool isOldFormatCascade() const;
     CV_WRAP Size getOriginalWindowSize() const;
     CV_WRAP int getFeatureType() const;
-    void* getOldCascade();
+    void* getOldCascade() const;
 
     CV_WRAP static bool convert(const String& oldcascade, const String& newcascade);
 
     void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
-    Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();
+    Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator() const;
 
     Ptr<BaseCascadeClassifier> cc;
 };
