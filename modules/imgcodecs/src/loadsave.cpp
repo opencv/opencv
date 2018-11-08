@@ -437,18 +437,18 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     /// set the filename in the driver
     decoder->setSource( filename );
 
-    CV_TRY
+    try
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
             return 0;
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
         return 0;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
         return 0;
@@ -493,16 +493,16 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     // read the image data
     bool success = false;
-    CV_TRY
+    try
     {
         if (decoder->readData(*data))
             success = true;
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
     }
@@ -559,18 +559,18 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     decoder->setSource(filename);
 
     // read the header to make sure it succeeds
-    CV_TRY
+    try
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
             return 0;
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
         return 0;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
         return 0;
@@ -598,16 +598,16 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         // read the image data
         Mat mat(size.height, size.width, type);
         bool success = false;
-        CV_TRY
+        try
         {
             if (decoder->readData(mat))
                 success = true;
         }
-        CV_CATCH (cv::Exception, e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
         }
@@ -777,16 +777,16 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool success = false;
-    CV_TRY
+    try
     {
         if (decoder->readHeader())
             success = true;
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
     }
@@ -839,16 +839,16 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     success = false;
-    CV_TRY
+    try
     {
         if (decoder->readData(*data))
             success = true;
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
     }

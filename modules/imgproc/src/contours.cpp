@@ -1820,7 +1820,7 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     }
     else
     {
-        CV_TRY
+        try
         {
             scanner = cvStartFindContours_Impl( img, storage, cntHeaderSize, mode, method, offset,
                                             needFillBorder);
@@ -1832,11 +1832,11 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
             }
             while( contour != 0 );
         }
-        CV_CATCH_ALL
+        catch(...)
         {
             if( scanner )
                 cvEndFindContours(&scanner);
-            CV_RETHROW();
+            throw;
         }
 
         *firstContour = cvEndFindContours( &scanner );
