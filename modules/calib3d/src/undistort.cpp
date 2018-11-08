@@ -44,7 +44,7 @@
 #include "distortion_model.hpp"
 #include "undistort.hpp"
 
-#include "opencv2/calib3d/calib3d_c.h"
+#include "calib3d_c_api.h"
 
 cv::Mat cv::getDefaultNewCameraMatrix( InputArray _cameraMatrix, Size imgsize,
                                bool centerPrincipalPoint )
