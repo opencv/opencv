@@ -88,16 +88,16 @@ See @ref videoio_overview for more information.
 */
 enum VideoCaptureAPIs {
        CAP_ANY          = 0,            //!< Auto detect == 0
-       CAP_VFW          = 200,          //!< Video For Windows (platform native)
+       CAP_VFW          = 200,          //!< Video For Windows (obsolete, removed)
        CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
        CAP_V4L2         = CAP_V4L,      //!< Same as CAP_V4L
        CAP_FIREWIRE     = 300,          //!< IEEE 1394 drivers
-       CAP_FIREWARE     = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
-       CAP_IEEE1394     = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
-       CAP_DC1394       = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
-       CAP_CMU1394      = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
-       CAP_QT           = 500,          //!< QuickTime
-       CAP_UNICAP       = 600,          //!< Unicap drivers
+       CAP_FIREWARE     = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
+       CAP_IEEE1394     = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
+       CAP_DC1394       = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
+       CAP_CMU1394      = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
+       CAP_QT           = 500,          //!< QuickTime (obsolete, removed)
+       CAP_UNICAP       = 600,          //!< Unicap drivers (obsolete, removed)
        CAP_DSHOW        = 700,          //!< DirectShow (via videoInput)
        CAP_PVAPI        = 800,          //!< PvAPI, Prosilica GigE SDK
        CAP_OPENNI       = 900,          //!< OpenNI (for Kinect)
@@ -815,8 +815,8 @@ public:
 
     The constructors/functions initialize video writers.
     -   On Linux FFMPEG is used to write videos;
-    -   On Windows FFMPEG or VFW is used;
-    -   On MacOSX QTKit is used.
+    -   On Windows FFMPEG or MSWF or DSHOW is used;
+    -   On MacOSX AVFoundation is used.
      */
     CV_WRAP VideoWriter();
 
