@@ -25,6 +25,8 @@
 #include "gfluidimgproc.hpp"
 #include "gfluidutils.hpp"
 
+#include <opencv2/core/hal/intrin.hpp>
+
 #include <cmath>
 #include <cstdlib>
 
@@ -789,7 +791,69 @@ static void run_sobel(Buffer& dst,
     }
 
     // vertical pass
-    for (int l=0; l < width*chan; l++)
+    int l = 0;
+#if CV_SIMD
+    if (std::is_same<DST, short>::value || std::is_same<DST, ushort>::value)
+    {
+        constexpr static int nlanes = v_int16::nlanes;
+        for (; l <= width*chan - nlanes; l += nlanes)
+        {
+            v_float32 sum0 = v_load(&buf[r[0]][l])            * v_setall_f32(ky[0]);
+                sum0 = v_fma(v_load(&buf[r[1]][l]),             v_setall_f32(ky[1]), sum0);
+                sum0 = v_fma(v_load(&buf[r[2]][l]),             v_setall_f32(ky[2]), sum0);
+            v_float32 sum1 = v_load(&buf[r[0]][l + nlanes/2]) * v_setall_f32(ky[0]);
+                sum1 = v_fma(v_load(&buf[r[1]][l + nlanes/2]),  v_setall_f32(ky[1]), sum1);
+                sum1 = v_fma(v_load(&buf[r[2]][l + nlanes/2]),  v_setall_f32(ky[2]), sum1);
+            sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
+            sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
+            v_int32 isum0 = v_round(sum0),
+                    isum1 = v_round(sum1);
+            if (std::is_same<DST, short>::value)
+            {
+                // signed short
+                v_int16 res = v_pack(isum0, isum1);
+                v_store(reinterpret_cast<short*>(&out[l]), res);
+            } else
+            {
+                // unsigned short
+                v_uint16 res = v_pack_u(isum0, isum1);
+                v_store(reinterpret_cast<ushort*>(&out[l]), res);
+            }
+        }
+    }
+    if (std::is_same<DST, uchar>::value)
+    {
+        constexpr static int nlanes = v_int8::nlanes;
+        for (; l <= width*chan - nlanes; l += nlanes)
+        {
+            v_float32 sum0 = v_load(&buf[r[0]][l])              * v_setall_f32(ky[0]);
+                sum0 = v_fma(v_load(&buf[r[1]][l]),               v_setall_f32(ky[1]), sum0);
+                sum0 = v_fma(v_load(&buf[r[2]][l]),               v_setall_f32(ky[2]), sum0);
+            v_float32 sum1 = v_load(&buf[r[0]][l +   nlanes/4]) * v_setall_f32(ky[0]);
+                sum1 = v_fma(v_load(&buf[r[1]][l +   nlanes/4]),  v_setall_f32(ky[1]), sum1);
+                sum1 = v_fma(v_load(&buf[r[2]][l +   nlanes/4]),  v_setall_f32(ky[2]), sum1);
+            v_float32 sum2 = v_load(&buf[r[0]][l + 2*nlanes/4]) * v_setall_f32(ky[0]);
+                sum2 = v_fma(v_load(&buf[r[1]][l + 2*nlanes/4]),  v_setall_f32(ky[1]), sum2);
+                sum2 = v_fma(v_load(&buf[r[2]][l + 2*nlanes/4]),  v_setall_f32(ky[2]), sum2);
+            v_float32 sum3 = v_load(&buf[r[0]][l + 3*nlanes/4]) * v_setall_f32(ky[0]);
+                sum3 = v_fma(v_load(&buf[r[1]][l + 3*nlanes/4]),  v_setall_f32(ky[1]), sum3);
+                sum3 = v_fma(v_load(&buf[r[2]][l + 3*nlanes/4]),  v_setall_f32(ky[2]), sum3);
+            sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
+            sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
+            sum2 = v_fma(sum2, v_setall_f32(scale), v_setall_f32(delta));
+            sum3 = v_fma(sum3, v_setall_f32(scale), v_setall_f32(delta));
+            v_int32 isum0 = v_round(sum0),
+                    isum1 = v_round(sum1),
+                    isum2 = v_round(sum2),
+                    isum3 = v_round(sum3);
+            v_int16 ires0 = v_pack(isum0, isum1),
+                    ires1 = v_pack(isum2, isum3);
+            v_uint8 res = v_pack_u(ires0, ires1);
+            v_store(reinterpret_cast<uchar*>(&out[l]), res);
+        }
+    }
+#endif
+    for (; l < width*chan; l++)
     {
         float sum = buf[r[0]][l]*ky[0] + buf[r[1]][l]*ky[1] + buf[r[2]][l]*ky[2];
         float res = sum*scale + delta;
