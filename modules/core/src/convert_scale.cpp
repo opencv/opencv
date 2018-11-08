@@ -427,6 +427,8 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
     if( src.dims <= 2 )
     {
+        if (_dst.isVector() && dst.size() != src.size())  // https://github.com/opencv/opencv/pull/4159
+            dst = dst.reshape(0, (int)dst.total());
         Size sz = getContinuousSize(src, dst, cn);
         func( src.ptr(), src.step, 0, 0, dst.ptr(), dst.step, sz, scale );
     }

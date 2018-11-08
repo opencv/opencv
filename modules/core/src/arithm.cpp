@@ -199,6 +199,8 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             func = tab[depth1];
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
+        if (_dst.isVector() && dst.size() != src1.size())  // https://github.com/opencv/opencv/pull/4159
+            dst = dst.reshape(0, (int)dst.total());
         Size sz = getContinuousSize(src1, src2, dst);
         size_t len = sz.width*(size_t)cn;
         if( len == (size_t)(int)len )
@@ -630,6 +632,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           usrdata, oclop, false))
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
+        if (_dst.isVector() && dst.size() != src1.size())  // https://github.com/opencv/opencv/pull/4159
+            dst = dst.reshape(0, (int)dst.total());
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
         tab[depth1](src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
         return;
@@ -1279,6 +1283,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         int cn = src1.channels();
         _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
+        if (_dst.isVector() && dst.size() != src1.size())  // https://github.com/opencv/opencv/pull/4159
+            dst = dst.reshape(0, (int)dst.total());
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
         getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
         return;
