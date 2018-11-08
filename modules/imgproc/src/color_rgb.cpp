@@ -127,116 +127,6 @@ struct RGB2RGB
 
 /////////// Transforming 16-bit (565 or 555) RGB to/from 24/32-bit (888[8]) RGB //////////
 
-struct RGB5x52RGBold
-{
-    typedef uchar channel_type;
-
-    RGB5x52RGBold(int _dstcn, int _blueIdx, int _greenBits)
-        : dstcn(_dstcn), blueIdx(_blueIdx), greenBits(_greenBits)
-    {
-        #if CV_NEON
-        v_n3 = vdupq_n_u16(~3);
-        v_n7 = vdupq_n_u16(~7);
-        v_255 = vdupq_n_u8(255);
-        v_0 = vdupq_n_u8(0);
-        v_mask = vdupq_n_u16(0x8000);
-        #endif
-    }
-
-    void operator()(const uchar* src, uchar* dst, int n) const
-    {
-        int dcn = dstcn, bidx = blueIdx, i = 0;
-        if( greenBits == 6 )
-        {
-            #if CV_NEON
-            for ( ; i <= n - 16; i += 16, dst += dcn * 16)
-            {
-                uint16x8_t v_src0 = vld1q_u16((const ushort *)src + i), v_src1 = vld1q_u16((const ushort *)src + i + 8);
-                uint8x16_t v_b = vcombine_u8(vmovn_u16(vshlq_n_u16(v_src0, 3)), vmovn_u16(vshlq_n_u16(v_src1, 3)));
-                uint8x16_t v_g = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 3), v_n3)),
-                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 3), v_n3)));
-                uint8x16_t v_r = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 8), v_n7)),
-                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 8), v_n7)));
-                if (dcn == 3)
-                {
-                    uint8x16x3_t v_dst;
-                    v_dst.val[bidx] = v_b;
-                    v_dst.val[1] = v_g;
-                    v_dst.val[bidx^2] = v_r;
-                    vst3q_u8(dst, v_dst);
-                }
-                else
-                {
-                    uint8x16x4_t v_dst;
-                    v_dst.val[bidx] = v_b;
-                    v_dst.val[1] = v_g;
-                    v_dst.val[bidx^2] = v_r;
-                    v_dst.val[3] = v_255;
-                    vst4q_u8(dst, v_dst);
-                }
-            }
-            #endif
-            for( ; i < n; i++, dst += dcn )
-            {
-                unsigned t = ((const ushort*)src)[i];
-                dst[bidx] = (uchar)(t << 3);
-                dst[1] = (uchar)((t >> 3) & ~3);
-                dst[bidx ^ 2] = (uchar)((t >> 8) & ~7);
-                if( dcn == 4 )
-                    dst[3] = 255;
-            }
-        }
-        else
-        {
-            #if CV_NEON
-            for ( ; i <= n - 16; i += 16, dst += dcn * 16)
-            {
-                uint16x8_t v_src0 = vld1q_u16((const ushort *)src + i), v_src1 = vld1q_u16((const ushort *)src + i + 8);
-                uint8x16_t v_b = vcombine_u8(vmovn_u16(vshlq_n_u16(v_src0, 3)), vmovn_u16(vshlq_n_u16(v_src1, 3)));
-                uint8x16_t v_g = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 2), v_n7)),
-                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 2), v_n7)));
-                uint8x16_t v_r = vcombine_u8(vmovn_u16(vandq_u16(vshrq_n_u16(v_src0, 7), v_n7)),
-                                             vmovn_u16(vandq_u16(vshrq_n_u16(v_src1, 7), v_n7)));
-                if (dcn == 3)
-                {
-                    uint8x16x3_t v_dst;
-                    v_dst.val[bidx] = v_b;
-                    v_dst.val[1] = v_g;
-                    v_dst.val[bidx^2] = v_r;
-                    vst3q_u8(dst, v_dst);
-                }
-                else
-                {
-                    uint8x16x4_t v_dst;
-                    v_dst.val[bidx] = v_b;
-                    v_dst.val[1] = v_g;
-                    v_dst.val[bidx^2] = v_r;
-                    v_dst.val[3] = vbslq_u8(vcombine_u8(vqmovn_u16(vandq_u16(v_src0, v_mask)),
-                                                        vqmovn_u16(vandq_u16(v_src1, v_mask))), v_255, v_0);
-                    vst4q_u8(dst, v_dst);
-                }
-            }
-            #endif
-            for( ; i < n; i++, dst += dcn )
-            {
-                unsigned t = ((const ushort*)src)[i];
-                dst[bidx] = (uchar)(t << 3);
-                dst[1] = (uchar)((t >> 2) & ~7);
-                dst[bidx ^ 2] = (uchar)((t >> 7) & ~7);
-                if( dcn == 4 )
-                    dst[3] = t & 0x8000 ? 255 : 0;
-            }
-        }
-    }
-
-    int dstcn, blueIdx, greenBits;
-    #if CV_NEON
-    uint16x8_t v_n3, v_n7, v_mask;
-    uint8x16_t v_255, v_0;
-    #endif
-};
-
-
 struct RGB5x52RGB
 {
     typedef uchar channel_type;
@@ -268,37 +158,38 @@ struct RGB5x52RGB
             b = v_pack(b0, b1);
 
             v_uint16 g0, g1, r0, r1, a0, a1;
-
+            v_uint8 vn3 = vx_setall_u8(~3), vn7 = vx_setall_u8(~7);
+            v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
             if( gb == 6 )
             {
                 g0 = (t0 >> 3) & v255;
                 g1 = (t1 >> 3) & v255;
                 g = v_pack(g0, g1);
-                g &= vx_setall_u8(~3);
+                g &= vn3;
 
                 r0 = (t0 >> 8) & v255;
                 r1 = (t1 >> 8) & v255;
                 r = v_pack(r0, r1);
-                r &= vx_setall_u8(~7);
+                r &= vn7;
 
-                a = vx_setall_u8(255);
+                a = vn0;
             }
             else
             {
                 g0 = (t0 >> 2) & v255;
                 g1 = (t1 >> 2) & v255;
                 g = v_pack(g0, g1);
-                g &= vx_setall_u8(~7);
+                g &= vn7;
 
                 r0 = (t0 >> 7) & v255;
                 r1 = (t1 >> 7) & v255;
                 r = v_pack(r0, r1);
-                r &= vx_setall_u8(~7);
+                r &= vn7;
 
                 a0 = t0 >> 15;
                 a1 = t1 >> 15;
                 a = v_pack(a0, a1);
-                a *= vx_setall_u8(255);
+                a = v_select(a != vz, vn0, vz);
             }
 
             if(bidx == 2)
@@ -354,92 +245,85 @@ struct RGB2RGB5x5
 
     RGB2RGB5x5(int _srccn, int _blueIdx, int _greenBits)
         : srccn(_srccn), blueIdx(_blueIdx), greenBits(_greenBits)
-    {
-        #if CV_NEON
-        v_n3 = vdup_n_u8(~3);
-        v_n7 = vdup_n_u8(~7);
-        v_mask = vdupq_n_u16(0x8000);
-        v_0 = vdupq_n_u16(0);
-        v_full = vdupq_n_u16(0xffff);
-        #endif
-    }
+    { }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
-        int scn = srccn, bidx = blueIdx, i = 0;
-        if (greenBits == 6)
+        int scn = srccn, bidx = blueIdx, gb = greenBits;
+        int i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        for(; i < n-vsize+1;
+            i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
         {
-            if (scn == 3)
+            v_uint8 r, g, b, a;
+            if(scn == 3)
             {
-                #if CV_NEON
-                for ( ; i <= n - 8; i += 8, src += 24 )
-                {
-                    uint8x8x3_t v_src = vld3_u8(src);
-                    uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
-                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n3)), 3));
-                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 8));
-                    vst1q_u16((ushort *)dst + i, v_dst);
-                }
-                #endif
-                for ( ; i < n; i++, src += 3 )
-                    ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~3) << 3)|((src[bidx^2]&~7) << 8));
+                v_load_deinterleave(src, b, g, r);
             }
             else
             {
-                #if CV_NEON
-                for ( ; i <= n - 8; i += 8, src += 32 )
-                {
-                    uint8x8x4_t v_src = vld4_u8(src);
-                    uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
-                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n3)), 3));
-                    v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 8));
-                    vst1q_u16((ushort *)dst + i, v_dst);
-                }
-                #endif
-                for ( ; i < n; i++, src += 4 )
-                    ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~3) << 3)|((src[bidx^2]&~7) << 8));
+                v_load_deinterleave(src, b, g, r, a);
             }
-        }
-        else if (scn == 3)
-        {
-            #if CV_NEON
-            for ( ; i <= n - 8; i += 8, src += 24 )
+            if(bidx == 2)
+                swap(b, r);
+
+            r = r & vx_setall_u8(~7);
+
+            v_uint16 r0, r1, g0, g1, b0, b1, a0, a1;
+            v_expand(r, r0, r1);
+            v_expand(g, g0, g1);
+            v_expand(b, b0, b1);
+            v_expand(a, a0, a1);
+
+            v_uint16 d0, d1;
+            v_uint16 vn3 = vx_setall_u16(~3), vn7 = vx_setall_u16(~7);
+            v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
+            b0 = b0 >> 3;
+            b1 = b1 >> 3;
+            a0 = a0 != vz;
+            a1 = a1 != vz;
+
+            if(gb == 6)
             {
-                uint8x8x3_t v_src = vld3_u8(src);
-                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
-                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n7)), 2));
-                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 7));
-                vst1q_u16((ushort *)dst + i, v_dst);
+                d0 = b0 | ((g0 & vn3) << 3) | (r0 << 8);
+                d1 = b1 | ((g1 & vn3) << 3) | (r1 << 8);
             }
-            #endif
-            for ( ; i < n; i++, src += 3 )
-                ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~7) << 2)|((src[bidx^2]&~7) << 7));
-        }
-        else
-        {
-            #if CV_NEON
-            for ( ; i <= n - 8; i += 8, src += 32 )
+            else
             {
-                uint8x8x4_t v_src = vld4_u8(src);
-                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src.val[bidx], 3));
-                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[1], v_n7)), 2));
-                v_dst = vorrq_u16(v_dst, vorrq_u16(vshlq_n_u16(vmovl_u8(vand_u8(v_src.val[bidx^2], v_n7)), 7),
-                                                   vbslq_u16(veorq_u16(vceqq_u16(vmovl_u8(v_src.val[3]), v_0), v_full), v_mask, v_0)));
-                vst1q_u16((ushort *)dst + i, v_dst);
+                d0 = b0 | ((g0 & vn7) << 2) | (r0 << 7) | (v_select(a0, v0x8000, vz));
+                d1 = b1 | ((g1 & vn7) << 2) | (r1 << 7) | (v_select(a1, v0x8000, vz));
             }
-            #endif
-            for ( ; i < n; i++, src += 4 )
-                ((ushort*)dst)[i] = (ushort)((src[bidx] >> 3)|((src[1]&~7) << 2)|
-                    ((src[bidx^2]&~7) << 7)|(src[3] ? 0x8000 : 0));
+
+            v_store((ushort*)dst, d0);
+            v_store(((ushort*)dst) + vsize/2, d1);
+        }
+        vx_cleanup();
+#endif
+        for ( ; i < n; i++, src += scn, dst += sizeof(ushort) )
+        {
+            uchar r = src[bidx^2];
+            uchar g = src[1];
+            uchar b = src[bidx];
+            uchar a = scn == 4 ? src[3] : 0;
+
+            ushort d;
+            if (gb == 6)
+            {
+                d = (ushort)((b >> 3)|((g & ~3) << 3)|((r & ~7) << 8));
+            }
+            else
+            {
+                d = (ushort)((b >> 3)|((g & ~7) << 2)|((r & ~7) << 7)|(a ? 0x8000 : 0));
+            }
+            ((ushort*)dst)[0] = d;
         }
     }
 
     int srccn, blueIdx, greenBits;
-    #if CV_NEON
-    uint8x8_t v_n3, v_n7;
-    uint16x8_t v_mask, v_0, v_full;
-    #endif
 };
+
 
 ///////////////////////////////// Color to/from Grayscale ////////////////////////////////
 
