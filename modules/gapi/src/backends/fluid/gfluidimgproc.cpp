@@ -733,8 +733,8 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
 template<typename DST, typename SRC>
 static void run_sobel(Buffer& dst,
                 const View  & src,
-                      float   kx[],
-                      float   ky[],
+                const float   kx[],
+                const float   ky[],
                       int     ksize,
                       float   scale,  // default: 1
                       float   delta,  // default: 0
@@ -760,22 +760,38 @@ static void run_sobel(Buffer& dst,
     GAPI_DbgAssert(ksize == 3);
 //  float buf[3][width * chan];
 
+    int y  = dst.y();
+    int y0 = dst.priv().writeStart();
+//  int y1 = dst.priv().writeEnd();
+
+    int r[3];
+    r[0] = (y - y0)     % 3;  // buf[r[0]]: previous
+    r[1] = (y - y0 + 1) % 3;  //            this
+    r[2] = (y - y0 + 2) % 3;  //            next row
+
     // horizontal pass
-    for (int k=0; k < 3; k++)
+
+    // full horizontal pass is needed only if very 1st row in ROI;
+    // for 2nd and further rows, it is enough to convolve only the
+    // "next" row - as we can reuse buffers from previous calls to
+    // this kernel (note that Fluid processes rows consequently)
+    int k0 = (y == y0)? 0: 2;
+
+    for (int k = k0; k < 3; k++)
     {
         //                             previous, this , next pixel
         const SRC *s[3] = {in[k] - border*chan , in[k], in[k] + border*chan};
 
         for (int l=0; l < width*chan; l++)
         {
-            buf[k][l] = s[0][l]*kx[0] + s[1][l]*kx[1] + s[2][l]*kx[2];
+            buf[r[k]][l] = s[0][l]*kx[0] + s[1][l]*kx[1] + s[2][l]*kx[2];
         }
     }
 
     // vertical pass
     for (int l=0; l < width*chan; l++)
     {
-        float sum = buf[0][l]*ky[0] + buf[1][l]*ky[1] + buf[2][l]*ky[2];
+        float sum = buf[r[0]][l]*ky[0] + buf[r[1]][l]*ky[1] + buf[r[2]][l]*ky[2];
         float res = sum*scale + delta;
         out[l] = saturate<DST>(res, rintf);
     }
