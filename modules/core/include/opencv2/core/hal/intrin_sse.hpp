@@ -634,6 +634,35 @@ void v_rshr_pack_store(int* ptr, const v_int64x2& a)
     _mm_storel_epi64((__m128i*)ptr, a2);
 }
 
+// pack boolean
+inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)
+{
+    __m128i ab = _mm_packs_epi16(a.val, b.val);
+    return v_uint8x16(ab);
+}
+
+inline v_uint8x16 v_pack_b(const v_uint32x4& a, const v_uint32x4& b,
+                           const v_uint32x4& c, const v_uint32x4& d)
+{
+    __m128i ab = _mm_packs_epi32(a.val, b.val);
+    __m128i cd = _mm_packs_epi32(c.val, d.val);
+    return v_uint8x16(_mm_packs_epi16(ab, cd));
+}
+
+inline v_uint8x16 v_pack_b(const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c,
+                           const v_uint64x2& d, const v_uint64x2& e, const v_uint64x2& f,
+                           const v_uint64x2& g, const v_uint64x2& h)
+{
+    __m128i ab = _mm_packs_epi32(a.val, b.val);
+    __m128i cd = _mm_packs_epi32(c.val, d.val);
+    __m128i ef = _mm_packs_epi32(e.val, f.val);
+    __m128i gh = _mm_packs_epi32(g.val, h.val);
+
+    __m128i abcd = _mm_packs_epi32(ab, cd);
+    __m128i efgh = _mm_packs_epi32(ef, gh);
+    return v_uint8x16(_mm_packs_epi16(abcd, efgh));
+}
+
 inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
                             const v_float32x4& m1, const v_float32x4& m2,
                             const v_float32x4& m3)
@@ -706,18 +735,10 @@ OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_int64x2, _mm_sub_epi64)
     inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
     { a = a * b; return a; }
 
+OPENCV_HAL_IMPL_SSE_MUL_SAT(v_uint8x16, v_uint16x8)
 OPENCV_HAL_IMPL_SSE_MUL_SAT(v_int8x16,  v_int16x8)
 OPENCV_HAL_IMPL_SSE_MUL_SAT(v_uint16x8, v_uint32x4)
 OPENCV_HAL_IMPL_SSE_MUL_SAT(v_int16x8,  v_int32x4)
-
-inline v_uint8x16 operator * (const v_uint8x16& a, const v_uint8x16& b)
-{
-    v_uint16x8 c, d;
-    v_mul_expand(a, b, c, d);
-    return v_pack_u(v_reinterpret_as_s16(c), v_reinterpret_as_s16(d));
-}
-inline v_uint8x16& operator *= (v_uint8x16& a, const v_uint8x16& b)
-{ a = a * b; return a; }
 
 //  Multiply and expand
 inline void v_mul_expand(const v_uint8x16& a, const v_uint8x16& b,
@@ -1045,33 +1066,42 @@ inline v_int8x16 v_mul_wrap(const v_int8x16& a, const v_int8x16& b)
     return v_reinterpret_as_s8(v_mul_wrap(v_reinterpret_as_u8(a), v_reinterpret_as_u8(b)));
 }
 
-#define OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(_Tpuvec, _Tpsvec, bits, smask32) \
-inline _Tpuvec v_absdiff(const _Tpuvec& a, const _Tpuvec& b) \
-{ \
-    return _Tpuvec(_mm_add_epi##bits(_mm_subs_epu##bits(a.val, b.val), _mm_subs_epu##bits(b.val, a.val))); \
-} \
-inline _Tpuvec v_absdiff(const _Tpsvec& a, const _Tpsvec& b) \
-{ \
-    __m128i smask = _mm_set1_epi32(smask32); \
-    __m128i a1 = _mm_xor_si128(a.val, smask); \
-    __m128i b1 = _mm_xor_si128(b.val, smask); \
-    return _Tpuvec(_mm_add_epi##bits(_mm_subs_epu##bits(a1, b1), _mm_subs_epu##bits(b1, a1))); \
-}
+/** Absolute difference **/
 
-OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint8x16, v_int8x16, 8, (int)0x80808080)
-OPENCV_HAL_IMPL_SSE_ABSDIFF_8_16(v_uint16x8, v_int16x8, 16, (int)0x80008000)
-
+inline v_uint8x16 v_absdiff(const v_uint8x16& a, const v_uint8x16& b)
+{ return v_add_wrap(a - b,  b - a); }
+inline v_uint16x8 v_absdiff(const v_uint16x8& a, const v_uint16x8& b)
+{ return v_add_wrap(a - b,  b - a); }
 inline v_uint32x4 v_absdiff(const v_uint32x4& a, const v_uint32x4& b)
-{
-    return v_max(a, b) - v_min(a, b);
-}
+{ return v_max(a, b) - v_min(a, b); }
 
+inline v_uint8x16 v_absdiff(const v_int8x16& a, const v_int8x16& b)
+{
+    v_int8x16 d = v_sub_wrap(a, b);
+    v_int8x16 m = a < b;
+    return v_reinterpret_as_u8(v_sub_wrap(d ^ m, m));
+}
+inline v_uint16x8 v_absdiff(const v_int16x8& a, const v_int16x8& b)
+{
+    return v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b)));
+}
 inline v_uint32x4 v_absdiff(const v_int32x4& a, const v_int32x4& b)
 {
-    __m128i d = _mm_sub_epi32(a.val, b.val);
-    __m128i m = _mm_cmpgt_epi32(b.val, a.val);
-    return v_uint32x4(_mm_sub_epi32(_mm_xor_si128(d, m), m));
+    v_int32x4 d = a - b;
+    v_int32x4 m = a < b;
+    return v_reinterpret_as_u32((d ^ m) - m);
 }
+
+/** Saturating absolute difference **/
+inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
+{
+    v_int8x16 d = a - b;
+    v_int8x16 m = a < b;
+    return (d ^ m) - m;
+ }
+inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+{ return v_max(a, b) - v_min(a, b); }
+
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
@@ -1622,6 +1652,12 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
 
 inline v_int32x4 v_round(const v_float64x2& a)
 { return v_int32x4(_mm_cvtpd_epi32(a.val)); }
+
+inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
+{
+    __m128i ai = _mm_cvtpd_epi32(a.val), bi = _mm_cvtpd_epi32(b.val);
+    return v_int32x4(_mm_unpacklo_epi64(ai, bi));
+}
 
 inline v_int32x4 v_floor(const v_float64x2& a)
 {

@@ -661,7 +661,7 @@ inline v_uint8x32 operator * (const v_uint8x32& a, const v_uint8x32& b)
 {
     v_uint16x16 c, d;
     v_mul_expand(a, b, c, d);
-    return v_pack_u(v_reinterpret_as_s16(c), v_reinterpret_as_s16(d));
+    return v_pack(c, d);
 }
 inline v_int8x32 operator * (const v_int8x32& a, const v_int8x32& b)
 {
@@ -1291,6 +1291,16 @@ inline v_float32x8 v_absdiff(const v_float32x8& a, const v_float32x8& b)
 inline v_float64x4 v_absdiff(const v_float64x4& a, const v_float64x4& b)
 { return v_abs(a - b); }
 
+/** Saturating absolute difference **/
+inline v_int8x32 v_absdiffs(const v_int8x32& a, const v_int8x32& b)
+{
+    v_int8x32 d = a - b;
+    v_int8x32 m = a < b;
+    return (d ^ m) - m;
+}
+inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
+{ return v_max(a, b) - v_min(a, b); }
+
 ////////// Conversions /////////
 
 /** Rounding **/
@@ -1299,6 +1309,12 @@ inline v_int32x8 v_round(const v_float32x8& a)
 
 inline v_int32x8 v_round(const v_float64x4& a)
 { return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(a.val))); }
+
+inline v_int32x8 v_round(const v_float64x4& a, const v_float64x4& b)
+{
+    __m128i ai = _mm256_cvtpd_epi32(a.val), bi = _mm256_cvtpd_epi32(b.val);
+    return v_int32x8(_v256_combine(ai, bi));
+}
 
 inline v_int32x8 v_trunc(const v_float32x8& a)
 { return v_int32x8(_mm256_cvttps_epi32(a.val)); }
@@ -1687,6 +1703,40 @@ void v_rshr_pack_store(int* ptr, const v_int64x4& a)
 {
     v_int64x4 delta = v256_setall_s64((int64)1 << (n-1));
     v_pack_store(ptr, (a + delta) >> n);
+}
+
+// pack boolean
+inline v_uint8x32 v_pack_b(const v_uint16x16& a, const v_uint16x16& b)
+{
+    __m256i ab = _mm256_packs_epi16(a.val, b.val);
+    return v_uint8x32(_v256_shuffle_odd_64(ab));
+}
+
+inline v_uint8x32 v_pack_b(const v_uint32x8& a, const v_uint32x8& b,
+                           const v_uint32x8& c, const v_uint32x8& d)
+{
+    __m256i ab = _mm256_packs_epi32(a.val, b.val);
+    __m256i cd = _mm256_packs_epi32(c.val, d.val);
+
+    __m256i abcd = _v256_shuffle_odd_64(_mm256_packs_epi16(ab, cd));
+    return v_uint8x32(_mm256_shuffle_epi32(abcd, _MM_SHUFFLE(3, 1, 2, 0)));
+}
+
+inline v_uint8x32 v_pack_b(const v_uint64x4& a, const v_uint64x4& b, const v_uint64x4& c,
+                           const v_uint64x4& d, const v_uint64x4& e, const v_uint64x4& f,
+                           const v_uint64x4& g, const v_uint64x4& h)
+{
+    __m256i ab = _mm256_packs_epi32(a.val, b.val);
+    __m256i cd = _mm256_packs_epi32(c.val, d.val);
+    __m256i ef = _mm256_packs_epi32(e.val, f.val);
+    __m256i gh = _mm256_packs_epi32(g.val, h.val);
+
+    __m256i abcd = _mm256_packs_epi32(ab, cd);
+    __m256i efgh = _mm256_packs_epi32(ef, gh);
+    __m256i pkall = _v256_shuffle_odd_64(_mm256_packs_epi16(abcd, efgh));
+
+    __m256i rev = _mm256_alignr_epi8(pkall, pkall, 8);
+    return v_uint8x32(_mm256_unpacklo_epi16(pkall, rev));
 }
 
 /* Recombine */
