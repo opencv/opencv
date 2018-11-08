@@ -54,7 +54,6 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
 #include "opencv2/videoio/videoio_c.h"
 
 #include <stdlib.h>
@@ -124,7 +123,6 @@ CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
 CvCapture* cvCreateCameraCapture_Aravis( int index );
 
-CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
 
 
@@ -175,6 +173,8 @@ namespace cv
 
         virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
     };
+
+    Ptr<IVideoCapture> createFileCapture_Images(const String& filename);
 
     Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);
     Ptr<IVideoWriter> createMotionJpegWriter(const String& filename, int fourcc, double fps, Size frameSize, bool iscolor);

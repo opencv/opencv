@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/video/tracking_c.h"
 
 namespace opencv_test { namespace {
 
@@ -71,7 +70,7 @@ void CV_OptFlowPyrLKTest::run( int )
     int     merr_i = 0, merr_j = 0, merr_k = 0, merr_nan = 0;
     char    filename[1000];
 
-    CvPoint2D32f *v = 0, *v2 = 0;
+    cv::Point2f *v = 0, *v2 = 0;
     cv::Mat _u, _v, _v2;
 
     cv::Mat  imgI, imgJ;
@@ -145,8 +144,8 @@ void CV_OptFlowPyrLKTest::run( int )
     calcOpticalFlowPyrLK(imgI, imgJ, _u, _v2, status, cv::noArray(), Size( 41, 41 ), 4,
                          TermCriteria( TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0.01f ), 0 );
 
-    v = (CvPoint2D32f*)_v.ptr();
-    v2 = (CvPoint2D32f*)_v2.ptr();
+    v = (cv::Point2f*)_v.ptr();
+    v2 = (cv::Point2f*)_v2.ptr();
 
     /* compare results */
     for( i = 0; i < n; i++ )
