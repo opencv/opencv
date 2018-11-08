@@ -5,30 +5,30 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "../common/gapi_operators_tests.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
+#include "opencv2/gapi/gpu/core.hpp"
 
-#define CORE_FLUID cv::gapi::core::cpu::kernels()
+#define CORE_GPU cv::gapi::core::gpu::kernels()
 
 namespace opencv_test
 {
 
-INSTANTIATE_TEST_CASE_P(MathOperatorTestFluid, MathOperatorMatMatTest,
-                        Combine(Values(AbsExact().to_compare_f()),
-                                Values( opPlusM, opMinusM, opDivM,
-                                        opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq),
-                                Values(CV_8UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                   cv::Size(640, 480),
-                                   cv::Size(128, 128)),
-                                Values(-1, CV_8U, CV_32F),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
 
-//FIXME: Some Mat/Scalar Fluid kernels are not there yet!
-INSTANTIATE_TEST_CASE_P(DISABLED_MathOperatorTestFluid, MathOperatorMatScalarTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
+                    Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
+                            Values( opPlusM, opMinusM, opDivM,
+                                    opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq),
+                            Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                            Values(cv::Size(1280, 720),
+                               cv::Size(640, 480),
+                               cv::Size(128, 128)),
+                            Values(-1, CV_8U, CV_32F),
+/*init output matrices or not*/ testing::Bool(),
+                            Values(cv::compile_args(CORE_GPU))));
+
+INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
+                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR, opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER),
@@ -38,9 +38,9 @@ INSTANTIATE_TEST_CASE_P(DISABLED_MathOperatorTestFluid, MathOperatorMatScalarTes
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(cv::compile_args(CORE_GPU))));
 
-INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestFluid, MathOperatorMatMatTest,
+INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatMatTest,
                         Combine(Values(AbsExact().to_compare_f()),
                                 Values( opAnd, opOr, opXor ),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
@@ -49,10 +49,9 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestFluid, MathOperatorMatMatTest,
                                    cv::Size(128, 128)),
                                 Values(-1),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(cv::compile_args(CORE_GPU))));
 
-//FIXME: Some Mat/Scalar Fluid kernels are not there yet!
-INSTANTIATE_TEST_CASE_P(DISABLED_BitwiseOperatorTestFluid, MathOperatorMatScalarTest,
+INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
                         Combine(Values(AbsExact().to_compare_f()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR ),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),
@@ -61,13 +60,13 @@ INSTANTIATE_TEST_CASE_P(DISABLED_BitwiseOperatorTestFluid, MathOperatorMatScalar
                                        cv::Size(128, 128)),
                                 Values(-1),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(cv::compile_args(CORE_GPU))));
 
-INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestFluid, NotOperatorTest,
-                    Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                            Values(cv::Size(1280, 720),
-                                   cv::Size(640, 480),
-                                   cv::Size(128, 128)),
+INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestGPU, NotOperatorTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(cv::compile_args(CORE_GPU))));
 }

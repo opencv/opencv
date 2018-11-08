@@ -119,6 +119,7 @@ static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 #if !defined(GAPI_STANDALONE)
 class Mat;
 GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
 
 namespace gapi { namespace own {
