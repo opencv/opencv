@@ -358,7 +358,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
-    for (int i = 1; i < 2; ++i)
+    for (int i = 0; i < 2; ++i)
     {
         std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt", false);
         std::string model = findDataFile("dnn/" + names[i] + ".pb", false);
