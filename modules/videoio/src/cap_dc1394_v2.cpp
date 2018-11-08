@@ -578,7 +578,10 @@ bool CvCaptureCAM_DC1394_v2_CPP::grabFrame()
 
         // Swap R&B channels:
         if (nch==3)
-            cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
+        {
+            cv::Mat tmp = cv::cvarrToMat(&fhdr);
+            cv::cvtColor(tmp, tmp, cv::COLOR_RGB2BGR, tmp.channels());
+        }
 
         cvCopy(&fhdr, img[i]);
     }
