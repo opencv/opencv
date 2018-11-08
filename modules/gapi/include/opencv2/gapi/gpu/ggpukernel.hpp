@@ -65,7 +65,7 @@ protected:
     friend class gimpl::GGPUExecutable;
 };
 
-class CV_EXPORTS GGPUKernel
+class GAPI_EXPORTS GGPUKernel
 {
 public:
     // This function is kernel's execution entry point (does the processing work)
