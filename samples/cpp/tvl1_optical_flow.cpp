@@ -3,11 +3,13 @@
 
 #include <opencv2/core/utility.hpp>
 #include "opencv2/video.hpp"
+#include "opencv2/optflow.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
+using namespace optflow;
 
 inline bool isFlowCorrect(Point2f u)
 {
@@ -185,7 +187,7 @@ int main(int argc, const char* argv[])
     }
 
     Mat_<Point2f> flow;
-    Ptr<DualTVL1OpticalFlow> tvl1 = cv::DualTVL1OpticalFlow::create();
+    Ptr<DualTVL1OpticalFlow> tvl1 = DualTVL1OpticalFlow::create();
 
     const double start = (double)getTickCount();
     tvl1->calc(frame0, frame1, flow);
