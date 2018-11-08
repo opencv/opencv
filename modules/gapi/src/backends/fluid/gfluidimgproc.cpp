@@ -819,6 +819,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         //     DST     SRC     OP         __VA_ARGS__
         UNARY_(uchar , uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
         UNARY_(ushort, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( short, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( short, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
         UNARY_( short,  short, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
         UNARY_( float, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
         UNARY_( float, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
