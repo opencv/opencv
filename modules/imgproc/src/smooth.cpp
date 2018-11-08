@@ -1459,7 +1459,7 @@ namespace cv
 }
 #endif
 
-#if defined(HAVE_IPP)
+#if 0 //defined(HAVE_IPP)
 namespace cv
 {
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
@@ -1549,7 +1549,7 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     CV_OVX_RUN(true,
                openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
 
-    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
+    //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     borderType = (borderType&~BORDER_ISOLATED);
 
@@ -3952,7 +3952,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
 #endif
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
 #if IPP_DISABLE_GAUSSIANBLUR_PARALLEL
 #define IPP_GAUSSIANBLUR_PARALLEL 0
@@ -4123,7 +4123,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     CV_OVX_RUN(true,
                openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
-    CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
+    //CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
     {

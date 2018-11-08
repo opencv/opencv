@@ -7,6 +7,12 @@
 #include "opencl_kernels_core.hpp"
 #include "stat.hpp"
 
+#undef HAVE_IPP
+#undef CV_IPP_RUN_FAST
+#define CV_IPP_RUN_FAST(f, ...)
+#undef CV_IPP_RUN
+#define CV_IPP_RUN(c, f, ...)
+
 /****************************************************************************************\
 *                                         norm                                           *
 \****************************************************************************************/
