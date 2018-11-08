@@ -20,7 +20,7 @@
 
 namespace cv { namespace dnn { namespace vkcom {
 
-#include "function_list.inl"
+#include "function_list.inl.hpp"
 
 }}} // namespace cv::dnn::vkcom
 #endif // HAVE_VULKAN

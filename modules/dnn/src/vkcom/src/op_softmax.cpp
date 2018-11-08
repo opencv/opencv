@@ -22,6 +22,7 @@ struct SoftmaxParam {
     int channel_size;
     int outer_size;
     int channels;
+    int logsoftmax;
 };
 
 OpSoftmax::OpSoftmax(const int axis, const bool log_softmax)
@@ -90,7 +91,7 @@ bool OpSoftmax::forward(Tensor& in, Tensor& out)
     bindTensor(device_, *max_tensor_,  1, descriptor_set_);
     bindTensor(device_, *sum_tensor_,  2, descriptor_set_);
     bindTensor(device_, out, 3, descriptor_set_);
-    SoftmaxParam param = {channel_size_, outer_size_, channels_};
+    SoftmaxParam param = {channel_size_, outer_size_, channels_, log_softmax_ == true ? 1 : 0};
     recordCommandBuffer((void *)&param, sizeof(SoftmaxParam));
     runCommandBuffer();
     return true;

@@ -57,7 +57,7 @@ bool loadVulkanFunctions(VkInstance& instance)
       return false; \
     }
 
-#include "function_list.inl"
+#include "function_list.inl.hpp"
     return true;
 }
 
@@ -74,7 +74,7 @@ bool loadVulkanGlobalFunctions()
       return false; \
     }
 
-#include "function_list.inl"
+#include "function_list.inl.hpp"
     return true;
 }
 

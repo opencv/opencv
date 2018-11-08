@@ -1411,9 +1411,44 @@ struct Net::Impl
                 continue;
             }
 
+            if (ld.type == "Convolution")
+            {
+                std::vector<MatShape> in_shapes;
+                std::vector<MatShape> out_shapes;
+                CV_Assert(ld.inputBlobs.size() == ld.outputBlobs.size());
+
+                for (int i = 0; i < ld.inputBlobs.size(); i++)
+                {
+                    in_shapes.push_back(shape(*ld.inputBlobs[i]));
+                    out_shapes.push_back(shape(ld.outputBlobs[i]));
+                }
+                int64 flops = layer->getFLOPS(in_shapes, out_shapes);
+                // FIXME
+                //
+                // This is a workaround for GPU hang on heavy convolution workload ( > 10 GFLOPS).
+                // For the long time task, vkWaitForFences() return without error but next call on
+                // vkQueueSubmit() return -4, i.e. "VK_ERROR_DEVICE_LOST" and driver reports GPU hang.
+                //
+                // Need more investigation on root cause of GPU hang and need to optimize convolution shader
+                // to reduce process time.
+                if (flops > CV_BIG_INT(10) * 1000 * 1000 * 1000)
+                {
+                    continue;
+                }
+            }
+
             ld.skip = false;
-            ld.backendNodes[DNN_BACKEND_VKCOM] =
-                layer->initVkCom(ld.inputBlobsWrappers);
+
+            try
+            {
+                ld.backendNodes[DNN_BACKEND_VKCOM] =
+                    layer->initVkCom(ld.inputBlobsWrappers);
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_ERROR(NULL, "initVkCom failed, fallback to CPU implementation. " << e.what());
+                ld.backendNodes[DNN_BACKEND_VKCOM] = Ptr<BackendNode>();
+            }
         }
 #endif
     }
@@ -2318,7 +2353,16 @@ struct Net::Impl
                 }
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
-                    forwardVkCom(ld.outputBlobsWrappers, node);
+                    try
+                    {
+                        forwardVkCom(ld.outputBlobsWrappers, node);
+                    }
+                    catch (const cv::Exception& e)
+                    {
+                        CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
+                        it->second = Ptr<BackendNode>();
+                        forwardLayer(ld);
+                    }
                 }
                 else
                 {
