@@ -14,12 +14,13 @@ namespace opencv_test
 {
 TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 {
+    compare_f cmpF;
     g_api_ocv_pair_mat_scalar op;
     int type = 0, dtype = 0;
     cv::Size sz;
     bool initOutMatr = false;
     cv::GCompileArgs compile_args;
-    std::tie(op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
+    std::tie(cmpF, op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
     initMatsRandU(type, sz, dtype, initOutMatr);
 
     auto fun_gapi = op.g_api_function;
@@ -38,19 +39,20 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 {
+    compare_f cmpF;
     g_api_ocv_pair_mat_mat op;
     int type = 0, dtype = 0;
     cv::Size sz;
     bool initOutMatr = false;
     cv::GCompileArgs compile_args;
-    std::tie(op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
+    std::tie(cmpF, op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
     initMatsRandU(type, sz, dtype, initOutMatr);
 
     auto fun_gapi = op.g_api_function;
@@ -69,7 +71,7 @@ TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }

@@ -14,6 +14,7 @@ namespace opencv_test
 
 #define CORE_FLUID cv::gapi::core::fluid::kernels()
 
+
 // FIXME: Windows accuracy problems after recent update!
 INSTANTIATE_TEST_CASE_P(MathOpTestFluid, MathOpTest,
                         Combine(Values(ADD, SUB, DIV, MUL),
@@ -121,6 +122,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 testing::Bool(),
+                                Values(0.5000005),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
@@ -212,8 +214,10 @@ INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
-INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
-                        Combine(Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+INSTANTIATE_TEST_CASE_P(
+                        ResizeTestFluid, ResizeTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
                                 Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
@@ -225,7 +229,6 @@ INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
                                        cv::Size(128, 128),
                                        cv::Size(64, 64),
                                        cv::Size(30, 30)),
-                                Values(0.0),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 //----------------------------------------------------------------------
@@ -341,7 +344,9 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-/*init output matrices or not*/ testing::Bool()));
+/*init output matrices or not*/ testing::Bool())
+                                Values(0.0),
+                       );
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
@@ -371,6 +376,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128))),
+                                Values(0.0),
                         opencv_test::PrintNormCoreParams());
 
 INSTANTIATE_TEST_CASE_P(IntegralTestCPU, IntegralTest,

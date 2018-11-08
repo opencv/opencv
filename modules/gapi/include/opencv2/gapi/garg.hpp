@@ -90,6 +90,7 @@ using GRunArg  = util::variant<
 #if !defined(GAPI_STANDALONE)
     cv::Mat,
     cv::Scalar,
+    cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
     cv::gapi::own::Mat,
     cv::gapi::own::Scalar,
@@ -101,6 +102,7 @@ using GRunArgP = util::variant<
 #if !defined(GAPI_STANDALONE)
     cv::Mat*,
     cv::Scalar*,
+    cv::UMat*,
 #endif // !defined(GAPI_STANDALONE)
     cv::gapi::own::Mat*,
     cv::gapi::own::Scalar*,

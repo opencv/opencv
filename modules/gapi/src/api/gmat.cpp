@@ -38,6 +38,10 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 }
+cv::GMatDesc cv::descr_of(const cv::UMat &mat)
+{
+    return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
+}
 #endif
 
 cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)

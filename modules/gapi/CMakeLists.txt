@@ -22,6 +22,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cpu/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     )
@@ -69,6 +70,13 @@ set(gapi_srcs
     src/backends/fluid/gfluidbackend.cpp
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidcore.cpp
+
+    # GPU Backend (currently built-in)
+    src/backends/gpu/ggpubackend.cpp
+    src/backends/gpu/ggpukernel.cpp
+    src/backends/gpu/ggpuimgproc.cpp
+    src/backends/gpu/ggpucore.cpp
+
 
     # Compound
     src/backends/common/gcompoundbackend.cpp
