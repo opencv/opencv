@@ -377,6 +377,12 @@ public:
 private:
     double _tol;
 };
+} // namespace opencv_test
 
-
+namespace
+{
+    inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
+    {
+        return os << "compare_f";
+    }
 }
