@@ -86,6 +86,7 @@ int liveQRCodeDetect()
         return -4;
     }
 
+    QRCodeDetector qrcode;
     TickMeter total;
     for(;;)
     {
@@ -97,11 +98,11 @@ int liveQRCodeDetect()
         cvtColor(frame, src, COLOR_BGR2GRAY);
 
         total.start();
-        bool result_detection = detectQRCode(src, transform);
+        bool result_detection = qrcode.detect(src, transform);
         if (result_detection)
         {
-            bool result_decode = decodeQRCode(src, transform, decode_info, straight_barcode);
-            if (result_decode) { cout << decode_info << '\n'; }
+            decode_info = qrcode.decode(src, transform, straight_barcode);
+            if (!decode_info.empty()) { cout << decode_info << '\n'; }
         }
         total.stop();
         double fps = 1 / total.getTimeSec();
@@ -123,24 +124,25 @@ int showImageQRCodeDetect(string in, string out)
     vector<Point> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;
-    bool result_detection = false, result_decode = false;
+    bool result_detection = false;
     TickMeter total;
+    QRCodeDetector qrcode;
     for (size_t i = 0; i < count_experiments; i++)
     {
         total.start();
         transform.clear();
-        result_detection = detectQRCode(src, transform);
+        result_detection = qrcode.detect(src, transform);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
         if (!result_detection) { break; }
 
         total.start();
-        result_decode = decodeQRCode(src, transform, decode_info, straight_barcode);
+        decode_info = qrcode.decode(src, transform, straight_barcode);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
-        if (!result_decode) { break; }
+        if (decode_info.empty()) { break; }
 
     }
     double fps = count_experiments / transform_time;
