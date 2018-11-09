@@ -289,7 +289,7 @@ void Mat::copyTo( OutputArray _dst ) const
         {
             // For some cases (with vector) dst.size != src.size, so force to column-based form
             // It prevents memory corruption in case of column-based src
-            if (_dst.isVector())
+            if (_dst.isVector() && dst.size() != size())  // https://github.com/opencv/opencv/pull/4159
                 dst = dst.reshape(0, (int)dst.total());
 
             const uchar* sptr = data;
@@ -403,6 +403,8 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
     if( dims <= 2 )
     {
+        if (_dst.isVector() && dst.size() != size())  // https://github.com/opencv/opencv/pull/4159
+            dst = dst.reshape(0, (int)dst.total());
         Size sz = getContinuousSize(*this, dst, mask, mcn);
         copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
