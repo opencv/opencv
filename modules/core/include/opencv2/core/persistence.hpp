@@ -751,6 +751,17 @@ template<typename _Tp, int cn> static inline void read(const FileNode& node, Vec
     value = temp.size() != cn ? default_value : Vec<_Tp, cn>(&temp[0]);
 }
 
+template<typename _Tp, int m, int n> static inline void read(const FileNode& node, Matx<_Tp, m, n>& value, const Matx<_Tp, m, n>& default_matx = Matx<_Tp, m, n>())
+{
+    Mat temp;
+    read(node, temp); // read as a Mat class
+
+    if (temp.empty())
+        value = default_matx;
+    else
+        value = Matx<_Tp, m, n>(temp);
+}
+
 template<typename _Tp> static inline void read(const FileNode& node, Scalar_<_Tp>& value, const Scalar_<_Tp>& default_value)
 {
     std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
@@ -931,6 +942,12 @@ void write(FileStorage& fs, const Vec<_Tp, cn>& v )
         write(fs, v.val[i]);
 }
 
+template<typename _Tp, int m, int n> static inline
+void write(FileStorage& fs, const Matx<_Tp, m, n>& x )
+{
+    write(fs, Mat(x)); // write as a Mat class
+}
+
 template<typename _Tp> static inline
 void write(FileStorage& fs, const Scalar_<_Tp>& s )
 {
@@ -994,6 +1011,12 @@ void write(FileStorage& fs, const String& name, const Vec<_Tp, cn>& v )
 {
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ+FileNode::FLOW);
     write(fs, v);
+}
+
+template<typename _Tp, int m, int n> static inline
+void write(FileStorage& fs, const String& name, const Matx<_Tp, m, n>& x )
+{
+    write(fs, name, Mat(x)); // write as a Mat class
 }
 
 template<typename _Tp> static inline
