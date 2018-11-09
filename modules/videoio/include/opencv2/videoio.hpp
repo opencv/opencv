@@ -171,6 +171,8 @@ enum VideoCaptureProperties {
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
        CAP_PROP_BACKEND       =42, //!< Current backend (enum VideoCaptureAPIs). Read-only property
        CAP_PROP_CHANNEL       =43, //!< Video input or Channel Number (only for those cameras that support)
+       CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
+       CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif

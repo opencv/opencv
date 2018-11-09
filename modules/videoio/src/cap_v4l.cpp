@@ -1513,6 +1513,10 @@ static inline cv::String capPropertyName(int prop)
         return "sar_num";
     case cv::CAP_PROP_SAR_DEN:
         return "sar_den";
+    case CAP_PROP_AUTO_WB:
+        return "auto wb";
+    case CAP_PROP_WB_TEMPERATURE:
+        return "wb temperature";
     default:
         return "unknown";
     }
@@ -1593,6 +1597,10 @@ static inline int capPropertyToV4L2(int prop)
         return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT;
     case cv::CAP_PROP_SAR_DEN:
         return V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH;
+    case CAP_PROP_AUTO_WB:
+        return V4L2_CID_AUTO_WHITE_BALANCE;
+    case CAP_PROP_WB_TEMPERATURE:
+        return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
     default:
         break;
     }
@@ -1631,10 +1639,18 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
     _v4l2id = __u32(v4l2id);
     range = cv::Range(queryctrl.minimum, queryctrl.maximum);
     if (normalizePropRange) {
-        if (property_id == cv::CAP_PROP_AUTOFOCUS)
-            range = Range(0, 1);
-        else if (property_id == cv::CAP_PROP_AUTO_EXPOSURE)
+        switch(property_id)
+        {
+        case CAP_PROP_WB_TEMPERATURE:
+        case CAP_PROP_AUTO_WB:
+        case CAP_PROP_AUTOFOCUS:
+            range = Range(0, 1); // do not convert
+            break;
+        case CAP_PROP_AUTO_EXPOSURE:
             range = Range(0, 4);
+        default:
+            break;
+        }
     }
     return true;
 }
