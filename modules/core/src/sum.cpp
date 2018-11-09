@@ -520,7 +520,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     }
 
     size_t globalsize = ngroups * wgs;
-    if (k.run(1, &globalsize, &wgs, false))
+    if (k.run(1, &globalsize, &wgs, true))
     {
         typedef Scalar (*part_sum)(Mat m);
         part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },
