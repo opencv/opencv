@@ -758,6 +758,7 @@ static void run_sobel(Buffer& dst,
 
     int width = dst.length();
     int chan  = dst.meta().chan;
+    int length = width * chan;
 
     GAPI_DbgAssert(ksize == 3);
 //  float buf[3][width * chan];
@@ -784,76 +785,145 @@ static void run_sobel(Buffer& dst,
         //                             previous, this , next pixel
         const SRC *s[3] = {in[k] - border*chan , in[k], in[k] + border*chan};
 
-        for (int l=0; l < width*chan; l++)
+        // rely on compiler vectoring
+        for (int l=0; l < length; l++)
         {
             buf[r[k]][l] = s[0][l]*kx[0] + s[1][l]*kx[1] + s[2][l]*kx[2];
         }
     }
 
     // vertical pass
-    int l = 0;
 #if CV_SIMD
-    if (std::is_same<DST, short>::value || std::is_same<DST, ushort>::value)
+    if (std::is_same<DST, float>::value && length >= v_int16::nlanes)
     {
-        constexpr static int nlanes = v_int16::nlanes;
-        for (; l <= width*chan - nlanes; l += nlanes)
+        constexpr static int nlanes = v_float32::nlanes;
+
+        for (int l=0; l < length; )
         {
-            v_float32 sum0 = v_load(&buf[r[0]][l])            * v_setall_f32(ky[0]);
-                sum0 = v_fma(v_load(&buf[r[1]][l]),             v_setall_f32(ky[1]), sum0);
-                sum0 = v_fma(v_load(&buf[r[2]][l]),             v_setall_f32(ky[2]), sum0);
-            v_float32 sum1 = v_load(&buf[r[0]][l + nlanes/2]) * v_setall_f32(ky[0]);
-                sum1 = v_fma(v_load(&buf[r[1]][l + nlanes/2]),  v_setall_f32(ky[1]), sum1);
-                sum1 = v_fma(v_load(&buf[r[2]][l + nlanes/2]),  v_setall_f32(ky[2]), sum1);
-            sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
-            sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
-            v_int32 isum0 = v_round(sum0),
-                    isum1 = v_round(sum1);
-            if (std::is_same<DST, short>::value)
+            for (; l <= length - nlanes; l += nlanes)
             {
-                // signed short
-                v_int16 res = v_pack(isum0, isum1);
-                v_store(reinterpret_cast<short*>(&out[l]), res);
-            } else
+                v_float32 sum = v_load(&buf[r[0]][l]) * v_setall_f32(ky[0]);
+                    sum = v_fma(v_load(&buf[r[1]][l]),  v_setall_f32(ky[1]), sum);
+                    sum = v_fma(v_load(&buf[r[2]][l]),  v_setall_f32(ky[2]), sum);
+
+                sum = v_fma(sum, v_setall_f32(scale), v_setall_f32(delta));
+
+                v_store(reinterpret_cast<float*>(&out[l]), sum);
+            }
+
+            if (l < length)
             {
-                // unsigned short
-                v_uint16 res = v_pack_u(isum0, isum1);
-                v_store(reinterpret_cast<ushort*>(&out[l]), res);
+                // tail: recalculate last pixels
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
             }
         }
+
+        return;
     }
-    if (std::is_same<DST, uchar>::value)
+
+    if ((std::is_same<DST, short>::value || std::is_same<DST, ushort>::value)
+        && length >= v_int16::nlanes)
     {
-        constexpr static int nlanes = v_int8::nlanes;
-        for (; l <= width*chan - nlanes; l += nlanes)
+        constexpr static int nlanes = v_int16::nlanes;
+
+        for (int l=0; l < length; )
         {
-            v_float32 sum0 = v_load(&buf[r[0]][l])              * v_setall_f32(ky[0]);
-                sum0 = v_fma(v_load(&buf[r[1]][l]),               v_setall_f32(ky[1]), sum0);
-                sum0 = v_fma(v_load(&buf[r[2]][l]),               v_setall_f32(ky[2]), sum0);
-            v_float32 sum1 = v_load(&buf[r[0]][l +   nlanes/4]) * v_setall_f32(ky[0]);
-                sum1 = v_fma(v_load(&buf[r[1]][l +   nlanes/4]),  v_setall_f32(ky[1]), sum1);
-                sum1 = v_fma(v_load(&buf[r[2]][l +   nlanes/4]),  v_setall_f32(ky[2]), sum1);
-            v_float32 sum2 = v_load(&buf[r[0]][l + 2*nlanes/4]) * v_setall_f32(ky[0]);
-                sum2 = v_fma(v_load(&buf[r[1]][l + 2*nlanes/4]),  v_setall_f32(ky[1]), sum2);
-                sum2 = v_fma(v_load(&buf[r[2]][l + 2*nlanes/4]),  v_setall_f32(ky[2]), sum2);
-            v_float32 sum3 = v_load(&buf[r[0]][l + 3*nlanes/4]) * v_setall_f32(ky[0]);
-                sum3 = v_fma(v_load(&buf[r[1]][l + 3*nlanes/4]),  v_setall_f32(ky[1]), sum3);
-                sum3 = v_fma(v_load(&buf[r[2]][l + 3*nlanes/4]),  v_setall_f32(ky[2]), sum3);
-            sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
-            sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
-            sum2 = v_fma(sum2, v_setall_f32(scale), v_setall_f32(delta));
-            sum3 = v_fma(sum3, v_setall_f32(scale), v_setall_f32(delta));
-            v_int32 isum0 = v_round(sum0),
-                    isum1 = v_round(sum1),
-                    isum2 = v_round(sum2),
-                    isum3 = v_round(sum3);
-            v_int16 ires0 = v_pack(isum0, isum1),
-                    ires1 = v_pack(isum2, isum3);
-            v_uint8 res = v_pack_u(ires0, ires1);
-            v_store(reinterpret_cast<uchar*>(&out[l]), res);
+            for (; l <= length - nlanes; l += nlanes)
+            {
+                v_float32 sum0 = v_load(&buf[r[0]][l])            * v_setall_f32(ky[0]);
+                    sum0 = v_fma(v_load(&buf[r[1]][l]),             v_setall_f32(ky[1]), sum0);
+                    sum0 = v_fma(v_load(&buf[r[2]][l]),             v_setall_f32(ky[2]), sum0);
+
+                v_float32 sum1 = v_load(&buf[r[0]][l + nlanes/2]) * v_setall_f32(ky[0]);
+                    sum1 = v_fma(v_load(&buf[r[1]][l + nlanes/2]),  v_setall_f32(ky[1]), sum1);
+                    sum1 = v_fma(v_load(&buf[r[2]][l + nlanes/2]),  v_setall_f32(ky[2]), sum1);
+
+                sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
+                sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
+
+                v_int32 isum0 = v_round(sum0),
+                        isum1 = v_round(sum1);
+
+                if (std::is_same<DST, short>::value)
+                {
+                    // signed short
+                    v_int16 res = v_pack(isum0, isum1);
+                    v_store(reinterpret_cast<short*>(&out[l]), res);
+                } else
+                {
+                    // unsigned short
+                    v_uint16 res = v_pack_u(isum0, isum1);
+                    v_store(reinterpret_cast<ushort*>(&out[l]), res);
+                }
+            }
+
+            if (l < length)
+            {
+                // tail: recalculate last pixels
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
+            }
         }
+
+        return;
+    }
+
+    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    {
+        constexpr static int nlanes = v_uint8::nlanes;
+
+        for (int l=0; l < length; )
+        {
+            for (; l <= length - nlanes; l += nlanes)
+            {
+                v_float32 sum0 = v_load(&buf[r[0]][l])              * v_setall_f32(ky[0]);
+                    sum0 = v_fma(v_load(&buf[r[1]][l]),               v_setall_f32(ky[1]), sum0);
+                    sum0 = v_fma(v_load(&buf[r[2]][l]),               v_setall_f32(ky[2]), sum0);
+
+                v_float32 sum1 = v_load(&buf[r[0]][l +   nlanes/4]) * v_setall_f32(ky[0]);
+                    sum1 = v_fma(v_load(&buf[r[1]][l +   nlanes/4]),  v_setall_f32(ky[1]), sum1);
+                    sum1 = v_fma(v_load(&buf[r[2]][l +   nlanes/4]),  v_setall_f32(ky[2]), sum1);
+
+                v_float32 sum2 = v_load(&buf[r[0]][l + 2*nlanes/4]) * v_setall_f32(ky[0]);
+                    sum2 = v_fma(v_load(&buf[r[1]][l + 2*nlanes/4]),  v_setall_f32(ky[1]), sum2);
+                    sum2 = v_fma(v_load(&buf[r[2]][l + 2*nlanes/4]),  v_setall_f32(ky[2]), sum2);
+
+                v_float32 sum3 = v_load(&buf[r[0]][l + 3*nlanes/4]) * v_setall_f32(ky[0]);
+                    sum3 = v_fma(v_load(&buf[r[1]][l + 3*nlanes/4]),  v_setall_f32(ky[1]), sum3);
+                    sum3 = v_fma(v_load(&buf[r[2]][l + 3*nlanes/4]),  v_setall_f32(ky[2]), sum3);
+
+                sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
+                sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
+                sum2 = v_fma(sum2, v_setall_f32(scale), v_setall_f32(delta));
+                sum3 = v_fma(sum3, v_setall_f32(scale), v_setall_f32(delta));
+
+                v_int32 isum0 = v_round(sum0),
+                        isum1 = v_round(sum1),
+                        isum2 = v_round(sum2),
+                        isum3 = v_round(sum3);
+
+                v_int16 ires0 = v_pack(isum0, isum1),
+                        ires1 = v_pack(isum2, isum3);
+
+                v_uint8 res = v_pack_u(ires0, ires1);
+                v_store(reinterpret_cast<uchar*>(&out[l]), res);
+            }
+
+            if (l < length)
+            {
+                // tail: recalculate last pixels
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
+            }
+        }
+
+        return;
     }
 #endif
-    for (; l < width*chan; l++)
+
+    // vertical pass (reference code)
+    for (int l=0; l < width*chan; l++)
     {
         float sum = buf[r[0]][l]*ky[0] + buf[r[1]][l]*ky[1] + buf[r[2]][l]*ky[2];
         float res = sum*scale + delta;
