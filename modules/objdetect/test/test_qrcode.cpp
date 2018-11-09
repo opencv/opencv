@@ -67,10 +67,12 @@ TEST_P(Objdetect_QRCode, regression)
     std::vector<Point> corners;
     std::string decoded_info;
     QRCodeDetector qrcode;
-    ASSERT_TRUE(qrcode.detect(src, corners));
 #ifdef HAVE_QUIRC
-    decoded_info = qrcode.decode(src, corners, straight_barcode);
+    decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
+    ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+#else
+    ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json", false);

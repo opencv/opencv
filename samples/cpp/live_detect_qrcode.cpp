@@ -111,7 +111,7 @@ int liveQRCodeDetect()
         if (result_detection) { getMatWithQRCodeContour(frame, transform); }
         getMatWithFPS(frame, fps);
 
-        imshow("Live detect QR code", frame);
+        imshow("Live QR code detector", frame);
         if( waitKey(30) > 0 ) { break; }
     }
     return 0;
@@ -120,7 +120,7 @@ int liveQRCodeDetect()
 int showImageQRCodeDetect(string in, string out)
 {
     Mat src = imread(in, IMREAD_GRAYSCALE), straight_barcode;
-    string decode_info;
+    string decoded_info;
     vector<Point> transform;
     const int count_experiments = 10;
     double transform_time = 0.0;
@@ -138,16 +138,16 @@ int showImageQRCodeDetect(string in, string out)
         if (!result_detection) { break; }
 
         total.start();
-        decode_info = qrcode.decode(src, transform, straight_barcode);
+        decoded_info = qrcode.decode(src, transform, straight_barcode);
         total.stop();
         transform_time += total.getTimeSec();
         total.reset();
-        if (decode_info.empty()) { break; }
+        if (decoded_info.empty()) { break; }
 
     }
     double fps = count_experiments / transform_time;
-    if (!result_detection) { cout << "Not find QR-code." << '\n'; return -2; }
-    if (!result_decode) { cout << "Not decode QR-code." << '\n'; return -3; }
+    if (!result_detection) { cout << "QR code not found\n"; return -2; }
+    if (decoded_info.empty()) { cout << "QR code cannot be decoded\n"; return -3; }
 
     Mat color_src = imread(in);
     getMatWithQRCodeContour(color_src, transform);
@@ -168,7 +168,7 @@ int showImageQRCodeDetect(string in, string out)
         cout << "Output image file path: " << out << '\n';
         cout << "Size: " << color_src.size() << '\n';
         cout << "FPS: " << fps << '\n';
-        cout << "Decode info: " << decode_info << '\n';
+        cout << "Decoded info: " << decoded_info << '\n';
 
         vector<int> compression_params;
         compression_params.push_back(IMWRITE_PNG_COMPRESSION);

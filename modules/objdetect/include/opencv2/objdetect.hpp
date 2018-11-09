@@ -685,7 +685,7 @@ public:
     CV_WRAP void setEpsY(double epsY);
 
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
-     @param img grayscale image containing (or not) QR code.
+     @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
      */
     CV_WRAP bool detect(InputArray img, OutputArray points) const;
@@ -693,7 +693,7 @@ public:
     /** @brief Decodes QR code in image once it's found by the detect() method.
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
 
-     @param img grayscale image containing QR code.
+     @param img grayscale or color (BGR) image containing QR code.
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
@@ -701,10 +701,12 @@ public:
 
     /** @brief Both detects and decodes QR code
 
-     @param img grayscale or color image containing QR code.
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray straight_qrcode = noArray());
+    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
+                                        OutputArray straight_qrcode = noArray());
 protected:
     struct Impl;
     Ptr<Impl> p;

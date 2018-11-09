@@ -1096,7 +1096,9 @@ CV_EXPORTS std::string QRCodeDetector::decode(InputArray in, InputArray points,
     return ok ? decoded_info : std::string();
 }
 
-CV_EXPORTS std::string QRCodeDetector::detectAndDecode(InputArray in, OutputArray straight_qrcode)
+CV_EXPORTS std::string QRCodeDetector::detectAndDecode(InputArray in,
+                                                       OutputArray points_,
+                                                       OutputArray straight_qrcode)
 {
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
@@ -1112,6 +1114,13 @@ CV_EXPORTS std::string QRCodeDetector::detectAndDecode(InputArray in, OutputArra
 
     vector<Point2f> points;
     bool ok = detect(inarr, points);
+    if( points_.needed() )
+    {
+        if( ok )
+            Mat(points).copyTo(points_);
+        else
+            points_.release();
+    }
     std::string decoded_info;
     if( ok )
         decoded_info = decode(inarr, points, straight_qrcode);
