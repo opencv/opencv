@@ -89,7 +89,7 @@ bool  BmpDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    CV_TRY
+    try
     {
         m_strm.skip( 10 );
         m_offset = m_strm.getDWord();
@@ -173,9 +173,9 @@ bool  BmpDecoder::readHeader()
             }
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
-        CV_RETHROW();
+        throw;
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
@@ -225,7 +225,7 @@ bool  BmpDecoder::readData( Mat& img )
     }
     uchar *src = _src.data(), *bgr = _bgr.data();
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -490,9 +490,9 @@ decode_rle8_bad: ;
             CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
-        CV_RETHROW();
+        throw;
     }
 
     return result;

@@ -1191,11 +1191,11 @@ namespace
         prevImg.swapHandle(); nextImg.swapHandle();
 #endif
         }
-        catch (RuntimeError & e)
+        catch (const RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (WrapperError & e)
+        catch (const WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }

@@ -147,15 +147,15 @@ int main(int argc, char *argv[])
                     desMethCmp.push_back(cumSumDist2);
                     waitKey();
                 }
-                catch (Exception& e)
-                    {
+                catch (const Exception& e)
+                {
                     cout << e.msg << endl;
                     cout << "Cumulative distance cannot be computed." << endl;
                     desMethCmp.push_back(-1);
-                    }
                 }
+            }
         }
-        catch (Exception& e)
+        catch (const Exception& e)
         {
             cout << "Feature : " << *itDesc << "\n";
             if (itMatcher != typeAlgoMatch.end())

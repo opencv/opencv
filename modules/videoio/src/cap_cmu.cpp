@@ -362,7 +362,7 @@ bool CvCaptureCAM_CMU::open( int _index )
         CMU_numActiveCameras++;
         CMU_useCameraFlags[_index] = true;
     }
-    catch ( int )
+    catch (const int &)
     {
         return false;
     }

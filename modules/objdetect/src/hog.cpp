@@ -3685,7 +3685,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         String eerr("file not exist");
         String efile(__FILE__);
         String efunc(__FUNCTION__);
-        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     char version_buffer[10];
     if (!fread (&version_buffer,sizeof(char),10,modelfl))
@@ -3695,7 +3695,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         String efunc(__FUNCTION__);
         fclose(modelfl);
 
-        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     if(strcmp(version_buffer,"V6.01")) {
         String eerr("version does not match");
@@ -3703,14 +3703,14 @@ void HOGDescriptor::readALTModel(String modelfile)
         String efunc(__FUNCTION__);
         fclose(modelfl);
 
-        CV_THROW (Exception(Error::StsError, eerr, efile, efunc, __LINE__));
+        throw Exception(Error::StsError, eerr, efile, efunc, __LINE__);
     }
     /* read version number */
     int version = 0;
     if (!fread (&version,sizeof(int),1,modelfl))
     {
         fclose(modelfl);
-        CV_THROW (Exception());
+        throw Exception();
     }
     if (version < 200)
     {
@@ -3718,7 +3718,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         String efile(__FILE__);
         String efunc(__FUNCTION__);
         fclose(modelfl);
-        CV_THROW (Exception());
+        throw Exception();
     }
     int kernel_type;
     size_t nread;
@@ -3764,7 +3764,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         if(nread != static_cast<size_t>(length) + 1) {
             delete [] linearwt;
             fclose(modelfl);
-            CV_THROW (Exception());
+            throw Exception();
         }
 
         for(int i = 0; i < length; i++)
@@ -3775,7 +3775,7 @@ void HOGDescriptor::readALTModel(String modelfile)
         delete [] linearwt;
     } else {
         fclose(modelfl);
-        CV_THROW (Exception());
+        throw Exception();
     }
     fclose(modelfl);
 }
