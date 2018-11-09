@@ -63,8 +63,8 @@ namespace cv
 
 enum AccessFlag { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
     ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
-CV_ENUM_FLAGS(AccessFlag);
-__CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag);
+CV_ENUM_FLAGS(AccessFlag)
+__CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag)
 
 CV__DEBUG_NS_BEGIN
 
@@ -259,8 +259,8 @@ protected:
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
 };
-CV_ENUM_FLAGS(_InputArray::KindFlag);
-__CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag);
+CV_ENUM_FLAGS(_InputArray::KindFlag)
+__CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag)
 
 /** @brief This type is very similar to InputArray except that it is used for input/output and output function
 parameters.
@@ -563,7 +563,7 @@ struct CV_EXPORTS UMatData
     int mapcount;
     UMatData* originalUMatData;
 };
-CV_ENUM_FLAGS(UMatData::MemoryFlag);
+CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
 
 struct CV_EXPORTS MatSize
