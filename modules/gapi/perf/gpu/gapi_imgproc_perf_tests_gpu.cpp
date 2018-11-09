@@ -16,7 +16,7 @@ namespace opencv_test
 
 
 INSTANTIATE_TEST_CASE_P(SepFilterPerfTestGPU_8U, SepFilterPerfTest,
-                        Combine(Values(AbsToleranceSepFilter(1e-4f).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),
                                 Values(3),
                                 Values(szVGA, sz720p, sz1080p),
@@ -24,7 +24,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterPerfTestGPU_8U, SepFilterPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(SepFilterPerfTestGPU_other, SepFilterPerfTest,
-                        Combine(Values(AbsToleranceSepFilter(1e-4f).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3),
                                 Values(szVGA, sz720p, sz1080p),
@@ -34,7 +34,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterPerfTestGPU_other, SepFilterPerfTest,
 
 
 INSTANTIATE_TEST_CASE_P(Filter2DPerfTestGPU, Filter2DPerfTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 4, 5, 7),
                                 Values(szVGA, sz720p, sz1080p),
@@ -43,7 +43,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DPerfTestGPU, Filter2DPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestGPU, BoxFilterPerfTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(/*CV_8UC1,*/ CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3,5),
                                 Values(szVGA, sz720p, sz1080p),
@@ -52,7 +52,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestGPU, BoxFilterPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU)))); //TODO: 8UC1 doesn't work
 
 INSTANTIATE_TEST_CASE_P(BlurPerfTestGPU, BlurPerfTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(szVGA, sz720p, sz1080p),
@@ -60,7 +60,7 @@ INSTANTIATE_TEST_CASE_P(BlurPerfTestGPU, BlurPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(GaussianBlurPerfTestGPU, GaussianBlurPerfTest,
-                        Combine(Values(AbsToleranceGaussianBlur_Float_Int(1e-5, 0.05).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()), //TODO: too relaxed?
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3, 5),
                                 Values(szVGA, sz720p, sz1080p),
@@ -108,7 +108,7 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3PerfTestGPU, Dilate3x3PerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(SobelPerfTestGPU, SobelPerfTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-4).to_compare_f()),
+                        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1/*, CV_32FC1*/), //TODO: CV_32FC1 fails accuracy
                                 Values(3, 5),
                                 Values(szVGA, sz720p, sz1080p),
@@ -118,7 +118,7 @@ INSTANTIATE_TEST_CASE_P(SobelPerfTestGPU, SobelPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(CannyPerfTestGPU, CannyPerfTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),
                                 Values(szVGA, sz720p, sz1080p),
                                 Values(3.0, 120.0),
@@ -128,52 +128,52 @@ INSTANTIATE_TEST_CASE_P(CannyPerfTestGPU, CannyPerfTest,
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(EqHistPerfTestGPU, EqHistPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(AbsExact().to_compare_f()),  // FIXIT unrealiable check
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2GrayPerfTestGPU, RGB2GrayPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2GrayPerfTestGPU, BGR2GrayPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUVPerfTestGPU, RGB2YUVPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(YUV2RGBPerfTestGPU, YUV2RGBPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(RGB2LabPerfTestGPU, RGB2LabPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2LUVPerfTestGPU, BGR2LUVPerfTest,
-                        Combine(Values(ToleranceTriple(0.25 * 3, 0.01 * 3, 0.0001 * 3).to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(LUV2BGRPerfTestGPU, LUV2BGRPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(BGR2YUVPerfTestGPU, BGR2YUVPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
 INSTANTIATE_TEST_CASE_P(YUV2BGRPerfTestGPU, YUV2BGRPerfTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 

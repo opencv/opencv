@@ -277,7 +277,7 @@ INSTANTIATE_TEST_CASE_P(Split4TestGPU, Split4Test,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
@@ -288,7 +288,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
-                        Combine(Values(AbsTolerance_Float_Int(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),

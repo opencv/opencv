@@ -871,8 +871,8 @@ TEST_P(ThresholdTest, AccuracyTestBinary)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        ASSERT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_L1));
     }
 }
 
