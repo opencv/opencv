@@ -47,7 +47,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/photo/photo_c.h"
 
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -727,8 +726,8 @@ namespace cv {
 template<> struct DefaultDeleter<IplConvKernel>{ void operator ()(IplConvKernel* obj) const { cvReleaseStructuringElement(&obj); } };
 }
 
-void
-cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,
+static void
+icvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_img,
            double inpaintRange, int flags )
 {
     cv::Ptr<CvMat> mask, band, f, t, out;
@@ -847,5 +846,5 @@ void cv::inpaint( InputArray _src, InputArray _mask, OutputArray _dst,
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     CvMat c_src = cvMat(src), c_mask = cvMat(mask), c_dst = cvMat(dst);
-    cvInpaint( &c_src, &c_mask, &c_dst, inpaintRange, flags );
+    icvInpaint( &c_src, &c_mask, &c_dst, inpaintRange, flags );
 }

@@ -61,8 +61,6 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_W32(name,prop_value);
         #elif defined (HAVE_GTK)
             cvSetModeWindow_GTK(name,prop_value);
-        #elif defined (HAVE_CARBON)
-            cvSetModeWindow_CARBON(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
         #elif defined (WINRT)
@@ -103,8 +101,6 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetModeWindow_GTK(name);
-        #elif defined (HAVE_CARBON)
-            return cvGetModeWindow_CARBON(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
         #elif defined (WINRT)
@@ -176,8 +172,6 @@ cv::Rect cvGetWindowImageRect(const char* name)
         return cvGetWindowRect_W32(name);
     #elif defined (HAVE_GTK)
         return cvGetWindowRect_GTK(name);
-    #elif defined (HAVE_CARBON)
-        return cvGetWindowRect_CARBON(name);
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(name);
     #else
@@ -582,7 +576,6 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #if   defined (HAVE_WIN32UI)  // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
-#elif defined (HAVE_CARBON)   // see window_carbon.cpp
 #elif defined (HAVE_QT)       // see window_QT.cpp
 #elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
@@ -598,14 +591,14 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 void cv::setWindowTitle(const String&, const String&)
 {
     CV_Error(Error::StsNotImplemented, "The function is not implemented. "
-        "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "
+        "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
         "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
 }
 
 #define CV_NO_GUI_ERROR(funcname) \
     cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
-    "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "\
+    "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "\
     "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script", \
     funcname, __FILE__, __LINE__)
 

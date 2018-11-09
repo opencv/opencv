@@ -14,6 +14,7 @@
 namespace opencv_test
 {
 
+
 // FIXME: Wut? See MulTestCPU/MathOpTest below (duplicate?)
 INSTANTIATE_TEST_CASE_P(AddTestCPU, MathOpTest,
                         Combine(Values(ADD, MUL),
@@ -187,6 +188,7 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
+                                Values(0.0),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
@@ -213,6 +215,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestCPU, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
 /*init output matrices or not*/ testing::Bool(),
+                                Values(0.5000005),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
@@ -221,6 +224,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(0.0),
                                 Values(cv::compile_args(CORE_CPU))),
                         opencv_test::PrintNormCoreParams());
 
@@ -271,25 +275,25 @@ INSTANTIATE_TEST_CASE_P(Split4TestCPU, Split4Test,
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(cv::Size(64,64),
                                        cv::Size(30,30)),
-                                Values(0.0),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(0.5, 0.1),
                                 Values(0.5, 0.1),
-                                Values(0.0),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(Merge3TestCPU, Merge3Test,

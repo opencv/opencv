@@ -408,19 +408,19 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_BGRA2RGBA_8u_C4R( bstart + i*tile_width0*4, 0,
                                                              data + x*4 + img.step*(tile_height - i - 1), 0,
-                                                             cvSize(tile_width,1) );
+                                                             Size(tile_width,1) );
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2BGR_8u_C4C3R( bstart + i*tile_width0*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
-                                                             cvSize(tile_width,1), 2 );
+                                                             Size(tile_width,1), 2 );
                                     }
                                 }
                                 else
                                     icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
-                                                              cvSize(tile_width,1), 2 );
+                                                              Size(tile_width,1), 2 );
                             break;
                         }
 
@@ -445,13 +445,13 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                   (ushort*)(data + img.step*i) + x*3, 0,
-                                                                  cvSize(tile_width,1) );
+                                                                  Size(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
                                         icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
-                                                               cvSize(tile_width,1) );
+                                                               Size(tile_width,1) );
                                     }
                                     else if (ncn == 4)
                                     {
@@ -459,20 +459,20 @@ bool  TiffDecoder::readData( Mat& img )
                                         {
                                             icvCvt_BGRA2RGBA_16u_C4R(buffer16 + i*tile_width0*ncn, 0,
                                                 (ushort*)(data + img.step*i) + x * 4, 0,
-                                                cvSize(tile_width, 1));
+                                                Size(tile_width, 1));
                                         }
                                         else
                                         {
                                             icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                 (ushort*)(data + img.step*i) + x * 3, 0,
-                                                cvSize(tile_width, 1), 2);
+                                                Size(tile_width, 1), 2);
                                         }
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
-                                                               cvSize(tile_width,1), 2 );
+                                                               Size(tile_width,1), 2 );
                                     }
                                 }
                                 else
@@ -487,7 +487,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x, 0,
-                                                               cvSize(tile_width,1), ncn, 2 );
+                                                               Size(tile_width,1), ncn, 2 );
                                     }
                                 }
                             }
@@ -859,18 +859,18 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 case 3:
                 {
                     if (depth == CV_8U)
-                        icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                        icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, Size(width, 1));
                     else
-                        icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                        icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, Size(width, 1));
                     break;
                 }
 
                 case 4:
                 {
                     if (depth == CV_8U)
-                        icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                        icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, Size(width, 1));
                     else
-                        icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                        icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, Size(width, 1));
                     break;
                 }
 

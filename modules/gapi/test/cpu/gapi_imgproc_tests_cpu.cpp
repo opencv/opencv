@@ -15,26 +15,6 @@
 namespace opencv_test
 {
 
-class AbsExact : public Wrappable<AbsExact>
-{
-public:
-    AbsExact() {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const { return cv::countNonZero(in1 != in2)==0; }
-private:
-};
-
-class AbsTolerance : public Wrappable<AbsTolerance>
-{
-public:
-    AbsTolerance(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
-        return cv::countNonZero(absDiff > _tol) == 0;
-    }
-private:
-    double _tol;
-};
 
 INSTANTIATE_TEST_CASE_P(Filter2DTestCPU, Filter2DTest,
                         Combine(Values(AbsExact().to_compare_f()),
@@ -49,7 +29,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestCPU, Filter2DTest,
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
-                        Combine(Values(AbsTolerance(1e-6).to_compare_f()),
+                        Combine(Values(AbsTolerance(0).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(3,5),
                                 Values(cv::Size(1280, 720),

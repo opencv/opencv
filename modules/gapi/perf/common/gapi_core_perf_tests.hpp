@@ -34,13 +34,13 @@ namespace opencv_test
     class MulPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MulDoublePerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MulCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class DivPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class DivPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class DivCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class DivRCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class DivRCPerfTest : public TestPerfParams<tuple<compare_f,cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MaskPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class MeanPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
-    class Polar2CartPerfTest : public TestPerfParams<tuple<cv::Size, cv::GCompileArgs>> {};
-    class Cart2PolarPerfTest : public TestPerfParams<tuple<cv::Size, cv::GCompileArgs>> {};
+    class Polar2CartPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+    class Cart2PolarPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
     class CmpPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
     class CmpWithScalarPerfTest : public TestPerfParams<tuple<CmpTypes, cv::Size, MatType, cv::GCompileArgs>> {};
     class BitwisePerfTest : public TestPerfParams<tuple<bitwiseOp, cv::Size, MatType, cv::GCompileArgs>> {};
@@ -50,9 +50,9 @@ namespace opencv_test
     class MaxPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class AbsDiffPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class AbsDiffCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
-    class SumPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
-    class AddWeightedPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class NormPerfTest : public TestPerfParams<tuple<NormTypes, cv::Size, MatType, cv::GCompileArgs>> {};
+    class SumPerfTest : public TestPerfParams<tuple<cv::Size, MatType, double, cv::GCompileArgs>> {};
+    class AddWeightedPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, double, cv::GCompileArgs>> {};
+    class NormPerfTest : public TestPerfParams<tuple<NormTypes, cv::Size, MatType, double, cv::GCompileArgs>> {};
     class IntegralPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class ThresholdPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class ThresholdOTPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
@@ -70,7 +70,7 @@ namespace opencv_test
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<MatType, MatType, cv::Size, cv::GCompileArgs>> {};
     class ConvertToPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::GCompileArgs>> {};
-    class ResizePerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::Size, double, cv::GCompileArgs>> {};
-    class ResizeFxFyPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, double, double, double, cv::GCompileArgs>> {};
+    class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
+    class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_HPP

@@ -44,7 +44,7 @@
 
 namespace opencv_test { namespace {
 
-#if defined HAVE_GTK || defined HAVE_QT || defined HAVE_WIN32UI || defined HAVE_CARBON || defined HAVE_COCOA
+#if defined HAVE_GTK || defined HAVE_QT || defined HAVE_WIN32UI || defined HAVE_COCOA
 
 class CV_HighGuiOnlyGuiTest : public cvtest::BaseTest
 {

@@ -31,9 +31,6 @@
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
 
-/* Carbon windowing environment */
-#cmakedefine HAVE_CARBON
-
 /* AMD's Basic Linear Algebra Subprograms Library*/
 #cmakedefine HAVE_CLAMDBLAS
 
@@ -166,12 +163,6 @@
 /* Qt OpenGL support */
 #cmakedefine HAVE_QT_OPENGL
 
-/* QuickTime video libraries */
-#cmakedefine HAVE_QUICKTIME
-
-/* QTKit video libraries */
-#cmakedefine HAVE_QTKIT
-
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 
@@ -180,12 +171,6 @@
 
 /* TIFF codec */
 #cmakedefine HAVE_TIFF
-
-/* Unicap video capture library */
-#cmakedefine HAVE_UNICAP
-
-/* Video for Windows support */
-#cmakedefine HAVE_VFW
 
 /* V4L2 capturing support in videoio.h */
 #cmakedefine HAVE_VIDEOIO
@@ -226,8 +211,6 @@
 
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     /*defined(HAVE_OPENNI)     || too specialized */ \
     defined(HAVE_FFMPEG)       || \
@@ -237,8 +220,6 @@
 
 #if /*defined(HAVE_XINE)       || */\
     defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
     defined(HAVE_MSMF)
