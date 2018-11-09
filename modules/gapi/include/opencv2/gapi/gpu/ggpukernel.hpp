@@ -125,7 +125,7 @@ struct tracked_cv_umat{
 struct scalar_wrapper_gpu
 {
     //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_gpu(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s{s} {};
+    scalar_wrapper_gpu(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
     operator cv::Scalar& () { return m_s; }
     void writeBack() const  { m_org_s = to_own(m_s); }
 
