@@ -519,4 +519,3 @@ __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __glo
         Sy_ptr[index] = cur_Uy;
     }
 }
-

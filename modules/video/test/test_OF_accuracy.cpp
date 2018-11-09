@@ -53,8 +53,6 @@ static string getRubberWhaleGroundTruth() { return getDataDir() + "optflow/Rubbe
 
 static bool isFlowCorrect(float u) { return !cvIsNaN(u) && (fabs(u) < 1e9); }
 
-static bool isFlowCorrect(double u) { return !cvIsNaN(u) && (fabs(u) < 1e9); }
-
 static float calcRMSE(Mat flow1, Mat flow2)
 {
     float sum = 0;
@@ -82,31 +80,6 @@ static float calcRMSE(Mat flow1, Mat flow2)
         }
     }
     return (float)sqrt(sum / (1e-9 + counter));
-}
-
-static float calcAvgEPE(vector< pair<Point2i, Point2i> > corr, Mat flow)
-{
-    double sum = 0;
-    int counter = 0;
-
-    for (size_t i = 0; i < corr.size(); ++i)
-    {
-        Vec2f flow1_at_point = Point2f(corr[i].second - corr[i].first);
-        Vec2f flow2_at_point = flow.at<Vec2f>(corr[i].first.y, corr[i].first.x);
-
-        double u1 = (double)flow1_at_point[0];
-        double v1 = (double)flow1_at_point[1];
-        double u2 = (double)flow2_at_point[0];
-        double v2 = (double)flow2_at_point[1];
-
-        if (isFlowCorrect(u1) && isFlowCorrect(u2) && isFlowCorrect(v1) && isFlowCorrect(v2))
-        {
-            sum += sqrt((u1 - u2) * (u1 - u2) + (v1 - v2) * (v1 - v2));
-            counter++;
-        }
-    }
-
-    return (float)(sum / counter);
 }
 
 bool readRubberWhale(Mat &dst_frame_1, Mat &dst_frame_2, Mat &dst_GT)
