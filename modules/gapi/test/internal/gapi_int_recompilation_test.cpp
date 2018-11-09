@@ -193,6 +193,7 @@ TEST(GComputationCompile, ReshapeRois)
     cv::GComputation cc(in, cv::gapi::resize(blurred, szOut));
 
     cv::Mat first_in_mat(8, 8, CV_8UC3);
+    cv::randn(first_in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
     cv::Mat first_out_mat;
     auto fluidKernels = cv::gapi::combine(gapi::imgproc::fluid::kernels(),
                                           gapi::core::fluid::kernels(),
@@ -206,6 +207,7 @@ TEST(GComputationCompile, ReshapeRois)
         int width  = 4 + 2*i;
         int height = width;
         cv::Mat in_mat(width, height, CV_8UC3);
+        cv::randn(in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
         cv::Mat out_mat = cv::Mat::zeros(szOut, CV_8UC3);
 
         int x = 0;
