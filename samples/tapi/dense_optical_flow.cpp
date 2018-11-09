@@ -50,7 +50,7 @@ int main(int argc, const char* argv[])
     const char* keys =
             "{ h help     |     | print help message }"
             "{ c camera   | 0   | capture video from camera (device index starting from 0) }"
-            "{ a algorithm | fb | algorithm (supported: 'fb', 'tvl')}"
+            "{ a algorithm | fb | algorithm (supported: 'fb', 'dis')}"
             "{ m cpu      |     | run without OpenCL }"
             "{ v video    |     | use video as input }"
             "{ o original |     | use original frame size (do not resize to 640x480)}"
@@ -84,11 +84,11 @@ int main(int argc, const char* argv[])
         return 2;
     }
 
-    cv::Ptr<cv::DenseOpticalFlow> alg;
+    Ptr<DenseOpticalFlow> alg;
     if (algorithm == "fb")
-        alg = cv::FarnebackOpticalFlow::create();
-    else if (algorithm == "tvl")
-        alg = cv::DualTVL1OpticalFlow::create();
+        alg = FarnebackOpticalFlow::create();
+    else if (algorithm == "dis")
+        alg = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
     else
     {
         cout << "Invalid algorithm: " << algorithm << endl;
