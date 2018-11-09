@@ -778,7 +778,15 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
 {
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
-    CV_Assert(inarr.type() == CV_8UC1);
+    CV_Assert(inarr.depth() == CV_8U);
+    int incn = inarr.channels();
+    if( incn == 3 || incn == 4 )
+    {
+        Mat gray;
+        cvtColor(inarr, gray, COLOR_BGR2GRAY);
+        inarr = gray;
+    }
+
     QRDetect qrdet;
     qrdet.init(inarr, p->epsX, p->epsY);
     if (!qrdet.localization()) { return false; }
@@ -786,15 +794,6 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
     Mat(pnts2f).convertTo(points, points.fixedType() ? points.type() : CV_32FC2);
     return true;
-}
-
-CV_EXPORTS bool detectQRCode(InputArray in, vector<Point> &points, double eps_x, double eps_y)
-{
-    QRCodeDetector qrdetector;
-    qrdetector.setEpsX(eps_x);
-    qrdetector.setEpsY(eps_y);
-
-    return qrdetector.detect(in, points);
 }
 
 class QRDecode
@@ -1060,11 +1059,20 @@ bool QRDecode::fullDecodingProcess()
 #endif
 }
 
-CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode)
+CV_EXPORTS std::string QRCodeDetector::decode(InputArray in, InputArray points,
+                                              OutputArray straight_qrcode)
 {
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
-    inarr.convertTo(inarr, CV_8UC1);
+    CV_Assert(inarr.depth() == CV_8U);
+
+    int incn = inarr.channels();
+    if( incn == 3 || incn == 4 )
+    {
+        Mat gray;
+        cvtColor(inarr, gray, COLOR_BGR2GRAY);
+        inarr = gray;
+    }
 
     CV_Assert(points.isVector());
     vector<Point2f> src_points;
@@ -1074,18 +1082,50 @@ CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &deco
 
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
-    bool exit_flag = qrdec.fullDecodingProcess();
+    bool ok = qrdec.fullDecodingProcess();
 
-    decoded_info = qrdec.getDecodeInformation();
+    std::string decoded_info = qrdec.getDecodeInformation();
 
-    if (exit_flag && straight_qrcode.needed())
+    if (ok && straight_qrcode.needed())
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode,
                                              straight_qrcode.fixedType() ?
                                              straight_qrcode.type() : CV_32FC2);
     }
 
-    return exit_flag;
+    return ok ? decoded_info : std::string();
 }
+
+CV_EXPORTS std::string QRCodeDetector::detectAndDecode(InputArray in,
+                                                       OutputArray points_,
+                                                       OutputArray straight_qrcode)
+{
+    Mat inarr = in.getMat();
+    CV_Assert(!inarr.empty());
+    CV_Assert(inarr.depth() == CV_8U);
+
+    int incn = inarr.channels();
+    if( incn == 3 || incn == 4 )
+    {
+        Mat gray;
+        cvtColor(inarr, gray, COLOR_BGR2GRAY);
+        inarr = gray;
+    }
+
+    vector<Point2f> points;
+    bool ok = detect(inarr, points);
+    if( points_.needed() )
+    {
+        if( ok )
+            Mat(points).copyTo(points_);
+        else
+            points_.release();
+    }
+    std::string decoded_info;
+    if( ok )
+        decoded_info = decode(inarr, points, straight_qrcode);
+    return decoded_info;
+}
+
 
 }
