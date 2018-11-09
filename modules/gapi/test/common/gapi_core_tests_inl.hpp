@@ -703,7 +703,8 @@ TEST_P(SumTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(abs(out_sum[0] - out_sum_ocv[0]), tolerance);
+        EXPECT_LE(std::abs(out_sum[0] - out_sum_ocv[0]) / std::max(1.0, std::abs(out_sum_ocv[0])), tolerance)
+            << "OCV=" << out_sum_ocv[0] << "   GAPI=" << out_sum[0];
     }
 }
 
@@ -802,7 +803,8 @@ TEST_P(NormTest, AccuracyTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(abs(out_norm[0] - out_norm_ocv[0]), tolerance);
+        EXPECT_LE(std::abs(out_norm[0] - out_norm_ocv[0]) / std::max(1.0, std::abs(out_norm_ocv[0])), tolerance)
+            << "OCV=" << out_norm_ocv[0] << "   GAPI=" << out_norm[0];
     }
 }
 

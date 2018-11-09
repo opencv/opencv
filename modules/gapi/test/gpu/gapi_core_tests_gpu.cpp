@@ -190,7 +190,7 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.5), //Values(0.04), //TODO: too relaxed?
+                                Values(1e-3), //TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
@@ -226,7 +226,7 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(0.04), //TODO: too relaxed?
+                                Values(1e-3), //TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))),
                         opencv_test::PrintNormCoreParams());
 
