@@ -417,7 +417,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
 
         //mode = cvGetErrMode();
         //cvSetErrMode( CV_ErrModeSilent );
-        CV_TRY
+        try
         {
             switch (fs->fmt)
             {
@@ -427,7 +427,7 @@ cvOpenFileStorage( const char* query, CvMemStorage* dststorage, int flags, const
             default: break;
             }
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             fs->is_opened = true;
             cvReleaseFileStorage( &fs );

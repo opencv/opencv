@@ -756,11 +756,11 @@ static void* icvReadSeq( CvFileStorage* fs, CvFileNode* node )
             flags |= CV_SEQ_FLAG_HOLE;
         if( !strstr(flags_str, "untyped") )
         {
-            CV_TRY
+            try
             {
                 flags |= icvDecodeSimpleFormat(dt);
             }
-            CV_CATCH_ALL
+            catch (...)
             {
             }
         }

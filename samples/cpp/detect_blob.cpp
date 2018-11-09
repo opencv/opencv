@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
             imshow("Original", img);
             waitKey();
         }
-        catch (Exception& e)
+        catch (const Exception& e)
         {
             cout << "Feature : " << *itDesc << "\n";
             cout << e.msg << endl;

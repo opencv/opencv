@@ -120,11 +120,11 @@ static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
         lut.copyFrom(_lut);
         ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError& e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError& e)
     {
         VX_DbgThrow(e.what());
     }

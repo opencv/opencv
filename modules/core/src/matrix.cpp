@@ -416,7 +416,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    CV_TRY
+    try
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -436,10 +436,10 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
         release();
-        CV_RETHROW();
+        throw;
     }
 
     updateContinuityFlag();

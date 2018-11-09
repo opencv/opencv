@@ -150,11 +150,11 @@ bool PxMDecoder::readHeader()
     else if( !m_strm.open( m_filename ))
         return false;
 
-    CV_TRY
+    try
     {
         int code = m_strm.getByte();
         if( code != 'P' )
-            CV_THROW (RBS_BAD_HEADER);
+            throw RBS_BAD_HEADER;
 
         code = m_strm.getByte();
         switch( code )
@@ -162,7 +162,7 @@ bool PxMDecoder::readHeader()
         case '1': case '4': m_bpp = 1; break;
         case '2': case '5': m_bpp = 8; break;
         case '3': case '6': m_bpp = 24; break;
-        default: CV_THROW (RBS_BAD_HEADER);
+        default: throw RBS_BAD_HEADER;
         }
 
         m_binary = code >= '4';
@@ -173,7 +173,7 @@ bool PxMDecoder::readHeader()
 
         m_maxval = m_bpp == 1 ? 1 : ReadNumber(m_strm);
         if( m_maxval > 65535 )
-            CV_THROW (RBS_BAD_HEADER);
+            throw RBS_BAD_HEADER;
 
         //if( m_maxval > 255 ) m_binary = false; nonsense
         if( m_maxval > 255 )
@@ -185,15 +185,14 @@ bool PxMDecoder::readHeader()
             result = true;
         }
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception&)
     {
-        CV_UNUSED(e);
-        CV_RETHROW();
+        throw;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
-        CV_RETHROW();
+        throw;
     }
 
     if( !result )
@@ -233,7 +232,7 @@ bool PxMDecoder::readData( Mat& img )
         FillGrayPalette( palette, m_bpp==1 ? 1 : 8 , m_bpp == 1 );
     }
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -359,15 +358,14 @@ bool PxMDecoder::readData( Mat& img )
             CV_Error(Error::StsError, "m_bpp is not supported");
         }
     }
-    CV_CATCH (cv::Exception, e)
+    catch (const cv::Exception&)
     {
-        CV_UNUSED(e);
-        CV_RETHROW();
+        throw;
     }
-    CV_CATCH_ALL
+    catch (...)
     {
         std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
-        CV_RETHROW();
+        throw;
     }
 
     return result;
