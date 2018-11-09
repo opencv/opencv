@@ -411,7 +411,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
             Mat H8(8, 1, CV_64F, H.ptr<double>());
-            createLMSolver(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
+            LMSolver::create(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
     }
 
