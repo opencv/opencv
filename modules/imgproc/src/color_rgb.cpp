@@ -331,23 +331,51 @@ template<typename _Tp>
 struct Gray2RGB
 {
     typedef _Tp channel_type;
+    typedef typename v_type<_Tp>::t vt;
 
     Gray2RGB(int _dstcn) : dstcn(_dstcn) {}
     void operator()(const _Tp* src, _Tp* dst, int n) const
     {
-        if( dstcn == 3 )
-            for( int i = 0; i < n; i++, dst += 3 )
-            {
-                dst[0] = dst[1] = dst[2] = src[i];
-            }
-        else
+        int dcn = dstcn;
+        int i = 0;
+        _Tp alpha = ColorChannel<_Tp>::max();
+
+#if CV_SIMD
+        const int vsize = vt::nlanes;
+        vt valpha = v_set<_Tp>::set(alpha);
+        for(; i < n-vsize+1;
+            i += vsize, src += vsize, dst += vsize*dcn)
         {
-            _Tp alpha = ColorChannel<_Tp>::max();
-            for( int i = 0; i < n; i++, dst += 4 )
+            vt g = vx_load(src);
+
+            if(dcn == 3)
             {
-                dst[0] = dst[1] = dst[2] = src[i];
-                dst[3] = alpha;
+                v_store_interleave(dst, g, g, g);
             }
+            else
+            {
+                vt gg0, gg1, ga0, ga1, w0, w1, w2, w3;
+
+                v_zip(g, g, gg0, gg1);
+                v_zip(g, valpha, ga0, ga1);
+                v_zip(gg0, ga0, w0, w1);
+                v_zip(gg1, ga1, w2, w3);
+                v_store(dst +       0, w0);
+                v_store(dst +   vsize, w1);
+                v_store(dst + 2*vsize, w2);
+                v_store(dst + 3*vsize, w3);
+
+                //TODO: check what's faster
+                //v_store_interleave(dst, g, g, g, valpha);
+            }
+        }
+        vx_cleanup();
+#endif
+        for ( ; i < n; i++, src++, dst += dcn )
+        {
+            dst[0] = dst[1] = dst[2] = src[0];
+            if(dcn == 4)
+                dst[3] = alpha;
         }
     }
 
