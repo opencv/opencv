@@ -921,7 +921,8 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(abs(out_sum[0] - out_sum_ocv[0]), tolerance);
+        EXPECT_LE(std::abs(out_sum[0] - out_sum_ocv[0]) / std::max(1.0, std::abs(out_sum_ocv[0])), tolerance)
+            << "OCV=" << out_sum_ocv[0] << "   GAPI=" << out_sum[0];
     }
 
     SANITY_CHECK_NOTHING();
@@ -1041,7 +1042,8 @@ PERF_TEST_P_(NormPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(abs(out_norm[0] - out_norm_ocv[0]), tolerance);
+        EXPECT_LE(std::abs(out_norm[0] - out_norm_ocv[0]) / std::max(1.0, std::abs(out_norm_ocv[0])), tolerance)
+            << "OCV=" << out_norm_ocv[0] << "   GAPI=" << out_norm[0];
     }
 
     SANITY_CHECK_NOTHING();
