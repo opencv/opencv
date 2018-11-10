@@ -69,7 +69,7 @@ to an integer format. Then we use a simple look and the upper formula to calcula
 No OpenCV specific stuff here.
 
 Another issue is how do we measure time? Well OpenCV offers two simple functions to achieve this
-@ref cv::getTickCount() and @ref cv::getTickFrequency() . The first returns the number of ticks of
+cv::getTickCount() and cv::getTickFrequency() . The first returns the number of ticks of
 your systems CPU from a certain event (like since you booted your system). The second returns how
 many times your CPU emits a tick during a second. So to measure in seconds the number of time
 elapsed between two operations is easy as:
@@ -98,7 +98,7 @@ example in case of an BGR color system:
 Note that the order of the channels is inverse: BGR instead of RGB. Because in many cases the memory
 is large enough to store the rows in a successive fashion the rows may follow one after another,
 creating a single long row. Because everything is in a single place following one after another this
-may help to speed up the scanning process. We can use the @ref cv::Mat::isContinuous() function to *ask*
+may help to speed up the scanning process. We can use the cv::Mat::isContinuous() function to *ask*
 the matrix if this is the case. Continue on to the next section to find an example.
 
 The efficient way
@@ -155,7 +155,7 @@ elements in the image. Its basic usage is to specify the row and column number o
 to access. During our earlier scanning methods you could already observe that is important through
 what type we are looking at the image. It's no different here as you need to manually specify what
 type to use at the automatic lookup. You can observe this in case of the gray scale images for the
-following source code (the usage of the + @ref cv::at() function):
+following source code (the usage of the + cv::Mat::at() function):
 
 @snippet how_to_scan_images.cpp scan-random
 
@@ -169,12 +169,12 @@ new row pointer for what we use the C operator[] to acquire the column element.
 
 If you need to do multiple lookups using this method for an image it may be troublesome and time
 consuming to enter the type and the at keyword for each of the accesses. To solve this problem
-OpenCV has a @ref cv::Mat_ data type. It's the same as Mat with the extra need that at definition
+OpenCV has a cv::Mat_ data type. It's the same as Mat with the extra need that at definition
 you need to specify the data type through what to look at the data matrix, however in return you can
 use the operator() for fast access of items. To make things even better this is easily convertible
-from and to the usual @ref cv::Mat data type. A sample usage of this you can see in case of the
+from and to the usual cv::Mat data type. A sample usage of this you can see in case of the
 color images of the upper function. Nevertheless, it's important to note that the same operation
-(with the same runtime speed) could have been done with the @ref cv::at() function. It's just a less
+(with the same runtime speed) could have been done with the cv::Mat::at function. It's just a less
 to write for the lazy programmer trick.
 
 The Core Function
@@ -183,7 +183,7 @@ The Core Function
 This is a bonus method of achieving lookup table modification in an image. In image
 processing it's quite common that you want to modify all of a given image values to some other value.
 OpenCV provides a function for modifying image values, without the need to write the scanning logic
-of the image. We use the @ref cv::LUT() function of the core module. First we build a Mat type of the
+of the image. We use the cv::LUT() function of the core module. First we build a Mat type of the
 lookup table:
 
 @snippet how_to_scan_images.cpp table-init
