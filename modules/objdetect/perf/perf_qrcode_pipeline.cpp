@@ -21,7 +21,8 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, detect)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
     std::vector< Point > corners;
-    TEST_CYCLE() ASSERT_TRUE(detectQRCode(src, corners));
+    QRCodeDetector qrcode;
+    TEST_CYCLE() ASSERT_TRUE(qrcode.detect(src, corners));
     SANITY_CHECK(corners);
 }
 
@@ -37,8 +38,13 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
 
     std::vector< Point > corners;
     std::string decoded_info;
-    ASSERT_TRUE(detectQRCode(src, corners));
-    TEST_CYCLE() ASSERT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+    QRCodeDetector qrcode;
+    ASSERT_TRUE(qrcode.detect(src, corners));
+    TEST_CYCLE()
+    {
+        decoded_info = qrcode.decode(src, corners, straight_barcode);
+        ASSERT_FALSE(decoded_info.empty());
+    }
 
     std::vector<uint8_t> decoded_info_uint8_t(decoded_info.begin(), decoded_info.end());
     SANITY_CHECK(decoded_info_uint8_t);
@@ -69,7 +75,8 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
         rng.fill(not_qr_code, RNG::UNIFORM, Scalar(0), Scalar(1));
     }
 
-    TEST_CYCLE() ASSERT_FALSE(detectQRCode(not_qr_code, corners));
+    QRCodeDetector qrcode;
+    TEST_CYCLE() ASSERT_FALSE(qrcode.detect(not_qr_code, corners));
     SANITY_CHECK_NOTHING();
 }
 
@@ -77,7 +84,6 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
 PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
 {
     Mat straight_barcode;
-    std::string decoded_info;
     std::vector< Point > corners;
     corners.push_back(Point( 0, 0)); corners.push_back(Point( 0,  5));
     corners.push_back(Point(10, 0)); corners.push_back(Point(15, 15));
@@ -91,7 +97,8 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
         rng.fill(not_qr_code, RNG::UNIFORM, Scalar(0), Scalar(1));
     }
 
-    TEST_CYCLE() ASSERT_FALSE(decodeQRCode(not_qr_code, corners, decoded_info, straight_barcode));
+    QRCodeDetector qrcode;
+    TEST_CYCLE() ASSERT_TRUE(qrcode.decode(not_qr_code, corners, straight_barcode).empty());
     SANITY_CHECK_NOTHING();
 }
 #endif
