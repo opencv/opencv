@@ -130,52 +130,6 @@ node {
   }
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
-  op: "Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/weights/read/_252__cf__258"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-  attr {
-    key: "dilations"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-  attr {
-    key: "padding"
-    value {
-      s: "SAME"
-    }
-  }
-  attr {
-    key: "strides"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-}
-node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
-  op: "BiasAdd"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
-}
-node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv1/Conv2D"
   op: "Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
@@ -322,6 +276,52 @@ node {
   op: "BiasAdd"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/pool1/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/weights/read/_252__cf__258"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
 }
 node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_1/bottleneck_v1/add"
@@ -494,45 +494,6 @@ node {
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/add"
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
-  op: "MaxPool"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-  attr {
-    key: "ksize"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-  attr {
-    key: "padding"
-    value {
-      s: "SAME"
-    }
-  }
-  attr {
-    key: "strides"
-    value {
-      list {
-        i: 1
-        i: 2
-        i: 2
-        i: 1
-      }
-    }
-  }
-}
-node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv1/Conv2D"
   op: "Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
@@ -687,21 +648,9 @@ node {
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/Conv2D_bn_offset"
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
-  op: "Add"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
-}
-node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
-  op: "Relu"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
-}
-node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
-  op: "Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/weights/read/_257__cf__263"
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_2/bottleneck_v1/Relu"
   attr {
     key: "data_format"
     value {
@@ -709,7 +658,7 @@ node {
     }
   }
   attr {
-    key: "dilations"
+    key: "ksize"
     value {
       list {
         i: 1
@@ -730,18 +679,23 @@ node {
     value {
       list {
         i: 1
-        i: 1
-        i: 1
+        i: 2
+        i: 2
         i: 1
       }
     }
   }
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
-  op: "BiasAdd"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/shortcut/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/add"
 }
 node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv1/Conv2D"
@@ -890,6 +844,52 @@ node {
   op: "BiasAdd"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block1/unit_3/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/weights/read/_257__cf__263"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
 }
 node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_1/bottleneck_v1/add"
@@ -1221,45 +1221,6 @@ node {
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/add"
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
-  op: "MaxPool"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-  attr {
-    key: "ksize"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-  attr {
-    key: "padding"
-    value {
-      s: "SAME"
-    }
-  }
-  attr {
-    key: "strides"
-    value {
-      list {
-        i: 1
-        i: 2
-        i: 2
-        i: 1
-      }
-    }
-  }
-}
-node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv1/Conv2D"
   op: "Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
@@ -1414,21 +1375,9 @@ node {
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/Conv2D_bn_offset"
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
-  op: "Add"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
-}
-node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
-  op: "Relu"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
-}
-node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
-  op: "Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/weights/read/_262__cf__268"
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
+  op: "MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_3/bottleneck_v1/Relu"
   attr {
     key: "data_format"
     value {
@@ -1436,7 +1385,7 @@ node {
     }
   }
   attr {
-    key: "dilations"
+    key: "ksize"
     value {
       list {
         i: 1
@@ -1457,18 +1406,23 @@ node {
     value {
       list {
         i: 1
-        i: 1
-        i: 1
+        i: 2
+        i: 2
         i: 1
       }
     }
   }
 }
 node {
-  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
-  op: "BiasAdd"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
-  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
+  op: "Add"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/shortcut/MaxPool"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/conv3/BatchNorm/FusedBatchNorm"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
+  op: "Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/add"
 }
 node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv1/Conv2D"
@@ -1617,6 +1571,52 @@ node {
   op: "BiasAdd"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D"
   input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block2/unit_4/bottleneck_v1/Relu"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/weights/read/_262__cf__268"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
 }
 node {
   name: "FirstStageFeatureExtractor/resnet_v1_50/resnet_v1_50/block3/unit_1/bottleneck_v1/add"
@@ -2482,6 +2482,58 @@ node {
   input: "Conv/BiasAdd"
 }
 node {
+  name: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  op: "Conv2D"
+  input: "Conv/Relu6"
+  input: "FirstStageBoxPredictor/ClassPredictor/weights/read/_285__cf__291"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
+  input: "FirstStageBoxPredictor/ClassPredictor/biases/read/_284__cf__290"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
   name: "FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "Conv/Relu6"
@@ -2540,58 +2592,6 @@ node {
   }
 }
 node {
-  name: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
-  op: "Conv2D"
-  input: "Conv/Relu6"
-  input: "FirstStageBoxPredictor/ClassPredictor/weights/read/_285__cf__291"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-  attr {
-    key: "dilations"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-  attr {
-    key: "padding"
-    value {
-      s: "SAME"
-    }
-  }
-  attr {
-    key: "strides"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-}
-node {
-  name: "FirstStageBoxPredictor/ClassPredictor/BiasAdd"
-  op: "BiasAdd"
-  input: "FirstStageBoxPredictor/ClassPredictor/Conv2D"
-  input: "FirstStageBoxPredictor/ClassPredictor/biases/read/_284__cf__290"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-}
-node {
   name: "FirstStageBoxPredictor/ClassPredictor/reshape_1/shape"
   op: "Const"
   attr {
@@ -2599,14 +2599,14 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 0
+        int_val: -1
+        int_val: 2
         tensor_shape {
           dim {
             size: 3
           }
         }
-        int_val: 0
-        int_val: -1
-        int_val: 2
       }
     }
   }
@@ -2660,23 +2660,23 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 90.5096679919
+        float_val: 181.019335984
+        float_val: 362.038671968
+        float_val: 724.077343935
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 45.2548339959
+        float_val: 90.5096679919
+        float_val: 181.019335984
+        float_val: 362.038671968
         tensor_shape {
           dim {
             size: 12
           }
         }
-        float_val: 90.5096664429
-        float_val: 181.019332886
-        float_val: 362.038665771
-        float_val: 724.077331543
-        float_val: 64.0
-        float_val: 128.0
-        float_val: 256.0
-        float_val: 512.0
-        float_val: 45.2548332214
-        float_val: 90.5096664429
-        float_val: 181.019332886
-        float_val: 362.038665771
       }
     }
   }
@@ -2697,15 +2697,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -2714,23 +2714,23 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 45.2548339959
+        float_val: 90.5096679919
+        float_val: 181.019335984
+        float_val: 362.038671968
+        float_val: 64.0
+        float_val: 128.0
+        float_val: 256.0
+        float_val: 512.0
+        float_val: 90.5096679919
+        float_val: 181.019335984
+        float_val: 362.038671968
+        float_val: 724.077343935
         tensor_shape {
           dim {
             size: 12
           }
         }
-        float_val: 45.2548332214
-        float_val: 90.5096664429
-        float_val: 181.019332886
-        float_val: 362.038665771
-        float_val: 64.0
-        float_val: 128.0
-        float_val: 256.0
-        float_val: 512.0
-        float_val: 90.5096664429
-        float_val: 181.019332886
-        float_val: 362.038665771
-        float_val: 724.077331543
       }
     }
   }
@@ -2798,12 +2798,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.0
         tensor_shape {
           dim {
             size: 1
           }
         }
-        float_val: 0.0
       }
     }
   }
@@ -2816,12 +2816,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 1.0
         tensor_shape {
           dim {
             size: 1
           }
         }
-        float_val: 1.0
       }
     }
   }
@@ -2842,7 +2842,7 @@ node {
   attr {
     key: "extrapolation_value"
     value {
-      f: 0.0
+      f: 0
     }
   }
   attr {
@@ -2890,52 +2890,6 @@ node {
       }
     }
   }
-}
-node {
-  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
-  op: "Conv2D"
-  input: "MaxPool2D/MaxPool"
-  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/weights/read/_294__cf__300"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-  attr {
-    key: "dilations"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-  attr {
-    key: "padding"
-    value {
-      s: "SAME"
-    }
-  }
-  attr {
-    key: "strides"
-    value {
-      list {
-        i: 1
-        i: 1
-        i: 1
-        i: 1
-      }
-    }
-  }
-}
-node {
-  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
-  op: "BiasAdd"
-  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
-  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
 }
 node {
   name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv1/Conv2D"
@@ -3084,6 +3038,52 @@ node {
   op: "BiasAdd"
   input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D"
   input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/conv3/Conv2D_bn_offset"
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
+  op: "Conv2D"
+  input: "MaxPool2D/MaxPool"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/weights/read/_294__cf__300"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
+    key: "dilations"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+  attr {
+    key: "padding"
+    value {
+      s: "SAME"
+    }
+  }
+  attr {
+    key: "strides"
+    value {
+      list {
+        i: 1
+        i: 1
+        i: 1
+        i: 1
+      }
+    }
+  }
+}
+node {
+  name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/BatchNorm/FusedBatchNorm"
+  op: "BiasAdd"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D"
+  input: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/shortcut/Conv2D_bn_offset"
 }
 node {
   name: "SecondStageFeatureExtractor/resnet_v1_50/block4/unit_1/bottleneck_v1/add"
@@ -3432,6 +3432,42 @@ node {
   input: "SecondStageBoxPredictor/AvgPool"
 }
 node {
+  name: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  op: "MatMul"
+  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/weights/read/_299__cf__305"
+  attr {
+    key: "transpose_a"
+    value {
+      b: false
+    }
+  }
+  attr {
+    key: "transpose_b"
+    value {
+      b: false
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  op: "BiasAdd"
+  input: "SecondStageBoxPredictor/ClassPredictor/MatMul"
+  input: "SecondStageBoxPredictor/ClassPredictor/biases/read/_298__cf__304"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+}
+node {
+  name: "SecondStageBoxPredictor/Reshape_1"
+  op: "Reshape"
+  input: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
+  input: "SecondStageBoxPredictor/Reshape_1/shape"
+}
+node {
   name: "SecondStageBoxPredictor/BoxEncodingPredictor/MatMul"
   op: "MatMul"
   input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
@@ -3468,46 +3504,10 @@ node {
   }
 }
 node {
-  name: "SecondStageBoxPredictor/ClassPredictor/MatMul"
-  op: "MatMul"
-  input: "SecondStageBoxPredictor/Flatten/flatten/Reshape"
-  input: "SecondStageBoxPredictor/ClassPredictor/weights/read/_299__cf__305"
-  attr {
-    key: "transpose_a"
-    value {
-      b: false
-    }
-  }
-  attr {
-    key: "transpose_b"
-    value {
-      b: false
-    }
-  }
-}
-node {
-  name: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
-  op: "BiasAdd"
-  input: "SecondStageBoxPredictor/ClassPredictor/MatMul"
-  input: "SecondStageBoxPredictor/ClassPredictor/biases/read/_298__cf__304"
-  attr {
-    key: "data_format"
-    value {
-      s: "NHWC"
-    }
-  }
-}
-node {
   name: "SecondStageBoxPredictor/Reshape"
   op: "Reshape"
   input: "SecondStageBoxPredictor/BoxEncodingPredictor/BiasAdd"
   input: "SecondStageBoxPredictor/Reshape/shape2"
-}
-node {
-  name: "SecondStageBoxPredictor/Reshape_1"
-  op: "Reshape"
-  input: "SecondStageBoxPredictor/ClassPredictor/BiasAdd"
-  input: "SecondStageBoxPredictor/Reshape_1/shape"
 }
 node {
   name: "SecondStageBoxPredictor/Reshape_1/softmax"
@@ -3528,14 +3528,14 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 0
+        int_val: 0
+        int_val: 1
         tensor_shape {
           dim {
             size: 3
           }
         }
-        int_val: 0
-        int_val: 0
-        int_val: 1
       }
     }
   }
@@ -3548,14 +3548,14 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: -1
+        int_val: -1
+        int_val: -1
         tensor_shape {
           dim {
             size: 3
           }
         }
-        int_val: -1
-        int_val: -1
-        int_val: -1
       }
     }
   }
@@ -3575,13 +3575,13 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 1
+        int_val: -1
         tensor_shape {
           dim {
             size: 2
           }
         }
-        int_val: 1
-        int_val: -1
       }
     }
   }
@@ -3600,14 +3600,14 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 1
+        int_val: -1
+        int_val: 4
         tensor_shape {
           dim {
             size: 3
           }
         }
-        int_val: 1
-        int_val: -1
-        int_val: 4
       }
     }
   }
@@ -3620,15 +3620,15 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 0
+        int_val: 0
+        int_val: 0
+        int_val: 3
         tensor_shape {
           dim {
             size: 4
           }
         }
-        int_val: 0
-        int_val: 0
-        int_val: 0
-        int_val: 3
       }
     }
   }
@@ -3641,15 +3641,15 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: -1
+        int_val: -1
+        int_val: -1
+        int_val: 4
         tensor_shape {
           dim {
             size: 4
           }
         }
-        int_val: -1
-        int_val: -1
-        int_val: -1
-        int_val: 4
       }
     }
   }
@@ -3669,15 +3669,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -3702,14 +3702,14 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: 1
+        int_val: 1
+        int_val: -1
         tensor_shape {
           dim {
             size: 3
           }
         }
-        int_val: 1
-        int_val: 1
-        int_val: -1
       }
     }
   }
@@ -3758,7 +3758,7 @@ node {
   attr {
     key: "nms_threshold"
     value {
-      f: 0.600000023842
+      f: 0.6
     }
   }
   attr {
@@ -3779,6 +3779,4 @@ node {
       b: true
     }
   }
-}
-library {
 }
