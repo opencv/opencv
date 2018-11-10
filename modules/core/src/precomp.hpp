@@ -248,34 +248,12 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
-{
-    int64 sz = (int64)cols * rows * widthScale;
-    return (flags & Mat::CONTINUOUS_FLAG) != 0 &&
-        (int)sz == sz ? Size((int)sz, 1) : Size(cols * widthScale, rows);
-}
-
-inline Size getContinuousSize( const Mat& m1, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2, int widthScale=1 )
-{
-    CV_Assert(m1.size() == m2.size());
-    return getContinuousSize_(m1.flags & m2.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, int widthScale=1 )
-{
-    CV_Assert(m1.size() == m2.size());
-    CV_Assert(m1.size() == m3.size());
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags,
-                              m1.cols, m1.rows, widthScale);
-}
+// There is some mess in code with vectors representation.
+// Both vector-column / vector-rows are used with dims=2 (as Mat2D always).
+// Reshape matrices if neccessary (in case of vectors) and returns size with scaled width.
+Size getContinuousSize2D(Mat& m1, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale=1);
 
 void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
 void finalizeHdr(Mat& m);
