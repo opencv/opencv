@@ -246,11 +246,11 @@ namespace cv
                 ivx::IVX_CHECK_STATUS(vxuSobel3x3(ctx, ia, NULL, ib));
             ctx.setImmediateBorder(prevBorder);
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }

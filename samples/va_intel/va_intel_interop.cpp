@@ -256,7 +256,7 @@ int main(int argc, char** argv)
 
         std::cout << "Interop " << (doInterop ? "ON " : "OFF") << ": processing time, msec: " << time << std::endl;
     }
-    catch (std::exception& ex)
+    catch (const std::exception& ex)
     {
         std::cerr << "ERROR: " << ex.what() << std::endl;
     }

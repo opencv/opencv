@@ -232,7 +232,7 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
             storageOutPath += ext;
         }
     }
-    catch(cv::Exception&)
+    catch(const cv::Exception&)
     {
         LOGE("Failed to open sanity data for reading: %s", storageInPath.c_str());
     }
@@ -1987,22 +1987,22 @@ void TestBase::RunPerfTestBody()
             implConf.GetImpl();
 #endif
     }
-    catch(SkipTestException&)
+    catch(const SkipTestException&)
     {
         metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
         return;
     }
-    catch(PerfSkipTestException&)
+    catch(const PerfSkipTestException&)
     {
         metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
         return;
     }
-    catch(PerfEarlyExitException&)
+    catch(const PerfEarlyExitException&)
     {
         metrics.terminationReason = performance_metrics::TERM_INTERRUPT;
         return;//no additional failure logging
     }
-    catch(cv::Exception& e)
+    catch(const cv::Exception& e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         #ifdef HAVE_CUDA
@@ -2011,7 +2011,7 @@ void TestBase::RunPerfTestBody()
         #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }
-    catch(std::exception& e)
+    catch(const std::exception& e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws std::exception:\n  " << e.what();

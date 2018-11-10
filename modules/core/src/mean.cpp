@@ -654,11 +654,11 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
                     pstddev[c] = 0;
             }
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }

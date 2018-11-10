@@ -177,7 +177,7 @@ int showImageQRCodeDetect(string in, string out)
         {
             imwrite(out, color_src, compression_params);
         }
-        catch (cv::Exception& ex)
+        catch (const cv::Exception& ex)
         {
             cout << "Exception converting image to PNG format: ";
             cout << ex.what() << '\n';

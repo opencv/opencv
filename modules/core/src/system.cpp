@@ -1029,7 +1029,7 @@ void error( const Exception& exc )
         *p = 0;
     }
 
-    CV_THROW(exc);
+    throw exc;
 #ifdef __GNUC__
 # if !defined __clang__ && !defined __APPLE__
     // this suppresses this warning: "noreturn" function does return [enabled by default]

@@ -32,6 +32,8 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     width_stride = float(grid_anchor_generator['width_stride'][0])
     height_stride = float(grid_anchor_generator['height_stride'][0])
     features_stride = float(config['feature_extractor'][0]['first_stage_features_stride'][0])
+    first_stage_nms_iou_threshold = float(config['first_stage_nms_iou_threshold'][0])
+    first_stage_max_proposals = int(config['first_stage_max_proposals'][0])
 
     print('Number of classes: %d' % num_classes)
     print('Scales:            %s' % str(scales))
@@ -47,7 +49,8 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     removeIdentity(graph_def)
 
     def to_remove(name, op):
-        return name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep)
+        return name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep) or \
+               (name.startswith('CropAndResize') and op != 'CropAndResize')
 
     removeUnusedNodesAndAttrs(to_remove, graph_def)
 
@@ -114,10 +117,10 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     detectionOut.addAttr('num_classes', 2)
     detectionOut.addAttr('share_location', True)
     detectionOut.addAttr('background_label_id', 0)
-    detectionOut.addAttr('nms_threshold', 0.7)
+    detectionOut.addAttr('nms_threshold', first_stage_nms_iou_threshold)
     detectionOut.addAttr('top_k', 6000)
     detectionOut.addAttr('code_type', "CENTER_SIZE")
-    detectionOut.addAttr('keep_top_k', 100)
+    detectionOut.addAttr('keep_top_k', first_stage_max_proposals)
     detectionOut.addAttr('clip', False)
 
     graph_def.node.extend([detectionOut])
@@ -147,9 +150,11 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
               'SecondStageBoxPredictor/Reshape_1/Reshape', [1, -1], graph_def)
 
     # Replace Flatten subgraph onto a single node.
+    cropAndResizeNodeName = ''
     for i in reversed(range(len(graph_def.node))):
         if graph_def.node[i].op == 'CropAndResize':
             graph_def.node[i].input.insert(1, 'detection_out/clip_by_value')
+            cropAndResizeNodeName = graph_def.node[i].name
 
         if graph_def.node[i].name == 'SecondStageBoxPredictor/Reshape':
             addConstNode('SecondStageBoxPredictor/Reshape/shape2', [1, -1, 4], graph_def)
@@ -159,17 +164,26 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
 
         if graph_def.node[i].name in ['SecondStageBoxPredictor/Flatten/flatten/Shape',
                                       'SecondStageBoxPredictor/Flatten/flatten/strided_slice',
-                                      'SecondStageBoxPredictor/Flatten/flatten/Reshape/shape']:
+                                      'SecondStageBoxPredictor/Flatten/flatten/Reshape/shape',
+                                      'SecondStageBoxPredictor/Flatten_1/flatten/Shape',
+                                      'SecondStageBoxPredictor/Flatten_1/flatten/strided_slice',
+                                      'SecondStageBoxPredictor/Flatten_1/flatten/Reshape/shape']:
             del graph_def.node[i]
 
     for node in graph_def.node:
-        if node.name == 'SecondStageBoxPredictor/Flatten/flatten/Reshape':
+        if node.name == 'SecondStageBoxPredictor/Flatten/flatten/Reshape' or \
+           node.name == 'SecondStageBoxPredictor/Flatten_1/flatten/Reshape':
             node.op = 'Flatten'
             node.input.pop()
 
         if node.name in ['FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D',
                          'SecondStageBoxPredictor/BoxEncodingPredictor/MatMul']:
             node.addAttr('loc_pred_transposed', True)
+
+        if node.name.startswith('MaxPool2D'):
+            assert(node.op == 'MaxPool')
+            assert(cropAndResizeNodeName)
+            node.input = [cropAndResizeNodeName]
 
     ################################################################################
     ### Postprocessing

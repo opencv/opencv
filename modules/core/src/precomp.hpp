@@ -86,7 +86,6 @@
 #include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
 #include "opencv2/core/vsx_utils.hpp"
-#include "arithm_core.hpp"
 #include "hal_replacement.hpp"
 
 #define GET_OPTIMIZED(func) (func)
@@ -105,6 +104,102 @@ extern const uchar g_Saturate8u[];
 #define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
+};
+
+template<typename T> struct OpMin
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::min(a, b); }
+};
+
+template<typename T> struct OpMax
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator ()(const T a, const T b) const { return std::max(a, b); }
+};
+
+template<typename T> struct OpAbsDiff
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()(T a, T b) const { return a > b ? a - b : b - a; }
+};
+
+// specializations to prevent "-0" results
+template<> struct OpAbsDiff<float>
+{
+    typedef float type1;
+    typedef float type2;
+    typedef float rtype;
+    float operator()(float a, float b) const { return std::abs(a - b); }
+};
+template<> struct OpAbsDiff<double>
+{
+    typedef double type1;
+    typedef double type2;
+    typedef double rtype;
+    double operator()(double a, double b) const { return std::abs(a - b); }
+};
+
+template<typename T> struct OpAnd
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a & b; }
+};
+
+template<typename T> struct OpOr
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a | b; }
+};
+
+template<typename T> struct OpXor
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T b ) const { return a ^ b; }
+};
+
+template<typename T> struct OpNot
+{
+    typedef T type1;
+    typedef T type2;
+    typedef T rtype;
+    T operator()( T a, T ) const { return ~a; }
+};
 
 template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
 { return CV_FAST_CAST_8U(a + b); }
@@ -149,47 +244,12 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 /* maximal average node_count/hash_size ratio beyond which hash table is resized */
 #define  CV_SPARSE_HASH_RATIO    3
 
-inline Size getContinuousSize_( int flags, int cols, int rows, int widthScale )
-{
-    int64 sz = (int64)cols * rows * widthScale;
-    return (flags & Mat::CONTINUOUS_FLAG) != 0 &&
-        (int)sz == sz ? Size((int)sz, 1) : Size(cols * widthScale, rows);
-}
-
-inline Size getContinuousSize( const Mat& m1, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, const Mat& m4,
-                               int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags & m4.flags,
-                              m1.cols, m1.rows, widthScale);
-}
-
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
-                               const Mat& m3, const Mat& m4,
-                               const Mat& m5, int widthScale=1 )
-{
-    return getContinuousSize_(m1.flags & m2.flags & m3.flags & m4.flags & m5.flags,
-                              m1.cols, m1.rows, widthScale);
-}
+// There is some mess in code with vectors representation.
+// Both vector-column / vector-rows are used with dims=2 (as Mat2D always).
+// Reshape matrices if neccessary (in case of vectors) and returns size with scaled width.
+Size getContinuousSize2D(Mat& m1, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale=1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale=1);
 
 void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
 void finalizeHdr(Mat& m);

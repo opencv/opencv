@@ -1489,7 +1489,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     {
         int i, loc = 0;
         int cn = src.channels();
-        Size size = getContinuousSize( src, cn );
+        Size size = getContinuousSize2D(src, cn);
 
         if( depth == CV_32F )
         {

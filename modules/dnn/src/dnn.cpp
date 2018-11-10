@@ -1891,44 +1891,46 @@ struct Net::Impl
                 }
 
                 // fuse convolution layer followed by eltwise + relu
-                if ( IS_DNN_OPENCL_TARGET(preferableTarget) )
+                if ( IS_DNN_OPENCL_TARGET(preferableTarget) && ld.layerInstance->type == "Convolution" )
                 {
                     Ptr<EltwiseLayer> nextEltwiseLayer;
                     if( nextData )
                         nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
 
-                    if( !nextEltwiseLayer.empty() && pinsToKeep.count(lpNext) == 0 )
+                    if( !nextEltwiseLayer.empty() && pinsToKeep.count(lpNext) == 0 &&
+                        nextData->inputBlobsId.size() == 2 )
                     {
                         LayerData *eltwiseData = nextData;
-                        // go down from the second input and find the first non-skipped layer.
-                        LayerData *downLayerData = &layers[eltwiseData->inputBlobsId[1].lid];
-                        CV_Assert(downLayerData);
-                        while (downLayerData->skip)
-                        {
-                            downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
-                        }
-                        CV_Assert(downLayerData);
 
-                        // second input layer is current layer.
-                        if ( ld.id == downLayerData->id )
+                        // Eltwise layer has two inputs. We need to determine which
+                        // is a base convolution layer and which could be used as it's bias.
+                        LayerData* biasLayerData = 0;
+                        for (int i = 0; i < 2; ++i)
                         {
-                            // go down from the first input and find the first non-skipped layer
-                            downLayerData = &layers[eltwiseData->inputBlobsId[0].lid];
+                            LayerData *downLayerData = &layers[eltwiseData->inputBlobsId[i].lid];
+                            CV_Assert(downLayerData);
                             while (downLayerData->skip)
                             {
-                                if ( !downLayerData->type.compare("Eltwise") )
-                                    downLayerData = &layers[downLayerData->inputBlobsId[1].lid];
-                                else
+                                if (downLayerData->inputBlobsId.size() == 1)
                                     downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
+                                else
+                                {
+                                    downLayerData = 0;
+                                    break;
+                                }
                             }
-
-                            Ptr<ConvolutionLayer> convLayer = downLayerData->layerInstance.dynamicCast<ConvolutionLayer>();
-
-                            //  first input layer is convolution layer
-                            if( !convLayer.empty() && eltwiseData->consumers.size() == 1 )
+                            if (downLayerData && ld.id == downLayerData->id)
+                            {
+                                biasLayerData = &layers[eltwiseData->inputBlobsId[1 - i].lid];
+                                break;
+                            }
+                        }
+                        CV_Assert(biasLayerData);
+                        {
+                            if( eltwiseData->consumers.size() == 1 )
                             {
                                 // fuse eltwise + activation layer
-                                LayerData *firstConvLayerData = downLayerData;
+                                if (biasLayerData->id < ld.id)
                                 {
                                     nextData = &layers[eltwiseData->consumers[0].lid];
                                     lpNext = LayerPin(eltwiseData->consumers[0].lid, 0);
@@ -1942,8 +1944,8 @@ struct Net::Impl
                                              !nextData->type.compare("Power")) &&
                                             currLayer->setActivation(nextActivLayer) )
                                     {
-                                        CV_Assert(firstConvLayerData->outputBlobsWrappers.size() == 1 && ld.inputBlobsWrappers.size() == 1);
-                                        ld.inputBlobsWrappers.push_back(firstConvLayerData->outputBlobsWrappers[0]);
+                                        CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
+                                        ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[0]);
                                         printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
                                         printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
                                         eltwiseData->skip = true;
@@ -1993,9 +1995,6 @@ struct Net::Impl
                     }
                 }
             }
-
-            if (preferableBackend != DNN_BACKEND_OPENCV)
-                continue;  // Go to the next layer.
 
             // the optimization #2. if there is no layer that takes max pooling layer's computed
             // max indices (and only some semantical segmentation networks might need this;
@@ -3184,7 +3183,7 @@ void Net::setHalideScheduler(const String& scheduler)
 int64 Net::getPerfProfile(std::vector<double>& timings)
 {
     timings = std::vector<double>(impl->layersTimings.begin() + 1, impl->layersTimings.end());
-    int64 total = std::accumulate(timings.begin(), timings.end(), 0);
+    int64 total = (int64)std::accumulate(timings.begin(), timings.end(), 0.0);
     return total;
 }
 

@@ -81,8 +81,8 @@ points.
 Now an orientation is assigned to each keypoint to achieve invariance to image rotation. A
 neighbourhood is taken around the keypoint location depending on the scale, and the gradient
 magnitude and direction is calculated in that region. An orientation histogram with 36 bins covering
-360 degrees is created. (It is weighted by gradient magnitude and gaussian-weighted circular window
-with \f$\sigma\f$ equal to 1.5 times the scale of keypoint. The highest peak in the histogram is taken
+360 degrees is created (It is weighted by gradient magnitude and gaussian-weighted circular window
+with \f$\sigma\f$ equal to 1.5 times the scale of keypoint). The highest peak in the histogram is taken
 and any peak above 80% of it is also considered to calculate the orientation. It creates keypoints
 with same location and scale, but different directions. It contribute to stability of matching.
 
@@ -99,7 +99,7 @@ illumination changes, rotation etc.
 Keypoints between two images are matched by identifying their nearest neighbours. But in some cases,
 the second closest-match may be very near to the first. It may happen due to noise or some other
 reasons. In that case, ratio of closest-distance to second-closest distance is taken. If it is
-greater than 0.8, they are rejected. It eliminaters around 90% of false matches while discards only
+greater than 0.8, they are rejected. It eliminates around 90% of false matches while discards only
 5% correct matches, as per the paper.
 
 So this is a summary of SIFT algorithm. For more details and understanding, reading the original

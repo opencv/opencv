@@ -152,20 +152,6 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_UNUSED(name) (void)name
 
-#if defined __GNUC__ && !defined __EXCEPTIONS
-#define CV_TRY
-#define CV_CATCH(A, B) for (A B; false; )
-#define CV_CATCH_ALL if (false)
-#define CV_THROW(A) abort()
-#define CV_RETHROW() abort()
-#else
-#define CV_TRY try
-#define CV_CATCH(A, B) catch(const A & B)
-#define CV_CATCH_ALL catch(...)
-#define CV_THROW(A) throw A
-#define CV_RETHROW() throw
-#endif
-
 //! @endcond
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)

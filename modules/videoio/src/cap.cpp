@@ -110,7 +110,7 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
 
     if (isOpened()) release();
 
-    if(apiPreference==CAP_ANY)
+    if (apiPreference == CAP_ANY)
     {
         // interpret preferred interface (0 = autodetect)
         int backendID = (cameraNum / 100) * 100;
