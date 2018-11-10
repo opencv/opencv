@@ -48,54 +48,61 @@ namespace opencv_test { namespace {
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
-    Ptr<detail::FeaturesFinder> finder = makePtr<detail::SurfFeaturesFinder>();
+    Ptr<Feature2D> finder = xfeatures2d::SURF::create();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.png");
 
     vector<Rect> rois;
     rois.push_back(Rect(0, 0, img.cols / 2, img.rows / 2));
     rois.push_back(Rect(img.cols / 2, img.rows / 2, img.cols - img.cols / 2, img.rows - img.rows / 2));
+
+    // construct mask
+    Mat mask = Mat::zeros(img.size(), CV_8U);
+    for (const Rect &roi : rois)
+    {
+        Mat(mask, roi) = 1;
+    }
+
     detail::ImageFeatures roi_features;
-    (*finder)(img, roi_features, rois);
+    detail::computeImageFeatures(finder, img, roi_features, mask);
 
     int tl_rect_count = 0, br_rect_count = 0, bad_count = 0;
-    for (size_t i = 0; i < roi_features.keypoints.size(); ++i)
+    for (const auto &keypoint : roi_features.keypoints)
     {
-        Point2f pt = roi_features.keypoints[i].pt;
-        if (pt.x >= rois[0].x && pt.y >= rois[0].y && pt.x <= rois[0].br().x && pt.y <= rois[0].br().y)
+        if (rois[0].contains(keypoint.pt))
             tl_rect_count++;
-        else if (pt.x >= rois[1].x && pt.y >= rois[1].y && pt.x <= rois[1].br().x && pt.y <= rois[1].br().y)
+        else if (rois[1].contains(keypoint.pt))
             br_rect_count++;
         else
             bad_count++;
     }
 
-    ASSERT_GT(tl_rect_count, 0);
-    ASSERT_GT(br_rect_count, 0);
-    ASSERT_EQ(bad_count, 0);
+    EXPECT_GT(tl_rect_count, 0);
+    EXPECT_GT(br_rect_count, 0);
+    EXPECT_EQ(bad_count, 0);
 }
 
 #endif // HAVE_OPENCV_XFEATURES2D
 
 TEST(ParallelFeaturesFinder, IsSameWithSerial)
 {
-    Ptr<detail::FeaturesFinder> para_finder = makePtr<detail::OrbFeaturesFinder>();
-    Ptr<detail::FeaturesFinder> serial_finder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> para_finder = ORB::create();
+    Ptr<Feature2D> serial_finder = ORB::create();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a3.png", IMREAD_GRAYSCALE);
 
     vector<Mat> imgs(50, img);
     detail::ImageFeatures serial_features;
     vector<detail::ImageFeatures> para_features(imgs.size());
 
-    (*serial_finder)(img, serial_features);
-    (*para_finder)(imgs, para_features);
+    detail::computeImageFeatures(serial_finder, img, serial_features);
+    detail::computeImageFeatures(para_finder, imgs, para_features);
 
     // results must be the same
     for(size_t i = 0; i < para_features.size(); ++i)
     {
         Mat diff_descriptors = serial_features.descriptors.getMat(ACCESS_READ) != para_features[i].descriptors.getMat(ACCESS_READ);
-        ASSERT_EQ(countNonZero(diff_descriptors), 0);
-        ASSERT_EQ(serial_features.img_size, para_features[i].img_size);
-        ASSERT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
+        EXPECT_EQ(countNonZero(diff_descriptors), 0);
+        EXPECT_EQ(serial_features.img_size, para_features[i].img_size);
+        EXPECT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
     }
 }
 

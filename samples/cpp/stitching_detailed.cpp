@@ -17,6 +17,10 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
 
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/nonfree.hpp"
+#endif
+
 #define ENABLE_LOG 1
 #define LOG(msg) std::cout << msg
 #define LOGLN(msg) std::cout << msg << std::endl
@@ -374,23 +378,20 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 #endif
 
-    Ptr<FeaturesFinder> finder;
-    if (features_type == "surf")
+    Ptr<Feature2D> finder;
+    if (features_type == "orb")
     {
-#ifdef HAVE_OPENCV_XFEATURES2D
-        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
-            finder = makePtr<SurfFeaturesFinderGpu>();
-        else
-#endif
-            finder = makePtr<SurfFeaturesFinder>();
+        finder = ORB::create();
     }
-    else if (features_type == "orb")
+#ifdef HAVE_OPENCV_XFEATURES2D
+    else if (features_type == "surf")
     {
-        finder = makePtr<OrbFeaturesFinder>();
+        finder = xfeatures2d::SURF::create();
     }
     else if (features_type == "sift") {
-        finder = makePtr<SiftFeaturesFinder>();
+        finder = xfeatures2d::SIFT::create();
     }
+#endif
     else
     {
         cout << "Unknown 2D features type: '" << features_type << "'.\n";
@@ -435,7 +436,7 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        (*finder)(img, features[i]);
+        computeImageFeatures(finder, img, features[i]);
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
@@ -443,7 +444,6 @@ int main(int argc, char* argv[])
         images[i] = img.clone();
     }
 
-    finder->collectGarbage();
     full_img.release();
     img.release();
 
