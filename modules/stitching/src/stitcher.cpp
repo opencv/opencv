@@ -439,7 +439,7 @@ Stitcher::Status Stitcher::matchImages()
 
         if (!masks_.empty())
         {
-            resize(masks_[i], feature_find_masks[i], Size(), work_scale_, work_scale_, INTER_LINEAR_EXACT);
+            resize(masks_[i], feature_find_masks[i], Size(), work_scale_, work_scale_, INTER_NEAREST);
         }
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
