@@ -77,18 +77,18 @@ void Feature2D::detect( InputArrayOfArrays images,
 {
     CV_INSTRUMENT_REGION();
 
-    size_t nimages = images.total();
+    int nimages = (int)images.total();
 
     if (!masks.empty())
     {
-        CV_Assert(masks.total() == nimages);
+        CV_Assert(masks.total() == (size_t)nimages);
     }
 
     keypoints.resize(nimages);
 
     if (images.isMatVector())
     {
-       for (size_t i = 0; i < nimages; i++)
+       for (int i = 0; i < nimages; i++)
        {
            detect(images.getMat(i), keypoints[i], masks.empty() ? noArray() : masks.getMat(i));
        }
@@ -96,7 +96,7 @@ void Feature2D::detect( InputArrayOfArrays images,
     else
     {
         // assume UMats
-        for (size_t i = 0; i < nimages; i++)
+        for (int i = 0; i < nimages; i++)
         {
             detect(images.getUMat(i), keypoints[i], masks.empty() ? noArray() : masks.getUMat(i));
         }
@@ -134,15 +134,15 @@ void Feature2D::compute( InputArrayOfArrays images,
     if( !descriptors.needed() )
         return;
 
-    size_t nimages = images.total();
+    int nimages = (int)images.total();
 
-    CV_Assert( keypoints.size() == nimages );
+    CV_Assert( keypoints.size() == (size_t)nimages );
     // resize descriptors to appropriate size and compute
     if (descriptors.isMatVector())
     {
         vector<Mat>& vec = *(vector<Mat>*)descriptors.getObj();
         vec.resize(nimages);
-        for (size_t i = 0; i < nimages; i++)
+        for (int i = 0; i < nimages; i++)
         {
             compute(images.getMat(i), keypoints[i], vec[i]);
         }
@@ -151,7 +151,7 @@ void Feature2D::compute( InputArrayOfArrays images,
     {
         vector<UMat>& vec = *(vector<UMat>*)descriptors.getObj();
         vec.resize(nimages);
-        for (size_t i = 0; i < nimages; i++)
+        for (int i = 0; i < nimages; i++)
         {
             compute(images.getUMat(i), keypoints[i], vec[i]);
         }
