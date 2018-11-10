@@ -75,10 +75,10 @@ solution.
 ( Check similarity of inverse matrix with Harris corner detector. It denotes that corners are better
 points to be tracked.)
 
-So from user point of view, idea is simple, we give some points to track, we receive the optical
+So from the user point of view, the idea is simple, we give some points to track, we receive the optical
 flow vectors of those points. But again there are some problems. Until now, we were dealing with
-small motions. So it fails when there is large motion. So again we go for pyramids. When we go up in
-the pyramid, small motions are removed and large motions becomes small motions. So applying
+small motions, so it fails when there is a large motion. To deal with this we use pyramids. When we go up in
+the pyramid, small motions are removed and large motions become small motions. So by applying
 Lucas-Kanade there, we get optical flow along with the scale.
 
 Lucas-Kanade Optical Flow in OpenCV

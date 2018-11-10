@@ -158,7 +158,7 @@ int d3d_app(int argc, char** argv, std::string& title)
         return app.run();
     }
 
-    catch (cv::Exception& e)
+    catch (const cv::Exception& e)
     {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 10;

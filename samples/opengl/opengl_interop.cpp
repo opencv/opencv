@@ -325,7 +325,7 @@ public:
         }
 
 
-        catch (cv::Exception& e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             return 10;
@@ -520,7 +520,7 @@ int main(int argc, char** argv)
         app.create();
         return app.run();
     }
-    catch (cv::Exception& e)
+    catch (const cv::Exception& e)
     {
         cerr << "Exception: " << e.what() << endl;
         return 10;

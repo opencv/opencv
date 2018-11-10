@@ -439,11 +439,11 @@ static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minI
             ofs2idx(src, maxidx, maxIdx);
         }
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

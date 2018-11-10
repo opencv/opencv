@@ -180,6 +180,8 @@ T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffe
 *                     Structures and macros for integration with IPP                     *
 \****************************************************************************************/
 
+#define OPENCV_IPP_REDUCE_SIZE 1
+
 // Temporary disabled named IPP region. Accuracy
 #define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
 #define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results

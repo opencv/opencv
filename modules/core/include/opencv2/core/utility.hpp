@@ -519,6 +519,23 @@ static inline size_t divUp(size_t a, unsigned int b)
     return (a + b - 1) / b;
 }
 
+/** @brief Round first value up to the nearest multiple of second value.
+
+Use this function instead of `ceil((float)a / b) * b` expressions.
+
+@sa divUp
+*/
+static inline int roundUp(int a, unsigned int b)
+{
+    CV_DbgAssert(a >= 0);
+    return a + b - 1 - (a + b -1) % b;
+}
+/** @overload */
+static inline size_t roundUp(size_t a, unsigned int b)
+{
+    return a + b - 1 - (a + b - 1) % b;
+}
+
 /** @brief Enables or disables the optimized code.
 
 The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,

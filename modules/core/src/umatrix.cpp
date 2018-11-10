@@ -367,11 +367,11 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         new_u->originalUMatData = u;
     }
     bool allocated = false;
-    CV_TRY
+    try
     {
         allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
-    CV_CATCH(cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         fprintf(stderr, "Exception: %s\n", e.what());
     }
@@ -442,12 +442,12 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             a = a0;
             a0 = Mat::getDefaultAllocator();
         }
-        CV_TRY
+        try
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
-        CV_CATCH_ALL
+        catch(...)
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
