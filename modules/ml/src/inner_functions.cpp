@@ -110,15 +110,26 @@ public:
             int si = sidx_ptr ? sidx_ptr[i] : i;
             double sweight = sw ? static_cast<double>(sw[i]) : 1.;
             Mat sample = layout == ROW_SAMPLE ? samples.row(si) : samples.col(si);
-            float val = s.predict(sample);
-            float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
+            if (responses.cols == 1)
+            {
+                float val = s.predict(sample);
+                float val0 = (responses_type == CV_32S) ? (float)responses.at<int>(si) : responses.at<float>(si);
 
-            if (isclassifier)
-                err += sweight * fabs(val - val0) > FLT_EPSILON;
+                if (isclassifier)
+                    err += sweight * fabs(val - val0) > FLT_EPSILON;
+                else
+                    err += sweight * (val - val0)*(val - val0);
+                if (!resp.empty())
+                    resp.at<float>(i) = val;
+            }
             else
-                err += sweight * (val - val0)*(val - val0);
-            if (!resp.empty())
-                resp.at<float>(i) = val;
+            {
+                Mat p;
+                s.predict(sample, p);
+
+                err += sweight * norm(p - responses.row(si));
+            }
+
         }
 
 
