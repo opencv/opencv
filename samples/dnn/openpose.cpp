@@ -66,9 +66,9 @@ int main(int argc, char **argv)
         "{ t threshold      |  0.1  | threshold or confidence value for the heatmap }"
     );
 
-    String modelTxt = parser.get<string>("proto");
-    String modelBin = parser.get<string>("model");
-    String imageFile = parser.get<String>("image");
+    String modelTxt = samples::findFile(parser.get<string>("proto"));
+    String modelBin = samples::findFile(parser.get<string>("model"));
+    String imageFile = samples::findFile(parser.get<String>("image"));
     int W_in = parser.get<int>("width");
     int H_in = parser.get<int>("height");
     float thresh = parser.get<float>("threshold");

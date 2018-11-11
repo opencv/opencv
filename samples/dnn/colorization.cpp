@@ -64,9 +64,9 @@ int main(int argc, char **argv)
         parser.printMessage();
         return 0;
     }
-    string modelTxt = parser.get<string>("proto");
-    string modelBin = parser.get<string>("model");
-    string imageFile = parser.get<string>("image");
+    string modelTxt = samples::findFile(parser.get<string>("proto"));
+    string modelBin = samples::findFile(parser.get<string>("model"));
+    string imageFile = samples::findFile(parser.get<string>("image"));
     bool useOpenCL = parser.has("opencl");
     if (!parser.check())
     {

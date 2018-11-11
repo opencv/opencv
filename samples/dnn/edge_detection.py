@@ -43,7 +43,7 @@ cv.dnn_registerLayer('Crop', CropLayer)
 #! [Register]
 
 # Load the model.
-net = cv.dnn.readNet(args.prototxt, args.caffemodel)
+net = cv.dnn.readNet(cv.samples.findFile(args.prototxt), cv.samples.findFile(args.caffemodel))
 
 kWinName = 'Holistically-Nested Edge Detection'
 cv.namedWindow('Input', cv.WINDOW_NORMAL)
