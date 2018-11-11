@@ -1801,7 +1801,7 @@ struct Net::Impl
                         nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
 
                     if( !nextEltwiseLayer.empty() && pinsToKeep.count(lpNext) == 0 &&
-                        nextData->inputBlobsId.size() == 2 )
+                        nextData && nextData->inputBlobsId.size() == 2 )
                     {
                         LayerData *eltwiseData = nextData;
 
