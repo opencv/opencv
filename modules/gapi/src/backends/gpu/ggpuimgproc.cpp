@@ -256,8 +256,8 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
         cv::Size size = in.size();
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
 
-        size_t maxWorkItemSizes[32];
-        cv::ocl::Device::getDefault().maxWorkItemSizes(maxWorkItemSizes);
+        //size_t maxWorkItemSizes[32];
+        //cv::ocl::Device::getDefault().maxWorkItemSizes(maxWorkItemSizes);
 
         cv::ocl::Kernel kernel;
 
