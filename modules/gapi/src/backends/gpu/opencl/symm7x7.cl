@@ -300,5 +300,3 @@ __kernel void symm_7x7(
     vstore8(convert_uchar8_sat(intermediate), 0, (__global uchar*)(pdst));
 
 }
-
-
