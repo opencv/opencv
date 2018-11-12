@@ -25,9 +25,6 @@
 /* AVFoundation video libraries */
 #cmakedefine HAVE_AVFOUNDATION
 
-/* V4L capturing support */
-#cmakedefine HAVE_CAMV4L
-
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
 
@@ -115,9 +112,6 @@
 
 /* GDCM DICOM codec */
 #cmakedefine HAVE_GDCM
-
-/* V4L/V4L2 capturing support via libv4l */
-#cmakedefine HAVE_LIBV4L
 
 /* Microsoft Media Foundation Capture library */
 #cmakedefine HAVE_MSMF

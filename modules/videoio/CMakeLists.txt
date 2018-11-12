@@ -105,9 +105,7 @@ if(HAVE_GSTREAMER)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
-if(HAVE_LIBV4L)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+if(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 

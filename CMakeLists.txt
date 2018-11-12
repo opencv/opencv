@@ -259,7 +259,6 @@ OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF
 OCV_OPTION(WITH_PTHREADS_PF    "Use pthreads-based parallel_for"             ON   IF (NOT WIN32 OR MINGW) )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT ANDROID AND NOT APPLE) )
-OCV_OPTION(WITH_LIBV4L         "Use libv4l for Video 4 Linux support"        OFF  IF (UNIX AND NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_DSHOW          "Build VideoIO with DirectShow support"       ON   IF (WIN32 AND NOT ARM AND NOT WINRT) )
 OCV_OPTION(WITH_MSMF           "Build VideoIO with Media Foundation support" ON  IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT WINRT) )
@@ -1304,10 +1303,8 @@ if(APPLE)
   endif()
 endif()
 
-if(WITH_V4L OR WITH_LIBV4L OR HAVE_LIBV4L OR HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
-  status("    libv4l/libv4l2:" HAVE_LIBV4L THEN "${ALIASOF_libv4l1_VERSION} / ${ALIASOF_libv4l2_VERSION}" ELSE "NO")
+if(WITH_V4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   ocv_build_features_string(v4l_status
-    IF HAVE_CAMV4L THEN "linux/videodev.h"
     IF HAVE_CAMV4L2 THEN "linux/videodev2.h"
     IF HAVE_VIDEOIO THEN "sys/videoio.h"
     ELSE "NO")
