@@ -595,7 +595,7 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
 #undef INIT_ROW_POINTERS
 
         int j = 0;
-#ifdef CV_SIMD128
+#if CV_SIMD128
         v_float32x4 zeta_vec = v_setall_f32(zeta_squared);
         v_float32x4 eps_vec = v_setall_f32(epsilon_squared);
         v_float32x4 delta_vec = v_setall_f32(delta2);
@@ -801,7 +801,7 @@ void VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::operator()
     pA_v_next[j] += pWeight[j];
 
         int j = 0;
-#ifdef CV_SIMD128
+#if CV_SIMD128
         v_float32x4 alpha2_vec = v_setall_f32(alpha2);
         v_float32x4 eps_vec = v_setall_f32(epsilon_squared);
         v_float32x4 cW_u_vec, cW_v_vec;
@@ -911,7 +911,7 @@ void VariationalRefinementImpl::ComputeSmoothnessTermVertPass_ParBody::operator(
 #undef INIT_ROW_POINTERS
 
         int j = 0;
-#ifdef CV_SIMD128
+#if CV_SIMD128
         v_float32x4 pWeight_vec, uy_vec, vy_vec;
         for (; j < len - 3; j += 4)
         {
@@ -1013,7 +1013,7 @@ void VariationalRefinementImpl::RedBlackSOR_ParBody::operator()(const Range &ran
 #undef INIT_ROW_POINTERS
 
         j = 0;
-#ifdef CV_SIMD128
+#if CV_SIMD128
         v_float32x4 pW_prev_vec = v_setall_f32(pW_next[-1]);
         v_float32x4 pdu_prev_vec = v_setall_f32(pdu_next[-1]);
         v_float32x4 pdv_prev_vec = v_setall_f32(pdv_next[-1]);
