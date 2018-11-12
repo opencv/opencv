@@ -223,5 +223,12 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRTestGPU, YUV2BGRTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_GPU))));
 
+INSTANTIATE_TEST_CASE_P(Symm7x7TestGPU, Symm7x7Test,
+                        Combine(Values(AbsToleranceSepFilter(1e-1f).to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(IMGPROC_GPU))));
+
 
 } // opencv_test

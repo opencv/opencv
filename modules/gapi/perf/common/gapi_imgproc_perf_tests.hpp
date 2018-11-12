@@ -42,5 +42,6 @@ class BGR2LUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCo
 class LUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BGR2YUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class Symm7x7PerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 }
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP

@@ -10,6 +10,7 @@
 #include "opencv2/gapi/imgproc.hpp"
 #include "opencv2/gapi/gpu/imgproc.hpp"
 #include "backends/gpu/ggpuimgproc.hpp"
+#include "opencl_kernels_gapi.hpp"
 
 
 GAPI_GPU_KERNEL(GGPUSepFilter, cv::gapi::imgproc::GSepFilter)
@@ -247,6 +248,67 @@ GAPI_GPU_KERNEL(GGPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
     }
 };
 
+GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
+{
+    static void run(const cv::UMat& in, cv::UMat &out)
+    {
+        const cv::ocl::Device & dev = cv::ocl::Device::getDefault();
+        int type = in.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+        cv::Size size = in.size();
+        size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
+        size_t localsize_general[2] = { 0, 1 }, *localsize = NULL;
+
+        size_t maxWorkItemSizes[32];
+        cv::ocl::Device::getDefault().maxWorkItemSizes(maxWorkItemSizes);
+        int tryWorkItems = (int)maxWorkItemSizes[0];
+
+        cv::ocl::Kernel kernel;
+
+        int coefficients[10] = { 1140, -118, 526, 290, -236, 64, -128, -5, -87, -7 };
+        int shift = 10;
+
+
+        static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_UNDEFINED" };
+        std::string build_options = " -D BORDER_CONSTANT_VALUE=" + std::to_string(0) +
+            " -D " + borderMap[1] +
+            " -D SCALE=1.f/" + std::to_string(1 << shift) + ".f";
+
+
+        if (!kernel.create("symm_7x7", cv::ocl::gapi::symm7x7_oclsrc, build_options))
+        {
+            printf("DIMA_B TEST symm_7x7 kernel create failed\n");
+        }
+
+        //prepare coefficients for device
+        cv::Mat kernel_coeff(10, 1, CV_32S);
+        int* ci = kernel_coeff.ptr<int>();
+        for (int i = 0; i < 10; i++)
+        {
+            ci[i] = coefficients[i];
+        }
+        cv::UMat gKer;
+        kernel_coeff.copyTo(gKer);
+
+        int tile_y = 0;
+
+        int idxArg = kernel.set(0, cv::ocl::KernelArg::PtrReadOnly(in));
+        idxArg = kernel.set(idxArg, (int)in.step);
+        idxArg = kernel.set(idxArg, (int)size.width); //OVX fullImageSizeX
+        idxArg = kernel.set(idxArg, (int)size.height);
+        idxArg = kernel.set(idxArg, cv::ocl::KernelArg::PtrWriteOnly(out));
+        idxArg = kernel.set(idxArg, (int)out.step);
+        idxArg = kernel.set(idxArg, (int)size.height); //OVX part.rc.height,
+        idxArg = kernel.set(idxArg, (int)size.width); //OVX part.rc.width,
+        idxArg = kernel.set(idxArg, (int)tile_y); //OVX tile_y,
+        idxArg = kernel.set(idxArg, cv::ocl::KernelArg::PtrReadOnly(gKer));
+
+        if (!kernel.run(2, globalsize, NULL, false))
+        {
+            printf("DIMA_B TEST symm_7x7 kernel run failed\n");
+        }
+    }
+};
+
 
 cv::gapi::GKernelPackage cv::gapi::imgproc::gpu::kernels()
 {
@@ -272,6 +334,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::gpu::kernels()
         , GGPUBGR2Gray
         , GGPURGB2Gray
         , GGPURGB2GrayCustom
+        , GGPUSymm7x7
         >();
     return pkg;
 }

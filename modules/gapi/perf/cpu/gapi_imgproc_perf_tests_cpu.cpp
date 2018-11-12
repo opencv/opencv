@@ -177,4 +177,9 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRPerfTestCPU, YUV2BGRPerfTest,
         Values(szVGA, sz720p, sz1080p),
         Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(Symm7x7PerfTestCPU, Symm7x7PerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+        Values(szVGA, sz720p, sz1080p),
+        Values(cv::compile_args(IMGPROC_CPU))));
+
 }

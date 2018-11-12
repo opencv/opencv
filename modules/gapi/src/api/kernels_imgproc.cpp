@@ -140,5 +140,10 @@ GMat RGB2Lab(const GMat& src)
     return imgproc::GRGB2Lab::on(src);
 }
 
+GMat symm7x7(const GMat& src)
+{
+    return imgproc::GSymm7x7::on(src);
+}
+
 } //namespace gapi
 } //namespace cv
