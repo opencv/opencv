@@ -197,18 +197,66 @@ void run_sobel3x3_vert(DST out[], int length, const float ky[],
     }
 }
 
-#define INSTANTIATE(noscale, DST) \
-template void run_sobel3x3_vert<noscale, DST>(DST out[], int length, const float ky[], \
-                                float scale, float delta, const int r[], float *buf[]);
+template<typename DST, typename SRC>
+void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
+                    const float kx[], const float ky[], int border,
+                    float scale, float delta, float *buf[],
+                    int y, int y0)
+{
+    int r[3];
+    r[0] = (y - y0)     % 3;  // buf[r[0]]: previous
+    r[1] = (y - y0 + 1) % 3;  //            this
+    r[2] = (y - y0 + 2) % 3;  //            next row
 
-INSTANTIATE(true , uchar )
-INSTANTIATE(false, uchar )
-INSTANTIATE(true , ushort)
-INSTANTIATE(false, ushort)
-INSTANTIATE(true ,  short)
-INSTANTIATE(false,  short)
-INSTANTIATE(true ,  float)
-INSTANTIATE(false,  float)
+    int length = width * chan;
+
+    // horizontal pass
+
+    // full horizontal pass is needed only if very 1st row in ROI;
+    // for 2nd and further rows, it is enough to convolve only the
+    // "next" row - as we can reuse buffers from previous calls to
+    // this kernel (note that Fluid processes rows consequently)
+    int k0 = (y == y0)? 0: 2;
+
+    for (int k = k0; k < 3; k++)
+    {
+        //                             previous, this , next pixel
+        const SRC *s[3] = {in[k] - border*chan , in[k], in[k] + border*chan};
+
+        // rely on compiler vectoring
+        for (int l=0; l < length; l++)
+        {
+            buf[r[k]][l] = s[0][l]*kx[0] + s[1][l]*kx[1] + s[2][l]*kx[2];
+        }
+    }
+
+    // vertical pass
+    if (scale == 1 && delta == 0)
+    {
+        constexpr static bool noscale = true;  // omit scaling
+        run_sobel3x3_vert<noscale, DST>(out, length, ky, scale, delta, r, buf);
+    } else
+    {
+        constexpr static bool noscale = false;  // do scaling
+        run_sobel3x3_vert<noscale, DST>(out, length, ky, scale, delta, r, buf);
+    }
+}
+
+#define INSTANTIATE(DST, SRC)                                                 \
+template void run_sobel_impl(DST out[], const SRC *in[], int width, int chan, \
+                             const float kx[], const float ky[], int border,  \
+                             float scale, float delta, float *buf[],          \
+                             int y, int y0);
+
+INSTANTIATE(uchar , uchar )
+INSTANTIATE(ushort, ushort)
+INSTANTIATE( short, uchar )
+INSTANTIATE( short, ushort)
+INSTANTIATE( short,  short)
+INSTANTIATE( float, uchar )
+INSTANTIATE( float, ushort)
+INSTANTIATE( float,  short)
+INSTANTIATE( float,  float)
 
 #undef INSTANTIATE
 

@@ -18,10 +18,11 @@ namespace fluid {
 //
 //---------------------
 
-// Sobel 3x3: vertical pass
-template<bool noscale, typename DST>
-void run_sobel3x3_vert(DST out[], int length, const float ky[],
-         float scale, float delta, const int r[], float *buf[]);
+template<typename DST, typename SRC>
+void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
+                    const float kx[], const float ky[], int border,
+                    float scale, float delta, float *buf[],
+                    int y, int y0);
 
 }  // namespace fluid
 }  // namespace gapi
