@@ -777,7 +777,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
-    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
+    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", false);
     channelNumber = -1;
     bufferIndex = -1;
 
