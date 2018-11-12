@@ -248,6 +248,7 @@ GAPI_GPU_KERNEL(GGPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
     }
 };
 
+#ifdef HAVE_OPENCL
 GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
@@ -304,7 +305,7 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
         }
     }
 };
-
+#endif
 
 cv::gapi::GKernelPackage cv::gapi::imgproc::gpu::kernels()
 {
@@ -330,7 +331,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::gpu::kernels()
         , GGPUBGR2Gray
         , GGPURGB2Gray
         , GGPURGB2GrayCustom
+#ifdef HAVE_OPENCL
         , GGPUSymm7x7
+#endif
         >();
     return pkg;
 }
