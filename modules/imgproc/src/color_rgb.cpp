@@ -354,19 +354,7 @@ struct Gray2RGB
             }
             else
             {
-                vt gg0, gg1, ga0, ga1, w0, w1, w2, w3;
-
-                v_zip(g, g, gg0, gg1);
-                v_zip(g, valpha, ga0, ga1);
-                v_zip(gg0, ga0, w0, w1);
-                v_zip(gg1, ga1, w2, w3);
-                v_store(dst +       0, w0);
-                v_store(dst +   vsize, w1);
-                v_store(dst + 2*vsize, w2);
-                v_store(dst + 3*vsize, w3);
-
-                //TODO: check what's faster
-                //v_store_interleave(dst, g, g, g, valpha);
+                v_store_interleave(dst, g, g, g, valpha);
             }
         }
         vx_cleanup();
@@ -388,104 +376,60 @@ struct Gray2RGB5x5
     typedef uchar channel_type;
 
     Gray2RGB5x5(int _greenBits) : greenBits(_greenBits)
-    {
-        #if CV_NEON
-        v_n7 = vdup_n_u8(~7);
-        v_n3 = vdup_n_u8(~3);
-        #elif CV_SSE2
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        v_n7 = _mm_set1_epi16(~7);
-        v_n3 = _mm_set1_epi16(~3);
-        v_zero = _mm_setzero_si128();
-        #endif
-    }
+    { }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        int gb = greenBits;
         int i = 0;
-        if( greenBits == 6 )
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        v_uint16 v3 = vx_setall_u16(~3);
+        for(; i < n-vsize+1;
+            i += vsize, src += vsize, dst += vsize*sizeof(ushort))
         {
-            #if CV_NEON
-            for ( ; i <= n - 8; i += 8 )
-            {
-                uint8x8_t v_src = vld1_u8(src + i);
-                uint16x8_t v_dst = vmovl_u8(vshr_n_u8(v_src, 3));
-                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src, v_n3)), 3));
-                v_dst = vorrq_u16(v_dst, vshlq_n_u16(vmovl_u8(vand_u8(v_src, v_n7)), 8));
-                vst1q_u16((ushort *)dst + i, v_dst);
-            }
-            #elif CV_SSE2
-            if (haveSIMD)
-            {
-                for ( ; i <= n - 16; i += 16 )
-                {
-                    __m128i v_src = _mm_loadu_si128((__m128i const *)(src + i));
+            v_uint8 t = vx_load(src);
+            v_uint16 t0, t1;
+            v_expand(t, t0, t1);
 
-                    __m128i v_src_p = _mm_unpacklo_epi8(v_src, v_zero);
-                    __m128i v_dst = _mm_or_si128(_mm_srli_epi16(v_src_p, 3),
-                                    _mm_or_si128(_mm_slli_epi16(_mm_and_si128(v_src_p, v_n3), 3),
-                                                 _mm_slli_epi16(_mm_and_si128(v_src_p, v_n7), 8)));
-                    _mm_storeu_si128((__m128i *)((ushort *)dst + i), v_dst);
+            v_uint16 t30 = t0 >> 3;
+            v_uint16 t31 = t1 >> 3;
 
-                    v_src_p = _mm_unpackhi_epi8(v_src, v_zero);
-                    v_dst = _mm_or_si128(_mm_srli_epi16(v_src_p, 3),
-                            _mm_or_si128(_mm_slli_epi16(_mm_and_si128(v_src_p, v_n3), 3),
-                                         _mm_slli_epi16(_mm_and_si128(v_src_p, v_n7), 8)));
-                    _mm_storeu_si128((__m128i *)((ushort *)dst + i + 8), v_dst);
-                }
-            }
-            #endif
-            for ( ; i < n; i++ )
+            v_uint16 d0 = t30, d1 = t31;
+            if(gb == 6)
             {
-                int t = src[i];
-                ((ushort*)dst)[i] = (ushort)((t >> 3)|((t & ~3) << 3)|((t & ~7) << 8));
+                d0 |= ((t0 & v3) << 3) | (t30 << 11);
+                d1 |= ((t1 & v3) << 3) | (t31 << 11);
             }
+            else
+            {
+                d0 |= (t30 << 5) | (t30 << 10);
+                d1 |= (t31 << 5) | (t31 << 10);
+            }
+
+            v_store((ushort*)dst + 0,       d0);
+            v_store((ushort*)dst + vsize/2, d1);
         }
-        else
+        vx_cleanup();
+#endif
+
+        for( ; i < n; i++, src++, dst += sizeof(ushort))
         {
-            #if CV_NEON
-            for ( ; i <= n - 8; i += 8 )
+            int t = src[0];
+            int t3 = t >> 3;
+            ushort d;
+            if( gb == 6 )
             {
-                uint16x8_t v_src = vmovl_u8(vshr_n_u8(vld1_u8(src + i), 3));
-                uint16x8_t v_dst = vorrq_u16(vorrq_u16(v_src, vshlq_n_u16(v_src, 5)), vshlq_n_u16(v_src, 10));
-                vst1q_u16((ushort *)dst + i, v_dst);
+                d = (ushort)(t3 |((t & ~3) << 3)|(t3 << 11));
             }
-            #elif CV_SSE2
-            if (haveSIMD)
+            else
             {
-                for ( ; i <= n - 16; i += 8 )
-                {
-                    __m128i v_src = _mm_loadu_si128((__m128i const *)(src + i));
-
-                    __m128i v_src_p = _mm_srli_epi16(_mm_unpacklo_epi8(v_src, v_zero), 3);
-                    __m128i v_dst = _mm_or_si128(v_src_p,
-                                    _mm_or_si128(_mm_slli_epi32(v_src_p, 5),
-                                                 _mm_slli_epi16(v_src_p, 10)));
-                    _mm_storeu_si128((__m128i *)((ushort *)dst + i), v_dst);
-
-                    v_src_p = _mm_srli_epi16(_mm_unpackhi_epi8(v_src, v_zero), 3);
-                    v_dst = _mm_or_si128(v_src_p,
-                            _mm_or_si128(_mm_slli_epi16(v_src_p, 5),
-                                         _mm_slli_epi16(v_src_p, 10)));
-                    _mm_storeu_si128((__m128i *)((ushort *)dst + i + 8), v_dst);
-                }
+                d = (ushort)(t3 |(t3 << 5)|(t3 << 10));
             }
-            #endif
-            for( ; i < n; i++ )
-            {
-                int t = src[i] >> 3;
-                ((ushort*)dst)[i] = (ushort)(t|(t << 5)|(t << 10));
-            }
+            ((ushort*)dst)[0] = d;
         }
     }
     int greenBits;
-
-    #if CV_NEON
-    uint8x8_t v_n7, v_n3;
-    #elif CV_SSE2
-    __m128i v_n7, v_n3, v_zero;
-    bool haveSIMD;
-    #endif
 };
 
 
