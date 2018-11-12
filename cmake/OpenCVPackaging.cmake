@@ -123,7 +123,7 @@ foreach(module calib3d core cudaarithm cudabgsegm cudacodec cudafeatures2d cudaf
                cudev features2d flann hal highgui imgcodecs imgproc ml objdetect ocl
                photo shape stitching superres ts video videoio videostab viz)
   if(HAVE_opencv_${module})
-    list(APPEND STD_OPENCV_LIBS "libopencv-${module}3.0")
+    list(APPEND STD_OPENCV_LIBS "libopencv-${module}4.0")
     list(APPEND STD_OPENCV_DEV "libopencv-${module}-dev")
   endif()
 endforeach()
@@ -140,9 +140,9 @@ set(CPACK_COMPONENT_PYTHON_CONFLICTS python-opencv)
 set(CPACK_COMPONENT_PYTHON_PROVIDES python-opencv)
 set(CPACK_COMPONENT_PYTHON_REPLACES python-opencv)
 
-set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv3.0-java, libopencv3.0-jni")
-set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv3.0-java, libopencv3.0-jni")
-set(CPACK_COMPONENT_JAVA_REPLACES "libopencv3.0-java, libopencv3.0-jni")
+set(CPACK_COMPONENT_JAVA_CONFLICTS "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_PROVIDES "libopencv4.0-java, libopencv4.0-jni")
+set(CPACK_COMPONENT_JAVA_REPLACES "libopencv4.0-java, libopencv4.0-jni")
 
 set(CPACK_COMPONENT_DOCS_CONFLICTS opencv-doc)
 set(CPACK_COMPONENT_SAMPLES_CONFLICTS opencv-doc)
