@@ -2291,9 +2291,14 @@ void testDivideChecks(const Mat& dst)
     {
         for (int x = 0; x < dst.cols; x++)
         {
-            if (x == 2)
+            if ((x % 4) == 2)
             {
                 EXPECT_EQ(0, dst.at<T>(y, x)) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+            }
+            else
+            {
+                EXPECT_TRUE(0 == cvIsNaN((double)dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
+                EXPECT_TRUE(0 == cvIsInf((double)dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
             }
         }
     }
@@ -2308,11 +2313,11 @@ void testDivideChecksFP(const Mat& dst)
     {
         for (int x = 0; x < dst.cols; x++)
         {
-            if (y == 0 && x == 2)
+            if ((y % 3) == 0 && (x % 4) == 2)
             {
                 EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
             }
-            else if (x == 2)
+            else if ((x % 4) == 2)
             {
                 EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
             }
@@ -2329,24 +2334,40 @@ template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChec
 template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
 
 
-template <typename T, bool isUMat> static inline
-void testDivide()
+template <typename T> static inline
+void testDivide(bool isUMat, double scale, bool largeSize, bool tailProcessing, bool roi)
 {
     Mat src1, src2;
     testDivideInitData<T>(src1, src2);
     ASSERT_FALSE(src1.empty()); ASSERT_FALSE(src2.empty());
 
+    if (largeSize)
+    {
+        repeat(src1.clone(), 1, 8, src1);
+        repeat(src2.clone(), 1, 8, src2);
+    }
+    if (tailProcessing)
+    {
+        src1 = src1(Rect(0, 0, src1.cols - 1, src1.rows));
+        src2 = src2(Rect(0, 0, src2.cols - 1, src2.rows));
+    }
+    if (!roi && tailProcessing)
+    {
+        src1 = src1.clone();
+        src2 = src2.clone();
+    }
+
     Mat dst;
     if (!isUMat)
     {
-        cv::divide(src1, src2, dst);
+        cv::divide(src1, src2, dst, scale);
     }
     else
     {
         UMat usrc1, usrc2, udst;
         src1.copyTo(usrc1);
         src2.copyTo(usrc2);
-        cv::divide(usrc1, usrc2, udst);
+        cv::divide(usrc1, usrc2, udst, scale);
         udst.copyTo(dst);
     }
 
@@ -2360,14 +2381,46 @@ void testDivide()
     }
 }
 
-TEST(Core_DivideRules, type_32s) { testDivide<int, false>(); }
-TEST(UMat_Core_DivideRules, type_32s) { testDivide<int, true>(); }
-TEST(Core_DivideRules, type_16s) { testDivide<short, false>(); }
-TEST(UMat_Core_DivideRules, type_16s) { testDivide<short, true>(); }
-TEST(Core_DivideRules, type_32f) { testDivide<float, false>(); }
-TEST(UMat_Core_DivideRules, type_32f) { testDivide<float, true>(); }
-TEST(Core_DivideRules, type_64f) { testDivide<double, false>(); }
-TEST(UMat_Core_DivideRules, type_64f) { testDivide<double, true>(); }
+typedef tuple<bool, double, bool, bool, bool> DivideRulesParam;
+typedef testing::TestWithParam<DivideRulesParam> Core_DivideRules;
+
+TEST_P(Core_DivideRules, type_32s)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<int>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_16s)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<short>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_32f)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<float>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+TEST_P(Core_DivideRules, type_64f)
+{
+    DivideRulesParam param = GetParam();
+    testDivide<double>(get<0>(param), get<1>(param), get<2>(param), get<3>(param), get<4>(param));
+}
+
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_DivideRules, testing::Combine(
+/* isMat */     testing::Values(false),
+/* scale */     testing::Values(1.0, 5.0),
+/* largeSize */ testing::Bool(),
+/* tail */      testing::Bool(),
+/* roi */       testing::Bool()
+));
+
+INSTANTIATE_TEST_CASE_P(UMat, Core_DivideRules, testing::Combine(
+/* isMat */     testing::Values(true),
+/* scale */     testing::Values(1.0, 5.0),
+/* largeSize */ testing::Bool(),
+/* tail */      testing::Bool(),
+/* roi */       testing::Bool()
+));
 
 
 TEST(Core_MinMaxIdx, rows_overflow)
