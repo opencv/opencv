@@ -683,6 +683,25 @@ OPENCV_HAL_IMPL_CMP_OP(==)
 For all types except 64-bit integer values. */
 OPENCV_HAL_IMPL_CMP_OP(!=)
 
+template<int n>
+inline v_reg<float, n> v_not_nan(const v_reg<float, n>& a)
+{
+typedef typename V_TypeTraits<float>::int_type itype;
+v_reg<float, n> c;
+for (int i = 0; i < n; i++)
+    c.s[i] = V_TypeTraits<float>::reinterpret_from_int((itype)-(int)(a.s[i] == a.s[i]));
+    return c;
+}
+template<int n>
+inline v_reg<double, n> v_not_nan(const v_reg<double, n>& a)
+{
+    typedef typename V_TypeTraits<double>::int_type itype;
+    v_reg<double, n> c;
+    for (int i = 0; i < n; i++)
+        c.s[i] = V_TypeTraits<double>::reinterpret_from_int((itype)-(int)(a.s[i] == a.s[i]));
+    return c;
+}
+
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_ARITHM_OP(func, bin_op, cast_op, _Tp2) \

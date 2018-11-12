@@ -430,36 +430,44 @@ public:
                     for (; j <= size.width - v_float32::nlanes; j += v_float32::nlanes)
                     {
                         v_float32 val = vx_load(ksptr + j);
-
-                        v_float32 alpha = v_absdiff(val, vx_load(sptr + j)) * sindex;
+                        v_float32 rval = vx_load(sptr + j);
+                        v_float32 knan = v_not_nan(val);
+                        v_float32 alpha = (v_absdiff(val, rval) * sindex) & v_not_nan(rval) & knan;
                         v_int32 idx = v_trunc(alpha);
                         alpha -= v_cvt_f32(idx);
 
-                        v_float32 w = kweight * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one-alpha));
+                        v_float32 w = (kweight * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one-alpha))) & knan;
                         v_store_aligned(wsum + j, vx_load_aligned(wsum + j) + w);
-                        v_store_aligned(sum + j, v_muladd(val, w, vx_load_aligned(sum + j)));
+                        v_store_aligned(sum + j, v_muladd(val & knan, w, vx_load_aligned(sum + j)));
                     }
 #endif
                     for (; j < size.width; j++)
                     {
                         float val = ksptr[j];
-                        float alpha = std::abs(val - sptr[j]) * scale_index;
+                        float rval = sptr[j];
+                        float alpha = std::abs(val - rval) * scale_index;
                         int idx = cvFloor(alpha);
                         alpha -= idx;
-                        float w = space_weight[k] * (expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-                        wsum[j] += w;
-                        sum[j] += val * w;
+                        if (!cvIsNaN(val))
+                        {
+                            float w = space_weight[k] * (cvIsNaN(rval) ? 1.f : (expLUT[idx] + alpha*(expLUT[idx + 1] - expLUT[idx])));
+                            wsum[j] += w;
+                            sum[j] += val * w;
+                        }
                     }
                 }
                 j = 0;
 #if CV_SIMD
                 for (; j <= size.width - v_float32::nlanes; j += v_float32::nlanes)
-                    v_store(dptr + j, vx_load_aligned(sum + j) / vx_load_aligned(wsum + j));
+                {
+                    v_float32 v_val = vx_load(sptr + j);
+                    v_store(dptr + j, (vx_load_aligned(sum + j) + (v_val & v_not_nan(v_val))) / (vx_load_aligned(wsum + j) + (v_one & v_not_nan(v_val))));
+                }
 #endif
                 for (; j < size.width; j++)
                 {
-                    CV_DbgAssert(fabs(wsum[j]) > 0);
-                    dptr[j] = sum[j] / wsum[j];
+                    CV_DbgAssert(fabs(wsum[j]) >= 0);
+                    dptr[j] = cvIsNaN(sptr[j]) ? sum[j] / wsum[j] : (sum[j] + sptr[j]) / (wsum[j] + 1.f);
                 }
             }
             else
@@ -488,45 +496,68 @@ public:
                         v_load_deinterleave(ksptr, kb, kg, kr);
                         v_load_deinterleave(rsptr, rb, rg, rr);
 
-                        v_float32 alpha = (v_absdiff(kb, rb) + v_absdiff(kg, rg) + v_absdiff(kr, rr)) * sindex;
+                        v_float32 knan = v_not_nan(kb) & v_not_nan(kg) & v_not_nan(kr);
+                        v_float32 alpha = ((v_absdiff(kb, rb) + v_absdiff(kg, rg) + v_absdiff(kr, rr)) * sindex) & v_not_nan(rb) & v_not_nan(rg) & v_not_nan(rr) & knan;
                         v_int32 idx = v_trunc(alpha);
                         alpha -= v_cvt_f32(idx);
 
-                        v_float32 w = kweight * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one - alpha));
+                        v_float32 w = (kweight * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one - alpha))) & knan;
                         v_store_aligned(wsum + j, vx_load_aligned(wsum + j) + w);
-                        v_store_aligned(sum_b + j, v_muladd(kb, w, vx_load_aligned(sum_b + j)));
-                        v_store_aligned(sum_g + j, v_muladd(kg, w, vx_load_aligned(sum_g + j)));
-                        v_store_aligned(sum_r + j, v_muladd(kr, w, vx_load_aligned(sum_r + j)));
+                        v_store_aligned(sum_b + j, v_muladd(kb & knan, w, vx_load_aligned(sum_b + j)));
+                        v_store_aligned(sum_g + j, v_muladd(kg & knan, w, vx_load_aligned(sum_g + j)));
+                        v_store_aligned(sum_r + j, v_muladd(kr & knan, w, vx_load_aligned(sum_r + j)));
                     }
 #endif
                     for (; j < size.width; j++, ksptr += 3, rsptr += 3)
                     {
                         float b = ksptr[0], g = ksptr[1], r = ksptr[2];
-                        float alpha = (std::abs(b - rsptr[0]) + std::abs(g - rsptr[1]) + std::abs(r - rsptr[2])) * scale_index;
+                        bool v_NAN = cvIsNaN(b) || cvIsNaN(g) || cvIsNaN(r);
+                        float rb = rsptr[0], rg = rsptr[1], rr = rsptr[2];
+                        bool r_NAN = cvIsNaN(rb) || cvIsNaN(rg) || cvIsNaN(rr);
+                        float alpha = (std::abs(b - rb) + std::abs(g - rg) + std::abs(r - rr)) * scale_index;
                         int idx = cvFloor(alpha);
                         alpha -= idx;
-                        float w = space_weight[k] * (expLUT[idx] + alpha*(expLUT[idx + 1] - expLUT[idx]));
-                        wsum[j] += w;
-                        sum_b[j] += b*w;
-                        sum_g[j] += g*w;
-                        sum_r[j] += r*w;
+                        if (!v_NAN)
+                        {
+                            float w = space_weight[k] * (r_NAN ? 1.f : (expLUT[idx] + alpha*(expLUT[idx + 1] - expLUT[idx])));
+                            wsum[j] += w;
+                            sum_b[j] += b*w;
+                            sum_g[j] += g*w;
+                            sum_r[j] += r*w;
+                        }
                     }
                 }
                 j = 0;
 #if CV_SIMD
-                for (; j <= size.width - v_float32::nlanes; j += v_float32::nlanes, dptr += 3*v_float32::nlanes)
+                for (; j <= size.width - v_float32::nlanes; j += v_float32::nlanes, sptr += 3*v_float32::nlanes, dptr += 3*v_float32::nlanes)
                 {
-                    v_float32 w = v_one / vx_load_aligned(wsum + j);
-                    v_store_interleave(dptr, vx_load_aligned(sum_b + j) * w, vx_load_aligned(sum_g + j) * w, vx_load_aligned(sum_r + j) * w);
+                    v_float32 b, g, r;
+                    v_load_deinterleave(sptr, b, g, r);
+                    v_float32 mask = v_not_nan(b) & v_not_nan(g) & v_not_nan(r);
+                    v_float32 w = v_one / (vx_load_aligned(wsum + j) + (v_one & mask));
+                    v_store_interleave(dptr, (vx_load_aligned(sum_b + j) + (b & mask)) * w, (vx_load_aligned(sum_g + j) + (g & mask)) * w, (vx_load_aligned(sum_r + j) + (r & mask)) * w);
                 }
 #endif
                 for (; j < size.width; j++)
                 {
-                    CV_DbgAssert(fabs(wsum[j]) > 0);
-                    wsum[j] = 1.f / wsum[j];
-                    *(dptr++) = sum_b[j] * wsum[j];
-                    *(dptr++) = sum_g[j] * wsum[j];
-                    *(dptr++) = sum_r[j] * wsum[j];
+                    CV_DbgAssert(fabs(wsum[j]) >= 0);
+                    float b = *(sptr++);
+                    float g = *(sptr++);
+                    float r = *(sptr++);
+                    if (cvIsNaN(b) || cvIsNaN(g) || cvIsNaN(r))
+                    {
+                        wsum[j] = 1.f / wsum[j];
+                        *(dptr++) = sum_b[j] * wsum[j];
+                        *(dptr++) = sum_g[j] * wsum[j];
+                        *(dptr++) = sum_r[j] * wsum[j];
+                    }
+                    else
+                    {
+                        wsum[j] = 1.f / (wsum[j] + 1.f);
+                        *(dptr++) = (sum_b[j] + b) * wsum[j];
+                        *(dptr++) = (sum_g[j] + g) * wsum[j];
+                        *(dptr++) = (sum_r[j] + r) * wsum[j];
+                    }
                 }
             }
         }
@@ -585,9 +616,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // temporary copy of the image with borders for easy processing
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-    minValSrc -= 5. * sigma_color;
-    patchNaNs( temp, minValSrc ); // this replacement of NaNs makes the assumption that depth values are nonnegative
-                                  // TODO: make replacement parameter avalible in the outside function interface
+
     // allocate lookup tables
     std::vector<float> _space_weight(d*d);
     std::vector<int> _space_ofs(d*d);
@@ -620,7 +649,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         for( j = -radius; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);
-            if( r > radius )
+            if( r > radius || ( i == 0 && j == 0 ) )
                 continue;
             space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
             space_ofs[maxk++] = (int)(i*(temp.step/sizeof(float)) + j*cn);
