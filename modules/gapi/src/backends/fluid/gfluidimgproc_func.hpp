@@ -22,9 +22,9 @@ namespace fluid {
 
 #define RUN_SOBEL_ROW(DST, SRC)                                     \
 void run_sobel_row(DST out[], const SRC *in[], int width, int chan, \
-                  const float kx[], const float ky[], int border,  \
-                  float scale, float delta, float *buf[],          \
-                  int y, int y0);
+                   const float kx[], const float ky[], int border,  \
+                   float scale, float delta, float *buf[],          \
+                   int y, int y0);
 
 RUN_SOBEL_ROW(uchar , uchar )
 RUN_SOBEL_ROW(ushort, ushort)

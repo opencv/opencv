@@ -6,14 +6,10 @@
 
 #if !defined(GAPI_STANDALONE)
 
-#include "gfluidimgproc_func.hpp"
+#include "opencv2/gapi/own/saturate.hpp"
 
-#include "gfluidutils.hpp"
-
-#include <opencv2/core/hal/intrin.hpp>
-
-#include <cmath>
-#include <cstdlib>
+#include "opencv2/core.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
@@ -24,16 +20,35 @@ namespace cv {
 namespace gapi {
 namespace fluid {
 
-//---------------------
-//
-// Fluid kernels: Sobel
-//
-//---------------------
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+//----------------------------------------------------------------------
+
+#define RUN_SOBEL_ROW(DST, SRC)                                     \
+void run_sobel_row(DST out[], const SRC *in[], int width, int chan, \
+                  const float kx[], const float ky[], int border,   \
+                  float scale, float delta, float *buf[],           \
+                  int y, int y0);
+
+RUN_SOBEL_ROW(uchar , uchar )
+RUN_SOBEL_ROW(ushort, ushort)
+RUN_SOBEL_ROW( short, uchar )
+RUN_SOBEL_ROW( short, ushort)
+RUN_SOBEL_ROW( short,  short)
+RUN_SOBEL_ROW( float, uchar )
+RUN_SOBEL_ROW( float, ushort)
+RUN_SOBEL_ROW( float,  short)
+RUN_SOBEL_ROW( float,  float)
+
+#undef RUN_SOBEL_ROW
+
+//----------------------------------------------------------------------
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 // Sobel 3x3: vertical pass
 template<bool noscale, typename DST>
-void run_sobel3x3_vert(DST out[], int length, const float ky[],
-         float scale, float delta, const int r[], float *buf[])
+static void run_sobel3x3_vert(DST out[], int length, const float ky[],
+                float scale, float delta, const int r[], float *buf[])
 {
     float ky0 = ky[0],
           ky1 = ky[1],
@@ -196,15 +211,15 @@ void run_sobel3x3_vert(DST out[], int length, const float ky[],
             sum = sum*scale + delta;
         }
 
-        out[l] = saturate<DST>(sum, rintf);
+        out[l] = cv::gapi::own::saturate<DST>(sum, rintf);
     }
 }
 
 template<typename DST, typename SRC>
-void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
-                    const float kx[], const float ky[], int border,
-                    float scale, float delta, float *buf[],
-                    int y, int y0)
+static void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
+                           const float kx[], const float ky[], int border,
+                           float scale, float delta, float *buf[],
+                           int y, int y0)
 {
     int r[3];
     r[0] = (y - y0)     % 3;  // buf[r[0]]: previous
@@ -266,8 +281,13 @@ RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
 
-} // namespace fliud
-} // namespace gapi
-} // namespace cv
+#endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+//----------------------------------------------------------------------
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+
+}  // namespace fluid
+}  // namespace gapi
+}  // namespace cv
 
 #endif // !defined(GAPI_STANDALONE)
