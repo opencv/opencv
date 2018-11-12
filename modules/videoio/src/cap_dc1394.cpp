@@ -28,7 +28,7 @@ Install dc1394 raw1394 - coriander should work with your camera
 The build is controlled by the following entries in the videoio Makefile:
 
 libvideoio_la_LIBADD = -L/usr/X11R6/lib -lXm -lMrm -lUil -lpng  -ljpeg -lz -ltiff -lavcodec -lraw1394 -ldc1394_control
-DEFS = -DHAVE_CONFIG_H -DHAVE_DC1394 HAVE_CAMV4L
+DEFS = -DHAVE_CONFIG_H -DHAVE_DC1394
 
 
 Now it should be possible to use videoio camera functions, works for me.

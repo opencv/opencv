@@ -82,8 +82,6 @@ static const struct VideoBackendInfo builtin_backends[] =
     // Linux, some Unix
 #if defined HAVE_CAMV4L2
     DECLARE_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL),
-#elif defined HAVE_CAMV4L
-    DECLARE_BACKEND(CAP_V4L, "V4L", MODE_CAPTURE_ALL),
 #elif defined HAVE_VIDEOIO
     DECLARE_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL),
 #endif
@@ -436,7 +434,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN(createGPhoto2Capture(index));
         break;
 #endif
-#if defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
     case CAP_V4L:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(index))
         break;
@@ -500,7 +498,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
     default:
         CV_LOG_WARNING(NULL, "VideoCapture(filename=" << filename << ") was built without support of requested backendID=" << (int)api);
         break;
-#if defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
     case CAP_V4L:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(filename.c_str()))
         break;
