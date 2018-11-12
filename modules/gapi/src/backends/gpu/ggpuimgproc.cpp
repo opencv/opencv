@@ -252,7 +252,6 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
-        int type = in.type();
         cv::Size size = in.size();
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
 
