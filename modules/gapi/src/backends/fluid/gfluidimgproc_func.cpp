@@ -12,6 +12,9 @@
 
 #include <opencv2/core/hal/intrin.hpp>
 
+#include <cmath>
+#include <cstdlib>
+
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wstrict-overflow"
