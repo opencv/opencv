@@ -751,8 +751,10 @@ static void run_sobel3x3_vert(DST out[], int length, const float ky[],
         r2 = r[2];
 
 #if CV_SIMD
-    // for floating-point output, manual vectoring is not better than compiler optimization
-#if 0
+    // for floating-point output,
+    // manual vectoring may be not better than compiler's optimization
+#define EXPLICIT_SIMD_32F 0  // 1=vectorize 32f case explicitly, 0=don't
+#if     EXPLICIT_SIMD_32F
     if (std::is_same<DST, float>::value && length >= v_int16::nlanes)
     {
         constexpr static int nlanes = v_float32::nlanes;
@@ -761,13 +763,13 @@ static void run_sobel3x3_vert(DST out[], int length, const float ky[],
         {
             for (; l <= length - nlanes; l += nlanes)
             {
-                v_float32 sum = v_load(&buf[r0][l]) * v_setall_f32(ky0);
-                    sum = v_fma(v_load(&buf[r1][l]),  v_setall_f32(ky1), sum);
-                    sum = v_fma(v_load(&buf[r2][l]),  v_setall_f32(ky2), sum);
+                v_float32 sum = vx_load(&buf[r0][l]) * vx_setall_f32(ky0);
+                    sum = v_fma(vx_load(&buf[r1][l]),  vx_setall_f32(ky1), sum);
+                    sum = v_fma(vx_load(&buf[r2][l]),  vx_setall_f32(ky2), sum);
 
                 if (!noscale)
                 {
-                    sum = v_fma(sum, v_setall_f32(scale), v_setall_f32(delta));
+                    sum = v_fma(sum, vx_setall_f32(scale), vx_setall_f32(delta));
                 }
 
                 v_store(reinterpret_cast<float*>(&out[l]), sum);
@@ -794,18 +796,18 @@ static void run_sobel3x3_vert(DST out[], int length, const float ky[],
         {
             for (; l <= length - nlanes; l += nlanes)
             {
-                v_float32 sum0 = v_load(&buf[r0][l])            * v_setall_f32(ky0);
-                    sum0 = v_fma(v_load(&buf[r1][l]),             v_setall_f32(ky1), sum0);
-                    sum0 = v_fma(v_load(&buf[r2][l]),             v_setall_f32(ky2), sum0);
+                v_float32 sum0 = vx_load(&buf[r0][l])            * vx_setall_f32(ky0);
+                    sum0 = v_fma(vx_load(&buf[r1][l]),             vx_setall_f32(ky1), sum0);
+                    sum0 = v_fma(vx_load(&buf[r2][l]),             vx_setall_f32(ky2), sum0);
 
-                v_float32 sum1 = v_load(&buf[r0][l + nlanes/2]) * v_setall_f32(ky0);
-                    sum1 = v_fma(v_load(&buf[r1][l + nlanes/2]),  v_setall_f32(ky1), sum1);
-                    sum1 = v_fma(v_load(&buf[r2][l + nlanes/2]),  v_setall_f32(ky2), sum1);
+                v_float32 sum1 = vx_load(&buf[r0][l + nlanes/2]) * vx_setall_f32(ky0);
+                    sum1 = v_fma(vx_load(&buf[r1][l + nlanes/2]),  vx_setall_f32(ky1), sum1);
+                    sum1 = v_fma(vx_load(&buf[r2][l + nlanes/2]),  vx_setall_f32(ky2), sum1);
 
                 if (!noscale)
                 {
-                    sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
-                    sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
+                    sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                    sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
                 }
 
                 v_int32 isum0 = v_round(sum0),
@@ -843,28 +845,28 @@ static void run_sobel3x3_vert(DST out[], int length, const float ky[],
         {
             for (; l <= length - nlanes; l += nlanes)
             {
-                v_float32 sum0 = v_load(&buf[r0][l])              * v_setall_f32(ky0);
-                    sum0 = v_fma(v_load(&buf[r1][l]),               v_setall_f32(ky1), sum0);
-                    sum0 = v_fma(v_load(&buf[r2][l]),               v_setall_f32(ky2), sum0);
+                v_float32 sum0 = vx_load(&buf[r0][l])              * vx_setall_f32(ky0);
+                    sum0 = v_fma(vx_load(&buf[r1][l]),               vx_setall_f32(ky1), sum0);
+                    sum0 = v_fma(vx_load(&buf[r2][l]),               vx_setall_f32(ky2), sum0);
 
-                v_float32 sum1 = v_load(&buf[r0][l +   nlanes/4]) * v_setall_f32(ky0);
-                    sum1 = v_fma(v_load(&buf[r1][l +   nlanes/4]),  v_setall_f32(ky1), sum1);
-                    sum1 = v_fma(v_load(&buf[r2][l +   nlanes/4]),  v_setall_f32(ky2), sum1);
+                v_float32 sum1 = vx_load(&buf[r0][l +   nlanes/4]) * vx_setall_f32(ky0);
+                    sum1 = v_fma(vx_load(&buf[r1][l +   nlanes/4]),  vx_setall_f32(ky1), sum1);
+                    sum1 = v_fma(vx_load(&buf[r2][l +   nlanes/4]),  vx_setall_f32(ky2), sum1);
 
-                v_float32 sum2 = v_load(&buf[r0][l + 2*nlanes/4]) * v_setall_f32(ky0);
-                    sum2 = v_fma(v_load(&buf[r1][l + 2*nlanes/4]),  v_setall_f32(ky1), sum2);
-                    sum2 = v_fma(v_load(&buf[r2][l + 2*nlanes/4]),  v_setall_f32(ky2), sum2);
+                v_float32 sum2 = vx_load(&buf[r0][l + 2*nlanes/4]) * vx_setall_f32(ky0);
+                    sum2 = v_fma(vx_load(&buf[r1][l + 2*nlanes/4]),  vx_setall_f32(ky1), sum2);
+                    sum2 = v_fma(vx_load(&buf[r2][l + 2*nlanes/4]),  vx_setall_f32(ky2), sum2);
 
-                v_float32 sum3 = v_load(&buf[r0][l + 3*nlanes/4]) * v_setall_f32(ky0);
-                    sum3 = v_fma(v_load(&buf[r1][l + 3*nlanes/4]),  v_setall_f32(ky1), sum3);
-                    sum3 = v_fma(v_load(&buf[r2][l + 3*nlanes/4]),  v_setall_f32(ky2), sum3);
+                v_float32 sum3 = vx_load(&buf[r0][l + 3*nlanes/4]) * vx_setall_f32(ky0);
+                    sum3 = v_fma(vx_load(&buf[r1][l + 3*nlanes/4]),  vx_setall_f32(ky1), sum3);
+                    sum3 = v_fma(vx_load(&buf[r2][l + 3*nlanes/4]),  vx_setall_f32(ky2), sum3);
 
                 if (!noscale)
                 {
-                    sum0 = v_fma(sum0, v_setall_f32(scale), v_setall_f32(delta));
-                    sum1 = v_fma(sum1, v_setall_f32(scale), v_setall_f32(delta));
-                    sum2 = v_fma(sum2, v_setall_f32(scale), v_setall_f32(delta));
-                    sum3 = v_fma(sum3, v_setall_f32(scale), v_setall_f32(delta));
+                    sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                    sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
+                    sum2 = v_fma(sum2, vx_setall_f32(scale), vx_setall_f32(delta));
+                    sum3 = v_fma(sum3, vx_setall_f32(scale), vx_setall_f32(delta));
                 }
 
                 v_int32 isum0 = v_round(sum0),
