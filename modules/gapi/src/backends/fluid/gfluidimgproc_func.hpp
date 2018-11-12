@@ -8,6 +8,8 @@
 
 #if !defined(GAPI_STANDALONE)
 
+#include "opencv2/core.hpp"
+
 namespace cv {
 namespace gapi {
 namespace fluid {
@@ -18,11 +20,23 @@ namespace fluid {
 //
 //---------------------
 
-template<typename DST, typename SRC>
-void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
-                    const float kx[], const float ky[], int border,
-                    float scale, float delta, float *buf[],
-                    int y, int y0);
+#define RUN_SOBEL_ROW(DST, SRC)                                     \
+void run_sobel_row(DST out[], const SRC *in[], int width, int chan, \
+                  const float kx[], const float ky[], int border,  \
+                  float scale, float delta, float *buf[],          \
+                  int y, int y0);
+
+RUN_SOBEL_ROW(uchar , uchar )
+RUN_SOBEL_ROW(ushort, ushort)
+RUN_SOBEL_ROW( short, uchar )
+RUN_SOBEL_ROW( short, ushort)
+RUN_SOBEL_ROW( short,  short)
+RUN_SOBEL_ROW( float, uchar )
+RUN_SOBEL_ROW( float, ushort)
+RUN_SOBEL_ROW( float,  short)
+RUN_SOBEL_ROW( float,  float)
+
+#undef RUN_SOBEL_ROW
 
 }  // namespace fluid
 }  // namespace gapi

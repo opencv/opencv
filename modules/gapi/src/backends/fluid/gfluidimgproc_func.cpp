@@ -245,23 +245,26 @@ void run_sobel_impl(DST out[], const SRC *in[], int width, int chan,
     }
 }
 
-#define INSTANTIATE(DST, SRC)                                                 \
-template void run_sobel_impl(DST out[], const SRC *in[], int width, int chan, \
-                             const float kx[], const float ky[], int border,  \
-                             float scale, float delta, float *buf[],          \
-                             int y, int y0);
+#define RUN_SOBEL_ROW(DST, SRC)                                                    \
+void run_sobel_row(DST out[], const SRC *in[], int width, int chan,                \
+                   const float kx[], const float ky[], int border,                 \
+                   float scale, float delta, float *buf[],                         \
+                   int y, int y0)                                                  \
+{                                                                                  \
+    run_sobel_impl(out, in, width, chan, kx, ky, border, scale, delta, buf,y, y0); \
+}
 
-INSTANTIATE(uchar , uchar )
-INSTANTIATE(ushort, ushort)
-INSTANTIATE( short, uchar )
-INSTANTIATE( short, ushort)
-INSTANTIATE( short,  short)
-INSTANTIATE( float, uchar )
-INSTANTIATE( float, ushort)
-INSTANTIATE( float,  short)
-INSTANTIATE( float,  float)
+RUN_SOBEL_ROW(uchar , uchar )
+RUN_SOBEL_ROW(ushort, ushort)
+RUN_SOBEL_ROW( short, uchar )
+RUN_SOBEL_ROW( short, ushort)
+RUN_SOBEL_ROW( short,  short)
+RUN_SOBEL_ROW( float, uchar )
+RUN_SOBEL_ROW( float, ushort)
+RUN_SOBEL_ROW( float,  short)
+RUN_SOBEL_ROW( float,  float)
 
-#undef INSTANTIATE
+#undef RUN_SOBEL_ROW
 
 } // namespace fliud
 } // namespace gapi
