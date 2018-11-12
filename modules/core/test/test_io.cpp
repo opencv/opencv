@@ -1565,6 +1565,12 @@ TEST(Core_InputOutput, FileStorage_json_bool)
     ASSERT_EQ((int)fs["map_value"]["bool_true"], 1);
     ASSERT_EQ((std::string)fs["map_value"]["str_false"], "false");
     ASSERT_EQ((int)fs["bool_false"], 0);
+
+    std::vector<String> keys = fs["map_value"].keys();
+    ASSERT_EQ((int)keys.size(), 3);
+    ASSERT_EQ(keys[0], "int_value");
+    ASSERT_EQ(keys[1], "bool_true");
+    ASSERT_EQ(keys[2], "str_false");
     fs.release();
 }
 
