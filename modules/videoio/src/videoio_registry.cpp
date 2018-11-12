@@ -434,6 +434,11 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN(createGPhoto2Capture(index));
         break;
 #endif
+#if defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+    case CAP_V4L:
+        TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(index))
+        break;
+#endif
     case CAP_FIREWIRE:
 #ifdef HAVE_DC1394_2
         TRY_OPEN_LEGACY(cvCreateCameraCapture_DC1394_2(index))
