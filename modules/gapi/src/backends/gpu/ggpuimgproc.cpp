@@ -252,15 +252,12 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
-        const cv::ocl::Device & dev = cv::ocl::Device::getDefault();
-        int type = in.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+        int type = in.type();
         cv::Size size = in.size();
         size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
-        size_t localsize_general[2] = { 0, 1 }, *localsize = NULL;
 
         size_t maxWorkItemSizes[32];
         cv::ocl::Device::getDefault().maxWorkItemSizes(maxWorkItemSizes);
-        int tryWorkItems = (int)maxWorkItemSizes[0];
 
         cv::ocl::Kernel kernel;
 
@@ -276,7 +273,7 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 
         if (!kernel.create("symm_7x7", cv::ocl::gapi::symm7x7_oclsrc, build_options))
         {
-            printf("DIMA_B TEST symm_7x7 kernel create failed\n");
+            printf("symm_7x7 kernel create failed\n");
         }
 
         //prepare coefficients for device
@@ -293,18 +290,18 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 
         int idxArg = kernel.set(0, cv::ocl::KernelArg::PtrReadOnly(in));
         idxArg = kernel.set(idxArg, (int)in.step);
-        idxArg = kernel.set(idxArg, (int)size.width); //OVX fullImageSizeX
+        idxArg = kernel.set(idxArg, (int)size.width);
         idxArg = kernel.set(idxArg, (int)size.height);
         idxArg = kernel.set(idxArg, cv::ocl::KernelArg::PtrWriteOnly(out));
         idxArg = kernel.set(idxArg, (int)out.step);
-        idxArg = kernel.set(idxArg, (int)size.height); //OVX part.rc.height,
-        idxArg = kernel.set(idxArg, (int)size.width); //OVX part.rc.width,
-        idxArg = kernel.set(idxArg, (int)tile_y); //OVX tile_y,
+        idxArg = kernel.set(idxArg, (int)size.height);
+        idxArg = kernel.set(idxArg, (int)size.width);
+        idxArg = kernel.set(idxArg, (int)tile_y);
         idxArg = kernel.set(idxArg, cv::ocl::KernelArg::PtrReadOnly(gKer));
 
         if (!kernel.run(2, globalsize, NULL, false))
         {
-            printf("DIMA_B TEST symm_7x7 kernel run failed\n");
+            printf("symm_7x7 kernel run failed\n");
         }
     }
 };
