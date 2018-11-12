@@ -69,6 +69,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidbuffer.cpp
     src/backends/fluid/gfluidbackend.cpp
     src/backends/fluid/gfluidimgproc.cpp
+    src/backends/fluid/gfluidimgproc_func.cpp
     src/backends/fluid/gfluidcore.cpp
 
     # GPU Backend (currently built-in)
