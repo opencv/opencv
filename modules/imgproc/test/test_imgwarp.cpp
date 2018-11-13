@@ -796,7 +796,7 @@ int CV_RemapTest::prepare_test_case( int test_case_idx )
     k[2] = cvtest::randReal(rng)*0.004 - 0.002;
     k[3] = cvtest::randReal(rng)*0.004 - 0.002;
 
-    cvtest::initUndistortMap( _a, _k, test_mat[INPUT][1].size(), test_mat[INPUT][1], test_mat[INPUT][2] );
+    cvtest::initUndistortMap( _a, _k, Mat(), Mat(), test_mat[INPUT][1].size(), test_mat[INPUT][1], test_mat[INPUT][2], CV_32F );
     return code;
 }
 

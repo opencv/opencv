@@ -1006,6 +1006,60 @@ TEST(Core_InputOutput, filestorage_yaml_advanvced_type_heading)
     ASSERT_EQ(cv::norm(inputMatrix, actualMatrix, NORM_INF), 0.);
 }
 
+TEST(Core_InputOutput, filestorage_matx_io)
+{
+    Matx33d matxTest(1.234, 2, 3, 4, 5, 6, 7, 8, 9.876);
+
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "matxTest" << matxTest;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    reader["matxTest"] >> matxTestRead;
+    ASSERT_TRUE( cv::norm(matxTest, matxTestRead, NORM_INF) == 0 );
+
+    reader.release();
+}
+
+TEST(Core_InputOutput, filestorage_matx_io_size_mismatch)
+{
+    Matx32d matxTestWrongSize(1, 2, 3, 4, 5, 6);
+
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "matxTestWrongSize" << matxTestWrongSize;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    try
+    {
+        reader["matxTestWrongSize"] >> matxTestRead;
+        FAIL() << "wrong size matrix read but no exception thrown";
+    }
+    catch (const std::exception&)
+    {
+    }
+
+    reader.release();
+}
+
+TEST(Core_InputOutput, filestorage_matx_io_with_mat)
+{
+    Mat normalMat = Mat::eye(3, 3, CV_64F);
+
+    FileStorage writer("", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "normalMat" << normalMat;
+    String content = writer.releaseAndGetString();
+
+    FileStorage reader(content, FileStorage::READ | FileStorage::MEMORY);
+    Matx33d matxTestRead;
+    reader["normalMat"] >> matxTestRead;
+    ASSERT_TRUE( cv::norm(Mat::eye(3, 3, CV_64F), matxTestRead, NORM_INF) == 0 );
+
+    reader.release();
+}
+
 TEST(Core_InputOutput, filestorage_keypoints_vec_vec_io)
 {
     vector<vector<KeyPoint> > kptsVec;
@@ -1511,6 +1565,12 @@ TEST(Core_InputOutput, FileStorage_json_bool)
     ASSERT_EQ((int)fs["map_value"]["bool_true"], 1);
     ASSERT_EQ((std::string)fs["map_value"]["str_false"], "false");
     ASSERT_EQ((int)fs["bool_false"], 0);
+
+    std::vector<String> keys = fs["map_value"].keys();
+    ASSERT_EQ((int)keys.size(), 3);
+    ASSERT_EQ(keys[0], "int_value");
+    ASSERT_EQ(keys[1], "bool_true");
+    ASSERT_EQ(keys[2], "str_false");
     fs.release();
 }
 

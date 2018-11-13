@@ -866,7 +866,7 @@ private:
         d = alloc_1d<double> (n);
         e = alloc_1d<double> (n);
         ort = alloc_1d<double> (n);
-        CV_TRY {
+        try {
             // Reduce to Hessenberg form.
             orthes();
             // Reduce Hessenberg to real Schur form.
@@ -884,10 +884,10 @@ private:
             // Deallocate the memory by releasing all internal working data.
             release();
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             release();
-            CV_RETHROW();
+            throw;
         }
     }
 

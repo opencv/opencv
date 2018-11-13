@@ -2228,13 +2228,13 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
       void* oldCbkData;
       ErrorCallback oldCbk = redirectError(quiet_error, 0, &oldCbkData); // FIXIT not thread safe
 #endif
-      CV_TRY
+      try
       {
         isFound = boxFinder.findHoles();
       }
-      CV_CATCH(Exception, e)
+      catch (const cv::Exception &)
       {
-          CV_UNUSED(e);
+
       }
 #if BE_QUIET
       redirectError(oldCbk, oldCbkData);

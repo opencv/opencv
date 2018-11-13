@@ -44,10 +44,10 @@ namespace {
 
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
-- platform specific universal SDK: WINRT, QTKIT/AVFOUNDATION, MSMF/VFW/DSHOW, V4L/V4L2
+- platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
 - RGB-D: OpenNI/OpenNI2, INTELPERC/REALSENSE
 - special OpenCV (file-based): "images", "mjpeg"
-- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE), UNICAP
+- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)
 - other: XINE, gphoto2, etc
 */
 static const struct VideoBackendInfo builtin_backends[] =
@@ -64,9 +64,6 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 
     // Apple platform
-#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    DECLARE_BACKEND(CAP_QT, "QUICKTIME", MODE_CAPTURE_ALL | MODE_WRITER),
-#endif
 #ifdef HAVE_AVFOUNDATION
     DECLARE_BACKEND(CAP_AVFOUNDATION, "AVFOUNDATION", MODE_CAPTURE_ALL | MODE_WRITER),
 #endif
@@ -81,15 +78,12 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_DSHOW
     DECLARE_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX),
 #endif
-#ifdef HAVE_VFW
-    DECLARE_BACKEND(CAP_VFW, "VFW", MODE_CAPTURE_ALL | MODE_WRITER),
-#endif
 
     // Linux, some Unix
 #if defined HAVE_CAMV4L2
     DECLARE_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL),
-#elif defined HAVE_LIBV4L || defined HAVE_CAMV4L
-    DECLARE_BACKEND(CAP_V4L, "V4L", MODE_CAPTURE_ALL),
+#elif defined HAVE_VIDEOIO
+    DECLARE_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL),
 #endif
 
 
@@ -111,7 +105,7 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_BACKEND(CAP_OPENCV_MJPEG, "CV_MJPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 
     // special interfaces / stereo cameras / other SDKs
-#if defined(HAVE_DC1394_2) || defined(HAVE_DC1394) || defined(HAVE_CMU1394)
+#if defined(HAVE_DC1394_2)
     DECLARE_BACKEND(CAP_FIREWIRE, "FIREWIRE", MODE_CAPTURE_BY_INDEX),
 #endif
     // GigE
@@ -126,9 +120,6 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 #ifdef HAVE_ARAVIS_API
     DECLARE_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX),
-#endif
-#ifdef HAVE_UNICAP
-    DECLARE_BACKEND(CAP_UNICAP, "UNICAP", MODE_CAPTURE_BY_INDEX),
 #endif
 
 #ifdef HAVE_GPHOTO2
@@ -443,38 +434,19 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN(createGPhoto2Capture(index));
         break;
 #endif
-    case CAP_VFW: // or CAP_V4L or CAP_V4L2
-#ifdef HAVE_VFW
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_VFW(index))
-#endif
-#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+    case CAP_V4L:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(index))
-#endif
         break;
+#endif
     case CAP_FIREWIRE:
 #ifdef HAVE_DC1394_2
         TRY_OPEN_LEGACY(cvCreateCameraCapture_DC1394_2(index))
-#endif
-#ifdef HAVE_DC1394
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_DC1394(index))
-#endif
-#ifdef HAVE_CMU1394
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_CMU(index))
 #endif
         break; // CAP_FIREWIRE
 #ifdef HAVE_MIL
     case CAP_MIL:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_MIL(index))
-        break;
-#endif
-#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    case CAP_QT:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_QT(index))
-        break;
-#endif
-#ifdef HAVE_UNICAP
-    case CAP_UNICAP:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_Unicap(index))
         break;
 #endif
 #ifdef HAVE_PVAPI
@@ -520,26 +492,15 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
 
 void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, const cv::String& filename)
 {
+    CV_UNUSED(capture);
     switch (api)
     {
     default:
         CV_LOG_WARNING(NULL, "VideoCapture(filename=" << filename << ") was built without support of requested backendID=" << (int)api);
         break;
-#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
+#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
     case CAP_V4L:
         TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(filename.c_str()))
-        break;
-#endif
-
-#ifdef HAVE_VFW
-    case CAP_VFW:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_VFW(filename.c_str()))
-        break;
-#endif
-
-#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    case CAP_QT:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_QT(filename.c_str()))
         break;
 #endif
 
@@ -566,7 +527,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         break;
 #endif
     case CAP_IMAGES:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_Images(filename.c_str()))
+        TRY_OPEN(createFileCapture_Images(filename))
         break;
 #ifdef HAVE_FFMPEG
     case CAP_FFMPEG:
@@ -664,19 +625,9 @@ void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, Vide
         CREATE_WRITER(VideoWriter_IntelMFX::create(filename, fourcc, fps, frameSize, isColor));
         break;
 #endif
-#ifdef HAVE_VFW
-    case CAP_VFW:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_VFW(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
-        break;
-#endif
 #ifdef HAVE_AVFOUNDATION
     case CAP_AVFOUNDATION:
         CREATE_WRITER_LEGACY(cvCreateVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
-        break;
-#endif
-#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
-    case(CAP_QT):
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_QT(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
         break;
 #endif
 #ifdef HAVE_GSTREAMER

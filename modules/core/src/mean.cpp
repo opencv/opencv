@@ -8,6 +8,12 @@
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 
+#undef HAVE_IPP
+#undef CV_IPP_RUN_FAST
+#define CV_IPP_RUN_FAST(f, ...)
+#undef CV_IPP_RUN
+#define CV_IPP_RUN(c, f, ...)
+
 #if defined HAVE_IPP
 namespace cv
 {
@@ -648,11 +654,11 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
                     pstddev[c] = 0;
             }
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }

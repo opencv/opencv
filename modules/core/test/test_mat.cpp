@@ -1930,5 +1930,36 @@ TEST(Core_InputArray, support_CustomType)
     }
 }
 
+TEST(Core_Vectors, issue_13078)
+{
+    float floats_[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    std::vector<float> floats(floats_, floats_ + 8);
+    std::vector<int> ints(4);
+
+    Mat m(4, 1, CV_32FC1, floats.data(), sizeof(floats[0]) * 2);
+
+    m.convertTo(ints, CV_32S);
+
+    ASSERT_EQ(1, ints[0]);
+    ASSERT_EQ(3, ints[1]);
+    ASSERT_EQ(5, ints[2]);
+    ASSERT_EQ(7, ints[3]);
+}
+
+TEST(Core_Vectors, issue_13078_workaround)
+{
+    float floats_[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    std::vector<float> floats(floats_, floats_ + 8);
+    std::vector<int> ints(4);
+
+    Mat m(4, 1, CV_32FC1, floats.data(), sizeof(floats[0]) * 2);
+
+    m.convertTo(Mat(ints), CV_32S);
+
+    ASSERT_EQ(1, ints[0]);
+    ASSERT_EQ(3, ints[1]);
+    ASSERT_EQ(5, ints[2]);
+    ASSERT_EQ(7, ints[3]);
+}
 
 }} // namespace

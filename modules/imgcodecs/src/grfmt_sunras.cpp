@@ -84,7 +84,7 @@ bool  SunRasterDecoder::readHeader()
 
     if( !m_strm.open( m_filename )) return false;
 
-    CV_TRY
+    try
     {
         m_strm.skip( 4 );
         m_width  = m_strm.getDWord();
@@ -144,7 +144,7 @@ bool  SunRasterDecoder::readHeader()
             }
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
     }
 
@@ -179,7 +179,7 @@ bool  SunRasterDecoder::readData( Mat& img )
     if( !color && m_maptype == RMT_EQUAL_RGB )
         CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -343,13 +343,13 @@ bad_decoding_end:
                 if( color )
                 {
                     if( m_type == RAS_FORMAT_RGB )
-                        icvCvt_RGB2BGR_8u_C3R(src, 0, data, 0, cvSize(m_width,1) );
+                        icvCvt_RGB2BGR_8u_C3R(src, 0, data, 0, Size(m_width,1) );
                     else
                         memcpy(data, src, std::min(step, (size_t)src_pitch));
                 }
                 else
                 {
-                    icvCvt_BGR2Gray_8u_C3C1R(src, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGR2Gray_8u_C3C1R(src, 0, data, 0, Size(m_width,1),
                                               m_type == RAS_FORMAT_RGB ? 2 : 0 );
                 }
             }
@@ -364,10 +364,10 @@ bad_decoding_end:
                 m_strm.getBytes( src + 3, src_pitch );
 
                 if( color )
-                    icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, Size(m_width,1),
                                               m_type == RAS_FORMAT_RGB ? 2 : 0 );
                 else
-                    icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, Size(m_width,1),
                                                m_type == RAS_FORMAT_RGB ? 2 : 0 );
             }
             result = true;
@@ -376,7 +376,7 @@ bad_decoding_end:
             CV_Error(Error::StsInternal, "");
         }
     }
-    CV_CATCH_ALL
+    catch( ... )
     {
     }
 

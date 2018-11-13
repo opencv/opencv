@@ -442,7 +442,6 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
         _dst.create( dims, size, _type );
     Mat dst = _dst.getMat();
 
-
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
     double scale[] = {alpha, beta};
     int cn = channels();
@@ -450,7 +449,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
 
     if( dims <= 2 )
     {
-        Size sz = getContinuousSize(src, dst, cn);
+        Size sz = getContinuousSize2D(src, dst, cn);
         func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
     }
     else
@@ -511,7 +510,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
 
     if( src.dims <= 2 )
     {
-        Size sz = getContinuousSize(src, dst, cn);
+        Size sz = getContinuousSize2D(src, dst, cn);
         func( src.data, src.step, 0, 0, dst.data, dst.step, sz, 0);
     }
     else

@@ -132,12 +132,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             default:
@@ -147,12 +147,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_BGR2Gray_8u_C3C1R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1), 2 );
+                    Size(width,1), 2 );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1), 3, 2 );
+                    Size(width,1), 3, 2 );
                 ret = true;
                 break;
             default:
@@ -379,25 +379,25 @@ bool  PAMDecoder::readHeader()
     }
     else if( !m_strm.open( m_filename ))
         return false;
-    CV_TRY
+    try
     {
         byte = m_strm.getByte();
         if( byte != 'P' )
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         byte = m_strm.getByte();
         if (byte != '7')
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         byte = m_strm.getByte();
         if (byte != '\n' && byte != '\r')
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         uint i;
         memset (&flds, 0x00, sizeof (struct parsed_fields));
         do {
             if (!ReadPAMHeaderLine(m_strm, fieldtype, value))
-                CV_THROW( RBS_BAD_HEADER );
+                throw RBS_BAD_HEADER;
             switch (fieldtype) {
                 case PAM_HEADER_NONE:
                 case PAM_HEADER_COMMENT:
@@ -407,32 +407,32 @@ bool  PAMDecoder::readHeader()
                     break;
                 case PAM_HEADER_HEIGHT:
                     if (flds.height)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_height))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.height = true;
                     break;
                 case PAM_HEADER_WIDTH:
                     if (flds.width)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_width))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.width = true;
                     break;
                 case PAM_HEADER_DEPTH:
                     if (flds.depth)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_channels))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.depth = true;
                     break;
                 case PAM_HEADER_MAXVAL:
                     if (flds.maxval)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_maxval))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if ( m_maxval > 65535 )
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if ( m_maxval > 255 ) {
                         m_sampledepth = CV_16U;
                     }
@@ -451,7 +451,7 @@ bool  PAMDecoder::readHeader()
                     }
                     break;
                 default:
-                    CV_THROW( RBS_BAD_HEADER );
+                    throw RBS_BAD_HEADER;
             }
         } while (fieldtype != PAM_HEADER_ENDHDR);
 
@@ -469,7 +469,7 @@ bool  PAMDecoder::readHeader()
 
             return true;
         }
-    } CV_CATCH_ALL
+    } catch(...)
     {
     }
 
@@ -512,7 +512,7 @@ bool  PAMDecoder::readData( Mat& img )
         }
     }
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -610,7 +610,7 @@ bool  PAMDecoder::readData( Mat& img )
         }
 
         res = true;
-    } CV_CATCH_ALL
+    } catch(...)
     {
     }
 

@@ -1598,12 +1598,12 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
 
         ctx.setImmediateBorder(prevBorder);
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         CV_Error(CV_StsInternal, e.what());
         return false;
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         CV_Error(CV_StsInternal, e.what());
         return false;

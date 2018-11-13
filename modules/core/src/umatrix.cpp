@@ -367,11 +367,11 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         new_u->originalUMatData = u;
     }
     bool allocated = false;
-    CV_TRY
+    try
     {
         allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
-    CV_CATCH(cv::Exception, e)
+    catch (const cv::Exception& e)
     {
         fprintf(stderr, "Exception: %s\n", e.what());
     }
@@ -442,12 +442,12 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             a = a0;
             a0 = Mat::getDefaultAllocator();
         }
-        CV_TRY
+        try
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
-        CV_CATCH_ALL
+        catch(...)
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
@@ -1168,7 +1168,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     k.args(src1arg, src1.cols, (int)src1.total(), dbsize, dbarg, src2arg);
 
     size_t globalsize = dbsize * wgs;
-    if (k.run(1, &globalsize, &wgs, false))
+    if (k.run(1, &globalsize, &wgs, true))
     {
         res = sum(db.getMat(ACCESS_READ))[0];
         return true;

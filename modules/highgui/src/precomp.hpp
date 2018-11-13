@@ -47,11 +47,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -86,18 +86,15 @@
 //Yannick Verdie 2010, Max Kostin 2015
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
-void cvSetModeWindow_CARBON(const char* name, double prop_value);
 void cvSetModeWindow_COCOA(const char* name, double prop_value);
 void cvSetModeWindow_WinRT(const char* name, double prop_value);
 
 CvRect cvGetWindowRect_W32(const char* name);
 CvRect cvGetWindowRect_GTK(const char* name);
-CvRect cvGetWindowRect_CARBON(const char* name);
 CvRect cvGetWindowRect_COCOA(const char* name);
 
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
-double cvGetModeWindow_CARBON(const char* name);
 double cvGetModeWindow_COCOA(const char* name);
 double cvGetModeWindow_WinRT(const char* name);
 

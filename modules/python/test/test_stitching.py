@@ -10,7 +10,7 @@ class stitching_test(NewOpenCVTests):
         img1 = self.get_sample('stitching/a1.png')
         img2 = self.get_sample('stitching/a2.png')
 
-        stitcher = cv.createStitcher(False)
+        stitcher = cv.Stitcher.create(cv.Stitcher_PANORAMA)
         (_result, pano) = stitcher.stitch((img1, img2))
 
         #cv.imshow("pano", pano)

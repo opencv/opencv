@@ -41,6 +41,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/imgproc.hpp"
 
 #import <TargetConditionals.h>
 
@@ -910,9 +911,8 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 - (void)setImageData:(CvArr *)arr {
     //cout << "setImageData" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    CvMat *arrMat, dst, stub;
 
-    arrMat = cvGetMat(arr, &stub);
+    cv::Mat arrMat = cv::cvarrToMat(arr);
     /*CGColorSpaceRef colorspace = NULL;
     CGDataProviderRef provider = NULL;
     int width = cvimage->width;
@@ -933,40 +933,35 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     }*/
 
     NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-                pixelsWide:arrMat->cols
-                pixelsHigh:arrMat->rows
+                pixelsWide:arrMat.cols
+                pixelsHigh:arrMat.rows
                 bitsPerSample:8
                 samplesPerPixel:3
                 hasAlpha:NO
                 isPlanar:NO
                 colorSpaceName:NSDeviceRGBColorSpace
                 bitmapFormat: kCGImageAlphaNone
-                bytesPerRow:((arrMat->cols * 3 + 3) & -4)
+                bytesPerRow:((arrMat.cols * 3 + 3) & -4)
                 bitsPerPixel:24];
 
     if (bitmap) {
-        cvInitMatHeader(&dst, arrMat->rows, arrMat->cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
-        cvConvertImage(arrMat, &dst, CV_CVTIMG_SWAP_RB);
+        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
+        cv::cvtColor(arrMat, dst, cv::COLOR_BGR2RGB);
     }
     else {
         // It's not guaranteed to like the bitsPerPixel:24, but this is a lot slower so we'd rather not do it
         bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-            pixelsWide:arrMat->cols
-            pixelsHigh:arrMat->rows
+            pixelsWide:arrMat.cols
+            pixelsHigh:arrMat.rows
             bitsPerSample:8
             samplesPerPixel:3
             hasAlpha:NO
             isPlanar:NO
             colorSpaceName:NSDeviceRGBColorSpace
-            bytesPerRow:(arrMat->cols * 4)
+            bytesPerRow:(arrMat.cols * 4)
             bitsPerPixel:32];
-        uint8_t *data = [bitmap bitmapData];
-        cvInitMatHeader(&dst, arrMat->rows, arrMat->cols, CV_8UC3, data, (arrMat->cols * 3));
-        cvConvertImage(arrMat, &dst, CV_CVTIMG_SWAP_RB);
-        for (int i = (arrMat->rows * arrMat->cols) - 1; i >= 0; i--) {
-            memmove(data + i * 4, data + i * 3, 3);
-            data[i * 4 + 3] = 0;
-        }
+        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
+        cv::cvtColor(arrMat, dst, cv::COLOR_BGR2RGBA);
     }
 
     if( image ) {

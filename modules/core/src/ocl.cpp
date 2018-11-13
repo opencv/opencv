@@ -894,11 +894,11 @@ bool useOpenCL()
     CoreTLSData* data = getCoreTlsData().get();
     if( data->useOpenCL < 0 )
     {
-        CV_TRY
+        try
         {
             data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             data->useOpenCL = 0;
         }
@@ -6002,11 +6002,13 @@ const char* typeToStr(int type)
         "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
         "float", "float2", "float3", "float4", 0, 0, 0, "float8", 0, 0, 0, 0, 0, 0, 0, "float16",
         "double", "double2", "double3", "double4", 0, 0, 0, "double8", 0, 0, 0, 0, 0, 0, 0, "double16",
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
+        "half", "half2", "half3", "half4", 0, 0, 0, "half8", 0, 0, 0, 0, 0, 0, 0, "half16",
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
-    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
-    return cn > 16 ? "?" : tab[depth*16 + cn-1];
+    const char* result = cn > 16 ? 0 : tab[depth*16 + cn-1];
+    CV_Assert(result);
+    return result;
 }
 
 const char* memopTypeToStr(int type)
@@ -6020,11 +6022,13 @@ const char* memopTypeToStr(int type)
         "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
         "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
         "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
+        "short", "short2", "short3", "short4", 0, 0, 0, "short8", 0, 0, 0, 0, 0, 0, 0, "short16",
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
-    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
-    return cn > 16 ? "?" : tab[depth*16 + cn-1];
+    const char* result = cn > 16 ? 0 : tab[depth*16 + cn-1];
+    CV_Assert(result);
+    return result;
 }
 
 const char* vecopTypeToStr(int type)
@@ -6038,11 +6042,13 @@ const char* vecopTypeToStr(int type)
         "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
         "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
         "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
+        "short", "short2", "short3", "short4", 0, 0, 0, "short8", 0, 0, 0, 0, 0, 0, 0, "short16",
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
-    CV_Assert(depth != CV_16F);  // Workaround for: https://github.com/opencv/opencv/issues/12824
-    return cn > 16 ? "?" : tab[depth*16 + cn-1];
+    const char* result = cn > 16 ? 0 : tab[depth*16 + cn-1];
+    CV_Assert(result);
+    return result;
 }
 
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)

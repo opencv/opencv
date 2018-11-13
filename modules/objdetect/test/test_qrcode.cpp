@@ -66,9 +66,13 @@ TEST_P(Objdetect_QRCode, regression)
 
     std::vector<Point> corners;
     std::string decoded_info;
-    ASSERT_TRUE(detectQRCode(src, corners));
+    QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
-    ASSERT_TRUE(decodeQRCode(src, corners, decoded_info, straight_barcode));
+    decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
+    ASSERT_FALSE(corners.empty());
+    ASSERT_FALSE(decoded_info.empty());
+#else
+    ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
 
     const std::string dataset_config = findDataFile(root + "dataset_config.json", false);
@@ -119,10 +123,11 @@ TEST(Objdetect_QRCode_basic, not_found_qrcode)
     Mat straight_barcode;
     std::string decoded_info;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
-    EXPECT_FALSE(detectQRCode(zero_image, corners));
+    QRCodeDetector qrcode;
+    EXPECT_FALSE(qrcode.detect(zero_image, corners));
 #ifdef HAVE_QUIRC
     corners = std::vector<Point>(4);
-    EXPECT_ANY_THROW(decodeQRCode(zero_image, corners, decoded_info, straight_barcode));
+    EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
 #endif
 }
 

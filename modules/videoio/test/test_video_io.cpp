@@ -316,11 +316,6 @@ static const VideoCaptureAPIs backend_params[] = {
     CAP_MSMF,
 #endif
 
-// TODO: Broken?
-//#ifdef HAVE_VFW
-//    CAP_VFW,
-//#endif
-
 #ifdef HAVE_GSTREAMER
     CAP_GSTREAMER,
 #endif
@@ -388,18 +383,6 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("wmv", "WVC1", 30.f, CAP_MSMF),
     makeParam("mov", "H264", 30.f, CAP_MSMF),
 #endif
-
-// TODO: Broken?
-//#ifdef HAVE_VFW
-//#if !defined(_M_ARM)
-//    makeParam("wmv", "WMV1", 30.f, CAP_VFW),
-//    makeParam("wmv", "WMV2", 30.f, CAP_VFW),
-//#endif
-//    makeParam("wmv", "WMV3", 30.f, CAP_VFW),
-//    makeParam("wmv", "WVC1", 30.f, CAP_VFW),
-//    makeParam("avi", "H264", 30.f, CAP_VFW),
-//    makeParam("avi", "MJPG", 30.f, CAP_VFW),
-//#endif
 
 #ifdef HAVE_QUICKTIME
     makeParam("mov", "mp4v", 30.f, CAP_QT),
