@@ -8,7 +8,13 @@
 
 #include "gfluidimgproc_func.hpp"
 #include "gfluidimgproc_func.simd.hpp"
-#include "gfluidimgproc_func.simd_declarations.hpp"
+#if 1
+  // NB: workaround for CV_SIMD bug (or feature?):
+  // - dynamic dispatcher assumes *.simd.hpp is directly in src dir
+  #include "backends/fluid/gfluidimgproc_func.simd_declarations.hpp"
+#else
+  #include                "gfluidimgproc_func.simd_declarations.hpp"
+#endif
 
 #include "gfluidutils.hpp"
 

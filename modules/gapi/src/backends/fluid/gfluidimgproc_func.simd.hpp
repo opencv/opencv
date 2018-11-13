@@ -4,6 +4,9 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
+// NB: allow including this *.hpp several times!
+// #pragma once -- don't: this file is NOT once!
+
 #if !defined(GAPI_STANDALONE)
 
 #include "opencv2/gapi/own/saturate.hpp"
