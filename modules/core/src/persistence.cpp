@@ -2388,11 +2388,6 @@ FileNode FileNodeIterator::operator *() const
     return FileNode(idx < nodeNElems ? fs : 0, blockIdx, ofs);
 }
 
-FileNode FileNodeIterator::operator ->() const
-{
-    return FileNode(idx < nodeNElems ? fs : 0, blockIdx, ofs);
-}
-
 FileNodeIterator& FileNodeIterator::operator ++ ()
 {
     if( idx == nodeNElems || !fs )
