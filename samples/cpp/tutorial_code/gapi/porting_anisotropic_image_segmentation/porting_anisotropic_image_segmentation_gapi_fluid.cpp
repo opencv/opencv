@@ -3,6 +3,10 @@
 * @author Dmitry Matveev, dmitry.matveev@intel.com, based
 *    on sample by Karpushin Vladislav, karpushin@ngs.ru
 */
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_GAPI
+
+//! [full_sample]
 #include <iostream>
 #include <utility>
 
@@ -108,3 +112,13 @@ void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgO
     imgOrientationOut = 0.5*cv::gapi::phase(J22 - J11, 2.0*J12, true);
 }
 //! [calcGST]
+
+//! [full_sample]
+
+#else
+#include <iostream>
+int main()
+{
+    std::cerr << "This tutorial code requires G-API module to run" << std::endl;
+}
+#endif  // HAVE_OPECV_GAPI

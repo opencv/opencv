@@ -12,6 +12,10 @@ specific CV algorithm. G-API provides means to define CV operations,
 construct graphs (in form of expressions) using it, and finally
 implement and run the operations for a particular backend.
 
+@note G-API is a new module and now is in active development. It's API
+is volatile at the moment and there may be minor but
+compatibility-breaking changes in the future.
+
 # Contents
 
 G-API documentation is organized into the following chapters:

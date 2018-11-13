@@ -115,7 +115,7 @@ Result of this G-API pipeline bit-exact matches the original one
 Below is the full listing of the initial anisotropic image
 segmentation port on G-API:
 
-@include cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi.cpp
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi.cpp full_sample
 
 # Inspecting the initial version {#gapi_anisotropic_inspect}
 
@@ -143,7 +143,7 @@ G-API allows to dump generated graphs to `.dot` files which then
 could be visualized with [Graphviz](https://www.graphviz.org/), a
 popular open graph visualization software.
 
-@warning THIS VARIABLE NEEDS TO BE FIXED TO DUMP DIR ASAP!
+<!-- TODO THIS VARIABLE NEEDS TO BE FIXED TO DUMP DIR ASAP! -->
 
 In order to dump our graph to a `.dot` file, set `GRAPH_DUMP_PATH` to a
 file name before running the application, e.g.:
