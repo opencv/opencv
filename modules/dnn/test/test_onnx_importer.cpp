@@ -68,6 +68,12 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("two_convolution");
 }
 
+TEST_P(Test_ONNX_layers, Deconvolution)
+{
+    testONNXModels("deconvolution");
+    testONNXModels("two_deconvolution");
+}
+
 TEST_P(Test_ONNX_layers, Dropout)
 {
     testONNXModels("dropout");
