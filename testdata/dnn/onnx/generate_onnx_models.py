@@ -59,6 +59,9 @@ input = Variable(torch.randn(1, 3, 10, 10))
 conv = nn.Conv2d(3, 5, kernel_size=5, stride=2, padding=1)
 save_data_and_model("convolution", input, conv)
 
+input = Variable(torch.randn(1, 3, 10, 10))
+deconv = nn.ConvTranspose2d(3, 5, kernel_size=5, stride=2, padding=1)
+save_data_and_model("deconvolution", input, deconv)
 
 input = Variable(torch.randn(2, 3))
 linear = nn.Linear(3, 4, bias=True)
@@ -80,6 +83,12 @@ conv2 = nn.Sequential(
           )
 save_data_and_model("two_convolution", input, conv2)
 
+input = Variable(torch.randn(1, 3, 10, 20))
+deconv2 = nn.Sequential(
+    nn.ConvTranspose2d(3, 6, kernel_size=(5,3), stride=1, padding=1),
+    nn.ConvTranspose2d(6, 4, kernel_size=5, stride=2, padding=(0,2))
+)
+save_data_and_model("two_deconvolution", input, deconv2)
 
 input = Variable(torch.randn(2, 3, 12, 9))
 maxpool2 = nn.Sequential(
