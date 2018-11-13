@@ -142,7 +142,9 @@ struct RGB5x52RGB
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
-
+        v_uint8 vn3 = vx_setall_u8(~3), vn7 = vx_setall_u8(~7);
+        v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
+        v_uint16 v255 = vx_setall_u16(255);
         for(; i < n-vsize+1;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize*dcn)
         {
@@ -151,15 +153,12 @@ struct RGB5x52RGB
                                                        sizeof(ushort)*v_uint16::nlanes));
 
             v_uint8 r, g, b, a;
-            v_uint16 v255 = vx_setall_u16(255);
-
             v_uint16 b0 = (t0 << 3) & v255;
             v_uint16 b1 = (t1 << 3) & v255;
             b = v_pack(b0, b1);
 
             v_uint16 g0, g1, r0, r1, a0, a1;
-            v_uint8 vn3 = vx_setall_u8(~3), vn7 = vx_setall_u8(~7);
-            v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
+
             if( gb == 6 )
             {
                 g0 = (t0 >> 3) & v255;
@@ -254,6 +253,9 @@ struct RGB2RGB5x5
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
+        v_uint16 vn3 = vx_setall_u16(~3), vn7 = vx_setall_u16(~7);
+        v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
+        v_uint8 v7 = vx_setall_u8(~7);
         for(; i < n-vsize+1;
             i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
         {
@@ -269,7 +271,7 @@ struct RGB2RGB5x5
             if(bidx == 2)
                 swap(b, r);
 
-            r = r & vx_setall_u8(~7);
+            r = r & v7;
 
             v_uint16 r0, r1, g0, g1, b0, b1, a0, a1;
             v_expand(r, r0, r1);
@@ -278,8 +280,7 @@ struct RGB2RGB5x5
             v_expand(a, a0, a1);
 
             v_uint16 d0, d1;
-            v_uint16 vn3 = vx_setall_u16(~3), vn7 = vx_setall_u16(~7);
-            v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
+
             b0 = b0 >> 3;
             b1 = b1 >> 3;
             a0 = a0 != vz;
