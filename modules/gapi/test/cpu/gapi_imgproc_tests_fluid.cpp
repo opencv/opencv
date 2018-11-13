@@ -115,7 +115,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestFluid, SobelTest,
                                 Values(3), // add kernel size=5 when implementation is ready
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(-1, CV_32F),
+                                Values(-1, CV_16S, CV_32F),
                                 Values(0, 1),
                                 Values(1, 2),
                                 Values(true, false),

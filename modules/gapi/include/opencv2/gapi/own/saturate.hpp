@@ -8,6 +8,8 @@
 #ifndef OPENCV_GAPI_OWN_SATURATE_HPP
 #define OPENCV_GAPI_OWN_SATURATE_HPP
 
+#include <cmath>
+
 #include <limits>
 #include <type_traits>
 
