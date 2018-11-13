@@ -1357,11 +1357,11 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
         }
 #endif
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

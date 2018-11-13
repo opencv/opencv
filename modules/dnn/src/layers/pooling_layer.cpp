@@ -96,7 +96,6 @@ public:
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
             type = ROI;
-            computeMaxIdx = false;
             pooledSize.width = params.get<uint32_t>("pooled_w", 1);
             pooledSize.height = params.get<uint32_t>("pooled_h", 1);
         }
@@ -142,6 +141,7 @@ public:
 #ifdef HAVE_OPENCL
         poolOp.release();
 #endif
+        computeMaxIdx = type == MAX;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -193,19 +193,14 @@ public:
             poolOp = Ptr<OCL4DNNPool<float> >(new OCL4DNNPool<float>(config));
         }
 
-        for (size_t ii = 0; ii < inputs.size(); ii++)
-        {
-            UMat& inpMat = inputs[ii];
-            int out_index = (type == MAX) ? 2 : 1;
-            UMat& outMat = outputs[out_index * ii];
-            UMat maskMat = (type == MAX) ? outputs[2 * ii + 1] : UMat();
+        CV_Assert_N(inputs.size() == 1, !outputs.empty(), !computeMaxIdx || outputs.size() == 2);
+        UMat& inpMat = inputs[0];
+        UMat& outMat = outputs[0];
+        UMat maskMat = computeMaxIdx ? outputs[1] : UMat();
 
-            CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
+        CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
-            if (!poolOp->Forward(inpMat, outMat, maskMat))
-                return false;
-        }
-        return true;
+        return poolOp->Forward(inpMat, outMat, maskMat);
     }
 #endif
 
@@ -232,9 +227,12 @@ public:
         switch (type)
         {
             case MAX:
-                CV_Assert_N(inputs.size() == 1, outputs.size() == 2);
-                maxPooling(inputs[0], outputs[0], outputs[1]);
+            {
+                CV_Assert_N(inputs.size() == 1, !computeMaxIdx || outputs.size() == 2);
+                Mat mask = computeMaxIdx ? outputs[1] : Mat();
+                maxPooling(inputs[0], outputs[0], mask);
                 break;
+            }
             case AVE:
                 CV_Assert_N(inputs.size() == 1, outputs.size() == 1);
                 avePooling(inputs[0], outputs[0]);
@@ -951,7 +949,10 @@ public:
             dims[0] = inputs[1][0];  // Number of proposals;
             dims[1] = psRoiOutChannels;
         }
-        outputs.assign(type == MAX ? 2 : 1, shape(dims, 4));
+
+        int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
+        CV_Assert(numOutputs == 1 || (numOutputs == 2 && type == MAX));
+        outputs.assign(numOutputs, shape(dims, 4));
 
         return false;
     }

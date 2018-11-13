@@ -416,7 +416,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
-    CV_TRY
+    try
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -436,10 +436,10 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
         release();
-        CV_RETHROW();
+        throw;
     }
 
     updateContinuityFlag();
@@ -941,6 +941,79 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
     ? (int)(total()*channels()/_elemChannels) : -1;
+}
+
+
+static inline Size getContinuousSize_(int flags, int cols, int rows, int widthScale)
+{
+    int64 sz = (int64)cols * rows * widthScale;
+    bool has_int_overflow = sz >= INT_MAX;
+    bool isContiguous = (flags & Mat::CONTINUOUS_FLAG) != 0;
+    return (isContiguous && !has_int_overflow)
+            ? Size((int)sz, 1)
+            : Size(cols * widthScale, rows);
+}
+
+Size getContinuousSize2D(Mat& m1, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    return getContinuousSize_(m1.flags,
+                              m1.cols, m1.rows, widthScale);
+}
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    CV_CheckLE(m2.dims, 2, "");
+    const Size sz1 = m1.size();
+    if (sz1 != m2.size())  // reshape all matrixes to the same size (#4159)
+    {
+        size_t total_sz = m1.total();
+        CV_CheckEQ(total_sz, m2.total(), "");
+        bool is_m1_vector = m1.cols == 1 || m1.rows == 1;
+        bool is_m2_vector = m2.cols == 1 || m2.rows == 1;
+        CV_Assert(is_m1_vector); CV_Assert(is_m2_vector);
+        int total = (int)total_sz;  // vector-column
+        bool isContiguous = ((m1.flags & m2.flags) & Mat::CONTINUOUS_FLAG) != 0;
+        bool has_int_overflow = ((int64)total_sz * widthScale) >= INT_MAX;
+        if (isContiguous && !has_int_overflow)
+            total = 1; // vector-row
+        m1 = m1.reshape(0, total);
+        m2 = m2.reshape(0, total);
+        CV_Assert(m1.cols == m2.cols && m1.rows == m2.rows);
+        return Size(m1.cols * widthScale, m1.rows);
+    }
+    return getContinuousSize_(m1.flags & m2.flags,
+                              m1.cols, m1.rows, widthScale);
+}
+
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    CV_CheckLE(m2.dims, 2, "");
+    CV_CheckLE(m3.dims, 2, "");
+    const Size sz1 = m1.size();
+    if (sz1 != m2.size() || sz1 != m3.size())  // reshape all matrixes to the same size (#4159)
+    {
+        size_t total_sz = m1.total();
+        CV_CheckEQ(total_sz, m2.total(), "");
+        CV_CheckEQ(total_sz, m3.total(), "");
+        bool is_m1_vector = m1.cols == 1 || m1.rows == 1;
+        bool is_m2_vector = m2.cols == 1 || m2.rows == 1;
+        bool is_m3_vector = m3.cols == 1 || m3.rows == 1;
+        CV_Assert(is_m1_vector); CV_Assert(is_m2_vector); CV_Assert(is_m3_vector);
+        int total = (int)total_sz;  // vector-column
+        bool isContiguous = ((m1.flags & m2.flags & m3.flags) & Mat::CONTINUOUS_FLAG) != 0;
+        bool has_int_overflow = ((int64)total_sz * widthScale) >= INT_MAX;
+        if (isContiguous && !has_int_overflow)
+            total = 1; // vector-row
+        m1 = m1.reshape(0, total);
+        m2 = m2.reshape(0, total);
+        m3 = m3.reshape(0, total);
+        CV_Assert(m1.cols == m2.cols && m1.rows == m2.rows && m1.cols == m3.cols && m1.rows == m3.rows);
+        return Size(m1.cols * widthScale, m1.rows);
+    }
+    return getContinuousSize_(m1.flags & m2.flags & m3.flags,
+                              m1.cols, m1.rows, widthScale);
 }
 
 } // cv::

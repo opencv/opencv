@@ -383,6 +383,35 @@ OPENCV_HAL_IMPL_VSX_PACK(v_uint16x8, ushort, v_int32x4, unsigned int, int,
 //OPENCV_HAL_IMPL_VSX_PACK(v_uint32x4, uint, v_int64x2, unsigned long long, long long,
 //                         vec_sra, vec_packsu, vec_add, pack_u)
 
+// pack boolean
+inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)
+{
+    vec_uchar16 ab = vec_pack(a.val, b.val);
+    return v_uint8x16(ab);
+}
+
+inline v_uint8x16 v_pack_b(const v_uint32x4& a, const v_uint32x4& b,
+                           const v_uint32x4& c, const v_uint32x4& d)
+{
+    vec_ushort8 ab = vec_pack(a.val, b.val);
+    vec_ushort8 cd = vec_pack(c.val, d.val);
+    return v_uint8x16(vec_pack(ab, cd));
+}
+
+inline v_uint8x16 v_pack_b(const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c,
+                           const v_uint64x2& d, const v_uint64x2& e, const v_uint64x2& f,
+                           const v_uint64x2& g, const v_uint64x2& h)
+{
+    vec_uint4 ab = vec_pack(a.val, b.val);
+    vec_uint4 cd = vec_pack(c.val, d.val);
+    vec_uint4 ef = vec_pack(e.val, f.val);
+    vec_uint4 gh = vec_pack(g.val, h.val);
+
+    vec_ushort8 abcd = vec_pack(ab, cd);
+    vec_ushort8 efgh = vec_pack(ef, gh);
+    return v_uint8x16(vec_pack(abcd, efgh));
+}
+
 /* Recombine */
 template <typename _Tpvec>
 inline void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1)
@@ -834,16 +863,27 @@ inline v_float32x4 v_abs(const v_float32x4& x)
 inline v_float64x2 v_abs(const v_float64x2& x)
 { return v_float64x2(vec_abs(x.val)); }
 
+/** Absolute difference **/
+// unsigned
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_absdiff, vec_absd)
 
-#define OPENCV_HAL_IMPL_VSX_BIN_FUNC2(_Tpvec, _Tpvec2, cast, func, intrin)  \
-inline _Tpvec2 func(const _Tpvec& a, const _Tpvec& b)                       \
-{ return _Tpvec2(cast(intrin(a.val, b.val))); }
+inline v_uint8x16 v_absdiff(const v_int8x16& a, const v_int8x16& b)
+{ return v_reinterpret_as_u8(v_sub_wrap(v_max(a, b), v_min(a, b))); }
+inline v_uint16x8 v_absdiff(const v_int16x8& a, const v_int16x8& b)
+{ return v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))); }
+inline v_uint32x4 v_absdiff(const v_int32x4& a, const v_int32x4& b)
+{ return v_reinterpret_as_u32(v_max(a, b) - v_min(a, b)); }
 
-OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int8x16, v_uint8x16, vec_uchar16_c, v_absdiff, vec_absd)
-OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int16x8, v_uint16x8, vec_ushort8_c, v_absdiff, vec_absd)
-OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int32x4, v_uint32x4, vec_uint4_c, v_absdiff, vec_absd)
-OPENCV_HAL_IMPL_VSX_BIN_FUNC2(v_int64x2, v_uint64x2, vec_udword2_c, v_absdiff, vec_absd)
+inline v_float32x4 v_absdiff(const v_float32x4& a, const v_float32x4& b)
+{ return v_abs(a - b); }
+inline v_float64x2 v_absdiff(const v_float64x2& a, const v_float64x2& b)
+{ return v_abs(a - b); }
+
+/** Absolute difference for signed integers **/
+inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
+{ return v_int8x16(vec_abss(vec_subs(a.val, b.val))); }
+inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
+{ return v_int16x8(vec_abss(vec_subs(a.val, b.val))); }
 
 ////////// Conversions /////////
 
@@ -853,6 +893,9 @@ inline v_int32x4 v_round(const v_float32x4& a)
 
 inline v_int32x4 v_round(const v_float64x2& a)
 { return v_int32x4(vec_mergesqo(vec_ctso(vec_rint(a.val)), vec_int4_z)); }
+
+inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
+{ return v_int32x4(vec_mergesqo(vec_ctso(vec_rint(a.val)), vec_ctso(vec_rint(b.val)))); }
 
 inline v_int32x4 v_floor(const v_float32x4& a)
 { return v_int32x4(vec_cts(vec_floor(a.val))); }

@@ -89,7 +89,7 @@ See @ref videoio_overview for more information.
 enum VideoCaptureAPIs {
        CAP_ANY          = 0,            //!< Auto detect == 0
        CAP_VFW          = 200,          //!< Video For Windows (obsolete, removed)
-       CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
+       CAP_V4L          = 200,          //!< V4L/V4L2 capturing support
        CAP_V4L2         = CAP_V4L,      //!< Same as CAP_V4L
        CAP_FIREWIRE     = 300,          //!< IEEE 1394 drivers
        CAP_FIREWARE     = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
@@ -169,8 +169,10 @@ enum VideoCaptureProperties {
        CAP_PROP_AUTOFOCUS     =39,
        CAP_PROP_SAR_NUM       =40, //!< Sample aspect ratio: num/den (num)
        CAP_PROP_SAR_DEN       =41, //!< Sample aspect ratio: num/den (den)
-       CAP_PROP_BACKEND       =42, //!< current backend (enum VideoCaptureAPIs). Read-only property
-       CAP_CROSSBAR_INPIN_TYPE =43, //!<CrossBar input pin Setting
+       CAP_PROP_BACKEND       =42, //!< Current backend (enum VideoCaptureAPIs). Read-only property
+       CAP_PROP_CHANNEL       =43, //!< Video input or Channel Number (only for those cameras that support)
+       CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
+       CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif

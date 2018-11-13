@@ -378,7 +378,7 @@ public:
             }
         } // try
 
-        catch (cv::Exception& e)
+        catch (const cv::Exception& e)
         {
             std::cerr << "Exception: " << e.what() << std::endl;
             cleanup();

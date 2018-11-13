@@ -667,38 +667,52 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
-class CV_EXPORTS QRCodeDetector
+class CV_EXPORTS_W QRCodeDetector
 {
 public:
-    QRCodeDetector();
+    CV_WRAP QRCodeDetector();
     ~QRCodeDetector();
 
-    void setEpsX(double epsX);
-    void setEpsY(double epsY);
+    /** @brief sets the epsilon used during the horizontal scan of QR code stop marker detection.
+     @param epsX Epsilon neighborhood, which allows you to determine the horizontal pattern
+     of the scheme 1:1:3:1:1 according to QR code standard.
+    */
+    CV_WRAP void setEpsX(double epsX);
+    /** @brief sets the epsilon used during the vertical scan of QR code stop marker detection.
+     @param epsY Epsilon neighborhood, which allows you to determine the vertical pattern
+     of the scheme 1:1:3:1:1 according to QR code standard.
+     */
+    CV_WRAP void setEpsY(double epsY);
 
-    bool detect(InputArray in, OutputArray points) const;
+    /** @brief Detects QR code in image and returns the quadrangle containing the code.
+     @param img grayscale or color (BGR) image containing (or not) QR code.
+     @param points Output vector of vertices of the minimum-area quadrangle containing the code.
+     */
+    CV_WRAP bool detect(InputArray img, OutputArray points) const;
+
+    /** @brief Decodes QR code in image once it's found by the detect() method.
+     Returns UTF8-encoded output string or empty string if the code cannot be decoded.
+
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points Quadrangle vertices found by detect() method (or some other algorithm).
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+
+    /** @brief Both detects and decodes QR code
+
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
+                                        OutputArray straight_qrcode = noArray());
 protected:
     struct Impl;
     Ptr<Impl> p;
 };
 
-/** @brief Detect QR code in image and return minimum area of quadrangle that describes QR code.
-    @param in  Matrix of the type CV_8U containing an image where QR code are detected.
-    @param points Output vector of vertices of a quadrangle of minimal area that describes QR code.
-    @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
-    @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
-    */
-CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
-
-/** @brief Decode QR code in image and return text that is encrypted in QR code.
-    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
-    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
-    @param decoded_info String information that is encrypted in QR code.
-    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
-    */
-CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
 //! @} objdetect
-
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"

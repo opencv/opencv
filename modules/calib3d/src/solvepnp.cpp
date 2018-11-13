@@ -46,7 +46,7 @@
 #include "epnp.h"
 #include "p3p.h"
 #include "ap3p.h"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "calib3d_c_api.h"
 
 #include <iostream>
 

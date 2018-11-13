@@ -401,11 +401,11 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
         img.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

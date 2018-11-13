@@ -1678,6 +1678,7 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
     initMatrixRandU(type_mat, sz_in, type_out);
     cv::Size sz_lut = cv::Size(1, 256);
     cv::Mat in_lut(sz_lut, type_lut);
+    cv::randu(in_lut, cv::Scalar::all(0), cv::Scalar::all(255));
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::LUT(in_mat1, in_lut, out_mat_ocv);

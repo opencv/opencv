@@ -426,7 +426,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
     if( src.dims <= 2 )
     {
-        Size sz = getContinuousSize(src, dst, cn);
+        Size sz = getContinuousSize2D(src, dst, cn);
         func( src.ptr(), src.step, 0, 0, dst.ptr(), dst.step, sz, scale );
     }
     else

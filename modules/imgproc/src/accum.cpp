@@ -291,11 +291,11 @@ static bool openvx_accumulate(InputArray _src, InputOutputArray _dst, InputArray
         srcImage.swapHandle(); dstImage.swapHandle();
 #endif
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }

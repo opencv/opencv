@@ -1373,7 +1373,8 @@ TEST_P(LUTTest, AccuracyTest)
 
     initMatrixRandU(type_mat, sz_in, type_out);
     cv::Size sz_lut = cv::Size(1, 256);
-    cv::Mat in_lut (sz_lut, type_lut);
+    cv::Mat in_lut(sz_lut, type_lut);
+    cv::randu(in_lut, cv::Scalar::all(0), cv::Scalar::all(255));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;

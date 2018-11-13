@@ -793,11 +793,11 @@ namespace cv
             img.swapHandle();
 #endif
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }
@@ -3313,11 +3313,11 @@ static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
         srcImage.swapHandle(); dstImage.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
