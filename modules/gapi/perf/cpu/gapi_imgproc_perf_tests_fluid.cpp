@@ -7,8 +7,6 @@
 
 #include "../perf_precomp.hpp"
 #include "../common/gapi_imgproc_perf_tests.hpp"
-#include "../../src/backends/fluid/gfluidimgproc.hpp"
-
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
 
