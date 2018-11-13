@@ -275,7 +275,7 @@ GAPI_GPU_KERNEL(GGPUSymm7x7, cv::gapi::imgproc::GSymm7x7)
 
             if (!kernel.create("symm_7x7", cv::ocl::gapi::symm7x7_oclsrc, build_options))
             {
-                printf("symm_7x7 OpenCL kernel creation failed with build_options = %s\n", build_options);
+                printf("symm_7x7 OpenCL kernel creation failed with build_options = %s\n", build_options.c_str());
             }
 
             //prepare coefficients for device
