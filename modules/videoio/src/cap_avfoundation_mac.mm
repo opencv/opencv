@@ -45,6 +45,11 @@
 #include <stdio.h>
 #import <AVFoundation/AVFoundation.h>
 
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
+
 /********************** Declaration of class headers ************************/
 
 /*****************************************************************************
@@ -154,7 +159,7 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
-    int       mMode;
+    uint32_t  mMode;
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
@@ -1028,7 +1033,7 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
-        case CV_CAP_PROP_MODE:
+        case CV_CAP_PROP_FOURCC:
             return mMode;
         default:
             break;
@@ -1062,8 +1067,8 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             setupReadingAt(t);
             retval = true;
             break;
-        case CV_CAP_PROP_MODE:
-            int mode;
+        case CV_CAP_PROP_FOURCC:
+            uint32_t mode;
             mode = cvRound(value);
             if (mMode == mode) {
                 retval = true;

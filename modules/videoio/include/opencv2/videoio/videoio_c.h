@@ -452,16 +452,6 @@ enum
     CV_CAP_INTELPERC_GENERATORS_MASK = CV_CAP_INTELPERC_DEPTH_GENERATOR + CV_CAP_INTELPERC_IMAGE_GENERATOR
 };
 
-// Generic camera output modes.
-// Currently, these are supported through the libv4l interface only.
-enum
-{
-    CV_CAP_MODE_BGR  = 0, // BGR24 (default)
-    CV_CAP_MODE_RGB  = 1, // RGB24
-    CV_CAP_MODE_GRAY = 2, // Y8
-    CV_CAP_MODE_YUYV = 3  // YUYV
-};
-
 enum
 {
     // Data given from depth generator.
