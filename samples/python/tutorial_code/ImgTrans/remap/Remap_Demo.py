@@ -32,11 +32,11 @@ def update_map(ind, map_x, map_y):
 ## [Update]
 
 parser = argparse.ArgumentParser(description='Code for Remapping tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/chicky_512.png')
+parser.add_argument('--input', help='Path to input image.', default='chicky_512.png')
 args = parser.parse_args()
 
 ## [Load]
-src = cv.imread(args.input, cv.IMREAD_COLOR)
+src = cv.imread(cv.samples.findFile(args.input), cv.IMREAD_COLOR)
 if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)

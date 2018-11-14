@@ -60,10 +60,10 @@ if __name__ == '__main__':
     if len(sys.argv)>1:
         fname = sys.argv[1]
     else :
-        fname = '../data/lena.jpg'
+        fname = 'lena.jpg'
         print("usage : python hist.py <image_file>")
 
-    im = cv.imread(fname)
+    im = cv.imread(cv.samples.findFile(fname))
 
     if im is None:
         print('Failed to load image file:', fname)
