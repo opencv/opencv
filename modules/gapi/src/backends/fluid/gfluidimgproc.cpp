@@ -32,6 +32,11 @@
 #include <cmath>
 #include <cstdlib>
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wstrict-overflow"
+#endif
+
 namespace cv {
 namespace gapi {
 namespace fluid {
@@ -65,14 +70,64 @@ static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
+    ushort rc = static_cast<ushort>(coef_r*(1 << 16) + 0.5f);  // Q0.0.16
+    ushort gc = static_cast<ushort>(coef_g*(1 << 16) + 0.5f);
+    ushort bc = static_cast<ushort>(coef_b*(1 << 16) + 0.5f);
+
+#if CV_SIMD
+    constexpr int nlanes = v_uint8::nlanes;
+    if (width >= nlanes)
+    {
+        for (int w=0; w < width; )
+        {
+            // process main part of pixels row
+            for ( ; w <= width - nlanes; w += nlanes)
+            {
+                v_uint8 r, g, b;
+                v_load_deinterleave(&in[3*w], r, g, b);
+
+                v_uint16 r0, r1, g0, g1, b0, b1;
+                v_expand(r, r0, r1);
+                v_expand(g, g0, g1);
+                v_expand(b, b0, b1);
+
+                v_uint16 y0, y1;
+                static const ushort half = 1 << 7; // Q0.8.8
+                y0 = (v_mul_hi(r0 << 8, vx_setall_u16(rc)) +
+                      v_mul_hi(g0 << 8, vx_setall_u16(gc)) +
+                      v_mul_hi(b0 << 8, vx_setall_u16(bc)) +
+                                        vx_setall_u16(half)) >> 8;
+                y1 = (v_mul_hi(r1 << 8, vx_setall_u16(rc)) +
+                      v_mul_hi(g1 << 8, vx_setall_u16(gc)) +
+                      v_mul_hi(b1 << 8, vx_setall_u16(bc)) +
+                                        vx_setall_u16(half)) >> 8;
+
+                v_uint8 y;
+                y = v_pack(y0, y1);
+                v_store(&out[w], y);
+            }
+
+            // process tail (if any)
+            if (w < width)
+            {
+                GAPI_DbgAssert(width - nlanes >= 0);
+                w = width - nlanes;
+            }
+        }
+
+        return;
+    }
+#endif
+
     for (int w=0; w < width; w++)
     {
         uchar r = in[3*w    ];
         uchar g = in[3*w + 1];
         uchar b = in[3*w + 2];
-        float result = coef_r*r + coef_g*g + coef_b*b;
-        out[w] = saturate<uchar>(result, roundf);
+
+        static const int half = 1 << 15;  // Q0.0.16
+        ushort y = (r*rc + b*bc + g*gc + half) >> 16;
+        out[w] = y;
     }
 }
 
