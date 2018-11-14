@@ -127,7 +127,7 @@ static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_
 
         static const int half = 1 << 15;  // Q0.0.16
         ushort y = (r*rc + b*bc + g*gc + half) >> 16;
-        out[w] = y;
+        out[w] = static_cast<uchar>(y);
     }
 }
 
