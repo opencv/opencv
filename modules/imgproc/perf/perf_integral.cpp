@@ -11,7 +11,7 @@ typedef perf::TestBaseWithParam<Size_MatType_OutMatDepth_t> Size_MatType_OutMatD
 PERF_TEST_P(Size_MatType_OutMatDepth, integral,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_8UC4),
+                testing::Values(CV_8UC1, CV_8UC3, CV_8UC4),
                 testing::Values(CV_32S, CV_32F, CV_64F)
                 )
             )
