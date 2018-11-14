@@ -69,6 +69,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidbuffer.cpp
     src/backends/fluid/gfluidbackend.cpp
     src/backends/fluid/gfluidimgproc.cpp
+    src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
 
     # GPU Backend (currently built-in)
@@ -77,11 +78,12 @@ set(gapi_srcs
     src/backends/gpu/ggpuimgproc.cpp
     src/backends/gpu/ggpucore.cpp
 
-
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
     )
+
+ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
 
 ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
 

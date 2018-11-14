@@ -74,6 +74,17 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
         RNG rng;
         rng.fill(not_qr_code, RNG::UNIFORM, Scalar(0), Scalar(1));
     }
+    if (type_gen == "chessboard")
+    {
+        uint8_t next_pixel = 0;
+        for (int r = 0; r < not_qr_code.rows * not_qr_code.cols; r++)
+        {
+            int i = r / not_qr_code.cols;
+            int j = r % not_qr_code.cols;
+            not_qr_code.ptr<uchar>(i)[j] = next_pixel;
+            next_pixel = 255 - next_pixel;
+        }
+    }
 
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_FALSE(qrcode.detect(not_qr_code, corners));
@@ -96,6 +107,17 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
         RNG rng;
         rng.fill(not_qr_code, RNG::UNIFORM, Scalar(0), Scalar(1));
     }
+    if (type_gen == "chessboard")
+    {
+        uint8_t next_pixel = 0;
+        for (int r = 0; r < not_qr_code.rows * not_qr_code.cols; r++)
+        {
+            int i = r / not_qr_code.cols;
+            int j = r % not_qr_code.cols;
+            not_qr_code.ptr<uchar>(i)[j] = next_pixel;
+            next_pixel = 255 - next_pixel;
+        }
+    }
 
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.decode(not_qr_code, corners, straight_barcode).empty());
@@ -105,8 +127,9 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_Not_QRCode,
       ::testing::Combine(
-            ::testing::Values("zero", "random"),
-            ::testing::Values(Size(640, 480), Size(1280, 720), Size(1920, 1080))
+            ::testing::Values("zero", "random", "chessboard"),
+            ::testing::Values(Size(640, 480),   Size(1280, 720),
+                              Size(1920, 1080), Size(3840, 2160))
       ));
 
 }

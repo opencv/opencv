@@ -476,7 +476,7 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::Sobel(in, dtype, dx, dy, kernSize );
+    auto out = cv::gapi::Sobel(in, dtype, dx, dy, kernSize);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
@@ -484,7 +484,7 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -494,7 +494,6 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
     }
 
     SANITY_CHECK_NOTHING();
-
 }
 
 //------------------------------------------------------------------------------

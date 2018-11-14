@@ -348,7 +348,9 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 /***********************   Implementations  ***************************************/
 
 CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
-{}
+{
+    memset(&timestamp, 0, sizeof(timestamp));
+}
 
 CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
     streaming(false);
@@ -775,7 +777,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
-    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
+    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", false);
     channelNumber = -1;
     bufferIndex = -1;
 
@@ -1739,7 +1741,6 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         return  value;
     }
     }
-    return -1.0;
 }
 
 bool CvCaptureCAM_V4L::icvSetFrameSize(int _width, int _height)

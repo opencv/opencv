@@ -31,8 +31,6 @@ INSTANTIATE_TEST_CASE_P(SepFilterPerfTestCPU_other, SepFilterPerfTest,
         Values(-1, CV_32F),
         Values(cv::compile_args(IMGPROC_CPU))));
 
-
-
 INSTANTIATE_TEST_CASE_P(Filter2DPerfTestCPU, Filter2DPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
@@ -109,10 +107,20 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3PerfTestCPU, Dilate3x3PerfTest,
 
 INSTANTIATE_TEST_CASE_P(SobelPerfTestCPU, SobelPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
-        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
         Values(3, 5),
         Values(szVGA, sz720p, sz1080p),
-        Values(-1, CV_32F),
+        Values(-1, CV_16S, CV_32F),
+        Values(0, 1),
+        Values(1, 2),
+        Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(SobelPerfTestCPU32F, SobelPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+        Values(CV_32FC1),
+        Values(3, 5),
+        Values(szVGA, sz720p, sz1080p),
+        Values(CV_32F),
         Values(0, 1),
         Values(1, 2),
         Values(cv::compile_args(IMGPROC_CPU))));

@@ -25,6 +25,10 @@
 #include "gfluidimgproc.hpp"
 #include "gfluidutils.hpp"
 
+#include "gfluidimgproc_func.hpp"
+
+#include <opencv2/core/hal/intrin.hpp>
+
 #include <cmath>
 #include <cstdlib>
 
@@ -733,11 +737,12 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
 template<typename DST, typename SRC>
 static void run_sobel(Buffer& dst,
                 const View  & src,
-                      float   kx[],
-                      float   ky[],
+                const float   kx[],
+                const float   ky[],
                       int     ksize,
-                      float   scale=1,
-                      float   delta=0)
+                      float   scale,  // default: 1
+                      float   delta,  // default: 0
+                      float  *buf[])
 {
     static const int kmax = 11;
     GAPI_Assert(ksize <= kmax);
@@ -756,30 +761,14 @@ static void run_sobel(Buffer& dst,
     int width = dst.length();
     int chan  = dst.meta().chan;
 
-    for (int w=0; w < width; w++)
-    {
-        // TODO: make this cycle innermost
-        for (int c=0; c < chan; c++)
-        {
-            float sum=0;
+    GAPI_DbgAssert(ksize == 3);
+//  float buf[3][width * chan];
 
-            for (int i=0; i < ksize; i++)
-            {
-                float sumi=0;
+    int y  = dst.y();
+    int y0 = dst.priv().writeStart();
+//  int y1 = dst.priv().writeEnd();
 
-                for (int j=0; j < ksize; j++)
-                {
-                    sumi += in[i][(w + j - border)*chan + c] * kx[j];
-                }
-
-                sum += sumi * ky[i];
-            }
-
-            float result = sum*scale + delta;
-
-            out[w*chan + c] = saturate<DST>(result, rintf);
-        }
-    }
+    run_sobel_row(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
 }
 
 GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
@@ -801,28 +790,37 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         // TODO: support kernel height 3, 5, 7, 9, ...
         GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
 
-        if (ksize == CV_SCHARR)
-            ksize = 3;
+        int ksz = (ksize == CV_SCHARR)? 3: ksize;
 
         auto *kx = scratch.OutLine<float>();
-        auto *ky = kx + ksize;
+        auto *ky = kx + ksz;
+
+        int width = dst.meta().size.width;
+        int chan  = dst.meta().chan;
+
+        float *buf[3];
+        buf[0] = ky + ksz;
+        buf[1] = buf[0] + width*chan;
+        buf[2] = buf[1] + width*chan;
 
         auto scale = static_cast<float>(_scale);
         auto delta = static_cast<float>(_delta);
 
         //     DST     SRC     OP         __VA_ARGS__
-        UNARY_(uchar , uchar , run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_(ushort, ushort, run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_( short,  short, run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_( float, uchar , run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_( float, ushort, run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_( float,  short, run_sobel, dst, src, kx, ky, ksize, scale, delta);
-        UNARY_( float,  float, run_sobel, dst, src, kx, ky, ksize, scale, delta);
+        UNARY_(uchar , uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_(ushort, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( short, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( short, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( short,  short, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( float, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( float, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( float,  short, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+        UNARY_( float,  float, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 
-    static void initScratch(const GMatDesc& /* in */,
+    static void initScratch(const GMatDesc&    in,
                                   int       /* ddepth */,
                                   int          dx,
                                   int          dy,
@@ -833,14 +831,24 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                             const Scalar  & /* borderValue */,
                                   Buffer  &    scratch)
     {
-        cv::gapi::own::Size bufsize(ksize + ksize, 1);
+        // TODO: support kernel height 3, 5, 7, 9, ...
+        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
+        int ksz = (ksize == CV_SCHARR) ? 3 : ksize;
+
+        int width = in.size.width;
+        int chan  = in.chan;
+
+        int buflen = ksz + ksz            // kernels: kx, ky
+                   + ksz * width * chan;  // working buffers
+
+        cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
 
-        // FIXME: move to resetScratch stage ?
         auto *kx = scratch.OutLine<float>();
-        auto *ky = kx + ksize;
+        auto *ky = kx + ksz;
+
         Mat kxmat(1, ksize, CV_32FC1, kx);
         Mat kymat(ksize, 1, CV_32FC1, ky);
         getDerivKernels(kxmat, kymat, dx, dy, ksize);
@@ -860,7 +868,7 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                                       int          borderType,
                             const cv::Scalar  &    borderValue)
     {
-        return { borderType, borderValue};
+        return {borderType, borderValue};
     }
 };
 

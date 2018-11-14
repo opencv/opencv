@@ -259,7 +259,6 @@ OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF
 OCV_OPTION(WITH_PTHREADS_PF    "Use pthreads-based parallel_for"             ON   IF (NOT WIN32 OR MINGW) )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT ANDROID AND NOT APPLE) )
-OCV_OPTION(WITH_LIBV4L         "Use libv4l for Video 4 Linux support"        OFF  IF (UNIX AND NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_DSHOW          "Build VideoIO with DirectShow support"       ON   IF (WIN32 AND NOT ARM AND NOT WINRT) )
 OCV_OPTION(WITH_MSMF           "Build VideoIO with Media Foundation support" ON  IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT WINRT) )
@@ -326,7 +325,7 @@ OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"     
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_VSX                 "Enable POWER8 and above VSX (64-bit little-endian)"       ON   IF ((CV_GCC OR CV_CLANG) AND PPC64LE) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CV_GCC AND (X86 OR X86_64)) )
-if(NOT IOS)  # Use CPU_BASELINE instead
+if(NOT IOS AND (NOT ANDROID OR OPENCV_ANDROID_USE_LEGACY_FLAGS))  # Use CPU_BASELINE instead
 OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 endif()
@@ -1304,10 +1303,8 @@ if(APPLE)
   endif()
 endif()
 
-if(WITH_V4L OR WITH_LIBV4L OR HAVE_LIBV4L OR HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
-  status("    libv4l/libv4l2:" HAVE_LIBV4L THEN "${ALIASOF_libv4l1_VERSION} / ${ALIASOF_libv4l2_VERSION}" ELSE "NO")
+if(WITH_V4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   ocv_build_features_string(v4l_status
-    IF HAVE_CAMV4L THEN "linux/videodev.h"
     IF HAVE_CAMV4L2 THEN "linux/videodev2.h"
     IF HAVE_VIDEOIO THEN "sys/videoio.h"
     ELSE "NO")

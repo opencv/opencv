@@ -4,9 +4,9 @@ if(ANDROID)
 endif()
 
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
-set(ade_filename "v0.1.1c.zip")
-set(ade_subdir "ade-0.1.1c")
-set(ade_md5 "db7e6a260229ee562a1b2857df473af8")
+set(ade_filename "v0.1.1d.zip")
+set(ade_subdir "ade-0.1.1d")
+set(ade_md5 "37479d90e3a5d47f132f512b22cbe206")
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_md5}
              URL
