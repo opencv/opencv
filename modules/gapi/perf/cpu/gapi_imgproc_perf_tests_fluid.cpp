@@ -35,4 +35,14 @@ namespace opencv_test
             Values(1, 2),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
+    INSTANTIATE_TEST_CASE_P(RGB2GrayPerfTestFluid, RGB2GrayPerfTest,
+        Combine(Values(ToleranceRGBBGR(0.001).to_compare_f()),
+                Values(szVGA, sz720p, sz1080p),
+                Values(cv::compile_args(IMGPROC_FLUID))));
+
+    INSTANTIATE_TEST_CASE_P(BGR2GrayPerfTestFluid, BGR2GrayPerfTest,
+        Combine(Values(ToleranceRGBBGR(0.001).to_compare_f()),
+                Values(szVGA, sz720p, sz1080p),
+                Values(cv::compile_args(IMGPROC_FLUID))));
+
 }
