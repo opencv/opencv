@@ -559,7 +559,7 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
 bool InfEngineBackendLayer::supportBackend(int backendId)
 {
     return backendId == DNN_BACKEND_DEFAULT ||
-           backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+           (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
 }
 
 void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,

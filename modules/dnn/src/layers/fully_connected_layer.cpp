@@ -123,8 +123,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && axis == 1;
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE

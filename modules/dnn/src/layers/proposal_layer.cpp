@@ -87,7 +87,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && preferableTarget != DNN_TARGET_MYRIAD;
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && preferableTarget != DNN_TARGET_MYRIAD);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
