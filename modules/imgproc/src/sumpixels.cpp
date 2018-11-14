@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "sumpixels.hpp"
 
 
 namespace cv
@@ -60,6 +61,32 @@ struct Integral_SIMD
     {
         return false;
     }
+};
+
+
+template <>
+struct Integral_SIMD<uchar, double, double> {
+    Integral_SIMD() {};
+
+
+    bool operator()(const uchar *src, size_t _srcstep,
+                    double *sum,      size_t _sumstep,
+                    double *sqsum,    size_t _sqsumstep,
+                    double *tilted,   size_t _tiltedstep,
+                    int width, int height, int cn) const
+    {
+#if CV_TRY_AVX512_SKX
+        CV_UNUSED(_tiltedstep);
+        // TODO: Add support for 1,2, and 4 channels
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && cn == 3){
+            opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
+                                                      sqsum, _sqsumstep, width, height, cn);
+            return true;
+        }
+#endif
+        return false;
+    }
+
 };
 
 #if CV_SIMD && CV_SIMD_WIDTH <= 64
