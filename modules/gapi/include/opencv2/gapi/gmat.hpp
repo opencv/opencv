@@ -26,6 +26,10 @@ namespace cv
 class GNode;
 struct GOrigin;
 
+/** \addtogroup gapi_data_objects G-API Data Objects
+ * @{
+ */
+
 class GAPI_EXPORTS GMat
 {
 public:
@@ -38,6 +42,8 @@ public:
 private:
     std::shared_ptr<GOrigin> m_priv;
 };
+
+/** @} */
 
 struct GAPI_EXPORTS GMatDesc
 {

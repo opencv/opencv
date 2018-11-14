@@ -1,4 +1,5 @@
 // This file is part of OpenCV project.
+
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
@@ -22,6 +23,10 @@ namespace cv
 class GNode;
 struct GOrigin;
 
+/** \addtogroup gapi_data_objects
+ * @{
+ */
+
 class GAPI_EXPORTS GScalar
 {
 public:
@@ -40,6 +45,8 @@ public:
 private:
     std::shared_ptr<GOrigin> m_priv;
 };
+
+/** @} */
 
 struct GScalarDesc
 {

@@ -218,6 +218,10 @@ namespace detail
     };
 } // namespace detail
 
+/** \addtogroup gapi_data_objects
+ * @{
+ */
+
 template<typename T> class GArray
 {
 public:
@@ -233,6 +237,8 @@ private:
 
     detail::GArrayU m_ref;
 };
+
+/** @} */
 
 } // namespace cv
 
