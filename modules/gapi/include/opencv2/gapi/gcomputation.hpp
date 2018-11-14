@@ -238,7 +238,7 @@ public:
      * underlying compilation process. Don't create GCompileArgs
      * object manually, use cv::compile_args() wrapper instead.
      *
-     * @sa @ref gapi_data_objects
+     * @sa @ref gapi_data_objects, @ref gapi_compile_args
      */
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
@@ -334,6 +334,8 @@ public:
      *
      * @return GCompiled, an executable computation compiled
      * specifically for the given input parameters.
+     *
+     * @sa @ref gapi_compile_args
      */
     GCompiled compile(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 

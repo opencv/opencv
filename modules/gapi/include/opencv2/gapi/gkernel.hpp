@@ -294,7 +294,25 @@ namespace std
 
 namespace cv {
 namespace gapi {
+    /** \addtogroup gapi_compile_args
+     * @{
+     */
+
     // Lookup order is in fact a vector of Backends to traverse during look-up
+    /**
+     * @brief Priority list of backends to use during kernel
+     *   resolution process.
+     *
+     * Priority is descending -- the first backend in the list has the
+     * top priority, and the last one has the lowest priority.
+     *
+     * If there's multiple implementations available for a kernel at
+     * the moment of graph compilation, a kernel (and thus a backend)
+     * will be selected according to this order (if the parameter is passed).
+     *
+     * Default order is not specified (and by default, only
+     * CPU(OpenCV) backend is involved in graph compilation).
+     */
     using GLookupOrder = std::vector<GBackend>;
     inline GLookupOrder lookup_order(std::initializer_list<GBackend> &&list)
     {
@@ -401,6 +419,8 @@ namespace gapi {
         cv::util::suppress_unused_warning(unused);
         return pkg;
     };
+
+    /** @} */
 
     // Return a new package based on `lhs` and `rhs`,
     // with unity policy defined by `policy`.
