@@ -134,7 +134,7 @@ public:
     AbsExact() {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
-        if (cv::countNonZero(in1 != in2) != 0)
+        if (cv::norm(in1, in2, NORM_INF) != 0)
         {
             std::cout << "AbsExact error: G-API output and reference output matrixes are not bitexact equal."  << std::endl;
             return false;
@@ -153,8 +153,7 @@ public:
     AbsTolerance(double tol) : _tol(tol) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
-        cv::Mat absDiff; cv::absdiff(in1, in2, absDiff);
-        if(cv::countNonZero(absDiff > _tol))
+        if (cv::norm(in1, in2, NORM_INF) > _tol)
         {
             std::cout << "AbsTolerance error: Number of different pixels in " << std::endl;
             std::cout << "G-API output and reference output matrixes exceeds " << _tol << " pixels threshold." << std::endl;
@@ -169,39 +168,27 @@ private:
     double _tol;
 };
 
-class AbsTolerance_Float_Int : public Wrappable<AbsTolerance_Float_Int>
+class Tolerance_FloatRel_IntAbs : public Wrappable<Tolerance_FloatRel_IntAbs>
 {
 public:
-    AbsTolerance_Float_Int(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
+    Tolerance_FloatRel_IntAbs(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F)
+        int depth = CV_MAT_DEPTH(in1.type());
         {
-            if (cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2)))
+            double err = depth >= CV_32F ? cv::norm(in1, in2, NORM_L1 | NORM_RELATIVE)
+                                                     : cv::norm(in1, in2, NORM_INF);
+            double tolerance = depth >= CV_32F ? _tol : _tol8u;
+            if (err > tolerance)
             {
-                std::cout << "AbsTolerance_Float_Int error (Float): One or more of pixels in" << std::endl;
-                std::cout << "G-API output exceeds relative threshold value defined by reference_pixel_value * tolerance" << std::endl;
-                std::cout << "for tolerance " << _tol << std::endl;
+                std::cout << "Tolerance_FloatRel_IntAbs error: err=" << err
+                          << "  tolerance=" << tolerance
+                          << "  depth=" << cv::typeToString(depth) << std::endl;
                 return false;
             }
             else
             {
                 return true;
-            }
-        }
-        else
-        {
-            if (cv::countNonZero(in1 != in2) <= (_tol8u)* in2.total())
-            {
-                return true;
-            }
-            else
-            {
-                std::cout << "AbsTolerance_Float_Int error (Integer): Number of different pixels in" << std::endl;
-                std::cout << "G-API output and reference output matrixes exceeds relative threshold value" << std::endl;
-                std::cout << "defined by reference_total_pixels_number * tolerance" << std::endl;
-                std::cout << "for tolerance " << _tol8u << std::endl;
-                return false;
             }
         }
     }
@@ -210,172 +197,93 @@ private:
     double _tol8u;
 };
 
-class AbsToleranceSepFilter : public Wrappable<AbsToleranceSepFilter>
-{
-public:
-    AbsToleranceSepFilter(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        if ((cv::countNonZero(cv::abs(in1 - in2) > (_tol)* cv::abs(in2)) <= 0.01 * in2.total()))
-        {
-            return true;
-        }
-        else
-        {
-            std::cout << "AbsToleranceSepFilter error: Number of different pixels in" << std::endl;
-            std::cout << "G-API output and reference output matrixes which exceeds relative threshold value" << std::endl;
-            std::cout << "defined by reference_pixel_value * tolerance" << std::endl;
-            std::cout << "for tolerance " << _tol << " is more then 1% of total number of pixels in the reference matrix." << std::endl;
-            return false;
-        }
-    }
-private:
-    double _tol;
-};
 
-class AbsToleranceGaussianBlur_Float_Int : public Wrappable<AbsToleranceGaussianBlur_Float_Int>
+class AbsSimilarPoints : public Wrappable<AbsSimilarPoints>
 {
 public:
-    AbsToleranceGaussianBlur_Float_Int(double tol, double tol8u) : _tol(tol), _tol8u(tol8u) {}
+    AbsSimilarPoints(double tol, double percent) : _tol(tol), _percent(percent) {}
     bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
     {
-        if (CV_MAT_DEPTH(in1.type()) == CV_32F || CV_MAT_DEPTH(in1.type()) == CV_64F)
-        {
-            if (cv::countNonZero(cv::abs(in1 - in2) > (_tol)*cv::abs(in2)))
-            {
-                std::cout << "AbsToleranceGaussianBlur_Float_Int error (Float): Number of different pixels in" << std::endl;
-                std::cout << "G-API output and reference output matrixes which exceeds relative threshold value" << std::endl;
-                std::cout << "defined by reference_pixel_value * tolerance" << std::endl;
-                std::cout << "for tolerance " << _tol << " is more then 0." << std::endl;
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-        else
-        {
-            if (CV_MAT_DEPTH(in1.type()) == CV_8U)
-            {
-                bool a = (cv::countNonZero(cv::abs(in1 - in2) > 1) <= _tol8u * in2.total());
-                if (((a == 1 ? 0 : 1) && ((cv::countNonZero(cv::abs(in1 - in2) > 2) <= 0) == 1 ? 0 : 1)) == 1)
-                {
-                    std::cout << "AbsToleranceGaussianBlur_Float_Int error (8U): Number of pixels in" << std::endl;
-                    std::cout << "G-API output and reference output matrixes with absolute difference which is more than 1 but less than 3" << std::endl;
-                    std::cout << "exceeds relative threshold value defined by reference_total_pixels_number * tolerance" << std::endl;
-                    std::cout << "for tolerance " << _tol8u << std::endl;
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                if (cv::countNonZero(in1 != in2) != 0)
-                {
-                    std::cout << "AbsToleranceGaussianBlur_Float_Int error: G-API output and reference output matrixes are not bitexact equal." << std::endl;
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }
-        }
-    }
-private:
-    double _tol;
-    double _tol8u;
-};
-
-class ToleranceRGBBGR : public Wrappable<ToleranceRGBBGR>
-{
-public:
-    ToleranceRGBBGR(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        bool a = (cv::countNonZero((in1 - in2) > 0) <= _tol * in2.total());
-        if (((a == 1 ? 0 : 1) && ((cv::countNonZero((in1 - in2) > 1) <= 0) == 1 ? 0 : 1)) == 1)
-        {
-            std::cout << "ToleranceRGBBGR error: Number of pixels in" << std::endl;
-            std::cout << "G-API output and reference output matrixes with difference which is more than 0 but no more than 1" << std::endl;
-            std::cout << "exceeds relative threshold value defined by reference_total_pixels_number * tolerance" << std::endl;
-            std::cout << "for tolerance " << _tol << std::endl;
-            return false;
-        }
-        else
-        {
-            return true;
-        }
-    }
-private:
-    double _tol;
-};
-
-class ToleranceTriple: public Wrappable<ToleranceTriple>
-{
-public:
-    ToleranceTriple(double tol1, double tol2, double tol3) : _tol1(tol1), _tol2(tol2), _tol3(tol3) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        bool a = (cv::countNonZero((in1 - in2) > 0) <= _tol1 * in2.total());
-        if ((((a == 1 ? 0 : 1) &&
-            ((cv::countNonZero((in1 - in2) > 1) <= _tol2 * in2.total()) == 1 ? 0 : 1) &&
-            ((cv::countNonZero((in1 - in2) > 2) <= _tol3 * in2.total()) == 1 ? 0 : 1))) == 1)
-        {
-            std::cout << "ToleranceTriple error: Number of pixels in" << std::endl;
-            std::cout << "G-API output and reference output matrixes with difference which is more than 0 but no more than 1" << std::endl;
-            std::cout << "exceeds relative threshold value defined by reference_total_pixels_number * tolerance1" << std::endl;
-            std::cout << "for tolerance1 " << _tol1 << std::endl;
-            std::cout << "AND with difference which is more than 1 but no more than 2" << std::endl;
-            std::cout << "exceeds relative threshold value defined by reference_total_pixels_number * tolerance2" << std::endl;
-            std::cout << "for tolerance2 " << _tol2 << std::endl;
-            std::cout << "AND with difference which is more than 2" << std::endl;
-            std::cout << "exceeds relative threshold value defined by reference_total_pixels_number * tolerance3" << std::endl;
-            std::cout << "for tolerance3 " << _tol3 << std::endl;
-            return false;
-        }
-        else
-        {
-            return true;
-        }
-    }
-private:
-    double _tol1, _tol2, _tol3;
-};
-
-class AbsToleranceSobel : public Wrappable<AbsToleranceSobel>
-{
-public:
-    AbsToleranceSobel(double tol) : _tol(tol) {}
-    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
-    {
-        cv::Mat diff, a1, a2, b, base;
+        Mat diff;
         cv::absdiff(in1, in2, diff);
-        a1 = cv::abs(in1);
-        a2 = cv::abs(in2);
-        cv::max(a1, a2, b);
-        cv::max(1, b, base);  // base = max{1, |in1|, |in2|}
-
-        if(cv::countNonZero(diff > _tol*base) != 0)
+        Mat err_mask = diff > _tol;
+        int err_points = cv::countNonZero(err_mask.reshape(1));
+        double max_err_points = _percent * std::max((size_t)1000, in1.total());
+        if (err_points > max_err_points)
         {
-            std::cout << "AbsToleranceSobel error: Number of pixels in" << std::endl;
-            std::cout << "G-API output and reference output matrixes with absolute difference which is more than relative threshold defined by tolerance * max{1, |in1|, |in2|}" << std::endl;
-            std::cout << "relative threshold defined by tolerance * max{1, |in1|, |in2|} exceeds 0"<< std::endl;
-            std::cout << "for tolerance " << _tol << std::endl;
+            std::cout << "AbsSimilarPoints error: err_points=" << err_points
+                      << "  max_err_points=" << max_err_points << " (total=" << in1.total() << ")"
+                      << "  diff_tolerance=" << _tol << std::endl;
             return false;
         }
         else
         {
             return true;
         }
-
     }
 private:
     double _tol;
+    double _percent;
+};
+
+
+class ToleranceFilter : public Wrappable<ToleranceFilter>
+{
+public:
+    ToleranceFilter(double tol, double tol8u, double inf_tol = 2.0) : _tol(tol), _tol8u(tol8u), _inf_tol(inf_tol) {}
+    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
+    {
+        int depth = CV_MAT_DEPTH(in1.type());
+        {
+            double err_Inf = cv::norm(in1, in2, NORM_INF);
+            if (err_Inf > _inf_tol)
+            {
+                std::cout << "ToleranceFilter error: err_Inf=" << err_Inf << "  tolerance=" << _inf_tol << std::endl;
+                return false;
+            }
+            double err = cv::norm(in1, in2, NORM_L2 | NORM_RELATIVE);
+            double tolerance = depth >= CV_32F ? _tol : _tol8u;
+            if (err > tolerance)
+            {
+                std::cout << "ToleranceFilter error: err=" << err << "  tolerance=" << tolerance
+                          << "  depth=" << cv::depthToString(depth)
+                          << std::endl;
+                return false;
+            }
+        }
+        return true;
+    }
+private:
+    double _tol;
+    double _tol8u;
+    double _inf_tol;
+};
+
+class ToleranceColor : public Wrappable<ToleranceColor>
+{
+public:
+    ToleranceColor(double tol, double inf_tol = 2.0) : _tol(tol), _inf_tol(inf_tol) {}
+    bool operator() (const cv::Mat& in1, const cv::Mat& in2) const
+    {
+        {
+            double err_Inf = cv::norm(in1, in2, NORM_INF);
+            if (err_Inf > _inf_tol)
+            {
+                std::cout << "ToleranceColor error: err_Inf=" << err_Inf << "  tolerance=" << _inf_tol << std::endl;;
+                return false;
+            }
+            double err = cv::norm(in1, in2, NORM_L1 | NORM_RELATIVE);
+            if (err > _tol)
+            {
+                std::cout << "ToleranceColor error: err=" << err << "  tolerance=" << _tol << std::endl;;
+                return false;
+            }
+        }
+        return true;
+    }
+private:
+    double _tol;
+    double _inf_tol;
 };
 } // namespace opencv_test
 

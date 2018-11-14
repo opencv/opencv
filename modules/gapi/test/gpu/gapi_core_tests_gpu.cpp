@@ -190,7 +190,7 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.5), //Values(0.04), //TODO: too relaxed?
+                                Values(1e-3), //TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
@@ -226,7 +226,7 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(0.04), //TODO: too relaxed?
+                                Values(1e-3), //TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))),
                         opencv_test::PrintNormCoreParams());
 
@@ -277,7 +277,7 @@ INSTANTIATE_TEST_CASE_P(Split4TestGPU, Split4Test,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-3, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
@@ -288,7 +288,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
-                        Combine(Values(AbsTolerance_Float_Int(1e-1, 1e-0).to_compare_f()), //TODO: too relaxed?
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),

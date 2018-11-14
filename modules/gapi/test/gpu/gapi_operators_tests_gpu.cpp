@@ -16,7 +16,7 @@ namespace opencv_test
 
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
-                    Combine(Values(AbsTolerance_Float_Int(1e-5, 1e-3).to_compare_f()),
+                    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
                             Values( opPlusM, opMinusM, opDivM,
                                     opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq),
                             Values(CV_8UC1, CV_16SC1, CV_32FC1),
@@ -28,8 +28,8 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
                             Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
-                        Combine(Values(AbsTolerance_Float_Int(1e-4, 1e-2).to_compare_f()),
-                                Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR, opDiv, opDivR,
+                        Combine(Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_f()),
+                                Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER),
                                 Values(CV_8UC1, CV_16SC1, CV_32FC1),
