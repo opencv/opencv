@@ -45,6 +45,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include <iostream>
 #include "hal_replacement.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
@@ -1405,7 +1406,6 @@ void morph(int op, int src_type, int dst_type,
 
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
-#ifndef __APPLE__
 static bool ocl_morph3x3_8UC1( InputArray _src, OutputArray _dst, InputArray _kernel, Point anchor,
                                int op, int actual_op = -1, InputArray _extraMat = noArray())
 {
@@ -1632,7 +1632,6 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
 
     return kernel.run(2, globalsize, NULL, false);
 }
-#endif
 
 static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                         Point anchor, int iterations, int op, int borderType,
@@ -1652,24 +1651,33 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
 
     if (kernel.empty())
     {
-        kernel = getStructuringElement(MORPH_RECT, Size(1+iterations*2,1+iterations*2));
+        ksize = Size(1+iterations*2,1+iterations*2);
+        kernel = getStructuringElement(MORPH_RECT, ksize);
         anchor = Point(iterations, iterations);
         iterations = 1;
+        CV_DbgAssert(ksize == kernel.size());
     }
     else if( iterations > 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
     {
+        ksize = Size(ksize.width + (iterations-1)*(ksize.width-1),
+                     ksize.height + (iterations-1)*(ksize.height-1));
         anchor = Point(anchor.x*iterations, anchor.y*iterations);
-        kernel = getStructuringElement(MORPH_RECT,
-                                       Size(ksize.width + (iterations-1)*(ksize.width-1),
-                                            ksize.height + (iterations-1)*(ksize.height-1)),
-                                       anchor);
+        kernel = getStructuringElement(MORPH_RECT, ksize, anchor);
         iterations = 1;
+        CV_DbgAssert(ksize == kernel.size());
     }
 
+    static bool param_use_morph_special_kernels = utils::getConfigurationParameterBool("OPENCV_OPENCL_IMGPROC_MORPH_SPECIAL_KERNEL",
 #ifndef __APPLE__
+        true
+#else
+        false
+#endif
+        );
+
     int esz = CV_ELEM_SIZE(type);
     // try to use OpenCL kernel adopted for small morph kernel
-    if (dev.isIntel() &&
+    if (param_use_morph_special_kernels && dev.isIntel() &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)) &&
          (iterations == 1)
@@ -1681,7 +1689,6 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
         if (ocl_morphSmall(_src, _dst, kernel, anchor, borderType, op, actual_op, _extraMat))
             return true;
     }
-#endif
 
     if (iterations == 0 || kernel.rows*kernel.cols == 1)
     {
