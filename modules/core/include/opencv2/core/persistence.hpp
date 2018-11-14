@@ -642,8 +642,6 @@ public:
 
     //! returns the currently observed element
     FileNode operator *() const;
-    //! accesses the currently observed element methods
-    FileNode operator ->() const;
 
     //! moves iterator to the next node
     FileNodeIterator& operator ++ ();
