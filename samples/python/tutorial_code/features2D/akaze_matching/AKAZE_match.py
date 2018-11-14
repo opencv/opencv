@@ -6,18 +6,18 @@ from math import sqrt
 
 ## [load]
 parser = argparse.ArgumentParser(description='Code for AKAZE local features matching tutorial.')
-parser.add_argument('--input1', help='Path to input image 1.', default='../data/graf1.png')
-parser.add_argument('--input2', help='Path to input image 2.', default='../data/graf3.png')
-parser.add_argument('--homography', help='Path to the homography matrix.', default='../data/H1to3p.xml')
+parser.add_argument('--input1', help='Path to input image 1.', default='graf1.png')
+parser.add_argument('--input2', help='Path to input image 2.', default='graf3.png')
+parser.add_argument('--homography', help='Path to the homography matrix.', default='H1to3p.xml')
 args = parser.parse_args()
 
-img1 = cv.imread(args.input1, cv.IMREAD_GRAYSCALE)
-img2 = cv.imread(args.input2, cv.IMREAD_GRAYSCALE)
+img1 = cv.imread(cv.samples.findFile(args.input1), cv.IMREAD_GRAYSCALE)
+img2 = cv.imread(cv.samples.findFile(args.input2), cv.IMREAD_GRAYSCALE)
 if img1 is None or img2 is None:
     print('Could not open or find the images!')
     exit(0)
 
-fs = cv.FileStorage(args.homography, cv.FILE_STORAGE_READ)
+fs = cv.FileStorage(cv.samples.findFile(args.homography), cv.FILE_STORAGE_READ)
 homography = fs.getFirstTopLevelNode().mat()
 ## [load]
 

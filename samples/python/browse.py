@@ -32,7 +32,7 @@ if __name__ == '__main__':
     print()
 
     if len(sys.argv) > 1:
-        fn = sys.argv[1]
+        fn = cv.samples.findFile(sys.argv[1])
         print('loading %s ...' % fn)
         img = cv.imread(fn)
         if img is None:

@@ -116,11 +116,11 @@ if __name__ == '__main__':
     try:
         fn1, fn2 = args
     except:
-        fn1 = '../data/aero1.jpg'
-        fn2 = '../data/aero3.jpg'
+        fn1 = 'aero1.jpg'
+        fn2 = 'aero3.jpg'
 
-    img1 = cv.imread(fn1, 0)
-    img2 = cv.imread(fn2, 0)
+    img1 = cv.imread(cv.samples.findFile(fn1), cv.IMREAD_GRAYSCALE)
+    img2 = cv.imread(cv.samples.findFile(fn2), cv.IMREAD_GRAYSCALE)
     detector, matcher = init_feature(feature_name)
 
     if img1 is None:
