@@ -1974,12 +1974,13 @@ GAPI_FLUID_KERNEL(GFluidPhase, cv::gapi::core::GPhase, false)
                     bool angleInDegrees,
                     Buffer &dst)
     {
+        const auto w = dst.length() * dst.meta().chan;
         if (src_x.meta().depth == CV_32F && src_y.meta().depth == CV_32F)
         {
             hal::fastAtan32f(src_y.InLine<float>(0),
                              src_x.InLine<float>(0),
                              dst.OutLine<float>(),
-                             src_x.length(),
+                             w,
                              angleInDegrees);
         }
         else if (src_x.meta().depth == CV_64F && src_y.meta().depth == CV_64F)
@@ -1987,7 +1988,7 @@ GAPI_FLUID_KERNEL(GFluidPhase, cv::gapi::core::GPhase, false)
             hal::fastAtan64f(src_y.InLine<double>(0),
                              src_x.InLine<double>(0),
                              dst.OutLine<double>(),
-                             src_x.length(),
+                             w,
                              angleInDegrees);
         } else GAPI_Assert(false && !"Phase supports 32F/64F input only!");
     }
@@ -2100,17 +2101,18 @@ GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
 
     static void run(const View &in, Buffer &out)
     {
+        const auto w = out.length() * out.meta().chan;
         if (in.meta().depth == CV_32F)
         {
             hal::sqrt32f(in.InLine<float>(0),
                          out.OutLine<float>(0),
-                         out.length());
+                         w);
         }
         else if (in.meta().depth == CV_64F)
         {
             hal::sqrt64f(in.InLine<double>(0),
                          out.OutLine<double>(0),
-                         out.length());
+                         w);
         } else GAPI_Assert(false && !"Sqrt supports 32F/64F input only!");
     }
 };
