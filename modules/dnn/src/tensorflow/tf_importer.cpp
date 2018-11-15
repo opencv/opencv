@@ -156,6 +156,7 @@ void blobFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
     }
 }
 
+#if 0
 void printList(const tensorflow::AttrValue::ListValue &val)
 {
     std::cout << "(";
@@ -235,6 +236,7 @@ void printLayerAttr(const tensorflow::NodeDef &layer)
         std::cout << std::endl;
     }
 }
+#endif
 
 bool hasLayerAttr(const tensorflow::NodeDef &layer, const std::string &name)
 {

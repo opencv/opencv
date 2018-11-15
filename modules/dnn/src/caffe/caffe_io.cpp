@@ -404,7 +404,7 @@ bool UpgradeV0LayerParameter(V1LayerParameter* v0_layer_connection_,
               PoolingParameter_PoolMethod_STOCHASTIC);
           break;
         default:
-          LOG(ERROR) << "Unknown pool method " << pool;
+          LOG(ERROR) << "Unknown pool method " << (int)pool;
           is_fully_compatible = false;
         }
       } else {
@@ -863,7 +863,7 @@ bool UpgradeV1LayerParameter(V1LayerParameter* v1_layer_param_,
     while (layer_param->param_size() <= i) { layer_param->add_param(); }
     layer_param->mutable_param(i)->set_name(v1_layer_param.param(i));
   }
-  ParamSpec_DimCheckMode mode;
+  ParamSpec_DimCheckMode mode = ParamSpec_DimCheckMode_STRICT;
   for (int i = 0; i < v1_layer_param.blob_share_mode_size(); ++i) {
     while (layer_param->param_size() <= i) { layer_param->add_param(); }
     switch (v1_layer_param.blob_share_mode(i)) {
@@ -875,8 +875,8 @@ bool UpgradeV1LayerParameter(V1LayerParameter* v1_layer_param_,
       break;
     default:
       LOG(FATAL) << "Unknown blob_share_mode: "
-                 << v1_layer_param.blob_share_mode(i);
-      break;
+                 << (int)v1_layer_param.blob_share_mode(i);
+      CV_Error_(Error::StsError, ("Unknown blob_share_mode: %d", (int)v1_layer_param.blob_share_mode(i)));
     }
     layer_param->mutable_param(i)->set_share_mode(mode);
   }
@@ -1102,12 +1102,12 @@ const char* UpgradeV1LayerType(const V1LayerParameter_LayerType type) {
   case V1LayerParameter_LayerType_THRESHOLD:
     return "Threshold";
   default:
-    LOG(FATAL) << "Unknown V1LayerParameter layer type: " << type;
+    LOG(FATAL) << "Unknown V1LayerParameter layer type: " << (int)type;
     return "";
   }
 }
 
-const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
+static const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
 bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
     CodedInputStream coded_input(input);
