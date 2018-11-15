@@ -90,16 +90,10 @@ bool OpPool::forward(std::vector<Tensor>& ins,
                      std::vector<Tensor>& blobs,
                      std::vector<Tensor>& outs)
 {
-    for (size_t ii = 0; ii < ins.size(); ii++)
-    {
-        Tensor& inpMat = ins[ii];
-        int out_index = (pool_type_ == kPoolTypeMax) ? 2 : 1;
-        Tensor& outMat = outs[out_index * ii];
-        Tensor maskMat = (pool_type_ == kPoolTypeMax) ? outs[2 * ii + 1] : Tensor();
-        if (!forward(inpMat, outMat, maskMat))
-            return false;
-    }
-    return true;
+    Tensor& inpMat = ins[0];
+    Tensor& outMat = outs[0];
+    Tensor maskMat = outs.size() > 1 ? outs[1] : Tensor();
+    return forward(inpMat, outMat, maskMat);
 }
 
 bool OpPool::forward(Tensor& in, Tensor& out, Tensor& mask)
