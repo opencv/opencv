@@ -56,20 +56,24 @@ int main()
     // Define cv::Mats for output data
     cv::Mat imgOut, imgOutCoherency, imgOutOrientation;
 
+    //! [kernel_pkg_proper]
     //! [kernel_pkg]
     // Prepare the kernel package and run the graph
     cv::gapi::GKernelPackage fluid_kernels = cv::gapi::combine        // Define a custom kernel package:
         (cv::gapi::core::fluid::kernels(),                            // ...with Fluid Core kernels
          cv::gapi::imgproc::fluid::kernels(),                         // ...and Fluid ImgProc kernels
          cv::unite_policy::KEEP);
+    //! [kernel_pkg]
     //! [kernel_hotfix]
     fluid_kernels.remove<cv::gapi::imgproc::GBoxFilter>();            // Remove Fluid Box filter as unsuitable,
                                                                       // G-API will fall-back to OpenCV there.
     //! [kernel_hotfix]
+    //! [kernel_pkg_use]
     segm.apply(cv::gin(imgIn),                                        // Input data vector
                cv::gout(imgOut, imgOutCoherency, imgOutOrientation),  // Output data vector
                cv::compile_args(fluid_kernels));                      // Kernel package to use
-    //! [kernel_pkg]
+    //! [kernel_pkg_use]
+    //! [kernel_pkg_proper]
 
     // Normalize extra outputs (out of the graph)
     cv::normalize(imgOutCoherency, imgOutCoherency, 0, 255, cv::NORM_MINMAX);

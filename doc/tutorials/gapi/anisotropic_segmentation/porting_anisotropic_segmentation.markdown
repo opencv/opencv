@@ -15,7 +15,7 @@ tutorial_anisotropic_image_segmentation_by_a_gst.
 
 # Quick start: using OpenCV backend {#gapi_anisotropic_start}
 
-Before we start, let's review the [original algorithm](@ref tutorial_anisotropic_image_segmentation_by_a_gst) implementation:
+Before we start, let's review the original algorithm implementation:
 
 @include cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp
 
@@ -61,6 +61,11 @@ G-API and traditional OpenCV:
 namespace;
 * G-API operations _return_ its results -- there's no need to pass
 extra "output" parameters to the functions.
+
+Note -- this code is also using `auto` -- types of intermediate objects
+like `img`, `imgDiffX`, and so on are inferred automatically by the
+C++ compiler. In this example, the types are determined by G-API
+operation return values which all are cv::GMat.
 
 G-API standard kernels are trying to follow OpenCV API conventions
 whenever possible -- so cv::gapi::sobel takes the same arguments as
@@ -291,7 +296,9 @@ In G-API, kernels (or operation implementations) are objects. Kernels are
 organized into collections, or _kernel packages_, represented by class
 cv::gapi::GKernelPackage. The main purpose of a kernel package is to
 capture which kernels we would like to use in our graph, and pass it
-as a _graph compilation option_.
+as a _graph compilation option_:
+
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_pkg_use
 
 Traditional OpenCV is logically divided into modules, whith every
 module providing a set of functions. In G-API, there are also
@@ -314,7 +321,7 @@ cv::unite_policy::REPLACE. It means that user-specified
 implementations will replace default implementations in case of
 conflict.
 
-Kernel packages may contain mixes of kernels, in particular, multiple
+Kernel packages may contain a mix of kernels, in particular, multiple
 implementations of the same kernel. For example, a single kernel
 package may contain both OpenCV and Fluid implementations of kernel
 "Filter2D". In this case, the implementation selection preference can
@@ -351,7 +358,9 @@ created:
 Now this kernel package doesn't have _any_ implementation of Box
 filter kernel interface (specified as a template parameter). As
 described above, G-API will fall-back to OpenCV to run this kernel
-now.
+now. The resulting code with this change now looks like:
+
+@snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_pkg_proper
 
 Let's examine the memory profile for this sample after we switched to
 Fluid backend. Now it looks like this:

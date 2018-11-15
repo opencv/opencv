@@ -40,9 +40,9 @@ int main()
     cv::GMat imgCoherency, imgOrientation;
     calcGST(in, imgCoherency, imgOrientation, W);
 
-    auto imgCoherencyBin = imgCoherency > C_Thr;
-    auto imgOrientationBin = cv::gapi::inRange(imgOrientation, LowThr, HighThr);
-    auto imgBin = imgCoherencyBin & imgOrientationBin;
+    cv::GMat imgCoherencyBin = imgCoherency > C_Thr;
+    cv::GMat imgOrientationBin = cv::gapi::inRange(imgOrientation, LowThr, HighThr);
+    cv::GMat imgBin = imgCoherencyBin & imgOrientationBin;
     cv::GMat out = cv::gapi::addWeighted(in, 0.5, imgBin, 0.5, 0.0);
 
     // Capture the graph into object segm
