@@ -7,7 +7,6 @@
 
 #include "../test_precomp.hpp"
 #include "../common/gapi_core_tests.hpp"
-#include "backends/fluid/gfluidcore.hpp"
 
 namespace opencv_test
 {
@@ -193,6 +192,21 @@ INSTANTIATE_TEST_CASE_P(Cart2PolarFluid, Cart2PolarTest,
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(PhaseFluid, PhaseTest,
+                        Combine(Values(CV_32F, CV_32FC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                testing::Bool(),
+                                Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SqrtFluid, SqrtTest,
+                        Combine(Values(CV_32F, CV_32FC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(cv::compile_args(CORE_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1920, 1080),
@@ -206,7 +220,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
-                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
