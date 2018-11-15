@@ -23,9 +23,10 @@
 namespace opencv_test
 {
 
+#ifdef HAVE_OPENCL
+
 using namespace cv::gapi_test_kernels;
 
-#ifdef HAVE_OPENCL
 TEST(GPU, Symm7x7_test)
 {
     cv::GMat in;

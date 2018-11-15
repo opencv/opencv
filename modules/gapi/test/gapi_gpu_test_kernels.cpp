@@ -14,10 +14,10 @@
 
 namespace cv
 {
+#ifdef HAVE_OPENCL
 namespace gapi_test_kernels
 {
 
-#ifdef HAVE_OPENCL
 GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
@@ -134,7 +134,8 @@ GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 cv::gapi::GKernelPackage gpuTestPackage = cv::gapi::kernels
         <GGPUSymm7x7_test
         >();
-#endif //HAVE_OPENCL
 
 } // namespace gapi_test_kernels
+#endif //HAVE_OPENCL
+
 } // namespace cv
