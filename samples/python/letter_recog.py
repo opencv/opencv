@@ -41,7 +41,7 @@ class LetterStatModel(object):
     train_ratio = 0.5
 
     def load(self, fn):
-        self.model.load(fn)
+        self.model = self.model.load(fn)
     def save(self, fn):
         self.model.save(fn)
 
