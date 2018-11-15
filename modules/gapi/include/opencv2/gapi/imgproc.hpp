@@ -155,12 +155,6 @@ namespace imgproc {
         }
     };
 
-    //custom kernel example
-    G_TYPED_KERNEL(GSymm7x7, <GMat(GMat)>, "org.opencv.imgproc.symm7x7") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in.withType(CV_8U, 1);
-        }
-    };
 
 }
 
@@ -679,14 +673,6 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
 
 //! @} gapi_colorconvert
-
-/** @brief Symmetrical7x7 filter for grayscale image.
-
-@note Function textual ID is "org.opencv.imgproc.symm7x7"
-
-@param src Source 8-bit single channel image.
-*/
-GAPI_EXPORTS GMat symm7x7(const GMat& src);
 
 } //namespace gapi
 } //namespace cv

@@ -177,11 +177,4 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRPerfTestGPU, YUV2BGRPerfTest,
                         Values(szVGA, sz720p, sz1080p),
                         Values(cv::compile_args(IMGPROC_GPU))));
 
-#ifdef HAVE_OPENCL
-INSTANTIATE_TEST_CASE_P(Symm7x7PerfTestGPU, Symm7x7PerfTest,
-                        Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
-                        Values(szVGA, sz720p, sz1080p),
-                        Values(cv::compile_args(IMGPROC_GPU))));
-#endif
-
 }

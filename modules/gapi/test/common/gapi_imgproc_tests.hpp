@@ -37,7 +37,6 @@ struct BGR2LUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GC
 struct LUV2BGRTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct BGR2YUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct YUV2BGRTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
-struct Symm7x7Test : public TestParams<std::tuple<compare_f,cv::Size, bool, cv::GCompileArgs>> {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_HPP
