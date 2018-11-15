@@ -12,6 +12,7 @@
 
 namespace cv
 {
+#ifdef HAVE_OPENCL
     namespace gapi_test_kernels
     {
 
@@ -26,6 +27,7 @@ namespace cv
         extern cv::gapi::GKernelPackage gpuTestPackage;
 
     } // namespace gapi_test_kernels
+#endif
 } // namespace cv
 
 #endif // GAPI_GPU_TEST_KERNELS_HPP

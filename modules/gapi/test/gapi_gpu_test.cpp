@@ -25,7 +25,7 @@ namespace opencv_test
 
 using namespace cv::gapi_test_kernels;
 
-
+#ifdef HAVE_OPENCL
 TEST(GPU, Symm7x7_test)
 {
     cv::GMat in;
@@ -108,5 +108,6 @@ TEST(GPU, Symm7x7_test)
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
+#endif
 
 } // namespace opencv_test
