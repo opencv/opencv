@@ -48,6 +48,10 @@ private:
 
 /** @} */
 
+/**
+ * \addtogroup gapi_meta_args
+ * @{
+ */
 struct GAPI_EXPORTS GMatDesc
 {
     // FIXME: Default initializers in C++14
@@ -130,6 +134,8 @@ class Mat;
 GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 #endif // !defined(GAPI_STANDALONE)
+
+/** @} */
 
 namespace gapi { namespace own {
     class Mat;

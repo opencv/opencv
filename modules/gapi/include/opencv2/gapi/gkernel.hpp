@@ -326,26 +326,70 @@ namespace gapi {
     }
 
     // FIXME: Hide implementation
+    /**
+     * @brief A container class for heterogeneous kernel
+     * implementation collections.
+     *
+     * GKernelPackage is a special container class which stores kernel
+     * _implementations_. Objects of this class are created and passed
+     * to cv::GComputation::compile() to specify which kernels to use
+     * in the compiled graph. GKernelPackage may contain kernels of
+     * different backends, e.g. be heterogeneous.
+     *
+     * The most easy way to create a kernel package is to use function
+     * cv::gapi::kernels(). This template functions takes kernel
+     * implementations in form of type list (variadic template) and
+     * generates a kernel package atop of that.
+     *
+     * Kernel packages can be also generated programatically, starting
+     * with an empty package (created with the default constructor)
+     * and then by populating it with kernels via call to
+     * GKernelPackage::include(). Note this method is also a template
+     * one since G-API kernel implementations are _types_, not objects.
+     *
+     * Finally, two kernel packages can be combined into a new one
+     * with function cv::gapi::combine(). There are different rules
+     * apply to this process, see also cv::gapi::unite_policy for
+     * details.
+     */
     class GAPI_EXPORTS GKernelPackage
     {
+        /// @private
         using S = std::unordered_map<std::string, GKernelImpl>;
+
+        /// @private
         using M = std::unordered_map<GBackend, S>;
+
+        /// @private
         M m_backend_kernels;
 
     protected:
+        /// @private
         // Check if package contains ANY implementation of a kernel API
         // by API textual id.
         bool includesAPI(const std::string &id) const;
 
+        /// @private
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
 
     public:
-        // Return total number of kernels (accross all backends)
+        /**
+         * @brief Returns total number of kernels in the package
+         * (accross all backends included)
+         *
+         * @return a number of kernels in the package
+         */
         std::size_t size() const;
 
-        // Check if particular kernel implementation exist in the package.
-        // The key word here is _particular_ - i.e., from the specific backend.
+        /**
+         * @brief Test if a particular kernel _implementation_ KImpl is
+         * included in this kernel package.
+         *
+         * @sa includesAPI()
+         *
+         * @return true if there is such kernel, false otherwise.
+         */
         template<typename KImpl>
         bool includes() const
         {
@@ -355,40 +399,71 @@ namespace gapi {
                 : false;
         }
 
-        // Removes all the kernels related to the given backend
+        /**
+         * @brief Remove all kernels associated with the given backend
+         * from the package.
+         *
+         * Does nothing if there's no kernels of this backend in the package.
+         *
+         * @param backend backend which kernels to remove
+         */
         void remove(const GBackend& backend);
 
+        /**
+         * @brief Remove all kernels implementing the given API from
+         * the package.
+         *
+         * Does nothing if there's no kernels implementing the given interface.
+         */
         template<typename KAPI>
         void remove()
         {
             removeAPI(KAPI::id());
         }
 
-        // Check if package contains ANY implementation of a kernel API
-        // by API type.
         // FIXME: Rename to includes() and distinguish API/impl case by
         //     statically?
+        /**
+         * Check if package contains ANY implementation of a kernel API
+         * by API type.
+         */
         template<typename KAPI>
         bool includesAPI() const
         {
             return includesAPI(KAPI::id());
         }
 
-        // Lookup a kernel, given the look-up order. Returns Backend which
-        // hosts kernel implementation. Throws if nothing found.
-        //
-        // If order is empty(), returns first suitable implementation.
+        /**
+         * @brief Find a kernel (by its API), given the look-up order.
+         *
+         * If order is empty, returns first suitable implementation.
+         * Throws if nothing found.
+         *
+         * @return Backend which hosts matching kernel implementation.
+         *
+         * @sa cv::gapi::lookup_order
+         */
         template<typename KAPI>
         GBackend lookup(const GLookupOrder &order = {}) const
         {
             return lookup(KAPI::id(), order).first;
         }
 
+        /// @private
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
         lookup(const std::string &id, const GLookupOrder &order = {}) const;
 
-        // Put a new kernel implementation into package
         // FIXME: No overwrites allowed?
+        /**
+         * @brief Put a new kernel implementation KImpl into package.
+         *
+         * @param up unite policy to use. If the package has already
+         * implementation for this kernel (probably from another
+         * backend), and cv::unite_policy::KEEP is passed, the
+         * existing implementation remains in package; on
+         * cv::unite_policy::REPLACE all other existing
+         * implementations are first dropped from the package.
+         */
         template<typename KImpl>
         void include(const cv::unite_policy up = cv::unite_policy::KEEP)
         {
@@ -402,12 +477,33 @@ namespace gapi {
             m_backend_kernels[backend][kernel_id] = std::move(kernel_impl);
         }
 
-        // Lists all backends which are included into package
+        /**
+         * @brief Lists all backends which are included into package
+         *
+         * @return vector of backends
+         */
         std::vector<GBackend> backends() const;
 
-        friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &,
-                                                   const GKernelPackage  &,
-                                                   const cv::unite_policy);
+        // TODO: Doxygen bug -- it wants me to place this comment
+        // here, not below.
+        /**
+         * @brief Create a new package based on `lhs` and `rhs`,
+         * with unity policy defined by `policy`.
+         *
+         * @param lhs "Left-hand-side" package in the process
+         * @param rhs "Right-hand-side" package in the process
+         * @param policy Unite policy which is used in case of conflicts
+         * -- when the same kernel API is implemented in both packages by
+         * different backends; cv::unite_policy::KEEP keeps both
+         * implementation in the resulting package, while
+         * cv::unite_policy::REPLACE gives precedence two kernels from
+         * "Right-hand-side".
+         *
+         * @return a new kernel package.
+         */
+        friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
+                                                   const GKernelPackage  &rhs,
+                                                   const cv::unite_policy policy);
     };
 
     /**
@@ -446,8 +542,6 @@ namespace gapi {
 
     /** @} */
 
-    // Return a new package based on `lhs` and `rhs`,
-    // with unity policy defined by `policy`.
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
                                         const GKernelPackage  &rhs,
                                         const cv::unite_policy policy);
