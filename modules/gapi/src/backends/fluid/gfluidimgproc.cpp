@@ -60,6 +60,9 @@ static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_
     GAPI_Assert(dst.meta().chan == 1);
     GAPI_Assert(src.length() == dst.length());
 
+    GAPI_Assert(coef_r < 1 && coef_g < 1 && coef_b < 1);
+    GAPI_Assert(std::abs(coef_r + coef_g + coef_b - 1) < 0.001);
+
     const auto *in  = src.InLine<uchar>(0);
           auto *out = dst.OutLine<uchar>();
 

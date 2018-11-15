@@ -14,6 +14,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include <cstdint>
+
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wstrict-overflow"
@@ -71,9 +73,17 @@ RUN_SOBEL_ROW( float,  float)
 void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
                        float coef_r, float coef_g, float coef_b)
 {
-    ushort rc = static_cast<ushort>(coef_r*(1 << 16) + 0.5f);  // Q0.0.16
-    ushort gc = static_cast<ushort>(coef_g*(1 << 16) + 0.5f);
-    ushort bc = static_cast<ushort>(coef_b*(1 << 16) + 0.5f);
+    // assume:
+    // - coefficients are less than 1
+    // - and their sum equals 1
+
+    constexpr int unity = 1 << 16;  // Q0.0.16 inside ushort:
+    ushort rc = static_cast<ushort>(coef_r * unity + 0.5f);
+    ushort gc = static_cast<ushort>(coef_g * unity + 0.5f);
+    ushort bc = static_cast<ushort>(coef_b * unity + 0.5f);
+
+    GAPI_Assert(rc + gc + bc <= unity);
+    GAPI_Assert(rc + gc + bc >= USHRT_MAX);
 
 #if CV_SIMD
     constexpr int nlanes = v_uint8::nlanes;
