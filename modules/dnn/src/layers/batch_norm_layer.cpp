@@ -10,6 +10,7 @@ Implementation of Batch Normalization layer.
 */
 
 #include "../precomp.hpp"
+#include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -284,10 +285,10 @@ public:
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_muladd(x0, w, b);
-                x1 = v_muladd(x1, w, b);
-                x2 = v_muladd(x2, w, b);
-                x3 = v_muladd(x3, w, b);
+                x0 = v_muladd(x0, wV, bV);
+                x1 = v_muladd(x1, wV, bV);
+                x2 = v_muladd(x2, wV, bV);
+                x3 = v_muladd(x3, wV, bV);
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);

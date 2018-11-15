@@ -26,7 +26,7 @@ namespace opencv_test
             Values(cv::compile_args(IMGPROC_FLUID))));
 
     INSTANTIATE_TEST_CASE_P(SobelPerfTestFluid32F, SobelPerfTest,
-        Combine(Values(AbsToleranceSobel(1e-3).to_compare_f()),
+        Combine(Values(ToleranceFilter(1e-3f, 0.0).to_compare_f()),
             Values(CV_32FC1),
             Values(3),                                     // add 5x5 once supported
             Values(szVGA, sz720p, sz1080p),
