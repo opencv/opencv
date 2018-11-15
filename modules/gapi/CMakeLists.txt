@@ -122,7 +122,7 @@ if(cl_kernels_test)
   set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.cpp" "${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.hpp"
       PROPERTIES GENERATED TRUE
   )
-  #list(APPEND gapi_srcs ${cl_kernels_test} "${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.cpp" "${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.hpp")
+  list(APPEND gapi_srcs ${cl_kernels_test} "${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.cpp" "${CMAKE_CURRENT_LIST_DIR}/test/${OCL_NAME_TEST}.hpp")
 endif()
 
 
