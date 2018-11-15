@@ -129,11 +129,12 @@ GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
         }
     }
 };
-#endif
 
 
 cv::gapi::GKernelPackage gpuTestPackage = cv::gapi::kernels
         <GGPUSymm7x7_test
         >();
+#endif //HAVE_OPENCL
+
 } // namespace gapi_test_kernels
 } // namespace cv
