@@ -126,18 +126,24 @@ static void run_rgb2yuv(Buffer &dst, const View &src, const float coef[5])
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
+    constexpr int unity = 1 << 16;  // Q0.0.16
+    ushort c0 = static_cast<ushort>(coef[0] * unity + 0.5f);
+    ushort c1 = static_cast<ushort>(coef[1] * unity + 0.5f);
+    ushort c2 = static_cast<ushort>(coef[2] * unity + 0.5f);
+    ushort c3 = static_cast<ushort>(coef[3] * unity + 0.5f);
+    ushort c4 = static_cast<ushort>(coef[4] * unity + 0.5f);
+
     for (int w=0; w < width; w++)
     {
-        uchar r = in[3*w    ];
-        uchar g = in[3*w + 1];
-        uchar b = in[3*w + 2];
-        float y = coef[0]*r + coef[1]*g + coef[2]*b;
-        float u = coef[3]*(b - y) + 128;
-        float v = coef[4]*(r - y) + 128;
-        out[3*w    ] = saturate<uchar>(y, roundf);
-        out[3*w + 1] = saturate<uchar>(u, roundf);
-        out[3*w + 2] = saturate<uchar>(v, roundf);
+        short r = in[3*w    ] << 3;  // Q1.8.3 inside S16
+        short g = in[3*w + 1] << 3;
+        short b = in[3*w + 2] << 3;
+        short y = (c0*r + c1*g + c2*b) >> 16;
+        short u =  c3*(b - y) >> 16;
+        short v =  c4*(r - y) >> 16;
+        out[3*w    ] =                 (y              + (1 << 2)) >> 3;
+        out[3*w + 1] = saturate<uchar>((u + (128 << 3) + (1 << 2)) >> 3);
+        out[3*w + 2] = saturate<uchar>((v + (128 << 3) + (1 << 2)) >> 3);
     }
 }
 
@@ -154,18 +160,22 @@ static void run_yuv2rgb(Buffer &dst, const View &src, const float coef[4])
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
+    short c0 = static_cast<short>(coef[0] * (1 << 12) + 0.5f);  // Q1.3.12
+    short c1 = static_cast<short>(coef[1] * (1 << 12) + 0.5f);
+    short c2 = static_cast<short>(coef[2] * (1 << 12) + 0.5f);
+    short c3 = static_cast<short>(coef[3] * (1 << 12) + 0.5f);
+
     for (int w=0; w < width; w++)
     {
-        uchar y = in[3*w    ];
-        int   u = in[3*w + 1] - 128;
-        int   v = in[3*w + 2] - 128;
-        float r = y             + coef[0]*v;
-        float g = y + coef[1]*u + coef[2]*v;
-        float b = y + coef[3]*u;
-        out[3*w    ] = saturate<uchar>(r, roundf);
-        out[3*w + 1] = saturate<uchar>(g, roundf);
-        out[3*w + 2] = saturate<uchar>(b, roundf);
+        short y =  in[3*w    ]        << 3;  // Q1.12.3
+        short u = (in[3*w + 1] - 128) << 7;  // Q1.8.7
+        short v = (in[3*w + 2] - 128) << 7;
+        short r = y + (        c0*v  >> 16); // Q1.12.3
+        short g = y + ((c1*u + c2*v) >> 16);
+        short b = y + ((c3*u       ) >> 16);
+        out[3*w    ] = saturate<uchar>((r + (1 << 2)) >> 3);
+        out[3*w + 1] = saturate<uchar>((g + (1 << 2)) >> 3);
+        out[3*w + 2] = saturate<uchar>((b + (1 << 2)) >> 3);
     }
 }
 
