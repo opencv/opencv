@@ -132,6 +132,14 @@ GAPI_OCV_KERNEL(GCPUCartToPolar, cv::gapi::core::GCartToPolar)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUPhase, cv::gapi::core::GPhase)
+{
+    static void run(const cv::Mat &x, const cv::Mat &y, bool angleInDegrees, cv::Mat &out)
+    {
+        cv::phase(x, y, out, angleInDegrees);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUCmpGT, cv::gapi::core::GCmpGT)
 {
     static void run(const cv::Mat& a, const cv::Mat& b, cv::Mat& out)
@@ -509,6 +517,14 @@ GAPI_OCV_KERNEL(GCPUConvertTo, cv::gapi::core::GConvertTo)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUSqrt, cv::gapi::core::GSqrt)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::sqrt(in, out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -527,6 +543,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUMask
          , GCPUPolarToCart
          , GCPUCartToPolar
+         , GCPUPhase
          , GCPUCmpGT
          , GCPUCmpGE
          , GCPUCmpLE
@@ -572,6 +589,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUConcatVert
          , GCPULUT
          , GCPUConvertTo
+         , GCPUSqrt
          >();
     return pkg;
 }

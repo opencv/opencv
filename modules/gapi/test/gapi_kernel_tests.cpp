@@ -46,7 +46,29 @@ TEST(KernelPackage, Includes)
     EXPECT_FALSE(pkg.includes<J::Qux>());
 }
 
-TEST(KernelPackage, Include)
+TEST(KernelPackage, IncludesAPI)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, S::Bar>();
+    EXPECT_TRUE (pkg.includesAPI<I::Foo>());
+    EXPECT_TRUE (pkg.includesAPI<I::Bar>());
+    EXPECT_FALSE(pkg.includesAPI<I::Baz>());
+    EXPECT_FALSE(pkg.includesAPI<I::Qux>());
+}
+
+TEST(KernelPackage, IncludesAPI_Overlapping)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo, S::Bar>();
+    EXPECT_TRUE (pkg.includesAPI<I::Foo>());
+    EXPECT_TRUE (pkg.includesAPI<I::Bar>());
+    EXPECT_FALSE(pkg.includesAPI<I::Baz>());
+    EXPECT_FALSE(pkg.includesAPI<I::Qux>());
+}
+
+TEST(KernelPackage, Include_Add)
 {
     namespace J = Jupiter;
     auto pkg = cv::gapi::kernels<J::Foo, J::Bar, J::Baz>();
@@ -55,6 +77,66 @@ TEST(KernelPackage, Include)
     pkg.include<J::Qux>();
     EXPECT_TRUE(pkg.includes<J::Qux>());
 }
+
+TEST(KernelPackage, Include_KEEP)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
+    EXPECT_FALSE(pkg.includes<S::Foo>());
+    EXPECT_FALSE(pkg.includes<S::Bar>());
+
+    pkg.include<S::Bar>(); // default (KEEP)
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Bar>());
+
+    pkg.include<S::Foo>(cv::unite_policy::KEEP); // explicit (KEEP)
+    EXPECT_TRUE(pkg.includes<J::Foo>());
+    EXPECT_TRUE(pkg.includes<S::Foo>());
+}
+
+TEST(KernelPackage, Include_REPLACE)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
+    EXPECT_FALSE(pkg.includes<S::Bar>());
+
+    pkg.include<S::Bar>(cv::unite_policy::REPLACE);
+    EXPECT_FALSE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Bar>());
+}
+
+TEST(KernelPackage, RemoveBackend)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo>();
+    EXPECT_TRUE(pkg.includes<J::Foo>());
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Foo>());
+
+    pkg.remove(J::backend());
+    EXPECT_FALSE(pkg.includes<J::Foo>());
+    EXPECT_FALSE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Foo>());
+};
+
+TEST(KernelPackage, RemoveAPI)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo, S::Bar>();
+    EXPECT_TRUE(pkg.includes<J::Foo>());
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Foo>());
+
+    pkg.remove<I::Foo>();
+    EXPECT_TRUE(pkg.includes<J::Bar>());
+    EXPECT_TRUE(pkg.includes<S::Bar>());
+    EXPECT_FALSE(pkg.includes<J::Foo>());
+    EXPECT_FALSE(pkg.includes<S::Foo>());
+};
 
 TEST(KernelPackage, CreateHetero)
 {
@@ -89,7 +171,7 @@ TEST(KernelPackage, IncludeHetero)
     EXPECT_TRUE (pkg.includes<S::Qux>());
 }
 
-TEST(KernelPackage, Unite_REPLACE_Full)
+TEST(KernelPackage, Combine_REPLACE_Full)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
@@ -106,7 +188,7 @@ TEST(KernelPackage, Unite_REPLACE_Full)
     EXPECT_TRUE (u_pkg.includes<S::Baz>());
 }
 
-TEST(KernelPackage, Unite_REPLACE_Partial)
+TEST(KernelPackage, Combine_REPLACE_Partial)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
@@ -120,7 +202,7 @@ TEST(KernelPackage, Unite_REPLACE_Partial)
     EXPECT_TRUE (u_pkg.includes<S::Bar>());
 }
 
-TEST(KernelPackage, Unite_REPLACE_Append)
+TEST(KernelPackage, Combine_REPLACE_Append)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
@@ -134,7 +216,7 @@ TEST(KernelPackage, Unite_REPLACE_Append)
     EXPECT_TRUE(u_pkg.includes<S::Qux>());
 }
 
-TEST(KernelPackage, Unite_KEEP_AllDups)
+TEST(KernelPackage, Combine_KEEP_AllDups)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
@@ -151,7 +233,7 @@ TEST(KernelPackage, Unite_KEEP_AllDups)
     EXPECT_TRUE(u_pkg.includes<S::Baz>());
 }
 
-TEST(KernelPackage, Unite_KEEP_Append_NoDups)
+TEST(KernelPackage, Combine_KEEP_Append_NoDups)
 {
     namespace J = Jupiter;
     namespace S = Saturn;

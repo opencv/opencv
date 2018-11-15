@@ -7,7 +7,6 @@
 
 #include "perf_precomp.hpp"
 #include "../../test/common/gapi_tests_common.hpp"
-#include "../../src/backends/fluid/gfluidcore.hpp"
 
 namespace opencv_test
 {

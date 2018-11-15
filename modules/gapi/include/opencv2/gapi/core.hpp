@@ -144,6 +144,12 @@ namespace core {
         }
     };
 
+    G_TYPED_KERNEL(GPhase, <GMat(GMat, GMat, bool)>, "org.opencv.core.math.phase") {
+        static GMatDesc outMeta(const GMatDesc &inx, const GMatDesc &, bool) {
+            return inx;
+        }
+    };
+
     G_TYPED_KERNEL(GMask, <GMat(GMat,GMat)>, "org.opencv.core.pixelwise.mask") {
         static GMatDesc outMeta(GMatDesc in, GMatDesc) {
             return in;
@@ -447,6 +453,12 @@ namespace core {
             return rdepth < 0 ? in : in.withDepth(rdepth);
         }
     };
+
+    G_TYPED_KERNEL(GSqrt, <GMat(GMat)>, "org.opencv.core.math.sqrt") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -738,6 +750,35 @@ in radians (which is by default), or in degrees.
 */
 GAPI_EXPORTS std::tuple<GMat, GMat> cartToPolar(const GMat& x, const GMat& y,
                                               bool angleInDegrees = false);
+
+/** @brief Calculates the rotation angle of 2D vectors.
+
+The function cv::phase calculates the rotation angle of each 2D vector that
+is formed from the corresponding elements of x and y :
+\f[\texttt{angle} (I) =  \texttt{atan2} ( \texttt{y} (I), \texttt{x} (I))\f]
+
+The angle estimation accuracy is about 0.3 degrees. When x(I)=y(I)=0 ,
+the corresponding angle(I) is set to 0.
+@param x input floating-point array of x-coordinates of 2D vectors.
+@param y input array of y-coordinates of 2D vectors; it must have the
+same size and the same type as x.
+@param angleInDegrees when true, the function calculates the angle in
+degrees, otherwise, they are measured in radians.
+@return array of vector angles; it has the same size and same type as x.
+*/
+GAPI_EXPORTS GMat phase(const GMat& x, const GMat &y, bool angleInDegrees = false);
+
+/** @brief Calculates a square root of array elements.
+
+The function cv::gapi::sqrt calculates a square root of each input array element.
+In case of multi-channel arrays, each channel is processed
+independently. The accuracy is approximately the same as of the built-in
+std::sqrt .
+@param src input floating-point array.
+@return output array of the same size and type as src.
+*/
+GAPI_EXPORTS GMat sqrt(const GMat &src);
+
 //! @} gapi_math
 //!
 //! @addtogroup gapi_pixelwise
