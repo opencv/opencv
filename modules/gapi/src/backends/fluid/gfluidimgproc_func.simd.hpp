@@ -14,6 +14,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include <cstdint>
+
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wstrict-overflow"
@@ -25,7 +27,20 @@ namespace fluid {
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-//----------------------------------------------------------------------
+//----------------------------------
+//
+// Fluid kernels: RGB2Gray, BGR2Gray
+//
+//----------------------------------
+
+void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
+                       float coef_r, float coef_g, float coef_b);
+
+//---------------------
+//
+// Fluid kernels: Sobel
+//
+//---------------------
 
 #define RUN_SOBEL_ROW(DST, SRC)                                     \
 void run_sobel_row(DST out[], const SRC *in[], int width, int chan, \
@@ -46,7 +61,92 @@ RUN_SOBEL_ROW( float,  float)
 #undef RUN_SOBEL_ROW
 
 //----------------------------------------------------------------------
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+//----------------------------------
+//
+// Fluid kernels: RGB2Gray, BGR2Gray
+//
+//----------------------------------
+
+void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
+                       float coef_r, float coef_g, float coef_b)
+{
+    // assume:
+    // - coefficients are less than 1
+    // - and their sum equals 1
+
+    constexpr int unity = 1 << 16;  // Q0.0.16 inside ushort:
+    ushort rc = static_cast<ushort>(coef_r * unity + 0.5f);
+    ushort gc = static_cast<ushort>(coef_g * unity + 0.5f);
+    ushort bc = static_cast<ushort>(coef_b * unity + 0.5f);
+
+    GAPI_Assert(rc + gc + bc <= unity);
+    GAPI_Assert(rc + gc + bc >= USHRT_MAX);
+
+#if CV_SIMD
+    constexpr int nlanes = v_uint8::nlanes;
+    if (width >= nlanes)
+    {
+        for (int w=0; w < width; )
+        {
+            // process main part of pixels row
+            for ( ; w <= width - nlanes; w += nlanes)
+            {
+                v_uint8 r, g, b;
+                v_load_deinterleave(&in[3*w], r, g, b);
+
+                v_uint16 r0, r1, g0, g1, b0, b1;
+                v_expand(r, r0, r1);
+                v_expand(g, g0, g1);
+                v_expand(b, b0, b1);
+
+                v_uint16 y0, y1;
+                static const ushort half = 1 << 7; // Q0.8.8
+                y0 = (v_mul_hi(r0 << 8, vx_setall_u16(rc)) +
+                      v_mul_hi(g0 << 8, vx_setall_u16(gc)) +
+                      v_mul_hi(b0 << 8, vx_setall_u16(bc)) +
+                                        vx_setall_u16(half)) >> 8;
+                y1 = (v_mul_hi(r1 << 8, vx_setall_u16(rc)) +
+                      v_mul_hi(g1 << 8, vx_setall_u16(gc)) +
+                      v_mul_hi(b1 << 8, vx_setall_u16(bc)) +
+                                        vx_setall_u16(half)) >> 8;
+
+                v_uint8 y;
+                y = v_pack(y0, y1);
+                v_store(&out[w], y);
+            }
+
+            // process tail (if any)
+            if (w < width)
+            {
+                GAPI_DbgAssert(width - nlanes >= 0);
+                w = width - nlanes;
+            }
+        }
+
+        return;
+    }
+#endif
+
+    for (int w=0; w < width; w++)
+    {
+        uchar r = in[3*w    ];
+        uchar g = in[3*w + 1];
+        uchar b = in[3*w + 2];
+
+        static const int half = 1 << 15;  // Q0.0.16
+        ushort y = (r*rc + b*bc + g*gc + half) >> 16;
+        out[w] = static_cast<uchar>(y);
+    }
+}
+
+//---------------------
+//
+// Fluid kernels: Sobel
+//
+//---------------------
 
 // Sobel 3x3: vertical pass
 template<bool noscale, typename DST>
@@ -285,7 +385,6 @@ RUN_SOBEL_ROW( float,  float)
 #undef RUN_SOBEL_ROW
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
-//----------------------------------------------------------------------
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 

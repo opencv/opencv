@@ -60,20 +60,15 @@ static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_
     GAPI_Assert(dst.meta().chan == 1);
     GAPI_Assert(src.length() == dst.length());
 
+    GAPI_Assert(coef_r < 1 && coef_g < 1 && coef_b < 1);
+    GAPI_Assert(std::abs(coef_r + coef_g + coef_b - 1) < 0.001);
+
     const auto *in  = src.InLine<uchar>(0);
           auto *out = dst.OutLine<uchar>();
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
-    for (int w=0; w < width; w++)
-    {
-        uchar r = in[3*w    ];
-        uchar g = in[3*w + 1];
-        uchar b = in[3*w + 2];
-        float result = coef_r*r + coef_g*g + coef_b*b;
-        out[w] = saturate<uchar>(result, roundf);
-    }
+    run_rgb2gray_impl(out, in, width, coef_r, coef_g, coef_b);
 }
 
 GAPI_FLUID_KERNEL(GFluidRGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom, false)
