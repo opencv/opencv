@@ -161,7 +161,7 @@ INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(0, 0.05).to_compare_f()),
                                 Values(CV_8UC1, CV_8UC3),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),

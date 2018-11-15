@@ -99,7 +99,7 @@ TEST(GPU, Symm7x7_test)
     //int key = cv::waitKey(0);
 
 
-    compare_f cmpF = AbsToleranceSepFilter(1e-1f).to_compare_f();
+    compare_f cmpF = AbsSimilarPoints(1, 0.05).to_compare_f();
     //compare_f cmpF = AbsToleranceSepFilter(1e-5f).to_compare_f();
 
     // Comparison //////////////////////////////////////////////////////////////

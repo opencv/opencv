@@ -188,7 +188,7 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.0),
+                                Values(1e-5),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
@@ -224,7 +224,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(0.0),
+                                Values(1e-5),
                                 Values(cv::compile_args(CORE_CPU))),
                         opencv_test::PrintNormCoreParams());
 
@@ -275,7 +275,7 @@ INSTANTIATE_TEST_CASE_P(Split4TestCPU, Split4Test,
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
@@ -286,7 +286,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
-                        Combine(Values(AbsExact().to_compare_f()),
+                        Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(1280, 720),
