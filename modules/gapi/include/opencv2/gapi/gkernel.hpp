@@ -313,6 +313,9 @@ namespace gapi {
         // by API textual id.
         bool includesAPI(const std::string &id) const;
 
+        // Remove ALL implementations of the given API (identified by ID)
+        void removeAPI(const std::string &id);
+
     public:
         // Return total number of kernels (accross all backends)
         std::size_t size() const;
@@ -331,8 +334,16 @@ namespace gapi {
         // Removes all the kernels related to the given backend
         void remove(const GBackend& backend);
 
+        template<typename KAPI>
+        void remove()
+        {
+            removeAPI(KAPI::id());
+        }
+
         // Check if package contains ANY implementation of a kernel API
         // by API type.
+        // FIXME: Rename to includes() and distinguish API/impl case by
+        //     statically?
         template<typename KAPI>
         bool includesAPI() const
         {
@@ -354,11 +365,16 @@ namespace gapi {
 
         // Put a new kernel implementation into package
         // FIXME: No overwrites allowed?
-        template<typename KImpl> void include()
+        template<typename KImpl>
+        void include(const cv::unite_policy up = cv::unite_policy::KEEP)
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
             auto kernel_impl = GKernelImpl{KImpl::kernel()};
+            if (up == cv::unite_policy::REPLACE) removeAPI(kernel_id);
+            else GAPI_Assert(up == cv::unite_policy::KEEP);
+
+            // Regardless of the policy, store new impl in its storage slot.
             m_backend_kernels[backend][kernel_id] = std::move(kernel_impl);
         }
 
@@ -366,8 +382,8 @@ namespace gapi {
         std::vector<GBackend> backends() const;
 
         friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &,
-                                                 const GKernelPackage  &,
-                                                 const cv::unite_policy);
+                                                   const GKernelPackage  &,
+                                                   const cv::unite_policy);
     };
 
     template<typename... KK> GKernelPackage kernels()
@@ -389,8 +405,8 @@ namespace gapi {
     // Return a new package based on `lhs` and `rhs`,
     // with unity policy defined by `policy`.
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                      const GKernelPackage  &rhs,
-                                      const cv::unite_policy policy);
+                                        const GKernelPackage  &rhs,
+                                        const cv::unite_policy policy);
 } // namespace gapi
 
 namespace detail
