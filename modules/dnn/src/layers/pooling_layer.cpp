@@ -154,8 +154,8 @@ public:
         }
         else
             return backendId == DNN_BACKEND_OPENCV ||
-                   backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                   (type == MAX || type == AVE && !pad_t && !pad_l && !pad_b && !pad_r);
+                   (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
+                   (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)));
     }
 
 #ifdef HAVE_OPENCL
@@ -341,8 +341,8 @@ public:
                       src.isContinuous(), dst.isContinuous(),
                       src.type() == CV_32F, src.type() == dst.type(),
                       src.dims == 4, dst.dims == 4,
-                      ((poolingType == ROI || poolingType == PSROI) && dst.size[0] ==rois.size[0] || src.size[0] == dst.size[0]),
-                       poolingType == PSROI || src.size[1] == dst.size[1],
+                      (((poolingType == ROI || poolingType == PSROI) && dst.size[0] == rois.size[0]) || src.size[0] == dst.size[0]),
+                      poolingType == PSROI || src.size[1] == dst.size[1],
                       (mask.empty() || (mask.type() == src.type() && mask.size == dst.size)));
 
             PoolingInvoker p;

@@ -558,7 +558,9 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
         normAssert(outs[i].rowRange(0, numDets), ref);
 
         if (numDets < outs[i].size[0])
+        {
             EXPECT_EQ(countNonZero(outs[i].rowRange(numDets, outs[i].size[0])), 0);
+        }
     }
 }
 

@@ -101,7 +101,9 @@ public:
 
             string dataConfig;
             if (hasText)
+            {
                 ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+            }
 
             net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
                                         dataConfig.c_str(), dataConfig.size());

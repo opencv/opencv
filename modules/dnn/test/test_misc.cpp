@@ -140,9 +140,9 @@ TEST(LayerFactory, custom_layers)
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat output = net.forward();
 
-        if (i == 0)      EXPECT_EQ(output.at<float>(0), 1);
-        else if (i == 1) EXPECT_EQ(output.at<float>(0), 2);
-        else if (i == 2) EXPECT_EQ(output.at<float>(0), 1);
+        if (i == 0)      { EXPECT_EQ(output.at<float>(0), 1); }
+        else if (i == 1) { EXPECT_EQ(output.at<float>(0), 2); }
+        else if (i == 2) { EXPECT_EQ(output.at<float>(0), 1); }
     }
     LayerFactory::unregisterLayer("CustomType");
 }
