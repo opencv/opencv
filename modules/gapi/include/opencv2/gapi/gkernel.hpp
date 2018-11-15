@@ -314,6 +314,12 @@ namespace gapi {
      * CPU(OpenCV) backend is involved in graph compilation).
      */
     using GLookupOrder = std::vector<GBackend>;
+    /**
+     * @brief Create a backend lookup order -- priority list of
+     * backends to use during graph compilation process.
+     *
+     * @sa GLookupOrder, @ref gapi_std_backends
+     */
     inline GLookupOrder lookup_order(std::initializer_list<GBackend> &&list)
     {
         return GLookupOrder(std::move(list));
@@ -404,6 +410,24 @@ namespace gapi {
                                                    const cv::unite_policy);
     };
 
+    /**
+     * @brief Create a kernel package object containing kernels
+     * specified in variadic template argument.
+     *
+     * In G-API, kernel implementations are _types_. Every backend has
+     * its own kernel API (like GAPI_OCV_KERNEL() and
+     * GAPI_FLUID_KERNEL()) but all of that APIs define a new type for
+     * each kernel implementation.
+     *
+     * Use this function to pass kernel implementations (defined in
+     * either way) to the system. Example:
+     *
+     * @snippet modules/gapi/samples/api_ref_snippets.cpp kernels_snippet
+     *
+     * Note that kernels() itself is a function returning object, not
+     * a type, so having `()` at the end is important -- it must be a
+     * function call.
+     */
     template<typename... KK> GKernelPackage kernels()
     {
         GKernelPackage pkg;

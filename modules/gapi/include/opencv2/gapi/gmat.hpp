@@ -26,8 +26,11 @@ namespace cv
 class GNode;
 struct GOrigin;
 
-/** \addtogroup gapi_data_objects G-API Data Objects
+/** \addtogroup gapi_data_objects
  * @{
+ *
+ * @brief Data-representing objects which can be used to build G-API
+ * expressions.
  */
 
 class GAPI_EXPORTS GMat

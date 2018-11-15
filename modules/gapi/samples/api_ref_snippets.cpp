@@ -4,8 +4,23 @@
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/imgproc.hpp>
 
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
+
 #include <opencv2/gapi/fluid/core.hpp>
 #include <opencv2/gapi/fluid/imgproc.hpp>
+
+G_TYPED_KERNEL(IAdd, <cv::GMat(cv::GMat)>, "test.custom.add") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
+};
+G_TYPED_KERNEL(IFilter2D, <cv::GMat(cv::GMat)>, "test.custom.filter2d") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
+};
+G_TYPED_KERNEL(IRGB2YUV, <cv::GMat(cv::GMat)>, "test.custom.add") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
+};
+GAPI_OCV_KERNEL(CustomAdd,      IAdd)      { static void run(cv::Mat, cv::Mat &) {} };
+GAPI_OCV_KERNEL(CustomFilter2D, IFilter2D) { static void run(cv::Mat, cv::Mat &) {} };
+GAPI_OCV_KERNEL(CustomRGB2YUV,  IRGB2YUV)  { static void run(cv::Mat, cv::Mat &) {} };
 
 int main(int argc, char *argv[])
 {
@@ -55,5 +70,13 @@ int main(int argc, char *argv[])
     //! [graph_gen]
 
     cv::imwrite(argv[2], output);
+
+    //! [kernels_snippet]
+    cv::gapi::GKernelPackage pkg = cv::gapi::kernels
+        < CustomAdd
+        , CustomFilter2D
+        , CustomRGB2YUV
+        >();
+    //! [kernels_snippet]
     return 0;
 }

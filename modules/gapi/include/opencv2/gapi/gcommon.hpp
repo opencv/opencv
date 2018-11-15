@@ -53,7 +53,7 @@ namespace detail {
 // CompileArg is an unified interface over backend-specific compilation
 // information
 // FIXME: Move to a separate file?
-/** \addtogroup gapi_compile_args G-API Graph Compilation Arguments
+/** \addtogroup gapi_compile_args
  * @{
  *
  * @brief Compilation arguments: a set of data structures which can be

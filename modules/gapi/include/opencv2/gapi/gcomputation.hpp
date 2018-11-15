@@ -36,6 +36,10 @@ namespace detail
 }
 
 /**
+ * \addtogroup gapi_main_classes
+ * @{
+ */
+/**
  * @brief GComputation class represents a captured computation
  * graph. GComputation objects form boundaries for expression code
  * user writes with G-API, allowing to compile and execute it.
@@ -284,7 +288,7 @@ public:
     void apply(cv::Mat in1, cv::Mat in2, cv::Mat &out, GCompileArgs &&args = {}); // Binary overload
 
     /**
-     * @brief Execute an unary computation (with compilation on the fly)
+     * @brief Execute an binary computation (with compilation on the fly)
      *
      * @overload
      * @param in1 first input cv::Mat for binary computation
@@ -410,6 +414,7 @@ protected:
     /// @private
     std::shared_ptr<Priv> m_priv;
 };
+/** @} */
 
 namespace gapi
 {
