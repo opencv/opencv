@@ -126,22 +126,76 @@ static void run_rgb2yuv(Buffer &dst, const View &src, const float coef[5])
 
     int width = dst.length();
 
-    constexpr int unity = 1 << 16;  // Q0.0.16
-    ushort c0 = static_cast<ushort>(coef[0] * unity + 0.5f);
-    ushort c1 = static_cast<ushort>(coef[1] * unity + 0.5f);
-    ushort c2 = static_cast<ushort>(coef[2] * unity + 0.5f);
-    ushort c3 = static_cast<ushort>(coef[3] * unity + 0.5f);
-    ushort c4 = static_cast<ushort>(coef[4] * unity + 0.5f);
+    ushort c0 = static_cast<ushort>(coef[0]*(1 << 16) + 0.5f);  // Q0.0.16 un-signed
+    ushort c1 = static_cast<ushort>(coef[1]*(1 << 16) + 0.5f);
+    ushort c2 = static_cast<ushort>(coef[2]*(1 << 16) + 0.5f);
+    short c3 = static_cast<short>(coef[3]*(1 << 12) + 0.5f);    // Q1.0.12 signed
+    short c4 = static_cast<short>(coef[4]*(1 << 12) + 0.5f);
 
-    for (int w=0; w < width; w++)
+    int w = 0;
+
+#if CV_SIMD
+    static const int nlanes = v_uint8::nlanes;
+    for ( ; w <= width - nlanes; w += nlanes)
     {
-        short r = in[3*w    ] << 3;  // Q1.8.3 inside S16
-        short g = in[3*w + 1] << 3;
-        short b = in[3*w + 2] << 3;
-        short y = (c0*r + c1*g + c2*b) >> 16;
-        short u =  c3*(b - y) >> 16;
+        v_uint8 r, g, b;
+        v_load_deinterleave(&in[3*w], r, g, b);
+
+        v_uint16 _r0, _r1, _g0, _g1, _b0, _b1;
+        v_expand(r, _r0, _r1);
+        v_expand(g, _g0, _g1);
+        v_expand(b, _b0, _b1);
+
+        _r0 = _r0 << 7;                         // Q0.9.7 un-signed
+        _r1 = _r1 << 7;
+        _g0 = _g0 << 7;
+        _g1 = _g1 << 7;
+        _b0 = _b0 << 7;
+        _b1 = _b1 << 7;
+
+        v_uint16 _y0, _y1;
+        _y0 = v_mul_hi(vx_setall_u16(c0), _r0)  // Q0.9.7
+            + v_mul_hi(vx_setall_u16(c1), _g0)
+            + v_mul_hi(vx_setall_u16(c2), _b0);
+        _y1 = v_mul_hi(vx_setall_u16(c0), _r1)
+            + v_mul_hi(vx_setall_u16(c1), _g1)
+            + v_mul_hi(vx_setall_u16(c2), _b1);
+
+        v_int16 r0, r1, b0, b1, y0, y1;
+        r0 = v_reinterpret_as_s16(_r0);         // Q1.8.7 signed
+        r1 = v_reinterpret_as_s16(_r1);
+        b0 = v_reinterpret_as_s16(_b0);
+        b1 = v_reinterpret_as_s16(_b1);
+        y0 = v_reinterpret_as_s16(_y0);
+        y1 = v_reinterpret_as_s16(_y1);
+
+        v_int16 u0, u1, v0, v1;
+        u0 = v_mul_hi(vx_setall_s16(c3), b0 - y0);  // Q1.12.3
+        u1 = v_mul_hi(vx_setall_s16(c3), b1 - y1);
+        v0 = v_mul_hi(vx_setall_s16(c4), r0 - y0);
+        v1 = v_mul_hi(vx_setall_s16(c4), r1 - y1);
+
+        v_uint8 y, u, v;
+        y = v_pack((_y0 + vx_setall_u16(1 << 6)) >> 7,
+                   (_y1 + vx_setall_u16(1 << 6)) >> 7);
+        u = v_pack_u((u0 + vx_setall_s16(257 << 2)) >> 3,  // 257 << 2 = 128.5 * (1 << 3)
+                     (u1 + vx_setall_s16(257 << 2)) >> 3);
+        v = v_pack_u((v0 + vx_setall_s16(257 << 2)) >> 3,
+                     (v1 + vx_setall_s16(257 << 2)) >> 3);
+
+        v_store_interleave(&out[3*w], y, u, v);
+    }
+#endif
+
+    for ( ; w < width; w++)
+    {
+        short r = in[3*w    ] << 7;                            // Q1.8.7 signed
+        short g = in[3*w + 1] << 7;
+        short b = in[3*w + 2] << 7;
+        short y = (c0*r + c1*g + c2*b) >> 16;                  // Q1.8.7
+        short u =  c3*(b - y) >> 16;                           // Q1.12.3
         short v =  c4*(r - y) >> 16;
-        out[3*w    ] = static_cast<uchar>((y              + (1 << 2)) >> 3);
+        out[3*w    ] = static_cast<uchar>((y              + (1 << 6)) >> 7);
         out[3*w + 1] =    saturate<uchar>((u + (128 << 3) + (1 << 2)) >> 3);
         out[3*w + 2] =    saturate<uchar>((v + (128 << 3) + (1 << 2)) >> 3);
     }
@@ -165,7 +219,58 @@ static void run_yuv2rgb(Buffer &dst, const View &src, const float coef[4])
     short c2 = static_cast<short>(coef[2] * (1 << 12) + 0.5f);
     short c3 = static_cast<short>(coef[3] * (1 << 12) + 0.5f);
 
-    for (int w=0; w < width; w++)
+    int w = 0;
+
+#if CV_SIMD
+    static const int nlanes = v_uint8::nlanes;
+    for ( ; w <= width - nlanes; w += nlanes)
+    {
+        v_uint8 y, u, v;
+        v_load_deinterleave(&in[3*w], y, u, v);
+
+        v_uint16 _y0, _y1, _u0, _u1, _v0, _v1;
+        v_expand(y, _y0, _y1);
+        v_expand(u, _u0, _u1);
+        v_expand(v, _v0, _v1);
+
+        v_int16 y0, y1, u0, u1, v0, v1;
+        y0 = v_reinterpret_as_s16(_y0);
+        y1 = v_reinterpret_as_s16(_y1);
+        u0 = v_reinterpret_as_s16(_u0);
+        u1 = v_reinterpret_as_s16(_u1);
+        v0 = v_reinterpret_as_s16(_v0);
+        v1 = v_reinterpret_as_s16(_v1);
+
+        y0 =  y0 << 3;                              // Q1.12.3
+        y1 =  y1 << 3;
+        u0 = (u0 - vx_setall_s16(128)) << 7;        // Q1.8.7
+        u1 = (u1 - vx_setall_s16(128)) << 7;
+        v0 = (v0 - vx_setall_s16(128)) << 7;
+        v1 = (v1 - vx_setall_s16(128)) << 7;
+
+        v_int16 r0, r1, g0, g1, b0, b1;
+        r0 = y0 + v_mul_hi(vx_setall_s16(c0), v0);  // Q1.12.3
+        r1 = y1 + v_mul_hi(vx_setall_s16(c0), v1);
+        g0 = y0 + v_mul_hi(vx_setall_s16(c1), u0)
+                + v_mul_hi(vx_setall_s16(c2), v0);
+        g1 = y1 + v_mul_hi(vx_setall_s16(c1), u1)
+                + v_mul_hi(vx_setall_s16(c2), v1);
+        b0 = y0 + v_mul_hi(vx_setall_s16(c3), u0);
+        b1 = y1 + v_mul_hi(vx_setall_s16(c3), u1);
+
+        v_uint8 r, g, b;
+        r = v_pack_u((r0 + vx_setall_s16(1 << 2)) >> 3,
+                     (r1 + vx_setall_s16(1 << 2)) >> 3);
+        g = v_pack_u((g0 + vx_setall_s16(1 << 2)) >> 3,
+                     (g1 + vx_setall_s16(1 << 2)) >> 3);
+        b = v_pack_u((b0 + vx_setall_s16(1 << 2)) >> 3,
+                     (b1 + vx_setall_s16(1 << 2)) >> 3);
+
+        v_store_interleave(&out[3*w], r, g, b);
+    }
+#endif
+
+    for ( ; w < width; w++)
     {
         short y =  in[3*w    ]        << 3;  // Q1.12.3
         short u = (in[3*w + 1] - 128) << 7;  // Q1.8.7
