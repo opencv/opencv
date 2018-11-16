@@ -156,6 +156,14 @@ public:
 
         CV_Assert(crop_ranges.size() == 4);
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+        for (int i = 0; i < 4; ++i)
+        {
+            ieLayer->axis.push_back(i);
+            ieLayer->offset.push_back(crop_ranges[i].start);
+            ieLayer->dim.push_back(crop_ranges[i].end - crop_ranges[i].start);
+        }
+#else
         ieLayer->axis.push_back(0);  // batch
         ieLayer->offset.push_back(crop_ranges[0].start);
         ieLayer->dim.push_back(crop_ranges[0].end - crop_ranges[0].start);
@@ -171,7 +179,7 @@ public:
         ieLayer->axis.push_back(2);  // width
         ieLayer->offset.push_back(crop_ranges[3].start);
         ieLayer->dim.push_back(crop_ranges[3].end - crop_ranges[3].start);
-
+#endif
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();

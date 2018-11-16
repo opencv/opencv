@@ -475,7 +475,7 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     double l1_geometry = default_l1, lInf_geometry = default_lInf;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
-        lInf_scores = 0.11;
+        lInf_scores = backend == DNN_BACKEND_INFERENCE_ENGINE ? 0.16 : 0.11;
         l1_geometry = 0.28; lInf_geometry = 5.94;
     }
     else if (target == DNN_TARGET_MYRIAD)

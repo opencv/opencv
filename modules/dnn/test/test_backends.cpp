@@ -174,7 +174,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 0.0;
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
                inp, "detection_out", "", l1, lInf, 0.25);
@@ -184,7 +184,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
 {
     if (backend == DNN_BACKEND_HALIDE && target == DNN_TARGET_CPU)
         throw SkipTestException("");
-    double scoreThreshold = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0252 : 0.0;
+    double scoreThreshold = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0325 : 0.0;
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",

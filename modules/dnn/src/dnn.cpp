@@ -1568,6 +1568,23 @@ struct Net::Impl
 
             if (!ieNode->net->isInitialized())
             {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+                // For networks which is built in runtime we need to specify a
+                // version of it's hyperparameters.
+                std::string versionTrigger = "<net name=\"TestInput\" version=\"3\" batch=\"1\">"
+                                               "<layers>"
+                                                 "<layer name=\"data\" type=\"Input\" precision=\"FP32\" id=\"0\">"
+                                                   "<output>"
+                                                     "<port id=\"0\">"
+                                                       "<dim>1</dim>"
+                                                     "</port>"
+                                                   "</output>"
+                                                 "</layer>"
+                                               "</layers>"
+                                             "</net>";
+                InferenceEngine::CNNNetReader reader;
+                reader.ReadNetwork(versionTrigger.data(), versionTrigger.size());
+#endif
                 ieNode->net->init(preferableTarget);
                 ld.skip = false;
             }
