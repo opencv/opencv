@@ -134,5 +134,5 @@ property. The following properties of cameras available through OpenNI interface
     -   CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CAP_OPENNI_DEPTH_GENERATOR + CAP_PROP_OPENNI_REGISTRATION
 
 For more information please refer to the example of usage
-[openni_capture.cpp](https://github.com/opencv/opencv/tree/3.4/samples/cpp/openni_capture.cpp) in
+[videocapture_openni.cpp](https://github.com/opencv/opencv/tree/3.4/samples/cpp/videocapture_openni.cpp) in
 opencv/samples/cpp folder.
