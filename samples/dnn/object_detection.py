@@ -67,7 +67,7 @@ if args.classes:
         classes = f.read().rstrip('\n').split('\n')
 
 # Load a network
-net = cv.dnn.readNet(args.model, args.config, args.framework)
+net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 outNames = net.getUnconnectedOutLayersNames()
@@ -182,7 +182,7 @@ def callback(pos):
 
 cv.createTrackbar('Confidence threshold, %', winName, int(confThreshold * 100), 99, callback)
 
-cap = cv.VideoCapture(args.input if args.input else 0)
+cap = cv.VideoCapture(cv.samples.findFileOrKeep(args.input) if args.input else 0)
 while cv.waitKey(1) < 0:
     hasFrame, frame = cap.read()
     if not hasFrame:

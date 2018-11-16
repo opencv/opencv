@@ -19,11 +19,11 @@ Usage:
     ESC   - exit
 
 Examples:
-  deconvolution.py --angle 135 --d 22  ../data/licenseplate_motion.jpg
+  deconvolution.py --angle 135 --d 22  licenseplate_motion.jpg
     (image source: http://www.topazlabs.com/infocus/_images/licenseplate_compare.jpg)
 
-  deconvolution.py --angle 86 --d 31  ../data/text_motion.jpg
-  deconvolution.py --circle --d 19  ../data/text_defocus.jpg
+  deconvolution.py --angle 86 --d 31  text_motion.jpg
+  deconvolution.py --circle --d 19  text_defocus.jpg
     (image source: compact digital photo camera, no artificial distortion)
 
 
@@ -73,11 +73,11 @@ if __name__ == '__main__':
     try:
         fn = args[0]
     except:
-        fn = '../data/licenseplate_motion.jpg'
+        fn = 'licenseplate_motion.jpg'
 
     win = 'deconvolution'
 
-    img = cv.imread(fn, 0)
+    img = cv.imread(cv.samples.findFile(fn), cv.IMREAD_GRAYSCALE)
     if img is None:
         print('Failed to load file:', fn)
         sys.exit(1)

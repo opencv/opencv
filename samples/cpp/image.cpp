@@ -14,7 +14,7 @@ static void help()
     "It shows reading of images, converting to planes and merging back, color conversion\n"
     "and also iterating through pixels.\n"
     "Call:\n"
-    "./image [image-name Default: ../data/lena.jpg]\n" << endl;
+    "./image [image-name Default: lena.jpg]\n" << endl;
 }
 
 // enable/disable use of mixed API in the code below.
@@ -27,7 +27,7 @@ static void help()
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h | |}{@image|../data/lena.jpg|}");
+    cv::CommandLineParser parser(argc, argv, "{help h | |}{@image|lena.jpg|}");
     if (parser.has("help"))
     {
         help();
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
     // is converted, while the data is shared)
     //! [iplimage]
 #else
-    Mat img = imread(imagename); // the newer cvLoadImage alternative, MATLAB-style function
+    Mat img = imread(samples::findFile(imagename)); // the newer cvLoadImage alternative, MATLAB-style function
     if(img.empty())
     {
         fprintf(stderr, "Can not load image %s\n", imagename.c_str());

@@ -20,8 +20,8 @@ Usage:
      - synth:<params> for procedural video
 
 Synth examples:
-    synth:bg=../data/lena.jpg:noise=0.1
-    synth:class=chess:bg=../data/lena.jpg:noise=0.1:size=640x480
+    synth:bg=lena.jpg:noise=0.1
+    synth:class=chess:bg=lena.jpg:noise=0.1:size=640x480
 
 Keys:
     ESC    - exit
@@ -49,7 +49,7 @@ class VideoSynthBase(object):
         self.bg = None
         self.frame_size = (640, 480)
         if bg is not None:
-            self.bg = cv.imread(bg, 1)
+            self.bg = cv.imread(cv.samples.findFile(bg))
             h, w = self.bg.shape[:2]
             self.frame_size = (w, h)
 
@@ -85,8 +85,8 @@ class VideoSynthBase(object):
 class Book(VideoSynthBase):
     def __init__(self, **kw):
         super(Book, self).__init__(**kw)
-        backGr = cv.imread('../data/graf1.png')
-        fgr = cv.imread('../data/box.png')
+        backGr = cv.imread(cv.samples.findFile('graf1.png'))
+        fgr = cv.imread(cv.samples.findFile('box.png'))
         self.render = TestSceneRender(backGr, fgr, speed = 1)
 
     def read(self, dst=None):
@@ -98,7 +98,7 @@ class Book(VideoSynthBase):
 class Cube(VideoSynthBase):
     def __init__(self, **kw):
         super(Cube, self).__init__(**kw)
-        self.render = TestSceneRender(cv.imread('../data/pca_test1.jpg'), deformation = True,  speed = 1)
+        self.render = TestSceneRender(cv.imread(cv.samples.findFile('pca_test1.jpg')), deformation = True,  speed = 1)
 
     def read(self, dst=None):
         noise = np.zeros(self.render.sceneBg.shape, np.int8)
@@ -158,10 +158,10 @@ classes = dict(chess=Chess, book=Book, cube=Cube)
 
 presets = dict(
     empty = 'synth:',
-    lena = 'synth:bg=../data/lena.jpg:noise=0.1',
-    chess = 'synth:class=chess:bg=../data/lena.jpg:noise=0.1:size=640x480',
-    book = 'synth:class=book:bg=../data/graf1.png:noise=0.1:size=640x480',
-    cube = 'synth:class=cube:bg=../data/pca_test1.jpg:noise=0.0:size=640x480'
+    lena = 'synth:bg=lena.jpg:noise=0.1',
+    chess = 'synth:class=chess:bg=lena.jpg:noise=0.1:size=640x480',
+    book = 'synth:class=book:bg=graf1.png:noise=0.1:size=640x480',
+    cube = 'synth:class=cube:bg=pca_test1.jpg:noise=0.0:size=640x480'
 )
 
 
