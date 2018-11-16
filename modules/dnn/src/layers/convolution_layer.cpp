@@ -460,6 +460,12 @@ public:
         ieLayer->_pads_end.insert(InferenceEngine::Y_AXIS, pad.height);
         ieLayer->_dilation.insert(InferenceEngine::X_AXIS, dilation.width);
         ieLayer->_dilation.insert(InferenceEngine::Y_AXIS, dilation.height);
+        ieLayer->params["output"] = format("%d", outCn);
+        ieLayer->params["kernel"] = format("%d,%d,%d,%d", outCn, inpGroupCn, kernel.height, kernel.width);
+        ieLayer->params["pads_begin"] = format("%d,%d", pad.height, pad.width);
+        ieLayer->params["pads_end"] = format("%d,%d", pad.height, pad.width);
+        ieLayer->params["strides"] = format("%d,%d", stride.height, stride.width);
+        ieLayer->params["dilations"] = format("%d,%d", dilation.height, dilation.width);
 #else
         ieLayer->_kernel_x = kernel.width;
         ieLayer->_kernel_y = kernel.height;
