@@ -32,6 +32,8 @@ Keys:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import re
+
 import numpy as np
 from numpy import pi, sin, cos
 
@@ -169,11 +171,11 @@ def create_capture(source = 0, fallback = presets['chess']):
     '''source: <int> or '<int>|<filename>|synth [:<param_name>=<value> [:...]]'
     '''
     source = str(source).strip()
+
+    # Win32: handle drive letter ('c:', ...)
+    source = re.sub(r'(^|=)([a-zA-Z]):([/\\a-zA-Z0-9])', r'\1?disk\2?\3', source)
     chunks = source.split(':')
-    # handle drive letter ('c:', ...)
-    if len(chunks) > 1 and len(chunks[0]) == 1 and chunks[0].isalpha():
-        chunks[1] = chunks[0] + ':' + chunks[1]
-        del chunks[0]
+    chunks = [re.sub(r'\?disk([a-zA-Z])\?', r'\1:', s) for s in chunks]
 
     source = chunks[0]
     try: source = int(source)
