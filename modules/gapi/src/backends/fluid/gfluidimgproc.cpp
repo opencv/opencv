@@ -141,9 +141,9 @@ static void run_rgb2yuv(Buffer &dst, const View &src, const float coef[5])
         short y = (c0*r + c1*g + c2*b) >> 16;
         short u =  c3*(b - y) >> 16;
         short v =  c4*(r - y) >> 16;
-        out[3*w    ] =                 (y              + (1 << 2)) >> 3;
-        out[3*w + 1] = saturate<uchar>((u + (128 << 3) + (1 << 2)) >> 3);
-        out[3*w + 2] = saturate<uchar>((v + (128 << 3) + (1 << 2)) >> 3);
+        out[3*w    ] = static_cast<uchar>((y              + (1 << 2)) >> 3);
+        out[3*w + 1] =    saturate<uchar>((u + (128 << 3) + (1 << 2)) >> 3);
+        out[3*w + 2] =    saturate<uchar>((v + (128 << 3) + (1 << 2)) >> 3);
     }
 }
 
