@@ -1409,41 +1409,6 @@
       <x>698</x>
       <y>206</y>
       <val>36762.</val></rng2></dist></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--false->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>1.</min>
-    <max>4096.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>576.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>281</y>
-      <val>3136.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>227</y>
-      <val>9.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>1196.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1196.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>162</y>
-      <val>648.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>125</y>
-      <val>500.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
 <Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING--false->
   <dist>
     <kind>65536</kind>
@@ -1568,78 +1533,7 @@
       <x>732</x>
       <y>277</y>
       <val>3.0838287353515625e+01</val></rng2></dist></Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--false->
-<Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>1.</min>
-    <max>64.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>24.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>115</y>
-      <val>28.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>4</y>
-      <val>45.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>1196.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1196.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>102</y>
-      <val>408.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>217</y>
-      <val>868.</val></rng2></ndix></Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>1.</min>
-    <max>4096.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>576.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>153</y>
-      <val>25.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>194</y>
-      <val>1156.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>1196.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1196.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>216</y>
-      <val>864.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>36</y>
-      <val>144.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
  <!-- resumed -->
-
 <OCL_BruteForceMatcherFixture_Match--Match---640x480--32FC1->
   <matches-queryIdx>
     <kind>65536</kind>
@@ -2262,7 +2156,6 @@
       <dt>f</dt>
       <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1920x1080--32FC1->
  <!-- resumed -->
-
 <OCL_ORBFixture_ORB_Detect--ORB_Detect---cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png->
   <points-pt>
     <kind>65536</kind>
@@ -3372,7 +3265,6 @@
       <y>1379</y>
       <val>-1.</val></rng2></points-class_id></OCL_FASTFixture_FastDetect--FastDetect----stitching-a3-png---TYPE_9_16->
  <!-- resumed -->
-
 <agast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---AGAST_5_8->
   <points-pt>
     <kind>65536</kind>
@@ -4829,4 +4721,112 @@
       <x>0</x>
       <y>10385</y>
       <val>-1.</val></rng2></points-class_id></fast_detect_ovx--detect_ovx----stitching-a3-png---TYPE_9_16->
+ <!-- resumed -->
+<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
+  <dist>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.</min>
+    <max>4096.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>576.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>109</y>
+      <val>400.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>186</y>
+      <val>3969.</val></rng2></dist>
+  <ndix>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>-1.</min>
+    <max>1196.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>1196.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>156</y>
+      <val>624.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>255</y>
+      <val>1020.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
+ <!-- resumed -->
+<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
+  <dist>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>1.</min>
+    <max>4096.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>576.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>189</y>
+      <val>784.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>82</y>
+      <val>16.</val></rng2></dist>
+  <ndix>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>-1.</min>
+    <max>1196.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>1196.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>274</y>
+      <val>-1.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>10</y>
+      <val>40.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
+ <!-- resumed -->
+<Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
+  <dist>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.</min>
+    <max>64.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>24.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>91</y>
+      <val>60.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>68</y>
+      <val>2.</val></rng2></dist>
+  <ndix>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>-1.</min>
+    <max>1196.</max>
+    <last>
+      <x>0</x>
+      <y>299</y>
+      <val>1196.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>52</y>
+      <val>-1.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>155</y>
+      <val>-1.</val></rng2></ndix></Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
 </opencv_storage>
