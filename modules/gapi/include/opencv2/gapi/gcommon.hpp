@@ -53,6 +53,41 @@ namespace detail {
 // CompileArg is an unified interface over backend-specific compilation
 // information
 // FIXME: Move to a separate file?
+/** \addtogroup gapi_compile_args
+ * @{
+ *
+ * @brief Compilation arguments: a set of data structures which can be
+ * passed to control compilation process
+ *
+ * G-API comes with a number of graph compilation options which can be
+ * passed to cv::GComputation::apply() or
+ * cv::GComputation::compile(). Known compilation options are listed
+ * in this page, while extra backends may introduce their own
+ * compilation options (G-API transparently accepts _everything_ which
+ * can be passed to cv::compile_args(), it depends on underlying
+ * backends if an option would be interpreted or not).
+ *
+ * For example, if an example computation is executed like this:
+ *
+ * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_decl_apply
+ *
+ * Extra parameter specifying which kernels to compile with can be
+ * passed like this:
+ *
+ * @snippet modules/gapi/samples/api_ref_snippets.cpp apply_with_param
+ */
+
+/**
+ * @brief Represents an arbitrary compilation argument.
+ *
+ * Any value can be wrapped into cv::GCompileArg, but only known ones
+ * (to G-API or its backends) can be interpreted correctly.
+ *
+ * Normally objects of this class shouldn't be created manually, use
+ * cv::compile_args() function which automatically wraps everything
+ * passed in (a variadic template parameter pack) into a vector of
+ * cv::GCompileArg objects.
+ */
 struct GAPI_EXPORTS GCompileArg
 {
 public:
@@ -82,15 +117,28 @@ private:
 
 using GCompileArgs = std::vector<GCompileArg>;
 
+/**
+ * Wraps a list of arguments (a parameter pack) into a vector of
+ * compilation arguments (cv::GCompileArg).
+ */
 template<typename... Ts> GCompileArgs compile_args(Ts&&... args)
 {
     return GCompileArgs{ GCompileArg(args)... };
 }
 
+/**
+ * @brief Ask G-API to dump compiled graph in Graphviz format under
+ * the given file name.
+ *
+ * Specifies a graph dump path (path to .dot file to be generated).
+ * G-API will dump a .dot file under specified path during a
+ * compilation process if this flag is passed.
+ */
 struct graph_dump_path
 {
     std::string m_dump_path;
 };
+/** @} */
 
 namespace detail
 {
