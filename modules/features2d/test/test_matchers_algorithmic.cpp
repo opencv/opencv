@@ -558,4 +558,23 @@ TEST( Features2d_DMatch, read_write )
     ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
 }
 
+
+TEST(Features2d_DMatch, issue_11855)
+{
+    Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
+                                        1, 1, 1);
+    Mat targets = (Mat_<uchar>(2, 3) << 1, 1, 1,
+                                        0, 0, 0);
+
+    Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
+    vector<vector<DMatch> > match;
+    bf->knnMatch(sources, targets, match, 1, noArray(), true);
+
+    ASSERT_EQ((size_t)1, match.size());
+    ASSERT_EQ((size_t)1, match[0].size());
+    EXPECT_EQ(1, match[0][0].queryIdx);
+    EXPECT_EQ(0, match[0][0].trainIdx);
+    EXPECT_EQ(0.0f, match[0][0].distance);
+}
+
 }} // namespace
