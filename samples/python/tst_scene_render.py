@@ -98,8 +98,8 @@ class TestSceneRender():
 
 if __name__ == '__main__':
 
-    backGr = cv.imread('../data/graf1.png')
-    fgr = cv.imread('../data/box.png')
+    backGr = cv.imread(cv.samples.findFile('graf1.png'))
+    fgr = cv.imread(cv.samples.findFile('box.png'))
 
     render = TestSceneRender(backGr, fgr)
 

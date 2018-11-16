@@ -45,7 +45,7 @@ else:
 inWidth = args.width
 inHeight = args.height
 
-net = cv.dnn.readNetFromCaffe(args.proto, args.model)
+net = cv.dnn.readNetFromCaffe(cv.samples.findFile(args.proto), cv.samples.findFile(args.model))
 
 cap = cv.VideoCapture(args.input if args.input else 0)
 

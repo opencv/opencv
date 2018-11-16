@@ -21,9 +21,9 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/starry_night.jpg'
+        fn = 'starry_night.jpg'
 
-    img = cv.imread(fn)
+    img = cv.imread(cv.samples.findFile(fn))
     if img is None:
         print('Failed to load image file:', fn)
         sys.exit(1)

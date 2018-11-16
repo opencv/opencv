@@ -156,7 +156,7 @@ int main(int argc, char** argv)
         cout << "OpenCL was disabled" << endl;
     }
 
-    string inputName = cmd.get<string>("i");
+    string inputName = samples::findFile(cmd.get<string>("i"));
     string outfile = cmd.get<string>("o");
 
     int iterations = 10;
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
     vector<vector<Point> > squares;
 
     UMat image;
-    imread(inputName, 1).copyTo(image);
+    imread(inputName, IMREAD_COLOR).copyTo(image);
     if( image.empty() )
     {
         cout << "Couldn't load " << inputName << endl;

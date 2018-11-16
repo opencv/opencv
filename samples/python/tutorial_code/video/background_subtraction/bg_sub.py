@@ -4,7 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='This program shows how to use background subtraction methods provided by \
                                               OpenCV. You can process both videos and images.')
-parser.add_argument('--input', type=str, help='Path to a video or a sequence of image.', default='../data/vtest.avi')
+parser.add_argument('--input', type=str, help='Path to a video or a sequence of image.', default='vtest.avi')
 parser.add_argument('--algo', type=str, help='Background subtraction method (KNN, MOG2).', default='MOG2')
 args = parser.parse_args()
 
@@ -17,7 +17,7 @@ else:
 ## [create]
 
 ## [capture]
-capture = cv.VideoCapture(args.input)
+capture = cv.VideoCapture(cv.samples.findFileOrKeep(args.input))
 if not capture.isOpened:
     print('Unable to open: ' + args.input)
     exit(0)

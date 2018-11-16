@@ -107,11 +107,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         filename = sys.argv[1] # for drawing purposes
     else:
-        print("No input image given, so loading default image, ../data/lena.jpg \n")
+        print("No input image given, so loading default image, lena.jpg \n")
         print("Correct Usage: python grabcut.py <filename> \n")
-        filename = '../data/lena.jpg'
+        filename = 'lena.jpg'
 
-    img = cv.imread(filename)
+    img = cv.imread(cv.samples.findFile(filename))
     img2 = img.copy()                               # a copy of original image
     mask = np.zeros(img.shape[:2],dtype = np.uint8) # mask initialized to PR_BG
     output = np.zeros(img.shape,np.uint8)           # output image to be shown
