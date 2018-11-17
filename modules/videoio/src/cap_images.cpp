@@ -133,7 +133,7 @@ bool CvCapture_Images::grabFrame()
         return !frame.empty();
     }
 
-    frame = imread(str, CV_LOAD_IMAGE_UNCHANGED);
+    frame = imread(str, IMREAD_UNCHANGED);
     if( !frame.empty() )
         currentframe++;
 
