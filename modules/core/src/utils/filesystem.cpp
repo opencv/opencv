@@ -87,15 +87,18 @@ cv::String join(const cv::String& base, const cv::String& path)
 
 cv::String canonical(const cv::String& path)
 {
+    cv::String result;
 #ifdef _WIN32
-    const char* result = _fullpath(NULL, path.c_str(), 0);
+    const char* result_str = _fullpath(NULL, path.c_str(), 0);
 #else
-    const char* result = realpath(path.c_str(), NULL);
+    const char* result_str = realpath(path.c_str(), NULL);
 #endif
-    if (result)
-        return cv::String(result);
-    // no error handling, just return input
-    return path;
+    if (result_str)
+    {
+        result = cv::String(result_str);
+        free((void*)result_str);
+    }
+    return result.empty() ? path : result;
 }
 
 
