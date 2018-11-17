@@ -1183,9 +1183,9 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
+    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && _src.dims() <= 2);
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_OCL_RUN(_dst.isUMat(),
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
     Mat src = _src.getMat();
