@@ -1699,7 +1699,7 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     }
 }
 
-#if CV_SIMD128
+#if CV_SIMD128 && !defined(__aarch64__)
 static inline void
 load3x3Matrix(const float* m, v_float32x4& m0, v_float32x4& m1, v_float32x4& m2, v_float32x4& m3)
 {
@@ -1708,7 +1708,9 @@ load3x3Matrix(const float* m, v_float32x4& m0, v_float32x4& m1, v_float32x4& m2,
     m2 = v_float32x4(m[2], m[6], m[10], 0);
     m3 = v_float32x4(m[3], m[7], m[11], 0);
 }
+#endif
 
+#if CV_SIMD128
 static inline v_int16x8
 v_matmulvec(const v_int16x8 &v0, const v_int16x8 &m0, const v_int16x8 &m1, const v_int16x8 &m2, const v_int32x4 &m3, const int BITS)
 {

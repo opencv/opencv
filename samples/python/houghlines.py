@@ -5,7 +5,7 @@ This example illustrates how to use Hough Transform to find lines
 
 Usage:
     houghlines.py [<image_name>]
-    image argument defaults to ../data/pic1.png
+    image argument defaults to pic1.png
 '''
 
 # Python 2/3 compatibility
@@ -22,9 +22,9 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except IndexError:
-        fn = "../data/pic1.png"
+        fn = 'pic1.png'
 
-    src = cv.imread(fn)
+    src = cv.imread(cv.samples.findFile(fn))
     dst = cv.Canny(src, 50, 200)
     cdst = cv.cvtColor(dst, cv.COLOR_GRAY2BGR)
 

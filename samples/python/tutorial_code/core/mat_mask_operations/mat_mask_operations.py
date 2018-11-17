@@ -45,7 +45,7 @@ def sharpen(my_image):
 ## [basic_method]
 
 def main(argv):
-    filename = "../../../../data/lena.jpg"
+    filename = 'lena.jpg'
 
     img_codec = cv.IMREAD_COLOR
     if argv:
@@ -53,12 +53,12 @@ def main(argv):
         if len(argv) >= 2 and sys.argv[2] == "G":
             img_codec = cv.IMREAD_GRAYSCALE
 
-    src = cv.imread(filename, img_codec)
+    src = cv.imread(cv.samples.findFile(filename), img_codec)
 
     if src is None:
         print("Can't open image [" + filename + "]")
         print("Usage:")
-        print("mat_mask_operations.py [image_path -- default ../../../../data/lena.jpg] [G -- grayscale]")
+        print("mat_mask_operations.py [image_path -- default lena.jpg] [G -- grayscale]")
         return -1
 
     cv.namedWindow("Input", cv.WINDOW_AUTOSIZE)

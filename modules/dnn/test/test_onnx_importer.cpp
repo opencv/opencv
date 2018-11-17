@@ -68,6 +68,12 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("two_convolution");
 }
 
+TEST_P(Test_ONNX_layers, Deconvolution)
+{
+    testONNXModels("deconvolution");
+    testONNXModels("two_deconvolution");
+}
+
 TEST_P(Test_ONNX_layers, Dropout)
 {
     testONNXModels("dropout");
@@ -118,8 +124,8 @@ TEST_P(Test_ONNX_layers, Transpose)
 
 TEST_P(Test_ONNX_layers, Multiplication)
 {
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     testONNXModels("mul");
 }
@@ -296,7 +302,7 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
     if (cvtest::skipUnstableTests ||
-        backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)) {
+        (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))) {
         throw SkipTestException("");
     }
     // output range: [-11; 8]

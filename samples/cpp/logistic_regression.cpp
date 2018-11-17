@@ -83,7 +83,7 @@ static float calculateAccuracyPercent(const Mat &original, const Mat &predicted)
 
 int main()
 {
-    const String filename = "../data/data01.xml";
+    const String filename = samples::findFile("data01.xml");
     cout << "**********************************************************************" << endl;
     cout << filename
          << " contains digits 0 and 1 of 20 samples each, collected on an Android device" << endl;

@@ -257,6 +257,7 @@ PREDEFINED             = __cplusplus=1 \
                          CV_SSE2=1 \
                          CV__DEBUG_NS_BEGIN= \
                          CV__DEBUG_NS_END= \
+                         CV_DEPRECATED_EXTERNAL= \
                          CV_DEPRECATED=
 EXPAND_AS_DEFINED      =
 SKIP_FUNCTION_MACROS   = YES

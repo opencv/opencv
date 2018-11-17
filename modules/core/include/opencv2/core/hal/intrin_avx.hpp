@@ -1363,25 +1363,22 @@ inline v_float64x4 v_cvt_f64_high(const v_float32x8& a)
 
 inline v_int32x8 v_lut(const int* tab, const v_int32x8& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[8];
-    v_store_aligned(idx, idxvec);
-    return v_int32x8(_mm256_setr_epi32(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]],
-                                       tab[idx[4]], tab[idx[5]], tab[idx[6]], tab[idx[7]]));
+    return v_int32x8(_mm256_i32gather_epi32(tab, idxvec.val, 4));
+}
+
+inline v_uint32x8 v_lut(const unsigned* tab, const v_int32x8& idxvec)
+{
+    return v_reinterpret_as_u32(v_lut((const int *)tab, idxvec));
 }
 
 inline v_float32x8 v_lut(const float* tab, const v_int32x8& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[8];
-    v_store_aligned(idx, idxvec);
-    return v_float32x8(_mm256_setr_ps(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]],
-                                      tab[idx[4]], tab[idx[5]], tab[idx[6]], tab[idx[7]]));
+    return v_float32x8(_mm256_i32gather_ps(tab, idxvec.val, 4));
 }
 
 inline v_float64x4 v_lut(const double* tab, const v_int32x8& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[8];
-    v_store_aligned(idx, idxvec);
-    return v_float64x4(_mm256_setr_pd(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]));
+    return v_float64x4(_mm256_i32gather_pd(tab, _mm256_castsi256_si128(idxvec.val), 8));
 }
 
 inline void v_lut_deinterleave(const float* tab, const v_int32x8& idxvec, v_float32x8& x, v_float32x8& y)

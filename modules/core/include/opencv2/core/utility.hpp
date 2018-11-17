@@ -1234,7 +1234,74 @@ enum FLAGS
 CV_EXPORTS void       setFlags(FLAGS modeFlags);
 static inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
 CV_EXPORTS FLAGS      getFlags();
+
+} // namespace instr
+
+
+namespace samples {
+
+//! @addtogroup core_utils_samples
+// This section describes utility functions for OpenCV samples.
+//
+// @note Implementation of these utilities is not thread-safe.
+//
+//! @{
+
+/** @brief Try to find requested data file
+
+Search directories:
+
+1. Directories passed via `addSamplesDataSearchPath()`
+2. OPENCV_SAMPLES_DATA_PATH_HINT environment variable
+3. OPENCV_SAMPLES_DATA_PATH environment variable
+   If parameter value is not empty and nothing is found then stop searching.
+4. Detects build/install path based on:
+   a. current working directory (CWD)
+   b. and/or binary module location (opencv_core/opencv_world, doesn't work with static linkage)
+5. Scan `<source>/{,data,samples/data}` directories if build directory is detected or the current directory is in source tree.
+6. Scan `<install>/share/OpenCV` directory if install directory is detected.
+
+@see cv::utils::findDataFile
+
+@param relative_path Relative path to data file
+@param required Specify "file not found" handling.
+       If true, function prints information message and raises cv::Exception.
+       If false, function returns empty result
+@param silentMode Disables messages
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+*/
+CV_EXPORTS_W cv::String findFile(const cv::String& relative_path, bool required = true, bool silentMode = false);
+
+CV_EXPORTS_W cv::String findFileOrKeep(const cv::String& relative_path, bool silentMode = false);
+
+inline cv::String findFileOrKeep(const cv::String& relative_path, bool silentMode)
+{
+    cv::String res = findFile(relative_path, false, silentMode);
+    if (res.empty())
+        return relative_path;
+    return res;
 }
+
+/** @brief Override search data path by adding new search location
+
+Use this only to override default behavior
+Passed paths are used in LIFO order.
+
+@param path Path to used samples data
+*/
+CV_EXPORTS_W void addSamplesDataSearchPath(const cv::String& path);
+
+/** @brief Append samples search data sub directory
+
+General usage is to add OpenCV modules name (`<opencv_contrib>/modules/<name>/samples/data` -> `<name>/samples/data` + `modules/<name>/samples/data`).
+Passed subdirectories are used in LIFO order.
+
+@param subdir samples data sub directory
+*/
+CV_EXPORTS_W void addSamplesDataSearchSubDirectory(const cv::String& subdir);
+
+//! @}
+} // namespace samples
 
 namespace utils {
 
