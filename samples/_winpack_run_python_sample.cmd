@@ -30,12 +30,13 @@ GOTO :PYTHON_NOT_FOUND
 :QUERY_PYTHON
 SETLOCAL
 SET PY_VERSION=%1
-FOR /F "tokens=2*" %%A IN ('REG QUERY "HKCU\SOFTWARE\Python\PythonCore\%PY_VERSION%\InstallPath" /reg:64 /ve 2^>NUL ^| FIND "REG_SZ"') DO SET PYTHON_DIR=%%B
+SET PYTHON_DIR=
+CALL :regquery "HKCU\SOFTWARE\Python\PythonCore\%PY_VERSION%\InstallPath" PYTHON_DIR
 IF EXIST "%PYTHON_DIR%\python.exe" (
   SET "PYTHON=%PYTHON_DIR%\python.exe"
   GOTO :QUERY_PYTHON_FOUND
 )
-FOR /F "tokens=2*" %%A IN ('REG QUERY "HKLM\SOFTWARE\Python\PythonCore\%PY_VERSION%\InstallPath" /reg:64 /ve 2^>NUL ^| FIND "REG_SZ"') DO SET PYTHON_DIR=%%B
+CALL :regquery "HKLM\SOFTWARE\Python\PythonCore\%PY_VERSION%\InstallPath" PYTHON_DIR
 IF EXIST "%PYTHON_DIR%\python.exe" (
   SET "PYTHON=%PYTHON_DIR%\python.exe"
   GOTO :QUERY_PYTHON_FOUND
@@ -46,7 +47,7 @@ ENDLOCAL
 EXIT /B 1
 
 :QUERY_PYTHON_FOUND
-ECHO Found Python %PY_VERSION% from Windows Registry
+ECHO Found Python %PY_VERSION% from Windows Registry: %PYTHON%
 ENDLOCAL & SET PYTHON=%PYTHON%
 EXIT /B 0
 
@@ -111,4 +112,13 @@ EXIT /B %result%
   set _dir=%~dp1
   set _dir=%_dir:~0,-1%
   endlocal & set %2=%_dir%
+  EXIT /B 0
+
+:regquery name resultVar
+  SETLOCAL
+  FOR /F "tokens=*" %%A IN ('REG QUERY "%1" /reg:64 /ve 2^>NUL ^| FIND "REG_SZ"') DO SET _val=%%A
+  IF "x%_val%x"=="xx" EXIT /B 1
+  SET _val=%_val:*REG_SZ=%
+  FOR /F "tokens=*" %%A IN ("%_val%") DO SET _val=%%A
+  ENDLOCAL & SET %2=%_val%
   EXIT /B 0
