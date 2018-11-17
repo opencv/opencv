@@ -9,7 +9,7 @@ using namespace cv;
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv,
-                                 "{input   i|../data/building.jpg|input image}"
+                                 "{input   i|building.jpg|input image}"
                                  "{refine  r|false|if true use LSD_REFINE_STD method, if false use LSD_REFINE_NONE method}"
                                  "{canny   c|false|use Canny edge detector}"
                                  "{overlay o|false|show result on input image}"
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 
     parser.printMessage();
 
-    String filename = parser.get<String>("input");
+    String filename = samples::findFile(parser.get<String>("input"));
     bool useRefine = parser.get<bool>("refine");
     bool useCanny = parser.get<bool>("canny");
     bool overlay = parser.get<bool>("overlay");

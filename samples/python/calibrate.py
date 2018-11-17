@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     obj_points = []
     img_points = []
-    h, w = cv.imread(img_names[0], 0).shape[:2]  # TODO: use imquery call to retrieve results
+    h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]  # TODO: use imquery call to retrieve results
 
     def processImage(fn):
         print('processing %s... ' % fn)

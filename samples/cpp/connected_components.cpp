@@ -35,14 +35,14 @@ static void on_trackbar(int, void*)
 
 int main( int argc, const char** argv )
 {
-    CommandLineParser parser(argc, argv, "{@image|../data/stuff.jpg|image for converting to a grayscale}");
+    CommandLineParser parser(argc, argv, "{@image|stuff.jpg|image for converting to a grayscale}");
     parser.about("\nThis program demonstrates connected components and use of the trackbar\n");
     parser.printMessage();
     cout << "\nThe image is converted to grayscale and displayed, another image has a trackbar\n"
             "that controls thresholding and thereby the extracted contours which are drawn in color\n";
 
     String inputImage = parser.get<string>(0);
-    img = imread(inputImage, IMREAD_GRAYSCALE);
+    img = imread(samples::findFile(inputImage), IMREAD_GRAYSCALE);
 
     if(img.empty())
     {

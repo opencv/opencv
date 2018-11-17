@@ -406,7 +406,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < num_images; ++i)
     {
-        full_img = imread(img_names[i]);
+        full_img = imread(samples::findFile(img_names[i]));
         full_img_sizes[i] = full_img.size();
 
         if (full_img.empty())
@@ -727,7 +727,7 @@ int main(int argc, char* argv[])
         LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
-        full_img = imread(img_names[img_idx]);
+        full_img = imread(samples::findFile(img_names[img_idx]));
         if (!is_compose_scale_set)
         {
             if (compose_megapix > 0)

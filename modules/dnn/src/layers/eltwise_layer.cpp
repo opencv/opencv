@@ -98,7 +98,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && (op != SUM || coeffs.empty());
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && (op != SUM || coeffs.empty()));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

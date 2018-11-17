@@ -160,7 +160,7 @@ def draw_camera_boards(ax, camera_matrix, cam_width, cam_height, scale_focal,
 def main():
     parser = argparse.ArgumentParser(description='Plot camera calibration extrinsics.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--calibration', type=str, default="../data/left_intrinsics.yml",
+    parser.add_argument('--calibration', type=str, default='left_intrinsics.yml',
                         help='YAML camera calibration file.')
     parser.add_argument('--cam_width', type=float, default=0.064/2,
                         help='Width/2 of the displayed camera.')
@@ -172,7 +172,7 @@ def main():
                         help='The calibration board is static and the camera is moving.')
     args = parser.parse_args()
 
-    fs = cv.FileStorage(args.calibration, cv.FILE_STORAGE_READ)
+    fs = cv.FileStorage(cv.samples.findFile(args.calibration), cv.FILE_STORAGE_READ)
     board_width = int(fs.getNode('board_width').real())
     board_height = int(fs.getNode('board_height').real())
     square_size = fs.getNode('square_size').real()

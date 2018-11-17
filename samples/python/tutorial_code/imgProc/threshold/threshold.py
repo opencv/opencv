@@ -23,12 +23,12 @@ def Threshold_Demo(val):
 ## [Threshold_Demo]
 
 parser = argparse.ArgumentParser(description='Code for Basic Thresholding Operations tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/stuff.jpg')
+parser.add_argument('--input', help='Path to input image.', default='stuff.jpg')
 args = parser.parse_args()
 
 ## [load]
 # Load an image
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)

@@ -45,13 +45,13 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         hasWeights = blobs.size() == 2 || (blobs.size() == 1 && !hasBias);
-        CV_Assert(inputs.size() == 2 && blobs.empty() || blobs.size() == (int)hasWeights + (int)hasBias);
+        CV_Assert((inputs.size() == 2 && blobs.empty()) || blobs.size() == (int)hasWeights + (int)hasBias);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1;
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE

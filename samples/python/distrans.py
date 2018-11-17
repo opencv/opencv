@@ -24,10 +24,11 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/fruits.jpg'
+        fn = 'fruits.jpg'
     print(__doc__)
 
-    img = cv.imread(fn, 0)
+    fn = cv.samples.findFile(fn)
+    img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
     if img is None:
         print('Failed to load fn:', fn)
         sys.exit(1)

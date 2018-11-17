@@ -236,7 +236,7 @@ CV__DNN_INLINE_NS_BEGIN
         int type;
         Size kernel, stride;
         int pad_l, pad_t, pad_r, pad_b;
-        CV_DEPRECATED Size pad;
+        CV_DEPRECATED_EXTERNAL Size pad;
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;
@@ -578,7 +578,7 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         float pnorm, epsilon;
-        CV_DEPRECATED bool acrossSpatial;
+        CV_DEPRECATED_EXTERNAL bool acrossSpatial;
 
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };

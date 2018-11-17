@@ -794,6 +794,82 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
 #endif
 
+namespace cv {
+
+namespace utils {
+
+//! @addtogroup core_utils
+//! @{
+
+/** @brief Try to find requested data file
+
+Search directories:
+
+1. Directories passed via `addDataSearchPath()`
+2. Check path specified by configuration parameter with "_HINT" suffix (name of environment variable).
+3. Check path specified by configuration parameter (name of environment variable).
+   If parameter value is not empty and nothing is found then stop searching.
+4. Detects build/install path based on:
+   a. current working directory (CWD)
+   b. and/or binary module location (opencv_core/opencv_world, doesn't work with static linkage)
+5. Scan `<source>/{,data}` directories if build directory is detected or the current directory is in source tree.
+6. Scan `<install>/share/OpenCV` directory if install directory is detected.
+
+@param relative_path Relative path to data file
+@param required Specify "file not found" handling.
+       If true, function prints information message and raises cv::Exception.
+       If false, function returns empty result
+@param configuration_parameter specify configuration parameter name. Default NULL value means "OPENCV_DATA_PATH".
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS
+cv::String findDataFile(const cv::String& relative_path, bool required = true,
+                        const char* configuration_parameter = NULL);
+
+/** @overload
+@param relative_path Relative path to data file
+@param configuration_parameter specify configuration parameter name. Default NULL value means "OPENCV_DATA_PATH".
+@param search_paths override addDataSearchPath() settings.
+@param subdir_paths override addDataSearchSubDirectory() settings.
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS
+cv::String findDataFile(const cv::String& relative_path,
+                        const char* configuration_parameter,
+                        const std::vector<String>* search_paths,
+                        const std::vector<String>* subdir_paths);
+
+/** @brief Override default search data path by adding new search location
+
+Use this only to override default behavior
+Passed paths are used in LIFO order.
+
+@param path Path to used samples data
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS void addDataSearchPath(const cv::String& path);
+
+/** @brief Append default search data sub directory
+
+General usage is to add OpenCV modules name (`<opencv_contrib>/modules/<name>/data` -> `modules/<name>/data` + `<name>/data`).
+Passed subdirectories are used in LIFO order.
+
+@param subdir samples data sub directory
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir);
+
+//! @}
+
+} // namespace utils
+} // namespace cv
+
 //! @endcond
 
 #endif // OPENCV_CORE_PRIVATE_HPP

@@ -5,11 +5,11 @@ import numpy as np
 
 def main(argv):
     ## [load]
-    default_file =  "../../../../data/smarties.png"
+    default_file = 'smarties.png'
     filename = argv[0] if len(argv) > 0 else default_file
 
     # Loads an image
-    src = cv.imread(filename, cv.IMREAD_COLOR)
+    src = cv.imread(cv.samples.findFile(filename), cv.IMREAD_COLOR)
 
     # Check if image is loaded fine
     if src is None:

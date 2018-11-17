@@ -20,7 +20,7 @@ static void help(char** argv)
     cout << "\nThis is a demo program shows how perspective transformation applied on an image, \n"
          "Using OpenCV version " << CV_VERSION << endl;
 
-    cout << "\nUsage:\n" << argv[0] << " [image_name -- Default ../data/right.jpg]\n" << endl;
+    cout << "\nUsage:\n" << argv[0] << " [image_name -- Default data/right.jpg]\n" << endl;
 
     cout << "\nHot keys: \n"
          "\tESC, q - quit the program\n"
@@ -45,9 +45,9 @@ bool validation_needed = true;
 int main(int argc, char** argv)
 {
     help(argv);
-    CommandLineParser parser(argc, argv, "{@input| ../data/right.jpg |}");
+    CommandLineParser parser(argc, argv, "{@input| data/right.jpg |}");
 
-    string filename = parser.get<string>("@input");
+    string filename = samples::findFile(parser.get<string>("@input"));
     Mat original_image = imread( filename );
     Mat image;
 

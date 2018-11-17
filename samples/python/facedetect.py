@@ -40,13 +40,13 @@ if __name__ == '__main__':
     except:
         video_src = 0
     args = dict(args)
-    cascade_fn = args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml")
-    nested_fn  = args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml")
+    cascade_fn = args.get('--cascade', "data/haarcascades/haarcascade_frontalface_alt.xml")
+    nested_fn  = args.get('--nested-cascade', "data/haarcascades/haarcascade_eye.xml")
 
-    cascade = cv.CascadeClassifier(cascade_fn)
-    nested = cv.CascadeClassifier(nested_fn)
+    cascade = cv.CascadeClassifier(cv.samples.findFile(cascade_fn))
+    nested = cv.CascadeClassifier(cv.samples.findFile(nested_fn))
 
-    cam = create_capture(video_src, fallback='synth:bg=../data/lena.jpg:noise=0.05')
+    cam = create_capture(video_src, fallback='synth:bg={}:noise=0.05'.format(cv.samples.findFile('samples/data/lena.jpg')))
 
     while True:
         ret, img = cam.read()
