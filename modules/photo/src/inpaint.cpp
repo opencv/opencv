@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/photo/legacy/constants_c.h"
 
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \

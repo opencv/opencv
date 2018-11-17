@@ -783,9 +783,9 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                               Buffer&    scratch)
     {
         // TODO: support kernel height 3, 5, 7, 9, ...
-        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
 
-        int ksz = (ksize == CV_SCHARR)? 3: ksize;
+        int ksz = (ksize == FILTER_SCHARR)? 3: ksize;
 
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
@@ -827,8 +827,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                                   Buffer  &    scratch)
     {
         // TODO: support kernel height 3, 5, 7, 9, ...
-        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
-        int ksz = (ksize == CV_SCHARR) ? 3 : ksize;
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
+        int ksz = (ksize == FILTER_SCHARR) ? 3 : ksize;
 
         int width = in.size.width;
         int chan  = in.chan;
