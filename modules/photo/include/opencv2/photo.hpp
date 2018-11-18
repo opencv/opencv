@@ -61,12 +61,6 @@ camera calibration with multiple exposures and exposure fusion.
 @}
   */
 
-enum InpaintingModes
-{
-    CV_INPAINT_NS      =0,
-    CV_INPAINT_TELEA   =1
-};
-
 namespace cv
 {
 

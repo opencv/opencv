@@ -443,7 +443,7 @@ calculate the derivative. When \f$\texttt{ksize = 1}\f$, the \f$3 \times 1\f$ or
 kernel is used (that is, no Gaussian smoothing is done). `ksize = 1` can only be used for the first
 or the second x- or y- derivatives.
 
-There is also the special value `ksize = CV_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
+There is also the special value `ksize = FILTER_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
 filter that may give more accurate results than the \f$3\times3\f$ Sobel. The Scharr aperture is
 
 \f[\vecthreethree{-3}{0}{3}{-10}{0}{10}{-3}{0}{3}\f]
