@@ -43,6 +43,7 @@
 #define __VIDEOIO_H_
 
 #include "opencv2/videoio.hpp"
+#include "opencv2/videoio/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
