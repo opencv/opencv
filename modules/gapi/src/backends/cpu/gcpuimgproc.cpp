@@ -244,7 +244,6 @@ GAPI_OCV_KERNEL(GCPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
     }
 };
 
-
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
