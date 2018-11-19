@@ -1884,8 +1884,11 @@ Rect_<_Tp>& operator += ( Rect_<_Tp>& a, const Size_<_Tp>& b )
 template<typename _Tp> static inline
 Rect_<_Tp>& operator -= ( Rect_<_Tp>& a, const Size_<_Tp>& b )
 {
-    a.width -= b.width;
-    a.height -= b.height;
+    const _Tp width = a.width - b.width;
+    const _Tp height = a.height - b.height;
+    CV_DbgAssert(width >= 0 && height >= 0);
+    a.width = width;
+    a.height = height;
     return a;
 }
 
@@ -1948,6 +1951,15 @@ template<typename _Tp> static inline
 Rect_<_Tp> operator + (const Rect_<_Tp>& a, const Size_<_Tp>& b)
 {
     return Rect_<_Tp>( a.x, a.y, a.width + b.width, a.height + b.height );
+}
+
+template<typename _Tp> static inline
+Rect_<_Tp> operator - (const Rect_<_Tp>& a, const Size_<_Tp>& b)
+{
+    const _Tp width = a.width - b.width;
+    const _Tp height = a.height - b.height;
+    CV_DbgAssert(width >= 0 && height >= 0);
+    return Rect_<_Tp>( a.x, a.y, width, height );
 }
 
 template<typename _Tp> static inline
