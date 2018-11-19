@@ -69,6 +69,7 @@ protected:
 
 public:
     void updateInCache(View::Cache& cache, int start_log_idx, int nLines) const;
+    void updateOutCache(Buffer::Cache& cache, int start_log_idx, int nLines);
 
     virtual void copyTo(BufferStorageWithBorder &dst, int startLine, int nLines) const = 0;
 
@@ -238,6 +239,8 @@ void debugBufferPriv(const Buffer& buffer, std::ostream &os);
 // like readDone/writeDone in low-level tests
 class GAPI_EXPORTS Buffer::Priv
 {
+    Buffer::Cache m_cache;
+
     int m_writer_lpi       =  1;
 
     cv::GMatDesc m_desc    = cv::GMatDesc{-1,-1,{-1,-1}};
@@ -294,6 +297,8 @@ public:
     inline int writeStart()  const { return m_roi.y; }
     inline int writeEnd()    const { return m_roi.y + m_roi.height; }
     inline int outputLines() const { return m_roi.height; }
+
+    inline const Buffer::Cache& cache() const { return m_cache; }
 };
 
 } // namespace cv::gapi::fluid

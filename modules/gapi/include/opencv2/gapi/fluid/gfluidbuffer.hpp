@@ -91,6 +91,12 @@ private:
 class GAPI_EXPORTS Buffer
 {
 public:
+    struct Cache
+    {
+        std::vector<uint8_t*> m_linePtrs;
+        GMatDesc m_desc;
+    };
+
     // Default constructor (executable creation stage,
     // all following initialization performed in Priv::init())
     Buffer();
@@ -106,7 +112,11 @@ public:
     // Constructor for in/out buffers (for tests)
     Buffer(const cv::gapi::own::Mat &data, bool is_input);
 
-    uint8_t* OutLineB(int index = 0);
+    inline uint8_t* OutLineB(int index = 0)
+    {
+        return m_cache->m_linePtrs[index];
+    }
+
     template<typename T> inline T* OutLine(int index = 0)
     {
         uint8_t* ptr = this->OutLineB(index);
@@ -117,10 +127,10 @@ public:
 
     int linesReady() const;
     void debug(std::ostream &os) const;
-    int length() const;
+    inline int length() const { return m_cache->m_desc.size.width; }
     int lpi() const;  // LPI for WRITER
 
-    const GMatDesc& meta() const;
+    inline const GMatDesc& meta() const { return m_cache->m_desc; }
 
     View mkView(int borderSize, bool ownStorage);
 
@@ -130,7 +140,7 @@ public:
 
 private:
     std::shared_ptr<Priv> m_priv;
-
+    const Cache* m_cache;
 };
 
 } // namespace cv::gapi::fluid

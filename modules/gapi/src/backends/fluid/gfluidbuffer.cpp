@@ -215,6 +215,14 @@ void fluid::BufferStorage::updateInCache(View::Cache& cache, int start_log_idx, 
     }
 }
 
+void fluid::BufferStorage::updateOutCache(Buffer::Cache& cache, int start_log_idx, int nLines)
+{
+    for (int i = 0; i < nLines; i++)
+    {
+        cache.m_linePtrs[i] = ptr(start_log_idx + i);
+    }
+}
+
 void fluid::BufferStorageWithBorder::init(int dtype, int border_size, Border border)
 {
     switch(border.type)
@@ -522,6 +530,8 @@ void fluid::Buffer::Priv::init(const cv::GMatDesc &desc,
     m_readStart  = readStartPos;
     m_roi        = roi == own::Rect{} ? own::Rect{ 0, 0, desc.size.width, desc.size.height }
                                       : roi;
+    m_cache.m_linePtrs.resize(writer_lpi);
+    m_cache.m_desc = desc;
 }
 
 void fluid::Buffer::Priv::allocate(BorderOpt border,
@@ -543,7 +553,9 @@ void fluid::Buffer::Priv::allocate(BorderOpt border,
                               border);
 
     // Finally, initialize carets
-    m_write_caret = 0;
+    m_write_caret = writeStart();
+
+    m_storage->updateOutCache(m_cache, m_write_caret, m_writer_lpi);
 }
 
 void fluid::Buffer::Priv::bindTo(const cv::gapi::own::Mat &data, bool is_input)
@@ -564,6 +576,8 @@ void fluid::Buffer::Priv::bindTo(const cv::gapi::own::Mat &data, bool is_input)
     m_is_input    = is_input;
     m_write_caret = is_input ? writeEnd(): writeStart();
     // NB: views remain the same!
+
+    m_storage->updateOutCache(m_cache, m_write_caret, m_writer_lpi);
 }
 
 bool fluid::Buffer::Priv::full() const
@@ -592,11 +606,14 @@ void fluid::Buffer::Priv::writeDone()
     // write caret may exceed logical buffer size
     m_write_caret += m_writer_lpi;
     // FIXME: add consistency check!
+
+    m_storage->updateOutCache(m_cache, m_write_caret, m_writer_lpi);
 }
 
 void fluid::Buffer::Priv::reset()
 {
     m_write_caret = m_is_input ? writeEnd() : writeStart();
+    m_storage->updateOutCache(m_cache, m_write_caret, m_writer_lpi);
 }
 
 int fluid::Buffer::Priv::size() const
@@ -640,11 +657,13 @@ int fluid::Buffer::Priv::lpi() const
 
 fluid::Buffer::Buffer()
     : m_priv(new Priv())
+    , m_cache(&m_priv->cache())
 {
 }
 
 fluid::Buffer::Buffer(const cv::GMatDesc &desc)
     : m_priv(new Priv())
+    , m_cache(&m_priv->cache())
 {
     int lineConsumption = 1;
     int border = 0, skew = 0, wlpi = 1, readStart = 0;
@@ -660,6 +679,7 @@ fluid::Buffer::Buffer(const cv::GMatDesc &desc,
                       int wlpi,
                       BorderOpt border)
     : m_priv(new Priv())
+    , m_cache(&m_priv->cache())
 {
     int readStart = 0;
     cv::gapi::own::Rect roi = {0, 0, desc.size.width, desc.size.height};
@@ -669,6 +689,7 @@ fluid::Buffer::Buffer(const cv::GMatDesc &desc,
 
 fluid::Buffer::Buffer(const cv::gapi::own::Mat &data, bool is_input)
     : m_priv(new Priv())
+    , m_cache(&m_priv->cache())
 {
     int wlpi = 1, readStart = 0;
     cv::gapi::own::Rect roi{0, 0, data.cols, data.rows};
@@ -676,29 +697,14 @@ fluid::Buffer::Buffer(const cv::gapi::own::Mat &data, bool is_input)
     m_priv->bindTo(data, is_input);
 }
 
-uint8_t* fluid::Buffer::Buffer::OutLineB(int index)
-{
-    return m_priv->OutLineB(index);
-}
-
 int fluid::Buffer::linesReady() const
 {
     return m_priv->linesReady();
 }
 
-int fluid::Buffer::length() const
-{
-    return meta().size.width;
-}
-
 int fluid::Buffer::lpi() const
 {
     return m_priv->lpi();
-}
-
-const GMatDesc& fluid::Buffer::meta() const
-{
-    return m_priv->meta();
 }
 
 fluid::View::View(Priv* p)
