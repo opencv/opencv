@@ -116,6 +116,8 @@ class GFluidExecutable final: public GIslandExecutable
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
 
+    std::vector<FluidAgent*> m_script;
+
     using Magazine = detail::magazine<cv::gapi::own::Scalar>;
     Magazine m_res;
 

@@ -1032,6 +1032,10 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
             GAPI_LOG_INFO(NULL, stream.str());
         }
     }
+
+    // FIXME: calculate the size (lpi * ..)
+    m_script.clear();
+    m_script.reserve(10000);
 }
 
 void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &args)
@@ -1136,24 +1140,36 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &&input_objs,
     //       and output buffers get "writeDone()"
     //   - if there's not enough data, Agent is skipped
     // Yes, THAT easy!
-    bool complete = true;
-    do {
-        complete = true;
-        bool work_done=false;
-        for (auto &agent : m_agents)
-        {
-            // agent->debug(std::cout);
-            if (!agent->done())
+
+    if (m_script.empty())
+    {
+        bool complete = true;
+        do {
+            complete = true;
+            bool work_done=false;
+            for (auto &agent : m_agents)
             {
-                if (agent->canWork())
+                // agent->debug(std::cout);
+                if (!agent->done())
                 {
-                    agent->doWork(); work_done=true;
+                    if (agent->canWork())
+                    {
+                        agent->doWork(); work_done=true;
+                        m_script.push_back(agent.get());
+                    }
+                    if (!agent->done())   complete = false;
                 }
-                if (!agent->done())   complete = false;
             }
+            GAPI_Assert(work_done || complete);
+        } while (!complete); // FIXME: number of iterations can be calculated statically
+    }
+    else
+    {
+        for (auto &agent : m_script)
+        {
+            agent->doWork();
         }
-        GAPI_Assert(work_done || complete);
-    } while (!complete); // FIXME: number of iterations can be calculated statically
+    }
 }
 
 // FIXME: these passes operate on graph global level!!!
