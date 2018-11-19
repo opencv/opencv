@@ -41,6 +41,22 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-YUV, YUV-to-RGB
+//
+//--------------------------------------
+
+void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef[5])
+{
+    CV_CPU_DISPATCH(run_rgb2yuv_impl, (out, in, width, coef), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4])
+{
+    CV_CPU_DISPATCH(run_yuv2rgb_impl, (out, in, width, coef), CV_CPU_DISPATCH_MODES_ALL);
+}
+
 //---------------------
 //
 // Fluid kernels: Sobel

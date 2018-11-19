@@ -23,6 +23,16 @@ namespace fluid {
 void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
                        float coef_r, float coef_g, float coef_b);
 
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-YUV, YUV-to-RGB
+//
+//--------------------------------------
+
+void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef[5]);
+
+void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4]);
+
 //---------------------
 //
 // Fluid kernels: Sobel

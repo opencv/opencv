@@ -126,19 +126,7 @@ static void run_rgb2yuv(Buffer &dst, const View &src, const float coef[5])
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
-    for (int w=0; w < width; w++)
-    {
-        uchar r = in[3*w    ];
-        uchar g = in[3*w + 1];
-        uchar b = in[3*w + 2];
-        float y = coef[0]*r + coef[1]*g + coef[2]*b;
-        float u = coef[3]*(b - y) + 128;
-        float v = coef[4]*(r - y) + 128;
-        out[3*w    ] = saturate<uchar>(y, roundf);
-        out[3*w + 1] = saturate<uchar>(u, roundf);
-        out[3*w + 2] = saturate<uchar>(v, roundf);
-    }
+    run_rgb2yuv_impl(out, in, width, coef);
 }
 
 static void run_yuv2rgb(Buffer &dst, const View &src, const float coef[4])
@@ -154,19 +142,7 @@ static void run_yuv2rgb(Buffer &dst, const View &src, const float coef[4])
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
-    for (int w=0; w < width; w++)
-    {
-        uchar y = in[3*w    ];
-        int   u = in[3*w + 1] - 128;
-        int   v = in[3*w + 2] - 128;
-        float r = y             + coef[0]*v;
-        float g = y + coef[1]*u + coef[2]*v;
-        float b = y + coef[3]*u;
-        out[3*w    ] = saturate<uchar>(r, roundf);
-        out[3*w + 1] = saturate<uchar>(g, roundf);
-        out[3*w + 2] = saturate<uchar>(b, roundf);
-    }
+    run_yuv2rgb_impl(out, in, width, coef);
 }
 
 GAPI_FLUID_KERNEL(GFluidRGB2YUV, cv::gapi::imgproc::GRGB2YUV, false)
