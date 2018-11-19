@@ -109,19 +109,29 @@ cv::gapi::GBackend cv::gapi::fluid::backend()
 // FluidAgent implementation ///////////////////////////////////////////////////
 
 namespace cv { namespace gimpl {
+struct FluidMapper
+{
+    FluidMapper(double ratio, int lpi) : m_ratio(ratio), m_lpi(lpi) {}
+    virtual ~FluidMapper() = default;
+    virtual int firstWindow(int outCoord, int lpi) const = 0;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const = 0;
+
+protected:
+    double m_ratio = 0.0;
+    int    m_lpi   = 0;
+};
+
 struct FluidDownscaleMapper : public FluidMapper
 {
     virtual int firstWindow(int outCoord, int lpi) const override;
-    virtual int nextWindow(int outCoord, int lpi) const override;
-    virtual int linesRead(int outCoord) const override;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const override;
     using FluidMapper::FluidMapper;
 };
 
 struct FluidUpscaleMapper : public FluidMapper
 {
     virtual int firstWindow(int outCoord, int lpi) const override;
-    virtual int nextWindow(int outCoord, int lpi) const override;
-    virtual int linesRead(int outCoord) const override;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const override;
     FluidUpscaleMapper(double ratio, int lpi, int inHeight) : FluidMapper(ratio, lpi), m_inHeight(inHeight) {}
 private:
     int m_inHeight = 0;
@@ -131,8 +141,7 @@ struct FluidFilterAgent : public FluidAgent
 {
 private:
     virtual int firstWindow() const override;
-    virtual int nextWindow() const override;
-    virtual int linesRead() const override;
+    virtual std::pair<int,int> linesReadAndnextWindow() const override;
     virtual void setRatio(double) override { /* nothing */ }
 public:
     using FluidAgent::FluidAgent;
@@ -142,8 +151,7 @@ struct FluidResizeAgent : public FluidAgent
 {
 private:
     virtual int firstWindow() const override;
-    virtual int nextWindow() const override;
-    virtual int linesRead() const override;
+    virtual std::pair<int,int> linesReadAndnextWindow() const override;
     virtual void setRatio(double ratio) override;
 
     std::unique_ptr<FluidMapper> m_mapper;
@@ -269,35 +277,35 @@ static int borderSize(const cv::GFluidKernel& k)
     }
 }
 
-double inCoord(int outIdx, double ratio)
+inline double inCoord(int outIdx, double ratio)
 {
     return outIdx * ratio;
 }
 
-int windowStart(int outIdx, double ratio)
+inline int windowStart(int outIdx, double ratio)
 {
     return static_cast<int>(inCoord(outIdx, ratio) + 1e-3);
 }
 
-int windowEnd(int outIdx, double ratio)
+inline int windowEnd(int outIdx, double ratio)
 {
     return static_cast<int>(std::ceil(inCoord(outIdx + 1, ratio) - 1e-3));
 }
 
-double inCoordUpscale(int outCoord, double ratio)
+inline double inCoordUpscale(int outCoord, double ratio)
 {
     // Calculate the projection of output pixel's center
     return (outCoord + 0.5) * ratio - 0.5;
 }
 
-int upscaleWindowStart(int outCoord, double ratio)
+inline int upscaleWindowStart(int outCoord, double ratio)
 {
     int start = static_cast<int>(inCoordUpscale(outCoord, ratio));
     GAPI_DbgAssert(start >= 0);
     return start;
 }
 
-int upscaleWindowEnd(int outCoord, double ratio, int inSz)
+inline int upscaleWindowEnd(int outCoord, double ratio, int inSz)
 {
     int end = static_cast<int>(std::ceil(inCoordUpscale(outCoord, ratio)) + 1);
     if (end > inSz)
@@ -313,16 +321,19 @@ int cv::gimpl::FluidDownscaleMapper::firstWindow(int outCoord, int lpi) const
     return windowEnd(outCoord + lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
 }
 
-int cv::gimpl::FluidDownscaleMapper::nextWindow(int outCoord, int lpi) const
+std::pair<int,int> cv::gimpl::FluidDownscaleMapper::linesReadAndNextWindow(int outCoord, int lpi) const
 {
     auto nextStartIdx = outCoord + 1 + m_lpi - 1;
     auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return windowEnd(nextEndIdx, m_ratio) - windowStart(nextStartIdx, m_ratio);
-}
 
-int cv::gimpl::FluidDownscaleMapper::linesRead(int outCoord) const
-{
-    return windowStart(outCoord + 1 + m_lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
+    auto currStart = windowStart(outCoord, m_ratio);
+    auto nextStart = windowStart(nextStartIdx, m_ratio);
+    auto nextEnd   = windowEnd(nextEndIdx, m_ratio);
+
+    auto lines_read = nextStart - currStart;
+    auto next_window = nextEnd - nextStart;
+
+    return std::make_pair(lines_read, next_window);
 }
 
 int cv::gimpl::FluidUpscaleMapper::firstWindow(int outCoord, int lpi) const
@@ -330,16 +341,19 @@ int cv::gimpl::FluidUpscaleMapper::firstWindow(int outCoord, int lpi) const
     return upscaleWindowEnd(outCoord + lpi - 1, m_ratio, m_inHeight) - upscaleWindowStart(outCoord, m_ratio);
 }
 
-int cv::gimpl::FluidUpscaleMapper::nextWindow(int outCoord, int lpi) const
+std::pair<int,int> cv::gimpl::FluidUpscaleMapper::linesReadAndNextWindow(int outCoord, int lpi) const
 {
     auto nextStartIdx = outCoord + 1 + m_lpi - 1;
     auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return upscaleWindowEnd(nextEndIdx, m_ratio, m_inHeight) - upscaleWindowStart(nextStartIdx, m_ratio);
-}
 
-int cv::gimpl::FluidUpscaleMapper::linesRead(int outCoord) const
-{
-    return upscaleWindowStart(outCoord + 1 + m_lpi - 1, m_ratio) - upscaleWindowStart(outCoord, m_ratio);
+    auto currStart = upscaleWindowStart(outCoord, m_ratio);
+    auto nextStart = upscaleWindowStart(nextStartIdx, m_ratio);
+    auto nextEnd   = upscaleWindowEnd(nextEndIdx, m_ratio, m_inHeight);
+
+    auto lines_read = nextStart - currStart;
+    auto next_window = nextEnd - nextStart;
+
+    return std::make_pair(lines_read, next_window);
 }
 
 int cv::gimpl::FluidFilterAgent::firstWindow() const
@@ -347,15 +361,10 @@ int cv::gimpl::FluidFilterAgent::firstWindow() const
     return k.m_window + k.m_lpi - 1;
 }
 
-int cv::gimpl::FluidFilterAgent::nextWindow() const
+std::pair<int,int> cv::gimpl::FluidFilterAgent::linesReadAndnextWindow() const
 {
     int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines - k.m_lpi);
-    return k.m_window - 1 + lpi;
-}
-
-int cv::gimpl::FluidFilterAgent::linesRead() const
-{
-    return k.m_lpi;
+    return std::make_pair(k.m_lpi, k.m_window - 1 + lpi);
 }
 
 int cv::gimpl::FluidResizeAgent::firstWindow() const
@@ -365,17 +374,11 @@ int cv::gimpl::FluidResizeAgent::firstWindow() const
     return m_mapper->firstWindow(outIdx, lpi);
 }
 
-int cv::gimpl::FluidResizeAgent::nextWindow() const
+std::pair<int,int> cv::gimpl::FluidResizeAgent::linesReadAndnextWindow() const
 {
     auto outIdx = out_buffers[0]->priv().y();
     auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
-    return m_mapper->nextWindow(outIdx, lpi);
-}
-
-int cv::gimpl::FluidResizeAgent::linesRead() const
-{
-    auto outIdx = out_buffers[0]->priv().y();
-    return m_mapper->linesRead(outIdx);
+    return m_mapper->linesReadAndNextWindow(outIdx, lpi);
 }
 
 void cv::gimpl::FluidResizeAgent::setRatio(double ratio)
@@ -439,7 +442,11 @@ void cv::gimpl::FluidAgent::doWork()
 
     for (auto& in_view : in_views)
     {
-        if (in_view) in_view.priv().readDone(linesRead(), nextWindow());
+        if (in_view)
+        {
+            auto pair = linesReadAndnextWindow();
+            in_view.priv().readDone(pair.first, pair.second);
+        };
     }
 
     for (auto out_buf : out_buffers)
