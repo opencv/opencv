@@ -764,6 +764,13 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float64x2, vreinterpretq_f64_u64, f64, u64)
 #endif
 
+inline v_float32x4 v_not_nan(const v_float32x4& a)
+{ return v_float32x4(vreinterpretq_f32_u32(vceqq_f32(a.val, a.val))); }
+#if CV_SIMD128_64F
+inline v_float64x2 v_not_nan(const v_float64x2& a)
+{ return v_float64x2(vreinterpretq_f64_u64(vceqq_f64(a.val, a.val))); }
+#endif
+
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint8x16, v_add_wrap, vaddq_u8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_int8x16, v_add_wrap, vaddq_s8)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_uint16x8, v_add_wrap, vaddq_u16)

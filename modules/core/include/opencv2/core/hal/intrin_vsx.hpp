@@ -607,6 +607,11 @@ OPENCV_HAL_IMPL_VSX_INT_CMP_OP(v_float64x2)
 OPENCV_HAL_IMPL_VSX_INT_CMP_OP(v_uint64x2)
 OPENCV_HAL_IMPL_VSX_INT_CMP_OP(v_int64x2)
 
+inline v_float32x4 v_not_nan(const v_float32x4& a)
+{ return v_float32x4(vec_cmpeq(a.val, a.val)); }
+inline v_float64x2 v_not_nan(const v_float64x2& a)
+{ return v_float64x2(vec_cmpeq(a.val, a.val)); }
+
 /** min/max **/
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_min, vec_min)
 OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_max, vec_max)
