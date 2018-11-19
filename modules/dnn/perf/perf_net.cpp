@@ -42,7 +42,7 @@ public:
         }
         if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         {
-            if (!checkMyriadTarget())
+            if (!checkIETarget(DNN_TARGET_MYRIAD))
             {
                 throw SkipTestException("Myriad is not available/disabled in OpenCV");
             }
