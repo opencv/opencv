@@ -5,7 +5,7 @@ This example illustrates how to use cv.HoughCircles() function.
 
 Usage:
     houghcircles.py [<image_name>]
-    image argument defaults to ../data/board.jpg
+    image argument defaults to board.jpg
 '''
 
 # Python 2/3 compatibility
@@ -21,9 +21,9 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except IndexError:
-        fn = "../data/board.jpg"
+        fn = 'board.jpg'
 
-    src = cv.imread(fn, 1)
+    src = cv.imread(cv.samples.findFile(fn))
     img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
     img = cv.medianBlur(img, 5)
     cimg = src.copy() # numpy function

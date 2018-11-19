@@ -3,7 +3,7 @@
 * findTransformECC that implements the image alignment ECC algorithm
 *
 *
-* The demo loads an image (defaults to ../data/fruits.jpg) and it artificially creates
+* The demo loads an image (defaults to fruits.jpg) and it artificially creates
 * a template image based on the given motion type. When two images are given,
 * the first image is the input image and the second one defines the template image.
 * In the latter case, you can also parse the warp's initialization.
@@ -44,7 +44,7 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
 
 
 const std::string keys =
-    "{@inputImage    | ../data/fruits.jpg | input image filename }"
+    "{@inputImage    | fruits.jpg    | input image filename }"
     "{@templateImage |               | template image filename (optional)}"
     "{@inputWarp     |               | input warp (matrix) filename (optional)}"
     "{n numOfIter    | 50            | ECC's iterations }"
@@ -65,10 +65,10 @@ static void help(void)
         " are given, the initialization of the warp by command line parsing is possible. "
         "If inputWarp is missing, the identity transformation initializes the algorithm. \n" << endl;
 
-    cout << "\nUsage example (one image): \n./ecc ../data/fruits.jpg -o=outWarp.ecc "
+    cout << "\nUsage example (one image): \n./image_alignment fruits.jpg -o=outWarp.ecc "
         "-m=euclidean -e=1e-6 -N=70 -v=1 \n" << endl;
 
-    cout << "\nUsage example (two images with initialization): \n./ecc yourInput.png yourTemplate.png "
+    cout << "\nUsage example (two images with initialization): \n./image_alignment yourInput.png yourTemplate.png "
         "yourInitialWarp.ecc -o=outWarp.ecc -m=homography -e=1e-6 -N=70 -v=1 -w=yourFinalImage.png \n" << endl;
 
 }
@@ -212,7 +212,7 @@ int main (const int argc, const char * argv[])
     else
         mode_temp = MOTION_HOMOGRAPHY;
 
-    Mat inputImage = imread(imgFile,0);
+    Mat inputImage = imread(samples::findFile(imgFile), IMREAD_GRAYSCALE);
     if (inputImage.empty())
     {
         cerr << "Unable to load the inputImage" <<  endl;
@@ -224,7 +224,7 @@ int main (const int argc, const char * argv[])
 
     if (tempImgFile!="") {
         inputImage.copyTo(target_image);
-        template_image = imread(tempImgFile,0);
+        template_image = imread(samples::findFile(tempImgFile), IMREAD_GRAYSCALE);
         if (template_image.empty()){
             cerr << "Unable to load the template image" << endl;
             return -1;

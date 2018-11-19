@@ -12,6 +12,10 @@ specific CV algorithm. G-API provides means to define CV operations,
 construct graphs (in form of expressions) using it, and finally
 implement and run the operations for a particular backend.
 
+@note G-API is a new module and now is in active development. It's API
+is volatile at the moment and there may be minor but
+compatibility-breaking changes in the future.
+
 # Contents
 
 G-API documentation is organized into the following chapters:
@@ -103,7 +107,7 @@ There is a number important concepts can be outlines with this examle:
 
 <!-- FIXME: The above operator|() link links to MatExpr not GAPI -->
 
-See Tutorial[TBD] and Porting examples[TBD] to learn more on various
-G-API features and concepts.
+See [tutorials and porting examples](@ref tutorial_table_of_content_gapi)
+to learn more on various G-API features and concepts.
 
 <!-- TODO Add chapter on declaration, compilation, execution -->

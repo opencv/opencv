@@ -92,7 +92,7 @@ public class Features2dTest extends OpenCVTestCase {
         writeFile(extractorCfgFile, extractorCfg);
         extractor.read(extractorCfgFile);
 
-        Mat imgTrain = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
+        Mat imgTrain = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_GRAYSCALE);
         Mat imgQuery = imgTrain.submat(new Range(0, imgTrain.rows() - 100), Range.all());
 
         MatOfKeyPoint trainKeypoints = new MatOfKeyPoint();

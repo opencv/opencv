@@ -8,8 +8,9 @@
 #include "test_precomp.hpp"
 #include "api/gcomputation_priv.hpp"
 
-#include <backends/fluid/gfluidcore.hpp>
-#include <backends/fluid/gfluidimgproc.hpp>
+#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include "opencv2/gapi/fluid/core.hpp"
+#include "opencv2/gapi/fluid/imgproc.hpp"
 
 namespace opencv_test
 {

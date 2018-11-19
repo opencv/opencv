@@ -91,7 +91,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4;
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE

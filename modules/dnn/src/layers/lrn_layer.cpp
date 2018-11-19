@@ -93,8 +93,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && (preferableTarget != DNN_TARGET_MYRIAD || type == CHANNEL_NRM) ||
-               backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && (preferableTarget != DNN_TARGET_MYRIAD || type == CHANNEL_NRM)) ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
     }
 
 #ifdef HAVE_OPENCL

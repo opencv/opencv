@@ -1,6 +1,4 @@
 /*
- * starter_imagelist.cpp
- *
  *  Created on: Nov 23, 2010
  *      Author: Ethan Rublee
  *
@@ -16,10 +14,7 @@
 using namespace cv;
 using namespace std;
 
-//hide the local functions in an unnamed namespace
-namespace
-{
-void help(char** av)
+static void help(char** av)
 {
   cout << "\nThis program gets you started being able to read images from a list in a file\n"
           "Usage:\n./" << av[0] << " image_list.yaml\n"
@@ -30,7 +25,7 @@ void help(char** av)
         "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
 }
 
-bool readStringList(const string& filename, vector<string>& l)
+static bool readStringList(const string& filename, vector<string>& l)
 {
   l.resize(0);
   FileStorage fs(filename, FileStorage::READ);
@@ -45,7 +40,7 @@ bool readStringList(const string& filename, vector<string>& l)
   return true;
 }
 
-int process(vector<string> images)
+static int process(const vector<string>& images)
 {
     namedWindow("image", WINDOW_KEEPRATIO); //resizable window;
     for (size_t i = 0; i < images.size(); i++)
@@ -53,11 +48,9 @@ int process(vector<string> images)
         Mat image = imread(images[i], IMREAD_GRAYSCALE); // do grayscale processing?
         imshow("image",image);
         cout << "Press a key to see the next image in the list." << endl;
-        waitKey(); // wait indefinitely for a key to be pressed
+        waitKey(); // wait infinitely for a key to be pressed
     }
     return 0;
-}
-
 }
 
 int main(int ac, char** av)

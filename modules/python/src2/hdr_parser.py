@@ -432,7 +432,7 @@ class CppHeaderParser(object):
         # it means class methods, not instance methods
         decl_str = self.batch_replace(decl_str, [("static inline", ""), ("inline", ""),\
             ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("CV_INLINE", ""),
-            ("CV_DEPRECATED", "")]).strip()
+            ("CV_DEPRECATED", ""), ("CV_DEPRECATED_EXTERNAL", "")]).strip()
 
 
         if decl_str.strip().startswith('virtual'):

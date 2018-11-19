@@ -8,13 +8,7 @@
 
 #include "gfluidimgproc_func.hpp"
 #include "gfluidimgproc_func.simd.hpp"
-#if 1
-  // NB: workaround for CV_SIMD bug (or feature?):
-  // - dynamic dispatcher assumes *.simd.hpp is directly in src dir
-  #include "backends/fluid/gfluidimgproc_func.simd_declarations.hpp"
-#else
-  #include                "gfluidimgproc_func.simd_declarations.hpp"
-#endif
+#include "backends/fluid/gfluidimgproc_func.simd_declarations.hpp"
 
 #include "gfluidutils.hpp"
 
@@ -32,6 +26,26 @@
 namespace cv {
 namespace gapi {
 namespace fluid {
+
+//----------------------------------
+//
+// Fluid kernels: RGB2Gray, BGR2Gray
+//
+//----------------------------------
+
+void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
+                       float coef_r, float coef_g, float coef_b)
+{
+    CV_CPU_DISPATCH(run_rgb2gray_impl,
+        (out, in, width, coef_r, coef_g, coef_b),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+//---------------------
+//
+// Fluid kernels: Sobel
+//
+//---------------------
 
 #define RUN_SOBEL_ROW(DST, SRC)                                          \
 void run_sobel_row(DST out[], const SRC *in[], int width, int chan,      \

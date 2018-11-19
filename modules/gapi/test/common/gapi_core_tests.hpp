@@ -146,6 +146,8 @@ struct ConcatVertVecTest : public TestWithParam<std::tuple<int, cv::Size, cv::GC
 struct ConcatHorVecTest  : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
 struct LUTTest           : public TestParams<std::tuple<int, int, cv::Size,bool, cv::GCompileArgs>> {};
 struct ConvertToTest     : public TestParams<std::tuple<int, int, cv::Size, cv::GCompileArgs>> {};
+struct PhaseTest         : public TestParams<std::tuple<int, cv::Size, bool, cv::GCompileArgs>> {};
+struct SqrtTest          : public TestParams<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

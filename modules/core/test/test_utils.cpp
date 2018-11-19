@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -281,6 +282,23 @@ TEST(CommandLineParser, testScalar)
     EXPECT_EQ(parser.get<Scalar>("s3"), Scalar(1.1, 2.2, 3));
     EXPECT_EQ(parser.get<Scalar>("s4"), Scalar(-4.2, 1, 0, 3));
     EXPECT_EQ(parser.get<Scalar>("s5"), Scalar(5, -4, 3, 2));
+}
+
+TEST(Samples, findFile)
+{
+    cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
+    cv::String path;
+    ASSERT_NO_THROW(path = samples::findFile("lena.jpg", false));
+    EXPECT_NE(std::string(), path.c_str());
+    cv::utils::logging::setLogLevel(prev);
+}
+
+TEST(Samples, findFile_missing)
+{
+    cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
+    cv::String path;
+    ASSERT_ANY_THROW(path = samples::findFile("non-existed.file", true));
+    cv::utils::logging::setLogLevel(prev);
 }
 
 }} // namespace

@@ -86,6 +86,10 @@ def findFile(filename):
         if os.path.exists(filename):
             return filename
 
+        fpath = cv.samples.findFile(filename, False)
+        if fpath:
+            return fpath
+
         samplesDataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                       '..',
                                       'data',

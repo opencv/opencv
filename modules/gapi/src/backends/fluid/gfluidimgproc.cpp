@@ -19,10 +19,10 @@
 
 #include "opencv2/gapi/fluid/gfluidbuffer.hpp"
 #include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include "opencv2/gapi/fluid/imgproc.hpp"
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
-#include "gfluidimgproc.hpp"
 #include "gfluidutils.hpp"
 
 #include "gfluidimgproc_func.hpp"
@@ -60,20 +60,15 @@ static void run_rgb2gray(Buffer &dst, const View &src, float coef_r, float coef_
     GAPI_Assert(dst.meta().chan == 1);
     GAPI_Assert(src.length() == dst.length());
 
+    GAPI_Assert(coef_r < 1 && coef_g < 1 && coef_b < 1);
+    GAPI_Assert(std::abs(coef_r + coef_g + coef_b - 1) < 0.001);
+
     const auto *in  = src.InLine<uchar>(0);
           auto *out = dst.OutLine<uchar>();
 
     int width = dst.length();
 
-    // TODO: Vectorize for SIMD
-    for (int w=0; w < width; w++)
-    {
-        uchar r = in[3*w    ];
-        uchar g = in[3*w + 1];
-        uchar b = in[3*w + 2];
-        float result = coef_r*r + coef_g*g + coef_b*b;
-        out[w] = saturate<uchar>(result, roundf);
-    }
+    run_rgb2gray_impl(out, in, width, coef_r, coef_g, coef_b);
 }
 
 GAPI_FLUID_KERNEL(GFluidRGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom, false)
@@ -788,9 +783,9 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                               Buffer&    scratch)
     {
         // TODO: support kernel height 3, 5, 7, 9, ...
-        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
 
-        int ksz = (ksize == CV_SCHARR)? 3: ksize;
+        int ksz = (ksize == FILTER_SCHARR)? 3: ksize;
 
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
@@ -832,8 +827,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
                                   Buffer  &    scratch)
     {
         // TODO: support kernel height 3, 5, 7, 9, ...
-        GAPI_Assert(ksize == 3 || ksize == CV_SCHARR);
-        int ksz = (ksize == CV_SCHARR) ? 3 : ksize;
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
+        int ksz = (ksize == FILTER_SCHARR) ? 3 : ksize;
 
         int width = in.size.width;
         int chan  = in.chan;

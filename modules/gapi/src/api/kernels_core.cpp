@@ -104,6 +104,11 @@ std::tuple<GMat, GMat> cartToPolar(const GMat& x, const GMat& y,
     return core::GCartToPolar::on(x, y, angleInDegrees);
 }
 
+GMat phase(const GMat &x, const GMat &y, bool angleInDegrees)
+{
+    return core::GPhase::on(x, y, angleInDegrees);
+}
+
 GMat cmpGT(const GMat& src1, const GMat& src2)
 {
     return core::GCmpGT::on(src1, src2);
@@ -343,6 +348,11 @@ GMat LUT(const GMat& src, const Mat& lut)
 GMat convertTo(const GMat& m, int rtype, double alpha, double beta)
 {
     return core::GConvertTo::on(m, rtype, alpha, beta);
+}
+
+GMat sqrt(const GMat& src)
+{
+    return core::GSqrt::on(src);
 }
 
 } //namespace gapi

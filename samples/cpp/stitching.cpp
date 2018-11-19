@@ -95,7 +95,7 @@ int parseCmdArgs(int argc, char** argv)
         }
         else
         {
-            Mat img = imread(argv[i]);
+            Mat img = imread(samples::findFile(argv[i]));
             if (img.empty())
             {
                 cout << "Can't read image '" << argv[i] << "'\n";

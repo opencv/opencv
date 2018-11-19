@@ -95,7 +95,7 @@ void mouseHandler(int event, int x, int y, int, void*)
 
 int main(int argc, char **argv)
 {
-    CommandLineParser parser(argc, argv, "{@input | ../data/lena.jpg | input image}");
+    CommandLineParser parser(argc, argv, "{@input | lena.jpg | input image}");
     parser.about("This program demonstrates using mouse events\n");
     parser.printMessage();
     cout << "\n\tleft mouse button - set a point to create mask shape\n"
@@ -103,13 +103,13 @@ int main(int argc, char **argv)
         "\tmiddle mouse button - reset\n";
     String input_image = parser.get<String>("@input");
 
-    src = imread(input_image);
+    src = imread(samples::findFile(input_image));
 
     if (src.empty())
-        {
+    {
         printf("Error opening image: %s\n", input_image.c_str());
         return 0;
-        }
+    }
 
     namedWindow("Source", WINDOW_AUTOSIZE);
     setMouseCallback("Source", mouseHandler, NULL);

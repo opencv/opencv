@@ -31,9 +31,23 @@ namespace gapi
 {
 namespace gpu
 {
+    /**
+     * \addtogroup gapi_std_backends G-API Standard backends
+     * @{
+     */
+    /**
+     * @brief Get a reference to GPU backend.
+     *
+     * At the moment, the GPU backend is built atop of OpenCV
+     * "Transparent API" (T-API), see cv::UMat for details.
+     *
+     * @sa gapi_std_backends
+     */
     GAPI_EXPORTS cv::gapi::GBackend backend();
+    /** @} */
 } // namespace gpu
 } // namespace gapi
+
 
 // Represents arguments which are passed to a wrapped GPU function
 // FIXME: put into detail?

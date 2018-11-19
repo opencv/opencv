@@ -128,7 +128,7 @@ if(TARGET opencv_test_gapi)
     )
 
     set(test_srcs
-      ${cl_kernels_test} 
+      ${cl_kernels_test}
       "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME_TEST}.cpp"
       "${CMAKE_CURRENT_BINARY_DIR}/${OCL_NAME_TEST}.hpp"
     )

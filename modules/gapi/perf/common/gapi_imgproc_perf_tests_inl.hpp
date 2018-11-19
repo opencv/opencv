@@ -602,7 +602,7 @@ PERF_TEST_P_(RGB2GrayPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -640,7 +640,7 @@ PERF_TEST_P_(BGR2GrayPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////

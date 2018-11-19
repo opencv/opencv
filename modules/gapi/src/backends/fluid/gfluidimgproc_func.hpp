@@ -14,6 +14,15 @@ namespace cv {
 namespace gapi {
 namespace fluid {
 
+//----------------------------------
+//
+// Fluid kernels: RGB2Gray, BGR2Gray
+//
+//----------------------------------
+
+void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
+                       float coef_r, float coef_g, float coef_b);
+
 //---------------------
 //
 // Fluid kernels: Sobel

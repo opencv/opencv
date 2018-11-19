@@ -181,7 +181,8 @@ CV__DNN_INLINE_NS_BEGIN
          * If this method is called after network has allocated all memory for input and output blobs
          * and before inferencing.
          */
-        CV_DEPRECATED virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
+        CV_DEPRECATED_EXTERNAL
+        virtual void finalize(const std::vector<Mat*> &input, std::vector<Mat> &output);
 
         /** @brief Computes and sets internal parameters according to inputs, outputs and blobs.
          *  @param[in]  inputs  vector of already allocated input blobs
@@ -198,7 +199,8 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[out] output allocated output blobs, which will store results of the computation.
          *  @param[out] internals allocated internal blobs
          */
-        CV_DEPRECATED virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals);
+        CV_DEPRECATED_EXTERNAL
+        virtual void forward(std::vector<Mat*> &input, std::vector<Mat> &output, std::vector<Mat> &internals);
 
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
@@ -218,7 +220,8 @@ CV__DNN_INLINE_NS_BEGIN
          * @overload
          * @deprecated Use Layer::finalize(InputArrayOfArrays, OutputArrayOfArrays) instead
          */
-        CV_DEPRECATED void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
+        CV_DEPRECATED_EXTERNAL
+        void finalize(const std::vector<Mat> &inputs, CV_OUT std::vector<Mat> &outputs);
 
         /** @brief
          * @overload

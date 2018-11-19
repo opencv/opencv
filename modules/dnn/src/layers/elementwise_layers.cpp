@@ -45,7 +45,6 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
-#include "opencv2/imgproc.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
 

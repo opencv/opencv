@@ -175,7 +175,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
+        CV_Assert((!usePeephole && blobs.size() == 3) || (usePeephole && blobs.size() == 6));
         CV_Assert(inputs.size() == 1);
         const MatShape& inp0 = inputs[0];
 
@@ -221,7 +221,7 @@ public:
         std::vector<Mat> input;
         inputs_arr.getMatVector(input);
 
-        CV_Assert(!usePeephole && blobs.size() == 3 || usePeephole && blobs.size() == 6);
+        CV_Assert((!usePeephole && blobs.size() == 3) || (usePeephole && blobs.size() == 6));
         CV_Assert(input.size() == 1);
         const Mat& inp0 = input[0];
 

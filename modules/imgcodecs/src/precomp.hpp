@@ -43,6 +43,7 @@
 #define __IMGCODECS_H_
 
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgcodecs/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"

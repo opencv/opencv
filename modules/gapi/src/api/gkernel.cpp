@@ -34,6 +34,12 @@ bool cv::gapi::GKernelPackage::includesAPI(const std::string &id) const
     return (it != m_backend_kernels.end());
 }
 
+void cv::gapi::GKernelPackage::removeAPI(const std::string &id)
+{
+    for (auto &bk : m_backend_kernels)
+        bk.second.erase(id);
+}
+
 std::size_t cv::gapi::GKernelPackage::size() const
 {
     return std::accumulate(m_backend_kernels.begin(),
@@ -53,7 +59,7 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
     {
         // REPLACE policy: if there is a collision, prefer RHS
         // to LHS
-        // since OTHER package has a prefernece, start with its copy
+        // since RHS package has a precedense, start with its copy
         GKernelPackage result(rhs);
         // now iterate over LHS package and put kernel if and only
         // if there's no such one

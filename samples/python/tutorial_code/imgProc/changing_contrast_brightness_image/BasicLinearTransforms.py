@@ -7,10 +7,10 @@ import argparse
 # Read image given by user
 ## [basic-linear-transform-load]
 parser = argparse.ArgumentParser(description='Code for Changing the contrast and brightness of an image! tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='../data/lena.jpg')
+parser.add_argument('--input', help='Path to input image.', default='lena.jpg')
 args = parser.parse_args()
 
-image = cv.imread(args.input)
+image = cv.imread(cv.samples.findFile(args.input))
 if image is None:
     print('Could not open or find the image: ', args.input)
     exit(0)
