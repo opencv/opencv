@@ -135,6 +135,13 @@
 }
 
 {
+   OpenCV-UMatDataAutoLockerTLS
+   Memcheck:Leak
+   ...
+   fun:_ZN2cvL21getUMatDataAutoLockerEv
+}
+
+{
    OpenCV-haveOpenCL
    Memcheck:Leak
    ...

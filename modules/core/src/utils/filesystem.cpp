@@ -85,6 +85,23 @@ cv::String join(const cv::String& base, const cv::String& path)
 
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
+cv::String canonical(const cv::String& path)
+{
+    cv::String result;
+#ifdef _WIN32
+    const char* result_str = _fullpath(NULL, path.c_str(), 0);
+#else
+    const char* result_str = realpath(path.c_str(), NULL);
+#endif
+    if (result_str)
+    {
+        result = cv::String(result_str);
+        free((void*)result_str);
+    }
+    return result.empty() ? path : result;
+}
+
+
 bool exists(const cv::String& path)
 {
     CV_INSTRUMENT_REGION();
@@ -543,11 +560,12 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 
 #else
 #define NOT_IMPLEMENTED CV_Error(Error::StsNotImplemented, "");
-CV_EXPORTS bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
-CV_EXPORTS cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
+cv::String canonical(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }
 #undef NOT_IMPLEMENTED
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 

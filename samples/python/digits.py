@@ -3,7 +3,7 @@
 '''
 SVM and KNearest digit recognition.
 
-Sample loads a dataset of handwritten digits from '../data/digits.png'.
+Sample loads a dataset of handwritten digits from 'digits.png'.
 Then it trains a SVM and KNearest classifiers on it and evaluates
 their accuracy.
 
@@ -42,7 +42,7 @@ from common import clock, mosaic
 
 SZ = 20 # size of each digit is SZ x SZ
 CLASS_N = 10
-DIGITS_FN = '../data/digits.png'
+DIGITS_FN = 'digits.png'
 
 def split2d(img, cell_size, flatten=True):
     h, w = img.shape[:2]
@@ -54,8 +54,9 @@ def split2d(img, cell_size, flatten=True):
     return cells
 
 def load_digits(fn):
+    fn = cv.samples.findFile(fn)
     print('loading "%s" ...' % fn)
-    digits_img = cv.imread(fn, 0)
+    digits_img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
     digits = split2d(digits_img, (SZ, SZ))
     labels = np.repeat(np.arange(CLASS_N), len(digits)/CLASS_N)
     return digits, labels

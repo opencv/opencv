@@ -349,6 +349,15 @@ Cv64suf;
 #  endif
 #endif
 
+#ifndef CV_DEPRECATED_EXTERNAL
+#  if defined(__OPENCV_BUILD)
+#    define CV_DEPRECATED_EXTERNAL /* nothing */
+#  else
+#    define CV_DEPRECATED_EXTERNAL CV_DEPRECATED
+#  endif
+#endif
+
+
 #ifndef CV_EXTERN_C
 #  ifdef __cplusplus
 #    define CV_EXTERN_C extern "C"

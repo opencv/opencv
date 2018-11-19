@@ -29,6 +29,10 @@ struct GOrigin;
 
 template<typename T> class GArray;
 
+/**
+ * \addtogroup gapi_meta_args
+ * @{
+ */
 struct GArrayDesc
 {
     // FIXME: Body
@@ -36,7 +40,9 @@ struct GArrayDesc
     bool operator== (const GArrayDesc&) const { return true; }
 };
 template<typename U> GArrayDesc descr_of(const std::vector<U> &) { return {};}
-inline GArrayDesc empty_array_desc() {return {}; }
+static inline GArrayDesc empty_array_desc() {return {}; }
+/** @} */
+
 std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);
 
 namespace detail
@@ -218,6 +224,10 @@ namespace detail
     };
 } // namespace detail
 
+/** \addtogroup gapi_data_objects
+ * @{
+ */
+
 template<typename T> class GArray
 {
 public:
@@ -233,6 +243,8 @@ private:
 
     detail::GArrayU m_ref;
 };
+
+/** @} */
 
 } // namespace cv
 

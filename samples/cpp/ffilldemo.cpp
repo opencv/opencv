@@ -12,7 +12,7 @@ static void help()
 {
     cout << "\nThis program demonstrated the floodFill() function\n"
             "Call:\n"
-            "./ffilldemo [image_name -- Default: ../data/fruits.jpg]\n" << endl;
+            "./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
             "\tESC - quit the program\n"
@@ -74,7 +74,7 @@ static void onMouse( int event, int x, int y, int, void* )
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser (argc, argv,
-        "{help h | | show help message}{@image|../data/fruits.jpg| input image}"
+        "{help h | | show help message}{@image|fruits.jpg| input image}"
     );
     if (parser.has("help"))
     {
@@ -82,7 +82,7 @@ int main( int argc, char** argv )
         return 0;
     }
     string filename = parser.get<string>("@image");
-    image0 = imread(filename, 1);
+    image0 = imread(samples::findFile(filename), 1);
 
     if( image0.empty() )
     {

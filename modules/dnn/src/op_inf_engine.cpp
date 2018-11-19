@@ -309,7 +309,7 @@ void InfEngineBackendNet::setTargetDevice(InferenceEngine::TargetDevice device) 
 
 InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() CV_NOEXCEPT
 {
-    return targetDevice;
+    return const_cast<const InfEngineBackendNet*>(this)->getTargetDevice();
 }
 
 InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() const CV_NOEXCEPT
@@ -387,6 +387,27 @@ void InfEngineBackendNet::init(int targetId)
             }
         }
         CV_Assert(!inputs.empty());
+
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+        for (const auto& inp : inputs)
+        {
+            InferenceEngine::LayerParams lp;
+            lp.name = inp.first;
+            lp.type = "Input";
+            lp.precision = InferenceEngine::Precision::FP32;
+            std::shared_ptr<InferenceEngine::CNNLayer> inpLayer(new InferenceEngine::CNNLayer(lp));
+
+            layers.push_back(inpLayer);
+
+            InferenceEngine::DataPtr dataPtr = inp.second->getInputData();
+            // TODO: remove precision dependency (see setInput.normalization tests)
+            if (dataPtr->precision == InferenceEngine::Precision::FP32)
+            {
+                inpLayer->outData.assign(1, dataPtr);
+                dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(inpLayer);
+            }
+        }
+#endif
     }
 
     if (outputs.empty())
@@ -559,7 +580,7 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
 bool InfEngineBackendLayer::supportBackend(int backendId)
 {
     return backendId == DNN_BACKEND_DEFAULT ||
-           backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+           (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
 }
 
 void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs,

@@ -138,8 +138,8 @@ static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
 
 int main(int argc, char** argv)
 {
-    static const char* names[] = { "../data/pic1.png", "../data/pic2.png", "../data/pic3.png",
-        "../data/pic4.png", "../data/pic5.png", "../data/pic6.png", 0 };
+    static const char* names[] = { "data/pic1.png", "data/pic2.png", "data/pic3.png",
+        "data/pic4.png", "data/pic5.png", "data/pic6.png", 0 };
     help(argv[0]);
 
     if( argc > 1)
@@ -152,10 +152,11 @@ int main(int argc, char** argv)
 
     for( int i = 0; names[i] != 0; i++ )
     {
-        Mat image = imread(names[i], IMREAD_COLOR);
+        string filename = samples::findFile(names[i]);
+        Mat image = imread(filename, IMREAD_COLOR);
         if( image.empty() )
         {
-            cout << "Couldn't load " << names[i] << endl;
+            cout << "Couldn't load " << filename << endl;
             continue;
         }
 

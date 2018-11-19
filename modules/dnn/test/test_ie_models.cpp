@@ -177,10 +177,20 @@ TEST_P(DNNTestOpenVINO, models)
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
 
+#ifdef INF_ENGINE_RELEASE
+#if INF_ENGINE_RELEASE <= 2018030000
     if (target == DNN_TARGET_MYRIAD && (modelName == "landmarks-regression-retail-0001" ||
                                         modelName == "semantic-segmentation-adas-0001" ||
                                         modelName == "face-reidentification-retail-0001"))
         throw SkipTestException("");
+#elif INF_ENGINE_RELEASE == 2018040000
+    if (modelName == "single-image-super-resolution-0034" ||
+        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
+                                         modelName == "landmarks-regression-retail-0009" ||
+                                          modelName == "semantic-segmentation-adas-0001")))
+        throw SkipTestException("");
+#endif
+#endif
 
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
     std::string prefix = utils::fs::join("intel_models",

@@ -80,6 +80,6 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/fruits.jpg'
+        fn = 'fruits.jpg'
     print(__doc__)
-    App(fn).run()
+    App(cv.samples.findFile(fn)).run()

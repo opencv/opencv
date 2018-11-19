@@ -51,9 +51,9 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/baboon.jpg'
+        fn = 'baboon.jpg'
 
-    src = cv.imread(fn)
+    src = cv.imread(cv.samples.findFile(fn))
 
     def nothing(*argv):
         pass

@@ -178,17 +178,6 @@ enum VideoCaptureProperties {
 #endif
      };
 
-
-/** @brief Generic camera output modes identifier.
-@note Currently, these are supported through the libv4l backend only.
-*/
-enum VideoCaptureModes {
-       CAP_MODE_BGR  = 0, //!< BGR24 (default)
-       CAP_MODE_RGB  = 1, //!< RGB24
-       CAP_MODE_GRAY = 2, //!< Y8
-       CAP_MODE_YUYV = 3  //!< YUYV
-     };
-
 /** @brief %VideoWriter generic properties identifier.
  @sa VideoWriter::get(), VideoWriter::set()
 */

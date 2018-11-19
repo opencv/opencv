@@ -11,10 +11,10 @@ rng.seed(12345)
 parser = argparse.ArgumentParser(description='Code for Image Segmentation with Distance Transform and Watershed Algorithm.\
     Sample code showing how to segment overlapping objects using Laplacian filtering, \
     in addition to Watershed and Distance Transformation')
-parser.add_argument('--input', help='Path to input image.', default='../data/cards.png')
+parser.add_argument('--input', help='Path to input image.', default='cards.png')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

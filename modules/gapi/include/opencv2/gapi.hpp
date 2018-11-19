@@ -10,6 +10,18 @@
 
 #include <memory>
 
+/** \defgroup gapi G-API framework
+@{
+    @defgroup gapi_main_classes G-API Main Classes
+    @defgroup gapi_data_objects G-API Data Objects
+    @{
+      @defgroup gapi_meta_args G-API Metadata Descriptors
+    @}
+    @defgroup gapi_std_backends G-API Standard backends
+    @defgroup gapi_compile_args G-API Graph Compilation Arguments
+@}
+ */
+
 #include "opencv2/gapi/gmat.hpp"
 #include "opencv2/gapi/garray.hpp"
 #include "opencv2/gapi/gcomputation.hpp"
