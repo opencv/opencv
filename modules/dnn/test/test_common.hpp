@@ -66,6 +66,7 @@ static inline void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_FPGA: *os << "FPGA"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -188,7 +189,7 @@ static inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *co
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
-static inline bool checkMyriadTarget()
+static inline bool checkIETarget(int target)
 {
 #ifndef HAVE_INF_ENGINE
     return false;
@@ -197,7 +198,7 @@ static inline bool checkMyriadTarget()
     cv::dnn::LayerParams lp;
     net.addLayerToPrev("testLayer", "Identity", lp);
     net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_MYRIAD);
+    net.setPreferableTarget(target);
     static int inpDims[] = {1, 2, 3, 4};
     net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
     try
@@ -264,7 +265,7 @@ testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
         }
 #endif
-        if (checkMyriadTarget())
+        if (checkIETarget(DNN_TARGET_MYRIAD))
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
     }
 #endif
@@ -344,7 +345,7 @@ public:
        }
        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
        {
-           if (!checkMyriadTarget())
+           if (!checkIETarget(DNN_TARGET_MYRIAD))
            {
                throw SkipTestException("Myriad is not available/disabled in OpenCV");
            }
