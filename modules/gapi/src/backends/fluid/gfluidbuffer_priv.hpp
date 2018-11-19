@@ -68,6 +68,8 @@ protected:
     cv::gapi::own::Mat m_data;
 
 public:
+    void updateInCache(View::Cache& cache, int start_log_idx, int nLines) const;
+
     virtual void copyTo(BufferStorageWithBorder &dst, int startLine, int nLines) const = 0;
 
     virtual ~BufferStorage() = default;
@@ -90,7 +92,7 @@ public:
     virtual void updateBeforeRead(int startLine, int nLines, const BufferStorage& src) = 0;
     virtual void updateAfterWrite(int startLine, int nLines) = 0;
 
-    virtual int physIdx(int logIdx) const = 0;
+    virtual inline int physIdx(int logIdx) const = 0;
 
     virtual size_t size() const = 0;
 };
@@ -123,7 +125,7 @@ public:
 
     void create(int capacity, int desc_width, int type);
 
-    inline virtual const uint8_t* inLineB(int log_idx, int desc_height) const override;
+    inline virtual const uint8_t* inLineB(int log_idx, int /*desc_height*/) const override { return ptr(log_idx); }
 
     virtual void updateBeforeRead(int startLine, int nLines, const BufferStorage& src) override;
     virtual void updateAfterWrite(int startLine, int nLines) override;
@@ -170,6 +172,8 @@ class GAPI_EXPORTS View::Priv
 {
     friend class View;
 protected:
+    View::Cache m_cache;
+
     const Buffer *m_p           = nullptr; // FIXME replace with weak_ptr
     int           m_read_caret  = -1;
     int           m_lines_next_iter = -1;
@@ -178,6 +182,9 @@ protected:
 public:
     virtual ~Priv() = default;
     // API used by actors/backend
+
+    const View::Cache& cache() const { return m_cache; }
+    void initCache(int lineConsumption);
 
     virtual void allocate(int lineConsumption, BorderOpt border) = 0;
     virtual void prepareToRead() = 0;
@@ -200,8 +207,8 @@ public:
     // API used by actors/backend
     ViewPrivWithoutOwnBorder(const Buffer *p, int borderSize);
 
-    inline virtual void allocate(int, BorderOpt) override { /* nothing */ }
-    inline virtual void prepareToRead() override { /* nothing */ }
+    virtual void allocate(int lineConsumption, BorderOpt) override;
+    virtual void prepareToRead() override;
 
     inline virtual std::size_t size() const override { return 0; }
 
@@ -217,7 +224,7 @@ public:
     // API used by actors/backend
     ViewPrivWithOwnBorder(const Buffer *p, int borderSize);
 
-    inline virtual void allocate(int lineConsumption, BorderOpt border) override;
+    virtual void allocate(int lineConsumption, BorderOpt border) override;
     virtual void prepareToRead() override;
     virtual std::size_t size() const override;
 
