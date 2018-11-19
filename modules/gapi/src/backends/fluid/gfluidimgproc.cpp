@@ -27,7 +27,8 @@
 
 #include "gfluidimgproc_func.hpp"
 
-#include <opencv2/core/hal/intrin.hpp>
+#include "opencv2/imgproc/hal/hal.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -230,22 +231,9 @@ static inline void f_xyz2luv(float  X, float  Y, float  Z,
     v = 13*L * (v1 - vn);
 }
 
-// compile-time parameters: output format (Lab/LUV),
-// and position of blue channel in BGR/RGB (0 or 2)
 template<LabLUV labluv, int blue=0>
-static void run_rgb2labluv(Buffer &dst, const View &src)
+static void run_rgb2labluv_reference(uchar out[], const uchar in[], int width)
 {
-    GAPI_Assert(src.meta().depth == CV_8U);
-    GAPI_Assert(dst.meta().depth == CV_8U);
-    GAPI_Assert(src.meta().chan == 3);
-    GAPI_Assert(dst.meta().chan == 3);
-    GAPI_Assert(src.length() == dst.length());
-
-    const auto *in  = src.InLine<uchar>(0);
-          auto *out = dst.OutLine<uchar>();
-
-    int width = dst.length();
-
     for (int w=0; w < width; w++)
     {
         float R, G, B;
@@ -282,6 +270,40 @@ static void run_rgb2labluv(Buffer &dst, const View &src)
         else
             CV_Error(cv::Error::StsBadArg, "unsupported color conversion");;
     }
+}
+
+// compile-time parameters: output format (Lab/LUV),
+// and position of blue channel in BGR/RGB (0 or 2)
+template<LabLUV labluv, int blue=0>
+static void run_rgb2labluv(Buffer &dst, const View &src)
+{
+    GAPI_Assert(src.meta().depth == CV_8U);
+    GAPI_Assert(dst.meta().depth == CV_8U);
+    GAPI_Assert(src.meta().chan == 3);
+    GAPI_Assert(dst.meta().chan == 3);
+    GAPI_Assert(src.length() == dst.length());
+
+    const auto *in  = src.InLine<uchar>(0);
+          auto *out = dst.OutLine<uchar>();
+
+    int width = dst.length();
+
+#if 1
+    uchar *dst_data = out;
+    const uchar *src_data = in;
+    size_t src_step = width;
+    size_t dst_step = width;
+    int height = 1;
+    int depth = CV_8U;
+    int scn = 3;
+    bool swapBlue = (blue == 2);
+    bool isLab = (LL_Lab == labluv);
+    bool srgb = true;
+    cv::hal::cvtBGRtoLab(src_data, src_step, dst_data, dst_step,
+               width, height, depth, scn, swapBlue, isLab, srgb);
+#else
+    run_rgb2labluv_reference<labluv, blue>(out, in, width);
+#endif
 }
 
 GAPI_FLUID_KERNEL(GFluidRGB2Lab, cv::gapi::imgproc::GRGB2Lab, false)
