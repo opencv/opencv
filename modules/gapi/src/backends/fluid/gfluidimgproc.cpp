@@ -174,6 +174,10 @@ GAPI_FLUID_KERNEL(GFluidYUV2RGB, cv::gapi::imgproc::GYUV2RGB, false)
 
 enum LabLUV { LL_Lab, LL_LUV };
 
+#define LabLuv_reference 0  // 1=use reference code of RGB/BGR to LUV/Lab, 0=don't
+
+#if LabLuv_reference
+
 // gamma-correction (inverse) for sRGB, 1/gamma=2.4 for inverse, like for Mac OS (?)
 static inline float f_gamma(float x)
 {
@@ -272,6 +276,8 @@ static void run_rgb2labluv_reference(uchar out[], const uchar in[], int width)
     }
 }
 
+#endif  // LabLuv_reference
+
 // compile-time parameters: output format (Lab/LUV),
 // and position of blue channel in BGR/RGB (0 or 2)
 template<LabLUV labluv, int blue=0>
@@ -288,7 +294,9 @@ static void run_rgb2labluv(Buffer &dst, const View &src)
 
     int width = dst.length();
 
-#if 1
+#if LabLuv_reference
+    run_rgb2labluv_reference<labluv, blue>(out, in, width);
+#else
     uchar *dst_data = out;
     const uchar *src_data = in;
     size_t src_step = width;
@@ -301,8 +309,6 @@ static void run_rgb2labluv(Buffer &dst, const View &src)
     bool srgb = true;
     cv::hal::cvtBGRtoLab(src_data, src_step, dst_data, dst_step,
                width, height, depth, scn, swapBlue, isLab, srgb);
-#else
-    run_rgb2labluv_reference<labluv, blue>(out, in, width);
 #endif
 }
 
