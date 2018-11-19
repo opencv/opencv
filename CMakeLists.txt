@@ -126,9 +126,17 @@ if(DEFINED CMAKE_BUILD_TYPE)
   set_property( CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES} )
 endif()
 
-enable_testing()
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.19.68.tar.gz"
+    SHA1 "ad0d042d8ec56a3c6a4bda1e657f1f65b494ab12"
+)
 
 project(OpenCV CXX C)
+
+if(IOS)
+  set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -fomit-frame-pointer -ffast-math")
+endif()
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
@@ -368,11 +376,8 @@ ocv_cmake_hook(POST_OPTIONS)
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications")
 
 if(ANDROID)
-  if(ANDROID_ABI MATCHES "NEON")
+  if(CMAKE_ANDROID_ARM_NEON)
     set(ENABLE_NEON ON)
-  endif()
-  if(ANDROID_ABI MATCHES "VFPV3")
-    set(ENABLE_VFPV3 ON)
   endif()
 endif()
 
@@ -394,13 +399,13 @@ else()
 endif()
 
 if(ANDROID)
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples/${CMAKE_ANDROID_ARCH_ABI}")
 else()
   ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
 endif()
 
 if(ANDROID)
-  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin/${CMAKE_ANDROID_ARCH_ABI}")
 else()
   ocv_update(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
 endif()
@@ -420,11 +425,11 @@ elseif(WIN32)
 endif()
 
 if(ANDROID)
-  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH sdk/native/staticlibs/${ANDROID_NDK_ABI_NAME})
-  ocv_update(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
+  set(LIBRARY_OUTPUT_PATH                "${OpenCV_BINARY_DIR}/lib/${CMAKE_ANDROID_ARCH_ABI}")
+  ocv_update(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${CMAKE_ANDROID_ARCH_ABI}")
+  ocv_update(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${CMAKE_ANDROID_ARCH_ABI})
+  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH sdk/native/staticlibs/${CMAKE_ANDROID_ARCH_ABI})
+  ocv_update(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${CMAKE_ANDROID_ARCH_ABI})
   ocv_update(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
   ocv_update(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
   ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
@@ -524,6 +529,10 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 #  Path for additional modules
 # ----------------------------------------------------------------------------
 set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
+if(OPENCV_WITH_EXTRA_MODULES)
+  hunter_add_package(OpenCV-Extra)
+  set(OPENCV_EXTRA_MODULES_PATH "${OPENCV-EXTRA_ROOT}/modules")
+endif()
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository

@@ -6,6 +6,7 @@
 if(BUILD_ZLIB)
   ocv_clear_vars(ZLIB_FOUND)
 else()
+  hunter_add_package(ZLIB)
   find_package(ZLIB "${MIN_VER_ZLIB}")
   if(ZLIB_FOUND AND ANDROID)
     if(ZLIB_LIBRARIES MATCHES "/usr/(lib|lib32|lib64)/libz.so$")
@@ -30,7 +31,19 @@ if(WITH_JPEG)
   if(BUILD_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
+    hunter_add_package(Jpeg)
+    if(HUNTER_ENABLED)
+      find_package(JPEG CONFIG REQUIRED)
+      set(JPEG_LIBRARY JPEG::jpeg)
+      set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+      get_target_property(
+          JPEG_INCLUDE_DIR
+          JPEG::jpeg
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
     include(FindJPEG)
+    endif()
   endif()
 
   if(NOT JPEG_FOUND)
@@ -74,6 +87,7 @@ if(WITH_TIFF)
   if(BUILD_TIFF)
     ocv_clear_vars(TIFF_FOUND)
   else()
+    hunter_add_package(TIFF)
     include(FindTIFF)
     if(TIFF_FOUND)
       ocv_parse_header("${TIFF_INCLUDE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
@@ -117,9 +131,26 @@ if(WITH_WEBP)
   if(BUILD_WEBP)
     ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
   else()
+    if(HUNTER_ENABLED)
+      hunter_add_package(WebP)
+      find_package(WebP CONFIG REQUIRED)
+      set(WEBP_FOUND TRUE)
+      set(HAVE_WEBP 1)
+      set(WEBP_LIBRARY WebP::webp)
+      set(WEBP_LIBRARIES ${WEBP_LIBRARY})
+
+      get_target_property(
+          WEBP_INCLUDE_DIR
+          WebP::webp
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
+
     include(cmake/OpenCVFindWebP.cmake)
     if(WEBP_FOUND)
       set(HAVE_WEBP 1)
+    endif()
+
     endif()
   endif()
 endif()
@@ -158,7 +189,23 @@ if(WITH_JASPER)
   if(BUILD_JASPER)
     ocv_clear_vars(JASPER_FOUND)
   else()
+    if(HUNTER_ENABLED)
+      hunter_add_package(jasper)
+      find_package(jasper CONFIG REQUIRED)
+
+      set(JASPER_FOUND TRUE)
+      set(JASPER_LIBRARY jasper::libjasper)
+      set(JASPER_LIBRARIES ${JASPER_LIBRARY})
+      get_target_property(
+          JASPER_INCLUDE_DIR
+          jasper::libjasper
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
+
     include(FindJasper)
+
+    endif()
   endif()
 
   if(NOT JASPER_FOUND)
@@ -182,6 +229,7 @@ if(WITH_PNG)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
+    hunter_add_package(PNG)
     include(FindPNG)
     if(PNG_FOUND)
       include(CheckIncludeFile)

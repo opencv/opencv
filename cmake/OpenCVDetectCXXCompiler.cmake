@@ -111,10 +111,10 @@ endif()
 # Similar code exists in OpenCVConfig.cmake
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
-  if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
-    set(OpenCV_STATIC OFF)
-  else()
+  if(NOT DEFINED BUILD_SHARED_LIBS OR NOT BUILD_SHARED_LIBS)
     set(OpenCV_STATIC ON)
+  else()
+    set(OpenCV_STATIC OFF)
   endif()
 endif()
 

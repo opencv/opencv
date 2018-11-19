@@ -4,7 +4,7 @@ if(OPENCV_INITIAL_PASS)
 endif()
 
 if(APPLE_FRAMEWORK OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE
-    OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7))
+    OR NOT (JNI_FOUND OR (ANDROID AND CMAKE_SYSTEM_VERSION GREATER 7))
     OR BUILD_opencv_world
     )
   ocv_module_disable(java)
@@ -53,7 +53,6 @@ macro(copy_common_tests _src_location _dst_location _deps)
   unset(_src)
   unset(_dst)
 endmacro()
-
 
 add_subdirectory(jni)  # generates ${the_module} target (${the_module}_jni doesn't work properly with Android samples)
 if(ANDROID)
