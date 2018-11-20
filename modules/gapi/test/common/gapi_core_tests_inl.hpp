@@ -685,7 +685,6 @@ TEST_P(SumTest, AccuracyTest)
     auto tolerance = std::get<3>(param);
     auto compile_args = std::get<4>(param);
     initMatrixRandU(std::get<0>(param), sz_in, std::get<2>(param));
-    //initMatsRandN(std::get<0>(param), sz_in, std::get<2>(param)); //TODO: workaround trying to fix SumTest failures
 
 
     cv::Scalar out_sum;

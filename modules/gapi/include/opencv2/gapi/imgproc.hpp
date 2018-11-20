@@ -154,8 +154,6 @@ namespace imgproc {
             return in.withType(CV_8U, 1);
         }
     };
-
-
 }
 
 
@@ -673,7 +671,6 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
 
 //! @} gapi_colorconvert
-
 } //namespace gapi
 } //namespace cv
 

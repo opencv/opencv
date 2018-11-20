@@ -235,5 +235,4 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRTestCPU, YUV2BGRTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
-
 } // opencv_test

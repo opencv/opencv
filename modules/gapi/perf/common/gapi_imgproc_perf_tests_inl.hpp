@@ -905,7 +905,5 @@ PERF_TEST_P_(YUV2BGRPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
-
-
 }
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP

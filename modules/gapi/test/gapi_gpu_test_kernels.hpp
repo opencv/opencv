@@ -12,17 +12,17 @@
 
 namespace cv
 {
+    void reference_symm7x7_CPU(const cv::Mat& in, cv::Mat& kernel_coeff, int shift, cv::Mat &out);
+
 #ifdef HAVE_OPENCL
     namespace gapi_test_kernels
     {
 
-
-        G_TYPED_KERNEL(TSymm7x7_test, <GMat(GMat)>, "org.opencv.imgproc.symm7x7_test") {
-            static GMatDesc outMeta(GMatDesc in) {
+        G_TYPED_KERNEL(TSymm7x7_test, <GMat(GMat, Mat, int)>, "org.opencv.imgproc.symm7x7_test") {
+            static GMatDesc outMeta(GMatDesc in, Mat, int) {
                 return in.withType(CV_8U, 1);
             }
         };
-
 
         extern cv::gapi::GKernelPackage gpuTestPackage;
 
