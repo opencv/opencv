@@ -587,8 +587,12 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
 
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
+        UNARY_( short, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
+        UNARY_( float, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
         UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
+        UNARY_( float, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
         UNARY_( short,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
+        UNARY_( float,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
         UNARY_( float,  float, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");

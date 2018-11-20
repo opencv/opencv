@@ -13,9 +13,25 @@
 namespace opencv_test
 {
 
+    INSTANTIATE_TEST_CASE_P(SepFilterPerfTestFluid_8U, SepFilterPerfTest,
+        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
+                Values(CV_8UC1, CV_8UC3),
+                Values(3),
+                Values(szVGA, sz720p, sz1080p),
+                Values(-1, CV_16S, CV_32F),
+                Values(cv::compile_args(IMGPROC_FLUID))));
+
+    INSTANTIATE_TEST_CASE_P(SepFilterPerfTestFluid_other, SepFilterPerfTest,
+        Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
+                Values(CV_16UC1, CV_16SC1, CV_32FC1),
+                Values(3),
+                Values(szVGA, sz720p, sz1080p),
+                Values(-1, CV_32F),
+                Values(cv::compile_args(IMGPROC_FLUID))));
+
     INSTANTIATE_TEST_CASE_P(SobelPerfTestFluid, SobelPerfTest,
         Combine(Values(AbsExact().to_compare_f()),
-            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),  // add CV_32FC1 when ready
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
             Values(3),                                     // add 5x5 once supported
             Values(szVGA, sz720p, sz1080p),
             Values(-1, CV_16S, CV_32F),
