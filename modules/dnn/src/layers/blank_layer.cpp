@@ -119,8 +119,8 @@ public:
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::SplitLayer> ieLayer(new InferenceEngine::SplitLayer(lp));
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
-        ieLayer->params["axis"] = format("%d", input->dims.size() - 1);
-        ieLayer->params["out_sizes"] = format("%d", input->dims[0]);
+        ieLayer->params["axis"] = format("%d", (int)input->dims.size() - 1);
+        ieLayer->params["out_sizes"] = format("%d", (int)input->dims[0]);
 #endif
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
