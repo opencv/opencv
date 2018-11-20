@@ -117,7 +117,7 @@ void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, In
                                      end = keypoints.end();
     for( ; it != end; ++it )
     {
-        Scalar color = isRandColor ? Scalar(rng(256), rng(256), rng(256)) : _color;
+        Scalar color = isRandColor ? Scalar( rng(256), rng(256), rng(256), 255 ) : _color;
         _drawKeypoint( outImage, *it, color, flags );
     }
 }
@@ -173,7 +173,7 @@ static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1
 {
     RNG& rng = theRNG();
     bool isRandMatchColor = matchColor == Scalar::all(-1);
-    Scalar color = isRandMatchColor ? Scalar( rng(256), rng(256), rng(256) ) : matchColor;
+    Scalar color = isRandMatchColor ? Scalar( rng(256), rng(256), rng(256), 255 ) : matchColor;
 
     _drawKeypoint( outImg1, kp1, color, flags );
     _drawKeypoint( outImg2, kp2, color, flags );
