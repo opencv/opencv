@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_OWN_ASSERT_HPP
 #define OPENCV_GAPI_OWN_ASSERT_HPP
 
-#if 0
+#if !defined(GAPI_STANDALONE)
 #include <opencv2/core/base.hpp>
 #define GAPI_Assert(expr) CV_Assert(expr)
 
@@ -32,10 +32,10 @@ namespace detail
 
 #endif
 
-#ifdef _DEBUG
-#  define GAPI_DbgAssert(expr) GAPI_Assert(expr)
-#else
+#ifdef NDEBUG
 #  define GAPI_DbgAssert(expr)
+#else
+#  define GAPI_DbgAssert(expr) GAPI_Assert(expr)
 #endif
 
 #endif // OPENCV_GAPI_OWN_ASSERT_HPP

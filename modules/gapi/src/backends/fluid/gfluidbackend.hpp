@@ -49,19 +49,6 @@ struct FluidData
     gapi::fluid::BorderOpt border;
 };
 
-struct FluidMapper
-{
-    FluidMapper(double ratio, int lpi) : m_ratio(ratio), m_lpi(lpi) {}
-    virtual ~FluidMapper() = default;
-    virtual int firstWindow(int outCoord, int lpi) const = 0;
-    virtual int nextWindow(int outCoord, int lpi) const = 0;
-    virtual int linesRead(int outCoord) const = 0;
-
-protected:
-    double m_ratio = 0.0;
-    int    m_lpi   = 0;
-};
-
 struct FluidAgent
 {
 public:
@@ -104,8 +91,7 @@ private:
     // FIXME!!!
     // move to another class
     virtual int firstWindow() const = 0;
-    virtual int nextWindow() const = 0;
-    virtual int linesRead()  const = 0;
+    virtual std::pair<int,int> linesReadAndnextWindow() const = 0;
 };
 
 class GFluidExecutable final: public GIslandExecutable
@@ -115,6 +101,8 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
+
+    std::vector<FluidAgent*> m_script;
 
     using Magazine = detail::magazine<cv::gapi::own::Scalar>;
     Magazine m_res;

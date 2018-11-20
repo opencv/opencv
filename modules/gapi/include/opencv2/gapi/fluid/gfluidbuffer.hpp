@@ -45,21 +45,37 @@ class GAPI_EXPORTS Buffer;
 class GAPI_EXPORTS View
 {
 public:
+    struct Cache
+    {
+        std::vector<const uint8_t*> m_linePtrs;
+        GMatDesc m_desc;
+        int m_border_size = 0;
+
+        inline const uint8_t* linePtr(int index) const
+        {
+            return m_linePtrs[index + m_border_size];
+        }
+    };
+
     View() = default;
 
-    const uint8_t* InLineB(int index) const; // -(w-1)/2...0...+(w-1)/2 for Filters
+    const inline uint8_t* InLineB(int index) const // -(w-1)/2...0...+(w-1)/2 for Filters
+    {
+        return m_cache->linePtr(index);
+    }
+
     template<typename T> const inline T* InLine(int i) const
     {
         const uint8_t* ptr = this->InLineB(i);
         return reinterpret_cast<const T*>(ptr);
     }
 
-    operator bool() const;
+    inline operator bool() const { return m_priv != nullptr; }
     bool ready() const;
-    int length() const;
+    inline int length() const { return m_cache->m_desc.size.width; }
     int y() const;
 
-    const GMatDesc& meta() const;
+    inline const GMatDesc& meta() const { return m_cache->m_desc; }
 
     class GAPI_EXPORTS Priv;      // internal use only
     Priv& priv();               // internal use only
@@ -69,11 +85,18 @@ public:
 
 private:
     std::shared_ptr<Priv> m_priv;
+    const Cache* m_cache;
 };
 
 class GAPI_EXPORTS Buffer
 {
 public:
+    struct Cache
+    {
+        std::vector<uint8_t*> m_linePtrs;
+        GMatDesc m_desc;
+    };
+
     // Default constructor (executable creation stage,
     // all following initialization performed in Priv::init())
     Buffer();
@@ -89,7 +112,11 @@ public:
     // Constructor for in/out buffers (for tests)
     Buffer(const cv::gapi::own::Mat &data, bool is_input);
 
-    uint8_t* OutLineB(int index = 0);
+    inline uint8_t* OutLineB(int index = 0)
+    {
+        return m_cache->m_linePtrs[index];
+    }
+
     template<typename T> inline T* OutLine(int index = 0)
     {
         uint8_t* ptr = this->OutLineB(index);
@@ -100,10 +127,10 @@ public:
 
     int linesReady() const;
     void debug(std::ostream &os) const;
-    int length() const;
+    inline int length() const { return m_cache->m_desc.size.width; }
     int lpi() const;  // LPI for WRITER
 
-    const GMatDesc& meta() const;
+    inline const GMatDesc& meta() const { return m_cache->m_desc; }
 
     View mkView(int borderSize, bool ownStorage);
 
@@ -113,7 +140,7 @@ public:
 
 private:
     std::shared_ptr<Priv> m_priv;
-
+    const Cache* m_cache;
 };
 
 } // namespace cv::gapi::fluid
