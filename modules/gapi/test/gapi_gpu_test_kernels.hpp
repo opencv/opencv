@@ -12,7 +12,7 @@
 
 namespace cv
 {
-    void reference_symm7x7_CPU(const cv::Mat& in, cv::Mat& kernel_coeff, int shift, cv::Mat &out);
+    void reference_symm7x7_CPU(const cv::Mat& in, const cv::Mat& kernel_coeff, int shift, cv::Mat &out);
 
 #ifdef HAVE_OPENCL
     namespace gapi_test_kernels

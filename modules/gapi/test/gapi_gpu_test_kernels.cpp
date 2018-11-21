@@ -15,12 +15,12 @@
 namespace cv
 {
 
-void reference_symm7x7_CPU(const cv::Mat& in, cv::Mat& kernel_coeff, int shift, cv::Mat &out)
+void reference_symm7x7_CPU(const cv::Mat& in, const cv::Mat& kernel_coeff, int shift, cv::Mat &out)
 {
     cv::Point anchor = { -1, -1 };
     double delta = 0;
 
-    int* ci = kernel_coeff.ptr<int>();
+    const int* ci = kernel_coeff.ptr<int>();
 
     float c_float[10];
     float divisor = (float)(1 << shift);
@@ -73,7 +73,7 @@ namespace gapi_test_kernels
 
 GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 {
-    static void run(const cv::UMat& in, cv::Mat& kernel_coeff, int shift, cv::UMat &out)
+    static void run(const cv::UMat& in, const cv::Mat& kernel_coeff, int shift, cv::UMat &out)
     {
         if (cv::ocl::isOpenCLActivated())
         {
