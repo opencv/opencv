@@ -408,6 +408,7 @@ GAPI_FLUID_KERNEL(GFluidBlur, cv::gapi::imgproc::GBlur, false)
         UNARY_(uchar , uchar , run_boxfilter, dst, src, kernelSize, anchor, normalize);
         UNARY_(ushort, ushort, run_boxfilter, dst, src, kernelSize, anchor, normalize);
         UNARY_( short,  short, run_boxfilter, dst, src, kernelSize, anchor, normalize);
+        UNARY_( float,  float, run_boxfilter, dst, src, kernelSize, anchor, normalize);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -443,11 +444,12 @@ GAPI_FLUID_KERNEL(GFluidBoxFilter, cv::gapi::imgproc::GBoxFilter, false)
 
         //     DST     SRC     OP             __VA_ARGS__
         UNARY_(uchar , uchar , run_boxfilter, dst, src, kernelSize, anchor, normalize);
-        UNARY_(ushort, ushort, run_boxfilter, dst, src, kernelSize, anchor, normalize);
-        UNARY_( short,  short, run_boxfilter, dst, src, kernelSize, anchor, normalize);
         UNARY_( float, uchar , run_boxfilter, dst, src, kernelSize, anchor, normalize);
+        UNARY_(ushort, ushort, run_boxfilter, dst, src, kernelSize, anchor, normalize);
         UNARY_( float, ushort, run_boxfilter, dst, src, kernelSize, anchor, normalize);
+        UNARY_( short,  short, run_boxfilter, dst, src, kernelSize, anchor, normalize);
         UNARY_( float,  short, run_boxfilter, dst, src, kernelSize, anchor, normalize);
+        UNARY_( float,  float, run_boxfilter, dst, src, kernelSize, anchor, normalize);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -675,6 +677,7 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
         UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
         UNARY_( short,  short, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
+        UNARY_( float,  float, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1106,6 +1109,7 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
         UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
         UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
         UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
+        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1113,7 +1117,7 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
     static void initScratch(const GMatDesc& /* in */,
                             const Mat     &    kernel,
                             const Point   & /* anchor */,
-                              int           /* iterations */,
+                                  int       /* iterations */,
                                   int       /* borderType */,
                             const cv::Scalar  & /* borderValue */,
                                   Buffer  &    scratch)
@@ -1183,6 +1187,7 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
         UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
         UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
         UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
+        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1294,6 +1299,7 @@ GAPI_FLUID_KERNEL(GFluidMedianBlur, cv::gapi::imgproc::GMedianBlur, false)
         UNARY_(uchar , uchar , run_medianblur, dst, src, ksize);
         UNARY_(ushort, ushort, run_medianblur, dst, src, ksize);
         UNARY_( short,  short, run_medianblur, dst, src, ksize);
+        UNARY_( float,  float, run_medianblur, dst, src, ksize);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
