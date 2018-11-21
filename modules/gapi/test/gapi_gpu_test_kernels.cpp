@@ -91,7 +91,7 @@ GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 
             if (!kernel.create("symm_7x7_test", cv::ocl::gapi::symm7x7_test_oclsrc, build_options))
             {
-                CV_Error(cv::Error::OpenCLInitError, "symm_7x7_test OpenCL kernel creation failed with build_options = %s\n", build_options.c_str());
+                CV_Error_(cv::Error::OpenCLInitError, ("symm_7x7_test OpenCL kernel creation failed with build_options = %s\n", build_options.c_str()));
             }
 
             cv::UMat gKer;
