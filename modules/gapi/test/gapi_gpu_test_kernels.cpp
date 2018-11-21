@@ -91,7 +91,7 @@ GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 
             if (!kernel.create("symm_7x7_test", cv::ocl::gapi::symm7x7_test_oclsrc, build_options))
             {
-                printf("symm_7x7_test OpenCL kernel creation failed with build_options = %s\n", build_options.c_str());
+                CV_Error(cv::Error::OpenCLInitError, "symm_7x7_test OpenCL kernel creation failed with build_options = %s\n", build_options.c_str());
             }
 
             cv::UMat gKer;
@@ -112,15 +112,15 @@ GAPI_GPU_KERNEL(GGPUSymm7x7_test, TSymm7x7_test)
 
             if (!kernel.run(2, globalsize, NULL, false))
             {
-                printf("symm_7x7_test OpenCL kernel run failed\n");
+                CV_Error(cv::Error::OpenCLApiCallError, "symm_7x7_test OpenCL kernel run failed\n");
             }
         }
         else
         {
             //CPU fallback
             cv::Mat in_Mat, out_Mat;
-            in.copyTo(in_Mat);
-            out.copyTo(out_Mat);
+            in_Mat = in.getMat(ACCESS_READ);
+            out_Mat = out.getMat(ACCESS_WRITE);
             reference_symm7x7_CPU(in_Mat, kernel_coeff, shift, out_Mat);
         }
     }
