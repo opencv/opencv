@@ -1104,7 +1104,8 @@ struct Net::Impl
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
-                  preferableTarget == DNN_TARGET_MYRIAD);
+                  preferableTarget == DNN_TARGET_MYRIAD ||
+                  preferableTarget == DNN_TARGET_FPGA);
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
@@ -1609,7 +1610,9 @@ struct Net::Impl
             ieNode->net = net;
 
             auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
-            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD) && !fused)
+            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
+                 preferableTarget == DNN_TARGET_MYRIAD ||
+                 preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
                 ieNode->layer->precision = InferenceEngine::Precision::FP16;
                 if (weightableLayer)

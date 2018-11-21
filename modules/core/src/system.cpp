@@ -107,15 +107,14 @@ void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
 #  include <cpu-features.h>
 #endif
 
-#ifndef __VSX__
-# if defined __PPC64__ && defined __linux__
-#   include "sys/auxv.h"
-#   ifndef AT_HWCAP2
-#     define AT_HWCAP2 26
-#   endif
-#   ifndef PPC_FEATURE2_ARCH_2_07
-#     define PPC_FEATURE2_ARCH_2_07 0x80000000
-#   endif
+
+#if CV_VSX && defined __linux__
+# include "sys/auxv.h"
+# ifndef AT_HWCAP2
+#   define AT_HWCAP2 26
+# endif
+# ifndef PPC_FEATURE2_ARCH_3_00
+#   define PPC_FEATURE2_ARCH_3_00 0x00800000
 # endif
 #endif
 
@@ -359,6 +358,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_NEON] = "NEON";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
+        g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
     }
@@ -513,14 +513,14 @@ struct HWFeatures
     #endif
     #endif
 
-    #ifdef __VSX__
-        have[CV_CPU_VSX] = true;
-    #elif (defined __PPC64__ && defined __linux__)
-        uint64 hwcaps = getauxval(AT_HWCAP);
+    // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
+    have[CV_CPU_VSX] = (CV_VSX);
+    // TODO: Check VSX3 availability in runtime for other platforms
+    #if CV_VSX && defined __linux__
         uint64 hwcap2 = getauxval(AT_HWCAP2);
-        have[CV_CPU_VSX] = (hwcaps & PPC_FEATURE_PPC_LE && hwcaps & PPC_FEATURE_HAS_VSX && hwcap2 & PPC_FEATURE2_ARCH_2_07);
+        have[CV_CPU_VSX3] = (hwcap2 & PPC_FEATURE2_ARCH_3_00);
     #else
-        have[CV_CPU_VSX] = false;
+        have[CV_CPU_VSX3] = (CV_VSX3);
     #endif
 
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
