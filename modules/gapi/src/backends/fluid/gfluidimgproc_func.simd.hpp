@@ -16,6 +16,8 @@
 
 #include <cstdint>
 
+#include <vector>
+
 #ifdef __GNUC__
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wstrict-overflow"
@@ -71,6 +73,23 @@ RUN_SOBEL_ROW( float,  short)
 RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
+
+#define RUN_SOBEL_ROW1(DST, SRC)                                     \
+void run_sobel_row1(DST out[], const SRC *in[], int width, int chan, \
+                    const float kx[], const float ky[], int border,  \
+                    float scale, float delta);
+
+RUN_SOBEL_ROW1(uchar , uchar )
+RUN_SOBEL_ROW1(ushort, ushort)
+RUN_SOBEL_ROW1( short, uchar )
+RUN_SOBEL_ROW1( short, ushort)
+RUN_SOBEL_ROW1( short,  short)
+RUN_SOBEL_ROW1( float, uchar )
+RUN_SOBEL_ROW1( float, ushort)
+RUN_SOBEL_ROW1( float,  short)
+RUN_SOBEL_ROW1( float,  float)
+
+#undef RUN_SOBEL_ROW1
 
 //----------------------------------------------------------------------
 
@@ -550,6 +569,342 @@ RUN_SOBEL_ROW( float,  short)
 RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sobel_reference(DST out[], const SRC *in[], int width, int chan,
+                                const float kx[], const float ky[], int border,
+                                float scale, float delta)
+{
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float kx0 = kx[0], kx1 = kx[1], kx2 = kx[2];
+    const float ky0 = ky[0], ky1 = ky[1], ky2 = ky[2];
+
+    for (int l=0; l < length; l++)
+    {
+        auto xsum = [l, shift, kx0, kx1, kx2](const SRC i[])
+        {
+            float t0 = static_cast<float>(i[l - shift]);
+            float t1 = static_cast<float>(i[l        ]);
+            float t2 = static_cast<float>(i[l + shift]);
+            float t = t0*kx0 + t1*kx1 + t2*kx2;
+            return t;
+        };
+
+        float s0 = xsum(in[0]);
+        float s1 = xsum(in[1]);
+        float s2 = xsum(in[2]);
+        float s = s0*ky0 + s1*ky1 + s2*ky2;
+
+        if (!noscale)
+        {
+            s = s*scale + delta;
+        }
+
+        out[l] = cv::gapi::own::saturate<DST>(s, rintf);
+    }
+}
+
+#if CV_SIMD
+template<typename SRC>
+static inline v_float32 vx_load_f32(const SRC* ptr)
+{
+    if (std::is_same<SRC,uchar>::value)
+    {
+        v_uint32 tmp = vx_load_expand_q(reinterpret_cast<const uchar*>(ptr));
+        return v_cvt_f32(v_reinterpret_as_s32(tmp));
+    }
+
+    if (std::is_same<SRC,ushort>::value)
+    {
+        v_uint32 tmp = vx_load_expand(reinterpret_cast<const ushort*>(ptr));
+        return v_cvt_f32(v_reinterpret_as_s32(tmp));
+    }
+
+    if (std::is_same<SRC,short>::value)
+    {
+        v_int32 tmp = vx_load_expand(reinterpret_cast<const short*>(ptr));
+        return v_cvt_f32(tmp);
+    }
+
+    if (std::is_same<SRC,float>::value)
+    {
+        v_float32 tmp = vx_load(reinterpret_cast<const float*>(ptr));
+        return tmp;
+    }
+
+    CV_Error(cv::Error::StsBadArg, "unsupported type");
+}
+
+template<bool noscale, typename SRC>
+static void run_sobel_float(float out[], const SRC *in[], int width, int chan,
+                            const float kx[], const float ky[], int border,
+                            float scale, float delta)
+{
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float kx0 = kx[0], kx1 = kx[1], kx2 = kx[2];
+    const float ky0 = ky[0], ky1 = ky[1], ky2 = ky[2];
+
+    for (int l=0; l < length; )
+    {
+        static const int nlanes = v_float32::nlanes;
+
+        // main part
+        for ( ; l <= length - nlanes; l += nlanes)
+        {
+            auto xsum = [l, shift, kx0, kx1, kx2](const SRC i[])
+            {
+                v_float32 t0 = vx_load_f32(&i[l - shift]);
+                v_float32 t1 = vx_load_f32(&i[l        ]);
+                v_float32 t2 = vx_load_f32(&i[l + shift]);
+                v_float32 t = t0 * vx_setall_f32(kx0);
+                    t = v_fma(t1,  vx_setall_f32(kx1), t);
+                    t = v_fma(t2,  vx_setall_f32(kx2), t);
+                return t;
+            };
+
+            v_float32 s0 = xsum(in[0]);
+            v_float32 s1 = xsum(in[1]);
+            v_float32 s2 = xsum(in[2]);
+            v_float32 s = s0 * vx_setall_f32(ky0);
+                s = v_fma(s1,  vx_setall_f32(ky1), s);
+                s = v_fma(s2,  vx_setall_f32(ky2), s);
+
+            if (!noscale)
+            {
+                s = v_fma(s, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_store(&out[l], s);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sobel_short(DST out[], const SRC *in[], int width, int chan,
+                            const float kx[], const float ky[], int border,
+                            float scale, float delta)
+{
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float kx0 = kx[0], kx1 = kx[1], kx2 = kx[2];
+    const float ky0 = ky[0], ky1 = ky[1], ky2 = ky[2];
+
+    for (int l=0; l < length; )
+    {
+        static const int nlanes = v_int16::nlanes;
+
+        // main part
+        for ( ; l <= length - nlanes; l += nlanes)
+        {
+            auto xsum = [shift, kx0, kx1, kx2](const SRC inp[], const int j)
+            {
+                v_float32 t0 = vx_load_f32(&inp[j - shift]);
+                v_float32 t1 = vx_load_f32(&inp[j        ]);
+                v_float32 t2 = vx_load_f32(&inp[j + shift]);
+                v_float32 t = t0 * vx_setall_f32(kx0);
+                    t = v_fma(t1,  vx_setall_f32(kx1), t);
+                    t = v_fma(t2,  vx_setall_f32(kx2), t);
+                return t;
+            };
+
+            auto ysum = [in, ky0, ky1, ky2, xsum](const int j)
+            {
+                v_float32 s0 = xsum(in[0], j);
+                v_float32 s1 = xsum(in[1], j);
+                v_float32 s2 = xsum(in[2], j);
+                v_float32 s = s0 * vx_setall_f32(ky0);
+                    s = v_fma(s1,  vx_setall_f32(ky1), s);
+                    s = v_fma(s2,  vx_setall_f32(ky2), s);
+                return s;
+            };
+
+            v_float32 r0 = ysum(l);
+            v_float32 r1 = ysum(l + nlanes/2);
+
+            if (!noscale)
+            {
+                r0 = v_fma(r0, vx_setall_f32(scale), vx_setall_f32(delta));
+                r1 = v_fma(r1, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 i0 = v_round(r0);
+            v_int32 i1 = v_round(r1);
+
+            if (std::is_same<DST,short>::value)
+            {
+                v_int16 i = v_pack(i0, i1);
+                v_store(reinterpret_cast<short*>(&out[l]), i);
+            }
+            else
+            {
+                v_uint16 u = v_pack_u(i0, i1);
+                v_store(reinterpret_cast<ushort*>(&out[l]), u);
+            }
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+
+template<bool noscale, typename SRC>
+static void run_sobel_uchar(uchar out[], const SRC *in[], int width, int chan,
+                            const float kx[], const float ky[], int border,
+                            float scale, float delta)
+{
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float kx0 = kx[0], kx1 = kx[1], kx2 = kx[2];
+    const float ky0 = ky[0], ky1 = ky[1], ky2 = ky[2];
+
+    for (int l=0; l < length; )
+    {
+        static const int nlanes = v_uint8::nlanes;
+
+        // main part
+        for ( ; l <= length - nlanes; l += nlanes)
+        {
+            auto xsum = [shift, kx0, kx1, kx2](const SRC inp[], const int j)
+            {
+                v_float32 t0 = vx_load_f32(&inp[j - shift]);
+                v_float32 t1 = vx_load_f32(&inp[j        ]);
+                v_float32 t2 = vx_load_f32(&inp[j + shift]);
+                v_float32 t = t0 * vx_setall_f32(kx0);
+                    t = v_fma(t1,  vx_setall_f32(kx1), t);
+                    t = v_fma(t2,  vx_setall_f32(kx2), t);
+                return t;
+            };
+
+            auto ysum = [in, ky0, ky1, ky2, xsum](const int j)
+            {
+                v_float32 s0 = xsum(in[0], j);
+                v_float32 s1 = xsum(in[1], j);
+                v_float32 s2 = xsum(in[2], j);
+                v_float32 s = s0 * vx_setall_f32(ky0);
+                    s = v_fma(s1,  vx_setall_f32(ky1), s);
+                    s = v_fma(s2,  vx_setall_f32(ky2), s);
+                return s;
+            };
+
+            v_float32 r0 = ysum(l);
+            v_float32 r1 = ysum(l +   nlanes/4);
+            v_float32 r2 = ysum(l + 2*nlanes/4);
+            v_float32 r3 = ysum(l + 3*nlanes/4);
+
+            if (!noscale)
+            {
+                r0 = v_fma(r0, vx_setall_f32(scale), vx_setall_f32(delta));
+                r1 = v_fma(r1, vx_setall_f32(scale), vx_setall_f32(delta));
+                r2 = v_fma(r2, vx_setall_f32(scale), vx_setall_f32(delta));
+                r3 = v_fma(r3, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 i0 = v_round(r0);
+            v_int32 i1 = v_round(r1);
+            v_int32 i2 = v_round(r2);
+            v_int32 i3 = v_round(r3);
+
+            v_int16 h0 = v_pack(i0, i1);
+            v_int16 h1 = v_pack(i2, i3);
+            v_uint8 c = v_pack_u(h0, h1);
+            v_store(&out[l], c);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+#endif
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sobel_impl1(DST out[], const SRC *in[], int width, int chan,
+                            const float kx[], const float ky[], int border,
+                            float scale, float delta)
+{
+    int length = width * chan;
+
+#if CV_SIMD
+    if (std::is_same<DST,float>::value && length >= v_float32::nlanes)
+    {
+        run_sobel_float<noscale>(reinterpret_cast<float*>(out),
+                                 in, width, chan, kx, ky, border, scale, delta);
+        return;
+    }
+
+    if (std::is_same<DST,short>::value && length >= v_int16::nlanes)
+    {
+        run_sobel_short<noscale>(reinterpret_cast<short*>(out),
+                                 in, width, chan, kx, ky, border, scale, delta);
+        return;
+    }
+
+    if (std::is_same<DST,ushort>::value && length >= v_uint16::nlanes)
+    {
+        run_sobel_short<noscale>(reinterpret_cast<ushort*>(out),
+                                 in, width, chan, kx, ky, border, scale, delta);
+        return;
+    }
+
+    if (std::is_same<DST,uchar>::value && length >= v_uint8::nlanes)
+    {
+        run_sobel_uchar<noscale>(reinterpret_cast<uchar*>(out),
+                                 in, width, chan, kx, ky, border, scale, delta);
+        return;
+    }
+#endif
+
+    run_sobel_reference<noscale>(out, in, width, chan, kx, ky, border, scale, delta);
+}
+
+#define RUN_SOBEL_ROW1(DST, SRC)                                                      \
+void run_sobel_row1(DST out[], const SRC *in[], int width, int chan,                  \
+                   const float kx[], const float ky[], int border,                    \
+                   float scale, float delta)                                          \
+{                                                                                     \
+    if (scale == 1 && delta == 0)                                                     \
+    {                                                                                 \
+        constexpr bool noscale = true;                                                \
+        run_sobel_impl1<noscale>(out, in, width, chan, kx, ky, border, scale, delta); \
+    }                                                                                 \
+    else                                                                              \
+    {                                                                                 \
+        constexpr bool noscale = false;                                               \
+        run_sobel_impl1<noscale>(out, in, width, chan, kx, ky, border, scale, delta); \
+    }                                                                                 \
+}
+
+RUN_SOBEL_ROW1(uchar , uchar )
+RUN_SOBEL_ROW1(ushort, ushort)
+RUN_SOBEL_ROW1( short, uchar )
+RUN_SOBEL_ROW1( short, ushort)
+RUN_SOBEL_ROW1( short,  short)
+RUN_SOBEL_ROW1( float, uchar )
+RUN_SOBEL_ROW1( float, ushort)
+RUN_SOBEL_ROW1( float,  short)
+RUN_SOBEL_ROW1( float,  float)
+
+#undef RUN_SOBEL_ROW1
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

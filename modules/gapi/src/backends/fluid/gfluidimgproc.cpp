@@ -774,7 +774,11 @@ static void run_sobel(Buffer& dst,
     int y0 = dst.priv().writeStart();
 //  int y1 = dst.priv().writeEnd();
 
+#if 0
     run_sobel_row(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
+#else
+    run_sobel_row1(out, in, width, chan, kx, ky, border, scale, delta);
+#endif
 }
 
 GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)

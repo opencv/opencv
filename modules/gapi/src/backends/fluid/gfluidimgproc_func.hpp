@@ -57,6 +57,23 @@ RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
 
+#define RUN_SOBEL_ROW1(DST, SRC)                                     \
+void run_sobel_row1(DST out[], const SRC *in[], int width, int chan, \
+                    const float kx[], const float ky[], int border,  \
+                    float scale, float delta);
+
+RUN_SOBEL_ROW1(uchar , uchar )
+RUN_SOBEL_ROW1(ushort, ushort)
+RUN_SOBEL_ROW1( short, uchar )
+RUN_SOBEL_ROW1( short, ushort)
+RUN_SOBEL_ROW1( short,  short)
+RUN_SOBEL_ROW1( float, uchar )
+RUN_SOBEL_ROW1( float, ushort)
+RUN_SOBEL_ROW1( float,  short)
+RUN_SOBEL_ROW1( float,  float)
+
+#undef RUN_SOBEL_ROW1
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
