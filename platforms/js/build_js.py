@@ -121,7 +121,7 @@ class Builder:
                "-DBUILD_opencv_flann=ON",  # No bindings provided. This module is used as a dependency for other modules.
                "-DBUILD_opencv_gapi=OFF",
                "-DBUILD_opencv_ml=OFF",
-               "-DBUILD_opencv_photo=OFF",
+               "-DBUILD_opencv_photo=ON",
                "-DBUILD_opencv_imgcodecs=OFF",
                "-DBUILD_opencv_shape=OFF",
                "-DBUILD_opencv_videoio=OFF",
