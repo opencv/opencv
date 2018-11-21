@@ -25,9 +25,9 @@
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
-#include "backends/gpu/ggpubackend.hpp"
-#include "backends/gpu/ggpuimgproc.hpp"
-#include "backends/gpu/ggpucore.hpp"
+#include "backends/ocl/goclbackend.hpp"
+#include "backends/ocl/goclimgproc.hpp"
+#include "backends/ocl/goclcore.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -37,47 +37,47 @@
 // Alternatively, is there a way to compose types graphs?
 //
 // If not, we need to introduce that!
-using GGPUModel = ade::TypedGraph
+using GOCLModel = ade::TypedGraph
     < cv::gimpl::Unit
     , cv::gimpl::Protocol
     >;
 
 // FIXME: Same issue with Typed and ConstTyped
-using GConstGGPUModel = ade::ConstTypedGraph
+using GConstGOCLModel = ade::ConstTypedGraph
     < cv::gimpl::Unit
     , cv::gimpl::Protocol
     >;
 
 namespace
 {
-    class GGPUBackendImpl final: public cv::gapi::GBackend::Priv
+    class GOCLBackendImpl final: public cv::gapi::GBackend::Priv
     {
         virtual void unpackKernel(ade::Graph            &graph,
                                   const ade::NodeHandle &op_node,
                                   const cv::GKernelImpl &impl) override
         {
-            GGPUModel gm(graph);
-            auto gpu_impl = cv::util::any_cast<cv::GGPUKernel>(impl.opaque);
-            gm.metadata(op_node).set(cv::gimpl::Unit{gpu_impl});
+            GOCLModel gm(graph);
+            auto ocl_impl = cv::util::any_cast<cv::GOCLKernel>(impl.opaque);
+            gm.metadata(op_node).set(cv::gimpl::Unit{ocl_impl});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
                              const cv::GCompileArgs &,
                              const std::vector<ade::NodeHandle> &nodes) const override
         {
-            return EPtr{new cv::gimpl::GGPUExecutable(graph, nodes)};
+            return EPtr{new cv::gimpl::GOCLExecutable(graph, nodes)};
         }
    };
 }
 
-cv::gapi::GBackend cv::gapi::gpu::backend()
+cv::gapi::GBackend cv::gapi::ocl::backend()
 {
-    static cv::gapi::GBackend this_backend(std::make_shared<GGPUBackendImpl>());
+    static cv::gapi::GBackend this_backend(std::make_shared<GOCLBackendImpl>());
     return this_backend;
 }
 
-// GGPUExcecutable implementation //////////////////////////////////////////////
-cv::gimpl::GGPUExecutable::GGPUExecutable(const ade::Graph &g,
+// GOCLExcecutable implementation //////////////////////////////////////////////
+cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
                                           const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g)
 {
@@ -112,7 +112,7 @@ cv::gimpl::GGPUExecutable::GGPUExecutable(const ade::Graph &g,
 }
 
 // FIXME: Document what it does
-cv::GArg cv::gimpl::GGPUExecutable::packArg(const GArg &arg)
+cv::GArg cv::gimpl::GOCLExecutable::packArg(const GArg &arg)
 {
     // No API placeholders allowed at this point
     // FIXME: this check has to be done somewhere in compilation stage.
@@ -143,7 +143,7 @@ cv::GArg cv::gimpl::GGPUExecutable::packArg(const GArg &arg)
     }
 }
 
-void cv::gimpl::GGPUExecutable::run(std::vector<InObj>  &&input_objs,
+void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
                                     std::vector<OutObj> &&output_objs)
 {
     // Update resources with run-time information - what this Island
@@ -172,24 +172,24 @@ void cv::gimpl::GGPUExecutable::run(std::vector<InObj>  &&input_objs,
 
     // OpenCV backend execution is not a rocket science at all.
     // Simply invoke our kernels in the proper order.
-    GConstGGPUModel gcm(m_g);
+    GConstGOCLModel gcm(m_g);
     for (auto &op_info : m_script)
     {
         const auto &op = m_gm.metadata(op_info.nh).get<Op>();
 
         // Obtain our real execution unit
         // TODO: Should kernels be copyable?
-        GGPUKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
+        GOCLKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
 
         // Initialize kernel's execution context:
         // - Input parameters
-        GGPUContext context;
+        GOCLContext context;
         context.m_args.reserve(op.args.size());
 
         using namespace std::placeholders;
         ade::util::transform(op.args,
                           std::back_inserter(context.m_args),
-                          std::bind(&GGPUExecutable::packArg, this, _1));
+                          std::bind(&GOCLExecutable::packArg, this, _1));
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta

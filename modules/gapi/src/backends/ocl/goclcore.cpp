@@ -8,10 +8,10 @@
 #include "precomp.hpp"
 
 #include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/gpu/core.hpp"
-#include "backends/gpu/ggpucore.hpp"
+#include "opencv2/gapi/ocl/core.hpp"
+#include "backends/ocl/goclcore.hpp"
 
-GAPI_GPU_KERNEL(GGPUAdd, cv::gapi::core::GAdd)
+GAPI_OCL_KERNEL(GOCLAdd, cv::gapi::core::GAdd)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, int dtype, cv::UMat& out)
     {
@@ -19,7 +19,7 @@ GAPI_GPU_KERNEL(GGPUAdd, cv::gapi::core::GAdd)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUAddC, cv::gapi::core::GAddC)
+GAPI_OCL_KERNEL(GOCLAddC, cv::gapi::core::GAddC)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, int dtype, cv::UMat& out)
     {
@@ -27,7 +27,7 @@ GAPI_GPU_KERNEL(GGPUAddC, cv::gapi::core::GAddC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSub, cv::gapi::core::GSub)
+GAPI_OCL_KERNEL(GOCLSub, cv::gapi::core::GSub)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, int dtype, cv::UMat& out)
     {
@@ -35,7 +35,7 @@ GAPI_GPU_KERNEL(GGPUSub, cv::gapi::core::GSub)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSubC, cv::gapi::core::GSubC)
+GAPI_OCL_KERNEL(GOCLSubC, cv::gapi::core::GSubC)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, int dtype, cv::UMat& out)
     {
@@ -43,7 +43,7 @@ GAPI_GPU_KERNEL(GGPUSubC, cv::gapi::core::GSubC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSubRC, cv::gapi::core::GSubRC)
+GAPI_OCL_KERNEL(GOCLSubRC, cv::gapi::core::GSubRC)
 {
     static void run(const cv::Scalar& a, const cv::UMat& b, int dtype, cv::UMat& out)
     {
@@ -51,7 +51,7 @@ GAPI_GPU_KERNEL(GGPUSubRC, cv::gapi::core::GSubRC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMul, cv::gapi::core::GMul)
+GAPI_OCL_KERNEL(GOCLMul, cv::gapi::core::GMul)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, double scale, int dtype, cv::UMat& out)
     {
@@ -59,7 +59,7 @@ GAPI_GPU_KERNEL(GGPUMul, cv::gapi::core::GMul)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMulCOld, cv::gapi::core::GMulCOld)
+GAPI_OCL_KERNEL(GOCLMulCOld, cv::gapi::core::GMulCOld)
 {
     static void run(const cv::UMat& a, double b, int dtype, cv::UMat& out)
     {
@@ -67,7 +67,7 @@ GAPI_GPU_KERNEL(GGPUMulCOld, cv::gapi::core::GMulCOld)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMulC, cv::gapi::core::GMulC)
+GAPI_OCL_KERNEL(GOCLMulC, cv::gapi::core::GMulC)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, int dtype, cv::UMat& out)
     {
@@ -75,7 +75,7 @@ GAPI_GPU_KERNEL(GGPUMulC, cv::gapi::core::GMulC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUDiv, cv::gapi::core::GDiv)
+GAPI_OCL_KERNEL(GOCLDiv, cv::gapi::core::GDiv)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, double scale, int dtype, cv::UMat& out)
     {
@@ -83,7 +83,7 @@ GAPI_GPU_KERNEL(GGPUDiv, cv::gapi::core::GDiv)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUDivC, cv::gapi::core::GDivC)
+GAPI_OCL_KERNEL(GOCLDivC, cv::gapi::core::GDivC)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, double scale, int dtype, cv::UMat& out)
     {
@@ -91,7 +91,7 @@ GAPI_GPU_KERNEL(GGPUDivC, cv::gapi::core::GDivC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUDivRC, cv::gapi::core::GDivRC)
+GAPI_OCL_KERNEL(GOCLDivRC, cv::gapi::core::GDivRC)
 {
     static void run(const cv::Scalar& a, const cv::UMat& b, double scale, int dtype, cv::UMat& out)
     {
@@ -99,7 +99,7 @@ GAPI_GPU_KERNEL(GGPUDivRC, cv::gapi::core::GDivRC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMask, cv::gapi::core::GMask)
+GAPI_OCL_KERNEL(GOCLMask, cv::gapi::core::GMask)
 {
     static void run(const cv::UMat& in, const cv::UMat& mask, cv::UMat& out)
     {
@@ -109,7 +109,7 @@ GAPI_GPU_KERNEL(GGPUMask, cv::gapi::core::GMask)
 };
 
 
-GAPI_GPU_KERNEL(GGPUMean, cv::gapi::core::GMean)
+GAPI_OCL_KERNEL(GOCLMean, cv::gapi::core::GMean)
 {
     static void run(const cv::UMat& in, cv::Scalar& out)
     {
@@ -117,7 +117,7 @@ GAPI_GPU_KERNEL(GGPUMean, cv::gapi::core::GMean)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUPolarToCart, cv::gapi::core::GPolarToCart)
+GAPI_OCL_KERNEL(GOCLPolarToCart, cv::gapi::core::GPolarToCart)
 {
     static void run(const cv::UMat& magn, const cv::UMat& angle, bool angleInDegrees, cv::UMat& outx, cv::UMat& outy)
     {
@@ -125,7 +125,7 @@ GAPI_GPU_KERNEL(GGPUPolarToCart, cv::gapi::core::GPolarToCart)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCartToPolar, cv::gapi::core::GCartToPolar)
+GAPI_OCL_KERNEL(GOCLCartToPolar, cv::gapi::core::GCartToPolar)
 {
     static void run(const cv::UMat& x, const cv::UMat& y, bool angleInDegrees, cv::UMat& outmagn, cv::UMat& outangle)
     {
@@ -133,7 +133,7 @@ GAPI_GPU_KERNEL(GGPUCartToPolar, cv::gapi::core::GCartToPolar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpGT, cv::gapi::core::GCmpGT)
+GAPI_OCL_KERNEL(GOCLCmpGT, cv::gapi::core::GCmpGT)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -141,7 +141,7 @@ GAPI_GPU_KERNEL(GGPUCmpGT, cv::gapi::core::GCmpGT)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpGE, cv::gapi::core::GCmpGE)
+GAPI_OCL_KERNEL(GOCLCmpGE, cv::gapi::core::GCmpGE)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -149,7 +149,7 @@ GAPI_GPU_KERNEL(GGPUCmpGE, cv::gapi::core::GCmpGE)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpLE, cv::gapi::core::GCmpLE)
+GAPI_OCL_KERNEL(GOCLCmpLE, cv::gapi::core::GCmpLE)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -157,7 +157,7 @@ GAPI_GPU_KERNEL(GGPUCmpLE, cv::gapi::core::GCmpLE)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpLT, cv::gapi::core::GCmpLT)
+GAPI_OCL_KERNEL(GOCLCmpLT, cv::gapi::core::GCmpLT)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -165,7 +165,7 @@ GAPI_GPU_KERNEL(GGPUCmpLT, cv::gapi::core::GCmpLT)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpEQ, cv::gapi::core::GCmpEQ)
+GAPI_OCL_KERNEL(GOCLCmpEQ, cv::gapi::core::GCmpEQ)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -173,7 +173,7 @@ GAPI_GPU_KERNEL(GGPUCmpEQ, cv::gapi::core::GCmpEQ)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpNE, cv::gapi::core::GCmpNE)
+GAPI_OCL_KERNEL(GOCLCmpNE, cv::gapi::core::GCmpNE)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -181,7 +181,7 @@ GAPI_GPU_KERNEL(GGPUCmpNE, cv::gapi::core::GCmpNE)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpGTScalar, cv::gapi::core::GCmpGTScalar)
+GAPI_OCL_KERNEL(GOCLCmpGTScalar, cv::gapi::core::GCmpGTScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -189,7 +189,7 @@ GAPI_GPU_KERNEL(GGPUCmpGTScalar, cv::gapi::core::GCmpGTScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpGEScalar, cv::gapi::core::GCmpGEScalar)
+GAPI_OCL_KERNEL(GOCLCmpGEScalar, cv::gapi::core::GCmpGEScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -197,7 +197,7 @@ GAPI_GPU_KERNEL(GGPUCmpGEScalar, cv::gapi::core::GCmpGEScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpLEScalar, cv::gapi::core::GCmpLEScalar)
+GAPI_OCL_KERNEL(GOCLCmpLEScalar, cv::gapi::core::GCmpLEScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -205,7 +205,7 @@ GAPI_GPU_KERNEL(GGPUCmpLEScalar, cv::gapi::core::GCmpLEScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpLTScalar, cv::gapi::core::GCmpLTScalar)
+GAPI_OCL_KERNEL(GOCLCmpLTScalar, cv::gapi::core::GCmpLTScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -213,7 +213,7 @@ GAPI_GPU_KERNEL(GGPUCmpLTScalar, cv::gapi::core::GCmpLTScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpEQScalar, cv::gapi::core::GCmpEQScalar)
+GAPI_OCL_KERNEL(GOCLCmpEQScalar, cv::gapi::core::GCmpEQScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -221,7 +221,7 @@ GAPI_GPU_KERNEL(GGPUCmpEQScalar, cv::gapi::core::GCmpEQScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCmpNEScalar, cv::gapi::core::GCmpNEScalar)
+GAPI_OCL_KERNEL(GOCLCmpNEScalar, cv::gapi::core::GCmpNEScalar)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -229,7 +229,7 @@ GAPI_GPU_KERNEL(GGPUCmpNEScalar, cv::gapi::core::GCmpNEScalar)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUAnd, cv::gapi::core::GAnd)
+GAPI_OCL_KERNEL(GOCLAnd, cv::gapi::core::GAnd)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -237,7 +237,7 @@ GAPI_GPU_KERNEL(GGPUAnd, cv::gapi::core::GAnd)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUAndS, cv::gapi::core::GAndS)
+GAPI_OCL_KERNEL(GOCLAndS, cv::gapi::core::GAndS)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -245,7 +245,7 @@ GAPI_GPU_KERNEL(GGPUAndS, cv::gapi::core::GAndS)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUOr, cv::gapi::core::GOr)
+GAPI_OCL_KERNEL(GOCLOr, cv::gapi::core::GOr)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -253,7 +253,7 @@ GAPI_GPU_KERNEL(GGPUOr, cv::gapi::core::GOr)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUOrS, cv::gapi::core::GOrS)
+GAPI_OCL_KERNEL(GOCLOrS, cv::gapi::core::GOrS)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -261,7 +261,7 @@ GAPI_GPU_KERNEL(GGPUOrS, cv::gapi::core::GOrS)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUXor, cv::gapi::core::GXor)
+GAPI_OCL_KERNEL(GOCLXor, cv::gapi::core::GXor)
 {
     static void run(const cv::UMat& a, const cv::UMat& b, cv::UMat& out)
     {
@@ -269,7 +269,7 @@ GAPI_GPU_KERNEL(GGPUXor, cv::gapi::core::GXor)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUXorS, cv::gapi::core::GXorS)
+GAPI_OCL_KERNEL(GOCLXorS, cv::gapi::core::GXorS)
 {
     static void run(const cv::UMat& a, const cv::Scalar& b, cv::UMat& out)
     {
@@ -277,7 +277,7 @@ GAPI_GPU_KERNEL(GGPUXorS, cv::gapi::core::GXorS)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUNot, cv::gapi::core::GNot)
+GAPI_OCL_KERNEL(GOCLNot, cv::gapi::core::GNot)
 {
     static void run(const cv::UMat& a, cv::UMat& out)
     {
@@ -285,7 +285,7 @@ GAPI_GPU_KERNEL(GGPUNot, cv::gapi::core::GNot)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSelect, cv::gapi::core::GSelect)
+GAPI_OCL_KERNEL(GOCLSelect, cv::gapi::core::GSelect)
 {
     static void run(const cv::UMat& src1, const cv::UMat& src2, const cv::UMat& mask, cv::UMat& out)
     {
@@ -295,7 +295,7 @@ GAPI_GPU_KERNEL(GGPUSelect, cv::gapi::core::GSelect)
 };
 
 ////TODO: doesn't compiled with UMat
-//GAPI_GPU_KERNEL(GGPUMin, cv::gapi::core::GMin)
+//GAPI_OCL_KERNEL(GOCLMin, cv::gapi::core::GMin)
 //{
 //    static void run(const cv::UMat& in1, const cv::UMat& in2, cv::UMat& out)
 //    {
@@ -304,7 +304,7 @@ GAPI_GPU_KERNEL(GGPUSelect, cv::gapi::core::GSelect)
 //};
 //
 ////TODO: doesn't compiled with UMat
-//GAPI_GPU_KERNEL(GGPUMax, cv::gapi::core::GMax)
+//GAPI_OCL_KERNEL(GOCLMax, cv::gapi::core::GMax)
 //{
 //    static void run(const cv::UMat& in1, const cv::UMat& in2, cv::UMat& out)
 //    {
@@ -313,7 +313,7 @@ GAPI_GPU_KERNEL(GGPUSelect, cv::gapi::core::GSelect)
 //};
 
 
-GAPI_GPU_KERNEL(GGPUAbsDiff, cv::gapi::core::GAbsDiff)
+GAPI_OCL_KERNEL(GOCLAbsDiff, cv::gapi::core::GAbsDiff)
 {
     static void run(const cv::UMat& in1, const cv::UMat& in2, cv::UMat& out)
     {
@@ -321,7 +321,7 @@ GAPI_GPU_KERNEL(GGPUAbsDiff, cv::gapi::core::GAbsDiff)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUAbsDiffC, cv::gapi::core::GAbsDiffC)
+GAPI_OCL_KERNEL(GOCLAbsDiffC, cv::gapi::core::GAbsDiffC)
 {
     static void run(const cv::UMat& in1, const cv::Scalar& in2, cv::UMat& out)
     {
@@ -329,7 +329,7 @@ GAPI_GPU_KERNEL(GGPUAbsDiffC, cv::gapi::core::GAbsDiffC)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSum, cv::gapi::core::GSum)
+GAPI_OCL_KERNEL(GOCLSum, cv::gapi::core::GSum)
 {
     static void run(const cv::UMat& in, cv::Scalar& out)
     {
@@ -337,7 +337,7 @@ GAPI_GPU_KERNEL(GGPUSum, cv::gapi::core::GSum)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUAddW, cv::gapi::core::GAddW)
+GAPI_OCL_KERNEL(GOCLAddW, cv::gapi::core::GAddW)
 {
     static void run(const cv::UMat& in1, double alpha, const cv::UMat& in2, double beta, double gamma, int dtype, cv::UMat& out)
     {
@@ -346,7 +346,7 @@ GAPI_GPU_KERNEL(GGPUAddW, cv::gapi::core::GAddW)
 };
 
 
-GAPI_GPU_KERNEL(GGPUNormL1, cv::gapi::core::GNormL1)
+GAPI_OCL_KERNEL(GOCLNormL1, cv::gapi::core::GNormL1)
 {
     static void run(const cv::UMat& in, cv::Scalar& out)
     {
@@ -354,7 +354,7 @@ GAPI_GPU_KERNEL(GGPUNormL1, cv::gapi::core::GNormL1)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUNormL2, cv::gapi::core::GNormL2)
+GAPI_OCL_KERNEL(GOCLNormL2, cv::gapi::core::GNormL2)
 {
     static void run(const cv::UMat& in, cv::Scalar& out)
     {
@@ -362,7 +362,7 @@ GAPI_GPU_KERNEL(GGPUNormL2, cv::gapi::core::GNormL2)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUNormInf, cv::gapi::core::GNormInf)
+GAPI_OCL_KERNEL(GOCLNormInf, cv::gapi::core::GNormInf)
 {
     static void run(const cv::UMat& in, cv::Scalar& out)
     {
@@ -370,7 +370,7 @@ GAPI_GPU_KERNEL(GGPUNormInf, cv::gapi::core::GNormInf)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUIntegral, cv::gapi::core::GIntegral)
+GAPI_OCL_KERNEL(GOCLIntegral, cv::gapi::core::GIntegral)
 {
     static void run(const cv::UMat& in, int sdepth, int sqdepth, cv::UMat& out, cv::UMat& outSq)
     {
@@ -378,7 +378,7 @@ GAPI_GPU_KERNEL(GGPUIntegral, cv::gapi::core::GIntegral)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUThreshold, cv::gapi::core::GThreshold)
+GAPI_OCL_KERNEL(GOCLThreshold, cv::gapi::core::GThreshold)
 {
     static void run(const cv::UMat& in, const cv::Scalar& a, const cv::Scalar& b, int type, cv::UMat& out)
     {
@@ -386,7 +386,7 @@ GAPI_GPU_KERNEL(GGPUThreshold, cv::gapi::core::GThreshold)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUThresholdOT, cv::gapi::core::GThresholdOT)
+GAPI_OCL_KERNEL(GOCLThresholdOT, cv::gapi::core::GThresholdOT)
 {
     static void run(const cv::UMat& in, const cv::Scalar& b, int type, cv::UMat& out, cv::Scalar& outScalar)
     {
@@ -395,7 +395,7 @@ GAPI_GPU_KERNEL(GGPUThresholdOT, cv::gapi::core::GThresholdOT)
 };
 
 
-GAPI_GPU_KERNEL(GGPUInRange, cv::gapi::core::GInRange)
+GAPI_OCL_KERNEL(GOCLInRange, cv::gapi::core::GInRange)
 {
     static void run(const cv::UMat& in, const cv::Scalar& low, const cv::Scalar& up, cv::UMat& out)
     {
@@ -403,7 +403,7 @@ GAPI_GPU_KERNEL(GGPUInRange, cv::gapi::core::GInRange)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSplit3, cv::gapi::core::GSplit3)
+GAPI_OCL_KERNEL(GOCLSplit3, cv::gapi::core::GSplit3)
 {
     static void run(const cv::UMat& in, cv::UMat &m1, cv::UMat &m2, cv::UMat &m3)
     {
@@ -417,7 +417,7 @@ GAPI_GPU_KERNEL(GGPUSplit3, cv::gapi::core::GSplit3)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSplit4, cv::gapi::core::GSplit4)
+GAPI_OCL_KERNEL(GOCLSplit4, cv::gapi::core::GSplit4)
 {
     static void run(const cv::UMat& in, cv::UMat &m1, cv::UMat &m2, cv::UMat &m3, cv::UMat &m4)
     {
@@ -432,7 +432,7 @@ GAPI_GPU_KERNEL(GGPUSplit4, cv::gapi::core::GSplit4)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMerge3, cv::gapi::core::GMerge3)
+GAPI_OCL_KERNEL(GOCLMerge3, cv::gapi::core::GMerge3)
 {
     static void run(const cv::UMat& in1, const cv::UMat& in2, const cv::UMat& in3, cv::UMat &out)
     {
@@ -441,7 +441,7 @@ GAPI_GPU_KERNEL(GGPUMerge3, cv::gapi::core::GMerge3)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMerge4, cv::gapi::core::GMerge4)
+GAPI_OCL_KERNEL(GOCLMerge4, cv::gapi::core::GMerge4)
 {
     static void run(const cv::UMat& in1, const cv::UMat& in2, const cv::UMat& in3, const cv::UMat& in4, cv::UMat &out)
     {
@@ -450,7 +450,7 @@ GAPI_GPU_KERNEL(GGPUMerge4, cv::gapi::core::GMerge4)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUResize, cv::gapi::core::GResize)
+GAPI_OCL_KERNEL(GOCLResize, cv::gapi::core::GResize)
 {
     static void run(const cv::UMat& in, cv::Size sz, double fx, double fy, int interp, cv::UMat &out)
     {
@@ -458,7 +458,7 @@ GAPI_GPU_KERNEL(GGPUResize, cv::gapi::core::GResize)
     }
 };
 
-GAPI_GPU_KERNEL(GGPURemap, cv::gapi::core::GRemap)
+GAPI_OCL_KERNEL(GOCLRemap, cv::gapi::core::GRemap)
 {
     static void run(const cv::UMat& in, const cv::Mat& x, const cv::Mat& y, int a, int b, cv::Scalar s, cv::UMat& out)
     {
@@ -466,7 +466,7 @@ GAPI_GPU_KERNEL(GGPURemap, cv::gapi::core::GRemap)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUFlip, cv::gapi::core::GFlip)
+GAPI_OCL_KERNEL(GOCLFlip, cv::gapi::core::GFlip)
 {
     static void run(const cv::UMat& in, int code, cv::UMat& out)
     {
@@ -474,7 +474,7 @@ GAPI_GPU_KERNEL(GGPUFlip, cv::gapi::core::GFlip)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCrop, cv::gapi::core::GCrop)
+GAPI_OCL_KERNEL(GOCLCrop, cv::gapi::core::GCrop)
 {
     static void run(const cv::UMat& in, cv::Rect rect, cv::UMat& out)
     {
@@ -482,7 +482,7 @@ GAPI_GPU_KERNEL(GGPUCrop, cv::gapi::core::GCrop)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUConcatHor, cv::gapi::core::GConcatHor)
+GAPI_OCL_KERNEL(GOCLConcatHor, cv::gapi::core::GConcatHor)
 {
     static void run(const cv::UMat& in1, const cv::UMat& in2, cv::UMat& out)
     {
@@ -490,7 +490,7 @@ GAPI_GPU_KERNEL(GGPUConcatHor, cv::gapi::core::GConcatHor)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUConcatVert, cv::gapi::core::GConcatVert)
+GAPI_OCL_KERNEL(GOCLConcatVert, cv::gapi::core::GConcatVert)
 {
     static void run(const cv::UMat& in1, const cv::UMat& in2, cv::UMat& out)
     {
@@ -498,7 +498,7 @@ GAPI_GPU_KERNEL(GGPUConcatVert, cv::gapi::core::GConcatVert)
     }
 };
 
-GAPI_GPU_KERNEL(GGPULUT, cv::gapi::core::GLUT)
+GAPI_OCL_KERNEL(GOCLLUT, cv::gapi::core::GLUT)
 {
     static void run(const cv::UMat& in, const cv::Mat& lut, cv::UMat& out)
     {
@@ -506,7 +506,7 @@ GAPI_GPU_KERNEL(GGPULUT, cv::gapi::core::GLUT)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUConvertTo, cv::gapi::core::GConvertTo)
+GAPI_OCL_KERNEL(GOCLConvertTo, cv::gapi::core::GConvertTo)
 {
     static void run(const cv::UMat& in, int rtype, double alpha, double beta, cv::UMat& out)
     {
@@ -514,69 +514,69 @@ GAPI_GPU_KERNEL(GGPUConvertTo, cv::gapi::core::GConvertTo)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::gpu::kernels()
+cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
-        <  GGPUAdd
-         , GGPUAddC
-         , GGPUSub
-         , GGPUSubC
-         , GGPUSubRC
-         , GGPUMul
-         , GGPUMulC
-         , GGPUMulCOld
-         , GGPUDiv
-         , GGPUDivC
-         , GGPUDivRC
-         , GGPUMean
-         , GGPUMask
-         , GGPUPolarToCart
-         , GGPUCartToPolar
-         , GGPUCmpGT
-         , GGPUCmpGE
-         , GGPUCmpLE
-         , GGPUCmpLT
-         , GGPUCmpEQ
-         , GGPUCmpNE
-         , GGPUCmpGTScalar
-         , GGPUCmpGEScalar
-         , GGPUCmpLEScalar
-         , GGPUCmpLTScalar
-         , GGPUCmpEQScalar
-         , GGPUCmpNEScalar
-         , GGPUAnd
-         , GGPUAndS
-         , GGPUOr
-         , GGPUOrS
-         , GGPUXor
-         , GGPUXorS
-         , GGPUNot
-         , GGPUSelect
-         //, GGPUMin
-         //, GGPUMax
-         , GGPUAbsDiff
-         , GGPUAbsDiffC
-         , GGPUSum
-         , GGPUAddW
-         , GGPUNormL1
-         , GGPUNormL2
-         , GGPUNormInf
-         , GGPUIntegral
-         , GGPUThreshold
-         , GGPUThresholdOT
-         , GGPUInRange
-         , GGPUSplit3
-         , GGPUSplit4
-         , GGPUResize
-         , GGPUMerge3
-         , GGPUMerge4
-         , GGPURemap
-         , GGPUFlip
-         , GGPUCrop
-         , GGPUConcatHor
-         , GGPUConcatVert
-         , GGPULUT
-         , GGPUConvertTo
+        <  GOCLAdd
+         , GOCLAddC
+         , GOCLSub
+         , GOCLSubC
+         , GOCLSubRC
+         , GOCLMul
+         , GOCLMulC
+         , GOCLMulCOld
+         , GOCLDiv
+         , GOCLDivC
+         , GOCLDivRC
+         , GOCLMean
+         , GOCLMask
+         , GOCLPolarToCart
+         , GOCLCartToPolar
+         , GOCLCmpGT
+         , GOCLCmpGE
+         , GOCLCmpLE
+         , GOCLCmpLT
+         , GOCLCmpEQ
+         , GOCLCmpNE
+         , GOCLCmpGTScalar
+         , GOCLCmpGEScalar
+         , GOCLCmpLEScalar
+         , GOCLCmpLTScalar
+         , GOCLCmpEQScalar
+         , GOCLCmpNEScalar
+         , GOCLAnd
+         , GOCLAndS
+         , GOCLOr
+         , GOCLOrS
+         , GOCLXor
+         , GOCLXorS
+         , GOCLNot
+         , GOCLSelect
+         //, GOCLMin
+         //, GOCLMax
+         , GOCLAbsDiff
+         , GOCLAbsDiffC
+         , GOCLSum
+         , GOCLAddW
+         , GOCLNormL1
+         , GOCLNormL2
+         , GOCLNormInf
+         , GOCLIntegral
+         , GOCLThreshold
+         , GOCLThresholdOT
+         , GOCLInRange
+         , GOCLSplit3
+         , GOCLSplit4
+         , GOCLResize
+         , GOCLMerge3
+         , GOCLMerge4
+         , GOCLRemap
+         , GOCLFlip
+         , GOCLCrop
+         , GOCLConcatHor
+         , GOCLConcatVert
+         , GOCLLUT
+         , GOCLConvertTo
          >();
     return pkg;
 }

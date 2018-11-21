@@ -8,7 +8,6 @@
 #include "../test_precomp.hpp"
 
 #include "../common/gapi_imgproc_tests.hpp"
-#include "opencv2/gapi/gpu/imgproc.hpp"
 
 #define IMGPROC_GPU cv::gapi::imgproc::gpu::kernels()
 

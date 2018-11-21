@@ -5,23 +5,24 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GPU_CORE_API_HPP
-#define OPENCV_GAPI_GPU_CORE_API_HPP
+#ifndef OPENCV_GAPI_OCL_IMGPROC_API_HPP
+#define OPENCV_GAPI_OCL_IMGPROC_API_HPP
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 
 namespace cv {
 namespace gapi {
-namespace core {
-namespace gpu {
+namespace imgproc {
+#define gpu ocl
+namespace ocl {
 
 GAPI_EXPORTS GKernelPackage kernels();
 
-} // namespace gpu
-} // namespace core
+} // namespace ocl
+} // namespace imgproc
 } // namespace gapi
 } // namespace cv
 
 
-#endif // OPENCV_GAPI_GPU_CORE_API_HPP
+#endif // OPENCV_GAPI_OCL_IMGPROC_API_HPP

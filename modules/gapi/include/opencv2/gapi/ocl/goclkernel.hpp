@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GGPUKERNEL_HPP
-#define OPENCV_GAPI_GGPUKERNEL_HPP
+#ifndef OPENCV_GAPI_GOCLKERNEL_HPP
+#define OPENCV_GAPI_GOCLKERNEL_HPP
 
 #include <vector>
 #include <functional>
@@ -24,34 +24,34 @@ namespace cv {
 namespace gimpl
 {
     // Forward-declare an internal class
-    class GGPUExecutable;
+    class GOCLExecutable;
 } // namespace gimpl
 
 namespace gapi
 {
-namespace gpu
+namespace ocl
 {
     /**
      * \addtogroup gapi_std_backends G-API Standard backends
      * @{
      */
     /**
-     * @brief Get a reference to GPU backend.
+     * @brief Get a reference to OCL backend.
      *
-     * At the moment, the GPU backend is built atop of OpenCV
+     * At the moment, the OCL backend is built atop of OpenCV
      * "Transparent API" (T-API), see cv::UMat for details.
      *
      * @sa gapi_std_backends
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
     /** @} */
-} // namespace gpu
+} // namespace ocl
 } // namespace gapi
 
 
-// Represents arguments which are passed to a wrapped GPU function
+// Represents arguments which are passed to a wrapped OCL function
 // FIXME: put into detail?
-class GAPI_EXPORTS GGPUContext
+class GAPI_EXPORTS GOCLContext
 {
 public:
     // Generic accessor API
@@ -76,19 +76,19 @@ protected:
     std::unordered_map<std::size_t, GRunArgP> m_results;
 
 
-    friend class gimpl::GGPUExecutable;
+    friend class gimpl::GOCLExecutable;
 };
 
-class GAPI_EXPORTS GGPUKernel
+class GAPI_EXPORTS GOCLKernel
 {
 public:
     // This function is kernel's execution entry point (does the processing work)
-    using F = std::function<void(GGPUContext &)>;
+    using F = std::function<void(GOCLContext &)>;
 
-    GGPUKernel();
-    explicit GGPUKernel(const F& f);
+    GOCLKernel();
+    explicit GOCLKernel(const F& f);
 
-    void apply(GGPUContext &ctx);
+    void apply(GOCLContext &ctx);
 
 protected:
     F m_f;
@@ -98,22 +98,22 @@ protected:
 
 namespace detail
 {
-template<class T> struct gpu_get_in;
-template<> struct gpu_get_in<cv::GMat>
+template<class T> struct ocl_get_in;
+template<> struct ocl_get_in<cv::GMat>
 {
-    static cv::UMat    get(GGPUContext &ctx, int idx) { return ctx.inMat(idx); }
+    static cv::UMat    get(GOCLContext &ctx, int idx) { return ctx.inMat(idx); }
 };
-template<> struct gpu_get_in<cv::GScalar>
+template<> struct ocl_get_in<cv::GScalar>
 {
-    static cv::Scalar get(GGPUContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
+    static cv::Scalar get(GOCLContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
 };
-template<typename U> struct gpu_get_in<cv::GArray<U> >
+template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
-    static const std::vector<U>& get(GGPUContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
+    static const std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
 };
-template<class T> struct gpu_get_in
+template<class T> struct ocl_get_in
 {
-    static T get(GGPUContext &ctx, int idx) { return ctx.inArg<T>(idx); }
+    static T get(GOCLContext &ctx, int idx) { return ctx.inArg<T>(idx); }
 };
 
 struct tracked_cv_umat{
@@ -136,10 +136,10 @@ struct tracked_cv_umat{
     }
 };
 
-struct scalar_wrapper_gpu
+struct scalar_wrapper_ocl
 {
     //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_gpu(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
+    scalar_wrapper_ocl(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
     operator cv::Scalar& () { return m_s; }
     void writeBack() const  { m_org_s = to_own(m_s); }
 
@@ -148,12 +148,12 @@ struct scalar_wrapper_gpu
 };
 
 template<typename... Outputs>
-void postprocess_gpu(Outputs&... outs)
+void postprocess_ocl(Outputs&... outs)
 {
     struct
     {
         void operator()(tracked_cv_umat* bm) { bm->validate(); }
-        void operator()(scalar_wrapper_gpu* sw) { sw->writeBack(); }
+        void operator()(scalar_wrapper_ocl* sw) { sw->writeBack(); }
         void operator()(...) {                  }
 
     } validate;
@@ -162,34 +162,34 @@ void postprocess_gpu(Outputs&... outs)
     cv::util::suppress_unused_warning(dummy);
 }
 
-template<class T> struct gpu_get_out;
-template<> struct gpu_get_out<cv::GMat>
+template<class T> struct ocl_get_out;
+template<> struct ocl_get_out<cv::GMat>
 {
-    static tracked_cv_umat get(GGPUContext &ctx, int idx)
+    static tracked_cv_umat get(GOCLContext &ctx, int idx)
     {
         auto& r = ctx.outMatR(idx);
         return{ r };
     }
 };
-template<> struct gpu_get_out<cv::GScalar>
+template<> struct ocl_get_out<cv::GScalar>
 {
-    static scalar_wrapper_gpu get(GGPUContext &ctx, int idx)
+    static scalar_wrapper_ocl get(GOCLContext &ctx, int idx)
     {
         auto& s = ctx.outValR(idx);
         return{ s };
     }
 };
-template<typename U> struct gpu_get_out<cv::GArray<U> >
+template<typename U> struct ocl_get_out<cv::GArray<U> >
 {
-    static std::vector<U>& get(GGPUContext &ctx, int idx) { return ctx.outVecR<U>(idx);  }
+    static std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.outVecR<U>(idx);  }
 };
 
 template<typename, typename, typename>
-struct GPUCallHelper;
+struct OCLCallHelper;
 
 // FIXME: probably can be simplified with std::apply or analogue.
 template<typename Impl, typename... Ins, typename... Outs>
-struct GPUCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
+struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 {
     template<typename... Inputs>
     struct call_and_postprocess
@@ -201,21 +201,21 @@ struct GPUCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
             //cause compilation error, by tring to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
-            postprocess_gpu(outs...);
+            postprocess_ocl(outs...);
         }
     };
 
     template<int... IIs, int... OIs>
-    static void call_impl(GGPUContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
+    static void call_impl(GOCLContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
         //TODO: Make sure that OpenCV kernels do not reallocate memory for output parameters
         //by comparing it's state (data ptr) before and after the call.
         //Convert own::Scalar to cv::Scalar before call kernel and run kernel
         //convert cv::Scalar to own::Scalar after call kernel and write back results
-        call_and_postprocess<decltype(gpu_get_in<Ins>::get(ctx, IIs))...>::call(gpu_get_in<Ins>::get(ctx, IIs)..., gpu_get_out<Outs>::get(ctx, OIs)...);
+        call_and_postprocess<decltype(ocl_get_in<Ins>::get(ctx, IIs))...>::call(ocl_get_in<Ins>::get(ctx, IIs)..., ocl_get_out<Outs>::get(ctx, OIs)...);
     }
 
-    static void call(GGPUContext &ctx)
+    static void call(GOCLContext &ctx)
     {
         call_impl(ctx,
             typename detail::MkSeq<sizeof...(Ins)>::type(),
@@ -226,19 +226,20 @@ struct GPUCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 } // namespace detail
 
 template<class Impl, class K>
-class GGPUKernelImpl: public detail::GPUCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GOCLKernelImpl: public detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
 {
-    using P = detail::GPUCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
+    using P = detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 
 public:
     using API = K;
 
-    static cv::gapi::GBackend backend()  { return cv::gapi::gpu::backend(); }
-    static cv::GGPUKernel     kernel()   { return GGPUKernel(&P::call);     }
+    static cv::gapi::GBackend backend()  { return cv::gapi::ocl::backend(); }
+    static cv::GOCLKernel     kernel()   { return GOCLKernel(&P::call);     }
 };
 
-#define GAPI_GPU_KERNEL(Name, API) struct Name: public cv::GGPUKernelImpl<Name, API>
+#define GAPI_OCL_KERNEL(Name, API) struct Name: public cv::GOCLKernelImpl<Name, API>
+#define GAPI_GPU_KERNEL GAPI_OCL_KERNEL
 
 } // namespace cv
 
-#endif // OPENCV_GAPI_GGPUKERNEL_HPP
+#endif // OPENCV_GAPI_GOCLKERNEL_HPP
