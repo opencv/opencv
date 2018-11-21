@@ -905,6 +905,11 @@ OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
 OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float64x4, pd)
 
+inline v_float32x8 v_not_nan(const v_float32x8& a)
+{ return v_float32x8(_mm256_cmp_ps(a.val, a.val, _CMP_ORD_Q)); }
+inline v_float64x4 v_not_nan(const v_float64x4& a)
+{ return v_float64x4(_mm256_cmp_pd(a.val, a.val, _CMP_ORD_Q)); }
+
 /** min/max **/
 OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_uint8x32,  _mm256_min_epu8)
 OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_uint8x32,  _mm256_max_epu8)
