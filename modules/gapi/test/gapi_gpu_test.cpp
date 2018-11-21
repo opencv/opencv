@@ -17,6 +17,7 @@
 namespace cv
 {
 
+#ifdef HAVE_OPENCL
 
     static void reference_symm7x7_CPU(const cv::Mat& in, const cv::Mat& kernel_coeff, int shift, cv::Mat &out)
     {
@@ -70,7 +71,6 @@ namespace cv
         cv::filter2D(in, out, CV_8UC1, kernel, anchor, delta, cv::BORDER_REPLICATE);
     }
 
-#ifdef HAVE_OPENCL
     namespace gapi_test_kernels
     {
         G_TYPED_KERNEL(TSymm7x7_test, <GMat(GMat, Mat, int)>, "org.opencv.imgproc.symm7x7_test") {
