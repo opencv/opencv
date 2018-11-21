@@ -114,6 +114,8 @@ double cvGetRatioWindow_GTK(const char* name);
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
 
+double cvGetPropVisible_W32(const char* name);
+
 //for QT
 #if defined (HAVE_QT)
 CvRect cvGetWindowRect_QT(const char* name);
