@@ -427,7 +427,7 @@ static inline int _initMaxThreads()
     {
         omp_set_dynamic(maxThreads);
     }
-    return numThreads;
+    return maxThreads;
 }
 static int numThreadsMax = _initMaxThreads();
 #elif defined HAVE_GCD
