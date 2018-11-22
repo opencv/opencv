@@ -101,7 +101,7 @@ namespace cv
                     cv::ocl::Program program(source, build_options, errmsg);
                     if (program.ptr() == NULL)
                     {
-                        CV_Error_(cv::Error::OpenCLInitError, ("symm_7x7_test Can't compile OpenCL program: = %s with build_options = %s\n", errmsg.c_str()), build_options);
+                        CV_Error_(cv::Error::OpenCLInitError, ("symm_7x7_test Can't compile OpenCL program: = %s with build_options = %s\n", errmsg.c_str(), build_options));
                     }
                     if (!errmsg.empty())
                     {
