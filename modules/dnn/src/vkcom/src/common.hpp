@@ -33,6 +33,7 @@ extern VkPhysicalDevice kPhysicalDevice;
 extern VkDevice kDevice;
 extern VkQueue kQueue;
 extern VkCommandPool kCmdPool;
+extern cv::Mutex kContextMtx;
 
 enum ShapeIdx
 {
