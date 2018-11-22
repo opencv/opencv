@@ -18,7 +18,7 @@ static uint32_t findMemoryType(uint32_t memoryTypeBits, VkMemoryPropertyFlags pr
 {
     VkPhysicalDeviceMemoryProperties memoryProperties;
 
-    vkGetPhysicalDeviceMemoryProperties(getPhysicalDevice(), &memoryProperties);
+    vkGetPhysicalDeviceMemoryProperties(kPhysicalDevice, &memoryProperties);
 
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
         if ((memoryTypeBits & (1 << i)) &&
