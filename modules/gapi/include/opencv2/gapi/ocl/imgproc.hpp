@@ -14,12 +14,14 @@
 namespace cv {
 namespace gapi {
 namespace imgproc {
-#define gpu ocl
-namespace ocl {
+inline namespace ocl {
 
-GAPI_EXPORTS GKernelPackage kernels();
+    GAPI_EXPORTS GKernelPackage kernels();
 
-} // namespace ocl
+} // inline namespace ocl
+namespace gpu {
+    using namespace ocl;
+} // namespace gpu
 } // namespace imgproc
 } // namespace gapi
 } // namespace cv
