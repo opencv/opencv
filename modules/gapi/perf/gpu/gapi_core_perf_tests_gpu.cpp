@@ -163,7 +163,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestGPU, AddWeightedPerfTest,
                         Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, /*CV_8UC3,*/ CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
-                                Values(0.5000005), //TODO: accuracy testing is disabled; 0.500005 was OK for GPU 
+                                Values(0.5000005), //TODO: accuracy testing is disabled; 0.500005 was OK for GPU
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(NormPerfTestGPU, NormPerfTest,
