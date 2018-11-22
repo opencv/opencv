@@ -29,6 +29,10 @@
 namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
+extern VkPhysicalDevice kPhysicalDevice;
+extern VkDevice kDevice;
+extern VkQueue kQueue;
+extern VkCommandPool kCmdPool;
 
 enum ShapeIdx
 {
