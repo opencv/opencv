@@ -102,6 +102,7 @@ file(GLOB imgcodecs_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
      )
 
 if(IOS)
