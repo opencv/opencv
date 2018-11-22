@@ -39,7 +39,7 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 //
 //---------------------
 
-#define RUN_SOBEL_WITH_BUF 0  // 1=run_sobel_row() using buf[], 0=not using buf[]
+#define RUN_SOBEL_WITH_BUF 1  // 1=run_sobel_row() using buf[], 0=not using buf[]
 
 #if RUN_SOBEL_WITH_BUF
 

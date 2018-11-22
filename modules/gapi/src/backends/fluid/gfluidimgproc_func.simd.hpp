@@ -935,9 +935,9 @@ static void run_sobel_impl1(DST out[], const SRC *in[], int width, int chan,
                             const float kx[], const float ky[], int border,
                             float scale, float delta)
 {
+#if CV_SIMD
     int length = width * chan;
 
-#if CV_SIMD
 #if USE_CHAR2SHORT
     if (std::is_same<DST,short>::value && std::is_same<SRC,uchar>::value &&
         length >= v_int16::nlanes)
