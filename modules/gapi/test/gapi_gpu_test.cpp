@@ -89,18 +89,29 @@ namespace cv
                     cv::Size size = in.size();
                     size_t globalsize[2] = { (size_t)size.width, (size_t)size.height };
 
-                    cv::ocl::Kernel kernel;
-
+                    const cv::String moduleName = "gapi";
+                    cv::ocl::ProgramSource source(moduleName, "symm7x7", opencl_symm7x7_src, "");
 
                     static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_UNDEFINED" };
                     std::string build_options = " -D BORDER_CONSTANT_VALUE=" + std::to_string(0) +
                         " -D " + borderMap[1] +
                         " -D SCALE=1.f/" + std::to_string(1 << shift) + ".f";
 
-
-                    if (!kernel.create("symm_7x7_test", cv::ocl::gapi::symm7x7_test_oclsrc, build_options))
+                    cv::String errmsg;
+                    cv::ocl::Program program(source, build_options, errmsg);
+                    if (program.ptr() == NULL)
                     {
-                        CV_Error_(cv::Error::OpenCLInitError, ("symm_7x7_test OpenCL kernel creation failed with build_options = %s\n", build_options.c_str()));
+                        CV_Error_(cv::Error::OpenCLInitError, ("symm_7x7_test Can't compile OpenCL program: = %s with build_options = %s\n", errmsg.c_str()), build_options);
+                    }
+                    if (!errmsg.empty())
+                    {
+                        std::cout << "OpenCL program build log:" << std::endl << errmsg << std::endl;
+                    }
+
+                    cv::ocl::Kernel kernel("symm_7x7_test", program);
+                    if (kernel.empty())
+                    {
+                        CV_Error(cv::Error::OpenCLInitError, "symm_7x7_test Can't get OpenCL kernel\n");
                     }
 
                     cv::UMat gKer;
