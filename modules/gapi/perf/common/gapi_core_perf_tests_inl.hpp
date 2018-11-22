@@ -900,13 +900,13 @@ PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
 
 PERF_TEST_P_(SumPerfTest, TestPerformance)
 {
-    cv::Size sz_in = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    double tolerance = get<2>(GetParam());
+    compare_scalar_f cmpF = get<0>(GetParam());
+    cv::Size sz_in = get<1>(GetParam());
+    MatType type = get<2>(GetParam());
     cv::GCompileArgs compile_args = get<3>(GetParam());
 
 
-    initMatrixRandU(type, sz_in, false);
+    initMatrixRandU(type, sz_in, type, false);
     cv::Scalar out_sum;
     cv::Scalar out_sum_ocv;
 
@@ -928,8 +928,7 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_sum[0] - out_sum_ocv[0]) / std::max(1.0, std::abs(out_sum_ocv[0])), tolerance)
-            << "OCV=" << out_sum_ocv[0] << "   GAPI=" << out_sum[0];
+        EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1015,10 +1014,10 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
 
 PERF_TEST_P_(NormPerfTest, TestPerformance)
 {
-    NormTypes opType = get<0>(GetParam());
-    cv::Size sz = get<1>(GetParam());
-    MatType type = get<2>(GetParam());
-    double tolerance = get<3>(GetParam());
+    compare_scalar_f cmpF = get<0>(GetParam());
+    NormTypes opType = get<1>(GetParam());
+    cv::Size sz = get<2>(GetParam());
+    MatType type = get<3>(GetParam());
     cv::GCompileArgs compile_args = get<4>(GetParam());
 
 
@@ -1051,8 +1050,7 @@ PERF_TEST_P_(NormPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_norm[0] - out_norm_ocv[0]) / std::max(1.0, std::abs(out_norm_ocv[0])), tolerance)
-            << "OCV=" << out_norm_ocv[0] << "   GAPI=" << out_norm[0];
+        EXPECT_TRUE(cmpF(out_norm, out_norm_ocv));
     }
 
     SANITY_CHECK_NOTHING();

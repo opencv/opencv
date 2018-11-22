@@ -152,9 +152,10 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCPerfTestCPU, AbsDiffCPerfTest,
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(SumPerfTestCPU, SumPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+        Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-        Values(0.0),
+        //Values(0.0),
         Values(cv::compile_args(CORE_CPU))));
 
 // FIXME: Comparison introduced by YL doesn't work with C3
@@ -166,10 +167,10 @@ INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestCPU, AddWeightedPerfTest,
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(NormPerfTestCPU, NormPerfTest,
-    Combine(Values(NORM_INF, NORM_L1, NORM_L2),
+    Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+        Values(NORM_INF, NORM_L1, NORM_L2),
         Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-        Values(0.0),
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(IntegralPerfTestCPU, IntegralPerfTest,

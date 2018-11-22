@@ -681,11 +681,11 @@ TEST_P(AbsDiffCTest, AccuracyTest)
 TEST_P(SumTest, AccuracyTest)
 {
     auto param = GetParam();
+    compare_scalar_f cmpF = get<3>(GetParam());
+    MatType type = std::get<0>(param);
     cv::Size sz_in = std::get<1>(param);
-    auto tolerance = std::get<3>(param);
     auto compile_args = std::get<4>(param);
-    //initMatrixRandU(std::get<0>(param), sz_in, std::get<2>(param));
-    initMatsRandN(std::get<0>(param), sz_in, std::get<2>(param)); //TODO: workaround trying to fix SumTest failures
+    initMatrixRandU(type, sz_in, type, std::get<2>(param));
 
 
     cv::Scalar out_sum;
@@ -703,8 +703,7 @@ TEST_P(SumTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_sum[0] - out_sum_ocv[0]) / std::max(1.0, std::abs(out_sum_ocv[0])), tolerance)
-            << "OCV=" << out_sum_ocv[0] << "   GAPI=" << out_sum[0];
+        EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 }
 
@@ -776,12 +775,12 @@ TEST_P(AddWeightedTest, AccuracyTest)
 
 TEST_P(NormTest, AccuracyTest)
 {
+    compare_scalar_f cmpF;
     NormTypes opType = NORM_INF;
     int type = 0;
     cv::Size sz;
-    double tolerance = 0.0;
     cv::GCompileArgs compile_args;
-    std::tie(opType, type, sz, tolerance, compile_args) = GetParam();
+    std::tie(opType, type, sz, cmpF, compile_args) = GetParam();
     initMatrixRandU(type, sz, type, false);
 
     cv::Scalar out_norm;
@@ -803,8 +802,7 @@ TEST_P(NormTest, AccuracyTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_norm[0] - out_norm_ocv[0]) / std::max(1.0, std::abs(out_norm_ocv[0])), tolerance)
-            << "OCV=" << out_norm_ocv[0] << "   GAPI=" << out_norm[0];
+        EXPECT_TRUE(cmpF(out_norm, out_norm_ocv));
     }
 }
 

@@ -203,7 +203,8 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(1e-5),
+                                //Values(1e-5),
+                                Values(AbsToleranceScalar(1e-5).to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
@@ -239,7 +240,8 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(1e-5),
+                                //Values(1e-5),
+                                Values(AbsToleranceScalar(1e-5).to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))),
                         opencv_test::PrintNormCoreParams());
 
