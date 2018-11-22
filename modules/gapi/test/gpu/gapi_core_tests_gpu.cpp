@@ -217,7 +217,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestGPU, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.50005),
+                                Values(0.5000005), //TODO: accuracy testing is disabled; 0.500005 was OK for GPU 
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
