@@ -770,13 +770,15 @@ static void run_sobel(Buffer& dst,
     GAPI_DbgAssert(ksize == 3);
 //  float buf[3][width * chan];
 
+#if 0
     int y  = dst.y();
     int y0 = dst.priv().writeStart();
 //  int y1 = dst.priv().writeEnd();
 
-#if 0
     run_sobel_row(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
 #else
+    UNUSED(buf);
+
     run_sobel_row1(out, in, width, chan, kx, ky, border, scale, delta);
 #endif
 }

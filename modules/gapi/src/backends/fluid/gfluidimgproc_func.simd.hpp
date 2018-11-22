@@ -334,6 +334,8 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 //
 //---------------------
 
+#if 0
+
 // Sobel 3x3: vertical pass
 template<bool noscale, typename DST>
 static void run_sobel3x3_vert(DST out[], int length, const float ky[],
@@ -569,6 +571,8 @@ RUN_SOBEL_ROW( float,  short)
 RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
+
+#endif
 
 template<bool noscale, typename DST, typename SRC>
 static void run_sobel_reference(DST out[], const SRC *in[], int width, int chan,

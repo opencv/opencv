@@ -63,6 +63,7 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 //
 //---------------------
 
+#if 0
 #define RUN_SOBEL_ROW(DST, SRC)                                          \
 void run_sobel_row(DST out[], const SRC *in[], int width, int chan,      \
                    const float kx[], const float ky[], int border,       \
@@ -85,6 +86,7 @@ RUN_SOBEL_ROW( float,  short)
 RUN_SOBEL_ROW( float,  float)
 
 #undef RUN_SOBEL_ROW
+#endif
 
 #define RUN_SOBEL_ROW1(DST, SRC)                                     \
 void run_sobel_row1(DST out[], const SRC *in[], int width, int chan, \
