@@ -946,7 +946,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     if (bitmap) {
         cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
-        cv::cvtColor(arrMat, dst, cv::COLOR_BGR2RGB);
+        convertToShow(arrMat, dst);
     }
     else {
         // It's not guaranteed to like the bitsPerPixel:24, but this is a lot slower so we'd rather not do it
@@ -960,8 +960,8 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
             colorSpaceName:NSDeviceRGBColorSpace
             bytesPerRow:(arrMat.cols * 4)
             bitsPerPixel:32];
-        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
-        cv::cvtColor(arrMat, dst, cv::COLOR_BGR2RGBA);
+        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC4, [bitmap bitmapData], [bitmap bytesPerRow]);
+        convertToShow(arrMat, dst);
     }
 
     if( image ) {

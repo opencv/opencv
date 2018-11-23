@@ -2556,17 +2556,7 @@ void DefaultViewPort::updateImage(const CvArr* arr)
 
     nbChannelOriginImage = cvGetElemType(mat);
     CV_Assert(origin == 0);
-    cv::Mat src = cv::cvarrToMat(mat), dst = cv::cvarrToMat(image2Draw_mat);
-
-    cv::Mat tmp;
-    int src_depth = src.depth();
-    double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
-    double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
-    cv::convertScaleAbs(src, tmp, scale, shift);
-
-    cv::cvtColor(tmp, dst, cv::COLOR_BGR2RGB, dst.channels());
-    CV_Assert(dst.data == image2Draw_mat->data.ptr);
-
+    convertToShow(cv::cvarrToMat(mat), image2Draw_mat);
     viewport()->update();
 }
 
