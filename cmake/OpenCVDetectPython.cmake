@@ -19,13 +19,10 @@
 #   include_dir (variable): Output of found Python include dir
 #   include_dir2 (variable): Output of found Python include dir2
 #   packages_path (variable): Output of found Python packages path
-#   numpy_include_dirs (variable): Output of found Python Numpy include dirs
-#   numpy_version (variable): Output of found Python Numpy version
 function(find_python preferred_version min_version library_env include_dir_env
          found executable version_string version_major version_minor
          libs_found libs_version_string libraries library debug_libraries
-         debug_library include_path include_dir include_dir2 packages_path
-         numpy_include_dirs numpy_version)
+         debug_library include_path include_dir include_dir2 packages_path)
 if(NOT ${found})
   if(" ${executable}" STREQUAL " PYTHON_EXECUTABLE")
     set(__update_python_vars 0)
@@ -36,21 +33,6 @@ if(NOT ${found})
   ocv_check_environment_variables(${executable})
   if(${executable})
     set(PYTHON_EXECUTABLE "${${executable}}")
-  endif()
-
-  if(WIN32 AND NOT ${executable} AND OPENCV_PYTHON_PREFER_WIN32_REGISTRY)  # deprecated
-    # search for executable with the same bitness as resulting binaries
-    # standard FindPythonInterp always prefers executable from system path
-    # this is really important because we are using the interpreter for numpy search and for choosing the install location
-    foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} "${preferred_version}" "${min_version}")
-      find_host_program(PYTHON_EXECUTABLE
-        NAMES python${_CURRENT_VERSION} python
-        PATHS
-          [HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
-          [HKEY_CURRENT_USER\\\\SOFTWARE\\\\Python\\\\PythonCore\\\\${_CURRENT_VERSION}\\\\InstallPath]
-        NO_SYSTEM_ENVIRONMENT_PATH
-      )
-    endforeach()
   endif()
 
   if(preferred_version)
@@ -205,45 +187,6 @@ if(NOT ${found})
         set(_packages_path "${_path}/Lib/site-packages")
         unset(_path)
       endif()
-
-      set(_numpy_include_dirs "${${numpy_include_dirs}}")
-
-      if(NOT _numpy_include_dirs)
-        if(CMAKE_CROSSCOMPILING)
-          message(STATUS "Cannot probe for Python/Numpy support (because we are cross-compiling OpenCV)")
-          message(STATUS "If you want to enable Python/Numpy support, set the following variables:")
-          message(STATUS "  PYTHON2_INCLUDE_PATH")
-          message(STATUS "  PYTHON2_LIBRARIES (optional on Unix-like systems)")
-          message(STATUS "  PYTHON2_NUMPY_INCLUDE_DIRS")
-          message(STATUS "  PYTHON3_INCLUDE_PATH")
-          message(STATUS "  PYTHON3_LIBRARIES (optional on Unix-like systems)")
-          message(STATUS "  PYTHON3_NUMPY_INCLUDE_DIRS")
-        else()
-          # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-          execute_process(COMMAND "${_executable}" -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(os.pathsep.join(numpy.distutils.misc_util.get_numpy_include_dirs()))"
-                          RESULT_VARIABLE _numpy_process
-                          OUTPUT_VARIABLE _numpy_include_dirs
-                          OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-          if(NOT _numpy_process EQUAL 0)
-              unset(_numpy_include_dirs)
-          endif()
-        endif()
-      endif()
-
-      if(_numpy_include_dirs)
-        file(TO_CMAKE_PATH "${_numpy_include_dirs}" _numpy_include_dirs)
-        if(CMAKE_CROSSCOMPILING)
-          if(NOT _numpy_version)
-            set(_numpy_version "undefined - cannot be probed because of the cross-compilation")
-          endif()
-        else()
-          execute_process(COMMAND "${_executable}" -c "import numpy; print(numpy.version.version)"
-                          RESULT_VARIABLE _numpy_process
-                          OUTPUT_VARIABLE _numpy_version
-                          OUTPUT_STRIP_TRAILING_WHITESPACE)
-        endif()
-      endif()
     endif(NOT ANDROID AND NOT IOS)
   endif()
 
@@ -263,8 +206,6 @@ if(NOT ${found})
   set(${include_dir} "${_include_dir}" CACHE PATH "Python include dir")
   set(${include_dir2} "${_include_dir2}" CACHE PATH "Python include dir 2")
   set(${packages_path} "${_packages_path}" CACHE PATH "Where to install the python packages.")
-  set(${numpy_include_dirs} ${_numpy_include_dirs} CACHE PATH "Path to numpy headers")
-  set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
 endif()
 endfunction(find_python)
 
@@ -277,8 +218,7 @@ find_python("" "${MIN_VER_PYTHON2}" PYTHON2_LIBRARY PYTHON2_INCLUDE_DIR
     PYTHON2_VERSION_MAJOR PYTHON2_VERSION_MINOR PYTHON2LIBS_FOUND
     PYTHON2LIBS_VERSION_STRING PYTHON2_LIBRARIES PYTHON2_LIBRARY
     PYTHON2_DEBUG_LIBRARIES PYTHON2_LIBRARY_DEBUG PYTHON2_INCLUDE_PATH
-    PYTHON2_INCLUDE_DIR PYTHON2_INCLUDE_DIR2 PYTHON2_PACKAGES_PATH
-    PYTHON2_NUMPY_INCLUDE_DIRS PYTHON2_NUMPY_VERSION)
+    PYTHON2_INCLUDE_DIR PYTHON2_INCLUDE_DIR2 PYTHON2_PACKAGES_PATH)
 
 option(OPENCV_PYTHON3_VERSION "Python3 version" "")
 find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYTHON3_INCLUDE_DIR
@@ -286,8 +226,7 @@ find_python("${OPENCV_PYTHON3_VERSION}" "${MIN_VER_PYTHON3}" PYTHON3_LIBRARY PYT
     PYTHON3_VERSION_MAJOR PYTHON3_VERSION_MINOR PYTHON3LIBS_FOUND
     PYTHON3LIBS_VERSION_STRING PYTHON3_LIBRARIES PYTHON3_LIBRARY
     PYTHON3_DEBUG_LIBRARIES PYTHON3_LIBRARY_DEBUG PYTHON3_INCLUDE_PATH
-    PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH
-    PYTHON3_NUMPY_INCLUDE_DIRS PYTHON3_NUMPY_VERSION)
+    PYTHON3_INCLUDE_DIR PYTHON3_INCLUDE_DIR2 PYTHON3_PACKAGES_PATH)
 
 
 if(PYTHON_DEFAULT_EXECUTABLE)

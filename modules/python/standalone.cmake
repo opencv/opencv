@@ -15,20 +15,15 @@ find_python("${OPENCV_PYTHON_VERSION}" "${OPENCV_PYTHON_VERSION}" PYTHON_LIBRARY
     PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHONLIBS_FOUND
     PYTHONLIBS_VERSION_STRING PYTHON_LIBRARIES PYTHON_LIBRARY
     PYTHON_DEBUG_LIBRARIES PYTHON_LIBRARY_DEBUG PYTHON_INCLUDE_PATH
-    PYTHON_INCLUDE_DIR PYTHON_INCLUDE_DIR2 PYTHON_PACKAGES_PATH
-    PYTHON_NUMPY_INCLUDE_DIRS PYTHON_NUMPY_VERSION)
+    PYTHON_INCLUDE_DIR PYTHON_INCLUDE_DIR2 PYTHON_PACKAGES_PATH)
 if(NOT PYTHON_EXECUTABLE OR NOT PYTHON_INCLUDE_DIR)
   message(FATAL_ERROR "Can't find Python development files")
-endif()
-if(NOT PYTHON_NUMPY_INCLUDE_DIRS)
-  message(FATAL_ERROR "Can't find Python 'numpy' development files")
 endif()
 
 status("-----------------------------------------------------------------")
 status("  Python:")
 status("    Interpreter:"   "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})")
 status("    Libraries:"     "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})")
-status("    numpy:"         "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})")
 status("")
 status("  Install to:" "${CMAKE_INSTALL_PREFIX}")
 status("-----------------------------------------------------------------")

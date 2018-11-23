@@ -1,4 +1,4 @@
-if(NOT PYTHON2_INCLUDE_PATH OR NOT PYTHON2_NUMPY_INCLUDE_DIRS)
+if(NOT PYTHON2_INCLUDE_PATH)
   ocv_module_disable(python2)
 endif()
 
