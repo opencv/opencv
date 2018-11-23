@@ -99,6 +99,30 @@ RUN_SOBEL_ROW1( float,  float)
 
 #endif  // RUN_SOBEL_WITH_BUF
 
+//-------------------------
+//
+// Fluid kernels: sepFilter
+//
+//-------------------------
+
+#define RUN_SEPFILTER3X3_IMPL(DST, SRC)                                     \
+void run_sepfilter3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kx[], const float ky[], int border,  \
+                           float scale, float delta,                        \
+                           float *buf[], int y, int y0);
+
+RUN_SEPFILTER3X3_IMPL(uchar , uchar )
+RUN_SEPFILTER3X3_IMPL( short, uchar )
+RUN_SEPFILTER3X3_IMPL( float, uchar )
+RUN_SEPFILTER3X3_IMPL(ushort, ushort)
+RUN_SEPFILTER3X3_IMPL( short, ushort)
+RUN_SEPFILTER3X3_IMPL( float, ushort)
+RUN_SEPFILTER3X3_IMPL( short,  short)
+RUN_SEPFILTER3X3_IMPL( float,  short)
+RUN_SEPFILTER3X3_IMPL( float,  float)
+
+#undef RUN_SEPFILTER3X3_IMPL
+
 //----------------------------------------------------------------------
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -1011,6 +1035,106 @@ RUN_SOBEL_ROW1( float,  float)
 #undef RUN_SOBEL_ROW1
 
 #endif  // RUN_SOBEL_WITH_BUF
+
+//-------------------------
+//
+// Fluid kernels: sepFilter
+//
+//-------------------------
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sepfilter3x3_reference(DST out[], const SRC *in[], int width, int chan,
+                                       const float kx[], const float ky[], int border,
+                                       float scale, float delta,
+                                       float *buf[], int y, int y0)
+{
+    int r[3];
+    r[0] = (y - y0)     % 3;  // buf[r[0]]: previous
+    r[1] = (y - y0 + 1) % 3;  //            this
+    r[2] = (y - y0 + 2) % 3;  //            next row
+
+    int length = width * chan;
+    int shift = border * chan;
+
+    // horizontal pass
+
+    // full horizontal pass is needed only if very 1st row in ROI;
+    // for 2nd and further rows, it is enough to convolve only the
+    // "next" row - as we can reuse buffers from previous calls to
+    // this kernel (Fluid does rows consequently: y=y0, y0+1, ...)
+
+    int k0 = (y == y0)? 0: 2;
+
+    for (int k = k0; k < 3; k++)
+    {
+        //                      previous , this , next pixel
+        const SRC *s[3] = {in[k] - shift , in[k], in[k] + shift};
+
+        // rely on compiler vectoring
+        for (int l=0; l < length; l++)
+        {
+            buf[r[k]][l] = s[0][l]*kx[0] + s[1][l]*kx[1] + s[2][l]*kx[2];
+        }
+    }
+
+    // vertical pass
+
+    for (int l=0; l < length; l++)
+    {
+        float sum = buf[r[0]][l]*ky[0] + buf[r[1]][l]*ky[1] + buf[r[2]][l]*ky[2];
+
+        if (!noscale)
+        {
+            sum = sum*scale + delta;
+        }
+
+        out[l] = saturate<DST>(sum, rintf);
+    }
+}
+
+template<bool noscale, typename DST, typename SRC>
+static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int chan,
+                                  const float kx[], const float ky[], int border,
+                                  float scale, float delta,
+                                  float *buf[], int y, int y0)
+{
+    run_sepfilter3x3_reference<noscale>(out, in, width, chan, kx, ky, border,
+                                        scale, delta, buf, y, y0);
+}
+
+#define RUN_SEPFILTER3X3_IMPL(DST, SRC)                                      \
+void run_sepfilter3x3_impl(DST out[], const SRC *in[], int width, int chan,  \
+                           const float kx[], const float ky[], int border,   \
+                           float scale, float delta,                         \
+                           float *buf[], int y, int y0)                      \
+{                                                                            \
+    if (scale == 1 && delta == 0)                                            \
+    {                                                                        \
+        constexpr bool noscale = true;                                       \
+        run_sepfilter3x3_code<noscale>(out, in, width, chan, kx, ky, border, \
+                                       scale, delta, buf, y, y0);            \
+    }                                                                        \
+    else                                                                     \
+    {                                                                        \
+        constexpr bool noscale = false;                                      \
+        run_sepfilter3x3_code<noscale>(out, in, width, chan, kx, ky, border, \
+                                       scale, delta, buf, y, y0);            \
+    }                                                                        \
+}
+
+RUN_SEPFILTER3X3_IMPL(uchar , uchar )
+RUN_SEPFILTER3X3_IMPL( short, uchar )
+RUN_SEPFILTER3X3_IMPL( float, uchar )
+RUN_SEPFILTER3X3_IMPL(ushort, ushort)
+RUN_SEPFILTER3X3_IMPL( short, ushort)
+RUN_SEPFILTER3X3_IMPL( float, ushort)
+RUN_SEPFILTER3X3_IMPL( short,  short)
+RUN_SEPFILTER3X3_IMPL( float,  short)
+RUN_SEPFILTER3X3_IMPL( float,  float)
+
+#undef RUN_SEPFILTER3X3_IMPL
+
+//------------------------------------------------------------------------------
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

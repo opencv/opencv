@@ -512,18 +512,21 @@ static void run_sepfilter(Buffer& dst, const View& src,
                           const float kx[], int kxLen,
                           const float ky[], int kyLen,
                           const cv::Point& /* anchor */,
-                          float delta=0)
+                          float scale, float delta,
+                          float *buf[])
 {
-    static const int maxLines = 9;
-    GAPI_Assert(kyLen <= maxLines);
+    constexpr int kMax = 11;
+    GAPI_Assert(kxLen <= kMax && kyLen <= kMax);
 
-    const SRC *in[ maxLines ];
+    const SRC *in[kMax];
           DST *out;
 
-    int border = (kyLen - 1) / 2;
+    int xborder = (kxLen - 1) / 2;
+    int yborder = (kyLen - 1) / 2;
+
     for (int i=0; i < kyLen; i++)
     {
-        in[i] = src.InLine<SRC>(i - border);
+        in[i] = src.InLine<SRC>(i - yborder);
     }
 
     out = dst.OutLine<DST>();
@@ -531,28 +534,52 @@ static void run_sepfilter(Buffer& dst, const View& src,
     int width = dst.length();
     int chan  = dst.meta().chan;
 
-    for (int w=0; w < width; w++)
+    // optimized 3x3 vs reference
+    if (kxLen == 3 && kyLen == 3)
     {
-        // TODO: make this cycle innermost
-        for (int c=0; c < chan; c++)
+        int y  = dst.y();
+        int y0 = dst.priv().writeStart();
+
+        int border = xborder;
+        run_sepfilter3x3_impl(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
+    }
+    else
+    {
+        int length = chan * width;
+        int xshift = chan * xborder;
+
+        // horizontal pass
+
+        for (int k=0; k < kyLen; k++)
         {
-            float sum=0;
+            const SRC *inp[kMax] = {nullptr};
 
-            for (int i=0; i < kyLen; i++)
+            for (int j=0; j < kxLen; j++)
             {
-                float sumi=0;
-
-                for (int j=0; j < kxLen; j++)
-                {
-                    sumi += in[i][(w + j - border)*chan + c] * kx[j];
-                }
-
-                sum += sumi * ky[i];
+                inp[j] = in[k] + (j - xborder)*xshift;
             }
 
-            float result = sum + delta;
+            for (int l=0; l < length; l++)
+            {
+                float sum = 0;
+                for (int j=0; j < kxLen; j++)
+                {
+                    sum += inp[j][l] * kx[j];
+                }
+                buf[k][l] = sum;
+            }
+        }
 
-            out[w*chan + c] = saturate<DST>(result, rintf);
+        // vertical pass
+
+        for (int l=0; l < length; l++)
+        {
+            float sum = 0;
+            for (int k=0; k < kyLen; k++)
+            {
+                sum += buf[k][l] * ky[k];
+            }
+            out[l] = saturate<DST>(sum*scale + delta, rintf);
         }
     }
 }
@@ -582,25 +609,37 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
         int kxLen = kernX.rows * kernX.cols;
         int kyLen = kernY.rows * kernY.cols;
 
+        GAPI_Assert(kyLen == 3);
+
         float *kx = scratch.OutLine<float>();
         float *ky = kx + kxLen;
 
+        int width = src.meta().size.width;
+        int chan  = src.meta().chan;
+        int length = width * chan;
+
+        float *buf[3];
+        buf[0] = ky + kyLen;
+        buf[1] = buf[0] + length;
+        buf[2] = buf[1] + length;
+
+        float scale = 1;
         float delta = static_cast<float>(delta_[0]);
 
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( short, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( float, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( float, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( short,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( float,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
-        UNARY_( float,  float, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, delta);
+        UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( short, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( float, uchar , run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( float, ushort, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( short,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( float,  short, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
+        UNARY_( float,  float, run_sepfilter, dst, src, kx, kxLen, ky, kyLen, anchor, scale, delta, buf);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 
-    static void initScratch(const GMatDesc& /* in */,
+    static void initScratch(const GMatDesc&    in,
                                   int       /* ddepth */,
                             const Mat     &    kernX,
                             const Mat     &    kernY,
@@ -613,7 +652,13 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
         int kxLen = kernX.rows * kernX.cols;
         int kyLen = kernY.rows * kernY.cols;
 
-        cv::gapi::own::Size bufsize(kxLen + kyLen, 1);
+        int width = in.size.width;
+        int chan  = in.chan;
+
+        size_t buflen = kxLen + kyLen           // x, y kernels
+                      + width * chan * Window;  // work buffers
+
+        cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
@@ -670,30 +715,47 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         auto *kx = scratch.OutLine<float>(); // cached kernX data
         auto *ky = kx + kxsize;              // cached kernY data
 
+        int width = src.meta().size.width;
+        int chan  = src.meta().chan;
+        int length = width * chan;
+
+        float *buf[3];
+        buf[0] = ky + kysize;
+        buf[1] = buf[0] + length;
+        buf[2] = buf[1] + length;
+
         auto  anchor = cv::Point(-1, -1);
-        float delta = 0.f;
+
+        float scale = 1;
+        float delta = 0;
 
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
-        UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
-        UNARY_( short,  short, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
-        UNARY_( float,  float, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, delta);
+        UNARY_(uchar , uchar , run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, scale, delta, buf);
+        UNARY_(ushort, ushort, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, scale, delta, buf);
+        UNARY_( short,  short, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, scale, delta, buf);
+        UNARY_( float,  float, run_sepfilter, dst, src, kx, kxsize, ky, kysize, anchor, scale, delta, buf);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 
-    static void initScratch(const GMatDesc& /* in */,
+    static void initScratch(const GMatDesc&    in,
                             const cv::Size &   ksize,
                                   double       sigmaX,
                                   double       sigmaY,
-                                  int       /* borderType */,
-                            const cv::Scalar  & /* borderValue */,
+                                  int          /* borderType */,
+                            const cv::Scalar & /* borderValue */,
                                   Buffer  &    scratch)
     {
         int kxsize = ksize.width;
         int kysize = ksize.height;
 
-        cv::gapi::own::Size bufsize(kxsize + kysize, 1);
+        int width = in.size.width;
+        int chan  = in.chan;
+
+        size_t buflen = kxsize + kysize         // x, y kernels
+                      + width * chan * Window;  // work buffers
+
+        cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
