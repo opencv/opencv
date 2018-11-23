@@ -131,27 +131,27 @@ int main(int, char *[])
 {
     std::cout << "This sample is non-complete. It is used as code snippents in documentation." << std::endl;
 
-cv::Mat conv_kernel_mat;
+    cv::Mat conv_kernel_mat;
 
-{
-// [filter2d_on]
-cv::GMat in;
-cv::GMat out = GFilter2D::on(/* GMat    */  in,
+    {
+        // [filter2d_on]
+        cv::GMat in;
+        cv::GMat out = GFilter2D::on(/* GMat    */  in,
                              /* int     */  -1,
                              /* Mat     */  conv_kernel_mat,
                              /* Point   */  cv::Point(-1,-1),
                              /* double  */  0.,
                              /* int     */  cv::BORDER_DEFAULT,
                              /* Scalar  */  cv::Scalar(0));
-// [filter2d_on]
-}
+        // [filter2d_on]
+    }
 
-{
-// [filter2d_wrap_call]
-cv::GMat in;
-cv::GMat out = filter2D(in, -1, conv_kernel_mat);
-// [filter2d_wrap_call]
-}
+    {
+        // [filter2d_wrap_call]
+        cv::GMat in;
+        cv::GMat out = filter2D(in, -1, conv_kernel_mat);
+        // [filter2d_wrap_call]
+    }
 
-return 0;
+    return 0;
 }
