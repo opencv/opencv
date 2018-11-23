@@ -655,8 +655,8 @@ GAPI_FLUID_KERNEL(GFluidSepFilter, cv::gapi::imgproc::GSepFilter, true)
         int width = in.size.width;
         int chan  = in.chan;
 
-        size_t buflen = kxLen + kyLen           // x, y kernels
-                      + width * chan * Window;  // work buffers
+        int buflen = kxLen + kyLen +         // x, y kernels
+                     width * chan * Window;  // work buffers
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
@@ -752,8 +752,8 @@ GAPI_FLUID_KERNEL(GFluidGaussBlur, cv::gapi::imgproc::GGaussBlur, true)
         int width = in.size.width;
         int chan  = in.chan;
 
-        size_t buflen = kxsize + kysize         // x, y kernels
-                      + width * chan * Window;  // work buffers
+        int buflen = kxsize + kysize +       // x, y kernels
+                     width * chan * Window;  // work buffers
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
