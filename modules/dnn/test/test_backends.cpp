@@ -197,7 +197,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
@@ -206,7 +206,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
@@ -217,7 +217,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenFace)
