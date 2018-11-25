@@ -462,10 +462,9 @@ struct Hamming
             }
         }
 #else // NO NEON and NOT GNUC
-        typedef unsigned long long pop_t;
         HammingLUT lut;
         result = lut(reinterpret_cast<const unsigned char*> (a),
-                     reinterpret_cast<const unsigned char*> (b), size * sizeof(pop_t));
+                     reinterpret_cast<const unsigned char*> (b), size);
 #endif
         return result;
     }
