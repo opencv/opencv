@@ -39,9 +39,6 @@ enum PaddingMode { kPaddingModeSame, kPaddingModeValid, kPaddingModeCaffe, kPadd
 enum FusedActivationType { kNone, kRelu, kRelu1, kRelu6, kActivationNum };
 typedef std::vector<int> Shape;
 
-/* context APIs */
-bool initPerThread();
-void deinitPerThread();
 bool isAvailable();
 
 #endif // HAVE_VULKAN
