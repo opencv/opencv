@@ -914,18 +914,11 @@ static void run_sobel(Buffer& dst,
     GAPI_DbgAssert(ksize == 3);
 //  float buf[3][width * chan];
 
-#if RUN_SOBEL_WITH_BUF
     int y  = dst.y();
     int y0 = dst.priv().writeStart();
 //  int y1 = dst.priv().writeEnd();
 
-    run_sobel_row(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
-
-#else  // if not RUN_SOBEL_WITH_BUF
-    UNUSED(buf);
-
-    run_sobel_row1(out, in, width, chan, kx, ky, border, scale, delta);
-#endif  // RUN_SOBEL_WITH_BUF
+    run_sepfilter3x3_impl(out, in, width, chan, kx, ky, border, scale, delta, buf, y, y0);
 }
 
 GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
@@ -952,7 +945,6 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
 
-    #if RUN_SOBEL_WITH_BUF
         int width = dst.meta().size.width;
         int chan  = dst.meta().chan;
 
@@ -960,9 +952,6 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         buf[0] = ky + ksz;
         buf[1] = buf[0] + width*chan;
         buf[2] = buf[1] + width*chan;
-    #else
-        float *buf[3] = {nullptr, nullptr, nullptr};
-    #endif
 
         auto scale = static_cast<float>(_scale);
         auto delta = static_cast<float>(_delta);
@@ -996,16 +985,11 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
         int ksz = (ksize == FILTER_SCHARR) ? 3 : ksize;
 
-    #if RUN_SOBEL_WITH_BUF
         int width = in.size.width;
         int chan  = in.chan;
 
         int buflen = ksz + ksz            // kernels: kx, ky
                    + ksz * width * chan;  // working buffers
-    #else
-        UNUSED(in);
-        int buflen = ksz + ksz;           // kernels: kx, ky
-    #endif
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};

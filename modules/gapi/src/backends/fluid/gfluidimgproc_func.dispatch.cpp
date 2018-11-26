@@ -57,63 +57,6 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
     CV_CPU_DISPATCH(run_yuv2rgb_impl, (out, in, width, coef), CV_CPU_DISPATCH_MODES_ALL);
 }
 
-//---------------------
-//
-// Fluid kernels: Sobel
-//
-//---------------------
-
-#if RUN_SOBEL_WITH_BUF
-
-#define RUN_SOBEL_ROW(DST, SRC)                                          \
-void run_sobel_row(DST out[], const SRC *in[], int width, int chan,      \
-                   const float kx[], const float ky[], int border,       \
-                   float scale, float delta, float *buf[],               \
-                   int y, int y0)                                        \
-{                                                                        \
-    CV_CPU_DISPATCH(run_sobel_row,                                       \
-        (out, in, width, chan, kx, ky, border, scale, delta, buf,y, y0), \
-        CV_CPU_DISPATCH_MODES_ALL);                                      \
-}
-
-RUN_SOBEL_ROW(uchar , uchar )
-RUN_SOBEL_ROW(ushort, ushort)
-RUN_SOBEL_ROW( short, uchar )
-RUN_SOBEL_ROW( short, ushort)
-RUN_SOBEL_ROW( short,  short)
-RUN_SOBEL_ROW( float, uchar )
-RUN_SOBEL_ROW( float, ushort)
-RUN_SOBEL_ROW( float,  short)
-RUN_SOBEL_ROW( float,  float)
-
-#undef RUN_SOBEL_ROW
-
-#else  // if not RUN_SOBEL_WITH_BUF
-
-#define RUN_SOBEL_ROW1(DST, SRC)                                     \
-void run_sobel_row1(DST out[], const SRC *in[], int width, int chan, \
-                    const float kx[], const float ky[], int border,  \
-                    float scale, float delta)                        \
-{                                                                    \
-    CV_CPU_DISPATCH(run_sobel_row1,                                  \
-        (out, in, width, chan, kx, ky, border, scale, delta),        \
-        CV_CPU_DISPATCH_MODES_ALL);                                  \
-}
-
-RUN_SOBEL_ROW1(uchar , uchar )
-RUN_SOBEL_ROW1(ushort, ushort)
-RUN_SOBEL_ROW1( short, uchar )
-RUN_SOBEL_ROW1( short, ushort)
-RUN_SOBEL_ROW1( short,  short)
-RUN_SOBEL_ROW1( float, uchar )
-RUN_SOBEL_ROW1( float, ushort)
-RUN_SOBEL_ROW1( float,  short)
-RUN_SOBEL_ROW1( float,  float)
-
-#undef RUN_SOBEL_ROW1
-
-#endif // RUN_SOBEL_WITH_BUF
-
 //-------------------------
 //
 // Fluid kernels: sepFilter
