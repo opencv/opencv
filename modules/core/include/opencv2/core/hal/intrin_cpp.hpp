@@ -1063,6 +1063,21 @@ inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
     return r;
 }
 
+/** @brief Sum absolute differences of values
+
+Scheme:
+@code
+{A1 A2 A3 ...} {B1 B2 B3 ...} => sum{ABS(A1-B1),abs(A2-B2),abs(A3-B3),...}
+@endcode
+For all types except 64-bit types.*/
+template<typename _Tp, int n> inline typename V_TypeTraits< typename V_TypeTraits<_Tp>::abs_type >::sum_type v_reduce_sad(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b)
+{
+    typename V_TypeTraits< typename V_TypeTraits<_Tp>::abs_type >::sum_type c = _absdiff(a.s[0], b.s[0]);
+    for (int i = 1; i < n; i++)
+        c += _absdiff(a.s[i], b.s[i]);
+    return c;
+}
+
 /** @brief Get negative values mask
 
 Returned value is a bit mask with bits set to 1 on places corresponding to negative packed values indexes.

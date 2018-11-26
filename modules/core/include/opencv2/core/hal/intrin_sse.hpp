@@ -1477,6 +1477,41 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_int32x4, int, min, std::min)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, max, std::max)
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4(v_float32x4, float, min, std::min)
 
+inline unsigned v_reduce_sad(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return (unsigned)_mm_cvtsi128_si32(_mm_sad_epu8(a.val, b.val));
+}
+inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
+{
+    __m128i half = _mm_set1_epi8(0x7f);
+    return (unsigned)_mm_cvtsi128_si32(_mm_sad_epu8(_mm_add_epi8(a.val, half),
+                                                    _mm_add_epi8(b.val, half)));
+}
+inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
+{
+    v_uint32x4 l, h;
+    v_expand(v_absdiff(a, b), l, h);
+    return v_reduce_sum(l + h);
+}
+inline unsigned v_reduce_sad(const v_int16x8& a, const v_int16x8& b)
+{
+    v_uint32x4 l, h;
+    v_expand(v_absdiff(a, b), l, h);
+    return v_reduce_sum(l + h);
+}
+inline unsigned v_reduce_sad(const v_uint32x4& a, const v_uint32x4& b)
+{
+    return v_reduce_sum(v_absdiff(a, b));
+}
+inline unsigned v_reduce_sad(const v_int32x4& a, const v_int32x4& b)
+{
+    return v_reduce_sum(v_absdiff(a, b));
+}
+inline float v_reduce_sad(const v_float32x4& a, const v_float32x4& b)
+{
+    return v_reduce_sum(v_absdiff(a, b));
+}
+
 #define OPENCV_HAL_IMPL_SSE_POPCOUNT(_Tpvec) \
 inline v_uint32x4 v_popcount(const _Tpvec& a) \
 { \
