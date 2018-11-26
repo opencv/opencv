@@ -642,6 +642,24 @@ double cvGetOpenGlProp_W32(const char* name)
     return result;
 }
 
+double cvGetPropVisible_W32(const char* name)
+{
+    double result = -1;
+
+    CV_FUNCNAME( "cvGetPropVisible_W32" );
+
+    __BEGIN__;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    result = (icvFindWindowByName( name ) != NULL);
+
+    __END__;
+
+    return result;
+}
+
 
 // OpenGL support
 

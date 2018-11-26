@@ -364,7 +364,7 @@ IplImage;
 
 CV_INLINE IplImage cvIplImage()
 {
-#if !defined(CV__ENABLE_C_API_CTORS)
+#if !(defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus))
     IplImage self = CV_STRUCT_INITIALIZER; self.nSize = sizeof(IplImage); return self;
 #else
     return _IplImage();

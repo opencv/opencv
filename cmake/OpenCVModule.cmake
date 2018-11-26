@@ -910,7 +910,11 @@ macro(_ocv_create_module)
       source_group("Src" FILES "${_VS_VERSION_FILE}")
     endif()
   endif()
-  if(WIN32 AND NOT ("${the_module}" STREQUAL "opencv_core" OR "${the_module}" STREQUAL "opencv_world")
+  if(WIN32 AND NOT (
+          "${the_module}" STREQUAL "opencv_core" OR
+          "${the_module}" STREQUAL "opencv_world" OR
+          "${the_module}" STREQUAL "opencv_cudev"
+      )
       AND (BUILD_SHARED_LIBS AND NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC")
       AND NOT OPENCV_SKIP_DLLMAIN_GENERATION
   )

@@ -752,7 +752,8 @@ struct AbsValFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -806,8 +807,11 @@ struct AbsValFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "Abs");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "ReLU";
+        std::shared_ptr<InferenceEngine::ReLULayer> ieLayer(new InferenceEngine::ReLULayer(lp));
+        ieLayer->negative_slope = -1;
+        ieLayer->params["negative_slope"] = "-1.0";
+        return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
 
@@ -900,7 +904,7 @@ struct PowerFunctor
     bool supportBackend(int backendId, int targetId)
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return (targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16) || power == 1.0;
+            return (targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16) || power == 1.0 || power == 0.5;
         else
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
@@ -1054,7 +1058,8 @@ struct ChannelsPReLUFunctor
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -1140,8 +1145,11 @@ struct ChannelsPReLUFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)
     {
-        CV_Error(Error::StsNotImplemented, "PReLU");
-        return InferenceEngine::CNNLayerPtr();
+        lp.type = "PReLU";
+        std::shared_ptr<InferenceEngine::PReLULayer> ieLayer(new InferenceEngine::PReLULayer(lp));
+        const size_t numChannels = scale.total();
+        ieLayer->_weights = wrapToInfEngineBlob(scale, {numChannels}, InferenceEngine::Layout::C);
+        return ieLayer;
     }
 #endif  // HAVE_INF_ENGINE
 
