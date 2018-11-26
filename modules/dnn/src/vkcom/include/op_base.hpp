@@ -36,7 +36,6 @@ protected:
     void recordCommandBuffer(void* push_constants = NULL, size_t push_constants_size = 0);
     void runCommandBuffer();
 
-    const Context* ctx_;
     VkPipeline pipeline_;
     VkCommandBuffer cmd_buffer_;
     VkDescriptorPool descriptor_pool_;

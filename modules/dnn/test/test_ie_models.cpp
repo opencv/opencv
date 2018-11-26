@@ -57,28 +57,29 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     InferencePlugin plugin;
     ExecutableNetwork netExec;
     InferRequest infRequest;
-    TargetDevice targetDevice;
-    switch (target)
-    {
-        case DNN_TARGET_CPU:
-            targetDevice = TargetDevice::eCPU;
-            break;
-        case DNN_TARGET_OPENCL:
-        case DNN_TARGET_OPENCL_FP16:
-            targetDevice = TargetDevice::eGPU;
-            break;
-        case DNN_TARGET_MYRIAD:
-            targetDevice = TargetDevice::eMYRIAD;
-            break;
-        default:
-            CV_Error(Error::StsNotImplemented, "Unknown target");
-    };
-
     try
     {
-        enginePtr = PluginDispatcher({""}).getSuitablePlugin(targetDevice);
+        auto dispatcher = InferenceEngine::PluginDispatcher({""});
+        switch (target)
+        {
+            case DNN_TARGET_CPU:
+                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eCPU);
+                break;
+            case DNN_TARGET_OPENCL:
+            case DNN_TARGET_OPENCL_FP16:
+                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eGPU);
+                break;
+            case DNN_TARGET_MYRIAD:
+                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eMYRIAD);
+                break;
+            case DNN_TARGET_FPGA:
+                enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
+                break;
+            default:
+                CV_Error(Error::StsNotImplemented, "Unknown target");
+        };
 
-        if (targetDevice == TargetDevice::eCPU)
+        if (target == DNN_TARGET_CPU || target == DNN_TARGET_FPGA)
         {
             std::string suffixes[] = {"_avx2", "_sse4", ""};
             bool haveFeature[] = {
@@ -255,8 +256,10 @@ static testing::internal::ParamGenerator<Target> dnnDLIETargets()
         targets.push_back(DNN_TARGET_OPENCL_FP16);
     }
 #endif
-    if (checkMyriadTarget())
+    if (checkIETarget(DNN_TARGET_MYRIAD))
         targets.push_back(DNN_TARGET_MYRIAD);
+    if (checkIETarget(DNN_TARGET_FPGA))
+        targets.push_back(DNN_TARGET_FPGA);
     return testing::ValuesIn(targets);
 }
 

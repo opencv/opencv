@@ -1,3 +1,9 @@
+OCV_OPTION(WITH_ADE "Enable ADE framework (required for Graph API module)" ON)
+
+if(NOT WITH_ADE)
+  return()
+endif()
+
 if (ade_DIR)
   # if ade_DIR is set, use ADE-supplied CMake script
   # to set up variables to the prebuilt ADE

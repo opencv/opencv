@@ -226,9 +226,10 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX_512VBMI      20
 #define CV_CPU_AVX_512VL        21
 
-#define CV_CPU_NEON   100
+#define CV_CPU_NEON             100
 
-#define CV_CPU_VSX 200
+#define CV_CPU_VSX              200
+#define CV_CPU_VSX3             201
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
@@ -266,6 +267,7 @@ enum CpuFeatures {
     CPU_NEON            = 100,
 
     CPU_VSX             = 200,
+    CPU_VSX3            = 201,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
 

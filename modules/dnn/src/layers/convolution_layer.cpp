@@ -220,9 +220,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height;
+        {
+            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4) ||
+                   (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
+        }
         else
+#endif
             return backendId == DNN_BACKEND_OPENCV ||
                    backendId == DNN_BACKEND_HALIDE ||
                    (backendId == DNN_BACKEND_VKCOM && haveVulkan());

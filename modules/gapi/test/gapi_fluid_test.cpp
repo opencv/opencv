@@ -51,12 +51,14 @@ TEST(FluidBuffer, InputTest)
     cv::Mat in_mat = cv::Mat::eye(buffer_size, CV_8U);
 
     cv::gapi::fluid::Buffer buffer(to_own(in_mat), true);
-    cv::gapi::fluid::View  view = buffer.mkView(0, {});
+    cv::gapi::fluid::View  view = buffer.mkView(0, false);
+    view.priv().allocate(1, {});
     view.priv().reset(1);
     int this_y = 0;
 
     while (this_y < buffer_size.height)
     {
+        view.priv().prepareToRead();
         const uint8_t* rrow = view.InLine<uint8_t>(0);
         ReadFunction1x1(rrow, buffer_size.width);
         view.priv().readDone(1,1);
@@ -76,6 +78,7 @@ TEST(FluidBuffer, CircularTest)
         util::make_optional(cv::gapi::fluid::Border{cv::BORDER_CONSTANT, cv::gapi::own::Scalar(255)}));
     cv::gapi::fluid::View view = buffer.mkView(1, {});
     view.priv().reset(3);
+    view.priv().allocate(3, {});
     buffer.debug(std::cout);
 
     const auto whole_line_is = [](const uint8_t *line, int len, int value)
