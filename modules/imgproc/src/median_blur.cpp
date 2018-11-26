@@ -74,30 +74,27 @@
 namespace cv
 {
 
-namespace
-{
-
-typedef ushort HT;
-
-/**
- * This structure represents a two-tier histogram. The first tier (known as the
- * "coarse" level) is 4 bit wide and the second tier (known as the "fine" level)
- * is 8 bit wide. Pixels inserted in the fine level also get inserted into the
- * coarse bucket designated by the 4 MSBs of the fine bucket value.
- *
- * The structure is aligned on 16 bits, which is a prerequisite for SIMD
- * instructions. Each bucket is 16 bit wide, which means that extra care must be
- * taken to prevent overflow.
- */
-typedef struct
-{
-    HT coarse[16];
-    HT fine[16][16];
-} Histogram;
-
 static void
 medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 {
+    typedef ushort HT;
+
+    /**
+     * This structure represents a two-tier histogram. The first tier (known as the
+     * "coarse" level) is 4 bit wide and the second tier (known as the "fine" level)
+     * is 8 bit wide. Pixels inserted in the fine level also get inserted into the
+     * coarse bucket designated by the 4 MSBs of the fine bucket value.
+     *
+     * The structure is aligned on 16 bits, which is a prerequisite for SIMD
+     * instructions. Each bucket is 16 bit wide, which means that extra care must be
+     * taken to prevent overflow.
+     */
+    typedef struct
+    {
+        HT coarse[16];
+        HT fine[16][16];
+    } Histogram;
+
 /**
  * HOP is short for Histogram OPeration. This macro makes an operation \a op on
  * histogram \a h for pixel value \a x. It takes care of handling both levels.
@@ -136,7 +133,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
         for( c = 0; c < cn; c++ )
         {
             for( j = 0; j < n; j++ )
-                COP( c, j, src[cn*j+c], += (cv::HT)(r+2) );
+                COP( c, j, src[cn*j+c], += (HT)(r+2) );
 
             for( i = 1; i < r; i++ )
             {
@@ -172,7 +169,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     v_store(H[c].fine[k] + 8, v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k) + 8), v_setall_u16((ushort)(2 * r + 1))) + v_load(H[c].fine[k] + 8));
 #else
                     for (int ind = 0; ind < 16; ++ind)
-                        H[c].fine[k][ind] += (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind];
+                        H[c].fine[k][ind] = (HT)(H[c].fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
 #endif
                 }
 
@@ -245,7 +242,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         memset(&H[c].fine[k], 0, 16 * sizeof(HT));
 #endif
                         px = h_fine + 16 * (n*(16 * c + k) + j - r);
-                        for (luc[c][k] = cv::HT(j - r); luc[c][k] < MIN(j + r + 1, n); ++luc[c][k], px += 16)
+                        for (luc[c][k] = HT(j - r); luc[c][k] < MIN(j + r + 1, n); ++luc[c][k], px += 16)
                         {
 #if CV_SIMD256
                             v_fine += v256_load(px);
@@ -268,7 +265,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                             v_fineh += v_mul_wrap(v_load(px + 8), v_setall_u16((ushort)(j + r + 1 - n)));
 #else
                             for (int ind = 0; ind < 16; ++ind)
-                                H[c].fine[k][ind] += (j + r + 1 - n) * px[ind];
+                                H[c].fine[k][ind] = (HT)(H[c].fine[k][ind] + (j + r + 1 - n) * px[ind]);
 #endif
                             luc[c][k] = (HT)(j+r+1);
                         }
@@ -478,6 +475,8 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
 #undef UPDATE_ACC
 }
 
+
+namespace {
 
 struct MinMax8u
 {
