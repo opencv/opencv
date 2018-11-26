@@ -243,9 +243,14 @@ TEST_P(Test_Caffe_layers, Concat)
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL))
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 ||
+            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
         throw SkipTestException("");
+    }
+#endif
     checkBackend();
 
     // Test case
@@ -349,12 +354,6 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 
 TEST_P(Test_Caffe_layers, Conv_Elu)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-    {
-        if (!checkIETarget(DNN_TARGET_MYRIAD))
-            throw SkipTestException("Myriad is not available/disabled in OpenCV");
-    }
-
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
 
