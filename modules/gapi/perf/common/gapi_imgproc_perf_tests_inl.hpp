@@ -52,7 +52,7 @@ PERF_TEST_P_(SepFilterPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-      c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+      c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -100,7 +100,7 @@ PERF_TEST_P_(Filter2DPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -145,7 +145,7 @@ PERF_TEST_P_(BoxFilterPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -188,7 +188,7 @@ PERF_TEST_P_(BlurPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -230,7 +230,7 @@ PERF_TEST_P_(GaussianBlurPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -271,7 +271,7 @@ PERF_TEST_P_(MedianBlurPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -314,7 +314,7 @@ PERF_TEST_P_(ErodePerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -357,7 +357,7 @@ PERF_TEST_P_(Erode3x3PerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -400,7 +400,7 @@ PERF_TEST_P_(DilatePerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -443,7 +443,7 @@ PERF_TEST_P_(Dilate3x3PerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -526,7 +526,7 @@ PERF_TEST_P_(CannyPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -564,7 +564,7 @@ PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -830,7 +830,7 @@ PERF_TEST_P_(LUV2BGRPerfTest, TestPerformance)
 
     TEST_CYCLE()
     {
-        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+        c.apply(in_mat1, out_mat_gapi);
     }
 
     // Comparison //////////////////////////////////////////////////////////////
