@@ -128,10 +128,16 @@ TEST_P(DNNTestNetwork, GoogLeNet)
 
 TEST_P(DNNTestNetwork, Inception_5h)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE) throw SkipTestException("");
+    double l1 = default_l1, lInf = default_lInf;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_CPU || target == DNN_TARGET_OPENCL))
+    {
+        l1 = 1.72e-5;
+        lInf = 8e-4;
+    }
     processNet("dnn/tensorflow_inception_graph.pb", "", Size(224, 224), "softmax2",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_inception_5h.yml" :
-                                             "dnn/halide_scheduler_inception_5h.yml");
+                                             "dnn/halide_scheduler_inception_5h.yml",
+               l1, lInf);
 }
 
 TEST_P(DNNTestNetwork, ENet)
@@ -193,41 +199,42 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
 
 TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
-               Size(368, 368));
+               Size(46, 46));
 }
 
 TEST_P(DNNTestNetwork, OpenFace)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+#if defined(INF_ENGINE_RELEASE)
+#if INF_ENGINE_RELEASE < 2018030000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#elif INF_ENGINE_RELEASE < 2018040000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R4");
 #endif
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16))
+#endif
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "");
 }

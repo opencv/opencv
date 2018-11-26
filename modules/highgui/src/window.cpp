@@ -152,6 +152,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     case CV_WND_PROP_VISIBLE:
         #if defined (HAVE_QT)
             return cvGetPropVisible_QT(name);
+        #elif defined(HAVE_WIN32UI)
+            return cvGetPropVisible_W32(name);
         #else
             return -1;
         #endif

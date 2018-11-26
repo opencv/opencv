@@ -358,7 +358,8 @@ void ONNXImporter::populateNet(Net dstNet)
                     layerParams.set("shift", blob.at<float>(0));
                 }
                 else {
-                    layerParams.type = "Shift";
+                    layerParams.type = "Scale";
+                    layerParams.set("bias_term", true);
                     layerParams.blobs.push_back(blob);
                 }
             }
@@ -375,8 +376,26 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("shift", blob.at<float>(0));
             }
             else {
-                layerParams.type = "Shift";
+                layerParams.type = "Scale";
+                layerParams.set("has_bias", true);
                 layerParams.blobs.push_back(blob);
+            }
+        }
+        else if (layer_type == "Div")
+        {
+            Mat blob = getBlob(node_proto, constBlobs, 1);
+            CV_Assert_N(blob.type() == CV_32F, blob.total());
+            divide(1.0, blob, blob);
+            if (blob.total() == 1)
+            {
+                layerParams.set("scale", blob.at<float>(0));
+                layerParams.type = "Power";
+            }
+            else
+            {
+                layerParams.type = "Scale";
+                layerParams.blobs.push_back(blob);
+                layerParams.set("bias_term", false);
             }
         }
         else if (layer_type == "Constant")
