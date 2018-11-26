@@ -753,7 +753,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
-    UNUSED(length);
+    (void) length;
 
 #if USE_SEPFILTER3X3_CHAR2SHORT
     if (std::is_same<DST, short>::value && std::is_same<SRC, uchar>::value &&
