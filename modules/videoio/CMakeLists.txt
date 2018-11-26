@@ -32,7 +32,9 @@ set(videoio_srcs
 file(GLOB videoio_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
+)
 
 # Removing WinRT API headers by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")

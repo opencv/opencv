@@ -911,21 +911,8 @@ struct Net::Impl
     typedef std::map<int, LayerShapes> LayersShapesMap;
     typedef std::map<int, LayerData> MapIdToLayerData;
 
-    ~Impl()
-    {
-#ifdef HAVE_VULKAN
-        // Vulkan requires explicit releasing the child objects of
-        // VkDevice object prior to releasing VkDevice object itself.
-        layers.clear();
-        backendWrappers.clear();
-        vkcom::deinitPerThread();
-#endif
-    }
     Impl()
     {
-#ifdef HAVE_VULKAN
-        vkcom::initPerThread();
-#endif
         //allocate fake net input layer
         netInputLayer = Ptr<DataLayer>(new DataLayer());
         LayerData &inpl = layers.insert( make_pair(0, LayerData()) ).first->second;
