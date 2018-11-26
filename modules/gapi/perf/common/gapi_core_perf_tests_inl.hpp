@@ -900,13 +900,13 @@ PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
 
 PERF_TEST_P_(SumPerfTest, TestPerformance)
 {
-    cv::Size sz_in = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    double tolerance = get<2>(GetParam());
+    compare_scalar_f cmpF = get<0>(GetParam());
+    cv::Size sz_in = get<1>(GetParam());
+    MatType type = get<2>(GetParam());
     cv::GCompileArgs compile_args = get<3>(GetParam());
 
 
-    initMatrixRandU(type, sz_in, false);
+    initMatrixRandU(type, sz_in, type, false);
     cv::Scalar out_sum;
     cv::Scalar out_sum_ocv;
 
@@ -928,8 +928,7 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_sum[0] - out_sum_ocv[0]) / std::max(1.0, std::abs(out_sum_ocv[0])), tolerance)
-            << "OCV=" << out_sum_ocv[0] << "   GAPI=" << out_sum[0];
+        EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 
     SANITY_CHECK_NOTHING();
@@ -939,10 +938,10 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
 
 PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
 {
-    cv::Size sz_in = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    int dtype = get<2>(GetParam());
-    double tolerance = get<3>(GetParam());
+    compare_f cmpF = get<0>(GetParam());
+    cv::Size sz_in = get<1>(GetParam());
+    MatType type = get<2>(GetParam());
+    int dtype = get<3>(GetParam());
     cv::GCompileArgs compile_args = get<4>(GetParam());
 
     auto& rng = cv::theRNG();
@@ -968,45 +967,9 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check
-    if (0)
-    {
-        // Note, that we cannot expect bitwise results for add-weighted:
-        //
-        //    tmp = src1*alpha + src2*beta + gamma;
-        //    dst = saturate<DST>( round(tmp) );
-        //
-        // Because tmp is floating-point, dst depends on compiler optimizations
-        //
-        // However, we must expect good accuracy of tmp, and rounding correctly
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_EQ(out_mat_gapi.size(), sz_in);
 
-        cv::Mat failures;
-
-        if (out_mat_ocv.type() == CV_32FC1)
-        {
-            // result: float - may vary in 7th decimal digit
-            failures = abs(out_mat_gapi - out_mat_ocv) > abs(out_mat_ocv) * 1e-6;
-        }
-        else
-        {
-            // result: integral - rounding may vary if fractional part of tmp
-            //                    is nearly 0.5
-
-            cv::Mat inexact, incorrect, diff, tmp;
-
-            inexact = out_mat_gapi != out_mat_ocv;
-
-            // even if rounded differently, check if still rounded correctly
-            cv::addWeighted(in_mat1, alpha, in_mat2, beta, gamma, tmp, CV_32F);
-            cv::subtract(out_mat_gapi, tmp, diff, cv::noArray(), CV_32F);
-            incorrect = abs(diff) >= tolerance;// 0.5000005f; // relative to 6 digits
-
-            failures = inexact & incorrect;
-        }
-
-        EXPECT_EQ(0, cv::countNonZero(failures));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
-    }
 
     SANITY_CHECK_NOTHING();
 }
@@ -1015,10 +978,10 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
 
 PERF_TEST_P_(NormPerfTest, TestPerformance)
 {
-    NormTypes opType = get<0>(GetParam());
-    cv::Size sz = get<1>(GetParam());
-    MatType type = get<2>(GetParam());
-    double tolerance = get<3>(GetParam());
+    compare_scalar_f cmpF = get<0>(GetParam());
+    NormTypes opType = get<1>(GetParam());
+    cv::Size sz = get<2>(GetParam());
+    MatType type = get<3>(GetParam());
     cv::GCompileArgs compile_args = get<4>(GetParam());
 
 
@@ -1051,8 +1014,7 @@ PERF_TEST_P_(NormPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_LE(std::abs(out_norm[0] - out_norm_ocv[0]) / std::max(1.0, std::abs(out_norm_ocv[0])), tolerance)
-            << "OCV=" << out_norm_ocv[0] << "   GAPI=" << out_norm[0];
+        EXPECT_TRUE(cmpF(out_norm, out_norm_ocv));
     }
 
     SANITY_CHECK_NOTHING();

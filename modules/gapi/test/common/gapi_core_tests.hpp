@@ -124,9 +124,9 @@ struct MinTest           : public TestParams<std::tuple<int,cv::Size,bool, cv::G
 struct MaxTest           : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>>{};
 struct AbsDiffTest       : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>>{};
 struct AbsDiffCTest      : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct SumTest           : public TestParams<std::tuple<int, cv::Size,bool,double,cv::GCompileArgs>> {};
-struct AddWeightedTest   : public TestParams<std::tuple<int,cv::Size,int,bool,double,cv::GCompileArgs>>{};
-struct NormTest          : public TestParams<std::tuple<NormTypes,int,cv::Size, double, cv::GCompileArgs>>{};
+struct SumTest           : public TestParams<std::tuple<int, cv::Size,bool, compare_scalar_f, cv::GCompileArgs>> {};
+struct AddWeightedTest   : public TestParams<std::tuple<int,cv::Size,int,bool, compare_f,cv::GCompileArgs>>{};
+struct NormTest          : public TestParams<std::tuple<NormTypes,int,cv::Size, compare_scalar_f, cv::GCompileArgs>>{};
 struct IntegralTest      : public TestWithParam<std::tuple<int,cv::Size, cv::GCompileArgs>> {};
 struct ThresholdTest     : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>> {};
 struct ThresholdOTTest   : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>> {};
