@@ -53,7 +53,7 @@ endif()
 set(CAROTENE_NS "carotene_o4t" CACHE STRING "" FORCE)
 
 function(compile_carotene)
-  if(ENABLE_NEON)
+  if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
     set(WITH_NEON ON)
   endif()
 
