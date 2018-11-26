@@ -119,6 +119,7 @@ enum VideoCaptureAPIs {
        CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
+	   CAP_RTX64_GIGE 	= 2500,			//!< IntervalZero RTX64 GigE driver
      };
 
 /** @brief %VideoCapture generic properties identifier.

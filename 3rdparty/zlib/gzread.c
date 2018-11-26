@@ -32,7 +32,11 @@ local int gz_load(state, buf, len, have)
         get = len - *have;
         if (get > max)
             get = max;
-        ret = read(state->fd, buf + *have, get);
+#ifdef UNDER_RTSS
+        ret = _read(state->fd, buf + *have, get);
+#else
+		ret = read(state->fd, buf + *have, get);
+#endif
         if (ret <= 0)
             break;
         *have += (unsigned)ret;
@@ -648,7 +652,11 @@ int ZEXPORT gzclose_r(file)
     err = state->err == Z_BUF_ERROR ? Z_BUF_ERROR : Z_OK;
     gz_error(state, Z_OK, NULL);
     free(state->path);
-    ret = close(state->fd);
+#ifdef UNDER_RTSS
+	ret = _close(state->fd);
+#else
+	ret = close(state->fd);
+#endif
     free(state);
     return ret ? Z_ERRNO : err;
 }

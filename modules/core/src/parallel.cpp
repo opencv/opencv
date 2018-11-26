@@ -73,8 +73,10 @@
     #define HAVE_GCD
 #endif
 
+#ifndef UNDER_RTSS
 #if defined _MSC_VER && _MSC_VER >= 1600
     #define HAVE_CONCURRENCY
+#endif
 #endif
 
 /* IMPORTANT: always use the same order of defines
@@ -801,7 +803,7 @@ static inline int getNumberOfCPUsImpl()
 
 int cv::getNumberOfCPUs(void)
 {
-#if defined _WIN32
+#if (defined _WIN32) && (!defined(UNDER_RTSS))
     SYSTEM_INFO sysinfo;
 #if (defined(_M_ARM) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );

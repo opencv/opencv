@@ -130,6 +130,11 @@ enable_testing()
 
 project(OpenCV CXX C)
 
+if(RTX64)
+	SET(CMAKE_CXX_STANDARD_LIBRARIES "" CACHE STRING "Force an empty linker for RTX" FORCE)
+	SET(CMAKE_C_STANDARD_LIBRARIES "" CACHE STRING "Force an empty linker for RTX" FORCE)
+ENDIF(RTX64)
+
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
@@ -137,6 +142,55 @@ endif()
 ocv_cmake_eval(DEBUG_PRE ONCE)
 
 ocv_clear_vars(OpenCVModules_TARGETS)
+
+if(MSVC)
+  set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
+  set( RTX64 0 CACHE STRING "If true builds the solution and project for RTX64" )  
+  # Threading part of the suffix
+  # if( RTX64 )
+	# set(COMPILER_THREADING_SUFFIX _MT) 
+  # endif( RTX64 )
+  
+endif()
+
+if( WITH_RTX64_GIGE )
+	LINK_DIRECTORIES( $ENV{RTX64SDKDIR3}/lib/amd64 )
+	INCLUDE_DIRECTORIES( $ENV{RTX64SDKDIR3}/include )
+endif( WITH_RTX64_GIGE )
+
+if ( WITH_RTX64_GIGE )
+	set(HAVE_RTX64_GIGE TRUE)
+endif ( WITH_RTX64_GIGE )
+
+if( RTX64 )
+	LINK_DIRECTORIES( $ENV{RTX64SDKDIR3}/lib/amd64 )
+	INCLUDE_DIRECTORIES( $ENV{RTX64SDKDIR3}/include )
+
+	SET(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /NODEFAULTLIB /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /STACK:10000,10000")
+	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /Fixed:NO /STACK:100000,100000")
+	SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /Fixed:NO /STACK:100000,100000")
+	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiProcessEntryCRT /STACK:100000,100000")
+endif( RTX64 )
+
+IF( RTX64 )
+	message (STATUS "This is a Win64 RTX build")
+	add_definitions(-DUNDER_RTSS)
+	# FOREACH(flag_var
+		# CMAKE_CXX_FLAGS 
+		# CMAKE_CXX_FLAGS_DEBUG 
+		# CMAKE_CXX_FLAGS_RELEASE
+		# CMAKE_CXX_FLAGS_MINSIZEREL 
+		# CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        # CMAKE_C_FLAGS_RTSSDEBUG
+		# CMAKE_CXX_FLAGS_RTSSDEBUG)
+		# IF( ${flag_var} MATCHES "/MD" )
+			# string( REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}" )
+		# ENDIF()
+
+		# STRING (REGEX REPLACE "/RTC(su|[1su])" "" ${flag_var} "${${flag_var}}")
+
+	# ENDFOREACH()
+ENDIF(RTX64 )
 
 include(cmake/OpenCVDownload.cmake)
 
@@ -204,6 +258,7 @@ endif()
 # ----------------------------------------------------------------------------
 
 OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
+OCV_OPTION(WITH_RTX64_GIGE            "Include RTX64 support for GigE camers"           OFF  )
 
 # 3rd party libs
 OCV_OPTION(OPENCV_FORCE_3RDPARTY_BUILD   "Force using 3rdparty code from source" OFF)
@@ -291,7 +346,7 @@ OCV_OPTION(WITH_QUIRC          "Include library QR-code decoding"            ON)
 
 # OpenCV build components
 # ===================================================
-OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR APPLE_FRAMEWORK) )
+OCV_OPTION(BUILD_SHARED_LIBS        "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR APPLE_FRAMEWORK OR RTX64) )
 OCV_OPTION(BUILD_opencv_apps        "Build utility applications (used for example to train classifiers)" (NOT ANDROID AND NOT WINRT) IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_opencv_js          "Build JavaScript bindings by Emscripten" OFF )
 OCV_OPTION(BUILD_ANDROID_PROJECTS   "Build Android projects providing .apk files" ON  IF ANDROID )
@@ -302,7 +357,7 @@ OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"     
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into release binaries ('OFF' means default settings)" OFF )
-OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for statically linked OpenCV" ON IF MSVC )
+OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for statically linked OpenCV" ON IF (MSVC OR RTX64) )
 OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create Java wrapper exporting all functions of OpenCV library (requires static build of OpenCV modules)" ANDROID IF NOT BUILD_SHARED_LIBS)
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID )
@@ -1249,6 +1304,10 @@ endif()
 # ========================== VIDEO IO ==========================
 status("")
 status("  Video I/O:")
+
+if (DEFINED WITH_RTX64_GIGE)
+  status("    Video for RTX64:" HAVE_RTX64_GIGE         THEN YES                                        ELSE NO)
+endif(DEFINED WITH_RTX64_GIGE)
 
 if(WITH_VFW OR HAVE_VFW)
   status("    Video for Windows:" HAVE_VFW         THEN YES                                        ELSE NO)

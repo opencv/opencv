@@ -124,7 +124,9 @@ enum
     CV_CAP_FFMPEG = 1900,    // FFMPEG
     CV_CAP_IMAGES = 2000,    // OpenCV Image Sequence (e.g. img_%02d.jpg)
 
-    CV_CAP_ARAVIS = 2100     // Aravis GigE SDK
+    CV_CAP_ARAVIS = 2100,     // Aravis GigE SDK
+	
+	CV_CAP_RTX64_GIGE = 2500		// IntervalZero RTX64 GigE driver
 };
 
 /** @brief start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*)

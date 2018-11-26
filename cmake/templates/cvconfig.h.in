@@ -58,6 +58,9 @@
 /* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
+/* RTX64 capturing support */
+#cmakedefine HAVE_RTX64_GIGE
+
 /* IEEE1394 capturing support */
 #cmakedefine HAVE_DC1394
 

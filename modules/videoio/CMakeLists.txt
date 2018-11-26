@@ -97,6 +97,10 @@ if (WIN32 AND HAVE_VFW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_vfw.cpp)
 endif()
 
+if(HAVE_RTX64_GIGE)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_rtx64gige.cpp)
+endif(HAVE_RTX64_GIGE)
+
 if(HAVE_XINE)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_xine.cpp)
 endif(HAVE_XINE)
@@ -223,6 +227,10 @@ endif(HAVE_INTELPERC)
 if(HAVE_GPHOTO2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)
 endif(HAVE_GPHOTO2)
+
+if(HAVE_RTX64_GIGE)
+    include_directories(AFTER SYSTEM $ENV{RTX64_RTVISION}/common )
+endif(HAVE_RTX64_GIGE)
 
 if(IOS)
   list(APPEND videoio_srcs
