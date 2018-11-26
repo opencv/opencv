@@ -25,6 +25,7 @@ VkDebugReportCallbackEXT kDebugReportCallback;
 uint32_t kQueueFamilyIndex;
 std::vector<const char *> kEnabledLayers;
 std::map<std::string, std::vector<uint32_t>> kShaders;
+cv::Mutex kContextMtx;
 
 static uint32_t getComputeQueueFamilyIndex()
 {
@@ -86,7 +87,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
 // internally used
 void createContext()
 {
-    cv::AutoLock lock(getInitializationMutex());
+    cv::AutoLock lock(kContextMtx);
     if (!kCtx)
     {
         kCtx.reset(new Context());
