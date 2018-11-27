@@ -911,7 +911,7 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
     const int length = width * chan;
     const int shift = border * chan;
 
-    float k[3][3];
+    float k[3 * 3];
     memcpy(k, kernel, 9*sizeof(float));
 
     for (int l=0; l < length;)
@@ -923,9 +923,9 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
         {
             auto sumx = [in, shift, k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
-                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
-                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[3*i + 0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[3*i + 1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[3*i + 2]), s);
                 return s;
             };
 
@@ -974,7 +974,7 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
     const int length = width * chan;
     const int shift = border * chan;
 
-    float k[3][3];
+    float k[3 * 3];
     memcpy(k, kernel, 9*sizeof(float));
 
     for (int l=0; l < length;)
@@ -986,9 +986,9 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
         {
             auto sumx = [in, shift, k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
-                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
-                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[3*i + 0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[3*i + 1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[3*i + 2]), s);
                 return s;
             };
 
