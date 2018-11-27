@@ -76,6 +76,26 @@ RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
 
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                     \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kernel[], float scale, float delta);
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
+
 //----------------------------------------------------------------------
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
@@ -842,6 +862,74 @@ RUN_SEPFILTER3X3_IMPL( float,  short)
 RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
+
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+template<bool noscale, typename DST, typename SRC>
+static void run_filter2d_3x3_reference(DST out[], const SRC *in[], int width, int chan,
+                                       const float kernel[], float scale, float delta)
+{
+    static constexpr int ksize = 3;
+    static constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float k[3][3] = { kernel[0], kernel[1], kernel[2],
+                            kernel[3], kernel[4], kernel[5],
+                            kernel[6], kernel[7], kernel[8] };
+
+    for (int l=0; l < length; l++)
+    {
+        float sum = in[0][l - shift] * k[0][0] + in[0][l] * k[0][1] + in[0][l + shift] * k[0][2]
+                  + in[1][l - shift] * k[1][0] + in[1][l] * k[1][1] + in[1][l + shift] * k[1][2]
+                  + in[2][l - shift] * k[2][0] + in[2][l] * k[2][1] + in[2][l + shift] * k[2][2];
+
+        if (!noscale)
+        {
+            sum = sum*scale + delta;
+        }
+
+        out[l] = saturate<DST>(sum, rintf);
+    }
+}
+
+template<bool noscale, typename DST, typename SRC>
+static void run_filter2d_3x3_code(DST out[], const SRC *in[], int width, int chan,
+                                  const float kernel[], float scale, float delta)
+{
+    run_filter2d_3x3_reference<noscale>(out, in, width, chan, kernel, scale, delta);
+}
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                             \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan,         \
+                           const float kernel[], float scale, float delta)          \
+{                                                                                   \
+    if (scale == 1 && delta == 0)                                                   \
+    {                                                                               \
+        constexpr bool noscale = true;                                              \
+        run_filter2d_3x3_code<noscale>(out, in, width, chan, kernel, scale, delta); \
+    }                                                                               \
+    else                                                                            \
+    {                                                                               \
+        constexpr bool noscale = false;                                             \
+        run_filter2d_3x3_code<noscale>(out, in, width, chan, kernel, scale, delta); \
+    }                                                                               \
+}
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
 
 //------------------------------------------------------------------------------
 
