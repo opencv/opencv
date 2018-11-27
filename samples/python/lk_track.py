@@ -38,6 +38,7 @@ feature_params = dict( maxCorners = 500,
 
 class App:
     def __init__(self, video_src):
+        cv.namedWindow('lk_track', cv.WINDOW_NORMAL)
         self.track_len = 10
         self.detect_interval = 5
         self.tracks = []
