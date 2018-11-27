@@ -686,10 +686,10 @@ OPENCV_HAL_IMPL_CMP_OP(!=)
 template<int n>
 inline v_reg<float, n> v_not_nan(const v_reg<float, n>& a)
 {
-typedef typename V_TypeTraits<float>::int_type itype;
-v_reg<float, n> c;
-for (int i = 0; i < n; i++)
-    c.s[i] = V_TypeTraits<float>::reinterpret_from_int((itype)-(int)(a.s[i] == a.s[i]));
+    typedef typename V_TypeTraits<float>::int_type itype;
+    v_reg<float, n> c;
+    for (int i = 0; i < n; i++)
+        c.s[i] = V_TypeTraits<float>::reinterpret_from_int((itype)-(int)(a.s[i] == a.s[i]));
     return c;
 }
 template<int n>
