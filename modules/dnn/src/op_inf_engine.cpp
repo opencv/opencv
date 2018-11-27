@@ -233,6 +233,12 @@ const std::string& InfEngineBackendNet::getName() const CV_NOEXCEPT
     return name;
 }
 
+InferenceEngine::StatusCode InfEngineBackendNet::serialize(const std::string&, const std::string&, InferenceEngine::ResponseDesc*) const CV_NOEXCEPT
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return InferenceEngine::StatusCode::OK;
+}
+
 size_t InfEngineBackendNet::layerCount() CV_NOEXCEPT
 {
     return const_cast<const InfEngineBackendNet*>(this)->layerCount();
