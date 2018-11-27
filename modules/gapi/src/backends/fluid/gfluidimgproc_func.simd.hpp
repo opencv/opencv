@@ -17,6 +17,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 
 #include <cstdint>
+#include <cstring>
 
 #include <vector>
 
@@ -75,6 +76,26 @@ RUN_SEPFILTER3X3_IMPL( float,  short)
 RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
+
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                     \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kernel[], float scale, float delta);
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
 
 //----------------------------------------------------------------------
 
@@ -842,6 +863,241 @@ RUN_SEPFILTER3X3_IMPL( float,  short)
 RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
+
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+template<bool noscale, typename DST, typename SRC>
+static void run_filter2d_3x3_reference(DST out[], const SRC *in[], int width, int chan,
+                                       const float kernel[], float scale, float delta)
+{
+    static constexpr int ksize = 3;
+    static constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float k[3][3] = {{ kernel[0], kernel[1], kernel[2] },
+                           { kernel[3], kernel[4], kernel[5] },
+                           { kernel[6], kernel[7], kernel[8] }};
+
+    for (int l=0; l < length; l++)
+    {
+        float sum = in[0][l - shift] * k[0][0] + in[0][l] * k[0][1] + in[0][l + shift] * k[0][2]
+                  + in[1][l - shift] * k[1][0] + in[1][l] * k[1][1] + in[1][l + shift] * k[1][2]
+                  + in[2][l - shift] * k[2][0] + in[2][l] * k[2][1] + in[2][l + shift] * k[2][2];
+
+        if (!noscale)
+        {
+            sum = sum*scale + delta;
+        }
+
+        out[l] = saturate<DST>(sum, rintf);
+    }
+}
+
+#if CV_SIMD
+// assume DST is short or ushort
+template<bool noscale, typename DST, typename SRC>
+static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, int chan,
+                                       const float kernel[], float scale, float delta)
+{
+    static constexpr int ksize = 3;
+    static constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float k[3][3] = {
+        { kernel[0], kernel[1], kernel[2] },
+        { kernel[3], kernel[4], kernel[5] },
+        { kernel[6], kernel[7], kernel[8] }
+    };
+
+    for (int l=0; l < length;)
+    {
+        static constexpr int nlanes = v_int16::nlanes;
+
+        // main part of output row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            auto sumx = [in, shift, &k](int i, int j)
+            {
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
+                return s;
+            };
+
+            int l0 = l;
+            int l1 = l + nlanes/2;
+            v_float32 sum0 = sumx(0, l0) + sumx(1, l0) + sumx(2, l0);
+            v_float32 sum1 = sumx(0, l1) + sumx(1, l1) + sumx(2, l1);
+
+            if (!noscale)
+            {
+                sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 res0 = v_round(sum0);
+            v_int32 res1 = v_round(sum1);
+
+            if (std::is_same<DST, ushort>::value)
+            {
+                v_uint16 res = v_pack_u(res0, res1);
+                v_store(reinterpret_cast<ushort*>(&out[l]), res);
+            }
+            else // if DST == short
+            {
+                v_int16 res = v_pack(res0, res1);
+                v_store(reinterpret_cast<short*>(&out[l]), res);
+            }
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+
+template<bool noscale, typename SRC>
+static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, int chan,
+                                      const float kernel[], float scale, float delta)
+{
+    static constexpr int ksize = 3;
+    static constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    const float k[3][3] = {
+        { kernel[0], kernel[1], kernel[2] },
+        { kernel[3], kernel[4], kernel[5] },
+        { kernel[6], kernel[7], kernel[8] }
+    };
+
+    for (int l=0; l < length;)
+    {
+        static constexpr int nlanes = v_uint8::nlanes;
+
+        // main part of output row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            auto sumx = [in, shift, &k](int i, int j)
+            {
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
+                return s;
+            };
+
+            int l0 = l;
+            int l1 = l +   nlanes/4;
+            int l2 = l + 2*nlanes/4;
+            int l3 = l + 3*nlanes/4;
+            v_float32 sum0 = sumx(0, l0) + sumx(1, l0) + sumx(2, l0);
+            v_float32 sum1 = sumx(0, l1) + sumx(1, l1) + sumx(2, l1);
+            v_float32 sum2 = sumx(0, l2) + sumx(1, l2) + sumx(2, l2);
+            v_float32 sum3 = sumx(0, l3) + sumx(1, l3) + sumx(2, l3);
+
+            if (!noscale)
+            {
+                sum0 = v_fma(sum0, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum1 = v_fma(sum1, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum2 = v_fma(sum2, vx_setall_f32(scale), vx_setall_f32(delta));
+                sum3 = v_fma(sum3, vx_setall_f32(scale), vx_setall_f32(delta));
+            }
+
+            v_int32 res0 = v_round(sum0);
+            v_int32 res1 = v_round(sum1);
+            v_int32 res2 = v_round(sum2);
+            v_int32 res3 = v_round(sum3);
+
+            v_int16 resl = v_pack(res0, res1);
+            v_int16 resh = v_pack(res2, res3);
+            v_uint8 res = v_pack_u(resl, resh);
+
+            v_store(&out[l], res);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+#endif
+
+template<bool noscale, typename DST, typename SRC>
+static void run_filter2d_3x3_code(DST out[], const SRC *in[], int width, int chan,
+                                  const float kernel[], float scale, float delta)
+{
+#if CV_SIMD
+    int length = width * chan;
+
+    // length variable may be unused if types do not match at 'if' statements below
+    (void) length;
+
+    if (std::is_same<DST, short>::value && length >= v_int16::nlanes)
+    {
+        run_filter2d_3x3_any2short<noscale>(reinterpret_cast<short*>(out), in,
+                                            width, chan, kernel, scale, delta);
+        return;
+    }
+
+    if (std::is_same<DST, ushort>::value && length >= v_uint16::nlanes)
+    {
+        run_filter2d_3x3_any2short<noscale>(reinterpret_cast<ushort*>(out), in,
+                                            width, chan, kernel, scale, delta);
+        return;
+    }
+
+
+    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    {
+        run_filter2d_3x3_any2char<noscale>(reinterpret_cast<uchar*>(out), in,
+                                           width, chan, kernel, scale, delta);
+        return;
+    }
+#endif  // CV_SIMD
+
+    run_filter2d_3x3_reference<noscale>(out, in, width, chan, kernel, scale, delta);
+}
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                             \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan,         \
+                           const float kernel[], float scale, float delta)          \
+{                                                                                   \
+    if (scale == 1 && delta == 0)                                                   \
+    {                                                                               \
+        constexpr bool noscale = true;                                              \
+        run_filter2d_3x3_code<noscale>(out, in, width, chan, kernel, scale, delta); \
+    }                                                                               \
+    else                                                                            \
+    {                                                                               \
+        constexpr bool noscale = false;                                             \
+        run_filter2d_3x3_code<noscale>(out, in, width, chan, kernel, scale, delta); \
+    }                                                                               \
+}
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
 
 //------------------------------------------------------------------------------
 
