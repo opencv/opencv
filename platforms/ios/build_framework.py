@@ -31,18 +31,22 @@ from __future__ import print_function
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 
+IPHONEOS_DEPLOYMENT_TARGET='8.0'  # default, can be changed via command line options or environemnt variable
+
 def execute(cmd, cwd = None):
     print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
+    print('Executing: ' + ' '.join(cmd))
     retcode = check_call(cmd, cwd = cwd)
     if retcode != 0:
         raise Exception("Child returned:", retcode)
 
 def getXCodeMajor():
     ret = check_output(["xcodebuild", "-version"])
-    m = re.match(r'XCode\s+(\d)\..*', ret, flags=re.IGNORECASE)
+    m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
-    return 0
+    else:
+        raise Exception("Failed to parse Xcode version")
 
 class Builder:
     def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, targets):
@@ -128,6 +132,8 @@ class Builder:
             "-DAPPLE_FRAMEWORK=ON",
             "-DCMAKE_INSTALL_PREFIX=install",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DOPENCV_INCLUDE_INSTALL_PATH=include",
+            "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty"
         ] + ([
             "-DBUILD_SHARED_LIBS=ON",
             "-DCMAKE_MACOSX_BUNDLE=ON",
@@ -148,7 +154,7 @@ class Builder:
 
         if self.dynamic:
             buildcmd += [
-                "IPHONEOS_DEPLOYMENT_TARGET=8.0",
+                "IPHONEOS_DEPLOYMENT_TARGET=" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'],
                 "ONLY_ACTIVE_ARCH=NO",
             ]
 
@@ -161,7 +167,7 @@ class Builder:
         else:
             arch = ";".join(archs)
             buildcmd += [
-                "IPHONEOS_DEPLOYMENT_TARGET=6.0",
+                "IPHONEOS_DEPLOYMENT_TARGET=" + os.environ['IPHONEOS_DEPLOYMENT_TARGET'],
                 "ARCHS=%s" % arch,
             ]
 
@@ -183,7 +189,7 @@ class Builder:
         cmakecmd = self.getCMakeArgs(arch, target) + \
             (["-DCMAKE_TOOLCHAIN_FILE=%s" % toolchain] if toolchain is not None else [])
         if target.lower().startswith("iphoneos"):
-            cmakecmd.append("-DENABLE_NEON=ON")
+            cmakecmd.append("-DCPU_BASELINE=DETECT")
         cmakecmd.append(self.opencv)
         cmakecmd.extend(cmakeargs)
         execute(cmakecmd, cwd = builddir)
@@ -199,7 +205,7 @@ class Builder:
     def mergeLibs(self, builddir):
         res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        libs3 = glob.glob(os.path.join(builddir, "install", "share", "OpenCV", "3rdparty", "lib", "*.a"))
+        libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
         print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
         execute(["libtool", "-static", "-o", res] + libs + libs3)
 
@@ -277,14 +283,21 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     parser.add_argument('--dynamic', default=False, action='store_true', help='build dynamic framework (default is "False" - builds static framework)')
     parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
+    parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
+    parser.add_argument('--iphoneos_archs', default='armv7,armv7s,arm64', help='select iPhoneOS target ARCHS')
     args = parser.parse_args()
+
+    os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
+    print('Using IPHONEOS_DEPLOYMENT_TARGET=' + os.environ['IPHONEOS_DEPLOYMENT_TARGET'])
+    iphoneos_archs = args.iphoneos_archs.split(',')
+    print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
 
     b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without,
         [
-            (["armv7s", "arm64"], "iPhoneOS"),
+            (iphoneos_archs, "iPhoneOS"),
         ] if os.environ.get('BUILD_PRECOMMIT', None) else
         [
-            (["armv7", "armv7s", "arm64"], "iPhoneOS"),
+            (iphoneos_archs, "iPhoneOS"),
             (["i386", "x86_64"], "iPhoneSimulator"),
         ])
     b.build(args.out)

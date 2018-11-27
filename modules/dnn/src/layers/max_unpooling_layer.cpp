@@ -11,7 +11,7 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_halide.hpp"
+#include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <iostream>
@@ -21,7 +21,7 @@ namespace cv
 namespace dnn
 {
 
-class MaxUnpoolLayerImpl : public MaxUnpoolLayer
+class MaxUnpoolLayerImpl CV_FINAL : public MaxUnpoolLayer
 {
 public:
     MaxUnpoolLayerImpl(const LayerParams& params)
@@ -32,17 +32,16 @@ public:
         poolStride = Size(params.get<int>("pool_stride_w"), params.get<int>("pool_stride_h"));
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               !poolPad.width && !poolPad.height;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
         CV_Assert(total(inputs[0]) == total(inputs[1]));
@@ -57,22 +56,24 @@ public:
         return false;
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         CV_Assert(inputs.size() == 2);
-        Mat& input = *inputs[0];
-        Mat& indices = *inputs[1];
+        Mat& input = inputs[0];
+        Mat& indices = inputs[1];
 
         CV_Assert(input.total() == indices.total());
         CV_Assert(input.size[0] == 1);
@@ -117,7 +118,7 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input)
+    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
         // Meaningless operation if false because if kernel > stride

@@ -6,6 +6,8 @@ tracking and foreground extractions.
 
 -   @subpage tutorial_background_subtraction
 
+    *Languages:* C++, Java, Python
+
     *Compatibility:* \> OpenCV 2.4.6
 
     *Author:* Domenico Daniele Bloisi

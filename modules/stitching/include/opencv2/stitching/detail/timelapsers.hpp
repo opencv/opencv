@@ -80,7 +80,7 @@ protected:
 class CV_EXPORTS TimelapserCrop : public Timelapser
 {
 public:
-    virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes) CV_OVERRIDE;
 };
 
 //! @}

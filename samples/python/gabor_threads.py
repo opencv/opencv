@@ -55,9 +55,9 @@ if __name__ == '__main__':
     try:
         img_fn = sys.argv[1]
     except:
-        img_fn = '../data/baboon.jpg'
+        img_fn = 'baboon.jpg'
 
-    img = cv.imread(img_fn)
+    img = cv.imread(cv.samples.findFile(img_fn))
     if img is None:
         print('Failed to load image file:', img_fn)
         sys.exit(1)

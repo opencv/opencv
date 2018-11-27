@@ -125,7 +125,6 @@ template <typename T> bool CV_BoundingRectTest::checking_function_work(vector <P
             cout << "Result rect (x, y, w, h): [" << rect[i].x << ", " << rect[i].y << ", " << rect[i].width << ", " << rect[i].height << "]" << endl;
             cout << endl;
             CV_Error(IMGPROC_BOUNDINGRECT_ERROR_DIFF, MESSAGE_ERROR_DIFF);
-            return false;
         }
 
     }

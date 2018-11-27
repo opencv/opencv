@@ -56,11 +56,7 @@ enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
 /////////////////////ref//////////////////////
 
-#ifdef CV_CXX11
 struct greaterThanPtr
-#else
-struct greaterThanPtr : public std::binary_function<const float *, const float *, bool>
-#endif
 {
     bool operator () (const float * a, const float * b) const
     { return *a > *b; }
@@ -363,7 +359,7 @@ int CV_GoodFeatureToTTest::prepare_test_case( int test_case_idx )
 
     CV_Assert(src.data != NULL);
 
-    cvtColor( src, src_gray, CV_BGR2GRAY );
+    cvtColor( src, src_gray, COLOR_BGR2GRAY );
     SrcType = types[test_case_idx & 0x1];
     useHarrisDetector = test_case_idx & 2 ?  true : false;
     return 1;

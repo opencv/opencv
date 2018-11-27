@@ -77,7 +77,7 @@
 namespace cv
 {
 
-class LMSolverImpl : public LMSolver
+class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
     LMSolverImpl() : maxIters(100) { init(); }
@@ -89,7 +89,7 @@ public:
         printInterval = 0;
     }
 
-    int run(InputOutputArray _param0) const
+    int run(InputOutputArray _param0) const CV_OVERRIDE
     {
         Mat param0 = _param0.getMat(), x, xd, r, rd, J, A, Ap, v, temp_d, d;
         int ptype = param0.type();
@@ -198,7 +198,8 @@ public:
         return iter;
     }
 
-    void setCallback(const Ptr<LMSolver::Callback>& _cb) { cb = _cb; }
+    void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
+    int getMaxIters() const CV_OVERRIDE { return maxIters; }
 
     Ptr<LMSolver::Callback> cb;
 
@@ -209,7 +210,7 @@ public:
 };
 
 
-Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     return makePtr<LMSolverImpl>(cb, maxIters);
 }

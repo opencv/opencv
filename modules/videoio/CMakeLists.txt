@@ -20,6 +20,8 @@ set(videoio_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
     )
 set(videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/videoio_registry.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/videoio_c.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp
@@ -30,7 +32,9 @@ set(videoio_srcs
 file(GLOB videoio_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
+)
 
 # Removing WinRT API headers by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
@@ -71,10 +75,6 @@ if(HAVE_MFX)
   list(APPEND VIDEOIO_LIBRARIES mfx)
 endif()
 
-if(WIN32 AND NOT ARM)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_cmu.cpp)
-endif()
-
 if (WIN32 AND HAVE_DSHOW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.cpp)
   list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dshow.hpp)
@@ -86,10 +86,9 @@ endif()
 if (WIN32 AND HAVE_MSMF)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
-endif()
-
-if (WIN32 AND HAVE_VFW)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_vfw.cpp)
+  if (HAVE_DXVA)
+    add_definitions(-DHAVE_DXVA)
+  endif()
 endif()
 
 if(HAVE_XINE)
@@ -100,10 +99,6 @@ if(HAVE_DC1394_2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394_v2.cpp)
 endif(HAVE_DC1394_2)
 
-if(HAVE_DC1394)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394.cpp)
-endif(HAVE_DC1394)
-
 if(HAVE_GSTREAMER)
   IF(WIN32)
     INCLUDE_DIRECTORIES(${GSTREAMER_INCLUDE_DIR})
@@ -112,13 +107,7 @@ if(HAVE_GSTREAMER)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
 endif(HAVE_GSTREAMER)
 
-if(HAVE_UNICAP)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_unicap.cpp)
-endif(HAVE_UNICAP)
-
-if(HAVE_LIBV4L)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libv4l.cpp)
-elseif(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+if(HAVE_CAMV4L2 OR HAVE_VIDEOIO)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_v4l.cpp)
 endif()
 
@@ -162,6 +151,9 @@ if(HAVE_FFMPEG)
   if(APPLE)
     list(APPEND VIDEOIO_LIBRARIES "-framework VideoDecodeAcceleration" bz2)
   endif()
+  if(HAVE_FFMPEG_WRAPPER)
+    add_definitions(-DHAVE_FFMPEG_WRAPPER=1)
+  endif()
 endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
@@ -198,19 +190,17 @@ if(HAVE_AVFOUNDATION)
   endif()
 endif()
 
-if(HAVE_QUICKTIME)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qt.cpp)
-  list(APPEND VIDEOIO_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-elseif(HAVE_QTKIT)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_qtkit.mm)
-  list(APPEND VIDEOIO_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
-endif()
-
 if(HAVE_INTELPERC)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_intelperc.cpp)
   ocv_include_directories(${INTELPERC_INCLUDE_DIR})
   list(APPEND VIDEOIO_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
+
+if(HAVE_LIBREALSENSE)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_librealsense.cpp)
+  ocv_include_directories(${LIBREALSENSE_INCLUDE_DIR})
+  list(APPEND VIDEOIO_LIBRARIES ${LIBREALSENSE_LIBRARIES})
+endif(HAVE_LIBREALSENSE)
 
 if(HAVE_GPHOTO2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gphoto2.cpp)
@@ -223,12 +213,6 @@ if(IOS)
        ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
 
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
-endif()
-
-if(WIN32)
-  link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
-  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)
@@ -263,7 +247,7 @@ endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
-if(WIN32 AND HAVE_FFMPEG)
+if(WIN32 AND HAVE_FFMPEG_WRAPPER)
   #copy ffmpeg dll to the output folder
   if(MSVC64 OR MINGW64)
     set(FFMPEG_SUFFIX _64)

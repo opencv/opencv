@@ -61,10 +61,10 @@ protected:
 
 public:
     CalibProcessor(cv::Ptr<calibrationData> data, captureParameters& capParams);
-    virtual cv::Mat processFrame(const cv::Mat& frame);
-    virtual bool isProcessed() const;
-    virtual void resetState();
-    ~CalibProcessor();
+    virtual cv::Mat processFrame(const cv::Mat& frame) CV_OVERRIDE;
+    virtual bool isProcessed() const CV_OVERRIDE;
+    virtual void resetState() CV_OVERRIDE;
+    ~CalibProcessor() CV_OVERRIDE;
 };
 
 enum visualisationMode {Grid, Window};
@@ -84,9 +84,9 @@ protected:
     void drawGridPoints(const cv::Mat& frame);
 public:
     ShowProcessor(cv::Ptr<calibrationData> data, cv::Ptr<calibController> controller, TemplateType board);
-    virtual cv::Mat processFrame(const cv::Mat& frame);
-    virtual bool isProcessed() const;
-    virtual void resetState();
+    virtual cv::Mat processFrame(const cv::Mat& frame) CV_OVERRIDE;
+    virtual bool isProcessed() const CV_OVERRIDE;
+    virtual void resetState() CV_OVERRIDE;
 
     void setVisualizationMode(visualisationMode mode);
     void switchVisualizationMode();
@@ -95,7 +95,7 @@ public:
 
     void switchUndistort();
     void setUndistort(bool isEnabled);
-    ~ShowProcessor();
+    ~ShowProcessor() CV_OVERRIDE;
 };
 
 }

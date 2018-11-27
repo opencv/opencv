@@ -49,14 +49,12 @@
 #include <numeric>
 #include <map>
 
-#include "precomp.hpp"
-
 class CirclesGridClusterFinder
 {
     CirclesGridClusterFinder& operator=(const CirclesGridClusterFinder&);
     CirclesGridClusterFinder(const CirclesGridClusterFinder&);
 public:
-  CirclesGridClusterFinder(const cv::CirclesGridFinderParameters2 &parameters)
+  CirclesGridClusterFinder(const cv::CirclesGridFinderParameters &parameters)
   {
     isAsymmetricGrid = parameters.gridType == cv::CirclesGridFinderParameters::ASYMMETRIC_GRID;
     squareSize = parameters.squareSize;
@@ -69,7 +67,7 @@ public:
 private:
   void findCorners(const std::vector<cv::Point2f> &hull2f, std::vector<cv::Point2f> &corners);
   void findOutsideCorners(const std::vector<cv::Point2f> &corners, std::vector<cv::Point2f> &outsideCorners);
-  void getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners);
+  void getSortedCorners(const std::vector<cv::Point2f> &hull2f, const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &corners, const std::vector<cv::Point2f> &outsideCorners, std::vector<cv::Point2f> &sortedCorners);
   void rectifyPatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &sortedCorners, std::vector<cv::Point2f> &rectifiedPatternPoints);
   void parsePatternPoints(const std::vector<cv::Point2f> &patternPoints, const std::vector<cv::Point2f> &rectifiedPatternPoints, std::vector<cv::Point2f> &centers);
 

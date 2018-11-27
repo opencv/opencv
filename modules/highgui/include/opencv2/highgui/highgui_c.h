@@ -44,12 +44,6 @@
 
 #include "opencv2/core/core_c.h"
 #include "opencv2/imgproc/imgproc_c.h"
-#ifdef HAVE_OPENCV_IMGCODECS
-#include "opencv2/imgcodecs/imgcodecs_c.h"
-#endif
-#ifdef HAVE_OPENCV_VIDEOIO
-#include "opencv2/videoio/videoio_c.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,8 +129,10 @@ CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOS
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
 
+#ifdef __cplusplus  // FIXIT remove in OpenCV 4.0
 /* Get window image rectangle coordinates, width and height */
 CVAPI(cv::Rect)cvGetWindowImageRect(const char* name);
+#endif
 
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );

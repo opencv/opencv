@@ -48,6 +48,10 @@
 #include <algorithm>
 #include <limits>
 
+#ifndef __OPENCV_BUILD
+#define CV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
+#endif
+
 #define CALC_FFMPEG_VERSION(a,b,c) ( a<<16 | b<<8 | c )
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -56,6 +60,10 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+#ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
+#define CV_UNUSED(name) (void)name
 #endif
 
 #ifdef __cplusplus
@@ -101,7 +109,7 @@ extern "C" {
         long   tv_nsec;
     };
   #endif
-#elif defined __linux__ || defined __APPLE__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -298,7 +306,7 @@ static int get_number_of_cpus(void)
     GetSystemInfo( &sysinfo );
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__
+#elif defined __linux__ || defined __HAIKU__
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;
@@ -345,6 +353,41 @@ struct AVInterruptCallbackMetadata
     unsigned int timeout_after_ms;
     int timeout;
 };
+
+// https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
+static
+inline const char* _opencv_avcodec_get_name(AVCodecID id)
+{
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
+    return avcodec_get_name(id);
+#else
+    const AVCodecDescriptor *cd;
+    AVCodec *codec;
+
+    if (id == AV_CODEC_ID_NONE)
+    {
+        return "none";
+    }
+    cd = avcodec_descriptor_get(id);
+    if (cd)
+    {
+        return cd->name;
+    }
+    codec = avcodec_find_decoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+    codec = avcodec_find_encoder(id);
+    if (codec)
+    {
+        return codec->name;
+    }
+
+    return "unknown_codec";
+#endif
+}
 
 static
 inline void _opencv_ffmpeg_free(void** ptr)
@@ -715,6 +758,8 @@ static int LockCallBack(void **mutex, AVLockOp op)
     {
         case AV_LOCK_CREATE:
             localMutex = reinterpret_cast<ImplMutex*>(malloc(sizeof(ImplMutex)));
+            if (!localMutex)
+                return 1;
             localMutex->init();
             *mutex = localMutex;
             if (!*mutex)
@@ -754,6 +799,17 @@ private:
     AutoLock& operator = (const AutoLock&); // disabled
 };
 
+static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
+{
+    static bool skip_header = false;
+    static int prev_level = -1;
+    CV_UNUSED(ptr);
+    if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
+    vprintf(fmt, vargs);
+    size_t fmt_len = strlen(fmt);
+    skip_header = fmt_len > 0 && fmt[fmt_len - 1] != '\n';
+    prev_level = level;
+}
 
 class InternalFFMpegRegister
 {
@@ -773,7 +829,18 @@ public:
             /* register a callback function for synchronization */
             av_lockmgr_register(&LockCallBack);
 
-            av_log_set_level(AV_LOG_ERROR);
+#ifndef NO_GETENV
+            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+            if (debug_option != NULL)
+            {
+                av_log_set_level(AV_LOG_VERBOSE);
+                av_log_set_callback(ffmpeg_log_callback);
+            }
+            else
+#endif
+            {
+                av_log_set_level(AV_LOG_ERROR);
+            }
 
             _initialized = true;
         }
@@ -870,7 +937,12 @@ bool CvCapture_FFMPEG::open( const char* _filename )
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-            AVCodec *codec = avcodec_find_decoder(enc->codec_id);
+            AVCodec *codec;
+            if(av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                codec = avcodec_find_decoder(enc->codec_id);
+            } else {
+                codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+            }
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
                 avcodec_open2(enc, codec, NULL)
@@ -1088,6 +1160,10 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
 
+    double codec_tag = 0;
+    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    const char* codec_fourcc = NULL;
+
     switch( property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:
@@ -1106,10 +1182,25 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
 #if LIBAVFORMAT_BUILD > 4628
-        return (double)video_st->codec->codec_tag;
+        codec_id = video_st->codec->codec_id;
+        codec_tag = (double) video_st->codec->codec_tag;
 #else
-        return (double)video_st->codec.codec_tag;
+        codec_id = video_st->codec.codec_id;
+        codec_tag = (double)video_st->codec.codec_tag;
 #endif
+
+        if(codec_tag || codec_id == AV_CODEC_ID_NONE)
+        {
+            return codec_tag;
+        }
+
+        codec_fourcc = _opencv_avcodec_get_name(codec_id);
+        if(!codec_fourcc || strlen(codec_fourcc) < 4 || strcmp(codec_fourcc, "unknown_codec") == 0)
+        {
+            return codec_tag;
+        }
+
+        return (double) CV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
     case CV_FFMPEG_CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CV_FFMPEG_CAP_PROP_SAR_DEN:
@@ -1431,8 +1522,6 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
         _opencv_ffmpeg_av_image_fill_arrays(picture, picture_buf,
                        (AVPixelFormat) pix_fmt, width, height);
     }
-    else {
-    }
 
     return picture;
 }
@@ -1508,7 +1597,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
        identically 1. */
     frame_rate=(int)(fps+0.5);
     frame_rate_base=1;
-    while (fabs((double)frame_rate/frame_rate_base) - fps > 0.001){
+    while (fabs(((double)frame_rate/frame_rate_base) - fps) > 0.001){
         frame_rate_base*=10;
         frame_rate=(int)(fps*frame_rate_base + 0.5);
     }
@@ -1581,6 +1670,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(52, 42, 0)
     st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
+#endif
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
+    st->time_base = c->time_base;
 #endif
 
     return st;
@@ -1874,6 +1966,7 @@ static inline bool cv_ff_codec_tag_match(const AVCodecTag *tags, CV_CODEC_ID id,
     }
     return false;
 }
+
 static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_CODEC_ID id, unsigned int tag)
 {
     int i;
@@ -1883,6 +1976,21 @@ static inline bool cv_ff_codec_tag_list_match(const AVCodecTag *const *tags, CV_
             return res;
     }
     return false;
+}
+
+
+static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
+{
+    int i;
+    for (i = 0; tags && tags[i]; i++) {
+        const AVCodecTag * ptags = tags[i];
+        while (ptags->id != AV_CODEC_ID_NONE)
+        {
+            unsigned int tag = ptags->tag;
+            printf("fourcc tag 0x%08x/'%c%c%c%c' codec_id %04X\n", tag, CV_TAG_TO_PRINTABLE_CHAR4(tag), ptags->id);
+            ptags++;
+        }
+    }
 }
 
 /// Create a video writer object that uses FFMPEG
@@ -1928,6 +2036,13 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         input_pix_fmt = AV_PIX_FMT_GRAY8;
     }
 
+    if (fourcc == -1)
+    {
+        fprintf(stderr,"OpenCV: FFMPEG: format %s / %s\n", fmt->name, fmt->long_name);
+        cv_ff_codec_tag_dump(fmt->codec_tag);
+        return false;
+    }
+
     /* Lookup codec_id for given fourcc */
 #if LIBAVCODEC_VERSION_INT<((51<<16)+(49<<8)+0)
     if( (codec_id = codec_get_bmp_id( fourcc )) == CV_CODEC(CODEC_ID_NONE) )
@@ -1959,6 +2074,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             return false;
         }
     }
+
+
     // validate tag
     if (cv_ff_codec_tag_list_match(fmt->codec_tag, codec_id, fourcc) == false)
     {
@@ -1996,11 +2113,78 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #if LIBAVCODEC_VERSION_INT>((50<<16)+(1<<8)+0)
     case CV_CODEC(CODEC_ID_JPEGLS):
         // BGR24 or GRAY8 depending on is_color...
+        // supported: bgr24 rgb24 gray gray16le
+        // as of version 3.4.1
         codec_pix_fmt = input_pix_fmt;
         break;
 #endif
     case CV_CODEC(CODEC_ID_HUFFYUV):
-        codec_pix_fmt = AV_PIX_FMT_YUV422P;
+        // supported: yuv422p rgb24 bgra
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_RGB24:
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_BGR24:
+                codec_pix_fmt = AV_PIX_FMT_RGB24;
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
+        break;
+    case CV_CODEC(CODEC_ID_PNG):
+        // supported: rgb24 rgba rgb48be rgba64be pal8 gray ya8 gray16be ya16be monob
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_GRAY8:
+            case AV_PIX_FMT_GRAY16BE:
+            case AV_PIX_FMT_RGB24:
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_GRAY16LE:
+                codec_pix_fmt = AV_PIX_FMT_GRAY16BE;
+                break;
+            case AV_PIX_FMT_BGR24:
+                codec_pix_fmt = AV_PIX_FMT_RGB24;
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
+        break;
+    case CV_CODEC(CODEC_ID_FFV1):
+        // supported: MANY
+        // as of version 3.4.1
+        switch(input_pix_fmt)
+        {
+            case AV_PIX_FMT_GRAY8:
+            case AV_PIX_FMT_GRAY16LE:
+#ifdef AV_PIX_FMT_BGR0
+            case AV_PIX_FMT_BGR0:
+#endif
+            case AV_PIX_FMT_BGRA:
+                codec_pix_fmt = input_pix_fmt;
+                break;
+            case AV_PIX_FMT_GRAY16BE:
+                codec_pix_fmt = AV_PIX_FMT_GRAY16LE;
+                break;
+            case AV_PIX_FMT_BGR24:
+            case AV_PIX_FMT_RGB24:
+#ifdef AV_PIX_FMT_BGR0
+                codec_pix_fmt = AV_PIX_FMT_BGR0;
+#else
+                codec_pix_fmt = AV_PIX_FMT_BGRA;
+#endif
+                break;
+            default:
+                codec_pix_fmt = AV_PIX_FMT_YUV422P;
+                break;
+        }
         break;
     case CV_CODEC(CODEC_ID_MJPEG):
     case CV_CODEC(CODEC_ID_LJPEG):
@@ -2008,9 +2192,25 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         bitrate_scale = 3;
         break;
     case CV_CODEC(CODEC_ID_RAWVIDEO):
-        codec_pix_fmt = input_pix_fmt == AV_PIX_FMT_GRAY8 ||
-                        input_pix_fmt == AV_PIX_FMT_GRAY16LE ||
-                        input_pix_fmt == AV_PIX_FMT_GRAY16BE ? input_pix_fmt : AV_PIX_FMT_YUV420P;
+        // RGBA is the only RGB fourcc supported by AVI and MKV format
+        if(fourcc == CV_FOURCC('R','G','B','A'))
+        {
+            codec_pix_fmt = AV_PIX_FMT_RGBA;
+        }
+        else
+        {
+            switch(input_pix_fmt)
+            {
+                case AV_PIX_FMT_GRAY8:
+                case AV_PIX_FMT_GRAY16LE:
+                case AV_PIX_FMT_GRAY16BE:
+                    codec_pix_fmt = input_pix_fmt;
+                    break;
+                default:
+                    codec_pix_fmt = AV_PIX_FMT_YUV420P;
+                    break;
+            }
+        }
         break;
     default:
         // good for lossy formats, MPEG, etc.
@@ -2321,9 +2521,6 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
     c->codec_type = AVMEDIA_TYPE_VIDEO;
 
     // put sample parameters
-    unsigned long long lbit_rate = static_cast<unsigned long long>(bitrate);
-    lbit_rate += (bitrate / 4);
-    lbit_rate = std::min(lbit_rate, static_cast<unsigned long long>(std::numeric_limits<int>::max()));
     c->bit_rate = bitrate;
 
     // took advice from
@@ -2341,7 +2538,7 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CV_CODEC
 
     int frame_rate = static_cast<int>(fps+0.5);
     int frame_rate_base = 1;
-    while (fabs(static_cast<double>(frame_rate)/frame_rate_base) - fps > 0.001)
+    while (fabs((static_cast<double>(frame_rate)/frame_rate_base) - fps) > 0.001)
     {
         frame_rate_base *= 10;
         frame_rate = static_cast<int>(fps*frame_rate_base + 0.5);

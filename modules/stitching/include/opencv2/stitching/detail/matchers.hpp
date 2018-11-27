@@ -48,10 +48,6 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_XFEATURES2D
-#  include "opencv2/xfeatures2d/cuda.hpp"
-#endif
-
 namespace cv {
 namespace detail {
 
@@ -67,134 +63,17 @@ struct CV_EXPORTS ImageFeatures
     UMat descriptors;
 };
 
-/** @brief Feature finders base class */
-class CV_EXPORTS FeaturesFinder
-{
-public:
-    virtual ~FeaturesFinder() {}
-    /** @overload */
-    void operator ()(InputArray image, ImageFeatures &features);
-    /** @brief Finds features in the given image.
+CV_EXPORTS void computeImageFeatures(
+    const Ptr<Feature2D> &featuresFinder,
+    InputArrayOfArrays  images,
+    std::vector<ImageFeatures> &features,
+    InputArrayOfArrays masks = noArray());
 
-    @param image Source image
-    @param features Found features
-    @param rois Regions of interest
-
-    @sa detail::ImageFeatures, Rect_
-    */
-    void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
-    /** @brief Finds features in the given images in parallel.
-
-    @param images Source images
-    @param features Found features for each image
-    @param rois Regions of interest for each image
-
-    @sa detail::ImageFeatures, Rect_
-    */
-    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
-                     const std::vector<std::vector<cv::Rect> > &rois);
-    /** @overload */
-    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
-    /** @brief Frees unused memory allocated before if there is any. */
-    virtual void collectGarbage() {}
-
-    /* TODO OpenCV ABI 4.x
-    reimplement this as public method similar to FeaturesMatcher and remove private function hack
-    @return True, if it's possible to use the same finder instance in parallel, false otherwise
-    bool isThreadSafe() const { return is_thread_safe_; }
-    */
-
-protected:
-    /** @brief This method must implement features finding logic in order to make the wrappers
-    detail::FeaturesFinder::operator()_ work.
-
-    @param image Source image
-    @param features Found features
-
-    @sa detail::ImageFeatures */
-    virtual void find(InputArray image, ImageFeatures &features) = 0;
-    /** @brief uses dynamic_cast to determine thread-safety
-    @return True, if it's possible to use the same finder instance in parallel, false otherwise
-    */
-    bool isThreadSafe() const;
-};
-
-/** @brief SURF features finder.
-
-@sa detail::FeaturesFinder, SURF
-*/
-class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
-{
-public:
-    SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                       int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
-
-private:
-    void find(InputArray image, ImageFeatures &features);
-
-    Ptr<FeatureDetector> detector_;
-    Ptr<DescriptorExtractor> extractor_;
-    Ptr<Feature2D> surf;
-};
-
-/** @brief ORB features finder. :
-
-@sa detail::FeaturesFinder, ORB
-*/
-class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
-{
-public:
-    OrbFeaturesFinder(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5);
-
-private:
-    void find(InputArray image, ImageFeatures &features);
-
-    Ptr<ORB> orb;
-    Size grid_size;
-};
-
-/** @brief AKAZE features finder. :
-
-@sa detail::FeaturesFinder, AKAZE
-*/
-class CV_EXPORTS AKAZEFeaturesFinder : public detail::FeaturesFinder
-{
-public:
-    AKAZEFeaturesFinder(int descriptor_type = AKAZE::DESCRIPTOR_MLDB,
-                        int descriptor_size = 0,
-                        int descriptor_channels = 3,
-                        float threshold = 0.001f,
-                        int nOctaves = 4,
-                        int nOctaveLayers = 4,
-                        int diffusivity = KAZE::DIFF_PM_G2);
-
-private:
-    void find(InputArray image, detail::ImageFeatures &features);
-
-    Ptr<AKAZE> akaze;
-};
-
-#ifdef HAVE_OPENCV_XFEATURES2D
-class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
-{
-public:
-    SurfFeaturesFinderGpu(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                          int num_octaves_descr = 4, int num_layers_descr = 2);
-
-    void collectGarbage();
-
-private:
-    void find(InputArray image, ImageFeatures &features);
-
-    cuda::GpuMat image_;
-    cuda::GpuMat gray_image_;
-    cuda::SURF_CUDA surf_;
-    cuda::GpuMat keypoints_;
-    cuda::GpuMat descriptors_;
-    int num_octaves_, num_layers_;
-    int num_octaves_descr_, num_layers_descr_;
-};
-#endif
+CV_EXPORTS void computeImageFeatures(
+    const Ptr<Feature2D> &featuresFinder,
+    InputArray image,
+    ImageFeatures &features,
+    InputArray mask = noArray());
 
 /** @brief Structure containing information about matches between two images.
 
@@ -288,10 +167,10 @@ public:
     BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
                           int num_matches_thresh2 = 6);
 
-    void collectGarbage();
+    void collectGarbage() CV_OVERRIDE;
 
 protected:
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
 
     int num_matches_thresh1_;
     int num_matches_thresh2_;
@@ -342,7 +221,7 @@ public:
         full_affine_(full_affine) {}
 
 protected:
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info);
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
 
     bool full_affine_;
 };

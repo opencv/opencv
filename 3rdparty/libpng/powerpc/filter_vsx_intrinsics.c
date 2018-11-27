@@ -42,8 +42,8 @@
    png_byte i;\
    png_bytep rp = row + offset;\
    png_const_bytep pp = prev_row;\
-   png_size_t unaligned_top = 16 - (((png_size_t)rp % 16));\
-   png_size_t istop;\
+   size_t unaligned_top = 16 - (((size_t)rp % 16));\
+   size_t istop;\
    if(unaligned_top == 16)\
       unaligned_top = 0;\
    istop = row_info->rowbytes;\

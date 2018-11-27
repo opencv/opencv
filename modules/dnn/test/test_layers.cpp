@@ -44,7 +44,7 @@
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
-#include <opencv2/ts/ocl_test.hpp>
+#include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 
 namespace opencv_test { namespace {
 
@@ -61,16 +61,13 @@ static String _tf(TString filename)
 void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &outBlobs)
 {
     size_t ninputs = inpBlobs.size();
-    std::vector<Mat> inp_(ninputs);
-    std::vector<Mat*> inp(ninputs);
-    std::vector<Mat> outp, intp;
+    std::vector<Mat> inp(ninputs), outp, intp;
     std::vector<MatShape> inputs, outputs, internals;
 
     for (size_t i = 0; i < ninputs; i++)
     {
-        inp_[i] = inpBlobs[i].clone();
-        inp[i] = &inp_[i];
-        inputs.push_back(shape(inp_[i]));
+        inp[i] = inpBlobs[i].clone();
+        inputs.push_back(shape(inp[i]));
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
@@ -92,119 +89,82 @@ void runLayer(Ptr<Layer> layer, std::vector<Mat> &inpBlobs, std::vector<Mat> &ou
         outBlobs[i] = outp[i];
 }
 
-
-void testLayerUsingCaffeModels(String basename, int targetId = DNN_TARGET_CPU,
-                               bool useCaffeModel = false, bool useCommonInputBlob = true)
+class Test_Caffe_layers : public DNNTestLayer
 {
-    String prototxt = _tf(basename + ".prototxt");
-    String caffemodel = _tf(basename + ".caffemodel");
+public:
+    void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
+                                   bool useCommonInputBlob = true, double l1 = 0.0,
+                                   double lInf = 0.0)
+    {
+        String prototxt = _tf(basename + ".prototxt");
+        String caffemodel = _tf(basename + ".caffemodel");
 
-    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-    String outfile = _tf(basename + ".npy");
+        String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
+        String outfile = _tf(basename + ".npy");
 
-    Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
-    ASSERT_FALSE(net.empty());
+        Mat inp = blobFromNPY(inpfile);
+        Mat ref = blobFromNPY(outfile);
+        checkBackend(&inp, &ref);
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(targetId);
+        Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+        ASSERT_FALSE(net.empty());
 
-    Mat inp = blobFromNPY(inpfile);
-    Mat ref = blobFromNPY(outfile);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
 
-    net.setInput(inp, "input");
-    Mat out = net.forward("output");
+        net.setInput(inp, "input");
+        Mat out = net.forward("output");
 
-    normAssert(ref, out);
-}
+        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+    }
+};
 
-TEST(Layer_Test_Softmax, Accuracy)
+TEST_P(Test_Caffe_layers, Softmax)
 {
     testLayerUsingCaffeModels("layer_softmax");
 }
 
-OCL_TEST(Layer_Test_Softmax, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_softmax", DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Test_LRN_spatial, Accuracy)
+TEST_P(Test_Caffe_layers, LRN)
 {
     testLayerUsingCaffeModels("layer_lrn_spatial");
-}
-
-OCL_TEST(Layer_Test_LRN_spatial, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_lrn_spatial", DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Test_LRN_channels, Accuracy)
-{
     testLayerUsingCaffeModels("layer_lrn_channels");
 }
 
-OCL_TEST(Layer_Test_LRN_channels, Accuracy)
+TEST_P(Test_Caffe_layers, Convolution)
 {
-    testLayerUsingCaffeModels("layer_lrn_channels", DNN_TARGET_OPENCL);
+    testLayerUsingCaffeModels("layer_convolution", true);
 }
 
-TEST(Layer_Test_Convolution, Accuracy)
+TEST_P(Test_Caffe_layers, DeConvolution)
 {
-    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_CPU, true);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU)
+        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
+#endif
+    testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
-OCL_TEST(Layer_Test_Convolution, Accuracy)
+TEST_P(Test_Caffe_layers, InnerProduct)
 {
-    testLayerUsingCaffeModels("layer_convolution", DNN_TARGET_OPENCL, true);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE ||
+        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_inner_product", true);
 }
 
-TEST(Layer_Test_DeConvolution, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_CPU, true, false);
-}
-
-OCL_TEST(Layer_Test_DeConvolution, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_deconvolution", DNN_TARGET_OPENCL, true, false);
-}
-
-TEST(Layer_Test_InnerProduct, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_CPU, true);
-}
-
-OCL_TEST(Layer_Test_InnerProduct, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_inner_product", DNN_TARGET_OPENCL, true);
-}
-
-TEST(Layer_Test_Pooling_max, Accuracy)
+TEST_P(Test_Caffe_layers, Pooling_max)
 {
     testLayerUsingCaffeModels("layer_pooling_max");
 }
 
-OCL_TEST(Layer_Test_Pooling_max, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_pooling_max", DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Test_Pooling_ave, Accuracy)
+TEST_P(Test_Caffe_layers, Pooling_ave)
 {
     testLayerUsingCaffeModels("layer_pooling_ave");
 }
 
-OCL_TEST(Layer_Test_Pooling_ave, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_pooling_ave", DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Test_MVN, Accuracy)
+TEST_P(Test_Caffe_layers, MVN)
 {
     testLayerUsingCaffeModels("layer_mvn");
-}
-
-OCL_TEST(Layer_Test_MVN, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_mvn", DNN_TARGET_OPENCL);
 }
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
@@ -245,40 +205,54 @@ TEST(Layer_Test_Reshape, Accuracy)
         testReshape(MatShape(inp, inp + 4), MatShape(out, out + 2), 0, -1,
                     MatShape(mask, mask + 2));
     }
+    {
+        int inp[] = {1, 2, 3};
+        int out[] = {3, 1, 2};
+        int mask[] = {3, 1, 2};
+        testReshape(MatShape(inp, inp + 3), MatShape(out, out + 3), 0, -1,
+                    MatShape(mask, mask + 3));
+    }
 }
 
-TEST(Layer_Test_BatchNorm, Accuracy)
+TEST_P(Test_Caffe_layers, BatchNorm)
 {
-    testLayerUsingCaffeModels("layer_batch_norm", DNN_TARGET_CPU, true);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
+    testLayerUsingCaffeModels("layer_batch_norm", true);
+    testLayerUsingCaffeModels("layer_batch_norm_local_stats", true, false);
 }
 
-TEST(Layer_Test_ReLU, Accuracy)
+TEST_P(Test_Caffe_layers, ReLU)
 {
     testLayerUsingCaffeModels("layer_relu");
 }
 
-OCL_TEST(Layer_Test_ReLU, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_relu", DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Test_Dropout, Accuracy)
+TEST_P(Test_Caffe_layers, Dropout)
 {
     testLayerUsingCaffeModels("layer_dropout");
 }
 
-TEST(Layer_Test_Concat, Accuracy)
+TEST_P(Test_Caffe_layers, Concat)
 {
     testLayerUsingCaffeModels("layer_concat");
+    testLayerUsingCaffeModels("layer_concat_optim", true, false);
+    testLayerUsingCaffeModels("layer_concat_shared_input", true, false);
 }
 
-OCL_TEST(Layer_Test_Concat, Accuracy)
+TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-    testLayerUsingCaffeModels("layer_concat", DNN_TARGET_OPENCL);
-}
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 ||
+            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
+        throw SkipTestException("");
+    }
+#endif
+    checkBackend();
 
-TEST(Layer_Test_Fused_Concat, Accuracy)
-{
     // Test case
     // input
     //   |
@@ -309,37 +283,32 @@ TEST(Layer_Test_Fused_Concat, Accuracy)
     randu(input, 0.0f, 1.0f);  // [0, 1] to make AbsVal an identity transformation.
 
     net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input);
-    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input);
-
-    //
-
-    testLayerUsingCaffeModels("layer_concat_optim", DNN_TARGET_CPU, true, false);
-    testLayerUsingCaffeModels("layer_concat_shared_input", DNN_TARGET_CPU, true, false);
+    normAssert(slice(out, Range::all(), Range(0, 2), Range::all(), Range::all()), input, "", default_l1, default_lInf);
+    normAssert(slice(out, Range::all(), Range(2, 4), Range::all(), Range::all()), input, "", default_l1, default_lInf);
 }
 
-TEST(Layer_Test_Eltwise, Accuracy)
+TEST_P(Test_Caffe_layers, Eltwise)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
     testLayerUsingCaffeModels("layer_eltwise");
 }
 
-OCL_TEST(Layer_Test_Eltwise, Accuracy)
+TEST_P(Test_Caffe_layers, PReLU)
 {
-    testLayerUsingCaffeModels("layer_eltwise", DNN_TARGET_OPENCL);
+    testLayerUsingCaffeModels("layer_prelu", true);
 }
 
-TEST(Layer_Test_PReLU, Accuracy)
+// TODO: fix an unstable test case
+TEST_P(Test_Caffe_layers, layer_prelu_fc)
 {
-    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_CPU, true);
-    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_CPU, true, false);
-}
-
-OCL_TEST(Layer_Test_PReLU, Accuracy)
-{
-    testLayerUsingCaffeModels("layer_prelu", DNN_TARGET_OPENCL, true);
-    testLayerUsingCaffeModels("layer_prelu_fc", DNN_TARGET_OPENCL, true, false);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("");
+    testLayerUsingCaffeModels("layer_prelu_fc", true, false);
 }
 
 //template<typename XMat>
@@ -362,13 +331,16 @@ OCL_TEST(Layer_Test_PReLU, Accuracy)
 //    );
 //}
 
-static void test_Reshape_Split_Slice_layers(int targetId)
+TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
     Net net = readNetFromCaffe(_tf("reshape_and_slice_routines.prototxt"));
     ASSERT_FALSE(net.empty());
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(targetId);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat input(6, 12, CV_32F);
     RNG rng(0);
@@ -377,20 +349,10 @@ static void test_Reshape_Split_Slice_layers(int targetId)
     net.setInput(input, "input");
     Mat output = net.forward("output");
 
-    normAssert(input, output);
+    normAssert(input, output, "", default_l1, default_lInf);
 }
 
-TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
-{
-    test_Reshape_Split_Slice_layers(DNN_TARGET_CPU);
-}
-
-OCL_TEST(Layer_Test_Reshape_Split_Slice, Accuracy)
-{
-    test_Reshape_Split_Slice_layers(DNN_TARGET_OPENCL);
-}
-
-TEST(Layer_Conv_Elu, Accuracy)
+TEST_P(Test_Caffe_layers, Conv_Elu)
 {
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
@@ -399,9 +361,11 @@ TEST(Layer_Conv_Elu, Accuracy)
     Mat ref = blobFromNPY(_tf("layer_elu_out.npy"));
 
     net.setInput(inp, "input");
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", default_l1, default_lInf);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
@@ -551,36 +515,6 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
-void testLayerUsingDarknetModels(String basename, bool useDarknetModel = false, bool useCommonInputBlob = true)
-{
-    String cfg = _tf(basename + ".cfg");
-    String weights = _tf(basename + ".weights");
-
-    String inpfile = (useCommonInputBlob) ? _tf("blob.npy") : _tf(basename + ".input.npy");
-    String outfile = _tf(basename + ".npy");
-
-    Net net = readNetFromDarknet(cfg, (useDarknetModel) ? weights : String());
-    ASSERT_FALSE(net.empty());
-
-    Mat inp = blobFromNPY(inpfile);
-    Mat ref = blobFromNPY(outfile);
-
-    net.setInput(inp, "data");
-    Mat out = net.forward();
-
-    normAssert(ref, out);
-}
-
-TEST(Layer_Test_Region, Accuracy)
-{
-    testLayerUsingDarknetModels("region", false, false);
-}
-
-TEST(Layer_Test_Reorg, Accuracy)
-{
-    testLayerUsingDarknetModels("reorg", false, false);
-}
-
 TEST(Layer_Test_ROIPooling, Accuracy)
 {
     Net net = readNetFromCaffe(_tf("net_roi_pooling.prototxt"));
@@ -591,59 +525,46 @@ TEST(Layer_Test_ROIPooling, Accuracy)
 
     net.setInput(inp, "input");
     net.setInput(rois, "rois");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat out = net.forward();
 
     normAssert(out, ref);
 }
 
-TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
+TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
 {
+    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
 
     Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
     Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
     Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
-    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
 
     net.setInput(scores, "rpn_cls_prob_reshape");
     net.setInput(deltas, "rpn_bbox_pred");
     net.setInput(imInfo, "im_info");
 
-    Mat out = net.forward();
+    std::vector<Mat> outs;
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    net.forward(outs, "output");
 
-    const int numDets = ref.size[0];
-    EXPECT_LE(numDets, out.size[0]);
-    normAssert(out.rowRange(0, numDets), ref);
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat ref = blobFromNPY(_tf(i == 0 ? "net_faster_rcnn_proposal.out_rois.npy" :
+                                           "net_faster_rcnn_proposal.out_scores.npy"));
+        const int numDets = ref.size[0];
+        EXPECT_LE(numDets, outs[i].size[0]);
+        normAssert(outs[i].rowRange(0, numDets), ref);
 
-    if (numDets < out.size[0])
-        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
-}
-
-OCL_TEST(Layer_Test_FasterRCNN_Proposal, Accuracy)
-{
-    Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
-
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    net.setPreferableTarget(DNN_TARGET_OPENCL);
-
-    Mat scores = blobFromNPY(_tf("net_faster_rcnn_proposal.scores.npy"));
-    Mat deltas = blobFromNPY(_tf("net_faster_rcnn_proposal.deltas.npy"));
-    Mat imInfo = (Mat_<float>(1, 3) << 600, 800, 1.6f);
-    Mat ref = blobFromNPY(_tf("net_faster_rcnn_proposal.npy"));
-
-    net.setInput(scores, "rpn_cls_prob_reshape");
-    net.setInput(deltas, "rpn_bbox_pred");
-    net.setInput(imInfo, "im_info");
-
-    Mat out = net.forward();
-
-    const int numDets = ref.size[0];
-    EXPECT_LE(numDets, out.size[0]);
-    normAssert(out.rowRange(0, numDets), ref);
-
-    if (numDets < out.size[0])
-        EXPECT_EQ(countNonZero(out.rowRange(numDets, out.size[0])), 0);
+        if (numDets < outs[i].size[0])
+        {
+            EXPECT_EQ(countNonZero(outs[i].rowRange(numDets, outs[i].size[0])), 0);
+        }
+    }
 }
 
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
@@ -697,6 +618,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(input, inpNames[0]);
     net.setInput(weights, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
     Mat ref(input.dims, input.size, CV_32F);
@@ -764,6 +686,7 @@ TEST_P(Crop, Accuracy)
     net.setInputsNames(inpNames);
     net.setInput(inpImage, inpNames[0]);
     net.setInput(sizImage, inpNames[1]);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     // There are a few conditions that represent invalid input to the crop
     // layer, so in those cases we want to verify an exception is thrown.
@@ -808,8 +731,12 @@ INSTANTIATE_TEST_CASE_P(Layer_Test, Crop, Combine(
 
 // Check that by default average pooling layer should not count zero padded values
 // into the normalization area.
-TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
+TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#endif
     LayerParams lp;
     lp.name = "testAvePool";
     lp.type = "Pooling";
@@ -824,11 +751,621 @@ TEST(Layer_Test_Average_pooling_kernel_area, Accuracy)
     // ----+--
     // 7 8 | 9
     Mat inp = (Mat_<float>(3, 3) << 1, 2, 3, 4, 5, 6, 7, 8, 9);
-    Mat target = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
+    Mat ref = (Mat_<float>(2, 2) << (1 + 2 + 4 + 5) / 4.f, (3 + 6) / 2.f, (7 + 8) / 2.f, 9);
     Mat tmp = blobFromImage(inp);
     net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
     Mat out = net.forward();
-    normAssert(out, blobFromImage(target));
+    normAssert(out, blobFromImage(ref));
+}
+
+// Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
+TEST_P(Test_Caffe_layers, PriorBox_squares)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    LayerParams lp;
+    lp.name = "testPriorBox";
+    lp.type = "PriorBox";
+    lp.set("min_size", 2);
+    lp.set("flip", true);
+    lp.set("clip", true);
+    float variance[] = {0.1f, 0.1f, 0.2f, 0.2f};
+    float aspectRatios[] = {1.0f};  // That should be ignored.
+    lp.set("variance", DictValue::arrayReal<float*>(&variance[0], 4));
+    lp.set("aspect_ratio", DictValue::arrayReal<float*>(&aspectRatios[0], 1));
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 0, id, 1);  // The second input is an input image. Shapes are used for boxes normalization.
+    Mat inp(1, 2, CV_32F);
+    randu(inp, -1, 1);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    Mat out = net.forward();
+
+    Mat ref = (Mat_<float>(4, 4) << 0.0, 0.0, 0.75, 1.0,
+                                       0.25, 0.0, 1.0, 1.0,
+                                       0.1f, 0.1f, 0.2f, 0.2f,
+                                       0.1f, 0.1f, 0.2f, 0.2f);
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-5 : 1e-5;
+    normAssert(out.reshape(1, 4), ref, "", l1);
+}
+
+typedef TestWithParam<tuple<int, int> > Layer_Test_DWconv_Prelu;
+TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
+{
+    // Test case
+    // input       img size 3x16x16  value all 1
+    //   |
+    //   v
+    // dw_conv     weight[0]=-1 weight[1]=-2 weight[2]=-3   bias={1,2,3}
+    //   |
+    //   v
+    // prelu       weight={1,2,3}
+    //   |
+    //   v
+    // output      out size 3x14x14  if right: out[0]=-8 out[0]=-32 out[0]=-72
+    //             but current opencv output: out[0]=-24 out[0]=-48 out[0]=-72
+
+    const int num_input = get<0>(GetParam());   //inpChannels
+    const int group = 3;                        //outChannels=group when group>1
+    const int num_output = get<1>(GetParam());
+    const int kernel_depth = num_input/group;
+    CV_Assert_N(num_output >= group, num_output % group == 0, num_input % group == 0);
+
+    Net net;
+    //layer 1: dwconv
+    LayerParams lp;
+    lp.name = "dwconv";
+    lp.type = "Convolution";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", num_output);
+    lp.set("pad", 0);
+    lp.set("group", group);
+    lp.set("stride", 1);
+    lp.set("engine", "CAFFE");
+    lp.set("bias_term", "true");
+
+    std::vector<int> weightsShape(4);
+    weightsShape[0] = num_output;   // #outChannels
+    weightsShape[1] = kernel_depth; // #inpChannels / group
+    weightsShape[2] = 3;            // height
+    weightsShape[3] = 3;            // width
+    Mat weights(weightsShape, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < weightsShape[0]; ++i)
+    {
+        for (int j = 0; j < weightsShape[1]; ++j)
+        {
+            for (int k = 0; k < weightsShape[2]; ++k)
+            {
+                for (int l = 0; l < weightsShape[3]; ++l)
+                {
+                    weights.ptr<float>(i, j, k)[l]=-1*(i+1);
+                }
+            }
+        }
+    }
+    lp.blobs.push_back(weights);
+
+    //assign bias
+    Mat bias(1, num_output, CV_32F, Scalar(1));
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            bias.ptr<float>(i)[j]=j+1;
+        }
+    }
+    lp.blobs.push_back(bias);
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    //layer 2: prelu
+    LayerParams lpr;
+    lpr.name = "dw_relu";
+    lpr.type = "PReLU";
+    Mat weightsp(1, num_output, CV_32F, Scalar(1));
+
+    //assign weights
+    for (int i = 0; i < 1; ++i)
+    {
+        for (int j = 0; j < num_output; ++j)
+        {
+            weightsp.ptr<float>(i)[j]=j+1;
+        }
+    }
+
+    lpr.blobs.push_back(weightsp);
+    net.addLayerToPrev(lpr.name, lpr.type, lpr);
+
+    int shape[] = {1, num_input, 16, 16};
+    Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setInput(in_blob);
+    Mat out = net.forward();
+
+    //assign target
+    std::vector<int> outShape(4);
+    outShape[0] = 1;
+    outShape[1] = num_output;       // outChannels
+    outShape[2] = 14;          // height
+    outShape[3] = 14;          // width
+    Mat target(outShape, CV_32F, Scalar(1));
+    for (int i = 0; i < outShape[0]; ++i)
+    {
+        for (int j = 0; j < outShape[1]; ++j)
+        {
+            for (int k = 0; k < outShape[2]; ++k)
+            {
+                for (int l = 0; l < outShape[3]; ++l)
+                {
+                    target.ptr<float>(i, j, k)[l]=(-9*kernel_depth*(j+1)+j+1)*(j+1);
+                }
+            }
+        }
+    }
+
+    normAssert(out, target);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DWconv_Prelu, Combine(Values(3, 6), Values(3, 6)));
+
+#ifdef HAVE_INF_ENGINE
+// Using Intel's Model Optimizer generate .xml and .bin files:
+// ./ModelOptimizer -w /path/to/caffemodel -d /path/to/prototxt \
+//                  -p FP32 -i -b ${batch_size} -o /path/to/output/folder
+TEST(Layer_Test_Convolution_DLDT, Accuracy)
+{
+    Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
+    Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+
+    Mat inp = blobFromNPY(_tf("blob.npy"));
+
+    netDefault.setInput(inp);
+    netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat outDefault = netDefault.forward();
+
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    normAssert(outDefault, out);
+
+    std::vector<int> outLayers = net.getUnconnectedOutLayers();
+    ASSERT_EQ(net.getLayer(outLayers[0])->name, "output_merge");
+    ASSERT_EQ(net.getLayer(outLayers[0])->type, "Concat");
+}
+
+TEST(Layer_Test_Convolution_DLDT, setInput_uint8)
+{
+    Mat inp = blobFromNPY(_tf("blob.npy"));
+
+    Mat inputs[] = {Mat(inp.dims, inp.size, CV_8U), Mat()};
+    randu(inputs[0], 0, 255);
+    inputs[0].convertTo(inputs[1], CV_32F);
+
+    Mat outs[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+        net.setInput(inputs[i]);
+        outs[i] = net.forward();
+        ASSERT_EQ(outs[i].type(), CV_32F);
+    }
+    normAssert(outs[0], outs[1]);
+}
+
+// 1. Create a .prototxt file with the following network:
+// layer {
+//   type: "Input" name: "data" top: "data"
+//   input_param { shape { dim: 1 dim: 2 dim: 3 } }
+// }
+// layer {
+//   type: "Input" name: "second_input" top: "second_input"
+//   input_param { shape { dim: 1 dim: 2 dim: 3 } }
+// }
+// layer {
+//  type: "Eltwise" name: "output" top: "output"
+//  bottom: "data" bottom: "second_input"
+//  eltwise_param { operation: SUM }
+// }
+//
+// 2. Create a .caffemodel file using Caffe:
+//
+// import caffe
+// net = caffe.Net('/path/to/prototxt', caffe.TEST)
+// net.save('/path/to/caffemodel')
+//
+// 3. Convert using ModelOptimizer.
+typedef testing::TestWithParam<tuple<int, int> > Test_DLDT_two_inputs;
+TEST_P(Test_DLDT_two_inputs, as_IR)
+{
+    int firstInpType = get<0>(GetParam());
+    int secondInpType = get<1>(GetParam());
+    // TODO: It looks like a bug in Inference Engine.
+    if (secondInpType == CV_8U)
+        throw SkipTestException("");
+
+    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
+    int inpSize[] = {1, 2, 3};
+    Mat firstInp(3, &inpSize[0], firstInpType);
+    Mat secondInp(3, &inpSize[0], secondInpType);
+    randu(firstInp, 0, 255);
+    randu(secondInp, 0, 255);
+
+    net.setInput(firstInp, "data");
+    net.setInput(secondInp, "second_input");
+    Mat out = net.forward();
+
+    Mat ref;
+    cv::add(firstInp, secondInp, ref, Mat(), CV_32F);
+    normAssert(out, ref);
+}
+
+TEST_P(Test_DLDT_two_inputs, as_backend)
+{
+    static const float kScale = 0.5f;
+    static const float kScaleInv = 1.0f / kScale;
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "testLayer";
+    lp.set("operation", "sum");
+    int eltwiseId = net.addLayerToPrev(lp.name, lp.type, lp);  // connect to a first input
+    net.connect(0, 1, eltwiseId, 1);  // connect to a second input
+
+    int inpSize[] = {1, 2, 3};
+    Mat firstInp(3, &inpSize[0], get<0>(GetParam()));
+    Mat secondInp(3, &inpSize[0], get<1>(GetParam()));
+    randu(firstInp, 0, 255);
+    randu(secondInp, 0, 255);
+
+    net.setInputsNames({"data", "second_input"});
+    net.setInput(firstInp, "data", kScale);
+    net.setInput(secondInp, "second_input", kScaleInv);
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    Mat out = net.forward();
+
+    Mat ref;
+    addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
+    normAssert(out, ref);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
+  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F)
+));
+
+class UnsupportedLayer : public Layer
+{
+public:
+    UnsupportedLayer(const LayerParams &params) {}
+
+    static Ptr<Layer> create(const LayerParams& params)
+    {
+        return Ptr<Layer>(new UnsupportedLayer(params));
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    virtual void forward(cv::InputArrayOfArrays inputs, cv::OutputArrayOfArrays outputs, cv::OutputArrayOfArrays internals) CV_OVERRIDE {}
+};
+
+TEST(Test_DLDT, fused_output)
+{
+    static const int kNumChannels = 3;
+    CV_DNN_REGISTER_LAYER_CLASS(Unsupported, UnsupportedLayer);
+    Net net;
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 3);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv";
+        lp.blobs.push_back(Mat({kNumChannels, 1, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale";
+        lp.blobs.push_back(Mat({kNumChannels}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        net.addLayerToPrev("unsupported_layer", "Unsupported", lp);
+    }
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    ASSERT_NO_THROW(net.forward());
+    LayerFactory::unregisterLayer("Unsupported");
+}
+
+TEST(Test_DLDT, multiple_networks)
+{
+    Net nets[2];
+    for (int i = 0; i < 2; ++i)
+    {
+        nets[i].setInputsNames(std::vector<String>(1, format("input_%d", i)));
+
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = format("testConv_%d", i);
+        lp.blobs.push_back(Mat({1, 1, 1, 1}, CV_32F, Scalar(1 + i)));
+        nets[i].addLayerToPrev(lp.name, lp.type, lp);
+        nets[i].setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+        nets[i].setInput(Mat({1, 1, 1, 1}, CV_32FC1, Scalar(1)));
+    }
+    Mat out_1 = nets[0].forward();
+    Mat out_2 = nets[1].forward();
+    // After the second model is initialized we try to receive an output from the first network again.
+    out_1 = nets[0].forward();
+    normAssert(2 * out_1, out_2);
+}
+#endif  // HAVE_INF_ENGINE
+
+// Test a custom layer.
+class CustomInterpLayer CV_FINAL : public Layer
+{
+public:
+    CustomInterpLayer(const LayerParams &params) : Layer(params)
+    {
+        zoomFactor = params.get<int>("zoom_factor", 0);
+        outWidth = params.get<int>("width", 0);
+        outHeight = params.get<int>("height", 0);
+    }
+
+    static Ptr<Layer> create(LayerParams& params)
+    {
+        return Ptr<Layer>(new CustomInterpLayer(params));
+    }
+
+    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<std::vector<int> > &outputs,
+                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+    {
+        const int batchSize = inputs[0][0];
+        const int numChannels = inputs[0][1];
+        const int inpHeight = inputs[0][2];
+        const int inpWidth = inputs[0][3];
+
+        std::vector<int> outShape(4);
+        outShape[0] = batchSize;
+        outShape[1] = numChannels;
+        outShape[2] = outHeight != 0 ? outHeight : (inpHeight + (inpHeight - 1) * (zoomFactor - 1));
+        outShape[3] = outWidth != 0 ? outWidth : (inpWidth + (inpWidth - 1) * (zoomFactor - 1));
+        outputs.assign(1, outShape);
+        return false;
+    }
+
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
+        if (!outWidth && !outHeight)
+        {
+            outHeight = outputs[0].size[2];
+            outWidth = outputs[0].size[3];
+        }
+    }
+
+    // Implementation of this custom layer is based on https://github.com/cdmh/deeplab-public/blob/master/src/caffe/layers/interp_layer.cpp
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat& inp = inputs[0];
+        Mat& out = outputs[0];
+        const float* inpData = (float*)inp.data;
+        float* outData = (float*)out.data;
+
+        const int batchSize = inp.size[0];
+        const int numChannels = inp.size[1];
+        const int inpHeight = inp.size[2];
+        const int inpWidth = inp.size[3];
+
+        const float rheight = (outHeight > 1) ? static_cast<float>(inpHeight - 1) / (outHeight - 1) : 0.f;
+        const float rwidth = (outWidth > 1) ? static_cast<float>(inpWidth - 1) / (outWidth - 1) : 0.f;
+        for (int h2 = 0; h2 < outHeight; ++h2)
+        {
+            const float h1r = rheight * h2;
+            const int h1 = h1r;
+            const int h1p = (h1 < inpHeight - 1) ? 1 : 0;
+            const float h1lambda = h1r - h1;
+            const float h0lambda = 1.f - h1lambda;
+            for (int w2 = 0; w2 < outWidth; ++w2)
+            {
+                const float w1r = rwidth * w2;
+                const int w1 = w1r;
+                const int w1p = (w1 < inpWidth - 1) ? 1 : 0;
+                const float w1lambda = w1r - w1;
+                const float w0lambda = 1.f - w1lambda;
+                const float* pos1 = inpData + h1 * inpWidth + w1;
+                float* pos2 = outData + h2 * outWidth + w2;
+                for (int c = 0; c < batchSize * numChannels; ++c)
+                {
+                    pos2[0] =
+                      h0lambda * (w0lambda * pos1[0] + w1lambda * pos1[w1p]) +
+                      h1lambda * (w0lambda * pos1[h1p * inpWidth] + w1lambda * pos1[h1p * inpWidth + w1p]);
+                    pos1 += inpWidth * inpHeight;
+                    pos2 += outWidth * outHeight;
+                }
+            }
+        }
+    }
+
+private:
+    int outWidth, outHeight, zoomFactor;
+};
+
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
+TEST_P(Test_Caffe_layers, Interp)
+#else
+TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
+#endif
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+    // Test a custom layer.
+    CV_DNN_REGISTER_LAYER_CLASS(Interp, CustomInterpLayer);
+    try
+    {
+        testLayerUsingCaffeModels("layer_interp", false, false);
+    }
+    catch (...)
+    {
+        LayerFactory::unregisterLayer("Interp");
+        throw;
+    }
+    LayerFactory::unregisterLayer("Interp");
+
+    // Test an implemented layer.
+    testLayerUsingCaffeModels("layer_interp", false, false);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
+
+TEST(Layer_Test_PoolingIndices, Accuracy)
+{
+    Net net;
+
+    LayerParams lp;
+    lp.set("pool", "max");
+    lp.set("kernel_w", 2);
+    lp.set("kernel_h", 2);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("pad_w", 0);
+    lp.set("pad_h", 0);
+    lp.name = "testLayer.name";  // This test also checks that OpenCV lets use names with dots.
+    lp.type = "Pooling";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    Mat inp(10, 10, CV_8U);
+    randu(inp, 0, 255);
+
+    Mat maxValues(5, 5, CV_32F, Scalar(-1)), indices(5, 5, CV_32F, Scalar(-1));
+    for (int y = 0; y < 10; ++y)
+    {
+        int dstY = y / 2;
+        for (int x = 0; x < 10; ++x)
+        {
+            int dstX = x / 2;
+            uint8_t val = inp.at<uint8_t>(y, x);
+            if ((float)inp.at<uint8_t>(y, x) > maxValues.at<float>(dstY, dstX))
+            {
+                maxValues.at<float>(dstY, dstX) = val;
+                indices.at<float>(dstY, dstX) = y * 10 + x;
+            }
+        }
+    }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setInput(blobFromImage(inp));
+
+    std::vector<Mat> outputs;
+    net.forward(outputs, lp.name);
+    normAssert(maxValues, outputs[0].reshape(1, 5));
+    normAssert(indices, outputs[1].reshape(1, 5));
+}
+
+typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
+TEST_P(Layer_Test_ShuffleChannel, Accuracy)
+{
+    Vec4i inpShapeVec = get<0>(GetParam());
+    int group = get<1>(GetParam());
+    ASSERT_EQ(inpShapeVec[1] % group, 0);
+    const int groupSize = inpShapeVec[1] / group;
+    int backendId = get<0>(get<2>(GetParam()));
+    int targetId = get<1>(get<2>(GetParam()));
+
+    Net net;
+    LayerParams lp;
+    lp.set("group", group);
+    lp.type = "ShuffleChannel";
+    lp.name = "testLayer";
+    net.addLayerToPrev(lp.name, lp.type, lp);
+
+    const int inpShape[] = {inpShapeVec[0], inpShapeVec[1], inpShapeVec[2], inpShapeVec[3]};
+    Mat inp(4, inpShape, CV_32F);
+    randu(inp, 0, 255);
+
+    net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-2 : 1e-5;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 7e-2 : 1e-4;
+    for (int n = 0; n < inpShapeVec[0]; ++n)
+    {
+        for (int c = 0; c < inpShapeVec[1]; ++c)
+        {
+            Mat outChannel = getPlane(out, n, c);
+            Mat inpChannel = getPlane(inp, n, groupSize * (c % group) + c / group);
+            normAssert(outChannel, inpChannel, "", l1, lInf);
+        }
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
+/*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
+/*group*/        Values(1, 2, 3, 6), dnnBackendsAndTargets(/*with IE*/ false)
+));
+
+// Check if relu is not fused to convolution if we requested it's output
+TEST(Layer_Test_Convolution, relu_fusion)
+{
+    Net net;
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv";
+
+        int weightsShape[] = {1, 1, 1, 1};
+        Mat weights(4, &weightsShape[0], CV_32F, Scalar(1));
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    {
+        LayerParams lp;
+        lp.type = "ReLU";
+        lp.name = "testReLU";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+    int sz[] = {1, 1, 2, 3};
+    Mat input(4, &sz[0], CV_32F);
+    randu(input, -1.0, -0.1);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat output = net.forward("testConv");
+    normAssert(input, output);
 }
 
 }} // namespace

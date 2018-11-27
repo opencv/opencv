@@ -20,10 +20,10 @@ file(GLOB lib_hdrs ${IPP_IW_PATH}/include/*.h ${IPP_IW_PATH}/include/iw/*.h ${IP
 add_library(${IPP_IW_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
 if(UNIX)
-  if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
+  if(CV_GCC OR CV_CLANG OR CV_ICC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-braces -Wno-missing-field-initializers")
   endif()
-  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+  if(CV_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-self-assign")
   endif()
 endif()

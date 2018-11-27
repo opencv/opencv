@@ -62,12 +62,11 @@ yum install cmake
 yum install python-devel numpy
 yum install gcc gcc-c++
 @endcode
-Next we need **GTK** support for GUI features, Camera support (libdc1394, libv4l), Media Support
+Next we need **GTK** support for GUI features, Camera support (libdc1394, v4l), Media Support
 (ffmpeg, gstreamer) etc.
 @code{.sh}
 yum install gtk2-devel
 yum install libdc1394-devel
-yum install libv4l-devel
 yum install ffmpeg-devel
 yum install gstreamer-plugins-base-devel
 @endcode
@@ -160,7 +159,7 @@ understanding.)*
     @endcode
 -   Disable all GPU related modules.
     @code{.sh}
-    cmake -D WITH_OPENCL=OFF -D WITH_CUDA=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
+    cmake -D WITH_OPENCL=OFF -D BUILD_opencv_gpu=OFF -D BUILD_opencv_gpuarithm=OFF -D BUILD_opencv_gpubgsegm=OFF -D BUILD_opencv_gpucodec=OFF -D BUILD_opencv_gpufeatures2d=OFF -D BUILD_opencv_gpufilters=OFF -D BUILD_opencv_gpuimgproc=OFF -D BUILD_opencv_gpulegacy=OFF -D BUILD_opencv_gpuoptflow=OFF -D BUILD_opencv_gpustereo=OFF -D BUILD_opencv_gpuwarping=OFF ..
     @endcode
 -   Set installation path and build type
     @code{.sh}

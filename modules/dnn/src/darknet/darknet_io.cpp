@@ -89,6 +89,8 @@ namespace cv {
                 return init_val;
             }
 
+            static const std::string kFirstLayerName = "data";
+
             class setLayersParams {
 
                 NetParameter *net;
@@ -97,8 +99,8 @@ namespace cv {
                 std::vector<std::string> fused_layer_names;
 
             public:
-                setLayersParams(NetParameter *_net, std::string _first_layer = "data") :
-                    net(_net), layer_id(0), last_layer(_first_layer)
+                setLayersParams(NetParameter *_net) :
+                    net(_net), layer_id(0), last_layer(kFirstLayerName)
                 {}
 
                 void setLayerBlobs(int i, std::vector<cv::Mat> blobs)
@@ -210,6 +212,44 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setAvgpool()
+                {
+                    cv::dnn::LayerParams avgpool_param;
+                    avgpool_param.set<cv::String>("pool", "ave");
+                    avgpool_param.set<bool>("global_pooling", true);
+                    avgpool_param.name = "Pooling-name";
+                    avgpool_param.type = "Pooling";
+                    darknet::LayerParameter lp;
+
+                    std::string layer_name = cv::format("avgpool_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = avgpool_param.type;
+                    lp.layerParams = avgpool_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setSoftmax()
+                {
+                    cv::dnn::LayerParams softmax_param;
+                    softmax_param.name = "Softmax-name";
+                    softmax_param.type = "Softmax";
+                    darknet::LayerParameter lp;
+
+                    std::string layer_name = cv::format("softmax_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = softmax_param.type;
+                    lp.layerParams = softmax_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setConcat(int number_of_inputs, int *input_indexes)
                 {
                     cv::dnn::LayerParams concat_param;
@@ -275,7 +315,7 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
-                void setPermute()
+                void setPermute(bool isDarknetLayer = true)
                 {
                     cv::dnn::LayerParams permute_params;
                     permute_params.name = "Permute-name";
@@ -286,7 +326,7 @@ namespace cv {
                     permute_params.set("order", paramOrder);
 
                     darknet::LayerParameter lp;
-                    std::string layer_name = cv::format("premute_%d", layer_id);
+                    std::string layer_name = cv::format("permute_%d", layer_id);
                     lp.layer_name = layer_name;
                     lp.layer_type = permute_params.type;
                     lp.layerParams = permute_params;
@@ -294,8 +334,11 @@ namespace cv {
                     last_layer = layer_name;
                     net->layers.push_back(lp);
 
-                    layer_id++;
-                    fused_layer_names.push_back(last_layer);
+                    if (isDarknetLayer)
+                    {
+                        layer_id++;
+                        fused_layer_names.push_back(last_layer);
+                    }
                 }
 
                 void setRegion(float thresh, int coords, int classes, int anchors, int classfix, int softmax, int softmax_tree, float *biasData)
@@ -320,6 +363,86 @@ namespace cv {
                     lp.layer_name = layer_name;
                     lp.layer_type = region_param.type;
                     lp.layerParams = region_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setYolo(int classes, const std::vector<int>& mask, const std::vector<float>& anchors)
+                {
+                    cv::dnn::LayerParams region_param;
+                    region_param.name = "Region-name";
+                    region_param.type = "Region";
+
+                    const int numAnchors = mask.size();
+
+                    region_param.set<int>("classes", classes);
+                    region_param.set<int>("anchors", numAnchors);
+                    region_param.set<bool>("logistic", true);
+
+                    std::vector<float> usedAnchors(numAnchors * 2);
+                    for (int i = 0; i < numAnchors; ++i)
+                    {
+                        usedAnchors[i * 2] = anchors[mask[i] * 2];
+                        usedAnchors[i * 2 + 1] = anchors[mask[i] * 2 + 1];
+                    }
+
+                    cv::Mat biasData_mat = cv::Mat(1, numAnchors * 2, CV_32F, &usedAnchors[0]).clone();
+                    region_param.blobs.push_back(biasData_mat);
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("yolo_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = region_param.type;
+                    lp.layerParams = region_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    lp.bottom_indexes.push_back(kFirstLayerName);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setShortcut(int from)
+                {
+                    cv::dnn::LayerParams shortcut_param;
+                    shortcut_param.name = "Shortcut-name";
+                    shortcut_param.type = "Eltwise";
+
+                    shortcut_param.set<std::string>("op", "sum");
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("shortcut_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = shortcut_param.type;
+                    lp.layerParams = shortcut_param;
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+                void setUpsample(int scaleFactor)
+                {
+                    cv::dnn::LayerParams param;
+                    param.name = "Upsample-name";
+                    param.type = "Resize";
+
+                    param.set<int>("zoom_factor", scaleFactor);
+                    param.set<String>("interpolation", "nearest");
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("upsample_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = param.type;
+                    lp.layerParams = param;
                     lp.bottom_indexes.push_back(last_layer);
                     last_layer = layer_name;
                     net->layers.push_back(lp);
@@ -353,68 +476,61 @@ namespace cv {
                 return dst;
             }
 
-            bool ReadDarknetFromCfgFile(const char *cfgFile, NetParameter *net)
+            bool ReadDarknetFromCfgStream(std::istream &ifile, NetParameter *net)
             {
-                std::ifstream ifile;
-                ifile.open(cfgFile);
-                if (ifile.is_open())
-                {
-                    bool read_net = false;
-                    int layers_counter = -1;
-                    for (std::string line; std::getline(ifile, line);) {
-                        line = escapeString(line);
-                        if (line.empty()) continue;
-                        switch (line[0]) {
-                        case '\0': break;
-                        case '#': break;
-                        case ';': break;
-                        case '[':
-                            if (line == "[net]") {
-                                read_net = true;
-                            }
-                            else {
-                                // read section
-                                read_net = false;
-                                ++layers_counter;
-                                const size_t layer_type_size = line.find("]") - 1;
-                                CV_Assert(layer_type_size < line.size());
-                                std::string layer_type = line.substr(1, layer_type_size);
-                                net->layers_cfg[layers_counter]["type"] = layer_type;
-                            }
-                            break;
-                        default:
-                            // read entry
-                            const size_t separator_index = line.find('=');
-                            CV_Assert(separator_index < line.size());
-                            if (separator_index != std::string::npos) {
-                                std::string name = line.substr(0, separator_index);
-                                std::string value = line.substr(separator_index + 1, line.size() - (separator_index + 1));
-                                name = escapeString(name);
-                                value = escapeString(value);
-                                if (name.empty() || value.empty()) continue;
-                                if (read_net)
-                                    net->net_cfg[name] = value;
-                                else
-                                    net->layers_cfg[layers_counter][name] = value;
-                            }
+                bool read_net = false;
+                int layers_counter = -1;
+                for (std::string line; std::getline(ifile, line);) {
+                    line = escapeString(line);
+                    if (line.empty()) continue;
+                    switch (line[0]) {
+                    case '\0': break;
+                    case '#': break;
+                    case ';': break;
+                    case '[':
+                        if (line == "[net]") {
+                            read_net = true;
+                        }
+                        else {
+                            // read section
+                            read_net = false;
+                            ++layers_counter;
+                            const size_t layer_type_size = line.find("]") - 1;
+                            CV_Assert(layer_type_size < line.size());
+                            std::string layer_type = line.substr(1, layer_type_size);
+                            net->layers_cfg[layers_counter]["type"] = layer_type;
+                        }
+                        break;
+                    default:
+                        // read entry
+                        const size_t separator_index = line.find('=');
+                        CV_Assert(separator_index < line.size());
+                        if (separator_index != std::string::npos) {
+                            std::string name = line.substr(0, separator_index);
+                            std::string value = line.substr(separator_index + 1, line.size() - (separator_index + 1));
+                            name = escapeString(name);
+                            value = escapeString(value);
+                            if (name.empty() || value.empty()) continue;
+                            if (read_net)
+                                net->net_cfg[name] = value;
+                            else
+                                net->layers_cfg[layers_counter][name] = value;
                         }
                     }
-
-                    std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
-                    std::vector<float> vec = getNumbers<float>(anchors);
-                    std::map<std::string, std::string> &net_params = net->net_cfg;
-                    net->width = getParam(net_params, "width", 416);
-                    net->height = getParam(net_params, "height", 416);
-                    net->channels = getParam(net_params, "channels", 3);
-                    CV_Assert(net->width > 0 && net->height > 0 && net->channels > 0);
                 }
-                else
-                    return false;
+
+                std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
+                std::vector<float> vec = getNumbers<float>(anchors);
+                std::map<std::string, std::string> &net_params = net->net_cfg;
+                net->width = getParam(net_params, "width", 416);
+                net->height = getParam(net_params, "height", 416);
+                net->channels = getParam(net_params, "channels", 3);
+                CV_Assert(net->width > 0 && net->height > 0 && net->channels > 0);
 
                 int current_channels = net->channels;
                 net->out_channels_vec.resize(net->layers_cfg.size());
 
-                int layers_counter = -1;
+                layers_counter = -1;
 
                 setLayersParams setParams(net);
 
@@ -456,6 +572,17 @@ namespace cv {
                         int pad = getParam<int>(layer_params, "pad", 0);
                         setParams.setMaxpool(kernel_size, pad, stride);
                     }
+                    else if (layer_type == "avgpool")
+                    {
+                        setParams.setAvgpool();
+                    }
+                    else if (layer_type == "softmax")
+                    {
+                        int groups = getParam<int>(layer_params, "groups", 1);
+                        if (groups != 1)
+                            CV_Error(Error::StsNotImplemented, "Softmax from Darknet with groups != 1");
+                        setParams.setSoftmax();
+                    }
                     else if (layer_type == "route")
                     {
                         std::string bottom_layers = getParam<std::string>(layer_params, "layers", "");
@@ -464,7 +591,7 @@ namespace cv {
 
                         current_channels = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
-                            layers_vec[k] += layers_counter;
+                            layers_vec[k] = layers_vec[k] > 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
                             current_channels += net->out_channels_vec[layers_vec[k]];
                         }
 
@@ -496,8 +623,42 @@ namespace cv {
 
                         CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
 
-                        setParams.setPermute();
+                        setParams.setPermute(false);
                         setParams.setRegion(thresh, coords, classes, num_of_anchors, classfix, softmax, softmax_tree, anchors_vec.data());
+                    }
+                    else if (layer_type == "shortcut")
+                    {
+                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
+                        CV_Assert(!bottom_layer.empty());
+                        int from = std::atoi(bottom_layer.c_str());
+
+                        from += layers_counter;
+                        current_channels = net->out_channels_vec[from];
+
+                        setParams.setShortcut(from);
+                    }
+                    else if (layer_type == "upsample")
+                    {
+                        int scaleFactor = getParam<int>(layer_params, "stride", 1);
+                        setParams.setUpsample(scaleFactor);
+                    }
+                    else if (layer_type == "yolo")
+                    {
+                        int classes = getParam<int>(layer_params, "classes", -1);
+                        int num_of_anchors = getParam<int>(layer_params, "num", -1);
+
+                        std::string anchors_values = getParam<std::string>(layer_params, "anchors", std::string());
+                        CV_Assert(!anchors_values.empty());
+                        std::vector<float> anchors_vec = getNumbers<float>(anchors_values);
+
+                        std::string mask_values = getParam<std::string>(layer_params, "mask", std::string());
+                        CV_Assert(!mask_values.empty());
+                        std::vector<int> mask_vec = getNumbers<int>(mask_values);
+
+                        CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
+
+                        setParams.setPermute(false);
+                        setParams.setYolo(classes, mask_vec, anchors_vec);
                     }
                     else {
                         CV_Error(cv::Error::StsParseError, "Unknown layer type: " + layer_type);
@@ -508,13 +669,8 @@ namespace cv {
                 return true;
             }
 
-
-            bool ReadDarknetFromWeightsFile(const char *darknetModel, NetParameter *net)
+            bool ReadDarknetFromWeightsStream(std::istream &ifile, NetParameter *net)
             {
-                std::ifstream ifile;
-                ifile.open(darknetModel, std::ios::binary);
-                CV_Assert(ifile.is_open());
-
                 int32_t major_ver, minor_ver, revision;
                 ifile.read(reinterpret_cast<char *>(&major_ver), sizeof(int32_t));
                 ifile.read(reinterpret_cast<char *>(&minor_ver), sizeof(int32_t));
@@ -598,6 +754,10 @@ namespace cv {
                         if(activation == "leaky")
                             ++cv_layers_counter;
                     }
+                    if (layer_type == "region" || layer_type == "yolo")
+                    {
+                        ++cv_layers_counter;  // For permute.
+                    }
                     current_channels = net->out_channels_vec[darknet_layers_counter];
                 }
                 return true;
@@ -606,19 +766,18 @@ namespace cv {
         }
 
 
-        void ReadNetParamsFromCfgFileOrDie(const char *cfgFile, darknet::NetParameter *net)
+        void ReadNetParamsFromCfgStreamOrDie(std::istream &ifile, darknet::NetParameter *net)
         {
-            if (!darknet::ReadDarknetFromCfgFile(cfgFile, net)) {
-                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(cfgFile));
+            if (!darknet::ReadDarknetFromCfgStream(ifile, net)) {
+                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter stream");
             }
         }
 
-        void ReadNetParamsFromBinaryFileOrDie(const char *darknetModel, darknet::NetParameter *net)
+        void ReadNetParamsFromBinaryStreamOrDie(std::istream &ifile, darknet::NetParameter *net)
         {
-            if (!darknet::ReadDarknetFromWeightsFile(darknetModel, net)) {
-                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(darknetModel));
+            if (!darknet::ReadDarknetFromWeightsStream(ifile, net)) {
+                CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter stream");
             }
         }
-
     }
 }

@@ -44,7 +44,7 @@
 namespace cv
 {
 
-class GFTTDetector_Impl : public GFTTDetector
+class GFTTDetector_Impl CV_FINAL : public GFTTDetector
 {
 public:
     GFTTDetector_Impl( int _nfeatures, double _qualityLevel,
@@ -55,30 +55,36 @@ public:
     {
     }
 
-    void setMaxFeatures(int maxFeatures) { nfeatures = maxFeatures; }
-    int getMaxFeatures() const { return nfeatures; }
+    void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
+    int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
 
-    void setQualityLevel(double qlevel) { qualityLevel = qlevel; }
-    double getQualityLevel() const { return qualityLevel; }
+    void setQualityLevel(double qlevel) CV_OVERRIDE { qualityLevel = qlevel; }
+    double getQualityLevel() const CV_OVERRIDE { return qualityLevel; }
 
-    void setMinDistance(double minDistance_) { minDistance = minDistance_; }
-    double getMinDistance() const { return minDistance; }
+    void setMinDistance(double minDistance_) CV_OVERRIDE { minDistance = minDistance_; }
+    double getMinDistance() const CV_OVERRIDE { return minDistance; }
 
-    void setBlockSize(int blockSize_) { blockSize = blockSize_; }
-    int getBlockSize() const { return blockSize; }
+    void setBlockSize(int blockSize_) CV_OVERRIDE { blockSize = blockSize_; }
+    int getBlockSize() const CV_OVERRIDE { return blockSize; }
 
-    void setGradientSize(int gradientSize_) { gradSize = gradientSize_; }
-    int getGradientSize() { return gradSize; }
+    //void setGradientSize(int gradientSize_) { gradSize = gradientSize_; }
+    //int getGradientSize() { return gradSize; }
 
-    void setHarrisDetector(bool val) { useHarrisDetector = val; }
-    bool getHarrisDetector() const { return useHarrisDetector; }
+    void setHarrisDetector(bool val) CV_OVERRIDE { useHarrisDetector = val; }
+    bool getHarrisDetector() const CV_OVERRIDE { return useHarrisDetector; }
 
-    void setK(double k_) { k = k_; }
-    double getK() const { return k; }
+    void setK(double k_) CV_OVERRIDE { k = k_; }
+    double getK() const CV_OVERRIDE { return k; }
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask )
+    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
+
+        if(_image.empty())
+        {
+            keypoints.clear();
+            return;
+        }
 
         std::vector<Point2f> corners;
 

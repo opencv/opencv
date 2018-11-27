@@ -140,7 +140,6 @@ vector<Rect> get_annotations(Mat input_image)
         switch( key_pressed )
         {
         case 27:
-                destroyWindow(window_name);
                 stop = true;
                 break;
         case 99:

@@ -13,7 +13,20 @@ Declaration of various functions which are related to Tensorflow models reading.
 #define __OPENCV_DNN_TF_IO_HPP__
 #ifdef HAVE_PROTOBUF
 
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include "graph.pb.h"
+
+#include <google/protobuf/message.h>
+#include <google/protobuf/text_format.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#if defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic pop
+#endif
+
+namespace tensorflow { using namespace opencv_tensorflow; }
 
 namespace cv {
 namespace dnn {

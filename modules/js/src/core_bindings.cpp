@@ -68,14 +68,9 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //M*/
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/dnn.hpp"
-
 #include <emscripten/bind.h>
+
+@INCLUDES@
 
 using namespace emscripten;
 using namespace cv;
@@ -83,6 +78,12 @@ using namespace dnn;
 
 namespace binding_utils
 {
+    template<typename classT, typename enumT>
+    static inline typename std::underlying_type<enumT>::type classT::* underlying_ptr(enumT classT::* enum_ptr)
+    {
+        return reinterpret_cast<typename std::underlying_type<enumT>::type classT::*>(enum_ptr);
+    }
+
     template<typename T>
     emscripten::val matData(const cv::Mat& mat)
     {
@@ -332,6 +333,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::Point>("PointVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
+    register_vector<cv::KeyPoint>("KeyPointVector");
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
@@ -476,6 +478,14 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
     function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect));
     function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect2f));
+
+    emscripten::value_object<cv::KeyPoint>("KeyPoint")
+        .field("angle", &cv::KeyPoint::angle)
+        .field("class_id", &cv::KeyPoint::class_id)
+        .field("octave", &cv::KeyPoint::octave)
+        .field("pt", &cv::KeyPoint::pt)
+        .field("response", &cv::KeyPoint::response)
+        .field("size", &cv::KeyPoint::size);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
         .element(index<0>())

@@ -80,11 +80,9 @@ if(WITH_OPENGL)
   endif()
 endif(WITH_OPENGL)
 
-# --- Carbon & Cocoa ---
+# --- Cocoa ---
 if(APPLE)
-  if(WITH_CARBON)
-    set(HAVE_CARBON YES)
-  elseif(NOT IOS AND CMAKE_COMPILER_IS_CLANGCXX)
+  if(NOT IOS AND CV_CLANG)
     set(HAVE_COCOA YES)
   endif()
 endif()

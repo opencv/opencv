@@ -86,3 +86,16 @@ When you run the code you should see 3x3 identity matrix as output.
 
 That is it, whenever you start a new project just add the OpenCV user library that you have defined
 to your project and you are good to go. Enjoy your powerful, less painful development environment :)
+
+Running Java code with OpenCV and MKL dependency
+------------------------------------------------
+
+You may get the following error (e.g. on Ubuntu) if you have built OpenCV with MKL library with some Java code that calls OpenCV functions
+that use Intel MKL:
+> Intel MKL FATAL ERROR: Cannot load libmkl_avx2.so or libmkl_def.so.
+
+One solution to solve this on Linux consists in preloading the Intel MKL library (either run the command in a terminal or add it to your `.bashrc` file).
+Your command line should be something similar to this (add `$LD_PRELOAD:` before if you have already set the `LD_PRELOAD` variable):
+> export LD_PRELOAD=/opt/intel/mkl/lib/intel64/libmkl_core.so:/opt/intel/mkl/lib/intel64/libmkl_sequential.so
+
+Then, run the Eclipse IDE from a terminal that have this environment variable set (`echo $LD_PRELOAD`) and the error should disappear.

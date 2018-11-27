@@ -871,7 +871,7 @@ struct CalcVerticalSums: public ParallelLoopBody
         useSIMD = hasSIMD128();
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         static const CostType MAX_COST = SHRT_MAX;
         static const int ALIGN = 16;
@@ -1152,7 +1152,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
         useSIMD = hasSIMD128();
     }
 
-    void operator()( const Range& range ) const
+    void operator()(const Range& range) const CV_OVERRIDE
     {
         int y1 = range.start, y2 = range.end;
         size_t auxBufsSize = LrSize * sizeof(CostType) + width*(sizeof(CostType) + sizeof(DispType)) + 32;
@@ -1487,12 +1487,14 @@ static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
     size_t minLrSize = width1 , LrSize = minLrSize*D2;
     int hsumBufNRows = SH2*2 + 2;
     size_t totalBufSize = (LrSize + minLrSize)*NLR*sizeof(CostType) + // minLr[] and Lr[]
-    costBufSize*hsumBufNRows*sizeof(CostType) +                       // hsumBuf
-    CSBufSize*2*sizeof(CostType) + 1024;                              // C, S
+                          costBufSize*hsumBufNRows*sizeof(CostType) + // hsumBuf
+                          CSBufSize*2*sizeof(CostType) + 1024;        // C, S
 
     if( buffer.empty() || !buffer.isContinuous() ||
         buffer.cols*buffer.rows*buffer.elemSize() < totalBufSize )
-        buffer.create(1, (int)totalBufSize, CV_8U);
+    {
+        buffer.reserveBuffer(totalBufSize);
+    }
 
     // summary cost over different (nDirs) directions
     CostType* Cbuf = (CostType*)alignPtr(buffer.ptr(), ALIGN);
@@ -1542,7 +1544,7 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
 
     SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap);
     void getRawMatchingCost(CostType* C, CostType* hsumBuf, CostType* pixDiff, PixType* tmpBuf, int y, int src_start_idx) const;
-    void operator () (const Range& range) const;
+    void operator () (const Range& range) const CV_OVERRIDE;
 };
 
 SGBM3WayMainLoop::SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap):
@@ -2128,7 +2130,7 @@ static void computeDisparity3WaySGBM( const Mat& img1, const Mat& img2,
     delete[] dst_disp;
 }
 
-class StereoSGBMImpl : public StereoSGBM
+class StereoSGBMImpl CV_FINAL : public StereoSGBM
 {
 public:
     StereoSGBMImpl()
@@ -2147,9 +2149,9 @@ public:
                                    _mode );
     }
 
-    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
+    void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         Mat left = leftarr.getMat(), right = rightarr.getMat();
         CV_Assert( left.size() == right.size() && left.type() == right.type() &&
@@ -2172,40 +2174,40 @@ public:
                            StereoMatcher::DISP_SCALE*params.speckleRange, buffer);
     }
 
-    int getMinDisparity() const { return params.minDisparity; }
-    void setMinDisparity(int minDisparity) { params.minDisparity = minDisparity; }
+    int getMinDisparity() const CV_OVERRIDE { return params.minDisparity; }
+    void setMinDisparity(int minDisparity) CV_OVERRIDE { params.minDisparity = minDisparity; }
 
-    int getNumDisparities() const { return params.numDisparities; }
-    void setNumDisparities(int numDisparities) { params.numDisparities = numDisparities; }
+    int getNumDisparities() const CV_OVERRIDE { return params.numDisparities; }
+    void setNumDisparities(int numDisparities) CV_OVERRIDE { params.numDisparities = numDisparities; }
 
-    int getBlockSize() const { return params.SADWindowSize; }
-    void setBlockSize(int blockSize) { params.SADWindowSize = blockSize; }
+    int getBlockSize() const CV_OVERRIDE { return params.SADWindowSize; }
+    void setBlockSize(int blockSize) CV_OVERRIDE { params.SADWindowSize = blockSize; }
 
-    int getSpeckleWindowSize() const { return params.speckleWindowSize; }
-    void setSpeckleWindowSize(int speckleWindowSize) { params.speckleWindowSize = speckleWindowSize; }
+    int getSpeckleWindowSize() const CV_OVERRIDE { return params.speckleWindowSize; }
+    void setSpeckleWindowSize(int speckleWindowSize) CV_OVERRIDE { params.speckleWindowSize = speckleWindowSize; }
 
-    int getSpeckleRange() const { return params.speckleRange; }
-    void setSpeckleRange(int speckleRange) { params.speckleRange = speckleRange; }
+    int getSpeckleRange() const CV_OVERRIDE { return params.speckleRange; }
+    void setSpeckleRange(int speckleRange) CV_OVERRIDE { params.speckleRange = speckleRange; }
 
-    int getDisp12MaxDiff() const { return params.disp12MaxDiff; }
-    void setDisp12MaxDiff(int disp12MaxDiff) { params.disp12MaxDiff = disp12MaxDiff; }
+    int getDisp12MaxDiff() const CV_OVERRIDE { return params.disp12MaxDiff; }
+    void setDisp12MaxDiff(int disp12MaxDiff) CV_OVERRIDE { params.disp12MaxDiff = disp12MaxDiff; }
 
-    int getPreFilterCap() const { return params.preFilterCap; }
-    void setPreFilterCap(int preFilterCap) { params.preFilterCap = preFilterCap; }
+    int getPreFilterCap() const CV_OVERRIDE { return params.preFilterCap; }
+    void setPreFilterCap(int preFilterCap) CV_OVERRIDE { params.preFilterCap = preFilterCap; }
 
-    int getUniquenessRatio() const { return params.uniquenessRatio; }
-    void setUniquenessRatio(int uniquenessRatio) { params.uniquenessRatio = uniquenessRatio; }
+    int getUniquenessRatio() const CV_OVERRIDE { return params.uniquenessRatio; }
+    void setUniquenessRatio(int uniquenessRatio) CV_OVERRIDE { params.uniquenessRatio = uniquenessRatio; }
 
-    int getP1() const { return params.P1; }
-    void setP1(int P1) { params.P1 = P1; }
+    int getP1() const CV_OVERRIDE { return params.P1; }
+    void setP1(int P1) CV_OVERRIDE { params.P1 = P1; }
 
-    int getP2() const { return params.P2; }
-    void setP2(int P2) { params.P2 = P2; }
+    int getP2() const CV_OVERRIDE { return params.P2; }
+    void setP2(int P2) CV_OVERRIDE { params.P2 = P2; }
 
-    int getMode() const { return params.mode; }
-    void setMode(int mode) { params.mode = mode; }
+    int getMode() const CV_OVERRIDE { return params.mode; }
+    void setMode(int mode) CV_OVERRIDE { params.mode = mode; }
 
-    void write(FileStorage& fs) const
+    void write(FileStorage& fs) const CV_OVERRIDE
     {
         writeFormat(fs);
         fs << "name" << name_
@@ -2222,7 +2224,7 @@ public:
         << "mode" << params.mode;
     }
 
-    void read(const FileNode& fn)
+    void read(const FileNode& fn) CV_OVERRIDE
     {
         FileNode n = fn["name"];
         CV_Assert( n.isString() && String(n) == name_ );
@@ -2388,7 +2390,7 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
 static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int maxDiff, Mat &buffer)
 {
 #if IPP_VERSION_X100 >= 810
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppDataType dataType = ippiGetDataType(img.depth());
     IppiSize    size     = ippiSize(img.size());
@@ -2424,7 +2426,7 @@ static bool ipp_filterSpeckles(Mat &img, int maxSpeckleSize, int newVal, int max
 void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSize,
                          double _maxDiff, InputOutputArray __buf )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
     int type = img.type();
@@ -2444,14 +2446,14 @@ void cv::filterSpeckles( InputOutputArray _img, double _newval, int maxSpeckleSi
 void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDisparity,
                             int numberOfDisparities, int disp12MaxDiff )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat disp = _disp.getMat(), cost = _cost.getMat();
     int cols = disp.cols, rows = disp.rows;
     int minD = minDisparity, maxD = minDisparity + numberOfDisparities;
     int x, minX1 = std::max(maxD, 0), maxX1 = cols + std::min(minD, 0);
     AutoBuffer<int> _disp2buf(cols*2);
-    int* disp2buf = _disp2buf;
+    int* disp2buf = _disp2buf.data();
     int* disp2cost = disp2buf + cols;
     const int DISP_SHIFT = 4, DISP_SCALE = 1 << DISP_SHIFT;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;

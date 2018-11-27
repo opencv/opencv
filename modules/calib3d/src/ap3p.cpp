@@ -45,7 +45,8 @@ void solveQuartic(const double *factors, double *realRoots) {
     complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
     double B_4A = -a3 / (4 * a4);
     double complex1 = 4 * p4 / 3 + t;
-#if defined(__clang__) && defined(__arm__) && __clang_major__ == 3 && __clang_minor__ <= 7 && !defined(__ANDROID__)
+#if defined(__clang__) && defined(__arm__) && (__clang_major__ == 3 || __clang_minor__ == 4) && !defined(__ANDROID__)
+    // details: https://github.com/opencv/opencv/issues/11135
     // details: https://github.com/opencv/opencv/issues/11056
     complex<double> complex2 = 2 * q4;
     complex2 = complex<double>(complex2.real() / sqrt_2m.real(), 0);
@@ -296,7 +297,7 @@ int ap3p::computePoses(const double featureVectors[3][3],
 }
 
 bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[3][3], translation[3];
     std::vector<double> points;
@@ -320,7 +321,7 @@ bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Ma
 }
 
 int ap3p::solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[4][3][3], translation[4][3];
     std::vector<double> points;

@@ -41,6 +41,50 @@
 //
 //M*/
 
+/********************************* COPYRIGHT NOTICE *******************************\
+  Original code for Bayer->BGR/RGB conversion is provided by Dirk Schaefer
+  from MD-Mathematische Dienste GmbH. Below is the copyright notice:
+
+    IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+    By downloading, copying, installing or using the software you agree
+    to this license. If you do not agree to this license, do not download,
+    install, copy or use the software.
+
+    Contributors License Agreement:
+
+      Copyright (c) 2002,
+      MD-Mathematische Dienste GmbH
+      Im Defdahl 5-10
+      44141 Dortmund
+      Germany
+      www.md-it.de
+
+    Redistribution and use in source and binary forms,
+    with or without modification, are permitted provided
+    that the following conditions are met:
+
+    Redistributions of source code must retain
+    the above copyright notice, this list of conditions and the following disclaimer.
+    Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+    The name of Contributor may not be used to endorse or promote products
+    derived from this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+    PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+    STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+    THE POSSIBILITY OF SUCH DAMAGE.
+\**********************************************************************************/
+
+
 #include "precomp.hpp"
 
 #include <limits>
@@ -511,7 +555,7 @@ public:
     {
     }
 
-    virtual void operator ()(const Range& range) const
+    virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         const int G2Y = 9617;
@@ -614,10 +658,10 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
 
     Size size = srcmat.size();
     int bcoeff = B2Y, rcoeff = R2Y;
-    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
+    int start_with_green = code == COLOR_BayerGB2GRAY || code == COLOR_BayerGR2GRAY;
     bool brow = true;
 
-    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
+    if( code != COLOR_BayerBG2GRAY && code != COLOR_BayerGB2GRAY )
     {
         brow = false;
         std::swap(bcoeff, rcoeff);
@@ -670,7 +714,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         T alpha = Alpha<T>::value();
@@ -879,8 +923,10 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 {
     int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+    int blue = (code == COLOR_BayerBG2BGR || code == COLOR_BayerGB2BGR ||
+                code == COLOR_BayerBG2BGRA || code == COLOR_BayerGB2BGRA ) ? -1 : 1;
+    int start_with_green = (code == COLOR_BayerGB2BGR || code == COLOR_BayerGR2BGR ||
+                            code == COLOR_BayerGB2BGRA || code == COLOR_BayerGR2BGRA);
 
     int dcn = dstmat.channels();
     size.height -= 2;
@@ -918,8 +964,8 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     int dststep = (int)dstmat.step;
     Size size = srcmat.size();
 
-    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
-    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
+    int blueIdx = code == COLOR_BayerBG2BGR_VNG || code == COLOR_BayerGB2BGR_VNG ? 0 : 2;
+    bool greenCell0 = code != COLOR_BayerBG2BGR_VNG && code != COLOR_BayerRG2BGR_VNG;
 
     // for too small images use the simple interpolation algorithm
     if( MIN(size.width, size.height) < 8 )
@@ -932,7 +978,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
     int i, bufstep = N7*bcn;
     cv::AutoBuffer<ushort> _buf(bufstep*brows);
-    ushort* buf = (ushort*)_buf;
+    ushort* buf = _buf.data();
 
     bayer += bstep*2;
 
@@ -1476,7 +1522,7 @@ public:
     {
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         int dcn = dst.channels();
         int dcn2 = dcn<<1;
@@ -1579,8 +1625,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     size.width -= 2;
     size.height -= 2;
 
-    int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
-    int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
+    int start_with_green = code == COLOR_BayerGB2BGR_EA || code == COLOR_BayerGR2BGR_EA ? 1 : 0;
+    int blue = code == COLOR_BayerGB2BGR_EA || code == COLOR_BayerBG2BGR_EA ? 1 : 0;
 
     if (size.height > 0)
     {
@@ -1615,7 +1661,7 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 
 void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
@@ -1626,7 +1672,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 
     switch (code)
     {
-    case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
+    case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:
         if (dcn <= 0)
             dcn = 1;
         CV_Assert( scn == 1 && dcn == 1 );
@@ -1642,9 +1688,12 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
         break;
 
-    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
-    case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
-    case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
+    case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
+        if (dcn <= 0)
+          dcn = 4;
+        /* fallthrough */
+    case COLOR_BayerBG2BGR: case COLOR_BayerGB2BGR: case COLOR_BayerRG2BGR: case COLOR_BayerGR2BGR:
+    case COLOR_BayerBG2BGR_VNG: case COLOR_BayerGB2BGR_VNG: case COLOR_BayerRG2BGR_VNG: case COLOR_BayerGR2BGR_VNG:
         {
             if (dcn <= 0)
                 dcn = 3;
@@ -1653,10 +1702,10 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
             Mat dst_ = _dst.getMat();
 
-            if( code == CV_BayerBG2BGR || code == CV_BayerBG2BGRA ||
-                code == CV_BayerGB2BGR || code == CV_BayerGB2BGRA ||
-                code == CV_BayerRG2BGR || code == CV_BayerRG2BGRA ||
-                code == CV_BayerGR2BGR || code == CV_BayerGR2BGRA )
+            if( code == COLOR_BayerBG2BGR || code == COLOR_BayerBG2BGRA ||
+                code == COLOR_BayerGB2BGR || code == COLOR_BayerGB2BGRA ||
+                code == COLOR_BayerRG2BGR || code == COLOR_BayerRG2BGRA ||
+                code == COLOR_BayerGR2BGR || code == COLOR_BayerGR2BGRA )
             {
                 if( depth == CV_8U )
                     Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
@@ -1673,7 +1722,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         }
         break;
 
-    case CV_BayerBG2BGR_EA: case CV_BayerGB2BGR_EA: case CV_BayerRG2BGR_EA: case CV_BayerGR2BGR_EA:
+    case COLOR_BayerBG2BGR_EA: case COLOR_BayerGB2BGR_EA: case COLOR_BayerRG2BGR_EA: case COLOR_BayerGR2BGR_EA:
         if (dcn <= 0)
             dcn = 3;
 

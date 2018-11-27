@@ -136,11 +136,6 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         src_step = dst_step = roi.width;
     }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_8u(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
-
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
     {
@@ -356,8 +351,6 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         src_step = dst_step = roi.width;
     }
 
-    // HAVE_TEGRA_OPTIMIZATION not supported
-
     // HAVE_IPP not supported
 
     const ushort* src = _src.ptr<ushort>();
@@ -499,11 +492,6 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         roi.height = 1;
         src_step = dst_step = roi.width;
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_16s(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
 
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
@@ -696,11 +684,6 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         roi.width *= roi.height;
         roi.height = 1;
     }
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::thresh_32f(_src, _dst, roi.width, roi.height, thresh, maxval, type))
-        return;
-#endif
 
 #if defined(HAVE_IPP)
     CV_IPP_CHECK()
@@ -1003,7 +986,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
 #ifdef HAVE_IPP
 static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size size, unsigned char &thresh)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 // Performance degradations
 #if IPP_VERSION_X100 >= 201800
@@ -1206,7 +1189,7 @@ public:
         thresholdType = _thresholdType;
     }
 
-    void operator () ( const Range& range ) const
+    void operator () (const Range& range) const CV_OVERRIDE
     {
         int row0 = range.start;
         int row1 = range.end;
@@ -1374,11 +1357,11 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
         }
 #endif
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
@@ -1391,7 +1374,7 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
@@ -1518,7 +1501,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
                             int method, int type, int blockSize, double delta )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );

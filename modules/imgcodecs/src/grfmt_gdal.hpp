@@ -103,7 +103,7 @@ void write_ctable_pixel( const double& pixelValue,
 /**
  * Loader for GDAL
 */
-class GdalDecoder : public BaseImageDecoder{
+class GdalDecoder CV_FINAL : public BaseImageDecoder{
 
     public:
 
@@ -115,17 +115,17 @@ class GdalDecoder : public BaseImageDecoder{
         /**
          * Destructor
         */
-        ~GdalDecoder();
+        ~GdalDecoder() CV_OVERRIDE;
 
         /**
          * Read image data
         */
-        bool readData( Mat& img );
+        bool readData( Mat& img ) CV_OVERRIDE;
 
         /**
          * Read the image header
         */
-        bool readHeader();
+        bool readHeader() CV_OVERRIDE;
 
         /**
          * Close the module
@@ -135,7 +135,7 @@ class GdalDecoder : public BaseImageDecoder{
         /**
          * Create a new decoder
         */
-        ImageDecoder newDecoder() const;
+        ImageDecoder newDecoder() const CV_OVERRIDE;
 
         /**
          * Test the file signature
@@ -144,7 +144,7 @@ class GdalDecoder : public BaseImageDecoder{
          * The reason is that GDAL tends to overlap with other image formats and it is probably
          * safer to use other formats first.
         */
-        virtual bool checkSignature( const String& signature ) const;
+        virtual bool checkSignature( const String& signature ) const CV_OVERRIDE;
 
     protected:
 

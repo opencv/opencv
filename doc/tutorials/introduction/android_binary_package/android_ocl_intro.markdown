@@ -144,7 +144,7 @@ Here is a simple Java wrapper for our JNI stuff:
 public class NativeGLRenderer {
     static
     {
-        System.loadLibrary("opencv_java3"); // comment this when using OpenCV Manager
+        System.loadLibrary("opencv_java4"); // comment this when using OpenCV Manager
         System.loadLibrary("JNIrender");
     }
 
@@ -383,7 +383,7 @@ Unfortunately `UMat` keeps OpenCL _buffer_ internally, that can't be wrapped ove
   path/to/cmake.exe -GNinja -DCMAKE_MAKE_PROGRAM="path/to/ninja.exe" -DCMAKE_TOOLCHAIN_FILE=path/to/opencv/platforms/android/android.toolchain.cmake -DANDROID_ABI="armeabi-v7a with NEON" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON path/to/opencv
   path/to/ninja.exe install/strip
   @endcode
-  To use your own modified `libopencv_java3.so` you have to keep inside your APK, not to use OpenCV Manager and load it manually via `System.loadLibrary("opencv_java3")`.
+  To use your own modified `libopencv_java4.so` you have to keep inside your APK, not to use OpenCV Manager and load it manually via `System.loadLibrary("opencv_java4")`.
 
 Performance notes
 -----------------

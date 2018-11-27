@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
@@ -73,69 +74,55 @@ template<typename T1, typename T2> struct PyrUpNoVec
     int operator()(T1**, T2**, int, int) const { return 0; }
 };
 
-#if CV_SSE2
+#if CV_SIMD
 
 struct PyrDownVec_32s8u
 {
     int operator()(int** src, uchar* dst, int, int width) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE2) )
-            return 0;
-
         int x = 0;
         const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i delta = _mm_set1_epi16(128);
 
-        for( ; x <= width - 16; x += 16 )
+        for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes )
         {
-            __m128i r0, r1, r2, r3, r4, t0, t1;
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x)),
-                                 _mm_load_si128((const __m128i*)(row0 + x + 4)));
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x)),
-                                 _mm_load_si128((const __m128i*)(row1 + x + 4)));
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x)),
-                                 _mm_load_si128((const __m128i*)(row2 + x + 4)));
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x)),
-                                 _mm_load_si128((const __m128i*)(row3 + x + 4)));
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x)),
-                                 _mm_load_si128((const __m128i*)(row4 + x + 4)));
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            t0 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row0 + x + 12)));
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row1 + x + 12)));
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row2 + x + 12)));
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row3 + x + 12)));
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x + 8)),
-                                 _mm_load_si128((const __m128i*)(row4 + x + 12)));
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            t1 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            t0 = _mm_srli_epi16(_mm_add_epi16(t0, delta), 8);
-            t1 = _mm_srli_epi16(_mm_add_epi16(t1, delta), 8);
-            _mm_storeu_si128((__m128i*)(dst + x), _mm_packus_epi16(t0, t1));
+            v_uint16 r0, r1, r2, r3, r4, t0, t1;
+            r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)));
+            r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)));
+            r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)));
+            r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x), vx_load(row3 + x + v_int32::nlanes)));
+            r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x), vx_load(row4 + x + v_int32::nlanes)));
+            t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+            r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x + 2*v_int32::nlanes), vx_load(row0 + x + 3*v_int32::nlanes)));
+            r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x + 2*v_int32::nlanes), vx_load(row1 + x + 3*v_int32::nlanes)));
+            r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x + 2*v_int32::nlanes), vx_load(row2 + x + 3*v_int32::nlanes)));
+            r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x + 2*v_int32::nlanes), vx_load(row3 + x + 3*v_int32::nlanes)));
+            r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x + 2*v_int32::nlanes), vx_load(row4 + x + 3*v_int32::nlanes)));
+            t1 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+            v_store(dst + x, v_rshr_pack<8>(t0, t1));
         }
-
-        for( ; x <= width - 4; x += 4 )
+        if (x <= width - v_int16::nlanes)
         {
-            __m128i r0, r1, r2, r3, r4, z = _mm_setzero_si128();
-            r0 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row0 + x)), z);
-            r1 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row1 + x)), z);
-            r2 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row2 + x)), z);
-            r3 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row3 + x)), z);
-            r4 = _mm_packs_epi32(_mm_load_si128((const __m128i*)(row4 + x)), z);
-            r0 = _mm_add_epi16(r0, r4);
-            r1 = _mm_add_epi16(_mm_add_epi16(r1, r3), r2);
-            r0 = _mm_add_epi16(r0, _mm_add_epi16(r2, r2));
-            r0 = _mm_add_epi16(r0, _mm_slli_epi16(r1, 2));
-            r0 = _mm_srli_epi16(_mm_add_epi16(r0, delta), 8);
-            *(int*)(dst + x) = _mm_cvtsi128_si32(_mm_packus_epi16(r0, r0));
+            v_uint16 r0, r1, r2, r3, r4, t0;
+            r0 = v_reinterpret_as_u16(v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)));
+            r1 = v_reinterpret_as_u16(v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)));
+            r2 = v_reinterpret_as_u16(v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)));
+            r3 = v_reinterpret_as_u16(v_pack(vx_load(row3 + x), vx_load(row3 + x + v_int32::nlanes)));
+            r4 = v_reinterpret_as_u16(v_pack(vx_load(row4 + x), vx_load(row4 + x + v_int32::nlanes)));
+            t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+            v_rshr_pack_store<8>(dst + x, t0);
+            x += v_uint16::nlanes;
+        }
+        for ( ; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+        {
+            v_int32x4 r0, r1, r2, r3, r4, t0;
+            r0 = v_load(row0 + x);
+            r1 = v_load(row1 + x);
+            r2 = v_load(row2 + x);
+            r3 = v_load(row3 + x);
+            r4 = v_load(row4 + x);
+            t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
+
+            *(int*)(dst + x) = v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())).get0();
         }
 
         return x;
@@ -146,152 +133,105 @@ struct PyrDownVec_32f
 {
     int operator()(float** src, float* dst, int, int width) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
         int x = 0;
         const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128 _4 = _mm_set1_ps(4.f), _scale = _mm_set1_ps(1.f/256);
-        for( ; x <= width - 8; x += 8 )
+
+        v_float32 _4 = vx_setall_f32(4.f), _scale = vx_setall_f32(1.f/256);
+        for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
         {
-            __m128 r0, r1, r2, r3, r4, t0, t1;
-            r0 = _mm_load_ps(row0 + x);
-            r1 = _mm_load_ps(row1 + x);
-            r2 = _mm_load_ps(row2 + x);
-            r3 = _mm_load_ps(row3 + x);
-            r4 = _mm_load_ps(row4 + x);
-            r0 = _mm_add_ps(r0, r4);
-            r1 = _mm_add_ps(_mm_add_ps(r1, r3), r2);
-            r0 = _mm_add_ps(r0, _mm_add_ps(r2, r2));
-            t0 = _mm_add_ps(r0, _mm_mul_ps(r1, _4));
-
-            r0 = _mm_load_ps(row0 + x + 4);
-            r1 = _mm_load_ps(row1 + x + 4);
-            r2 = _mm_load_ps(row2 + x + 4);
-            r3 = _mm_load_ps(row3 + x + 4);
-            r4 = _mm_load_ps(row4 + x + 4);
-            r0 = _mm_add_ps(r0, r4);
-            r1 = _mm_add_ps(_mm_add_ps(r1, r3), r2);
-            r0 = _mm_add_ps(r0, _mm_add_ps(r2, r2));
-            t1 = _mm_add_ps(r0, _mm_mul_ps(r1, _4));
-
-            t0 = _mm_mul_ps(t0, _scale);
-            t1 = _mm_mul_ps(t1, _scale);
-
-            _mm_storeu_ps(dst + x, t0);
-            _mm_storeu_ps(dst + x + 4, t1);
+            v_float32 r0, r1, r2, r3, r4;
+            r0 = vx_load(row0 + x);
+            r1 = vx_load(row1 + x);
+            r2 = vx_load(row2 + x);
+            r3 = vx_load(row3 + x);
+            r4 = vx_load(row4 + x);
+            v_store(dst + x, v_muladd(r1 + r3 + r2, _4, r0 + r4 + (r2 + r2)) * _scale);
         }
 
         return x;
     }
 };
 
-#if CV_SSE4_1
+#if CV_SSE4_1 || CV_NEON || CV_VSX
 
 struct PyrDownVec_32s16u
 {
-    PyrDownVec_32s16u()
-    {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE4_1);
-    }
-
     int operator()(int** src, ushort* dst, int, int width) const
     {
         int x = 0;
-
-        if (!haveSSE)
-            return x;
-
         const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i v_delta = _mm_set1_epi32(128);
 
-        for( ; x <= width - 8; x += 8 )
+        for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
         {
-            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
-                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
-                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
-            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
-                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
-
-            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
-            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
-
-            v_r10 = _mm_slli_epi32(v_r10, 2);
-            __m128i v_dst0 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
-            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
-            v_r11 = _mm_slli_epi32(v_r11, 2);
-            __m128i v_dst1 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
-
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_packus_epi32(v_dst0, v_dst1));
+            v_int32 r00 = vx_load(row0 + x),
+                    r01 = vx_load(row0 + x + v_int32::nlanes),
+                    r10 = vx_load(row1 + x),
+                    r11 = vx_load(row1 + x + v_int32::nlanes),
+                    r20 = vx_load(row2 + x),
+                    r21 = vx_load(row2 + x + v_int32::nlanes),
+                    r30 = vx_load(row3 + x),
+                    r31 = vx_load(row3 + x + v_int32::nlanes),
+                    r40 = vx_load(row4 + x),
+                    r41 = vx_load(row4 + x + v_int32::nlanes);
+            v_store(dst + x, v_rshr_pack_u<8>(r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2),
+                                              r01 + r41 + (r21 + r21) + ((r11 + r21 + r31) << 2)));
+        }
+        if (x <= width - v_int32::nlanes)
+        {
+            v_int32 r00 = vx_load(row0 + x),
+                    r10 = vx_load(row1 + x),
+                    r20 = vx_load(row2 + x),
+                    r30 = vx_load(row3 + x),
+                    r40 = vx_load(row4 + x);
+            v_rshr_pack_u_store<8>(dst + x, r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2));
+            x += v_int32::nlanes;
         }
 
         return x;
     }
-
-    bool haveSSE;
 };
 
 #else
 
 typedef PyrDownNoVec<int, ushort> PyrDownVec_32s16u;
 
-#endif // CV_SSE4_1
+#endif
 
 struct PyrDownVec_32s16s
 {
-    PyrDownVec_32s16s()
-    {
-        haveSSE = checkHardwareSupport(CV_CPU_SSE2);
-    }
-
     int operator()(int** src, short* dst, int, int width) const
     {
         int x = 0;
-
-        if (!haveSSE)
-            return x;
-
         const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        __m128i v_delta = _mm_set1_epi32(128);
 
-        for( ; x <= width - 8; x += 8 )
+        for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
         {
-            __m128i v_r00 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r01 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            __m128i v_r10 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r11 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            __m128i v_r20 = _mm_loadu_si128((__m128i const *)(row2 + x)),
-                    v_r21 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            __m128i v_r30 = _mm_loadu_si128((__m128i const *)(row3 + x)),
-                    v_r31 = _mm_loadu_si128((__m128i const *)(row3 + x + 4));
-            __m128i v_r40 = _mm_loadu_si128((__m128i const *)(row4 + x)),
-                    v_r41 = _mm_loadu_si128((__m128i const *)(row4 + x + 4));
-
-            v_r00 = _mm_add_epi32(_mm_add_epi32(v_r00, v_r40), _mm_add_epi32(v_r20, v_r20));
-            v_r10 = _mm_add_epi32(_mm_add_epi32(v_r10, v_r20), v_r30);
-
-            v_r10 = _mm_slli_epi32(v_r10, 2);
-            __m128i v_dst0 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = _mm_add_epi32(_mm_add_epi32(v_r01, v_r41), _mm_add_epi32(v_r21, v_r21));
-            v_r11 = _mm_add_epi32(_mm_add_epi32(v_r11, v_r21), v_r31);
-            v_r11 = _mm_slli_epi32(v_r11, 2);
-            __m128i v_dst1 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(v_r01, v_r11), v_delta), 8);
-
-            _mm_storeu_si128((__m128i *)(dst + x), _mm_packs_epi32(v_dst0, v_dst1));
+            v_int32 r00 = vx_load(row0 + x),
+                    r01 = vx_load(row0 + x + v_int32::nlanes),
+                    r10 = vx_load(row1 + x),
+                    r11 = vx_load(row1 + x + v_int32::nlanes),
+                    r20 = vx_load(row2 + x),
+                    r21 = vx_load(row2 + x + v_int32::nlanes),
+                    r30 = vx_load(row3 + x),
+                    r31 = vx_load(row3 + x + v_int32::nlanes),
+                    r40 = vx_load(row4 + x),
+                    r41 = vx_load(row4 + x + v_int32::nlanes);
+            v_store(dst + x, v_rshr_pack<8>(r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2),
+                                            r01 + r41 + (r21 + r21) + ((r11 + r21 + r31) << 2)));
+        }
+        if (x <= width - v_int32::nlanes)
+        {
+            v_int32 r00 = vx_load(row0 + x),
+                r10 = vx_load(row1 + x),
+                r20 = vx_load(row2 + x),
+                r30 = vx_load(row3 + x),
+                r40 = vx_load(row4 + x);
+            v_rshr_pack_store<8>(dst + x, r00 + r40 + (r20 + r20) + ((r10 + r20 + r30) << 2));
+            x += v_int32::nlanes;
         }
 
         return x;
     }
-
-    bool haveSSE;
 };
 
 struct PyrUpVec_32s8u
@@ -299,59 +239,40 @@ struct PyrUpVec_32s8u
     int operator()(int** src, uchar** dst, int, int width) const
     {
         int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
-
         uchar *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi16(32), v_zero = _mm_setzero_si128();
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
 
-        for( ; x <= width - 16; x += 16 )
+        for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
         {
-            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
-            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
-            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
-
-            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst00 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row0 + x + 12)));
-            v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row1 + x + 12)));
-            v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x + 8)),
-                                   _mm_loadu_si128((__m128i const *)(row2 + x + 12)));
-
-            v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst01 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst00, v_delta), 6),
-                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst10, v_delta), 6),
-                                                                     _mm_srli_epi16(_mm_adds_epu16(v_dst11, v_delta), 6)));
+            v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                    v_r01 = v_pack(vx_load(row0 + x + 2 * v_int32::nlanes), vx_load(row0 + x + 3 * v_int32::nlanes)),
+                    v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                    v_r11 = v_pack(vx_load(row1 + x + 2 * v_int32::nlanes), vx_load(row1 + x + 3 * v_int32::nlanes)),
+                    v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)),
+                    v_r21 = v_pack(vx_load(row2 + x + 2 * v_int32::nlanes), vx_load(row2 + x + 3 * v_int32::nlanes));
+            v_int16 v_2r10 = v_r10 + v_r10, v_2r11 = (v_r11 + v_r11);
+            v_store(dst0 + x, v_rshr_pack_u<6>(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), v_r01 + v_r21 + (v_2r11 + v_2r11 + v_2r11)));
+            v_store(dst1 + x, v_rshr_pack_u<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
         }
-
-        for( ; x <= width - 8; x += 8 )
+        if(x <= width - v_uint16::nlanes)
         {
-            __m128i v_r0 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row0 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row0 + x + 4)));
-            __m128i v_r1 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row1 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row1 + x + 4)));
-            __m128i v_r2 = _mm_packs_epi32(_mm_loadu_si128((__m128i const *)(row2 + x)),
-                                           _mm_loadu_si128((__m128i const *)(row2 + x + 4)));
-
-            __m128i v_2r1 = _mm_adds_epu16(v_r1, v_r1), v_4r1 = _mm_adds_epu16(v_2r1, v_2r1);
-            __m128i v_dst0 = _mm_adds_epu16(_mm_adds_epu16(v_r0, v_r2), _mm_adds_epu16(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi16(_mm_adds_epu16(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x), _mm_packus_epi16(_mm_srli_epi16(_mm_adds_epu16(v_dst1, v_delta), 6), v_zero));
+            v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                    v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                    v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes));
+            v_int16 v_2r10 = v_r10 + v_r10;
+            v_rshr_pack_u_store<6>(dst0 + x, v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10));
+            v_rshr_pack_u_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+            x += v_uint16::nlanes;
+        }
+        for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+        {
+            v_int32 v_r00 = vx_load(row0 + x),
+                    v_r10 = vx_load(row1 + x),
+                    v_r20 = vx_load(row2 + x);
+            v_int32 v_2r10 = v_r10 + v_r10;
+            v_int16 d = v_pack(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), (v_r10 + v_r20) << 2);
+            *(int*)(dst0 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
+            *(int*)(dst1 + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(v_combine_high(d, d), vx_setzero_s16())).get0();
         }
 
         return x;
@@ -363,113 +284,63 @@ struct PyrUpVec_32s16s
     int operator()(int** src, short** dst, int, int width) const
     {
         int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
-
         short *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
 
-        for( ; x <= width - 8; x += 8 )
+        for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
         {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            v_2r1 = _mm_slli_epi32(v_r1, 1);
-            v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
-                                _mm_srai_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
-                                _mm_srai_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
+            v_int32 v_r00 = vx_load(row0 + x),
+                    v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                    v_r10 = vx_load(row1 + x),
+                    v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                    v_r20 = vx_load(row2 + x),
+                    v_r21 = vx_load(row2 + x + v_int32::nlanes);
+            v_store(dst0 + x, v_rshr_pack<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+            v_store(dst1 + x, v_rshr_pack<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
         }
-
-        for( ; x <= width - 4; x += 4 )
+        if(x <= width - v_int32::nlanes)
         {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-
-            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x),
-                _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
+            v_int32 v_r00 = vx_load(row0 + x),
+                    v_r10 = vx_load(row1 + x),
+                    v_r20 = vx_load(row2 + x);
+            v_rshr_pack_store<6>(dst0 + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+            v_rshr_pack_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+            x += v_int32::nlanes;
         }
 
         return x;
     }
 };
 
-#if CV_SSE4_1
+#if CV_SSE4_1 || CV_NEON || CV_VSX
 
 struct PyrUpVec_32s16u
 {
     int operator()(int** src, ushort** dst, int, int width) const
     {
         int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE4_1))
-            return x;
-
         ushort *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        __m128i v_delta = _mm_set1_epi32(32), v_zero = _mm_setzero_si128();
+        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
 
-        for( ; x <= width - 8; x += 8 )
+        for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
         {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst00 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst10 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x + 4));
-            v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x + 4));
-            v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x + 4));
-            v_2r1 = _mm_slli_epi32(v_r1, 1);
-            v_4r1 = _mm_slli_epi32(v_r1, 2);
-            __m128i v_dst01 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst11 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storeu_si128((__m128i *)(dst0 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst00, v_delta), 6),
-                                 _mm_srli_epi32(_mm_add_epi32(v_dst01, v_delta), 6)));
-            _mm_storeu_si128((__m128i *)(dst1 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst10, v_delta), 6),
-                                 _mm_srli_epi32(_mm_add_epi32(v_dst11, v_delta), 6)));
+            v_int32 v_r00 = vx_load(row0 + x),
+                    v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                    v_r10 = vx_load(row1 + x),
+                    v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                    v_r20 = vx_load(row2 + x),
+                    v_r21 = vx_load(row2 + x + v_int32::nlanes);
+            v_store(dst0 + x, v_rshr_pack_u<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+            v_store(dst1 + x, v_rshr_pack_u<6>((v_r10 + v_r20) << 2, (v_r11 + v_r21) << 2));
         }
-
-        for( ; x <= width - 4; x += 4 )
+        if(x <= width - v_int32::nlanes)
         {
-            __m128i v_r0 = _mm_loadu_si128((__m128i const *)(row0 + x)),
-                    v_r1 = _mm_loadu_si128((__m128i const *)(row1 + x)),
-                    v_r2 = _mm_loadu_si128((__m128i const *)(row2 + x));
-            __m128i v_2r1 = _mm_slli_epi32(v_r1, 1), v_4r1 = _mm_slli_epi32(v_r1, 2);
-
-            __m128i v_dst0 = _mm_add_epi32(_mm_add_epi32(v_r0, v_r2), _mm_add_epi32(v_2r1, v_4r1));
-            __m128i v_dst1 = _mm_slli_epi32(_mm_add_epi32(v_r1, v_r2), 2);
-
-            _mm_storel_epi64((__m128i *)(dst0 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst0, v_delta), 6), v_zero));
-            _mm_storel_epi64((__m128i *)(dst1 + x),
-                _mm_packus_epi32(_mm_srli_epi32(_mm_add_epi32(v_dst1, v_delta), 6), v_zero));
+            v_int32 v_r00 = vx_load(row0 + x),
+                    v_r10 = vx_load(row1 + x),
+                    v_r20 = vx_load(row2 + x);
+            v_rshr_pack_u_store<6>(dst0 + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+            v_rshr_pack_u_store<6>(dst1 + x, (v_r10 + v_r20) << 2);
+            x += v_int32::nlanes;
         }
 
         return x;
@@ -487,347 +358,17 @@ struct PyrUpVec_32f
     int operator()(float** src, float** dst, int, int width) const
     {
         int x = 0;
-
-        if (!checkHardwareSupport(CV_CPU_SSE2))
-            return x;
-
         const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
         float *dst0 = dst[0], *dst1 = dst[1];
-        __m128 v_6 = _mm_set1_ps(6.0f), v_scale = _mm_set1_ps(1.f/64.0f),
-               v_scale4 = _mm_mul_ps(v_scale, _mm_set1_ps(4.0f));
 
-        for( ; x <= width - 8; x += 8 )
+        v_float32 v_6 = vx_setall_f32(6.0f), v_scale = vx_setall_f32(1.f/64.f), v_scale4 = vx_setall_f32(1.f/16.f);
+        for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
         {
-            __m128 v_r0 = _mm_loadu_ps(row0 + x);
-            __m128 v_r1 = _mm_loadu_ps(row1 + x);
-            __m128 v_r2 = _mm_loadu_ps(row2 + x);
-
-            _mm_storeu_ps(dst1 + x, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
-            _mm_storeu_ps(dst0 + x, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
-
-            v_r0 = _mm_loadu_ps(row0 + x + 4);
-            v_r1 = _mm_loadu_ps(row1 + x + 4);
-            v_r2 = _mm_loadu_ps(row2 + x + 4);
-
-            _mm_storeu_ps(dst1 + x + 4, _mm_mul_ps(v_scale4, _mm_add_ps(v_r1, v_r2)));
-            _mm_storeu_ps(dst0 + x + 4, _mm_mul_ps(v_scale, _mm_add_ps(_mm_add_ps(v_r0, _mm_mul_ps(v_6, v_r1)), v_r2)));
-        }
-
-        return x;
-    }
-};
-
-#elif CV_NEON
-
-struct PyrDownVec_32s8u
-{
-    int operator()(int** src, uchar* dst, int, int width) const
-    {
-        int x = 0;
-        const unsigned int *row0 = (unsigned int*)src[0], *row1 = (unsigned int*)src[1],
-                           *row2 = (unsigned int*)src[2], *row3 = (unsigned int*)src[3],
-                           *row4 = (unsigned int*)src[4];
-        uint16x8_t v_delta = vdupq_n_u16(128);
-
-        for( ; x <= width - 16; x += 16 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-            uint16x8_t v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x)), vqmovn_u32(vld1q_u32(row3 + x + 4)));
-            uint16x8_t v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x)), vqmovn_u32(vld1q_u32(row4 + x + 4)));
-
-            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
-            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst0 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
-
-            v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
-            v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
-            v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
-            v_r3 = vcombine_u16(vqmovn_u32(vld1q_u32(row3 + x + 8)), vqmovn_u32(vld1q_u32(row3 + x + 12)));
-            v_r4 = vcombine_u16(vqmovn_u32(vld1q_u32(row4 + x + 8)), vqmovn_u32(vld1q_u32(row4 + x + 12)));
-
-            v_r0 = vaddq_u16(vaddq_u16(v_r0, v_r4), vaddq_u16(v_r2, v_r2));
-            v_r1 = vaddq_u16(vaddq_u16(v_r1, v_r2), v_r3);
-            uint16x8_t v_dst1 = vaddq_u16(v_r0, vshlq_n_u16(v_r1, 2));
-
-            vst1q_u8(dst + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 8)),
-                                          vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 8))));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32s16u
-{
-    int operator()(int** src, ushort* dst, int, int width) const
-    {
-        int x = 0;
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        int32x4_t v_delta = vdupq_n_s32(128);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r00 = vld1q_s32(row0 + x), v_r01 = vld1q_s32(row0 + x + 4);
-            int32x4_t v_r10 = vld1q_s32(row1 + x), v_r11 = vld1q_s32(row1 + x + 4);
-            int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
-            int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
-            int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
-
-            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
-
-            v_r10 = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
-            v_r11 = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
-
-            vst1q_u16(dst + x, vcombine_u16(vqmovun_s32(v_dst0), vqmovun_s32(v_dst1)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32s16s
-{
-    int operator()(int** src, short* dst, int, int width) const
-    {
-        int x = 0;
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        int32x4_t v_delta = vdupq_n_s32(128);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r00 = vld1q_s32(row0 + x), v_r01 = vld1q_s32(row0 + x + 4);
-            int32x4_t v_r10 = vld1q_s32(row1 + x), v_r11 = vld1q_s32(row1 + x + 4);
-            int32x4_t v_r20 = vld1q_s32(row2 + x), v_r21 = vld1q_s32(row2 + x + 4);
-            int32x4_t v_r30 = vld1q_s32(row3 + x), v_r31 = vld1q_s32(row3 + x + 4);
-            int32x4_t v_r40 = vld1q_s32(row4 + x), v_r41 = vld1q_s32(row4 + x + 4);
-
-            v_r00 = vaddq_s32(vaddq_s32(v_r00, v_r40), vaddq_s32(v_r20, v_r20));
-            v_r10 = vaddq_s32(vaddq_s32(v_r10, v_r20), v_r30);
-            v_r10 = vshlq_n_s32(v_r10, 2);
-            int32x4_t v_dst0 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r00, v_r10), v_delta), 8);
-
-            v_r01 = vaddq_s32(vaddq_s32(v_r01, v_r41), vaddq_s32(v_r21, v_r21));
-            v_r11 = vaddq_s32(vaddq_s32(v_r11, v_r21), v_r31);
-            v_r11 = vshlq_n_s32(v_r11, 2);
-            int32x4_t v_dst1 = vshrq_n_s32(vaddq_s32(vaddq_s32(v_r01, v_r11), v_delta), 8);
-
-            vst1q_s16(dst + x, vcombine_s16(vqmovn_s32(v_dst0), vqmovn_s32(v_dst1)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrDownVec_32f
-{
-    int operator()(float** src, float* dst, int, int width) const
-    {
-        int x = 0;
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
-        float32x4_t v_4 = vdupq_n_f32(4.0f), v_scale = vdupq_n_f32(1.f/256.0f);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            float32x4_t v_r0 = vld1q_f32(row0 + x);
-            float32x4_t v_r1 = vld1q_f32(row1 + x);
-            float32x4_t v_r2 = vld1q_f32(row2 + x);
-            float32x4_t v_r3 = vld1q_f32(row3 + x);
-            float32x4_t v_r4 = vld1q_f32(row4 + x);
-
-            v_r0 = vaddq_f32(vaddq_f32(v_r0, v_r4), vaddq_f32(v_r2, v_r2));
-            v_r1 = vaddq_f32(vaddq_f32(v_r1, v_r2), v_r3);
-            vst1q_f32(dst + x, vmulq_f32(vmlaq_f32(v_r0, v_4, v_r1), v_scale));
-
-            v_r0 = vld1q_f32(row0 + x + 4);
-            v_r1 = vld1q_f32(row1 + x + 4);
-            v_r2 = vld1q_f32(row2 + x + 4);
-            v_r3 = vld1q_f32(row3 + x + 4);
-            v_r4 = vld1q_f32(row4 + x + 4);
-
-            v_r0 = vaddq_f32(vaddq_f32(v_r0, v_r4), vaddq_f32(v_r2, v_r2));
-            v_r1 = vaddq_f32(vaddq_f32(v_r1, v_r2), v_r3);
-            vst1q_f32(dst + x + 4, vmulq_f32(vmlaq_f32(v_r0, v_4, v_r1), v_scale));
-        }
-
-        return x;
-    }
-};
-
-struct PyrUpVec_32s8u
-{
-    int operator()(int** src, uchar** dst, int, int width) const
-    {
-        int x = 0;
-        uchar *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        uint16x8_t v_delta = vdupq_n_u16(32);
-
-        for( ; x <= width - 16; x += 16 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-
-            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst00 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst10 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x + 8)), vqmovn_u32(vld1q_u32(row0 + x + 12)));
-            v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x + 8)), vqmovn_u32(vld1q_u32(row1 + x + 12)));
-            v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x + 8)), vqmovn_u32(vld1q_u32(row2 + x + 12)));
-
-            v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst01 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst11 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            vst1q_u8(dst0 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst00, v_delta), 6)),
-                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst01, v_delta), 6))));
-            vst1q_u8(dst1 + x, vcombine_u8(vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst10, v_delta), 6)),
-                                           vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint16x8_t v_r0 = vcombine_u16(vqmovn_u32(vld1q_u32(row0 + x)), vqmovn_u32(vld1q_u32(row0 + x + 4)));
-            uint16x8_t v_r1 = vcombine_u16(vqmovn_u32(vld1q_u32(row1 + x)), vqmovn_u32(vld1q_u32(row1 + x + 4)));
-            uint16x8_t v_r2 = vcombine_u16(vqmovn_u32(vld1q_u32(row2 + x)), vqmovn_u32(vld1q_u32(row2 + x + 4)));
-
-            uint16x8_t v_2r1 = vaddq_u16(v_r1, v_r1), v_4r1 = vaddq_u16(v_2r1, v_2r1);
-            uint16x8_t v_dst0 = vaddq_u16(vaddq_u16(v_r0, v_r2), vaddq_u16(v_2r1, v_4r1));
-            uint16x8_t v_dst1 = vshlq_n_u16(vaddq_u16(v_r1, v_r2), 2);
-
-            vst1_u8(dst0 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst0, v_delta), 6)));
-            vst1_u8(dst1 + x, vqmovn_u16(vshrq_n_u16(vaddq_u16(v_dst1, v_delta), 6)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrUpVec_32s16u
-{
-    int operator()(int** src, ushort** dst, int, int width) const
-    {
-        int x = 0;
-        ushort *dst0 = dst[0], *dst1 = dst[1];
-        const uint *row0 = (uint *)src[0], *row1 = (uint *)src[1], *row2 = (uint *)src[2];
-        uint32x4_t v_delta = vdupq_n_u32(32);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
-            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
-            uint32x4_t v_dst00 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst10 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            v_r0 = vld1q_u32(row0 + x + 4);
-            v_r1 = vld1q_u32(row1 + x + 4);
-            v_r2 = vld1q_u32(row2 + x + 4);
-            v_2r1 = vshlq_n_u32(v_r1, 1);
-            v_4r1 = vshlq_n_u32(v_r1, 2);
-            uint32x4_t v_dst01 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst11 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            vst1q_u16(dst0 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst00, v_delta), 6)),
-                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst01, v_delta), 6))));
-            vst1q_u16(dst1 + x, vcombine_u16(vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst10, v_delta), 6)),
-                                             vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            uint32x4_t v_r0 = vld1q_u32(row0 + x), v_r1 = vld1q_u32(row1 + x), v_r2 = vld1q_u32(row2 + x);
-            uint32x4_t v_2r1 = vshlq_n_u32(v_r1, 1), v_4r1 = vshlq_n_u32(v_r1, 2);
-
-            uint32x4_t v_dst0 = vaddq_u32(vaddq_u32(v_r0, v_r2), vaddq_u32(v_2r1, v_4r1));
-            uint32x4_t v_dst1 = vshlq_n_u32(vaddq_u32(v_r1, v_r2), 2);
-
-            vst1_u16(dst0 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst0, v_delta), 6)));
-            vst1_u16(dst1 + x, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst1, v_delta), 6)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrUpVec_32s16s
-{
-    int operator()(int** src, short** dst, int, int width) const
-    {
-        int x = 0;
-        short *dst0 = dst[0], *dst1 = dst[1];
-        const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        int32x4_t v_delta = vdupq_n_s32(32);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
-            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
-            int32x4_t v_dst00 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst10 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            v_r0 = vld1q_s32(row0 + x + 4);
-            v_r1 = vld1q_s32(row1 + x + 4);
-            v_r2 = vld1q_s32(row2 + x + 4);
-            v_2r1 = vshlq_n_s32(v_r1, 1);
-            v_4r1 = vshlq_n_s32(v_r1, 2);
-            int32x4_t v_dst01 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst11 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            vst1q_s16(dst0 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst00, v_delta), 6)),
-                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst01, v_delta), 6))));
-            vst1q_s16(dst1 + x, vcombine_s16(vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst10, v_delta), 6)),
-                                             vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst11, v_delta), 6))));
-        }
-
-        for( ; x <= width - 4; x += 4 )
-        {
-            int32x4_t v_r0 = vld1q_s32(row0 + x), v_r1 = vld1q_s32(row1 + x), v_r2 = vld1q_s32(row2 + x);
-            int32x4_t v_2r1 = vshlq_n_s32(v_r1, 1), v_4r1 = vshlq_n_s32(v_r1, 2);
-
-            int32x4_t v_dst0 = vaddq_s32(vaddq_s32(v_r0, v_r2), vaddq_s32(v_2r1, v_4r1));
-            int32x4_t v_dst1 = vshlq_n_s32(vaddq_s32(v_r1, v_r2), 2);
-
-            vst1_s16(dst0 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst0, v_delta), 6)));
-            vst1_s16(dst1 + x, vqmovn_s32(vshrq_n_s32(vaddq_s32(v_dst1, v_delta), 6)));
-        }
-
-        return x;
-    }
-};
-
-struct PyrUpVec_32f
-{
-    int operator()(float** src, float** dst, int, int width) const
-    {
-        int x = 0;
-        const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
-        float *dst0 = dst[0], *dst1 = dst[1];
-        float32x4_t v_6 = vdupq_n_f32(6.0f), v_scale = vdupq_n_f32(1.f/64.0f), v_scale4 = vmulq_n_f32(v_scale, 4.0f);
-
-        for( ; x <= width - 8; x += 8 )
-        {
-            float32x4_t v_r0 = vld1q_f32(row0 + x);
-            float32x4_t v_r1 = vld1q_f32(row1 + x);
-            float32x4_t v_r2 = vld1q_f32(row2 + x);
-
-            vst1q_f32(dst1 + x, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
-            vst1q_f32(dst0 + x, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
-
-            v_r0 = vld1q_f32(row0 + x + 4);
-            v_r1 = vld1q_f32(row1 + x + 4);
-            v_r2 = vld1q_f32(row2 + x + 4);
-
-            vst1q_f32(dst1 + x + 4, vmulq_f32(v_scale4, vaddq_f32(v_r1, v_r2)));
-            vst1q_f32(dst0 + x + 4, vmulq_f32(v_scale, vaddq_f32(vmlaq_f32(v_r0, v_6, v_r1), v_r2)));
+            v_float32 v_r0 = vx_load(row0 + x),
+                      v_r1 = vx_load(row1 + x),
+                      v_r2 = vx_load(row2 + x);
+            v_store(dst1 + x, v_scale4 * (v_r1 + v_r2));
+            v_store(dst0 + x, v_scale * (v_muladd(v_6, v_r1, v_r0) + v_r2));
         }
 
         return x;
@@ -860,10 +401,10 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     int cn = _src.channels();
     int bufstep = (int)alignSize(dsize.width*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
     AutoBuffer<int> _tabM(dsize.width*cn);
-    int* tabM = _tabM;
+    int* tabM = _tabM.data();
     WT* rows[PD_SZ];
     CastOp castOp;
     VecOp vecOp;
@@ -984,9 +525,9 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
     int cn = _src.channels();
     int bufstep = (int)alignSize((dsize.width+1)*cn, 16);
     AutoBuffer<WT> _buf(bufstep*PU_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf, 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
     AutoBuffer<int> _dtab(ssize.width*cn);
-    int* dtab = _dtab;
+    int* dtab = _dtab.data();
     WT* rows[PU_SZ];
     T* dsts[2];
     CastOp castOp;
@@ -1090,7 +631,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
         return false;
 
     Size ssize = _src.size();
-    Size dsize = _dsz.area() == 0 ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
+    Size dsize = _dsz.empty() ? Size((ssize.width + 1) / 2, (ssize.height + 1) / 2) : _dsz;
     if (dsize.height < 2 || dsize.width < 2)
         return false;
 
@@ -1142,7 +683,7 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
         return false;
 
     Size ssize = _src.size();
-    if ((_dsz.area() != 0) && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
+    if (!_dsz.empty() && (_dsz != Size(ssize.width * 2, ssize.height * 2)))
         return false;
 
     UMat src = _src.getUMat();
@@ -1198,10 +739,10 @@ namespace cv
 {
 static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
-    Size dsz = _dsz.area() == 0 ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
 
@@ -1276,7 +817,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
     // OpenVX limitations
     if((srcMat.type() != CV_8U) ||
        (borderType != BORDER_REPLICATE) ||
-       (_dsz != acceptableSize && _dsz.area() != 0))
+       (_dsz != acceptableSize && !_dsz.empty()))
         return false;
 
     // The only border mode which is supported by both cv::pyrDown() and OpenVX
@@ -1320,11 +861,11 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
         srcImg.swapHandle(); dstImg.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
@@ -1337,7 +878,7 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1348,17 +889,12 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
                openvx_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
+    Size dsz = _dsz.empty() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
     CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrDown(src, dst))
-        return;
-#endif
 
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1391,11 +927,11 @@ namespace cv
 {
 static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_UP
     Size sz = _src.dims() <= 2 ? _src.size() : Size();
-    Size dsz = _dsz.area() == 0 ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(_src.cols()*2, _src.rows()*2) : _dsz;
 
     Mat src = _src.getMat();
     _dst.create( dsz, src.type() );
@@ -1449,7 +985,7 @@ static bool ipp_pyrup( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType == BORDER_DEFAULT);
 
@@ -1458,15 +994,10 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;
+    Size dsz = _dsz.empty() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if(borderType == BORDER_DEFAULT && tegra::useTegra() && tegra::pyrUp(src, dst))
-        return;
-#endif
 
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
@@ -1499,7 +1030,7 @@ namespace cv
 {
 static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_BUILD
     Mat src = _src.getMat();
@@ -1611,7 +1142,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
 
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
@@ -1683,7 +1214,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
-    CvSize layer_size, size = cvGetMatSize(src);
+    cv::Size layer_size, size = cvGetMatSize(src);
 
     if( bufarr )
     {

@@ -99,6 +99,19 @@ static const char* trackbar_text =
     #define WM_MOUSEHWHEEL 0x020E
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+static inline void mingw_strcpy_s(char *dest, size_t destsz, const char *src){
+    strcpy(dest, src);
+}
+
+static inline void mingw_strcat_s(char *dest, size_t destsz, const char *src){
+    strcat(dest, src);
+}
+
+#define strcpy_s mingw_strcpy_s
+#define strcat_s mingw_strcat_s
+#endif
+
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
 {
     assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
@@ -307,8 +320,8 @@ icvLoadWindowPos( const char* name, CvRect& rect )
 {
     HKEY hkey;
     char szKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
@@ -368,8 +381,8 @@ icvSaveWindowPos( const char* name, CvRect rect )
     HKEY hkey;
     char szKey[1024];
     char rootKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     if( RegOpenKeyEx( HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS )
     {
@@ -379,7 +392,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
         char oldestKey[1024];
         char currentKey[1024];
 
-        strcpy( rootKey, icvWindowPosRootKey );
+        strcpy_s( rootKey, 1024, icvWindowPosRootKey );
         rootKey[strlen(rootKey)-1] = '\0';
         if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS )
             //RegOpenKeyEx( HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS )
@@ -398,7 +411,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
                 oldestTime.dwLowDateTime > accesstime.dwLowDateTime) )
             {
                 oldestTime = accesstime;
-                strcpy( oldestKey, currentKey );
+                strcpy_s( oldestKey, 1024, currentKey );
             }
         }
 
@@ -624,7 +637,25 @@ double cvGetOpenGlProp_W32(const char* name)
 
     __END__;
 #endif
-    (void)name;
+    CV_UNUSED(name);
+
+    return result;
+}
+
+double cvGetPropVisible_W32(const char* name)
+{
+    double result = -1;
+
+    CV_FUNCNAME( "cvGetPropVisible_W32" );
+
+    __BEGIN__;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    result = (icvFindWindowByName( name ) != NULL);
+
+    __END__;
 
     return result;
 }
@@ -1141,8 +1172,7 @@ cvShowImage( const char* name, const CvArr* arr )
     int channels = 0;
     void* dst_ptr = 0;
     const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
+    CvMat stub, *image;
     bool changed_size = false; // philipg
 
     if( !name )
@@ -1157,9 +1187,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     if( !window || !arr )
         EXIT; // keep silence here.
-
-    if( CV_IS_IMAGE_HDR( arr ))
-        origin = ((IplImage*)arr)->origin;
 
     CV_CALL( image = cvGetMat( arr, &stub ));
 
@@ -1196,9 +1223,20 @@ cvShowImage( const char* name, const CvArr* arr )
                                       DIB_RGB_COLORS, &dst_ptr, 0, 0));
     }
 
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3,
-                     dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
+    {
+        cv::Mat src = cv::cvarrToMat(image);
+        cv::Mat dst(size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4);
+
+        cv::Mat tmp;
+        int src_depth = src.depth();
+        double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
+        double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
+        cv::convertScaleAbs(src, tmp, scale, shift);
+        cv::cvtColor(tmp, dst, cv::COLOR_BGRA2BGR, dst.channels());
+        cv::flip(dst, dst, 0);
+
+        CV_Assert(dst.data == (uchar*)dst_ptr);
+    }
 
     // ony resize window if needed
     if (changed_size)
@@ -1209,86 +1247,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     __END__;
 }
-
-#if 0
-CV_IMPL void
-cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
-{
-    CV_FUNCNAME( "cvShowImageHWND" );
-
-    __BEGIN__;
-
-    SIZE size = { 0, 0 };
-    int channels = 0;
-    void* dst_ptr = 0;
-    const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
-    bool changed_size = false;
-    BITMAPINFO tempbinfo;
-    HDC hdc = NULL;
-
-    if( !arr )
-        EXIT;
-    if( !w_hWnd )
-        EXIT;
-
-    hdc = GetDC(w_hWnd);
-
-    if( CV_IS_IMAGE_HDR( arr ) )
-        origin = ((IplImage*)arr)->origin;
-
-    CV_CALL( image = cvGetMat( arr, &stub ) );
-
-    if ( hdc )
-    {
-            //GetBitmapData
-            BITMAP bmp;
-            GdiFlush();
-            HGDIOBJ h = GetCurrentObject( hdc, OBJ_BITMAP );
-
-            if (h == NULL)
-            EXIT;
-            if (GetObject(h, sizeof(bmp), &bmp) == 0) //GetObject(): returns size of object, 0 if error
-            EXIT;
-
-            channels = bmp.bmBitsPixel/8;
-            dst_ptr = bmp.bmBits;
-     }
-
-    if( size.cx != image->width || size.cy != image->height || channels != channels0 )
-    {
-        changed_size = true;
-
-        uchar buffer[sizeof(BITMAPINFO) + 255*sizeof(RGBQUAD)];
-        BITMAPINFO* binfo = (BITMAPINFO*)buffer;
-
-        BOOL bDeleteObj = DeleteObject(GetCurrentObject(hdc, OBJ_BITMAP));
-                CV_Assert( FALSE != bDeleteObj );
-
-        size.cx = image->width;
-        size.cy = image->height;
-        channels = channels0;
-
-        FillBitmapInfo( binfo, size.cx, size.cy, channels*8, 1 );
-
-        SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
-    }
-
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
-
-    // Image stretching to fit the window
-    RECT rect;
-    GetClientRect(w_hWnd, &rect);
-    StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
-
-    // ony resize window if needed
-    InvalidateRect(w_hWnd, 0, 0);
-
-    __END__;
-}
-#endif
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
@@ -1500,6 +1458,8 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             rgn = CreateRectRgn(0, 0, wrc.right, wrc.bottom);
             rgn1 = CreateRectRgn(cr.left, cr.top, cr.right, cr.bottom);
             rgn2 = CreateRectRgn(tr.left, tr.top, tr.right, tr.bottom);
+            CV_Assert_N(rgn != 0, rgn1 != 0, rgn2 != 0);
+
             ret = CombineRgn(rgn, rgn, rgn1, RGN_DIFF);
             ret = CombineRgn(rgn, rgn, rgn2, RGN_DIFF);
 
@@ -1965,7 +1925,8 @@ static void showSaveDialog(CvWindow* window)
 CV_IMPL int
 cvWaitKey( int delay )
 {
-    int time0 = GetTickCount();
+    int64 time0 = cv::getTickCount();
+    int64 timeEnd = time0 + (int64)(delay * 0.001f * cv::getTickFrequency());
 
     for(;;)
     {
@@ -1973,13 +1934,13 @@ cvWaitKey( int delay )
         MSG message;
         int is_processed = 0;
 
-        if( (delay > 0 && abs((int)(GetTickCount() - time0)) >= delay) || hg_windows == 0 )
-            return -1;
-
-        if( delay <= 0 )
+        if( (delay <= 0) && hg_windows)
             GetMessage(&message, 0, 0, 0);
         else if( PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE )
         {
+            int64 t = cv::getTickCount();
+            if (t - timeEnd >= 0)
+                return -1;  // no messages and no more time
             Sleep(1);
             continue;
         }

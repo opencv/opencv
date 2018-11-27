@@ -48,13 +48,13 @@ namespace cv
 class MotionJpegCapture: public IVideoCapture
 {
 public:
-    virtual ~MotionJpegCapture();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual bool retrieveFrame(int, OutputArray);
-    virtual bool isOpened() const;
-    virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+    virtual ~MotionJpegCapture() CV_OVERRIDE;
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CAP_OPENCV_MJPEG; }
     MotionJpegCapture(const String&);
 
     bool open(const String&);
@@ -146,6 +146,9 @@ bool MotionJpegCapture::grabFrame()
         }
         else
         {
+            if (m_frame_iterator == m_mjpeg_frames.end())
+                return false;
+
             ++m_frame_iterator;
         }
     }
@@ -161,7 +164,7 @@ bool MotionJpegCapture::retrieveFrame(int, OutputArray output_frame)
 
         if(data.size())
         {
-            m_current_frame = imdecode(data, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_COLOR | IMREAD_IGNORE_ORIENTATION);
+            m_current_frame = imdecode(data, IMREAD_ANYDEPTH | IMREAD_COLOR | IMREAD_IGNORE_ORIENTATION);
         }
 
         m_current_frame.copyTo(output_frame);

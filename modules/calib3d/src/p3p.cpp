@@ -33,7 +33,7 @@ p3p::p3p(double _fx, double _fy, double _cx, double _cy)
 
 bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat& ipoints)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[3][3], translation[3];
     std::vector<double> points;
@@ -59,7 +59,7 @@ bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat
 
 int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::Mat& opoints, const cv::Mat& ipoints)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double rotation_matrix[4][3][3], translation[4][3];
     std::vector<double> points;

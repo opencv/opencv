@@ -1098,6 +1098,7 @@ static float32_t f32_roundToInt( float32_t a, uint_fast8_t roundingMode, bool ex
         switch ( roundingMode ) {
          case round_near_even:
             if ( ! fracF32UI( uiA ) ) break;
+            /* fallthrough */
          case round_near_maxMag:
             if ( exp == 0x7E ) uiZ |= packToF32UI( 0, 0x7F, 0 );
             break;
@@ -1805,6 +1806,7 @@ static float64_t f64_roundToInt( float64_t a, uint_fast8_t roundingMode, bool ex
         switch ( roundingMode ) {
          case round_near_even:
             if ( ! fracF64UI( uiA ) ) break;
+            /* fallthrough */
          case round_near_maxMag:
             if ( exp == 0x3FE ) uiZ |= packToF64UI( 0, 0x3FF, 0 );
             break;

@@ -205,7 +205,7 @@ public:
     rate. 0 means that the background model is not updated at all, 1 means that the background model
     is completely reinitialized from the last frame.
      */
-    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
 };
 
 /** @brief Creates MOG2 Background Subtractor

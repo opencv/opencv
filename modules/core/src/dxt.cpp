@@ -908,7 +908,7 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
             int p, q, factor2 = (factor - 1)/2;
             int d, dd, dw_f = c.tab_size/factor;
             AutoBuffer<Complex<T> > buf(factor2 * 2);
-            Complex<T>* a = buf;
+            Complex<T>* a = buf.data();
             Complex<T>* b = a + factor2;
 
             for( i = 0; i < c.n; i += n )
@@ -1562,7 +1562,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -1643,7 +1643,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         IppStatus status;
         Ipp8u* pBuffer = 0;
@@ -1752,7 +1752,7 @@ private:
 
 static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -1808,7 +1808,7 @@ static bool ippi_DFT_C_32F(const uchar * src, size_t src_step, uchar * dst, size
 
 static bool ippi_DFT_R_32F(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, int norm_flag)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppStatus status;
     Ipp8u* pBuffer = 0;
@@ -2607,7 +2607,7 @@ inline DftDims determineDims(int rows, int cols, bool isRowWise, bool isContinuo
     return InvalidDim;
 }
 
-class OcvDftImpl : public hal::DFT2D
+class OcvDftImpl CV_FINAL : public hal::DFT2D
 {
 protected:
     Ptr<hal::DFT1D> contextA;
@@ -2779,7 +2779,7 @@ public:
         }
     }
 
-    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step)
+    void apply(const uchar * src, size_t src_step, uchar * dst, size_t dst_step) CV_OVERRIDE
     {
 #if defined USE_IPP_DFT
         if (useIpp)
@@ -2895,7 +2895,7 @@ protected:
             uchar* dptr = dptr0;
 
             if( needBufferA )
-                dptr = tmp_bufA;
+                dptr = tmp_bufA.data();
 
             contextA->apply(sptr, dptr);
 
@@ -2921,12 +2921,12 @@ protected:
         const uchar* sptr0 = src_data;
         uchar* dptr0 = dst_data;
 
-        dbuf0 = buf0, dbuf1 = buf1;
+        dbuf0 = buf0.data(), dbuf1 = buf1.data();
 
         if( needBufferB )
         {
-            dbuf1 = tmp_bufB;
-            dbuf0 = buf1;
+            dbuf1 = tmp_bufB.data();
+            dbuf0 = buf1.data();
         }
 
         if( real_transform )
@@ -2937,42 +2937,42 @@ protected:
             b = (count+1)/2;
             if( !inv )
             {
-                memset( buf0, 0, len*complex_elem_size );
-                CopyColumn( sptr0, src_step, buf0, complex_elem_size, len, elem_size );
+                memset( buf0.data(), 0, len*complex_elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, elem_size );
                 sptr0 += stage_dst_channels*elem_size;
                 if( even )
                 {
-                    memset( buf1, 0, len*complex_elem_size );
+                    memset( buf1.data(), 0, len*complex_elem_size );
                     CopyColumn( sptr0 + (count-2)*elem_size, src_step,
-                                buf1, complex_elem_size, len, elem_size );
+                                buf1.data(), complex_elem_size, len, elem_size );
                 }
             }
             else if( stage_src_channels == 1 )
             {
-                CopyColumn( sptr0, src_step, buf0, elem_size, len, elem_size );
-                ExpandCCS( buf0, len, elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), elem_size, len, elem_size );
+                ExpandCCS( buf0.data(), len, elem_size );
                 if( even )
                 {
                     CopyColumn( sptr0 + (count-1)*elem_size, src_step,
-                                buf1, elem_size, len, elem_size );
-                    ExpandCCS( buf1, len, elem_size );
+                                buf1.data(), elem_size, len, elem_size );
+                    ExpandCCS( buf1.data(), len, elem_size );
                 }
                 sptr0 += elem_size;
             }
             else
             {
-                CopyColumn( sptr0, src_step, buf0, complex_elem_size, len, complex_elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
                 if( even )
                 {
                     CopyColumn( sptr0 + b*complex_elem_size, src_step,
-                                   buf1, complex_elem_size, len, complex_elem_size );
+                                   buf1.data(), complex_elem_size, len, complex_elem_size );
                 }
                 sptr0 += complex_elem_size;
             }
 
             if( even )
-                contextB->apply(buf1, dbuf1);
-            contextB->apply(buf0, dbuf0);
+                contextB->apply(buf1.data(), dbuf1);
+            contextB->apply(buf0.data(), dbuf0);
 
             if( stage_dst_channels == 1 )
             {
@@ -3019,13 +3019,13 @@ protected:
         {
             if( i+1 < b )
             {
-                CopyFrom2Columns( sptr0, src_step, buf0, buf1, len, complex_elem_size );
-                contextB->apply(buf1, dbuf1);
+                CopyFrom2Columns( sptr0, src_step, buf0.data(), buf1.data(), len, complex_elem_size );
+                contextB->apply(buf1.data(), dbuf1);
             }
             else
-                CopyColumn( sptr0, src_step, buf0, complex_elem_size, len, complex_elem_size );
+                CopyColumn( sptr0, src_step, buf0.data(), complex_elem_size, len, complex_elem_size );
 
-            contextB->apply(buf0, dbuf0);
+            contextB->apply(buf0.data(), dbuf0);
 
             if( i+1 < b )
                 CopyTo2Columns( dbuf0, dbuf1, dptr0, dst_step, len, complex_elem_size );
@@ -3039,7 +3039,7 @@ protected:
     }
 };
 
-class OcvDftBasicImpl : public hal::DFT1D
+class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
 {
 public:
     OcvDftOptions opt;
@@ -3134,9 +3134,9 @@ public:
             if (len != prev_len || (!inplace_transform && opt.isInverse && real_transform))
             {
                 wave_buf.allocate(opt.n*complex_elem_size);
-                opt.wave = wave_buf;
+                opt.wave = wave_buf.data();
                 itab_buf.allocate(opt.n);
-                opt.itab = itab_buf;
+                opt.itab = itab_buf.data();
                 DFTInit( opt.n, opt.nf, opt.factors, opt.itab, complex_elem_size,
                          opt.wave, stage == 0 && opt.isInverse && real_transform );
             }
@@ -3194,7 +3194,7 @@ public:
         }
     }
 
-    void apply(const uchar *src, uchar *dst)
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
     {
         opt.dft_func(opt, src, dst);
     }
@@ -3214,7 +3214,7 @@ struct ReplacementDFT1D : public hal::DFT1D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src, uchar *dst)
+    void apply(const uchar *src, uchar *dst) CV_OVERRIDE
     {
         if (isInitialized)
         {
@@ -3244,7 +3244,7 @@ struct ReplacementDFT2D : public hal::DFT2D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
     {
         if (isInitialized)
         {
@@ -3314,7 +3314,7 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
 
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_CLAMDFFT
     CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
@@ -3364,7 +3364,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
 void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
@@ -3529,7 +3529,7 @@ void mulSpectrums_Impl(const T* dataA, const T* dataB, T* dataC, size_t stepA, s
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
@@ -3809,7 +3809,7 @@ public:
         *ok = true;
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         if(*ok == false)
             return;
@@ -3941,7 +3941,7 @@ static bool DctIPPLoop(const uchar * src, size_t src_step, uchar * dst, size_t d
 
 static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int height, bool inv, bool row)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if(row)
         return DctIPPLoop(src, src_step, dst, dst_step, width, height, inv);
@@ -4048,7 +4048,7 @@ static bool ippi_DCT_32f(const uchar * src, size_t src_step, uchar * dst, size_t
 
 namespace cv {
 
-class OcvDctImpl : public hal::DCT2D
+class OcvDctImpl CV_FINAL : public hal::DCT2D
 {
 public:
     OcvDftOptions opt;
@@ -4100,7 +4100,7 @@ public:
             end_stage = 1;
         }
     }
-    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step)
+    void apply(const uchar *src, size_t src_step, uchar *dst, size_t dst_step) CV_OVERRIDE
     {
         CV_IPP_RUN(IPP_VERSION_X100 >= 700 && depth == CV_32F, ippi_DCT_32f(src, src_step, dst, dst_step, width, height, isInverse, isRowTransform))
 
@@ -4152,31 +4152,31 @@ public:
                 bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
 
                 wave_buf.allocate(len*complex_elem_size);
-                opt.wave = wave_buf;
+                opt.wave = wave_buf.data();
                 itab_buf.allocate(len);
-                opt.itab = itab_buf;
+                opt.itab = itab_buf.data();
                 DFTInit( len, opt.nf, opt.factors, opt.itab, complex_elem_size, opt.wave, isInverse );
 
                 dct_wave.allocate((len/2 + 1)*complex_elem_size);
                 src_buf.allocate(len*elem_size);
-                src_dft_buf = src_buf;
+                src_dft_buf = src_buf.data();
                 if(!inplace_transform)
                 {
                     dst_buf.allocate(len*elem_size);
-                    dst_dft_buf = dst_buf;
+                    dst_dft_buf = dst_buf.data();
                 }
                 else
                 {
-                    dst_dft_buf = src_buf;
+                    dst_dft_buf = src_buf.data();
                 }
-                DCTInit( len, complex_elem_size, dct_wave, isInverse);
+                DCTInit( len, complex_elem_size, dct_wave.data(), isInverse);
                 prev_len = len;
             }
             // otherwise reuse the tables calculated on the previous stage
             for(unsigned i = 0; i < static_cast<unsigned>(count); i++ )
             {
                 dct_func( opt, sptr + i*sstep0, sstep1, src_dft_buf, dst_dft_buf,
-                          dptr + i*dstep0, dstep1, dct_wave);
+                          dptr + i*dstep0, dstep1, dct_wave.data());
             }
             src = dst;
             src_step = dst_step;
@@ -4196,7 +4196,7 @@ struct ReplacementDCT2D : public hal::DCT2D
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }
-    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step)
+    void apply(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) CV_OVERRIDE
     {
         if (isInitialized)
         {
@@ -4236,7 +4236,7 @@ Ptr<DCT2D> DCT2D::create(int width, int height, int depth, int flags)
 
 void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src0 = _src0.getMat(), src = src0;
     int type = src.type(), depth = src.depth();
@@ -4260,7 +4260,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
 void cv::idct( InputArray src, OutputArray dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     dct( src, dst, flags | DCT_INVERSE );
 }

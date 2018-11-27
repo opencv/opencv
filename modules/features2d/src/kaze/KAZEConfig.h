@@ -5,8 +5,8 @@
  * @author Pablo F. Alcantarilla
  */
 
-#ifndef __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
-#define __OPENCV_FEATURES_2D_AKAZE_CONFIG_H__
+#ifndef __OPENCV_FEATURES_2D_KAZE_CONFIG_H__
+#define __OPENCV_FEATURES_2D_KAZE_CONFIG_H__
 
 // OpenCV Includes
 #include "../precomp.hpp"
@@ -36,7 +36,7 @@ struct KAZEOptions {
     {
     }
 
-    int diffusivity;
+    KAZE::DiffusivityType diffusivity;
     float soffset;
     int omax;
     int nsublevels;

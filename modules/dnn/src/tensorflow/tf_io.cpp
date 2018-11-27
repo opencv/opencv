@@ -23,8 +23,8 @@ Implementation of various functions which are related to Tensorflow models readi
 #include <fstream>
 #include <vector>
 
-#include "graph.pb.h"
 #include "tf_io.hpp"
+
 #include "../caffe/caffe_io.hpp"
 #include "../caffe/glog_emulator.hpp"
 
@@ -36,8 +36,6 @@ using std::map;
 using namespace tensorflow;
 using namespace ::google::protobuf;
 using namespace ::google::protobuf::io;
-
-const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
 void ReadTFNetParamsFromBinaryFileOrDie(const char* param_file,
                                         tensorflow::GraphDef* param) {

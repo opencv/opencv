@@ -44,7 +44,7 @@
 
 #include <memory>
 
-#include <window_QT.h>
+#include "window_QT.h"
 
 #include <math.h>
 
@@ -1039,7 +1039,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
-    if (!w) //as observed in the previous implementation (W32, GTK or Carbon), create a new window is the pointer returned is null
+    if (!w) //as observed in the previous implementation (W32, GTK), create a new window is the pointer returned is null
     {
         cvNamedWindow(name.toLatin1().data());
         w = icvFindWindowByName(name);
@@ -2555,8 +2555,17 @@ void DefaultViewPort::updateImage(const CvArr* arr)
     }
 
     nbChannelOriginImage = cvGetElemType(mat);
+    CV_Assert(origin == 0);
+    cv::Mat src = cv::cvarrToMat(mat), dst = cv::cvarrToMat(image2Draw_mat);
 
-    cvConvertImage(mat, image2Draw_mat, (origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB);
+    cv::Mat tmp;
+    int src_depth = src.depth();
+    double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
+    double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
+    cv::convertScaleAbs(src, tmp, scale, shift);
+
+    cv::cvtColor(tmp, dst, cv::COLOR_BGR2RGB, dst.channels());
+    CV_Assert(dst.data == image2Draw_mat->data.ptr);
 
     viewport()->update();
 }
@@ -3002,7 +3011,7 @@ void DefaultViewPort::drawStatusBar()
 
         if (nbChannelOriginImage==CV_8UC1)
         {
-            //all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
+            //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
             centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
@@ -3094,6 +3103,11 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
             if (nbChannelOriginImage==CV_8UC1)
             {
                 QString val = tr("%1").arg(qRed(rgbValue));
+                int pixel_brightness_value = qRed(rgbValue);
+                int text_brightness_value = 0;
+
+                text_brightness_value = pixel_brightness_value > 127 ? pixel_brightness_value - 127 : 127 + pixel_brightness_value;
+                painter->setPen(QPen(QColor(text_brightness_value, text_brightness_value, text_brightness_value)));
                 painter->drawText(QRect(pos_in_view.x(),pos_in_view.y(),pixel_width,pixel_height),
                     Qt::AlignCenter, val);
             }

@@ -25,14 +25,8 @@
 /* AVFoundation video libraries */
 #cmakedefine HAVE_AVFOUNDATION
 
-/* V4L capturing support */
-#cmakedefine HAVE_CAMV4L
-
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
-
-/* Carbon windowing environment */
-#cmakedefine HAVE_CARBON
 
 /* AMD's Basic Linear Algebra Subprograms Library*/
 #cmakedefine HAVE_CLAMDBLAS
@@ -46,16 +40,13 @@
 /* Cocoa API */
 #cmakedefine HAVE_COCOA
 
-/* C= */
-#cmakedefine HAVE_CSTRIPES
-
-/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+/* NVIDIA CUDA Basic Linear Algebra Subprograms (BLAS) API*/
 #cmakedefine HAVE_CUBLAS
 
-/* NVidia Cuda Runtime API*/
+/* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
 
-/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+/* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
 /* IEEE1394 capturing support */
@@ -95,6 +86,9 @@
 /* Halide support */
 #cmakedefine HAVE_HALIDE
 
+/* Vulkan support */
+#cmakedefine HAVE_VULKAN
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
@@ -105,9 +99,7 @@
 #cmakedefine HAVE_IPP
 #cmakedefine HAVE_IPP_ICV
 #cmakedefine HAVE_IPP_IW
-
-/* Intel IPP Async */
-#cmakedefine HAVE_IPP_A
+#cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER
@@ -121,16 +113,13 @@
 /* GDCM DICOM codec */
 #cmakedefine HAVE_GDCM
 
-/* V4L/V4L2 capturing support via libv4l */
-#cmakedefine HAVE_LIBV4L
-
 /* Microsoft Media Foundation Capture library */
 #cmakedefine HAVE_MSMF
 
-/* NVidia Video Decoding API*/
+/* NVIDIA Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
 
-/* NVidia Video Encoding API*/
+/* NVIDIA Video Encoding API*/
 #cmakedefine HAVE_NVCUVENC
 
 /* OpenCL Support */
@@ -150,6 +139,9 @@
 /* OpenNI library */
 #cmakedefine HAVE_OPENNI2
 
+/* librealsense library */
+#cmakedefine HAVE_LIBREALSENSE
+
 /* PNG codec */
 #cmakedefine HAVE_PNG
 
@@ -165,23 +157,14 @@
 /* Qt OpenGL support */
 #cmakedefine HAVE_QT_OPENGL
 
-/* QuickTime video libraries */
-#cmakedefine HAVE_QUICKTIME
-
-/* QTKit video libraries */
-#cmakedefine HAVE_QTKIT
-
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 
+/* Ste||ar Group High Performance ParallelX */
+#cmakedefine HAVE_HPX
+
 /* TIFF codec */
 #cmakedefine HAVE_TIFF
-
-/* Unicap video capture library */
-#cmakedefine HAVE_UNICAP
-
-/* Video for Windows support */
-#cmakedefine HAVE_VFW
 
 /* V4L2 capturing support in videoio.h */
 #cmakedefine HAVE_VIDEOIO
@@ -222,8 +205,6 @@
 
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     /*defined(HAVE_OPENNI)     || too specialized */ \
     defined(HAVE_FFMPEG)       || \
@@ -233,8 +214,6 @@
 
 #if /*defined(HAVE_XINE)       || */\
     defined(HAVE_GSTREAMER)    || \
-    defined(HAVE_QUICKTIME)    || \
-    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
     defined(HAVE_MSMF)
@@ -244,5 +223,7 @@
 /* OpenCV trace utilities */
 #cmakedefine OPENCV_TRACE
 
+/* Library QR-code decoding */
+#cmakedefine HAVE_QUIRC
 
 #endif // OPENCV_CVCONFIG_H_INCLUDED

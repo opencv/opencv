@@ -431,7 +431,7 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
     return CV_HAL_ERROR_OK;
 }
 
-int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
+int ovx_hal_warpPerspective(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
     if (skipSmallImages<VX_KERNEL_WARP_PERSPECTIVE>(aw, ah))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

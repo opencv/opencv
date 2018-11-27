@@ -44,7 +44,7 @@ AKAZEFeatures::AKAZEFeatures(const AKAZEOptions& options) : options_(options) {
  * @brief This method allocates the memory for the nonlinear diffusion evolution
  */
 void AKAZEFeatures::Allocate_Memory_Evolution(void) {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   float rfactor = 0.0f;
   int level_height = 0, level_width = 0;
@@ -127,7 +127,7 @@ static inline int getGaussianKernelSize(float sigma) {
 static inline void
 nld_step_scalar_one_lane(const Mat& Lt, const Mat& Lf, Mat& Lstep, float step_size, int row_begin, int row_end)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
   /* The labeling scheme for this five star stencil:
    [    a    ]
    [ -1 c +1 ]
@@ -237,7 +237,7 @@ public:
     : Lt_(&Lt), Lf_(&Lf), Lstep_(&Lstep), step_size_(step_size)
   {}
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     nld_step_scalar_one_lane(*Lt_, *Lf_, *Lstep_, step_size_, range.start, range.end);
   }
@@ -277,7 +277,7 @@ ocl_non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_
 static inline void
 non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, float step_size)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   Lstep_.create(Lt_.size(), Lt_.type());
 
@@ -302,7 +302,7 @@ non_linear_diffusion_step(InputArray Lt_, InputArray Lf_, OutputArray Lstep_, fl
 static inline float
 compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   CV_Assert(nbins > 2);
   CV_Assert(!Lx_.empty());
@@ -377,9 +377,9 @@ ocl_pm_g2(InputArray Lx_, InputArray Ly_, OutputArray Lflow_, float kcontrast)
 #endif // HAVE_OPENCL
 
 static inline void
-compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, int diffusivity)
+compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcontrast, KAZE::DiffusivityType diffusivity)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   Lflow.create(Lx.size(), Lx.type());
 
@@ -398,7 +398,7 @@ compute_diffusivity(InputArray Lx, InputArray Ly, OutputArray Lflow, float kcont
       charbonnier_diffusivity(Lx, Ly, Lflow, kcontrast);
     break;
     default:
-      CV_Error(diffusivity, "Diffusivity is not supported");
+      CV_Error_(Error::StsError, ("Diffusivity is not supported: %d", static_cast<int>(diffusivity)));
     break;
   }
 }
@@ -432,7 +432,7 @@ static inline void
 create_nonlinear_scale_space(InputArray image, const AKAZEOptions &options,
   const std::vector<std::vector<float > > &tsteps_evolution, std::vector<Evolution<MatType> > &evolution)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
   CV_Assert(evolution.size() > 0);
 
   // convert input to grayscale float image if needed
@@ -575,7 +575,7 @@ ocl_compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_,
 static inline void compute_determinant(InputArray Lxx_, InputArray Lxy_, InputArray Lyy_,
   OutputArray Ldet_, float sigma)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   Ldet_.create(Lxx_.size(), Lxx_.type());
 
@@ -603,7 +603,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     MatType Lxx, Lxy, Lyy;
 
@@ -647,7 +647,7 @@ private:
  */
 static inline void
 Compute_Determinant_Hessian_Response(UMatPyramid &evolution) {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   DeterminantHessianResponse<UMat> body (evolution);
   body(Range(0, (int)evolution.size()));
@@ -660,7 +660,7 @@ Compute_Determinant_Hessian_Response(UMatPyramid &evolution) {
  */
 static inline void
 Compute_Determinant_Hessian_Response(Pyramid &evolution) {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   parallel_for_(Range(0, (int)evolution.size()), DeterminantHessianResponse<Mat>(evolution));
 }
@@ -673,7 +673,7 @@ Compute_Determinant_Hessian_Response(Pyramid &evolution) {
  */
 void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   kpts.clear();
   std::vector<Mat> keypoints_by_layers;
@@ -725,7 +725,7 @@ public:
     : evolution_(&ev), keypoints_by_layers_(&kpts), dthreshold_(dthreshold)
   {}
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -791,7 +791,7 @@ private:
  */
 void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   keypoints_by_layers.resize(evolution_.size());
 
@@ -872,7 +872,7 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
 void AKAZEFeatures::Do_Subpixel_Refinement(
   std::vector<Mat>& keypoints_by_layers, std::vector<KeyPoint>& output_keypoints)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   for (size_t i = 0; i < keypoints_by_layers.size(); i++) {
     const MEvolution &e = evolution_[i];
@@ -948,7 +948,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -974,7 +974,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1000,7 +1000,7 @@ public:
   {
   }
 
-  void operator()(const Range& range) const
+  void operator()(const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1026,7 +1026,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1053,7 +1053,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1088,7 +1088,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1119,7 +1119,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1158,7 +1158,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1185,7 +1185,7 @@ private:
  */
 void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray descriptors)
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   for(size_t i = 0; i < kpts.size(); i++)
   {
@@ -1448,7 +1448,7 @@ public:
   {
   }
 
-  void operator() (const Range& range) const
+  void operator() (const Range& range) const CV_OVERRIDE
   {
     for (int i = range.start; i < range.end; i++)
     {
@@ -1466,7 +1466,7 @@ private:
  */
 void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) const
 {
-  CV_INSTRUMENT_REGION()
+  CV_INSTRUMENT_REGION();
 
   parallel_for_(Range(0, (int)kpts.size()), ComputeKeypointOrientation(kpts, evolution_));
 }

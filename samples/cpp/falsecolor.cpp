@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     Mat img;
 
     if (argc > 1)
-        img = imread(argv[1], IMREAD_GRAYSCALE);
+        img = imread(samples::findFile(argv[1]), IMREAD_GRAYSCALE);
     else
         img = DrawMyImage(2,256);
 

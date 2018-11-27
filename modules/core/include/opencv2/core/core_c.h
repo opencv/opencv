@@ -1576,8 +1576,8 @@ CVAPI(void)  cvRestoreMemStoragePos( CvMemStorage* storage, CvMemStoragePos* pos
 CVAPI(void*) cvMemStorageAlloc( CvMemStorage* storage, size_t size );
 
 /** Allocates string in memory storage */
-CVAPI(CvString) cvMemStorageAllocString( CvMemStorage* storage, const char* ptr,
-                                         int len CV_DEFAULT(-1) );
+//CVAPI(CvString) cvMemStorageAllocString( CvMemStorage* storage, const char* ptr,
+//                                         int len CV_DEFAULT(-1) );
 
 /** Creates new empty sequence that will reside in the specified storage */
 CVAPI(CvSeq*)  cvCreateSeq( int seq_flags, size_t header_size,
@@ -1970,6 +1970,7 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
 *                                    Data Persistence                                    *
 \****************************************************************************************/
 
+#if 0
 /********************************** High-level functions ********************************/
 
 /** @brief Opens file storage for reading or writing data.
@@ -1978,11 +1979,7 @@ The function opens file storage for reading or writing data. In the latter case,
 created or an existing file is rewritten. The type of the read or written file is determined by the
 filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
 
-At the same time, it also supports adding parameters like "example.xml?base64". The three ways
-are the same:
-@snippet samples/cpp/filestorage_base64.cpp suffix_in_file_name
-@snippet samples/cpp/filestorage_base64.cpp flag_write_base64
-@snippet samples/cpp/filestorage_base64.cpp flag_write_and_flag_base64
+At the same time, it also supports adding parameters like "example.xml?base64".
 
 The function returns a pointer to the CvFileStorage structure.
 If the file cannot be opened then the function returns NULL.
@@ -2205,11 +2202,6 @@ difference is that it outputs a sequence in Base64 encoding rather than
 in plain text.
 
 This function can only be used to write a sequence with a type "binary".
-
-Consider the following two examples where their output is the same:
-@snippet samples/cpp/filestorage_base64.cpp without_base64_flag
-and
-@snippet samples/cpp/filestorage_base64.cpp with_write_base64_flag
 
 @param fs File storage
 @param src Pointer to the written array
@@ -2565,10 +2557,12 @@ returns NULL.
  */
 CVAPI(CvTypeInfo*) cvTypeOf( const void* struct_ptr );
 
+#endif
+
 /** @brief Releases an object.
 
-The function finds the type of a given object and calls release with the double pointer.
-@param struct_ptr Double pointer to the object
+ The function finds the type of a given object and calls release with the double pointer.
+ @param struct_ptr Double pointer to the object
  */
 CVAPI(void) cvRelease( void** struct_ptr );
 
@@ -2580,41 +2574,6 @@ function, like cvCloneMat.
 @param struct_ptr The object to clone
  */
 CVAPI(void*) cvClone( const void* struct_ptr );
-
-/** @brief Saves an object to a file.
-
-The function saves an object to a file. It provides a simple interface to cvWrite .
-@param filename File name
-@param struct_ptr Object to save
-@param name Optional object name. If it is NULL, the name will be formed from filename .
-@param comment Optional comment to put in the beginning of the file
-@param attributes Optional attributes passed to cvWrite
- */
-CVAPI(void) cvSave( const char* filename, const void* struct_ptr,
-                    const char* name CV_DEFAULT(NULL),
-                    const char* comment CV_DEFAULT(NULL),
-                    CvAttrList attributes CV_DEFAULT(cvAttrList()));
-
-/** @brief Loads an object from a file.
-
-The function loads an object from a file. It basically reads the specified file, find the first
-top-level node and calls cvRead for that node. If the file node does not have type information or
-the type information can not be found by the type name, the function returns NULL. After the object
-is loaded, the file storage is closed and all the temporary buffers are deleted. Thus, to load a
-dynamic structure, such as a sequence, contour, or graph, one should pass a valid memory storage
-destination to the function.
-@param filename File name
-@param memstorage Memory storage for dynamic structures, such as CvSeq or CvGraph . It is not used
-for matrices or images.
-@param name Optional object name. If it is NULL, the first top-level object in the storage will be
-loaded.
-@param real_name Optional output parameter that will contain the name of the loaded object
-(useful if name=NULL )
- */
-CVAPI(void*) cvLoad( const char* filename,
-                     CvMemStorage* memstorage CV_DEFAULT(NULL),
-                     const char* name CV_DEFAULT(NULL),
-                     const char** real_name CV_DEFAULT(NULL) );
 
 /*********************************** Measuring Execution Time ***************************/
 
@@ -2766,24 +2725,6 @@ static char cvFuncName[] = Name
 
 #ifdef __cplusplus
 
-//! @addtogroup core_c_glue
-//! @{
-
-//! class for automatic module/RTTI data registration/unregistration
-struct CV_EXPORTS CvType
-{
-    CvType( const char* type_name,
-            CvIsInstanceFunc is_instance, CvReleaseFunc release=0,
-            CvReadFunc read=0, CvWriteFunc write=0, CvCloneFunc clone=0 );
-    ~CvType();
-    CvTypeInfo* info;
-
-    static CvTypeInfo* first;
-    static CvTypeInfo* last;
-};
-
-//! @}
-
 #include "opencv2/core/utility.hpp"
 
 namespace cv
@@ -2814,11 +2755,11 @@ CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
 
 ////// specialized implementations of DefaultDeleter::operator() for classic OpenCV types //////
 
-template<> CV_EXPORTS void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const;
-template<> CV_EXPORTS void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const;
+template<> struct DefaultDeleter<CvMat>{ CV_EXPORTS void operator ()(CvMat* obj) const; };
+template<> struct DefaultDeleter<IplImage>{ CV_EXPORTS void operator ()(IplImage* obj) const; };
+template<> struct DefaultDeleter<CvMatND>{ CV_EXPORTS void operator ()(CvMatND* obj) const; };
+template<> struct DefaultDeleter<CvSparseMat>{ CV_EXPORTS void operator ()(CvSparseMat* obj) const; };
+template<> struct DefaultDeleter<CvMemStorage>{ CV_EXPORTS void operator ()(CvMemStorage* obj) const; };
 
 ////////////// convenient wrappers for operating old-style dynamic structures //////////////
 
@@ -3073,7 +3014,7 @@ template<typename _Tp> inline void Seq<_Tp>::copyTo(std::vector<_Tp>& vec, const
     size_t len = !seq ? 0 : range == Range::all() ? seq->total : range.end - range.start;
     vec.resize(len);
     if( seq && len )
-        cvCvtSeqToArray(seq, &vec[0], range);
+        cvCvtSeqToArray(seq, &vec[0], cvSlice(range));
 }
 
 template<typename _Tp> inline Seq<_Tp>::operator std::vector<_Tp>() const

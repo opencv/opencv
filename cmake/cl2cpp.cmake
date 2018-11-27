@@ -17,7 +17,7 @@ set(nested_namespace_end "}")
 
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
-#include \"precomp.hpp\"
+#include \"opencv2/core.hpp\"
 #include \"cvconfig.h\"
 #include \"${OUTPUT_HPP_NAME}\"
 

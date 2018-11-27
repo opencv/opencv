@@ -103,6 +103,7 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
             {
             case COLOR_RGB2HLS: case COLOR_BGR2HLS:
                 h_limit = 180;
+                /* fallthrough */
             case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
             {
                 ASSERT_EQ(dst_roi.type(), udst_roi.type());

@@ -46,10 +46,13 @@
 //
 //M*/
 
+#include "precomp.hpp"
+
+
+#ifdef HAVE_IMGCODEC_PXM
 
 #include <cerrno>
 
-#include "precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
 
@@ -129,12 +132,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             default:
@@ -144,12 +147,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_BGR2Gray_8u_C3C1R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1), 2 );
+                    Size(width,1), 2 );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1), 3, 2 );
+                    Size(width,1), 3, 2 );
                 ret = true;
                 break;
             default:
@@ -376,25 +379,25 @@ bool  PAMDecoder::readHeader()
     }
     else if( !m_strm.open( m_filename ))
         return false;
-    CV_TRY
+    try
     {
         byte = m_strm.getByte();
         if( byte != 'P' )
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         byte = m_strm.getByte();
         if (byte != '7')
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         byte = m_strm.getByte();
         if (byte != '\n' && byte != '\r')
-            CV_THROW( RBS_BAD_HEADER );
+            throw RBS_BAD_HEADER;
 
         uint i;
         memset (&flds, 0x00, sizeof (struct parsed_fields));
         do {
             if (!ReadPAMHeaderLine(m_strm, fieldtype, value))
-                CV_THROW( RBS_BAD_HEADER );
+                throw RBS_BAD_HEADER;
             switch (fieldtype) {
                 case PAM_HEADER_NONE:
                 case PAM_HEADER_COMMENT:
@@ -404,32 +407,32 @@ bool  PAMDecoder::readHeader()
                     break;
                 case PAM_HEADER_HEIGHT:
                     if (flds.height)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_height))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.height = true;
                     break;
                 case PAM_HEADER_WIDTH:
                     if (flds.width)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_width))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.width = true;
                     break;
                 case PAM_HEADER_DEPTH:
                     if (flds.depth)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_channels))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     flds.depth = true;
                     break;
                 case PAM_HEADER_MAXVAL:
                     if (flds.maxval)
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if (!ParseNumber (value, &m_maxval))
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if ( m_maxval > 65535 )
-                        CV_THROW( RBS_BAD_HEADER );
+                        throw RBS_BAD_HEADER;
                     if ( m_maxval > 255 ) {
                         m_sampledepth = CV_16U;
                     }
@@ -448,7 +451,7 @@ bool  PAMDecoder::readHeader()
                     }
                     break;
                 default:
-                    CV_THROW( RBS_BAD_HEADER );
+                    throw RBS_BAD_HEADER;
             }
         } while (fieldtype != PAM_HEADER_ENDHDR);
 
@@ -466,7 +469,7 @@ bool  PAMDecoder::readHeader()
 
             return true;
         }
-    } CV_CATCH_ALL
+    } catch(...)
     {
     }
 
@@ -493,9 +496,7 @@ bool  PAMDecoder::readData( Mat& img )
 
     /* setting buffer to max data size so scaling up is possible */
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
-    uchar* src = _src;
-    AutoBuffer<uchar> _gray_palette;
-    uchar* gray_palette = _gray_palette;
+    uchar* src = _src.data();
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
@@ -511,7 +512,7 @@ bool  PAMDecoder::readData( Mat& img )
         }
     }
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -541,10 +542,7 @@ bool  PAMDecoder::readData( Mat& img )
             if (bit_mode) {
                 if( target_channels == 1 )
                 {
-                    _gray_palette.allocate(2);
-                    gray_palette = _gray_palette;
-                    gray_palette[0] = 0;
-                    gray_palette[1] = 255;
+                    uchar gray_palette[2] = {0, 255};
                     for( y = 0; y < m_height; y++, data += imp_stride )
                     {
                         m_strm.getBytes( src, src_stride );
@@ -612,7 +610,7 @@ bool  PAMDecoder::readData( Mat& img )
         }
 
         res = true;
-    } CV_CATCH_ALL
+    } catch(...)
     {
     }
 
@@ -680,7 +678,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
         bufsize = tmp;
 
     AutoBuffer<char> _buffer(bufsize);
-    char* buffer = _buffer;
+    char* buffer = _buffer.data();
 
     /* write header */
     tmp = 0;
@@ -691,7 +689,7 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     tmp += sprintf( buffer + tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
     if (fmt)
         tmp += sprintf( buffer + tmp, "TUPLTYPE %s\n", fmt->name );
-    tmp += sprintf( buffer + tmp, "ENDHDR\n" );
+    sprintf( buffer + tmp, "ENDHDR\n" );
 
     strm.putBytes( buffer, (int)strlen(buffer) );
     /* write data */
@@ -720,3 +718,5 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 }
 
 }
+
+#endif

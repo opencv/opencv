@@ -2,6 +2,7 @@ include(CMakeParseArguments)
 
 # Debugging function
 function(ocv_cmake_dump_vars)
+  set(OPENCV_SUPPRESS_DEPRECATIONS 1)  # suppress deprecation warnings from variable_watch() guards
   get_cmake_property(__variableNames VARIABLES)
   cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
@@ -120,8 +121,10 @@ macro(ocv_assert)
 endmacro()
 
 macro(ocv_debug_message)
-#  string(REPLACE ";" " " __msg "${ARGN}")
-#  message(STATUS "${__msg}")
+  if(OPENCV_CMAKE_DEBUG_MESSAGES)
+    string(REPLACE ";" " " __msg "${ARGN}")
+    message(STATUS "${__msg}")
+  endif()
 endmacro()
 
 macro(ocv_check_environment_variables)
@@ -146,12 +149,69 @@ macro(ocv_path_join result_var P1 P2_)
   else()
     set(${result_var} "${P1}/${P2}")
   endif()
-  string(REGEX REPLACE "([/\\]?)[\\.][/\\]" "\\1" ${result_var} "${${result_var}}")
+  string(REPLACE "\\\\" "\\" ${result_var} "${${result_var}}")
+  string(REPLACE "//" "/" ${result_var} "${${result_var}}")
+  string(REGEX REPLACE "(^|[/\\])[\\.][/\\]" "\\1" ${result_var} "${${result_var}}")
   if("${${result_var}}" STREQUAL "")
     set(${result_var} ".")
   endif()
   #message(STATUS "'${P1}' '${P2_}' => '${${result_var}}'")
 endmacro()
+
+
+# Used to parse Android SDK 'source.properties' files
+# File lines format:
+# - '<var_name>=<value>' (with possible 'space' symbols around '=')
+# - '#<any comment>'
+# Parsed values are saved into CMake variables:
+# - '${var_prefix}_${var_name}'
+# Flags:
+# - 'CACHE_VAR <var1> <var2>' - put these properties into CMake internal cache
+# - 'MSG_PREFIX <msg>' - prefix string for emitted messages
+# - flag 'VALIDATE' - emit messages about missing values from required cached variables
+# - flag 'WARNING' - emit CMake WARNING instead of STATUS messages
+function(ocv_parse_properties_file file var_prefix)
+  cmake_parse_arguments(PARSE_PROPERTIES_PARAM "VALIDATE;WARNING" "" "CACHE_VAR;MSG_PREFIX" ${ARGN})
+
+  set(__msg_type STATUS)
+  if(PARSE_PROPERTIES_PARAM_WARNING)
+    set(__msg_type WARNING)
+  endif()
+
+  if(EXISTS "${file}")
+    set(SOURCE_PROPERTIES_REGEX "^[ ]*([^=:\n\"' ]+)[ ]*=[ ]*(.*)$")
+    file(STRINGS "${file}" SOURCE_PROPERTIES_LINES REGEX "^[ ]*[^#].*$")
+    foreach(line ${SOURCE_PROPERTIES_LINES})
+      if(line MATCHES "${SOURCE_PROPERTIES_REGEX}")
+        set(__name "${CMAKE_MATCH_1}")
+        set(__value "${CMAKE_MATCH_2}")
+        string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" __name ${__name})
+        if(";${PARSE_PROPERTIES_PARAM_CACHE_VAR};" MATCHES ";${__name};")
+          set(${var_prefix}_${__name} "${__value}" CACHE INTERNAL "from ${file}")
+        else()
+          set(${var_prefix}_${__name} "${__value}" PARENT_SCOPE)
+        endif()
+      else()
+        message(${__msg_type} "${PARSE_PROPERTIES_PARAM_MSG_PREFIX}Can't parse source property: '${line}' (from ${file})")
+      endif()
+    endforeach()
+    if(PARSE_PROPERTIES_PARAM_VALIDATE)
+      set(__missing "")
+      foreach(__name ${PARSE_PROPERTIES_PARAM_CACHE_VAR})
+        if(NOT DEFINED ${var_prefix}_${__name})
+          list(APPEND __missing ${__name})
+        endif()
+      endforeach()
+      if(__missing)
+        message(${__msg_type} "${PARSE_PROPERTIES_PARAM_MSG_PREFIX}Can't read properties '${__missing}' from '${file}'")
+      endif()
+    endif()
+  else()
+    message(${__msg_type} "${PARSE_PROPERTIES_PARAM_MSG_PREFIX}Can't find file: ${file}")
+  endif()
+endfunction()
+
+
 
 # rename modules target to world if needed
 macro(_ocv_fix_target target_var)
@@ -203,7 +263,7 @@ function(ocv_include_directories)
     ocv_is_opencv_directory(__is_opencv_dir "${dir}")
     if(__is_opencv_dir)
       list(APPEND __add_before "${dir}")
-    elseif(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+    elseif(((CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0") OR CV_CLANG) AND
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()
@@ -234,7 +294,7 @@ function(ocv_target_include_directories target)
   #ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
   _ocv_fix_target(target)
   set(__params "")
-  if(CMAKE_COMPILER_IS_GNUCXX AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+  if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
       ";${ARGN};" MATCHES "/usr/include;")
     return() # workaround for GCC 6.x bug
   endif()
@@ -444,11 +504,11 @@ macro(ocv_warnings_disable)
           set(${var} "${${var}} ${warning}")
         endforeach()
       endforeach()
-    elseif((CMAKE_COMPILER_IS_GNUCXX OR (UNIX AND CV_ICC)) AND _gxx_warnings AND _flag_vars)
+    elseif(((CV_GCC OR CV_CLANG) OR (UNIX AND CV_ICC)) AND _gxx_warnings AND _flag_vars)
       foreach(var ${_flag_vars})
         foreach(warning ${_gxx_warnings})
           if(NOT warning MATCHES "^-Wno-")
-            string(REPLACE "${warning}" "" ${var} "${${var}}")
+            string(REGEX REPLACE "${warning}(=[^ ]*)?" "" ${var} "${${var}}")
             string(REPLACE "-W" "-Wno-" warning "${warning}")
           endif()
           ocv_check_flag_support(${var} "${warning}" _varname "")
@@ -545,10 +605,14 @@ macro(OCV_OPTION variable description value)
       option(${variable} "${description}" ${__value})
     endif()
   else()
-    if(DEFINED ${variable})
-      # TODO: message(WARNING "Option will be ignored: ${variable} (=${${variable}})")
+    if(DEFINED ${variable} AND "${${variable}}"  # emit warnings about turned ON options only.
+        AND NOT (OPENCV_HIDE_WARNING_UNSUPPORTED_OPTION OR "$ENV{OPENCV_HIDE_WARNING_UNSUPPORTED_OPTION}")
+    )
+      message(WARNING "Unexpected option: ${variable} (=${${variable}})\nCondition: IF (${__condition})")
     endif()
-    unset(${variable} CACHE)
+    if(OPENCV_UNSET_UNSUPPORTED_OPTION)
+      unset(${variable} CACHE)
+    endif()
   endif()
   unset(__condition)
   unset(__value)
@@ -563,6 +627,24 @@ macro(ocv_append_build_options var_prefix pkg_prefix)
     endif()
   endforeach()
 endmacro()
+
+function(ocv_append_source_files_cxx_compiler_options files_var)
+  set(__flags "${ARGN}")
+  ocv_check_flag_support(CXX "${__flags}" __HAVE_COMPILER_OPTIONS_VAR "")
+  if(${__HAVE_COMPILER_OPTIONS_VAR})
+    foreach(source ${${files_var}})
+      if("${source}" MATCHES "\\.(cpp|cc|cxx)$")
+        get_source_file_property(flags "${source}" COMPILE_FLAGS)
+        if(flags)
+          set(flags "${flags} ${__flags}")
+        else()
+          set(flags "${__flags}")
+        endif()
+        set_source_files_properties("${source}" PROPERTIES COMPILE_FLAGS "${flags}")
+      endif()
+    endforeach()
+  endif()
+endfunction()
 
 # Usage is similar to CMake 'pkg_check_modules' command
 # It additionally controls HAVE_${define} and ${define}_${modname}_FOUND variables
@@ -923,6 +1005,15 @@ function(ocv_convert_to_lib_name var)
   set(${var} ${tmp} PARENT_SCOPE)
 endfunction()
 
+if(MSVC AND BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
+  if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
+    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
+    option(INSTALL_PDB "Add install PDB rules" ON)
+  elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
+    option(INSTALL_PDB "Add install PDB rules" OFF)
+  endif()
+endif()
 
 # add install command
 function(ocv_install_target)
@@ -953,14 +1044,18 @@ function(ocv_install_target)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
-  if(MSVS)
-    if(NOT INSTALL_IGNORE_PDB AND
-        (INSTALL_PDB OR
-          (INSTALL_CREATE_DISTRIB AND NOT BUILD_SHARED_LIBS)
-        ))
-      set(__target "${ARGV0}")
+  if(MSVC)
+    set(__target "${ARGV0}")
+    if(INSTALL_PDB AND NOT INSTALL_IGNORE_PDB
+        AND NOT OPENCV_${__target}_PDB_SKIP
+    )
+      set(__location_key "ARCHIVE")  # static libs
+      get_target_property(__target_type ${__target} TYPE)
+      if("${__target_type}" STREQUAL "SHARED_LIBRARY")
+        set(__location_key "RUNTIME")  # shared libs (.DLL)
+      endif()
 
-      set(isArchive 0)
+      set(processDst 0)
       set(isDst 0)
       unset(__dst)
       foreach(e ${ARGN})
@@ -968,34 +1063,48 @@ function(ocv_install_target)
           set(__dst "${e}")
           break()
         endif()
-        if(isArchive EQUAL 1 AND e STREQUAL "DESTINATION")
+        if(processDst EQUAL 1 AND e STREQUAL "DESTINATION")
           set(isDst 1)
         endif()
-        if(e STREQUAL "ARCHIVE")
-          set(isArchive 1)
+        if(e STREQUAL "${__location_key}")
+          set(processDst 1)
         else()
-          set(isArchive 0)
+          set(processDst 0)
         endif()
       endforeach()
 
 #      message(STATUS "Process ${__target} dst=${__dst}...")
       if(DEFINED __dst)
-        # If CMake version is >=3.1.0 or <2.8.12.
-        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0 OR CMAKE_VERSION VERSION_LESS 2.8.12)
-          get_target_property(fname ${__target} LOCATION_DEBUG)
-          if(fname MATCHES "\\.lib$")
-            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Debug OPTIONAL)
+        if(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+          set(__pdb_install_component "pdb")
+          if(DEFINED INSTALL_PDB_COMPONENT AND INSTALL_PDB_COMPONENT)
+            set(__pdb_install_component "${INSTALL_PDB_COMPONENT}")
+          endif()
+          set(__pdb_exclude_from_all "")
+          if(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL)
+            if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
+              set(__pdb_exclude_from_all EXCLUDE_FROM_ALL)
+            else()
+              message(WARNING "INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL requires CMake 3.6+")
+            endif()
           endif()
 
-          get_target_property(fname ${__target} LOCATION_RELEASE)
-          if(fname MATCHES "\\.lib$")
-            string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
-            install(FILES "${fname}" DESTINATION "${__dst}" CONFIGURATIONS Release OPTIONAL)
+#          message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
+          if("${__target_type}" STREQUAL "SHARED_LIBRARY")
+            install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
+                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
+          else()
+            # There is no generator expression similar to TARGET_PDB_FILE and TARGET_PDB_FILE can't be used: https://gitlab.kitware.com/cmake/cmake/issues/16932
+            # However we still want .pdb files like: 'lib/Debug/opencv_core341d.pdb' or '3rdparty/lib/zlibd.pdb'
+            install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_DEBUG>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
+                DESTINATION "${__dst}" CONFIGURATIONS Debug
+                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
+            install(FILES "$<TARGET_PROPERTY:${__target},ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<IF:$<BOOL:$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME_RELEASE>,$<TARGET_PROPERTY:${__target},COMPILE_PDB_NAME>>.pdb"
+                DESTINATION "${__dst}" CONFIGURATIONS Release
+                COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
           endif()
         else()
-          # CMake 2.8.12 broke PDB support for STATIC libraries from MSVS, fix was introduced in CMake 3.1.0.
-          message(WARNING "PDB's are not supported from this version of CMake, use CMake version later then 3.1.0 or before 2.8.12.")
+          message(WARNING "PDB files installation is not supported (need CMake >= 3.1.0)")
         endif()
       endif()
     endif()
@@ -1008,7 +1117,7 @@ function(ocv_install_3rdparty_licenses library)
     get_filename_component(name "${filename}" NAME)
     install(
       FILES "${filename}"
-      DESTINATION "${OPENCV_OTHER_INSTALL_PATH}/licenses"
+      DESTINATION "${OPENCV_LICENSES_INSTALL_PATH}"
       COMPONENT licenses
       RENAME "${library}-${name}"
       OPTIONAL)
@@ -1541,3 +1650,40 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.1)
 else()
   set(compatible_MESSAGE_NEVER "")
 endif()
+
+
+macro(ocv_git_describe var_name path)
+  if(GIT_FOUND)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --exact-match --dirty
+      WORKING_DIRECTORY "${path}"
+      OUTPUT_VARIABLE ${var_name}
+      RESULT_VARIABLE GIT_RESULT
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT GIT_RESULT EQUAL 0)
+      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
+        WORKING_DIRECTORY "${path}"
+        OUTPUT_VARIABLE ${var_name}
+        RESULT_VARIABLE GIT_RESULT
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(NOT GIT_RESULT EQUAL 0)  # --exclude is not supported by 'git'
+        # match only tags with complete OpenCV versions (ignores -alpha/-beta/-rc suffixes)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9]*[0-9]"
+          WORKING_DIRECTORY "${path}"
+          OUTPUT_VARIABLE ${var_name}
+          RESULT_VARIABLE GIT_RESULT
+          ERROR_QUIET
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(NOT GIT_RESULT EQUAL 0)
+          set(${var_name} "unknown")
+        endif()
+      endif()
+    endif()
+  else()
+    set(${var_name} "unknown")
+  endif()
+endmacro()

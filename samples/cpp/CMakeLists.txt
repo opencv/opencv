@@ -14,8 +14,6 @@ set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
   opencv_features2d
   opencv_calib3d
   opencv_stitching
-  opencv_videostab
-  opencv_shape
   ${OPENCV_MODULES_PUBLIC}
   ${OpenCV_LIB_COMPONENTS})
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
@@ -27,23 +25,11 @@ endif()
 project(cpp_samples)
 ocv_include_modules_recurse(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 file(GLOB_RECURSE cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
-if(NOT HAVE_OPENGL)
-  ocv_list_filterout(cpp_samples Qt_sample)
-endif()
 if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_cudafilters)
   ocv_list_filterout(cpp_samples "/gpu/")
 endif()
-if(NOT BUILD_opencv_viz OR NOT VTK_USE_FILE)
-  ocv_list_filterout(cpp_samples "/viz/")
-endif()
-if(NOT HAVE_IPP_A)
-  ocv_list_filterout(cpp_samples "/ippasync/")
-endif()
 ocv_list_filterout(cpp_samples "real_time_pose_estimation/")
 foreach(sample_filename ${cpp_samples})
-  if(sample_filename MATCHES "/viz/")
-    include(${VTK_USE_FILE})
-  endif()
   set(package "cpp")
   if(sample_filename MATCHES "tutorial_code")
     set(package "tutorial")

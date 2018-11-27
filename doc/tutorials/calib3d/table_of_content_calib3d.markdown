@@ -13,7 +13,7 @@ Although we get most of our images in a 2D format they do come from a 3D world. 
 
 -   @subpage tutorial_camera_calibration
 
-    *Compatibility:* \> OpenCV 2.0
+    *Compatibility:* \> OpenCV 4.0
 
     *Author:* Bernát Gábor
 

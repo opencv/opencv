@@ -25,7 +25,7 @@ macro(copy_file_ src dst prefix)
     endif()
     get_filename_component(target_path "${dst}" PATH)
     file(MAKE_DIRECTORY "${target_path}")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dst}
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${src}" "${dst}"
         RESULT_VARIABLE SYMLINK_RESULT)
     if(NOT SYMLINK_RESULT EQUAL 0)
       #message("Symlink failed, fallback to 'copy'")

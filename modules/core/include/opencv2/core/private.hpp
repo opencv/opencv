@@ -57,41 +57,23 @@
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
 #  endif
+#  if defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable:4701)  // potentially uninitialized local variable
+#    pragma warning(disable:4702)  // unreachable code
+#    pragma warning(disable:4714)  // const marked as __forceinline not inlined
+#  endif
 #  include <Eigen/Core>
+#  if defined(_MSC_VER)
+#    pragma warning(pop)
+#  endif
 #  include "opencv2/core/eigen.hpp"
-#endif
-
-#ifdef HAVE_TBB
-#  include "tbb/tbb.h"
-#  include "tbb/task.h"
-#  undef min
-#  undef max
 #endif
 
 //! @cond IGNORED
 
 namespace cv
 {
-#ifdef HAVE_TBB
-
-    typedef tbb::blocked_range<int> BlockedRange;
-
-    template<typename Body> static inline
-    void parallel_for( const BlockedRange& range, const Body& body )
-    {
-        tbb::parallel_for(range, body);
-    }
-
-    typedef tbb::split Split;
-
-    template<typename Body> static inline
-    void parallel_reduce( const BlockedRange& range, Body& body )
-    {
-        tbb::parallel_reduce(range, body);
-    }
-
-    typedef tbb::concurrent_vector<Rect> ConcurrentRectVector;
-#else
     class BlockedRange
     {
     public:
@@ -119,7 +101,6 @@ namespace cv
     {
         body(range);
     }
-#endif
 
     // Returns a static string if there is a parallel framework,
     // NULL otherwise.
@@ -161,9 +142,15 @@ namespace cv
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 
 //! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
-template <typename T>
-T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * count)); }
-}
+CV_EXPORTS void* allocSingletonBuffer(size_t size);
+
+//! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
+template <typename T> static inline
+T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffer(sizeof(T) * count)); }
+
+} // namespace
+
+#if 1 // TODO: Remove in OpenCV 4.x
 
 // property implementation macros
 
@@ -187,9 +174,13 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #define CV_WRAP_SAME_PROPERTY(type, name, internal_obj) CV_WRAP_PROPERTY(type, name, name, internal_obj)
 #define CV_WRAP_SAME_PROPERTY_S(type, name, internal_obj) CV_WRAP_PROPERTY_S(type, name, name, internal_obj)
 
+#endif
+
 /****************************************************************************************\
 *                     Structures and macros for integration with IPP                     *
 \****************************************************************************************/
+
+#define OPENCV_IPP_REDUCE_SIZE 1
 
 // Temporary disabled named IPP region. Accuracy
 #define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
@@ -205,8 +196,10 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #define IPP_DISABLE_LAB_RGB             1 // breaks OCL accuracy tests
 #define IPP_DISABLE_RGB_XYZ             1 // big accuracy difference
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
-#define IPP_DISABLE_HAAR                1 // improper integration/results
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
+#define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
+
+#define IPP_DISABLE_GAUSSIANBLUR_PARALLEL 1 // not supported (2017u2 / 2017u3)
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
@@ -233,8 +226,17 @@ T* allocSingleton(size_t count) { return static_cast<T*>(fastMalloc(sizeof(T) * 
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wsuggest-override"
+#  endif
 #include "iw++/iw.hpp"
+#  ifdef HAVE_IPP_IW_LL
 #include "iw/iw_ll.h"
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#  pragma GCC diagnostic pop
+#  endif
 #endif
 
 #if IPP_VERSION_X100 >= 201700
@@ -472,7 +474,7 @@ class IppAutoBuffer
 {
 public:
     IppAutoBuffer() { m_size = 0; m_pBuffer = NULL; }
-    IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
+    explicit IppAutoBuffer(size_t size) { m_size = 0; m_pBuffer = NULL; allocate(size); }
     ~IppAutoBuffer() { deallocate(); }
     T* allocate(size_t size)   { if(m_size < size) { deallocate(); m_pBuffer = (T*)CV_IPP_MALLOC(size); m_size = size; } return m_pBuffer; }
     void deallocate() { if(m_pBuffer) { ippFree(m_pBuffer); m_pBuffer = NULL; } m_size = 0; }
@@ -639,15 +641,6 @@ typedef enum CvStatus
 }
 CvStatus;
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-namespace tegra {
-
-CV_EXPORTS bool useTegra();
-CV_EXPORTS void setUseTegra(bool flag);
-
-}
-#endif
-
 #ifdef ENABLE_INSTRUMENTATION
 namespace cv
 {
@@ -719,12 +712,12 @@ CV_EXPORTS InstrNode*   getCurrentNode();
     if(::cv::instr::useInstrumentation()){\
         ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
         try{\
-            auto status = ((FUN)(__VA_ARGS__));\
+            auto instrStatus = ((FUN)(__VA_ARGS__));\
             if(ERROR_COND){\
                 ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
                 CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
             }\
-            return status;\
+            return instrStatus;\
         }catch(...){\
             ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
             CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
@@ -755,23 +748,23 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
-#define CV_INSTRUMENT_REGION_()             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+#define CV_INSTRUMENT_REGION_();             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Custom OpenCV region instrumentation macro
 #define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Instrumentation for parallel_for_ or other regions which forks and gathers threads
-#define CV_INSTRUMENT_REGION_MT_FORK()      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
+#define CV_INSTRUMENT_REGION_MT_FORK();      CV_INSTRUMENT_REGION_META(__FUNCTION__, true,  ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_IPP()          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP();          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
 // Function instrumentation macro
-#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, status < 0, FUN, __VA_ARGS__)
+#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, instrStatus < 0, FUN, __VA_ARGS__)
 // Diagnostic markers
 #define CV_INSTRUMENT_MARK_IPP(NAME)        CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_IPP, NAME)
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro
-#define CV_INSTRUMENT_REGION_OPENCL()              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
+#define CV_INSTRUMENT_REGION_OPENCL();              CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
 // OpenCL kernel compilation wrapper
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(NAME)  CV_INSTRUMENT_REGION_META(NAME, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_OPENCL)
 // OpenCL kernel run wrapper
@@ -781,25 +774,101 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #else
 #define CV_INSTRUMENT_REGION_META(...)
 
-#define CV_INSTRUMENT_REGION_()                            CV_TRACE_FUNCTION()
+#define CV_INSTRUMENT_REGION_();                            CV_TRACE_FUNCTION()
 #define CV_INSTRUMENT_REGION_NAME(...)                     CV_TRACE_REGION(__VA_ARGS__)
-#define CV_INSTRUMENT_REGION_MT_FORK()
+#define CV_INSTRUMENT_REGION_MT_FORK();
 
-#define CV_INSTRUMENT_REGION_IPP()                         CV__TRACE_REGION_("IPP", CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP)
+#define CV_INSTRUMENT_REGION_IPP();                         CV__TRACE_REGION_("IPP", CV_TRACE_NS::details::REGION_FLAG_IMPL_IPP)
 #define CV_INSTRUMENT_FUN_IPP(FUN, ...) ((FUN)(__VA_ARGS__))
 #define CV_INSTRUMENT_MARK_IPP(...)
 
-#define CV_INSTRUMENT_REGION_OPENCL()                      CV__TRACE_REGION_("OpenCL", CV_TRACE_NS::details::REGION_FLAG_IMPL_OPENCL)
+#define CV_INSTRUMENT_REGION_OPENCL();                      CV__TRACE_REGION_("OpenCL", CV_TRACE_NS::details::REGION_FLAG_IMPL_OPENCL)
 #define CV_INSTRUMENT_REGION_OPENCL_COMPILE(...)
 #define CV_INSTRUMENT_REGION_OPENCL_RUN(...)
 #define CV_INSTRUMENT_MARK_OPENCL(...)
 #endif
 
 #ifdef __CV_AVX_GUARD
-#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_()
+#define CV_INSTRUMENT_REGION(); __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
 #else
-#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_()
+#define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
 #endif
+
+namespace cv {
+
+namespace utils {
+
+//! @addtogroup core_utils
+//! @{
+
+/** @brief Try to find requested data file
+
+Search directories:
+
+1. Directories passed via `addDataSearchPath()`
+2. Check path specified by configuration parameter with "_HINT" suffix (name of environment variable).
+3. Check path specified by configuration parameter (name of environment variable).
+   If parameter value is not empty and nothing is found then stop searching.
+4. Detects build/install path based on:
+   a. current working directory (CWD)
+   b. and/or binary module location (opencv_core/opencv_world, doesn't work with static linkage)
+5. Scan `<source>/{,data}` directories if build directory is detected or the current directory is in source tree.
+6. Scan `<install>/share/OpenCV` directory if install directory is detected.
+
+@param relative_path Relative path to data file
+@param required Specify "file not found" handling.
+       If true, function prints information message and raises cv::Exception.
+       If false, function returns empty result
+@param configuration_parameter specify configuration parameter name. Default NULL value means "OPENCV_DATA_PATH".
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS
+cv::String findDataFile(const cv::String& relative_path, bool required = true,
+                        const char* configuration_parameter = NULL);
+
+/** @overload
+@param relative_path Relative path to data file
+@param configuration_parameter specify configuration parameter name. Default NULL value means "OPENCV_DATA_PATH".
+@param search_paths override addDataSearchPath() settings.
+@param subdir_paths override addDataSearchSubDirectory() settings.
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS
+cv::String findDataFile(const cv::String& relative_path,
+                        const char* configuration_parameter,
+                        const std::vector<String>* search_paths,
+                        const std::vector<String>* subdir_paths);
+
+/** @brief Override default search data path by adding new search location
+
+Use this only to override default behavior
+Passed paths are used in LIFO order.
+
+@param path Path to used samples data
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS void addDataSearchPath(const cv::String& path);
+
+/** @brief Append default search data sub directory
+
+General usage is to add OpenCV modules name (`<opencv_contrib>/modules/<name>/data` -> `modules/<name>/data` + `<name>/data`).
+Passed subdirectories are used in LIFO order.
+
+@param subdir samples data sub directory
+
+@note Implementation is not thread-safe.
+*/
+CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir);
+
+//! @}
+
+} // namespace utils
+} // namespace cv
 
 //! @endcond
 

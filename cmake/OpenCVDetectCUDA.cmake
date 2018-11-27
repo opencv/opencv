@@ -3,19 +3,28 @@ if(WIN32 AND NOT MSVC)
   return()
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(NOT UNIX AND CV_CLANG)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
-set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-if(ANDROID)
-  set(CUDA_TARGET_OS_VARIANT "Android")
+if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
+      OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
+    AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
+  ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "LINK_PRIVATE")
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+else()
+  # Use OpenCV's patched "FindCUDA" module
+  set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+  if(ANDROID)
+    set(CUDA_TARGET_OS_VARIANT "Android")
+  endif()
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+
+  list(REMOVE_AT CMAKE_MODULE_PATH 0)
 endif()
-find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
-
-list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
@@ -61,6 +70,12 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  endif()
+
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin "2.0")
@@ -72,11 +87,14 @@ if(CUDA_FOUND)
     set(__cuda_arch_bin "6.0 6.1")
   elseif(CUDA_GENERATION STREQUAL "Volta")
     set(__cuda_arch_bin "7.0")
+  elseif(CUDA_GENERATION STREQUAL "Turing")
+    set(__cuda_arch_bin "7.5")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
     if(NOT _nvcc_res EQUAL 0)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
@@ -90,23 +108,26 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+      execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                        RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
-        set(__cuda_arch_bin "5.3 6.2 7.0")
+        set(__cuda_arch_bin "5.3 6.2 7.0 7.5")
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
         string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
       endif()
       set(__cuda_arch_ptx "")
     else()
-      if(${CUDA_VERSION} VERSION_LESS "9.0")
+      if(CUDA_VERSION VERSION_LESS "9.0")
         set(__cuda_arch_bin "2.0 3.0 3.5 3.7 5.0 5.2 6.0 6.1")
-      else()
+      elseif(CUDA_VERSION VERSION_LESS "10.0")
         set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0")
+      else()
+        set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0 7.5")
       endif()
     endif()
   endif()
@@ -179,6 +200,13 @@ if(CUDA_FOUND)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
+      if (CV_CLANG)
+        # we remove -Winconsistent-missing-override and -Qunused-arguments
+        # just in case we are compiling CUDA with gcc but OpenCV with clang
+        string(REPLACE "-Winconsistent-missing-override" "" ${var} "${${var}}")
+        string(REPLACE "-Qunused-arguments" "" ${var} "${${var}}")
+      endif()
+
       # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")
 
@@ -200,6 +228,19 @@ if(CUDA_FOUND)
       string(REPLACE "-frtti" "" ${var} "${${var}}")
 
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+
+      # cc1: warning: command line option '-Wsuggest-override' is valid for C++/ObjC++ but not for C
+      string(REPLACE "-Wsuggest-override" "" ${var} "${${var}}")
+
+      # issue: #11552 (from OpenCVCompilerOptions.cmake)
+      string(REGEX REPLACE "-Wimplicit-fallthrough(=[0-9]+)? " "" ${var} "${${var}}")
+
+      # removal of custom specified options
+      if(OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS)
+        foreach(__flag ${OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS})
+          string(REPLACE "${__flag}" "" ${var} "${${var}}")
+        endforeach()
+      endif()
     endforeach()
   endmacro()
 
@@ -211,7 +252,7 @@ if(CUDA_FOUND)
     endif()
 
     if(UNIX OR APPLE)
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC --std=c++11)
     endif()
     if(APPLE)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
@@ -222,7 +263,7 @@ if(CUDA_FOUND)
     endif()
 
     # disabled because of multiple warnings during building nvcc auto generated files
-    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
+    if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.6.0")
       ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
     endif()
 

@@ -1,6 +1,9 @@
 Remapping {#tutorial_remap}
 =========
 
+@prev_tutorial{tutorial_hough_circle}
+@next_tutorial{tutorial_warp_affine}
+
 Goal
 ----
 
@@ -45,61 +48,91 @@ Theory
 Code
 ----
 
--#  **What does this program do?**
+-   **What does this program do?**
     -   Loads an image
     -   Each second, apply 1 of 4 different remapping processes to the image and display them
         indefinitely in a window.
     -   Wait for the user to exit the program
 
--#  The tutorial code's is shown lines below. You can also download it from
+@add_toggle_cpp
+-   The tutorial code's is shown lines below. You can also download it from
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+-   The tutorial code's is shown lines below. You can also download it from
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java)
+    @include samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java
+@end_toggle
+
+@add_toggle_python
+-   The tutorial code's is shown lines below. You can also download it from
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py)
+    @include samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Create some variables we will use:
-    @code{.cpp}
-    Mat src, dst;
-    Mat map_x, map_y;
-    char* remap_window = "Remap demo";
-    int ind = 0;
-    @endcode
--#  Load an image:
-    @code{.cpp}
-    src = imread( argv[1], 1 );
-    @endcode
--#  Create the destination image and the two mapping matrices (for x and y )
-    @code{.cpp}
-    dst.create( src.size(), src.type() );
-    map_x.create( src.size(), CV_32FC1 );
-    map_y.create( src.size(), CV_32FC1 );
-    @endcode
--#  Create a window to display results
-    @code{.cpp}
-    namedWindow( remap_window, WINDOW_AUTOSIZE );
-    @endcode
--#  Establish a loop. Each 1000 ms we update our mapping matrices (*mat_x* and *mat_y*) and apply
+-   Load an image:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp Load
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java Load
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py Load
+    @end_toggle
+
+-   Create the destination image and the two mapping matrices (for x and y )
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp Create
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java Create
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py Create
+    @end_toggle
+
+-   Create a window to display results
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp Window
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java Window
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py Window
+    @end_toggle
+
+-   Establish a loop. Each 1000 ms we update our mapping matrices (*mat_x* and *mat_y*) and apply
     them to our source image:
-    @code{.cpp}
-    while( true )
-    {
-      /// Each 1 sec. Press ESC to exit the program
-      char c = (char)waitKey( 1000 );
 
-      if( c == 27 )
-        { break; }
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp Loop
+    @end_toggle
 
-      /// Update map_x & map_y. Then apply remap
-      update_map();
-      remap( src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java Loop
+    @end_toggle
 
-      /// Display results
-      imshow( remap_window, dst );
-    }
-    @endcode
-    The function that applies the remapping is @ref cv::remap . We give the following arguments:
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py Loop
+    @end_toggle
 
+-   The function that applies the remapping is @ref cv::remap . We give the following arguments:
     -   **src**: Source image
     -   **dst**: Destination image of same size as *src*
     -   **map_x**: The mapping function in the x direction. It is equivalent to the first component
@@ -112,9 +145,9 @@ Explanation
 
     How do we update our mapping matrices *mat_x* and *mat_y*? Go on reading:
 
--#  **Updating the mapping matrices:** We are going to perform 4 different mappings:
+-   **Updating the mapping matrices:** We are going to perform 4 different mappings:
     -#  Reduce the picture to half its size and will display it in the middle:
-        \f[h(i,j) = ( 2*i - src.cols/2  + 0.5, 2*j - src.rows/2  + 0.5)\f]
+        \f[h(i,j) = ( 2 \times i - src.cols/2  + 0.5, 2 \times j - src.rows/2  + 0.5)\f]
         for all pairs \f$(i,j)\f$ such that: \f$\dfrac{src.cols}{4}<i<\dfrac{3 \cdot src.cols}{4}\f$ and
         \f$\dfrac{src.rows}{4}<j<\dfrac{3 \cdot src.rows}{4}\f$
     -#  Turn the image upside down: \f$h( i, j ) = (i, src.rows - j)\f$
@@ -123,41 +156,18 @@ Explanation
 
 This is expressed in the following snippet. Here, *map_x* represents the first coordinate of
 *h(i,j)* and *map_y* the second coordinate.
-@code{.cpp}
-for( int j = 0; j < src.rows; j++ )
-{ for( int i = 0; i < src.cols; i++ )
-{
-      switch( ind )
-  {
-    case 0:
-      if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
-            {
-          map_x.at<float>(j,i) = 2*( i - src.cols*0.25 ) + 0.5 ;
-          map_y.at<float>(j,i) = 2*( j - src.rows*0.25 ) + 0.5 ;
-         }
-      else
-    { map_x.at<float>(j,i) = 0 ;
-          map_y.at<float>(j,i) = 0 ;
-            }
-              break;
-    case 1:
-          map_x.at<float>(j,i) = i ;
-          map_y.at<float>(j,i) = src.rows - j ;
-      break;
-        case 2:
-          map_x.at<float>(j,i) = src.cols - i ;
-          map_y.at<float>(j,i) = j ;
-      break;
-        case 3:
-          map_x.at<float>(j,i) = src.cols - i ;
-          map_y.at<float>(j,i) = src.rows - j ;
-      break;
-      } // end of switch
-}
-  }
- ind++;
-}
-@endcode
+
+@add_toggle_cpp
+@snippet samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp Update
+@end_toggle
+
+@add_toggle_java
+@snippet samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java Update
+@end_toggle
+
+@add_toggle_python
+@snippet samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py Update
+@end_toggle
 
 Result
 ------

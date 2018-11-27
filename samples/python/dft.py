@@ -38,8 +38,8 @@ def shift_dft(src, dst=None):
 
     h, w = src.shape[:2]
 
-    cx1 = cx2 = w/2
-    cy1 = cy2 = h/2
+    cx1 = cx2 = w // 2
+    cy1 = cy2 = h // 2
 
     # if the size is odd, then adjust the bottom/right quadrants
     if w % 2 != 0:
@@ -65,10 +65,12 @@ def shift_dft(src, dst=None):
 if __name__ == "__main__":
 
     if len(sys.argv) > 1:
-        im = cv.imread(sys.argv[1])
+        fname = sys.argv[1]
     else:
-        im = cv.imread('../data/baboon.jpg')
+        fname = 'baboon.jpg'
         print("usage : python dft.py <image_file>")
+
+    im = cv.imread(cv.samples.findFile(fname))
 
     # convert to grayscale
     im = cv.cvtColor(im, cv.COLOR_BGR2GRAY)

@@ -109,13 +109,13 @@ public:
         return count;
     }
 
-    bool full() const
+    bool full() const CV_OVERRIDE
     {
         return count == capacity;
     }
 
 
-    void addPoint(DistanceType dist, int index)
+    void addPoint(DistanceType dist, int index) CV_OVERRIDE
     {
         if (dist >= worst_distance_) return;
         int i;
@@ -139,7 +139,7 @@ public:
         worst_distance_ = dists[capacity-1];
     }
 
-    DistanceType worstDist() const
+    DistanceType worstDist() const CV_OVERRIDE
     {
         return worst_distance_;
     }
@@ -176,13 +176,13 @@ public:
         return count;
     }
 
-    bool full() const
+    bool full() const CV_OVERRIDE
     {
         return count == capacity;
     }
 
 
-    void addPoint(DistanceType dist, int index)
+    void addPoint(DistanceType dist, int index) CV_OVERRIDE
     {
         if (dist >= worst_distance_) return;
         int i;
@@ -215,7 +215,7 @@ public:
         worst_distance_ = dists[capacity-1];
     }
 
-    DistanceType worstDist() const
+    DistanceType worstDist() const CV_OVERRIDE
     {
         return worst_distance_;
     }
@@ -310,7 +310,7 @@ public:
     /** Check the status of the set
      * @return true if we have k NN
      */
-    inline bool full() const
+    inline bool full() const CV_OVERRIDE
     {
         return is_full_;
     }
@@ -365,7 +365,7 @@ public:
      * If we don't have enough neighbors, it returns the max possible value
      * @return
      */
-    inline DistanceType worstDist() const
+    inline DistanceType worstDist() const CV_OVERRIDE
     {
         return worst_distance_;
     }
@@ -402,7 +402,7 @@ public:
      * @param dist distance for that neighbor
      * @param index index of that neighbor
      */
-    inline void addPoint(DistanceType dist, int index)
+    inline void addPoint(DistanceType dist, int index) CV_OVERRIDE
     {
         // Don't do anything if we are worse than the worst
         if (dist >= worst_distance_) return;
@@ -422,7 +422,7 @@ public:
 
     /** Remove all elements in the set
      */
-    void clear()
+    void clear() CV_OVERRIDE
     {
         dist_indices_.clear();
         worst_distance_ = std::numeric_limits<DistanceType>::max();
@@ -461,14 +461,14 @@ public:
      * @param dist distance for that neighbor
      * @param index index of that neighbor
      */
-    void addPoint(DistanceType dist, int index)
+    void addPoint(DistanceType dist, int index) CV_OVERRIDE
     {
         if (dist <= radius_) dist_indices_.insert(DistIndex(dist, index));
     }
 
     /** Remove all elements in the set
      */
-    inline void clear()
+    inline void clear() CV_OVERRIDE
     {
         dist_indices_.clear();
     }
@@ -477,7 +477,7 @@ public:
     /** Check the status of the set
      * @return alwys false
      */
-    inline bool full() const
+    inline bool full() const CV_OVERRIDE
     {
         return true;
     }
@@ -486,7 +486,7 @@ public:
      * If we don't have enough neighbors, it returns the max possible value
      * @return
      */
-    inline DistanceType worstDist() const
+    inline DistanceType worstDist() const CV_OVERRIDE
     {
         return radius_;
     }

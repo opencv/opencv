@@ -17,37 +17,35 @@ using namespace std;
  */
 int main( int argc, char** argv )
 {
-  Mat src, dst;
+    //! [Load image]
+    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
+    Mat src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+    if( src.empty() )
+    {
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
+        return -1;
+    }
+    //! [Load image]
 
-  const char* source_window = "Source image";
-  const char* equalized_window = "Equalized Image";
+    //! [Convert to grayscale]
+    cvtColor( src, src, COLOR_BGR2GRAY );
+    //! [Convert to grayscale]
 
-  /// Load image
-  CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
-  if( src.empty() )
-  {
-    cout << "Could not open or find the image!\n" << endl;
-    cout << "Usage: " << argv[0] << " <Input image>" << endl;
-    return -1;
-  }
+    //! [Apply Histogram Equalization]
+    Mat dst;
+    equalizeHist( src, dst );
+    //! [Apply Histogram Equalization]
 
-  /// Convert to grayscale
-  cvtColor( src, src, COLOR_BGR2GRAY );
+    //! [Display results]
+    imshow( "Source image", src );
+    imshow( "Equalized Image", dst );
+    //! [Display results]
 
-  /// Apply Histogram Equalization
-  equalizeHist( src, dst );
+    //! [Wait until user exits the program]
+    waitKey();
+    //! [Wait until user exits the program]
 
-  /// Display results
-  namedWindow( source_window, WINDOW_AUTOSIZE );
-  namedWindow( equalized_window, WINDOW_AUTOSIZE );
-
-  imshow( source_window, src );
-  imshow( equalized_window, dst );
-
-  /// Wait until user exits the program
-  waitKey(0);
-
-  return 0;
+    return 0;
 
 }

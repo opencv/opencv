@@ -189,11 +189,11 @@ static void onMouse( int event, int x, int y, int, void* pData)
 
     switch( event )
     {
-    case CV_EVENT_LBUTTONUP:
+    case EVENT_LBUTTONUP:
         addPointRetrainAndRedraw(data, x, y, 1);
         break;
 
-    case CV_EVENT_RBUTTONDOWN:
+    case EVENT_RBUTTONDOWN:
         addPointRetrainAndRedraw(data, x, y, -1);
         break;
     }

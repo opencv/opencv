@@ -121,10 +121,10 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
-    float* g = kbuf + n;
+    float* g = kbuf.data() + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;
-    float *row = (float*)_row + n*3;
+    float *row = _row.data() + n*3;
     double ig11, ig03, ig33, ig55;
 
     FarnebackPrepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
@@ -322,7 +322,7 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
     double scale = 1./(block_size*block_size);
 
     AutoBuffer<double> _vsum((width+m*2+2)*5);
-    double* vsum = _vsum + (m+1)*5;
+    double* vsum = _vsum.data() + (m+1)*5;
 
     // init vsum
     const float* srow0 = matM.ptr<float>();
@@ -416,10 +416,10 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
     AutoBuffer<float> _kernel((m+1)*5 + 16);
-    AutoBuffer<float*> _srow(m*2+1);
-    float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
-    float* kernel = (float*)_kernel;
-    const float** srow = (const float**)&_srow[0];
+    AutoBuffer<const float*> _srow(m*2+1);
+    float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
+    float* kernel = _kernel.data();
+    const float** srow = _srow.data();
     kernel[0] = (float)s;
 
     for( i = 1; i <= m; i++ )
@@ -597,31 +597,31 @@ public:
     {
     }
 
-    virtual int getNumLevels() const { return numLevels_; }
-    virtual void setNumLevels(int numLevels) { numLevels_ = numLevels; }
+    virtual int getNumLevels() const CV_OVERRIDE { return numLevels_; }
+    virtual void setNumLevels(int numLevels) CV_OVERRIDE { numLevels_ = numLevels; }
 
-    virtual double getPyrScale() const { return pyrScale_; }
-    virtual void setPyrScale(double pyrScale) { pyrScale_ = pyrScale; }
+    virtual double getPyrScale() const CV_OVERRIDE { return pyrScale_; }
+    virtual void setPyrScale(double pyrScale) CV_OVERRIDE { pyrScale_ = pyrScale; }
 
-    virtual bool getFastPyramids() const { return fastPyramids_; }
-    virtual void setFastPyramids(bool fastPyramids) { fastPyramids_ = fastPyramids; }
+    virtual bool getFastPyramids() const CV_OVERRIDE { return fastPyramids_; }
+    virtual void setFastPyramids(bool fastPyramids) CV_OVERRIDE { fastPyramids_ = fastPyramids; }
 
-    virtual int getWinSize() const { return winSize_; }
-    virtual void setWinSize(int winSize) { winSize_ = winSize; }
+    virtual int getWinSize() const CV_OVERRIDE { return winSize_; }
+    virtual void setWinSize(int winSize) CV_OVERRIDE { winSize_ = winSize; }
 
-    virtual int getNumIters() const { return numIters_; }
-    virtual void setNumIters(int numIters) { numIters_ = numIters; }
+    virtual int getNumIters() const CV_OVERRIDE { return numIters_; }
+    virtual void setNumIters(int numIters) CV_OVERRIDE { numIters_ = numIters; }
 
-    virtual int getPolyN() const { return polyN_; }
-    virtual void setPolyN(int polyN) { polyN_ = polyN; }
+    virtual int getPolyN() const CV_OVERRIDE { return polyN_; }
+    virtual void setPolyN(int polyN) CV_OVERRIDE { polyN_ = polyN; }
 
-    virtual double getPolySigma() const { return polySigma_; }
-    virtual void setPolySigma(double polySigma) { polySigma_ = polySigma; }
+    virtual double getPolySigma() const CV_OVERRIDE { return polySigma_; }
+    virtual void setPolySigma(double polySigma) CV_OVERRIDE { polySigma_ = polySigma; }
 
-    virtual int getFlags() const { return flags_; }
-    virtual void setFlags(int flags) { flags_ = flags; }
+    virtual int getFlags() const CV_OVERRIDE { return flags_; }
+    virtual void setFlags(int flags) CV_OVERRIDE { flags_ = flags; }
 
-    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow);
+    virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
 
 private:
     int numLevels_;
@@ -800,7 +800,7 @@ private:
         flowy = curFlowY;
         return true;
     }
-    virtual void collectGarbage(){
+    virtual void collectGarbage() CV_OVERRIDE {
         releaseMemory();
     }
     void releaseMemory()
@@ -1089,14 +1089,14 @@ private:
         return true;
     }
 #else // HAVE_OPENCL
-    virtual void collectGarbage(){}
+    virtual void collectGarbage() CV_OVERRIDE {}
 #endif
 };
 
 void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
                                     InputOutputArray _flow0)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_flow0.isUMat() &&
                ocl::Image2D::isFormatSupported(CV_32F, 1, false),
@@ -1186,7 +1186,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
                                InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Ptr<cv::FarnebackOpticalFlow> optflow;
     optflow = makePtr<FarnebackOpticalFlowImpl>(levels,pyr_scale,false,winsize,iterations,poly_n,poly_sigma,flags);

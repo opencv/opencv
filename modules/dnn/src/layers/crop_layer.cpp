@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 
 namespace cv
@@ -48,7 +49,7 @@ namespace cv
 namespace dnn
 {
 
-class CropLayerImpl : public CropLayer
+class CropLayerImpl CV_FINAL : public CropLayer
 {
 public:
     CropLayerImpl(const LayerParams& params)
@@ -64,10 +65,16 @@ public:
         }
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && crop_ranges.size() == 4);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
 
@@ -83,12 +90,14 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat *> &inputs, std::vector<Mat> &outputs)
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
         CV_Assert(2 == inputs.size());
 
-        const Mat &inpBlob = *inputs[0];
-        const Mat &inpSzBlob = *inputs[1];
+        const Mat &inpBlob = inputs[0];
+        const Mat &inpSzBlob = inputs[1];
 
         int dims = inpBlob.dims;
         int start_axis = clamp(startAxis, dims);
@@ -109,7 +118,11 @@ public:
                 offset_final[i] = offset[i - start_axis];
         }
 
-        crop_ranges.resize(dims, Range::all());
+        crop_ranges.resize(dims);
+        for (int i = 0; i < start_axis; i++)
+        {
+            crop_ranges[i] = Range(0, inpBlob.size[i]);
+        }
         for (int i = start_axis; i < dims; i++)
         {
             if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
@@ -119,23 +132,57 @@ public:
         }
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        Mat &input = inputs[0];
+        input(&crop_ranges[0]).copyTo(outputs[0]);
     }
 
-    void forward(std::vector<Mat *> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals)
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Crop";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
 
-        Mat &input = *inputs[0];
-        Mat &output = outputs[0];
+        CV_Assert(crop_ranges.size() == 4);
 
-        input(&crop_ranges[0]).copyTo(output);
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+        for (int i = 0; i < 4; ++i)
+        {
+            ieLayer->axis.push_back(i);
+            ieLayer->offset.push_back(crop_ranges[i].start);
+            ieLayer->dim.push_back(crop_ranges[i].end - crop_ranges[i].start);
+        }
+#else
+        ieLayer->axis.push_back(0);  // batch
+        ieLayer->offset.push_back(crop_ranges[0].start);
+        ieLayer->dim.push_back(crop_ranges[0].end - crop_ranges[0].start);
+
+        ieLayer->axis.push_back(1);  // channels
+        ieLayer->offset.push_back(crop_ranges[1].start);
+        ieLayer->dim.push_back(crop_ranges[1].end - crop_ranges[1].start);
+
+        ieLayer->axis.push_back(3);  // height
+        ieLayer->offset.push_back(crop_ranges[2].start);
+        ieLayer->dim.push_back(crop_ranges[2].end - crop_ranges[2].start);
+
+        ieLayer->axis.push_back(2);  // width
+        ieLayer->offset.push_back(crop_ranges[3].start);
+        ieLayer->dim.push_back(crop_ranges[3].end - crop_ranges[3].start);
+#endif
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
     }
 
     std::vector<Range> crop_ranges;

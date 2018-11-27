@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -259,6 +260,45 @@ TEST(AutoBuffer, allocate_test)
 
     abuf.allocate(6);
     EXPECT_EQ(6u, abuf.size());
+}
+
+TEST(CommandLineParser, testScalar)
+{
+    static const char * const keys3 =
+            "{ s0 | 3 4 5 | default scalar }"
+            "{ s1 |       | single value scalar }"
+            "{ s2 |       | two values scalar (default with zeros) }"
+            "{ s3 |       | three values scalar }"
+            "{ s4 |       | four values scalar }"
+            "{ s5 |       | five values scalar }";
+
+    const char* argv[] = {"<bin>", "--s1=1.1", "--s3=1.1 2.2 3",
+                          "--s4=-4.2 1 0 3", "--s5=5 -4 3 2 1"};
+    const int argc = 5;
+    CommandLineParser parser(argc, argv, keys3);
+    EXPECT_EQ(parser.get<Scalar>("s0"), Scalar(3, 4, 5));
+    EXPECT_EQ(parser.get<Scalar>("s1"), Scalar(1.1));
+    EXPECT_EQ(parser.get<Scalar>("s2"), Scalar(0));
+    EXPECT_EQ(parser.get<Scalar>("s3"), Scalar(1.1, 2.2, 3));
+    EXPECT_EQ(parser.get<Scalar>("s4"), Scalar(-4.2, 1, 0, 3));
+    EXPECT_EQ(parser.get<Scalar>("s5"), Scalar(5, -4, 3, 2));
+}
+
+TEST(Samples, findFile)
+{
+    cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
+    cv::String path;
+    ASSERT_NO_THROW(path = samples::findFile("lena.jpg", false));
+    EXPECT_NE(std::string(), path.c_str());
+    cv::utils::logging::setLogLevel(prev);
+}
+
+TEST(Samples, findFile_missing)
+{
+    cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
+    cv::String path;
+    ASSERT_ANY_THROW(path = samples::findFile("non-existed.file", true));
+    cv::utils::logging::setLogLevel(prev);
 }
 
 }} // namespace

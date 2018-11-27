@@ -157,7 +157,7 @@
 #                          Silently degrades to gnustl_static if not available.
 #        c++_static     -> Use the LLVM libc++ runtime as a static library.
 #                          Implies -frtti -fexceptions.
-#        c++_shared     -> Use the LLVM libc++ runtime as a static library.
+#        c++_shared     -> Use the LLVM libc++ runtime as a shared library.
 #                          Implies -frtti -fno-exceptions.
 #
 #    ANDROID_STL_FORCE_FEATURES=ON - turn rtti and exceptions support based on

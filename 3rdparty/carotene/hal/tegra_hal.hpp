@@ -1531,7 +1531,7 @@ class TegraCvtColor_##name##_Invoker : public cv::ParallelLoopBody \
 public: \
     TegraCvtColor_##name##_Invoker(const uchar * src_data_, size_t src_step_, uchar * dst_data_, size_t dst_step_, int width_, int height_) : \
         cv::ParallelLoopBody(), src_data(src_data_), src_step(src_step_), dst_data(dst_data_), dst_step(dst_step_), width(width_), height(height_) {} \
-    virtual void operator()(const cv::Range& range) const \
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE \
     { \
         CAROTENE_NS::func(CAROTENE_NS::Size2D(width, range.end-range.start), __VA_ARGS__); \
     } \

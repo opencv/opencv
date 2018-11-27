@@ -28,7 +28,7 @@ Install dc1394 raw1394 - coriander should work with your camera
 The build is controlled by the following entries in the videoio Makefile:
 
 libvideoio_la_LIBADD = -L/usr/X11R6/lib -lXm -lMrm -lUil -lpng  -ljpeg -lz -ltiff -lavcodec -lraw1394 -ldc1394_control
-DEFS = -DHAVE_CONFIG_H -DHAVE_DC1394 HAVE_CAMV4L
+DEFS = -DHAVE_CONFIG_H -DHAVE_DC1394
 
 
 Now it should be possible to use videoio camera functions, works for me.
@@ -1049,11 +1049,11 @@ public:
     virtual bool open( int index );
     virtual void close();
 
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual int getCaptureDomain() { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual double getProperty(int) const CV_OVERRIDE;
+    virtual bool setProperty(int, double) CV_OVERRIDE;
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_DC1394; }
 protected:
 
     CvCaptureCAM_DC1394* captureDC1394;
