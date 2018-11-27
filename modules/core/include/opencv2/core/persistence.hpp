@@ -565,7 +565,7 @@ public:
     //! returns the node content as double
     operator double() const;
     //! returns the node content as text string
-    operator std::string() const;
+    inline operator std::string() const { return this->string(); }
 
     static bool isMap(int flags);
     static bool isSeq(int flags);
@@ -599,7 +599,7 @@ public:
     //! Simplified reading API to use with bindings.
     CV_WRAP double real() const;
     //! Simplified reading API to use with bindings.
-    CV_WRAP String string() const;
+    CV_WRAP std::string string() const;
     //! Simplified reading API to use with bindings.
     CV_WRAP Mat mat() const;
 
