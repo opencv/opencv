@@ -17,6 +17,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 
 #include <cstdint>
+#include <cstring>
 
 #include <vector>
 
@@ -910,9 +911,8 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
     const int length = width * chan;
     const int shift = border * chan;
 
-    const float k[3][3] = {{ kernel[0], kernel[1], kernel[2] },
-                           { kernel[3], kernel[4], kernel[5] },
-                           { kernel[6], kernel[7], kernel[8] }};
+    float k[3][3];
+    memcpy(k, kernel, 9*sizeof(float));
 
     for (int l=0; l < length;)
     {
@@ -974,9 +974,8 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
     const int length = width * chan;
     const int shift = border * chan;
 
-    const float k[3][3] = {{ kernel[0], kernel[1], kernel[2] },
-                           { kernel[3], kernel[4], kernel[5] },
-                           { kernel[6], kernel[7], kernel[8] }};
+    float k[3][3];
+    memcpy(k, kernel, 9*sizeof(float));
 
     for (int l=0; l < length;)
     {
