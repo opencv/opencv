@@ -1052,24 +1052,30 @@ static void run_filter2d(Buffer& dst, const View& src,
 
     int width = dst.length();
     int chan  = dst.meta().chan;
+    int length = width * chan;
 
-    for (int w=0; w < width; w++)
+    // manually optimized for 3x3
+    if (k_rows == 3 && k_cols == 3)
     {
-        // TODO: make this cycle innermost
-        for (int c=0; c < chan; c++)
+        float scale = 1;
+        run_filter2d_3x3_impl(out, in, width, chan, k, scale, delta);
+        return;
+    }
+
+    // reference: any kernel size
+    for (int l=0; l < length; l++)
+    {
+        float sum = 0;
+
+        for (int i=0; i < k_rows; i++)
+        for (int j=0; j < k_cols; j++)
         {
-            float sum = 0;
-
-            for (int i=0; i < k_rows; i++)
-            for (int j=0; j < k_cols; j++)
-            {
-                sum += in[i][(w + j - border_x)*chan + c] * k[k_cols*i + j];
-            }
-
-            float result = sum + delta;
-
-            out[w*chan + c] = saturate<DST>(result, rintf);
+            sum += in[i][l + (j - border_x)*chan] * k[k_cols*i + j];
         }
+
+        float result = sum + delta;
+
+        out[l] = saturate<DST>(result, rintf);
     }
 }
 
@@ -1097,6 +1103,7 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
 
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
+
         const float *k = scratch.OutLine<float>(); // copy of kernel.data
 
         //     DST     SRC     OP            __VA_ARGS__
@@ -1120,7 +1127,12 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
                             const cv::Scalar  & /* borderValue */,
                                       Buffer  &    scratch)
     {
-        cv::gapi::own::Size bufsize(kernel.rows * kernel.cols, 1);
+        int krows = kernel.rows;
+        int kcols = kernel.cols;
+
+        int buflen = krows * kcols;  // kernel size
+
+        cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);

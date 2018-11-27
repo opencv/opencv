@@ -57,6 +57,26 @@ RUN_SEPFILTER3X3_IMPL( float,  float)
 
 #undef RUN_SEPFILTER3X3_IMPL
 
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                     \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kernel[], float scale, float delta);
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
