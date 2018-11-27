@@ -68,6 +68,8 @@ public:
 
     virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) const CV_NOEXCEPT;
 
+    virtual InferenceEngine::StatusCode serialize(const std::string &xmlPath, const std::string &binPath, InferenceEngine::ResponseDesc* resp) const CV_NOEXCEPT;
+
     virtual void getName(char *pName, size_t len) CV_NOEXCEPT;
 
     virtual void getName(char *pName, size_t len) const CV_NOEXCEPT;
