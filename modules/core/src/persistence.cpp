@@ -2197,7 +2197,8 @@ FileNode::operator double() const
         return DBL_MAX;
 }
 
-FileNode::operator std::string() const
+double FileNode::real() const  { return double(*this); }
+std::string FileNode::string() const
 {
     const uchar* p = ptr();
     if( !p || (*p & TYPE_MASK) != STRING )
@@ -2206,9 +2207,6 @@ FileNode::operator std::string() const
     size_t sz = (size_t)(unsigned)readInt(p);
     return std::string((const char*)(p + 4), sz - 1);
 }
-
-double FileNode::real() const  { return double(*this); }
-std::string FileNode::string() const { return std::string(*this); }
 Mat FileNode::mat() const { Mat value; read(*this, value, Mat()); return value; }
 
 FileNodeIterator FileNode::begin() const { return FileNodeIterator(*this, false); }
