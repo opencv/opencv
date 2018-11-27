@@ -911,8 +911,11 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
     const int length = width * chan;
     const int shift = border * chan;
 
-    float k[3 * 3];
-    memcpy(k, kernel, 9*sizeof(float));
+    const float k[3][3] = {
+        { kernel[0], kernel[1], kernel[2] },
+        { kernel[3], kernel[4], kernel[5] },
+        { kernel[6], kernel[7], kernel[8] }
+    };
 
     for (int l=0; l < length;)
     {
@@ -921,11 +924,11 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
         {
-            auto sumx = [in, shift, k](int i, int j)
+            auto sumx = [in, shift, &k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[3*i + 0]);
-                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[3*i + 1]), s);
-                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[3*i + 2]), s);
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
                 return s;
             };
 
@@ -974,8 +977,11 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
     const int length = width * chan;
     const int shift = border * chan;
 
-    float k[3 * 3];
-    memcpy(k, kernel, 9*sizeof(float));
+    const float k[3][3] = {
+        { kernel[0], kernel[1], kernel[2] },
+        { kernel[3], kernel[4], kernel[5] },
+        { kernel[6], kernel[7], kernel[8] }
+    };
 
     for (int l=0; l < length;)
     {
@@ -984,11 +990,11 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
         {
-            auto sumx = [in, shift, k](int i, int j)
+            auto sumx = [in, shift, &k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[3*i + 0]);
-                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[3*i + 1]), s);
-                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[3*i + 2]), s);
+                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                    s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
+                    s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
                 return s;
             };
 

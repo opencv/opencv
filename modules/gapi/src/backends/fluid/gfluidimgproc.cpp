@@ -1104,7 +1104,7 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
 
-        float *k = scratch.OutLine<float>(); // copy of kernel.data
+        const float *k = scratch.OutLine<float>(); // copy of kernel.data
 
         //     DST     SRC     OP            __VA_ARGS__
         UNARY_(uchar , uchar , run_filter2d, dst, src, k, k_rows, k_cols, anchor, delta);
