@@ -1164,12 +1164,34 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
 //
 //-----------------------------
 
+static MorphShape detect_morph3x3_shape(const uchar kernel[])
+{
+    const uchar k[3][3] = {
+        { kernel[0], kernel[1], kernel[2]},
+        { kernel[3], kernel[4], kernel[5]},
+        { kernel[6], kernel[7], kernel[8]}
+    };
+
+    if (k[0][0] && k[0][1] && k[0][2] &&
+        k[1][0] && k[1][1] && k[1][2] &&
+        k[2][0] && k[2][1] && k[2][2])
+        return M_FULL;
+
+    if (!k[0][0] && k[0][1] && !k[0][2] &&
+         k[1][0] && k[1][1] &&  k[1][2] &&
+        !k[2][0] && k[2][1] && !k[2][2])
+        return M_CROSS;
+
+    return M_UNDEF;
+}
+
 template<typename DST, typename SRC>
 static void run_morphology(          Buffer&    dst,
                            const     View  &    src,
                            const     uchar      k[],
                                      int        k_rows,
                                      int        k_cols,
+                                     MorphShape k_type,
                            const cv::Point & /* anchor */,
                                      Morphology morphology)
 {
@@ -1199,7 +1221,7 @@ static void run_morphology(          Buffer&    dst,
     // call optimized code, if 3x3
     if (3 == k_rows && 3 == k_cols)
     {
-        run_morphology3x3_impl(out, in, width, chan, k, morphology);
+        run_morphology3x3_impl(out, in, width, chan, k, k_type, morphology);
         return;
     }
 
@@ -1261,14 +1283,16 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
 
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
+        int k_size = k_rows * k_cols;
 
         auto *k = scratch.OutLine<uchar>(); // copy of kernel.data
+        auto k_type = static_cast<MorphShape>(k[k_size]);
 
         //     DST     SRC     OP              __VA_ARGS__
-        UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
-        UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
-        UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
-        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_ERODE);
+        UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_ERODE);
+        UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_ERODE);
+        UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_ERODE);
+        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_ERODE);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1283,8 +1307,9 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
     {
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
+        int k_size = k_rows * k_cols;
 
-        cv::gapi::own::Size bufsize(k_rows * k_cols, 1);
+        cv::gapi::own::Size bufsize(k_size + 1, 1);
         GMatDesc bufdesc = {CV_8U, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
@@ -1292,6 +1317,11 @@ GAPI_FLUID_KERNEL(GFluidErode, cv::gapi::imgproc::GErode, true)
         // FIXME: move to resetScratch stage ?
         auto *k = scratch.OutLine<uchar>();
         getKernel(k, kernel);
+
+        if (3 == k_rows && 3 == k_cols)
+            k[k_size] = static_cast<uchar>(detect_morph3x3_shape(k));
+        else
+            k[k_size] = static_cast<uchar>(M_UNDEF);
     }
 
     static void resetScratch(Buffer& /* scratch */)
@@ -1339,14 +1369,16 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
 
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
+        int k_size = k_rows * k_cols;
 
         auto *k = scratch.OutLine<uchar>(); // copy of kernel.data
+        auto k_type = static_cast<MorphShape>(k[k_size]);
 
         //     DST     SRC     OP              __VA_ARGS__
-        UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
-        UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
-        UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
-        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, anchor, M_DILATE);
+        UNARY_(uchar , uchar , run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_DILATE);
+        UNARY_(ushort, ushort, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_DILATE);
+        UNARY_( short,  short, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_DILATE);
+        UNARY_( float,  float, run_morphology, dst, src, k, k_rows, k_cols, k_type, anchor, M_DILATE);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -1361,8 +1393,9 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
     {
         int k_rows = kernel.rows;
         int k_cols = kernel.cols;
+        int k_size = k_rows * k_cols;
 
-        cv::gapi::own::Size bufsize(k_rows * k_cols, 1);
+        cv::gapi::own::Size bufsize(k_size + 1, 1);
         GMatDesc bufdesc = {CV_8U, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
@@ -1370,6 +1403,11 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
         // FIXME: move to resetScratch stage ?
         auto *k = scratch.OutLine<uchar>();
         getKernel(k, kernel);
+
+        if (3 == k_rows && 3 == k_cols)
+            k[k_size] = static_cast<uchar>(detect_morph3x3_shape(k));
+        else
+            k[k_size] = static_cast<uchar>(M_UNDEF);
     }
 
     static void resetScratch(Buffer& /* scratch */)

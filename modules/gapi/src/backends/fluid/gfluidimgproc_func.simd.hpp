@@ -107,7 +107,8 @@ RUN_FILTER2D_3X3_IMPL( float,  float)
 
 #define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
 void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
-                            const uchar k[], Morphology morphology);
+                            const uchar k[], MorphShape k_type,          \
+                            Morphology morphology);
 
 RUN_MORPHOLOGY3X3_IMPL(uchar )
 RUN_MORPHOLOGY3X3_IMPL(ushort)
@@ -1124,9 +1125,10 @@ RUN_FILTER2D_3X3_IMPL( float,  float)
 //
 //-----------------------------
 
-template<Morphology morphology, typename T>
+template<typename T>
 static void run_morphology3x3_reference(T out[], const T *in[], int width, int chan,
-                                        const uchar k[])
+                                        const uchar k[], MorphShape k_type,
+                                        Morphology morphology)
 {
     constexpr int k_size = 3;
     constexpr int border = (k_size - 1) / 2;
@@ -1136,13 +1138,58 @@ static void run_morphology3x3_reference(T out[], const T *in[], int width, int c
     const int length = width * chan;
     const int shift = border * chan;
 
-    for (int l=0; l < length; l++)
+    if (M_ERODE == morphology)
     {
-        T result = M_ERODE == morphology? std::numeric_limits<T>::max():
-                                          std::numeric_limits<T>::min();
-
-        if (M_ERODE == morphology)
+        if (M_FULL == k_type)
         {
+            for (int l=0; l < length; l++)
+            {
+                T result = std::numeric_limits<T>::max();
+
+                result = (std::min)(result, in[0][l - shift]);
+                result = (std::min)(result, in[0][l        ]);
+                result = (std::min)(result, in[0][l + shift]);
+
+                result = (std::min)(result, in[1][l - shift]);
+                result = (std::min)(result, in[1][l        ]);
+                result = (std::min)(result, in[1][l + shift]);
+
+                result = (std::min)(result, in[2][l - shift]);
+                result = (std::min)(result, in[2][l        ]);
+                result = (std::min)(result, in[2][l + shift]);
+
+                out[l] = result;
+            }
+            return;
+        }
+
+        if (M_CROSS == k_type)
+        {
+            for (int l=0; l < length; l++)
+            {
+                T result = std::numeric_limits<T>::max();
+
+            //  result = (std::min)(result, in[0][l - shift]);
+                result = (std::min)(result, in[0][l        ]);
+            //  result = (std::min)(result, in[0][l + shift]);
+
+                result = (std::min)(result, in[1][l - shift]);
+                result = (std::min)(result, in[1][l        ]);
+                result = (std::min)(result, in[1][l + shift]);
+
+            //  result = (std::min)(result, in[2][l - shift]);
+                result = (std::min)(result, in[2][l        ]);
+            //  result = (std::min)(result, in[2][l + shift]);
+
+                out[l] = result;
+            }
+            return;
+        }
+
+        for (int l=0; l < length; l++)
+        {
+            T result = std::numeric_limits<T>::max();
+
             result = kernel[0][0]? (std::min)(result, in[0][l - shift]): result;
             result = kernel[0][1]? (std::min)(result, in[0][l        ]): result;
             result = kernel[0][2]? (std::min)(result, in[0][l + shift]): result;
@@ -1154,9 +1201,64 @@ static void run_morphology3x3_reference(T out[], const T *in[], int width, int c
             result = kernel[2][0]? (std::min)(result, in[2][l - shift]): result;
             result = kernel[2][1]? (std::min)(result, in[2][l        ]): result;
             result = kernel[2][2]? (std::min)(result, in[2][l + shift]): result;
+
+            out[l] = result;
         }
-        else // if (M_DILATE == morphology)
+        return;
+    }
+
+    if (M_DILATE == morphology)
+    {
+        if (M_FULL == k_type)
         {
+            for (int l=0; l < length; l++)
+            {
+                T result = std::numeric_limits<T>::min();
+
+                result = (std::max)(result, in[0][l - shift]);
+                result = (std::max)(result, in[0][l        ]);
+                result = (std::max)(result, in[0][l + shift]);
+
+                result = (std::max)(result, in[1][l - shift]);
+                result = (std::max)(result, in[1][l        ]);
+                result = (std::max)(result, in[1][l + shift]);
+
+                result = (std::max)(result, in[2][l - shift]);
+                result = (std::max)(result, in[2][l        ]);
+                result = (std::max)(result, in[2][l + shift]);
+
+                out[l] = result;
+            }
+            return;
+        }
+
+        if (M_CROSS == k_type)
+        {
+            for (int l=0; l < length; l++)
+            {
+                T result = std::numeric_limits<T>::min();
+
+            //  result = (std::max)(result, in[0][l - shift]);
+                result = (std::max)(result, in[0][l        ]);
+            //  result = (std::max)(result, in[0][l + shift]);
+
+                result = (std::max)(result, in[1][l - shift]);
+                result = (std::max)(result, in[1][l        ]);
+                result = (std::max)(result, in[1][l + shift]);
+
+            //  result = (std::max)(result, in[2][l - shift]);
+                result = (std::max)(result, in[2][l        ]);
+            //  result = (std::max)(result, in[2][l + shift]);
+
+                out[l] = result;
+            }
+            return;
+        }
+
+        for (int l=0; l < length; l++)
+        {
+            T result = std::numeric_limits<T>::min();
+
             result = kernel[0][0]? (std::max)(result, in[0][l - shift]): result;
             result = kernel[0][1]? (std::max)(result, in[0][l        ]): result;
             result = kernel[0][2]? (std::max)(result, in[0][l + shift]): result;
@@ -1168,16 +1270,21 @@ static void run_morphology3x3_reference(T out[], const T *in[], int width, int c
             result = kernel[2][0]? (std::max)(result, in[2][l - shift]): result;
             result = kernel[2][1]? (std::max)(result, in[2][l        ]): result;
             result = kernel[2][2]? (std::max)(result, in[2][l + shift]): result;
-        }
 
-        out[l] = result;
+            out[l] = result;
+        }
+        return;
     }
+
+    CV_Error(cv::Error::StsBadArg, "unsupported morphology");
 }
 
 #if CV_SIMD
-template<Morphology morphology, typename T, typename VT, typename S>
+template<typename T, typename VT, typename S>
 static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
-                                   const uchar k[], S setall)
+                                   const uchar k[], MorphShape k_type,
+                                   Morphology morphology,
+                                   S setall)
 {
     constexpr int k_size = 3;
     constexpr int border = (k_size - 1) / 2;
@@ -1187,18 +1294,89 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
     const int length = width * chan;
     const int shift = border * chan;
 
-    for (int l=0; l < length;)
+    if (M_ERODE == morphology)
     {
-        constexpr int nlanes = VT::nlanes;
-
-        // main part of output row
-        for (; l <= length - nlanes; l += nlanes)
+        if (M_FULL == k_type)
         {
-            VT r = M_ERODE == morphology? setall(std::numeric_limits<T>::max()):
-                                          setall(std::numeric_limits<T>::min());
-
-            if (M_ERODE == morphology)
+            for (int l=0; l < length;)
             {
+                constexpr int nlanes = VT::nlanes;
+
+                // main part of output row
+                for (; l <= length - nlanes; l += nlanes)
+                {
+                    VT r = setall(std::numeric_limits<T>::max());
+
+                    r = v_min(r, vx_load(&in[0][l - shift]));
+                    r = v_min(r, vx_load(&in[0][l        ]));
+                    r = v_min(r, vx_load(&in[0][l + shift]));
+
+                    r = v_min(r, vx_load(&in[1][l - shift]));
+                    r = v_min(r, vx_load(&in[1][l        ]));
+                    r = v_min(r, vx_load(&in[1][l + shift]));
+
+                    r = v_min(r, vx_load(&in[2][l - shift]));
+                    r = v_min(r, vx_load(&in[2][l        ]));
+                    r = v_min(r, vx_load(&in[2][l + shift]));
+
+                    v_store(&out[l], r);
+                }
+
+                // tail (if any)
+                if (l < length)
+                {
+                    GAPI_DbgAssert(length >= nlanes);
+                    l = length - nlanes;
+                }
+            }
+            return;
+        }
+
+        if (M_CROSS == k_type)
+        {
+            for (int l=0; l < length;)
+            {
+                constexpr int nlanes = VT::nlanes;
+
+                // main part of output row
+                for (; l <= length - nlanes; l += nlanes)
+                {
+                    VT r = setall(std::numeric_limits<T>::max());
+
+                //  r = v_min(r, vx_load(&in[0][l - shift]));
+                    r = v_min(r, vx_load(&in[0][l        ]));
+                //  r = v_min(r, vx_load(&in[0][l + shift]));
+
+                    r = v_min(r, vx_load(&in[1][l - shift]));
+                    r = v_min(r, vx_load(&in[1][l        ]));
+                    r = v_min(r, vx_load(&in[1][l + shift]));
+
+                //  r = v_min(r, vx_load(&in[2][l - shift]));
+                    r = v_min(r, vx_load(&in[2][l        ]));
+                //  r = v_min(r, vx_load(&in[2][l + shift]));
+
+                    v_store(&out[l], r);
+                }
+
+                // tail (if any)
+                if (l < length)
+                {
+                    GAPI_DbgAssert(length >= nlanes);
+                    l = length - nlanes;
+                }
+            }
+            return;
+        }
+
+        for (int l=0; l < length;)
+        {
+            constexpr int nlanes = VT::nlanes;
+
+            // main part of output row
+            for (; l <= length - nlanes; l += nlanes)
+            {
+                VT r = setall(std::numeric_limits<T>::max());
+
                 if (kernel[0][0]) r = v_min(r, vx_load(&in[0][l - shift]));
                 if (kernel[0][1]) r = v_min(r, vx_load(&in[0][l        ]));
                 if (kernel[0][2]) r = v_min(r, vx_load(&in[0][l + shift]));
@@ -1210,9 +1388,103 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
                 if (kernel[2][0]) r = v_min(r, vx_load(&in[2][l - shift]));
                 if (kernel[2][1]) r = v_min(r, vx_load(&in[2][l        ]));
                 if (kernel[2][2]) r = v_min(r, vx_load(&in[2][l + shift]));
+
+                v_store(&out[l], r);
             }
-            else // if (M_DILATE == morphology)
+
+            // tail (if any)
+            if (l < length)
             {
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
+            }
+        }
+        return;
+    }
+
+    if (M_DILATE == morphology)
+    {
+        if (M_FULL == k_type)
+        {
+            for (int l=0; l < length;)
+            {
+                constexpr int nlanes = VT::nlanes;
+
+                // main part of output row
+                for (; l <= length - nlanes; l += nlanes)
+                {
+                    VT r = setall(std::numeric_limits<T>::min());
+
+                    r = v_max(r, vx_load(&in[0][l - shift]));
+                    r = v_max(r, vx_load(&in[0][l        ]));
+                    r = v_max(r, vx_load(&in[0][l + shift]));
+
+                    r = v_max(r, vx_load(&in[1][l - shift]));
+                    r = v_max(r, vx_load(&in[1][l        ]));
+                    r = v_max(r, vx_load(&in[1][l + shift]));
+
+                    r = v_max(r, vx_load(&in[2][l - shift]));
+                    r = v_max(r, vx_load(&in[2][l        ]));
+                    r = v_max(r, vx_load(&in[2][l + shift]));
+
+                    v_store(&out[l], r);
+                }
+
+                // tail (if any)
+                if (l < length)
+                {
+                    GAPI_DbgAssert(length >= nlanes);
+                    l = length - nlanes;
+                }
+            }
+            return;
+        }
+
+        if (M_CROSS == k_type)
+        {
+            for (int l=0; l < length;)
+            {
+                constexpr int nlanes = VT::nlanes;
+
+                // main part of output row
+                for (; l <= length - nlanes; l += nlanes)
+                {
+                    VT r = setall(std::numeric_limits<T>::min());
+
+                //  r = v_max(r, vx_load(&in[0][l - shift]));
+                    r = v_max(r, vx_load(&in[0][l        ]));
+                //  r = v_max(r, vx_load(&in[0][l + shift]));
+
+                    r = v_max(r, vx_load(&in[1][l - shift]));
+                    r = v_max(r, vx_load(&in[1][l        ]));
+                    r = v_max(r, vx_load(&in[1][l + shift]));
+
+                //  r = v_max(r, vx_load(&in[2][l - shift]));
+                    r = v_max(r, vx_load(&in[2][l        ]));
+                //  r = v_max(r, vx_load(&in[2][l + shift]));
+
+                    v_store(&out[l], r);
+                }
+
+                // tail (if any)
+                if (l < length)
+                {
+                    GAPI_DbgAssert(length >= nlanes);
+                    l = length - nlanes;
+                }
+            }
+            return;
+        }
+
+        for (int l=0; l < length;)
+        {
+            constexpr int nlanes = VT::nlanes;
+
+            // main part of output row
+            for (; l <= length - nlanes; l += nlanes)
+            {
+                VT r = setall(std::numeric_limits<T>::min());
+
                 if (kernel[0][0]) r = v_max(r, vx_load(&in[0][l - shift]));
                 if (kernel[0][1]) r = v_max(r, vx_load(&in[0][l        ]));
                 if (kernel[0][2]) r = v_max(r, vx_load(&in[0][l + shift]));
@@ -1224,24 +1496,28 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
                 if (kernel[2][0]) r = v_max(r, vx_load(&in[2][l - shift]));
                 if (kernel[2][1]) r = v_max(r, vx_load(&in[2][l        ]));
                 if (kernel[2][2]) r = v_max(r, vx_load(&in[2][l + shift]));
+
+                v_store(&out[l], r);
             }
 
-            v_store(&out[l], r);
+            // tail (if any)
+            if (l < length)
+            {
+                GAPI_DbgAssert(length >= nlanes);
+                l = length - nlanes;
+            }
         }
-
-        // tail (if any)
-        if (l < length)
-        {
-            GAPI_DbgAssert(length >= nlanes);
-            l = length - nlanes;
-        }
+        return;
     }
+
+    CV_Error(cv::Error::StsBadArg, "unsupported morphology");
 }
 #endif
 
-template<Morphology morphology, typename T>
+template<typename T>
 static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
-                                   const uchar k[])
+                                   const uchar k[], MorphShape k_type,
+                                   Morphology morphology)
 {
 #if CV_SIMD
     int length = width * chan;
@@ -1251,54 +1527,50 @@ static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
 
     if (std::is_same<T, float>::value && length >= v_float32::nlanes)
     {
-        run_morphology3x3_simd<morphology, float, v_float32>(reinterpret_cast<float*>(out),
-                                                             reinterpret_cast<const float**>(in),
-                                                             width, chan, k, vx_setall_f32);
+        run_morphology3x3_simd<float, v_float32>(reinterpret_cast<float*>(out),
+                                                 reinterpret_cast<const float**>(in),
+                                                 width, chan, k, k_type, morphology,
+                                                 vx_setall_f32);
         return;
     }
 
     if (std::is_same<T, short>::value && length >= v_int16::nlanes)
     {
-        run_morphology3x3_simd<morphology, short, v_int16>(reinterpret_cast<short*>(out),
-                                                           reinterpret_cast<const short**>(in),
-                                                           width, chan, k, vx_setall_s16);
+        run_morphology3x3_simd<short, v_int16>(reinterpret_cast<short*>(out),
+                                               reinterpret_cast<const short**>(in),
+                                               width, chan, k, k_type, morphology,
+                                               vx_setall_s16);
         return;
     }
 
     if (std::is_same<T, ushort>::value && length >= v_uint16::nlanes)
     {
-        run_morphology3x3_simd<morphology, ushort, v_uint16>(reinterpret_cast<ushort*>(out),
-                                                             reinterpret_cast<const ushort**>(in),
-                                                             width, chan, k, vx_setall_u16);
+        run_morphology3x3_simd<ushort, v_uint16>(reinterpret_cast<ushort*>(out),
+                                                 reinterpret_cast<const ushort**>(in),
+                                                 width, chan, k, k_type, morphology,
+                                                 vx_setall_u16);
         return;
     }
 
     if (std::is_same<T, uchar>::value && length >= v_uint8::nlanes)
     {
-        run_morphology3x3_simd<morphology, uchar, v_uint8>(reinterpret_cast<uchar*>(out),
-                                                           reinterpret_cast<const uchar**>(in),
-                                                           width, chan, k, vx_setall_u8);
+        run_morphology3x3_simd<uchar, v_uint8>(reinterpret_cast<uchar*>(out),
+                                               reinterpret_cast<const uchar**>(in),
+                                               width, chan, k, k_type, morphology,
+                                               vx_setall_u8);
         return;
     }
 #endif  // CV_SIMD
 
-    run_morphology3x3_reference<morphology>(out, in, width, chan, k);
+    run_morphology3x3_reference(out, in, width, chan, k, k_type, morphology);
 }
 
 #define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
 void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
-                            const uchar k[], Morphology morphology)      \
+                            const uchar k[], MorphShape k_type,          \
+                            Morphology morphology)                       \
 {                                                                        \
-    if (M_ERODE == morphology)                                           \
-    {                                                                    \
-        run_morphology3x3_code<M_ERODE>(out, in, width, chan, k);        \
-    }                                                                    \
-    else if (M_DILATE == morphology)                                     \
-    {                                                                    \
-        run_morphology3x3_code<M_DILATE>(out, in, width, chan, k);       \
-    }                                                                    \
-    else                                                                 \
-        CV_Error(cv::Error::StsBadArg, "unsupported morphology operation"); \
+    run_morphology3x3_code(out, in, width, chan, k, k_type, morphology); \
 }
 
 RUN_MORPHOLOGY3X3_IMPL(uchar )
