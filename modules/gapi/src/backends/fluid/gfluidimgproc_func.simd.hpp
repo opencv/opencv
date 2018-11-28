@@ -1174,10 +1174,114 @@ static void run_morphology3x3_reference(T out[], const T *in[], int width, int c
     }
 }
 
+#if CV_SIMD
+template<Morphology morphology, typename T, typename VT, typename S>
+static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
+                                   const uchar k[], S setall)
+{
+    constexpr int k_size = 3;
+    constexpr int border = (k_size - 1) / 2;
+
+    const uchar kernel[3][3] = {{k[0], k[1], k[2]}, {k[3], k[4], k[5]}, {k[6], k[7], k[8]}};
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    for (int l=0; l < length;)
+    {
+        constexpr int nlanes = VT::nlanes;
+
+        // main part of output row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            VT r = M_ERODE == morphology? setall(std::numeric_limits<T>::max()):
+                                          setall(std::numeric_limits<T>::min());
+
+            if (M_ERODE == morphology)
+            {
+                if (kernel[0][0]) r = v_min(r, vx_load(&in[0][l - shift]));
+                if (kernel[0][1]) r = v_min(r, vx_load(&in[0][l        ]));
+                if (kernel[0][2]) r = v_min(r, vx_load(&in[0][l + shift]));
+
+                if (kernel[1][0]) r = v_min(r, vx_load(&in[1][l - shift]));
+                if (kernel[1][1]) r = v_min(r, vx_load(&in[1][l        ]));
+                if (kernel[1][2]) r = v_min(r, vx_load(&in[1][l + shift]));
+
+                if (kernel[2][0]) r = v_min(r, vx_load(&in[2][l - shift]));
+                if (kernel[2][1]) r = v_min(r, vx_load(&in[2][l        ]));
+                if (kernel[2][2]) r = v_min(r, vx_load(&in[2][l + shift]));
+            }
+            else // if (M_DILATE == morphology)
+            {
+                if (kernel[0][0]) r = v_max(r, vx_load(&in[0][l - shift]));
+                if (kernel[0][1]) r = v_max(r, vx_load(&in[0][l        ]));
+                if (kernel[0][2]) r = v_max(r, vx_load(&in[0][l + shift]));
+
+                if (kernel[1][0]) r = v_max(r, vx_load(&in[1][l - shift]));
+                if (kernel[1][1]) r = v_max(r, vx_load(&in[1][l        ]));
+                if (kernel[1][2]) r = v_max(r, vx_load(&in[1][l + shift]));
+
+                if (kernel[2][0]) r = v_max(r, vx_load(&in[2][l - shift]));
+                if (kernel[2][1]) r = v_max(r, vx_load(&in[2][l        ]));
+                if (kernel[2][2]) r = v_max(r, vx_load(&in[2][l + shift]));
+            }
+
+            v_store(&out[l], r);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+#endif
+
 template<Morphology morphology, typename T>
 static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
                                    const uchar k[])
 {
+#if CV_SIMD
+    int length = width * chan;
+
+    // length variable may be unused if types do not match at 'if' statements below
+    (void) length;
+
+    if (std::is_same<T, float>::value && length >= v_float32::nlanes)
+    {
+        run_morphology3x3_simd<morphology, float, v_float32>(reinterpret_cast<float*>(out),
+                                                             reinterpret_cast<const float**>(in),
+                                                             width, chan, k, vx_setall_f32);
+        return;
+    }
+
+    if (std::is_same<T, short>::value && length >= v_int16::nlanes)
+    {
+        run_morphology3x3_simd<morphology, short, v_int16>(reinterpret_cast<short*>(out),
+                                                           reinterpret_cast<const short**>(in),
+                                                           width, chan, k, vx_setall_s16);
+        return;
+    }
+
+    if (std::is_same<T, ushort>::value && length >= v_uint16::nlanes)
+    {
+        run_morphology3x3_simd<morphology, ushort, v_uint16>(reinterpret_cast<ushort*>(out),
+                                                             reinterpret_cast<const ushort**>(in),
+                                                             width, chan, k, vx_setall_u16);
+        return;
+    }
+
+    if (std::is_same<T, uchar>::value && length >= v_uint8::nlanes)
+    {
+        run_morphology3x3_simd<morphology, uchar, v_uint8>(reinterpret_cast<uchar*>(out),
+                                                           reinterpret_cast<const uchar**>(in),
+                                                           width, chan, k, vx_setall_u8);
+        return;
+    }
+#endif  // CV_SIMD
+
     run_morphology3x3_reference<morphology>(out, in, width, chan, k);
 }
 
