@@ -1224,18 +1224,10 @@ cvShowImage( const char* name, const CvArr* arr )
     }
 
     {
-        cv::Mat src = cv::cvarrToMat(image);
         cv::Mat dst(size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4);
-
-        cv::Mat tmp;
-        int src_depth = src.depth();
-        double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
-        double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
-        cv::convertScaleAbs(src, tmp, scale, shift);
-        cv::cvtColor(tmp, dst, cv::COLOR_BGRA2BGR, dst.channels());
-        cv::flip(dst, dst, 0);
-
+        convertToShow(cv::cvarrToMat(image), dst, false);
         CV_Assert(dst.data == (uchar*)dst_ptr);
+        cv::flip(dst, dst, 0);
     }
 
     // ony resize window if needed
