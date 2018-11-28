@@ -111,6 +111,28 @@ RUN_FILTER2D_3X3_IMPL( float,  float)
 
 #undef RUN_FILTER2D_3X3_IMPL
 
+//-----------------------------
+//
+// Fluid kernels: Erode, Dilate
+//
+//-----------------------------
+
+#define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
+void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
+                            const uchar k[], Morphology morphology)      \
+{                                                                        \
+    CV_CPU_DISPATCH(run_morphology3x3_impl,                              \
+        (out, in, width, chan, k, morphology),                           \
+        CV_CPU_DISPATCH_MODES_ALL);                                      \
+}
+
+RUN_MORPHOLOGY3X3_IMPL(uchar )
+RUN_MORPHOLOGY3X3_IMPL(ushort)
+RUN_MORPHOLOGY3X3_IMPL( short)
+RUN_MORPHOLOGY3X3_IMPL( float)
+
+#undef RUN_MORPHOLOGY3X3_IMPL
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv

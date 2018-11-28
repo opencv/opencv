@@ -1164,8 +1164,6 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
 //
 //-----------------------------
 
-enum Morphology { M_ERODE, M_DILATE };
-
 template<typename DST, typename SRC>
 static void run_morphology(          Buffer&    dst,
                            const     View  &    src,
@@ -1175,6 +1173,10 @@ static void run_morphology(          Buffer&    dst,
                            const cv::Point & /* anchor */,
                                      Morphology morphology)
 {
+    static_assert(std::is_same<DST, SRC>::value, "unsupported combination of types");
+
+    GAPI_Assert(M_ERODE == morphology || M_DILATE == morphology);
+
     static const int maxLines = 9;
     GAPI_Assert(k_rows <= maxLines);
 
@@ -1194,43 +1196,44 @@ static void run_morphology(          Buffer&    dst,
     int width = dst.length();
     int chan  = dst.meta().chan;
 
-    for (int w=0; w < width; w++)
+    // call optimized code, if 3x3
+    if (3 == k_rows && 3 == k_cols)
     {
-        // TODO: make this cycle innermost
-        for (int c=0; c < chan; c++)
-        {
-            SRC result=0;
-            if (M_ERODE == morphology)
-            {
-                result = std::numeric_limits<SRC>::max();
-            }
-            else if (M_DILATE == morphology)
-            {
-                result = std::numeric_limits<SRC>::min();
-            }
-            else
-                CV_Error(cv::Error::StsBadArg, "unsupported morphology operation");
+        run_morphology3x3_impl(out, in, width, chan, k, morphology);
+        return;
+    }
 
-            for (int i=0; i < k_rows; i++)
-            for (int j=0; j < k_cols; j++)
+    // reference: any size of k[]
+    int length = width * chan;
+    for (int l=0; l < length; l++)
+    {
+        SRC result;
+        if (M_ERODE == morphology)
+        {
+            result = std::numeric_limits<SRC>::max();
+        }
+        else // if (M_DILATE == morphology)
+        {
+            result = std::numeric_limits<SRC>::min();
+        }
+
+        for (int i=0; i < k_rows; i++)
+        for (int j=0; j < k_cols; j++)
+        {
+            if ( k[k_cols*i + j] )
             {
-                if ( k[k_cols*i + j] )
+                if (M_ERODE == morphology)
                 {
-                    if (M_ERODE == morphology)
-                    {
-                        result = std::min(result, in[i][(w + j - border_x)*chan + c]);
-                    }
-                    else if (M_DILATE == morphology)
-                    {
-                        result = std::max(result, in[i][(w + j - border_x)*chan + c]);
-                    }
-                    else
-                        CV_Error(cv::Error::StsBadArg, "unsupported morphology operation");
+                    result = (std::min)(result, in[i][l + (j - border_x)*chan]);
+                }
+                else // if (M_DILATE == morphology)
+                {
+                    result = (std::max)(result, in[i][l + (j - border_x)*chan]);
                 }
             }
-
-            out[w*chan + c] = saturate<DST>(result, rintf);
         }
+
+        out[l] = saturate<DST>(result, rintf);
     }
 }
 
