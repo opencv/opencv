@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include <algorithm>
+#include <limits>
 #include <vector>
 
 #ifdef __GNUC__
@@ -96,6 +98,23 @@ RUN_FILTER2D_3X3_IMPL( float,  short)
 RUN_FILTER2D_3X3_IMPL( float,  float)
 
 #undef RUN_FILTER2D_3X3_IMPL
+
+//-----------------------------
+//
+// Fluid kernels: Erode, Dilate
+//
+//-----------------------------
+
+#define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
+void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
+                            const uchar k[], Morphology morphology);
+
+RUN_MORPHOLOGY3X3_IMPL(uchar )
+RUN_MORPHOLOGY3X3_IMPL(ushort)
+RUN_MORPHOLOGY3X3_IMPL( short)
+RUN_MORPHOLOGY3X3_IMPL( float)
+
+#undef RUN_MORPHOLOGY3X3_IMPL
 
 //----------------------------------------------------------------------
 
@@ -1098,6 +1117,92 @@ RUN_FILTER2D_3X3_IMPL( float,  short)
 RUN_FILTER2D_3X3_IMPL( float,  float)
 
 #undef RUN_FILTER2D_3X3_IMPL
+
+//-----------------------------
+//
+// Fluid kernels: Erode, Dilate
+//
+//-----------------------------
+
+template<Morphology morphology, typename T>
+static void run_morphology3x3_reference(T out[], const T *in[], int width, int chan,
+                                        const uchar k[])
+{
+    constexpr int k_size = 3;
+    constexpr int border = (k_size - 1) / 2;
+
+    const uchar kernel[3][3] = {{k[0], k[1], k[2]}, {k[3], k[4], k[5]}, {k[6], k[7], k[8]}};
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    for (int l=0; l < length; l++)
+    {
+        T result = M_ERODE == morphology? std::numeric_limits<T>::max():
+                                          std::numeric_limits<T>::min();
+
+        if (M_ERODE == morphology)
+        {
+            result = kernel[0][0]? (std::min)(result, in[0][l - shift]): result;
+            result = kernel[0][1]? (std::min)(result, in[0][l        ]): result;
+            result = kernel[0][2]? (std::min)(result, in[0][l + shift]): result;
+
+            result = kernel[1][0]? (std::min)(result, in[1][l - shift]): result;
+            result = kernel[1][1]? (std::min)(result, in[1][l        ]): result;
+            result = kernel[1][2]? (std::min)(result, in[1][l + shift]): result;
+
+            result = kernel[2][0]? (std::min)(result, in[2][l - shift]): result;
+            result = kernel[2][1]? (std::min)(result, in[2][l        ]): result;
+            result = kernel[2][2]? (std::min)(result, in[2][l + shift]): result;
+        }
+        else // if (M_DILATE == morphology)
+        {
+            result = kernel[0][0]? (std::max)(result, in[0][l - shift]): result;
+            result = kernel[0][1]? (std::max)(result, in[0][l        ]): result;
+            result = kernel[0][2]? (std::max)(result, in[0][l + shift]): result;
+
+            result = kernel[1][0]? (std::max)(result, in[1][l - shift]): result;
+            result = kernel[1][1]? (std::max)(result, in[1][l        ]): result;
+            result = kernel[1][2]? (std::max)(result, in[1][l + shift]): result;
+
+            result = kernel[2][0]? (std::max)(result, in[2][l - shift]): result;
+            result = kernel[2][1]? (std::max)(result, in[2][l        ]): result;
+            result = kernel[2][2]? (std::max)(result, in[2][l + shift]): result;
+        }
+
+        out[l] = result;
+    }
+}
+
+template<Morphology morphology, typename T>
+static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
+                                   const uchar k[])
+{
+    run_morphology3x3_reference<morphology>(out, in, width, chan, k);
+}
+
+#define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
+void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
+                            const uchar k[], Morphology morphology)      \
+{                                                                        \
+    if (M_ERODE == morphology)                                           \
+    {                                                                    \
+        run_morphology3x3_code<M_ERODE>(out, in, width, chan, k);        \
+    }                                                                    \
+    else if (M_DILATE == morphology)                                     \
+    {                                                                    \
+        run_morphology3x3_code<M_DILATE>(out, in, width, chan, k);       \
+    }                                                                    \
+    else                                                                 \
+        CV_Error(cv::Error::StsBadArg, "unsupported morphology operation"); \
+}
+
+RUN_MORPHOLOGY3X3_IMPL(uchar )
+RUN_MORPHOLOGY3X3_IMPL(ushort)
+RUN_MORPHOLOGY3X3_IMPL( short)
+RUN_MORPHOLOGY3X3_IMPL( float)
+
+#undef RUN_MORPHOLOGY3X3_IMPL
 
 //------------------------------------------------------------------------------
 

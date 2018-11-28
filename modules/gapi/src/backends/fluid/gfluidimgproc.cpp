@@ -1164,57 +1164,6 @@ GAPI_FLUID_KERNEL(GFluidFilter2D, cv::gapi::imgproc::GFilter2D, true)
 //
 //-----------------------------
 
-enum Morphology { M_ERODE, M_DILATE };
-
-template<Morphology morphology, typename T>
-static void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, const uchar k[])
-{
-    constexpr int k_size = 3;
-    constexpr int border = (k_size - 1) / 2;
-
-    const uchar kernel[3][3] = {{k[0], k[1], k[2]}, {k[3], k[4], k[5]}, {k[6], k[7], k[8]}};
-
-    const int length = width * chan;
-    const int shift = border * chan;
-
-    for (int l=0; l < length; l++)
-    {
-        T result = M_ERODE == morphology? std::numeric_limits<T>::max():
-                                          std::numeric_limits<T>::min();
-
-        if (M_ERODE == morphology)
-        {
-            result = kernel[0][0]? (std::min)(result, in[0][l - shift]): result;
-            result = kernel[0][1]? (std::min)(result, in[0][l        ]): result;
-            result = kernel[0][2]? (std::min)(result, in[0][l + shift]): result;
-
-            result = kernel[1][0]? (std::min)(result, in[1][l - shift]): result;
-            result = kernel[1][1]? (std::min)(result, in[1][l        ]): result;
-            result = kernel[1][2]? (std::min)(result, in[1][l + shift]): result;
-
-            result = kernel[2][0]? (std::min)(result, in[2][l - shift]): result;
-            result = kernel[2][1]? (std::min)(result, in[2][l        ]): result;
-            result = kernel[2][2]? (std::min)(result, in[2][l + shift]): result;
-        }
-        else // if (M_DILATE == morphology)
-        {
-            result = kernel[0][0]? (std::max)(result, in[0][l - shift]): result;
-            result = kernel[0][1]? (std::max)(result, in[0][l        ]): result;
-            result = kernel[0][2]? (std::max)(result, in[0][l + shift]): result;
-
-            result = kernel[1][0]? (std::max)(result, in[1][l - shift]): result;
-            result = kernel[1][1]? (std::max)(result, in[1][l        ]): result;
-            result = kernel[1][2]? (std::max)(result, in[1][l + shift]): result;
-
-            result = kernel[2][0]? (std::max)(result, in[2][l - shift]): result;
-            result = kernel[2][1]? (std::max)(result, in[2][l        ]): result;
-            result = kernel[2][2]? (std::max)(result, in[2][l + shift]): result;
-        }
-
-        out[l] = result;
-    }
-}
-
 template<typename DST, typename SRC>
 static void run_morphology(          Buffer&    dst,
                            const     View  &    src,
@@ -1250,13 +1199,11 @@ static void run_morphology(          Buffer&    dst,
     // call optimized code, if 3x3
     if (3 == k_rows && 3 == k_cols)
     {
-        if (M_ERODE == morphology)
-            run_morphology3x3_impl<M_ERODE>(out, in, width, chan, k);
-        else
-            run_morphology3x3_impl<M_DILATE>(out, in, width, chan, k);
+        run_morphology3x3_impl(out, in, width, chan, k, morphology);
         return;
     }
 
+    // reference: any size of k[]
     int length = width * chan;
     for (int l=0; l < length; l++)
     {
@@ -1281,7 +1228,7 @@ static void run_morphology(          Buffer&    dst,
                 }
                 else // if (M_DILATE == morphology)
                 {
-                    result = (std::max)(result, in[i][l + (j - border_y)*chan]);
+                    result = (std::max)(result, in[i][l + (j - border_x)*chan]);
                 }
             }
         }
