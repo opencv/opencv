@@ -238,7 +238,6 @@ public:
 };
 
 #define GAPI_OCL_KERNEL(Name, API) struct Name: public cv::GOCLKernelImpl<Name, API>
-#define GAPI_GPU_KERNEL GAPI_OCL_KERNEL
 
 } // namespace cv
 
