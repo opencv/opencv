@@ -119,10 +119,11 @@ RUN_FILTER2D_3X3_IMPL( float,  float)
 
 #define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
 void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
-                            const uchar k[], Morphology morphology)      \
+                            const uchar k[], MorphShape k_type,          \
+                            Morphology morphology)                       \
 {                                                                        \
     CV_CPU_DISPATCH(run_morphology3x3_impl,                              \
-        (out, in, width, chan, k, morphology),                           \
+        (out, in, width, chan, k, k_type, morphology),                   \
         CV_CPU_DISPATCH_MODES_ALL);                                      \
 }
 

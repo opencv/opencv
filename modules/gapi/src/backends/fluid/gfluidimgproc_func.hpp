@@ -85,9 +85,12 @@ RUN_FILTER2D_3X3_IMPL( float,  float)
 
 enum Morphology { M_ERODE, M_DILATE };
 
+enum MorphShape { M_FULL, M_CROSS, M_UNDEF };
+
 #define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
 void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
-                            const uchar k[], Morphology morphology);
+                            const uchar k[], MorphShape k_type,          \
+                            Morphology morphology);
 
 RUN_MORPHOLOGY3X3_IMPL(uchar )
 RUN_MORPHOLOGY3X3_IMPL(ushort)
