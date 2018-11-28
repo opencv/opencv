@@ -30,6 +30,8 @@
 # CPU_DISPATCH_FINAL=<list> - final list of dispatched optimizations
 #
 # CPU_DISPATCH_FLAGS_${opt} - flags for source files compiled separately (<name>.avx2.cpp)
+#
+# CPU_{opt}_ENABLED_DEFAULT=ON/OFF - has compiler support without additional flag (CPU_BASELINE_DETECT=ON only)
 
 set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_512F;AVX512_SKX")
 list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
@@ -345,6 +347,7 @@ macro(ocv_check_compiler_optimization OPT)
           ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" "${_varname}" "${CPU_${OPT}_TEST_FILE}")
           if(${_varname})
             list(APPEND CPU_BASELINE_FINAL ${OPT})
+            set(CPU_${OPT}_ENABLED_DEFAULT ON)
             set(__available 1)
           endif()
         endif()
@@ -462,7 +465,7 @@ foreach(OPT ${CPU_KNOWN_OPTIMIZATIONS})
       if(NOT ";${CPU_BASELINE_FINAL};" MATCHES ";${OPT};")
         list(APPEND CPU_BASELINE_FINAL ${OPT})
       endif()
-      if(NOT CPU_BASELINE_DETECT)  # Don't change compiler flags in 'detection' mode
+      if(NOT CPU_${OPT}_ENABLED_DEFAULT)  # Don't change compiler flags in 'detection' mode
         ocv_append_optimization_flag(CPU_BASELINE_FLAGS ${OPT})
       endif()
     endif()
