@@ -1125,6 +1125,12 @@ inline float v_reduce_sum(const v_float32x8& a)
     return _mm_cvtss_f32(s1);
 }
 
+inline double v_reduce_sum(const v_float64x4& a)
+{
+    __m256d s0 = _mm256_hadd_pd(a.val, a.val);
+    return _mm_cvtsd_f64(_mm_add_pd(_v256_extract_low(s0), _v256_extract_high(s0)));
+}
+
 inline v_float32x8 v_reduce_sum4(const v_float32x8& a, const v_float32x8& b,
                                  const v_float32x8& c, const v_float32x8& d)
 {
