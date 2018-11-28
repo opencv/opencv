@@ -242,12 +242,7 @@ local gzFile gz_open(path, fd, mode)
 #ifdef WIDECHAR
         fd == -2 ? _wopen(path, oflag, 0666) :
 #endif
-#ifdef UNDER_RTSS
-        _open((const char *)path, oflag, 0666));
-#else
 		open((const char *)path, oflag, 0666));
-#endif
-
     if (state->fd == -1) {
         free(state->path);
         free(state);

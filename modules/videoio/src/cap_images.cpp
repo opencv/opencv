@@ -214,9 +214,9 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
         if(sscanf(at + 1, "%ud", &dummy) != 1)
             return 0;
 #ifdef UNDER_RTSS
-		name = _strdup(filename);
+        name = _strdup(filename);
 #else
-		name = strdup(filename);
+        name = strdup(filename);
 #endif
 
     }

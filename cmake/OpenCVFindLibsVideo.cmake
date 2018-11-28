@@ -10,6 +10,11 @@ if(WITH_VFW)
     CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32")
 endif(WITH_VFW)
 
+# --- RTX64 GIGE ---
+if(WITH_RTX64_GIGE)
+  set(HAVE_RTX64_GIGE TRUE)
+endif(WITH_RTX64_GIGE)
+
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
 # try to find gstreamer 1.x first if 0.10 was not requested

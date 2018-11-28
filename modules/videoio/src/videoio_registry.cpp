@@ -128,7 +128,7 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_BACKEND(CAP_UNICAP, "UNICAP", MODE_CAPTURE_BY_INDEX),
 #endif
 #ifdef HAVE_RTX64_GIGE
-	DECLARE_BACKEND(CAP_RTX64_GIGE, "RTX64_GIGE", MODE_CAPTURE_BY_INDEX),
+    DECLARE_BACKEND(CAP_RTX64_GIGE, "RTX64_GIGE", MODE_CAPTURE_BY_INDEX),
 #endif
 #ifdef HAVE_GPHOTO2
     DECLARE_BACKEND(CAP_GPHOTO2, "GPHOTO2", MODE_CAPTURE_ALL),
@@ -500,9 +500,9 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
 #endif
 
 #ifdef HAVE_RTX64_GIGE
-	case CAP_RTX64_GIGE:
-		TRY_OPEN_LEGACY(cvCreateCameraCapture_Rtx64GigE(index));
-		break;
+    case CAP_RTX64_GIGE:
+        TRY_OPEN_LEGACY(cvCreateCameraCapture_Rtx64GigE(index));
+        break;
 #endif
 
 #ifdef HAVE_GIGE_API

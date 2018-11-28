@@ -135,11 +135,6 @@ macro(ippiw_setup PATH BUILD)
   set(HAVE_IPP_IW_LL 0)
 endmacro()
 
-if(RTX64)
-  # Disabling HAVE_IPP_IW in RTX64
-  set(HAVE_IPP_IW 0)
-  return()
-endif()
 # check build options first
 if(BUILD_IPP_IW)
   # custom path
