@@ -6,7 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core.hpp>
 
-#ifdef HAVE_RTX64_GIGE 
+#ifdef HAVE_RTX64_GIGE
 
 #include <SDKDDKVer.h>
 
@@ -131,7 +131,7 @@ namespace cv
                 uint32_t imageSize = (IMAGE_HEIGHT * IMAGE_WIDTH * IMAGE_NUM_CHANNELS * IMAGE_BITS_PER_PIXEL) / 8;
 
                 m_pActiveFrame = (RTX_Image*)malloc(metaDataSize + imageSize);
-                
+
                 //Initialize m_pActiveFrame fields
                 m_pActiveFrame->bitsPerPixel = IMAGE_BITS_PER_PIXEL;
                 m_pActiveFrame->pixelFormat = 0;
@@ -182,7 +182,7 @@ namespace cv
                 {
                     return false;
                 }
-                
+
                 if (pGrabbedFrameObj->Image_Data == NULL)
                 {
                     RtPrintf("CvCaptureCAM_Rtx64GigE::grabFrame bad data\n");
@@ -335,9 +335,6 @@ namespace cv
 
         return  pIplImageFrameObj;
     }
-    
+
 }
-#endif  // HAVE_RTX64_GIGE 
-
-
-
+#endif  // HAVE_RTX64_GIGE
