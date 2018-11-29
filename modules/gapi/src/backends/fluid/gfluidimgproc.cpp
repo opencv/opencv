@@ -1437,12 +1437,64 @@ GAPI_FLUID_KERNEL(GFluidDilate, cv::gapi::imgproc::GDilate, true)
 //
 //--------------------------
 
+template<typename T>
+static void run_medblur3x3_impl(T out[], const T *in[], int width, int chan)
+{
+    constexpr int ksize = 3;
+    constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    for (int l=0; l < length; l++)
+    {
+        T t[3][3];
+
+        // neighbourhood 3x3
+        t[0][0] = in[0][l - shift];    t[0][1] = in[0][l];    t[0][2] = in[0][l + shift];
+        t[1][0] = in[1][l - shift];    t[1][1] = in[1][l];    t[1][2] = in[1][l + shift];
+        t[2][0] = in[2][l - shift];    t[2][1] = in[2][l];    t[2][2] = in[2][l + shift];
+
+        // sort 2 values
+        auto sort = [](T& a, T& b)
+        {
+        #if 0
+            // slow
+            T u=a, v=b;
+            std::pair<T&, T&>(a, b) = std::minmax(u, v);
+        #else
+            // fast (except S16)
+            T u=a, v=b;
+            a = (std::min)(u, v);
+            b = (std::max)(u, v);
+        #endif
+        };
+
+        // horizontal: 3-elements bubble-sort per each row
+        sort(t[0][0], t[0][1]);    sort(t[0][1], t[0][2]);    sort(t[0][0], t[0][1]);
+        sort(t[1][0], t[1][1]);    sort(t[1][1], t[1][2]);    sort(t[1][0], t[1][1]);
+        sort(t[2][0], t[2][1]);    sort(t[2][1], t[2][2]);    sort(t[2][0], t[2][1]);
+
+        // vertical: columns bubble-sort (although partial)
+        sort(t[0][0], t[1][0]);    sort(t[0][1], t[1][1]);  /*sort(t[0][2], t[1][2]);*/
+        sort(t[1][0], t[2][0]);    sort(t[1][1], t[2][1]);    sort(t[1][2], t[2][2]);
+      /*sort(t[0][0], t[1][0]);*/  sort(t[0][1], t[1][1]);    sort(t[0][2], t[1][2]);
+
+        // diagonal: bubble-sort (in opposite order!)
+        sort(t[1][1], t[0][2]);    sort(t[2][0], t[1][1]);    sort(t[1][1], t[0][2]);
+
+        out[l] = t[1][1];
+    }
+}
+
 template<typename DST, typename SRC>
 static void run_medianblur(      Buffer& dst,
                            const View  & src,
                                  int     ksize)
 {
-    static const int kmax = 9;
+    static_assert(std::is_same<DST, SRC>::value, "unsupported combination of types");
+
+    constexpr int kmax = 9;
     GAPI_Assert(ksize <= kmax);
 
     const SRC *in[ kmax ];
@@ -1460,24 +1512,33 @@ static void run_medianblur(      Buffer& dst,
     int width = dst.length();
     int chan  = dst.meta().chan;
 
-    for (int w=0; w < width; w++)
+    // optimized: if 3x3
+
+    if (3 == ksize)
     {
-        // TODO: make this cycle innermost
-        for (int c=0; c < chan; c++)
+        run_medblur3x3_impl(out, in, width, chan);
+        return;
+    }
+
+    // reference: any ksize
+
+    int length = width * chan;
+    int klength = ksize * ksize;
+    int klenhalf = klength / 2;
+
+    for (int l=0; l < length; l++)
+    {
+        SRC neighbours[kmax * kmax];
+
+        for (int i=0; i < ksize; i++)
+        for (int j=0; j < ksize; j++)
         {
-            SRC neighbours[kmax * kmax];
-
-            for (int i=0; i < ksize; i++)
-            for (int j=0; j < ksize; j++)
-            {
-                neighbours[i*ksize + j] = in[i][(w + j - border)*chan + c];
-            }
-
-            int length = ksize * ksize;
-            std::nth_element(neighbours, neighbours + length/2, neighbours + length);
-
-            out[w*chan + c] = saturate<DST>(neighbours[length/2], rintf);
+            neighbours[i*ksize + j] = in[i][l + (j - border)*chan];
         }
+
+        std::nth_element(neighbours, neighbours + klenhalf, neighbours + klength);
+
+        out[l] = saturate<DST>(neighbours[klenhalf], rintf);
     }
 }
 
