@@ -17,6 +17,8 @@
 
 #include "opencv2/core/utils/trace.hpp"
 
+#include "opencv2/core/hal/hal.hpp"
+
 #include <stdarg.h> // for va_list
 
 #include "cvconfig.h"

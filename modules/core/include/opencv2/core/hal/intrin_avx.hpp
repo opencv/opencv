@@ -1133,6 +1133,41 @@ inline v_float32x8 v_reduce_sum4(const v_float32x8& a, const v_float32x8& b,
     return v_float32x8(_mm256_hadd_ps(ab, cd));
 }
 
+inline unsigned v_reduce_sad(const v_uint8x32& a, const v_uint8x32& b)
+{
+    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(a.val, b.val));
+}
+inline unsigned v_reduce_sad(const v_int8x32& a, const v_int8x32& b)
+{
+    __m256i half = _mm256_set1_epi8(0x7f);
+    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(_mm256_add_epi8(a.val, half), _mm256_add_epi8(b.val, half)));
+}
+inline unsigned v_reduce_sad(const v_uint16x16& a, const v_uint16x16& b)
+{
+    v_uint32x8 l, h;
+    v_expand(v_add_wrap(a - b, b - a), l, h);
+    return v_reduce_sum(l + h);
+}
+inline unsigned v_reduce_sad(const v_int16x16& a, const v_int16x16& b)
+{
+    v_uint32x8 l, h;
+    v_expand(v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))), l, h);
+    return v_reduce_sum(l + h);
+}
+inline unsigned v_reduce_sad(const v_uint32x8& a, const v_uint32x8& b)
+{
+    return v_reduce_sum(v_max(a, b) - v_min(a, b));
+}
+inline unsigned v_reduce_sad(const v_int32x8& a, const v_int32x8& b)
+{
+    v_int32x8 m = a < b;
+    return v_reduce_sum(v_reinterpret_as_u32(((a - b) ^ m) - m));
+}
+inline float v_reduce_sad(const v_float32x8& a, const v_float32x8& b)
+{
+    return v_reduce_sum((a - b) & v_float32x8(_mm256_castsi256_ps(_mm256_set1_epi32(0x7fffffff))));
+}
+
 /** Popcount **/
 #define OPENCV_HAL_IMPL_AVX_POPCOUNT(_Tpvec)                     \
     inline v_uint32x8 v_popcount(const _Tpvec& a)                \
