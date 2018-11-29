@@ -14,15 +14,5 @@
 #include "opencv2/gapi/ocl/goclkernel.hpp"
 #define GAPI_GPU_KERNEL GAPI_OCL_KERNEL
 
-namespace cv {
-namespace gapi {
-namespace core {
-namespace gpu {
-    using namespace ocl;
-} // namespace gpu
-} // namespace core
-} // namespace gapi
-} // namespace cv
-
 
 #endif // OPENCV_GAPI_GGPUKERNEL_HPP
