@@ -741,35 +741,30 @@ inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
 
 inline unsigned v_reduce_sad(const v_uint8x16& a, const v_uint8x16& b)
 {
-    const vec_char16 ad = vec_absd(a.val, b.val);
-    const vec_ushort8 ro = vec_add(fl(ad), fh(ad));
-    const vec_uint4 rq = vec_add(fl(ro), fh(ro));
-    const vec_uint4 rd = vec_add(rq, vec_sld(rq, rq, 8));
-    return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
+    const vec_uint4 zero4 = vec_uint4_z;
+    vec_uint4 sum4 = vec_sum4s(vec_absd(a.val, b.val), zero4);
+    return (unsigned)vec_extract(vec_sums(vec_int4_c(sum4), vec_int4_c(zero4)), 3);
 }
 inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
 {
-    const vec_char16 ad = v_reinterpret_as_u8(v_sub_wrap(v_max(a, b), v_min(a, b))).val;
-    const vec_ushort8 ro = vec_add(fl(ad), fh(ad));
-    const vec_uint4 rq = vec_add(fl(ro), fh(ro));
-    const vec_uint4 rd = vec_add(rq, vec_sld(rq, rq, 8));
-    return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
+    const vec_int4 zero4 = vec_int4_z;
+    vec_char16 ad = vec_abss(vec_subs(a.val, b.val));
+    vec_int4 sum4 = vec_sum4s(ad, zero4);
+    return (unsigned)vec_extract(vec_sums(sum4, zero4), 3);
 }
 inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
 {
-    const vec_ushort8 ad = vec_absd(a.val, b.val);
-    const vec_uint4 rq = vec_add(fl(ad), fh(ad));
-    const vec_uint4 rd = vec_add(rq, vec_sld(rq, rq, 8));
-    return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
+    vec_ushort8 ad = vec_absd(a.val, b.val);
+    VSX_UNUSED(vec_int4) sum = vec_sums(vec_int4_c(vec_unpackhu(ad)), vec_int4_c(vec_unpacklu(ad)));
+    return (unsigned)vec_extract(sum, 3);
 }
 inline unsigned v_reduce_sad(const v_int16x8& a, const v_int16x8& b)
 {
-    const vec_ushort8 ad = v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))).val;
-    const vec_uint4 rq = vec_add(fl(ad), fh(ad));
-    const vec_uint4 rd = vec_add(rq, vec_sld(rq, rq, 8));
-    return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
+    const vec_int4 zero4 = vec_int4_z;
+    vec_short8 ad = vec_abss(vec_subs(a.val, b.val));
+    vec_int4 sum4 = vec_sum4s(ad, zero4);
+    return (unsigned)vec_extract(vec_sums(sum4, zero4), 3);
 }
-
 inline unsigned v_reduce_sad(const v_uint32x4& a, const v_uint32x4& b)
 {
     const vec_uint4 ad = vec_absd(a.val, b.val);
@@ -778,13 +773,12 @@ inline unsigned v_reduce_sad(const v_uint32x4& a, const v_uint32x4& b)
 }
 inline unsigned v_reduce_sad(const v_int32x4& a, const v_int32x4& b)
 {
-    const vec_uint4 ad = v_reinterpret_as_u32(v_max(a, b) - v_min(a, b)).val;
-    const vec_uint4 rd = vec_add(ad, vec_sld(ad, ad, 8));
-    return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
+    vec_int4 ad = vec_abss(vec_sub(a.val, b.val));
+    return (unsigned)vec_extract(vec_sums(ad, vec_int4_z), 3);
 }
 inline float v_reduce_sad(const v_float32x4& a, const v_float32x4& b)
 {
-    const vec_float4 ad = v_abs(a - b).val;
+    const vec_float4 ad = vec_abs(vec_sub(a.val, b.val));
     const vec_float4 rd = vec_add(ad, vec_sld(ad, ad, 8));
     return vec_extract(vec_add(rd, vec_sld(rd, rd, 4)), 0);
 }
