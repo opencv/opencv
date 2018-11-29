@@ -5,20 +5,19 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GGPUCORE_HPP
-#define OPENCV_GAPI_GGPUCORE_HPP
+#ifndef OPENCV_GAPI_GOCLIMGPROC_HPP
+#define OPENCV_GAPI_GOCLIMGPROC_HPP
 
 #include <map>
 #include <string>
 
-#include "opencv2/gapi/gpu/ggpukernel.hpp"
+#include "opencv2/gapi/ocl/goclkernel.hpp"
 
 namespace cv { namespace gimpl {
 
-// NB: This is what a "Kernel Package" from the original Wiki doc should be.
-void loadGPUCore(std::map<std::string, cv::GGPUKernel> &kmap);
+// NB: This is what a "Kernel Package" from the origianl Wiki doc should be.
+void loadOCLImgProc(std::map<std::string, cv::GOCLKernel> &kmap);
 
-}
-}
+}}
 
-#endif // OPENCV_GAPI_GGPUCORE_HPP
+#endif // OPENCV_GAPI_GOCLIMGPROC_HPP
