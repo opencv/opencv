@@ -31,23 +31,6 @@ public:
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
                     const Mat& input, const std::string& outputLayer = "")
     {
-        if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        {
-#if defined(HAVE_OPENCL)
-            if (!cv::ocl::useOpenCL())
-#endif
-            {
-                throw cvtest::SkipTestException("OpenCL is not available/disabled in OpenCV");
-            }
-        }
-        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        {
-            if (!checkIETarget(DNN_TARGET_MYRIAD))
-            {
-                throw SkipTestException("Myriad is not available/disabled in OpenCV");
-            }
-        }
-
         randu(input, 0.0f, 1.0f);
 
         weights = findDataFile(weights, false);

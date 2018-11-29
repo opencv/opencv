@@ -75,6 +75,108 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 #endif
 );
 
+//==================================================================================================
+
+class BackendRegistry
+{
+public:
+    typedef std::vector<std::pair<Backend, Target>> BackendsList;
+    const BackendsList & getBackends() const { return backends; }
+    static BackendRegistry & getRegistry()
+    {
+        static BackendRegistry impl;
+        return impl;
+    }
+private:
+    BackendRegistry()
+    {
+#ifdef HAVE_HALIDE
+        backends.push_back(std::make_pair(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
+#  ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL())
+            backends.push_back(std::make_pair(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
+#  endif
+#endif // HAVE_HALIDE
+
+#ifdef HAVE_INF_ENGINE
+        for(Target tgt : {DNN_TARGET_CPU, DNN_TARGET_MYRIAD, DNN_TARGET_FPGA})
+        {
+            if (checkIETarget(tgt))
+                backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, tgt));
+        }
+#  ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
+        {
+            for(Target tgt : {DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16})
+            {
+
+                if (checkIETarget(tgt))
+                    backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, tgt));
+            }
+        }
+#  endif
+#endif // HAVE_INF_ENGINE
+
+#ifdef HAVE_OPENCL
+        if (cv::ocl::useOpenCL())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL));
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
+        }
+#endif
+
+#ifdef HAVE_VULKAN
+        backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
+#endif
+
+        backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+    }
+    static inline bool checkIETarget(int target)
+    {
+#ifndef HAVE_INF_ENGINE
+        return false;
+#else
+        cv::dnn::Net net;
+        cv::dnn::LayerParams lp;
+        net.addLayerToPrev("testLayer", "Identity", lp);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
+        net.setPreferableTarget(target);
+        static int inpDims[] = {1, 2, 3, 4};
+        net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
+        try
+        {
+            net.forward();
+        }
+        catch(...)
+        {
+            return false;
+        }
+        return true;
+#endif
+    }
+
+    BackendsList backends;
+};
+
+
+std::vector<std::pair<Backend, Target>> getAvailableBackends()
+{
+    return BackendRegistry::getRegistry().getBackends();
+}
+
+std::vector<Target> getAvailableTargets(Backend be)
+{
+    std::vector<Target> result;
+    for(const std::pair<Backend, Target> & i : getAvailableBackends())
+    {
+        if (i.first == be)
+            result.push_back(i.second);
+    }
+    return result;
+}
+
+//==================================================================================================
+
 // Additional checks (slowdowns execution!)
 static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);

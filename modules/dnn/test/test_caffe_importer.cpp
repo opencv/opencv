@@ -300,10 +300,11 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
 typedef testing::TestWithParam<Target> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
+    int targetId = GetParam();
+    if(targetId == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("This test does not support FP16");
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-
-    int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -324,7 +325,8 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1,
+    testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
