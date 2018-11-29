@@ -203,7 +203,8 @@ TEST_P(DNNTestOpenVINO, models)
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
     // Single Myriad device cannot be shared across multiple processes.
-    resetMyriadDevice();
+    if (target == DNN_TARGET_MYRIAD)
+        resetMyriadDevice();
     runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
 
@@ -245,27 +246,10 @@ static testing::internal::ParamGenerator<String> intelModels()
     return ValuesIn(modelsNames);
 }
 
-static testing::internal::ParamGenerator<Target> dnnDLIETargets()
-{
-    std::vector<Target> targets;
-    targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-    if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
-    {
-        targets.push_back(DNN_TARGET_OPENCL);
-        targets.push_back(DNN_TARGET_OPENCL_FP16);
-    }
-#endif
-    if (checkIETarget(DNN_TARGET_MYRIAD))
-        targets.push_back(DNN_TARGET_MYRIAD);
-    if (checkIETarget(DNN_TARGET_FPGA))
-        targets.push_back(DNN_TARGET_FPGA);
-    return testing::ValuesIn(targets);
-}
-
-INSTANTIATE_TEST_CASE_P(/**/, DNNTestOpenVINO, Combine(
-    dnnDLIETargets(), intelModels()
-));
+INSTANTIATE_TEST_CASE_P(/**/,
+    DNNTestOpenVINO,
+    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)), intelModels())
+);
 
 }}
 #endif  // HAVE_INF_ENGINE
