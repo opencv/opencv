@@ -134,6 +134,26 @@ RUN_MORPHOLOGY3X3_IMPL( float)
 
 #undef RUN_MORPHOLOGY3X3_IMPL
 
+//---------------------------
+//
+// Fluid kernels: Median blur
+//
+//---------------------------
+
+#define RUN_MEDBLUR3X3_IMPL(T)                                        \
+void run_medblur3x3_impl(T out[], const T *in[], int width, int chan) \
+{                                                                     \
+    CV_CPU_DISPATCH(run_medblur3x3_impl, (out, in, width, chan),      \
+        CV_CPU_DISPATCH_MODES_ALL);                                   \
+}
+
+RUN_MEDBLUR3X3_IMPL(uchar )
+RUN_MEDBLUR3X3_IMPL(ushort)
+RUN_MEDBLUR3X3_IMPL( short)
+RUN_MEDBLUR3X3_IMPL( float)
+
+#undef RUN_MEDBLUR3X3_IMPL
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
