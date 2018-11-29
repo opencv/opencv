@@ -7,7 +7,6 @@
 
 #include "../perf_precomp.hpp"
 #include "../common/gapi_core_perf_tests.hpp"
-#include "opencv2/gapi/gpu/core.hpp"
 
 #define CORE_GPU cv::gapi::core::gpu::kernels()
 

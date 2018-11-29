@@ -8,11 +8,11 @@
 #include "precomp.hpp"
 
 #include "opencv2/gapi/imgproc.hpp"
-#include "opencv2/gapi/gpu/imgproc.hpp"
-#include "backends/gpu/ggpuimgproc.hpp"
+#include "opencv2/gapi/ocl/imgproc.hpp"
+#include "backends/ocl/goclimgproc.hpp"
 
 
-GAPI_GPU_KERNEL(GGPUSepFilter, cv::gapi::imgproc::GSepFilter)
+GAPI_OCL_KERNEL(GOCLSepFilter, cv::gapi::imgproc::GSepFilter)
 {
     static void run(const cv::UMat& in, int ddepth, const cv::Mat& kernX, const cv::Mat& kernY, const cv::Point& anchor, const cv::Scalar& delta,
                     int border, const cv::Scalar& bordVal, cv::UMat &out)
@@ -31,7 +31,7 @@ GAPI_GPU_KERNEL(GGPUSepFilter, cv::gapi::imgproc::GSepFilter)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUBoxFilter, cv::gapi::imgproc::GBoxFilter)
+GAPI_OCL_KERNEL(GOCLBoxFilter, cv::gapi::imgproc::GBoxFilter)
 {
     static void run(const cv::UMat& in, int ddepth, const cv::Size& ksize, const cv::Point& anchor, bool normalize, int borderType, const cv::Scalar& bordVal, cv::UMat &out)
     {
@@ -49,7 +49,7 @@ GAPI_GPU_KERNEL(GGPUBoxFilter, cv::gapi::imgproc::GBoxFilter)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUBlur, cv::gapi::imgproc::GBlur)
+GAPI_OCL_KERNEL(GOCLBlur, cv::gapi::imgproc::GBlur)
 {
     static void run(const cv::UMat& in, const cv::Size& ksize, const cv::Point& anchor, int borderType, const cv::Scalar& bordVal, cv::UMat &out)
     {
@@ -68,7 +68,7 @@ GAPI_GPU_KERNEL(GGPUBlur, cv::gapi::imgproc::GBlur)
 };
 
 
-GAPI_GPU_KERNEL(GGPUFilter2D, cv::gapi::imgproc::GFilter2D)
+GAPI_OCL_KERNEL(GOCLFilter2D, cv::gapi::imgproc::GFilter2D)
 {
     static void run(const cv::UMat& in, int ddepth, const cv::Mat& k, const cv::Point& anchor, const cv::Scalar& delta, int border,
                     const cv::Scalar& bordVal, cv::UMat &out)
@@ -87,7 +87,7 @@ GAPI_GPU_KERNEL(GGPUFilter2D, cv::gapi::imgproc::GFilter2D)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUGaussBlur, cv::gapi::imgproc::GGaussBlur)
+GAPI_OCL_KERNEL(GOCLGaussBlur, cv::gapi::imgproc::GGaussBlur)
 {
     static void run(const cv::UMat& in, const cv::Size& ksize, double sigmaX, double sigmaY, int borderType, const cv::Scalar& bordVal, cv::UMat &out)
     {
@@ -105,7 +105,7 @@ GAPI_GPU_KERNEL(GGPUGaussBlur, cv::gapi::imgproc::GGaussBlur)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUMedianBlur, cv::gapi::imgproc::GMedianBlur)
+GAPI_OCL_KERNEL(GOCLMedianBlur, cv::gapi::imgproc::GMedianBlur)
 {
     static void run(const cv::UMat& in, int ksize, cv::UMat &out)
     {
@@ -113,7 +113,7 @@ GAPI_GPU_KERNEL(GGPUMedianBlur, cv::gapi::imgproc::GMedianBlur)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUErode, cv::gapi::imgproc::GErode)
+GAPI_OCL_KERNEL(GOCLErode, cv::gapi::imgproc::GErode)
 {
     static void run(const cv::UMat& in, const cv::Mat& kernel, const cv::Point& anchor, int iterations, int borderType, const cv::Scalar& borderValue, cv::UMat &out)
     {
@@ -121,7 +121,7 @@ GAPI_GPU_KERNEL(GGPUErode, cv::gapi::imgproc::GErode)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUDilate, cv::gapi::imgproc::GDilate)
+GAPI_OCL_KERNEL(GOCLDilate, cv::gapi::imgproc::GDilate)
 {
     static void run(const cv::UMat& in, const cv::Mat& kernel, const cv::Point& anchor, int iterations, int borderType, const cv::Scalar& borderValue, cv::UMat &out)
     {
@@ -129,7 +129,7 @@ GAPI_GPU_KERNEL(GGPUDilate, cv::gapi::imgproc::GDilate)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUSobel, cv::gapi::imgproc::GSobel)
+GAPI_OCL_KERNEL(GOCLSobel, cv::gapi::imgproc::GSobel)
 {
     static void run(const cv::UMat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
                     const cv::Scalar& bordVal, cv::UMat &out)
@@ -147,7 +147,7 @@ GAPI_GPU_KERNEL(GGPUSobel, cv::gapi::imgproc::GSobel)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUEqualizeHist, cv::gapi::imgproc::GEqHist)
+GAPI_OCL_KERNEL(GOCLEqualizeHist, cv::gapi::imgproc::GEqHist)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -155,7 +155,7 @@ GAPI_GPU_KERNEL(GGPUEqualizeHist, cv::gapi::imgproc::GEqHist)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUCanny, cv::gapi::imgproc::GCanny)
+GAPI_OCL_KERNEL(GOCLCanny, cv::gapi::imgproc::GCanny)
 {
     static void run(const cv::UMat& in, double thr1, double thr2, int apSize, bool l2gradient, cv::UMat &out)
     {
@@ -163,7 +163,7 @@ GAPI_GPU_KERNEL(GGPUCanny, cv::gapi::imgproc::GCanny)
     }
 };
 
-GAPI_GPU_KERNEL(GGPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
+GAPI_OCL_KERNEL(GOCLRGB2YUV, cv::gapi::imgproc::GRGB2YUV)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -171,7 +171,7 @@ GAPI_GPU_KERNEL(GGPURGB2YUV, cv::gapi::imgproc::GRGB2YUV)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
+GAPI_OCL_KERNEL(GOCLYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -179,7 +179,7 @@ GAPI_GPU_KERNEL(GGPUYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
     }
 };
 
-GAPI_GPU_KERNEL(GGPURGB2Lab, cv::gapi::imgproc::GRGB2Lab)
+GAPI_OCL_KERNEL(GOCLRGB2Lab, cv::gapi::imgproc::GRGB2Lab)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -187,7 +187,7 @@ GAPI_GPU_KERNEL(GGPURGB2Lab, cv::gapi::imgproc::GRGB2Lab)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUBGR2LUV, cv::gapi::imgproc::GBGR2LUV)
+GAPI_OCL_KERNEL(GOCLBGR2LUV, cv::gapi::imgproc::GBGR2LUV)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -195,7 +195,7 @@ GAPI_GPU_KERNEL(GGPUBGR2LUV, cv::gapi::imgproc::GBGR2LUV)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUBGR2YUV, cv::gapi::imgproc::GBGR2YUV)
+GAPI_OCL_KERNEL(GOCLBGR2YUV, cv::gapi::imgproc::GBGR2YUV)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -203,7 +203,7 @@ GAPI_GPU_KERNEL(GGPUBGR2YUV, cv::gapi::imgproc::GBGR2YUV)
     }
 };
 
-GAPI_GPU_KERNEL(GGPULUV2BGR, cv::gapi::imgproc::GLUV2BGR)
+GAPI_OCL_KERNEL(GOCLLUV2BGR, cv::gapi::imgproc::GLUV2BGR)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -211,7 +211,7 @@ GAPI_GPU_KERNEL(GGPULUV2BGR, cv::gapi::imgproc::GLUV2BGR)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUYUV2BGR, cv::gapi::imgproc::GYUV2BGR)
+GAPI_OCL_KERNEL(GOCLYUV2BGR, cv::gapi::imgproc::GYUV2BGR)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -219,7 +219,7 @@ GAPI_GPU_KERNEL(GGPUYUV2BGR, cv::gapi::imgproc::GYUV2BGR)
     }
 };
 
-GAPI_GPU_KERNEL(GGPURGB2Gray, cv::gapi::imgproc::GRGB2Gray)
+GAPI_OCL_KERNEL(GOCLRGB2Gray, cv::gapi::imgproc::GRGB2Gray)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -227,7 +227,7 @@ GAPI_GPU_KERNEL(GGPURGB2Gray, cv::gapi::imgproc::GRGB2Gray)
     }
 };
 
-GAPI_GPU_KERNEL(GGPUBGR2Gray, cv::gapi::imgproc::GBGR2Gray)
+GAPI_OCL_KERNEL(GOCLBGR2Gray, cv::gapi::imgproc::GBGR2Gray)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
     {
@@ -235,7 +235,7 @@ GAPI_GPU_KERNEL(GGPUBGR2Gray, cv::gapi::imgproc::GBGR2Gray)
     }
 };
 
-GAPI_GPU_KERNEL(GGPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
+GAPI_OCL_KERNEL(GOCLRGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
 {
     //TODO: avoid copy
     static void run(const cv::UMat& in, float rY, float bY, float gY, cv::UMat &out)
@@ -248,30 +248,30 @@ GAPI_GPU_KERNEL(GGPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
 };
 
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::gpu::kernels()
+cv::gapi::GKernelPackage cv::gapi::imgproc::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
-        < GGPUFilter2D
-        , GGPUSepFilter
-        , GGPUBoxFilter
-        , GGPUBlur
-        , GGPUGaussBlur
-        , GGPUMedianBlur
-        , GGPUErode
-        , GGPUDilate
-        , GGPUSobel
-        , GGPUCanny
-        , GGPUEqualizeHist
-        , GGPURGB2YUV
-        , GGPUYUV2RGB
-        , GGPURGB2Lab
-        , GGPUBGR2LUV
-        , GGPUBGR2YUV
-        , GGPUYUV2BGR
-        , GGPULUV2BGR
-        , GGPUBGR2Gray
-        , GGPURGB2Gray
-        , GGPURGB2GrayCustom
+        < GOCLFilter2D
+        , GOCLSepFilter
+        , GOCLBoxFilter
+        , GOCLBlur
+        , GOCLGaussBlur
+        , GOCLMedianBlur
+        , GOCLErode
+        , GOCLDilate
+        , GOCLSobel
+        , GOCLCanny
+        , GOCLEqualizeHist
+        , GOCLRGB2YUV
+        , GOCLYUV2RGB
+        , GOCLRGB2Lab
+        , GOCLBGR2LUV
+        , GOCLBGR2YUV
+        , GOCLYUV2BGR
+        , GOCLLUV2BGR
+        , GOCLBGR2Gray
+        , GOCLRGB2Gray
+        , GOCLRGB2GrayCustom
         >();
     return pkg;
 }

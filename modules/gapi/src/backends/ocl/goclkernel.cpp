@@ -7,43 +7,43 @@
 
 #include <cassert>
 
-#include "opencv2/gapi/gpu/ggpukernel.hpp"
+#include "opencv2/gapi/ocl/goclkernel.hpp"
 
-const cv::UMat& cv::GGPUContext::inMat(int input)
+const cv::UMat& cv::GOCLContext::inMat(int input)
 {
     return (inArg<cv::UMat>(input));
 }
 
-cv::UMat& cv::GGPUContext::outMatR(int output)
+cv::UMat& cv::GOCLContext::outMatR(int output)
 {
     return (*(util::get<cv::UMat*>(m_results.at(output))));
 }
 
-const cv::gapi::own::Scalar& cv::GGPUContext::inVal(int input)
+const cv::gapi::own::Scalar& cv::GOCLContext::inVal(int input)
 {
     return inArg<cv::gapi::own::Scalar>(input);
 }
 
-cv::gapi::own::Scalar& cv::GGPUContext::outValR(int output)
+cv::gapi::own::Scalar& cv::GOCLContext::outValR(int output)
 {
     return *util::get<cv::gapi::own::Scalar*>(m_results.at(output));
 }
 
-cv::detail::VectorRef& cv::GGPUContext::outVecRef(int output)
+cv::detail::VectorRef& cv::GOCLContext::outVecRef(int output)
 {
     return util::get<cv::detail::VectorRef>(m_results.at(output));
 }
 
-cv::GGPUKernel::GGPUKernel()
+cv::GOCLKernel::GOCLKernel()
 {
 }
 
-cv::GGPUKernel::GGPUKernel(const GGPUKernel::F &f)
+cv::GOCLKernel::GOCLKernel(const GOCLKernel::F &f)
     : m_f(f)
 {
 }
 
-void cv::GGPUKernel::apply(GGPUContext &ctx)
+void cv::GOCLKernel::apply(GOCLContext &ctx)
 {
     CV_Assert(m_f);
     m_f(ctx);
