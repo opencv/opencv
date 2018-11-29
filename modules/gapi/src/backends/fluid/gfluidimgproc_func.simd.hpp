@@ -1603,7 +1603,7 @@ RUN_MORPHOLOGY3X3_IMPL( float)
 //---------------------------
 
 template<typename T>
-static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
+static void run_medblur3x3_reference(T out[], const T *in[], int width, int chan)
 {
     constexpr int ksize = 3;
     constexpr int border = (ksize - 1) / 2;
@@ -1623,16 +1623,9 @@ static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
         // sort 2 values
         auto sort = [](T& a, T& b)
         {
-        #if 0
-            // slow
-            T u=a, v=b;
-            std::pair<T&, T&>(a, b) = std::minmax(u, v);
-        #else
-            // fast (except S16)
             T u=a, v=b;
             a = (std::min)(u, v);
             b = (std::max)(u, v);
-        #endif
         };
 
         // horizontal: 3-elements bubble-sort per each row
@@ -1650,6 +1643,118 @@ static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
 
         out[l] = t[1][1];
     }
+}
+
+#if CV_SIMD
+template<typename VT, typename T>
+static void run_medblur3x3_simd(T out[], const T *in[], int width, int chan)
+{
+    constexpr int ksize = 3;
+    constexpr int border = (ksize - 1) / 2;
+
+    const int length = width * chan;
+    const int shift = border * chan;
+
+    for (int l=0; l < length;)
+    {
+        constexpr int nlanes = VT::nlanes;
+
+        // main part of output row
+        for (; l <= length - nlanes; l += nlanes)
+        {
+            VT t00, t01, t02, t10, t11, t12, t20, t21, t22;
+
+            // neighbourhood 3x3
+
+            t00 = vx_load(&in[0][l - shift]);
+            t01 = vx_load(&in[0][l        ]);
+            t02 = vx_load(&in[0][l + shift]);
+
+            t10 = vx_load(&in[1][l - shift]);
+            t11 = vx_load(&in[1][l        ]);
+            t12 = vx_load(&in[1][l + shift]);
+
+            t20 = vx_load(&in[2][l - shift]);
+            t21 = vx_load(&in[2][l        ]);
+            t22 = vx_load(&in[2][l + shift]);
+
+            // sort 2 values
+            auto sort = [](VT& a, VT& b)
+            {
+                VT u=a, v=b;
+                a = v_min(u, v);
+                b = v_max(u, v);
+            };
+
+            // horizontal: 3-elements bubble-sort per each row
+            sort(t00, t01);    sort(t01, t02);    sort(t00, t01);
+            sort(t10, t11);    sort(t11, t12);    sort(t10, t11);
+            sort(t20, t21);    sort(t21, t22);    sort(t20, t21);
+
+            // vertical: columns bubble-sort (although partial)
+            sort(t00, t10);    sort(t01, t11);  /*sort(t02, t12);*/
+            sort(t10, t20);    sort(t11, t21);    sort(t12, t22);
+          /*sort(t00, t10);*/  sort(t01, t11);    sort(t02, t12);
+
+            // diagonal: bubble-sort (in opposite order!)
+            sort(t11, t02);    sort(t20, t11);    sort(t11, t02);
+
+            v_store(&out[l], t11);
+        }
+
+        // tail (if any)
+        if (l < length)
+        {
+            GAPI_DbgAssert(length >= nlanes);
+            l = length - nlanes;
+        }
+    }
+}
+#endif
+
+template<typename T>
+static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
+{
+#if CV_SIMD
+    int length = width * chan;
+
+    // length variable may be unused if types do not match at 'if' statements below
+    (void) length;
+
+    if (std::is_same<T, float>::value && length >= v_float32::nlanes)
+    {
+        run_medblur3x3_simd<v_float32>(reinterpret_cast<float*>(out),
+                                       reinterpret_cast<const float**>(in),
+                                       width, chan);
+        return;
+    }
+
+    if (std::is_same<T, short>::value && length >= v_int16::nlanes)
+    {
+        run_medblur3x3_simd<v_int16>(reinterpret_cast<short*>(out),
+                                     reinterpret_cast<const short**>(in),
+                                     width, chan);
+        return;
+    }
+
+    if (std::is_same<T, ushort>::value && length >= v_uint16::nlanes)
+    {
+        run_medblur3x3_simd<v_uint16>(reinterpret_cast<ushort*>(out),
+                                      reinterpret_cast<const ushort**>(in),
+                                      width, chan);
+        return;
+    }
+
+    if (std::is_same<T, uchar>::value && length >= v_uint8::nlanes)
+    {
+        run_medblur3x3_simd<v_uint8>(reinterpret_cast<uchar*>(out),
+                                     reinterpret_cast<const uchar**>(in),
+                                     width, chan);
+        return;
+    }
+#endif
+
+    run_medblur3x3_reference(out, in, width, chan);
 }
 
 #define RUN_MEDBLUR3X3_IMPL(T)                                        \
