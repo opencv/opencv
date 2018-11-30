@@ -1925,13 +1925,11 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b)
 {
-    const int mask_lo = _MM_SHUFFLE(2, 0, 2, 0), mask_hi = _MM_SHUFFLE(3, 1, 3, 1);
-
     __m128 u0 = _mm_loadu_ps(ptr);       // a0 b0 a1 b1
     __m128 u1 = _mm_loadu_ps((ptr + 4)); // a2 b2 a3 b3
 
-    a.val = _mm_shuffle_ps(u0, u1, mask_lo); // a0 a1 a2 a3
-    b.val = _mm_shuffle_ps(u0, u1, mask_hi); // b0 b1 ab b3
+    a.val = _mm_shuffle_ps(u0, u1, _MM_SHUFFLE(2, 0, 2, 0)); // a0 a1 a2 a3
+    b.val = _mm_shuffle_ps(u0, u1, _MM_SHUFFLE(3, 1, 3, 1)); // b0 b1 ab b3
 }
 
 inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c)
