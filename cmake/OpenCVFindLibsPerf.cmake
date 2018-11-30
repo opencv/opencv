@@ -41,11 +41,33 @@ endif(WITH_CUDA)
 
 # --- Eigen ---
 if(WITH_EIGEN)
-  find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432
-            PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
-            DOC "The path to Eigen3/Eigen2 headers"
-            CMAKE_FIND_ROOT_PATH_BOTH)
+  find_package(Eigen3 QUIET)
+
+  if(TARGET Eigen3::Eigen)
+    # Use Eigen3 imported target if possible
+    ocv_include_directories($<TARGET_PROPERTY:Eigen3::Eigen,INTERFACE_INCLUDE_DIRECTORIES>)
+    set(HAVE_EIGEN 1)
+  else(TARGET Eigen3::Eigen)
+    # Eigen3Config.cmake does not provide an imported target, use the legacy
+    # style variables
+    if(DEFINED EIGEN3_INCLUDE_DIR)
+      set(EIGEN_INCLUDE_PATH ${EIGEN3_INCLUDE_DIR})
+    endif(DEFINED EIGEN3_INCLUDE_DIR)
+  endif(TARGET Eigen3::Eigen)
+
+  if(NOT EIGEN3_INCLUDE_DIR)
+    # Neither imported target nor legacy style config is available
+    find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
+              PATHS /opt $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432
+              PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
+              DOC "The path to Eigen3/Eigen2 headers")
+  else(NOT EIGEN3_INCLUDE_DIR)
+    # Both newer Eigen3Config.cmake and legacy package config provide the
+    # version
+    set (EIGEN_WORLD_VERSION ${EIGEN3_VERSION_MAJOR})
+    set (EIGEN_MAJOR_VERSION ${EIGEN3_VERSION_MINOR})
+    set (EIGEN_MINOR_VERSION ${EIGEN3_VERSION_PATCH})
+  endif(NOT EIGEN3_INCLUDE_DIR)
 
   if(EIGEN_INCLUDE_PATH)
     ocv_include_directories(${EIGEN_INCLUDE_PATH})
