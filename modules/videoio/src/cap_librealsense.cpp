@@ -19,7 +19,7 @@ VideoCapture_LibRealsense::VideoCapture_LibRealsense(int) : mAlign(RS2_STREAM_CO
         config.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16);
         config.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8);
         config.enable_stream(RS2_STREAM_INFRARED, 640, 480, RS2_FORMAT_Y8);
-        mPipe.start();
+        mPipe.start(config);
     }
     catch (const rs2::error&)
     {
