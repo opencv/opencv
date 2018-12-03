@@ -96,11 +96,20 @@ int decodeFormat( const char* dt, int* fmt_pairs, int max_len );
 int decodeSimpleFormat( const char* dt );
 }
 
+
+#ifdef CV_STATIC_ANALYSIS
+#define CV_PARSE_ERROR_CPP(errmsg) do { (void)fs; abort(); } while (0)
+#else
 #define CV_PARSE_ERROR_CPP( errmsg ) \
     fs->parseError( CV_Func, (errmsg), __FILE__, __LINE__ )
+#endif
 
-#define CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP() \
-    if((ptr)[0] == 0 && (ptr) == fs->bufferEnd() - 1) CV_PARSE_ERROR_CPP("OpenCV persistence doesn't support very long lines")
+
+#define CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP() do { \
+    CV_DbgAssert(ptr); \
+    if((ptr)[0] == 0 && (ptr) == fs->bufferEnd() - 1) CV_PARSE_ERROR_CPP("OpenCV persistence doesn't support very long lines"); \
+} while (0)
+
 
 class FileStorageParser;
 class FileStorageEmitter;
@@ -151,6 +160,7 @@ public:
     virtual double strtod(char* ptr, char** endptr) = 0;
 
     virtual char* parseBase64(char* ptr, int indent, FileNode& collection) = 0;
+    CV_NORETURN
     virtual void parseError(const char* funcname, const std::string& msg,
                             const char* filename, int lineno) = 0;
 };
