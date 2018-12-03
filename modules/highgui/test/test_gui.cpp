@@ -47,7 +47,7 @@ namespace opencv_test { namespace {
 inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
-    EXPECT_EQ(-1, waitKey(100));
+    EXPECT_EQ(-1, waitKey(500));
     Rect rc;
     EXPECT_NO_THROW(rc = getWindowImageRect(nm));
     EXPECT_EQ(rc.size(), img.size());
