@@ -285,12 +285,15 @@ if __name__ == "__main__":
     parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
     parser.add_argument('--iphoneos_archs', default='armv7,armv7s,arm64', help='select iPhoneOS target ARCHS')
+    parser.add_argument('--iphonesimulator_archs', default='i386,x86_64', help='select iPhoneSimulator target ARCHS')
     args = parser.parse_args()
 
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
     print('Using IPHONEOS_DEPLOYMENT_TARGET=' + os.environ['IPHONEOS_DEPLOYMENT_TARGET'])
     iphoneos_archs = args.iphoneos_archs.split(',')
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
+    iphonesimulator_archs = args.iphonesimulator_archs.split(',')
+    print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
 
     b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without,
         [
@@ -298,6 +301,6 @@ if __name__ == "__main__":
         ] if os.environ.get('BUILD_PRECOMMIT', None) else
         [
             (iphoneos_archs, "iPhoneOS"),
-            (["i386", "x86_64"], "iPhoneSimulator"),
+            (iphonesimulator_archs, "iPhoneSimulator"),
         ])
     b.build(args.out)

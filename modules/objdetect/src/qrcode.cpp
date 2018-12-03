@@ -959,8 +959,7 @@ bool QRDecode::samplingForVersion()
     const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
     const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
 
-    vector<double> listFrequencyElem(version_size * version_size, 0);
-    int k = 0;
+    vector<double> listFrequencyElem;
     for (int r = 0; r < postIntermediate.rows; r += delta_rows)
     {
         for (int c = 0; c < postIntermediate.cols; c += delta_cols)
@@ -969,7 +968,7 @@ bool QRDecode::samplingForVersion()
                            Range(r, min(r + delta_rows, postIntermediate.rows)),
                            Range(c, min(c + delta_cols, postIntermediate.cols)));
             const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
-            listFrequencyElem[k] = frequencyElem; k++;
+            listFrequencyElem.push_back(frequencyElem);
         }
     }
 
