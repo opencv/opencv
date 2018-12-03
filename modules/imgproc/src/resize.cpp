@@ -3782,9 +3782,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     Size ssize = _src.size();
 
     CV_Assert( !ssize.empty() );
-    CV_Assert( !dsize.empty() || (inv_scale_x > 0 && inv_scale_y > 0) );
     if( dsize.empty() )
     {
+        CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
                      saturate_cast<int>(ssize.height*inv_scale_y));
         CV_Assert( !dsize.empty() );
@@ -3793,6 +3793,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     {
         inv_scale_x = (double)dsize.width/ssize.width;
         inv_scale_y = (double)dsize.height/ssize.height;
+        CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
     }
 
     if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
