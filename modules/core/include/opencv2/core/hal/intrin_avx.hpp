@@ -1278,6 +1278,16 @@ OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float64x4, 15)
 OPENCV_HAL_IMPL_AVX_MULADD(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_MULADD(v_float64x4, pd)
 
+inline v_int32x8 v_fma(const v_int32x8& a, const v_int32x8& b, const v_int32x8& c)
+{
+    return a * b + c;
+}
+
+inline v_int32x8 v_muladd(const v_int32x8& a, const v_int32x8& b, const v_int32x8& c)
+{
+    return v_fma(a, b, c);
+}
+
 inline v_float32x8 v_invsqrt(const v_float32x8& x)
 {
     v_float32x8 half = x * v256_setall_f32(0.5);
