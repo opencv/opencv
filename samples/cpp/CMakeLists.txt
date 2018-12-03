@@ -1,3 +1,6 @@
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+
 ocv_install_example_src(cpp *.cpp *.hpp CMakeLists.txt)
 
 set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
@@ -35,7 +38,7 @@ foreach(sample_filename ${cpp_samples})
     set(package "tutorial")
   endif()
   ocv_define_sample(tgt ${sample_filename} ${package})
-  ocv_target_link_libraries(${tgt} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
+  ocv_target_link_libraries(${tgt} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY})
   if(sample_filename MATCHES "/gpu/" AND HAVE_opencv_cudaarithm AND HAVE_opencv_cuda_filters)
     ocv_target_link_libraries(${tgt} opencv_cudaarithm opencv_cudafilters)
   endif()
