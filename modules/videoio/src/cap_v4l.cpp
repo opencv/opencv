@@ -347,8 +347,17 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 
 /***********************   Implementations  ***************************************/
 
-CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
+CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
+    deviceHandle(-1), bufferIndex(-1),
+    FirstCapture(true),
+    palette(0),
+    width(0), height(0), width_set(0), height_set(0),
+    bufferSize(DEFAULT_V4L_BUFFERS),
+    fps(0), convert_rgb(0), frame_allocated(false), returnFrame(false),
+    channelNumber(-1), normalizePropRange(false),
+    type(V4L2_BUF_TYPE_VIDEO_CAPTURE)
 {
+    frame = cvIplImage();
     memset(&timestamp, 0, sizeof(timestamp));
 }
 
