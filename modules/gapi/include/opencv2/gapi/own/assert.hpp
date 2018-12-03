@@ -10,7 +10,8 @@
 
 #if !defined(GAPI_STANDALONE)
 #include <opencv2/core/base.hpp>
-#define GAPI_Assert(expr) CV_Assert(expr)
+#define GAPI_Assert CV_Assert
+#define GAPI_DbgAssert CV_DbgAssert
 
 #else
 #include <stdexcept>
@@ -30,12 +31,13 @@ namespace detail
 #define GAPI_Assert(expr) \
 { if (!(expr)) ::detail::assert_abort(#expr, __LINE__, __FILE__, __func__); }
 
-#endif
 
 #ifdef NDEBUG
 #  define GAPI_DbgAssert(expr)
 #else
 #  define GAPI_DbgAssert(expr) GAPI_Assert(expr)
 #endif
+
+#endif // GAPI_STANDALONE
 
 #endif // OPENCV_GAPI_OWN_ASSERT_HPP
