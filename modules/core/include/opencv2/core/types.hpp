@@ -1877,7 +1877,7 @@ Point_<_Tp> Rect_<_Tp>::tl() const
 template<typename _Tp> inline
 Point_<_Tp> Rect_<_Tp>::br() const
 {
-    return Point_<_Tp>(x + width, y + height);
+    return Point_<_Tp>(x + width-1, y + height-1);
 }
 
 template<typename _Tp> inline
