@@ -226,9 +226,11 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     border_size = 16;
     use_mean_normalization = true;
     use_spatial_propagation = true;
+    coarsest_scale = 10;
 
     /* Use separate variational refinement instances for different scales to avoid repeated memory allocation: */
     int max_possible_scales = 10;
+    ws = hs = w = h = 0;
     for (int i = 0; i < max_possible_scales; i++)
         variational_refinement_processors.push_back(VariationalRefinement::create());
 }
@@ -1035,6 +1037,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
                     sum_Uy += coef * Sy_ptr[is * dis->ws + js];
                     sum_coef += coef;
                 }
+            CV_DbgAssert(sum_coef != 0);
             Ux_ptr[i * dis->w + j] = sum_Ux / sum_coef;
             Uy_ptr[i * dis->w + j] = sum_Uy / sum_coef;
         }
