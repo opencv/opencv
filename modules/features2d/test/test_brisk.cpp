@@ -76,11 +76,13 @@ void CV_BRISKTest::run( int )
   // Check parameter get/set functions.
   BRISK* detectorTyped = dynamic_cast<BRISK*>(detector.get());
   ASSERT_NE(nullptr, detectorTyped);
-  ASSERT_EQ(detectorTyped->getOctaves(), 4); // Default value
-  ASSERT_EQ(detectorTyped->getThreshold(), 30); // Default value
   detectorTyped->setOctaves(3);
-  detectorTyped->setThreshold(29);
+  detectorTyped->setThreshold(30);
   ASSERT_EQ(detectorTyped->getOctaves(), 3);
+  ASSERT_EQ(detectorTyped->getThreshold(), 30);
+  detectorTyped->setOctaves(4);
+  detectorTyped->setThreshold(29);
+  ASSERT_EQ(detectorTyped->getOctaves(), 4);
   ASSERT_EQ(detectorTyped->getThreshold(), 29);
 
   vector<KeyPoint> keypoints1;
