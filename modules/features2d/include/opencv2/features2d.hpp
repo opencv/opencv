@@ -287,7 +287,7 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
     /** @brief Set detection threshold.
-    @param thresh AGAST detection threshold score.
+    @param threshold AGAST detection threshold score.
     */
     CV_WRAP virtual void setThreshold(int threshold) = 0;
     CV_WRAP virtual int getThreshold() const = 0;
