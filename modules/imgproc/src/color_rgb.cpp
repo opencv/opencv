@@ -150,6 +150,7 @@ struct RGB5x52RGB
             v_uint16 t1 = v_reinterpret_as_u16(vx_load(src +
                                                        sizeof(ushort)*v_uint16::nlanes));
 
+            //TODO: shorten registers use when v_interleave is available
             v_uint8 r, g, b, a;
             v_uint16 b0 = (t0 << 11) >> 8;
             v_uint16 b1 = (t1 << 11) >> 8;
@@ -265,6 +266,7 @@ struct RGB2RGB5x5
 
             r = r & v7;
 
+            //TODO: shorten registers use when v_deinterleave is available
             v_uint16 r0, r1, g0, g1, b0, b1, a0, a1;
             v_expand(r, r0, r1);
             v_expand(g, g0, g1);
@@ -376,32 +378,27 @@ struct Gray2RGB5x5
         int gb = greenBits;
         int i = 0;
 #if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+        const int vsize = v_uint16::nlanes;
         v_uint16 v3 = vx_setall_u16(~3);
         for(; i < n-vsize+1;
             i += vsize, src += vsize, dst += vsize*sizeof(ushort))
         {
-            v_uint8 t = vx_load(src);
-            v_uint16 t0, t1;
-            v_expand(t, t0, t1);
+            v_uint8 t8 = vx_load_low(src);
+            v_uint16 t = v_expand_low(t8);
 
-            v_uint16 t30 = t0 >> 3;
-            v_uint16 t31 = t1 >> 3;
+            v_uint16 t3 = t >> 3;
 
-            v_uint16 d0 = t30, d1 = t31;
+            v_uint16 d = t3;
             if(gb == 6)
             {
-                d0 |= ((t0 & v3) << 3) | (t30 << 11);
-                d1 |= ((t1 & v3) << 3) | (t31 << 11);
+                d |= ((t & v3) << 3) | (t3 << 11);
             }
             else
             {
-                d0 |= (t30 << 5) | (t30 << 10);
-                d1 |= (t31 << 5) | (t31 << 10);
+                d |= (t3 << 5) | (t3 << 10);
             }
 
-            v_store((ushort*)dst + 0,       d0);
-            v_store((ushort*)dst + vsize/2, d1);
+            v_store((ushort*)dst, d);
         }
         vx_cleanup();
 #endif
@@ -437,7 +434,9 @@ struct RGB5x52Gray
     static const int shift = yuv_shift;
 
     RGB5x52Gray(int _greenBits) : greenBits(_greenBits)
-    { }
+    {
+        CV_Assert(BY + GY + RY == (1 << shift));
+    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
@@ -456,43 +455,44 @@ struct RGB5x52Gray
         for(; i < n-vsize+1;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
-            v_uint16 t0 = vx_load((ushort*)src);
+            v_uint16 t = vx_load((ushort*)src);
 
-            v_uint16 r0, g0, b0;
-            b0 = (t0 << 11) >> 8;
+            v_uint16 r, g, b;
+            b = (t << 11) >> 8;
 
             if(gb == 5)
             {
-                g0 = ((t0 >> 5) << 11) >> 8;
-                r0 = ((t0 >> 10) << 11) >> 8;
+                g = ((t >> 5) << 11) >> 8;
+                r = ((t >> 10) << 11) >> 8;
             }
             else
             {
-                g0 = ((t0 >> 5) << 10) >> 8;
-                r0 = (t0 >> 11) << 3;
+                g = ((t >> 5) << 10) >> 8;
+                r = (t >> 11) << 3;
             }
 
             v_uint8 d;
-            v_uint16 d0, d1;
+            v_uint16 dx;
 
-            v_int16 sr0 = v_reinterpret_as_s16(r0);
-            v_int16 sg0 = v_reinterpret_as_s16(g0);
-            v_int16 sb0 = v_reinterpret_as_s16(b0);
+            v_int16 sr = v_reinterpret_as_s16(r);
+            v_int16 sg = v_reinterpret_as_s16(g);
+            v_int16 sb = v_reinterpret_as_s16(b);
 
-            v_int16 bg00, bg01;
-            v_int16 rd00, rd01;
-            v_zip(sb0, sg0, bg00, bg01);
-            v_zip(sr0, delta, rd00, rd01);
+            v_int16 bg0, bg1;
+            v_int16 rd0, rd1;
+            v_zip(sb, sg, bg0, bg1);
+            v_zip(sr, delta, rd0, rd1);
 
-            v_uint32 d00, d01;
-            d00 = v_reinterpret_as_u32(v_dotprod(bg00, bg2y) + v_dotprod(rd00, r12y));
-            d01 = v_reinterpret_as_u32(v_dotprod(bg01, bg2y) + v_dotprod(rd01, r12y));
+            v_uint32 d0, d1;
+            d0 = v_reinterpret_as_u32(v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y));
+            d1 = v_reinterpret_as_u32(v_dotprod(bg1, bg2y) + v_dotprod(rd1, r12y));
 
-            d00 = d00 >> shift;
-            d01 = d01 >> shift;
+            d0 = d0 >> shift;
+            d1 = d1 >> shift;
 
-            d0 = v_pack(d00, d01);
-            d = v_pack(d0, d0);
+            dx = v_pack(d0, d1);
+            // high part isn't used
+            d = v_pack(dx, dx);
 
             v_store_low(dst, d);
         }
@@ -596,286 +596,192 @@ struct RGB2Gray<float>
     float coeffs[3];
 };
 
-
-template<> struct RGB2Gray<uchar>
+template<>
+struct RGB2Gray<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2Gray(int _srccn, int blueIdx, const int* coeffs) : srccn(_srccn)
-    {
-        const int coeffs0[] = { R2Y, G2Y, B2Y };
-        if(!coeffs) coeffs = coeffs0;
-
-        int b = 0, g = 0, r = (1 << (yuv_shift-1));
-        int db = coeffs[blueIdx^2], dg = coeffs[1], dr = coeffs[blueIdx];
-
-        for( int i = 0; i < 256; i++, b += db, g += dg, r += dr )
-        {
-            tab[i] = b;
-            tab[i+256] = g;
-            tab[i+512] = r;
-        }
-    }
-    void operator()(const uchar* src, uchar* dst, int n) const
-    {
-        int scn = srccn;
-        const int* _tab = tab;
-        for(int i = 0; i < n; i++, src += scn)
-            dst[i] = (uchar)((_tab[src[0]] + _tab[src[1]+256] + _tab[src[2]+512]) >> yuv_shift);
-    }
-    int srccn;
-    int tab[256*3];
-};
-
-#if CV_NEON
-
-template <>
-struct RGB2Gray<ushort>
-{
-    typedef ushort channel_type;
-
-    RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) :
-        srccn(_srccn)
-    {
-        static const int coeffs0[] = { R2Y, G2Y, B2Y };
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]));
-        if( blueIdx == 0 )
-            std::swap(coeffs[0], coeffs[2]);
-
-        v_cb = vdup_n_u16(coeffs[0]);
-        v_cg = vdup_n_u16(coeffs[1]);
-        v_cr = vdup_n_u16(coeffs[2]);
-        v_delta = vdupq_n_u32(1 << (yuv_shift - 1));
-    }
-
-    void operator()(const ushort* src, ushort* dst, int n) const
-    {
-        int scn = srccn, cb = coeffs[0], cg = coeffs[1], cr = coeffs[2], i = 0;
-
-        for ( ; i <= n - 8; i += 8, src += scn * 8)
-        {
-            uint16x8_t v_b, v_r, v_g;
-            if (scn == 3)
-            {
-                uint16x8x3_t v_src = vld3q_u16(src);
-                v_b = v_src.val[0];
-                v_g = v_src.val[1];
-                v_r = v_src.val[2];
-            }
-            else
-            {
-                uint16x8x4_t v_src = vld4q_u16(src);
-                v_b = v_src.val[0];
-                v_g = v_src.val[1];
-                v_r = v_src.val[2];
-            }
-
-            uint32x4_t v_dst0_ = vmlal_u16(vmlal_u16(
-                                           vmull_u16(vget_low_u16(v_b), v_cb),
-                                                     vget_low_u16(v_g), v_cg),
-                                                     vget_low_u16(v_r), v_cr);
-            uint32x4_t v_dst1_ = vmlal_u16(vmlal_u16(
-                                           vmull_u16(vget_high_u16(v_b), v_cb),
-                                                     vget_high_u16(v_g), v_cg),
-                                                     vget_high_u16(v_r), v_cr);
-
-            uint16x4_t v_dst0 = vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst0_, v_delta), yuv_shift));
-            uint16x4_t v_dst1 = vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst1_, v_delta), yuv_shift));
-
-            vst1q_u16(dst + i, vcombine_u16(v_dst0, v_dst1));
-        }
-
-        for ( ; i <= n - 4; i += 4, src += scn * 4)
-        {
-            uint16x4_t v_b, v_r, v_g;
-            if (scn == 3)
-            {
-                uint16x4x3_t v_src = vld3_u16(src);
-                v_b = v_src.val[0];
-                v_g = v_src.val[1];
-                v_r = v_src.val[2];
-            }
-            else
-            {
-                uint16x4x4_t v_src = vld4_u16(src);
-                v_b = v_src.val[0];
-                v_g = v_src.val[1];
-                v_r = v_src.val[2];
-            }
-
-            uint32x4_t v_dst = vmlal_u16(vmlal_u16(
-                                         vmull_u16(v_b, v_cb),
-                                                   v_g, v_cg),
-                                                   v_r, v_cr);
-
-            vst1_u16(dst + i, vmovn_u32(vshrq_n_u32(vaddq_u32(v_dst, v_delta), yuv_shift)));
-        }
-
-        for( ; i < n; i++, src += scn)
-            dst[i] = (ushort)CV_DESCALE((unsigned)(src[0]*cb + src[1]*cg + src[2]*cr), yuv_shift);
-    }
-
-    int srccn, coeffs[3];
-    uint16x4_t v_cb, v_cg, v_cr;
-    uint32x4_t v_delta;
-};
-
-
-
-#elif CV_SSE2
-
-#if CV_SSE4_1
-
-template <>
-struct RGB2Gray<ushort>
-{
-    typedef ushort channel_type;
-
-    RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) :
-        srccn(_srccn)
-    {
-        static const int coeffs0[] = { R2Y, G2Y, B2Y };
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]));
-        if( blueIdx == 0 )
-            std::swap(coeffs[0], coeffs[2]);
-
-        v_delta = _mm_set1_epi32(1 << (yuv_shift - 1));
-        v_zero = _mm_setzero_si128();
-
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
-    }
-
-    // 16s x 8
-    void process(__m128i* v_rgb, __m128i* v_coeffs,
-                 __m128i & v_gray) const
-    {
-        __m128i v_rgb_hi[4];
-        v_rgb_hi[0] = _mm_cmplt_epi16(v_rgb[0], v_zero);
-        v_rgb_hi[1] = _mm_cmplt_epi16(v_rgb[1], v_zero);
-        v_rgb_hi[2] = _mm_cmplt_epi16(v_rgb[2], v_zero);
-        v_rgb_hi[3] = _mm_cmplt_epi16(v_rgb[3], v_zero);
-
-        v_rgb_hi[0] = _mm_and_si128(v_rgb_hi[0], v_coeffs[1]);
-        v_rgb_hi[1] = _mm_and_si128(v_rgb_hi[1], v_coeffs[1]);
-        v_rgb_hi[2] = _mm_and_si128(v_rgb_hi[2], v_coeffs[1]);
-        v_rgb_hi[3] = _mm_and_si128(v_rgb_hi[3], v_coeffs[1]);
-
-        v_rgb_hi[0] = _mm_hadd_epi16(v_rgb_hi[0], v_rgb_hi[1]);
-        v_rgb_hi[2] = _mm_hadd_epi16(v_rgb_hi[2], v_rgb_hi[3]);
-        v_rgb_hi[0] = _mm_hadd_epi16(v_rgb_hi[0], v_rgb_hi[2]);
-
-        v_rgb[0] = _mm_madd_epi16(v_rgb[0], v_coeffs[0]);
-        v_rgb[1] = _mm_madd_epi16(v_rgb[1], v_coeffs[0]);
-        v_rgb[2] = _mm_madd_epi16(v_rgb[2], v_coeffs[0]);
-        v_rgb[3] = _mm_madd_epi16(v_rgb[3], v_coeffs[0]);
-
-        v_rgb[0] = _mm_hadd_epi32(v_rgb[0], v_rgb[1]);
-        v_rgb[2] = _mm_hadd_epi32(v_rgb[2], v_rgb[3]);
-
-        v_rgb[0] = _mm_add_epi32(v_rgb[0], v_delta);
-        v_rgb[2] = _mm_add_epi32(v_rgb[2], v_delta);
-
-        v_rgb[0] = _mm_srai_epi32(v_rgb[0], yuv_shift);
-        v_rgb[2] = _mm_srai_epi32(v_rgb[2], yuv_shift);
-
-        v_gray = _mm_packs_epi32(v_rgb[0], v_rgb[2]);
-        v_gray = _mm_add_epi16(v_gray, v_rgb_hi[0]);
-    }
-
-    void operator()(const ushort* src, ushort* dst, int n) const
-    {
-        int scn = srccn, cb = coeffs[0], cg = coeffs[1], cr = coeffs[2], i = 0;
-
-        if (scn == 3 && haveSIMD)
-        {
-            __m128i v_coeffs[2];
-            v_coeffs[0] = _mm_set_epi16(0, (short)coeffs[2], (short)coeffs[1], (short)coeffs[0], (short)coeffs[2], (short)coeffs[1], (short)coeffs[0], 0);
-            v_coeffs[1] = _mm_slli_epi16(v_coeffs[0], 2);
-
-            for ( ; i <= n - 8; i += 8, src += scn * 8)
-            {
-                __m128i v_src[3];
-                v_src[0] = _mm_loadu_si128((__m128i const *)(src));
-                v_src[1] = _mm_loadu_si128((__m128i const *)(src + 8));
-                v_src[2] = _mm_loadu_si128((__m128i const *)(src + 16));
-
-                __m128i v_rgb[4];
-                v_rgb[0] = _mm_slli_si128(v_src[0], 2);
-                v_rgb[1] = _mm_alignr_epi8(v_src[1], v_src[0], 10);
-                v_rgb[2] = _mm_alignr_epi8(v_src[2], v_src[1], 6);
-                v_rgb[3] = _mm_srli_si128(v_src[2], 2);
-
-                __m128i v_gray;
-                process(v_rgb, v_coeffs,
-                        v_gray);
-
-                _mm_storeu_si128((__m128i *)(dst + i), v_gray);
-            }
-        }
-        else if (scn == 4 && haveSIMD)
-        {
-            __m128i v_coeffs[2];
-            v_coeffs[0] = _mm_set_epi16(0, (short)coeffs[2], (short)coeffs[1], (short)coeffs[0], 0, (short)coeffs[2], (short)coeffs[1], (short)coeffs[0]);
-            v_coeffs[1] = _mm_slli_epi16(v_coeffs[0], 2);
-
-            for ( ; i <= n - 8; i += 8, src += scn * 8)
-            {
-                __m128i v_rgb[4];
-                v_rgb[0] = _mm_loadu_si128((__m128i const *)(src));
-                v_rgb[1] = _mm_loadu_si128((__m128i const *)(src + 8));
-                v_rgb[2] = _mm_loadu_si128((__m128i const *)(src + 16));
-                v_rgb[3] = _mm_loadu_si128((__m128i const *)(src + 24));
-
-                __m128i v_gray;
-                process(v_rgb, v_coeffs,
-                        v_gray);
-
-                _mm_storeu_si128((__m128i *)(dst + i), v_gray);
-            }
-        }
-
-        for( ; i < n; i++, src += scn)
-            dst[i] = (ushort)CV_DESCALE((unsigned)(src[0]*cb + src[1]*cg + src[2]*cr), yuv_shift);
-    }
-
-    int srccn, coeffs[3];
-    __m128i v_delta;
-    __m128i v_zero;
-    bool haveSIMD;
-};
-
-#endif // CV_SSE4_1
-
-
-
-#endif // CV_SSE2
-
-#if !CV_NEON && !CV_SSE4_1
-
-template<> struct RGB2Gray<ushort>
-{
-    typedef ushort channel_type;
+    // can be changed to 15-shift coeffs
+    static const int BY = B2Y;
+    static const int GY = G2Y;
+    static const int RY = R2Y;
+    static const int shift = yuv_shift;
 
     RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)
     {
-        static const int coeffs0[] = { R2Y, G2Y, B2Y };
-        memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]));
-        if( blueIdx == 0 )
+        const int coeffs0[] = { RY, GY, BY };
+        for(int i = 0; i < 3; i++)
+                coeffs[i] = _coeffs ? _coeffs[i] : coeffs0[i];
+        if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
+
+        CV_Assert(coeffs[0] + coeffs[1] + coeffs[2] == (1 << shift));
+    }
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        int scn = srccn;
+        int cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
+        int i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        v_int16 bg2y;
+        v_int16 r12y;
+        v_int16 dummy;
+        v_zip(vx_setall_s16(cb), vx_setall_s16(cg), bg2y, dummy);
+        v_zip(vx_setall_s16(cr), vx_setall_s16( 1), r12y, dummy);
+        v_int16 delta = vx_setall_s16(1 << (shift-1));
+
+        for( ; i < n-vsize+1;
+             i += vsize, src += scn*vsize, dst += vsize)
+        {
+            v_uint8 r, g, b, a;
+            if(scn == 3)
+            {
+                v_load_deinterleave(src, b, g, r);
+            }
+            else
+            {
+                v_load_deinterleave(src, b, g, r, a);
+            }
+
+            //TODO: shorten registers use when v_deinterleave is available
+
+            v_uint16 r0, r1, g0, g1, b0, b1;
+            v_expand(r, r0, r1);
+            v_expand(g, g0, g1);
+            v_expand(b, b0, b1);
+
+            v_int16 bg00, bg01, bg10, bg11;
+            v_int16 rd00, rd01, rd10, rd11;
+            v_zip(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(g0), bg00, bg01);
+            v_zip(v_reinterpret_as_s16(b1), v_reinterpret_as_s16(g1), bg10, bg11);
+            v_zip(v_reinterpret_as_s16(r0), delta, rd00, rd01);
+            v_zip(v_reinterpret_as_s16(r1), delta, rd10, rd11);
+
+            v_uint32 y00, y01, y10, y11;
+            y00 = v_reinterpret_as_u32(v_dotprod(bg00, bg2y) + v_dotprod(rd00, r12y)) >> shift;
+            y01 = v_reinterpret_as_u32(v_dotprod(bg01, bg2y) + v_dotprod(rd01, r12y)) >> shift;
+            y10 = v_reinterpret_as_u32(v_dotprod(bg10, bg2y) + v_dotprod(rd10, r12y)) >> shift;
+            y11 = v_reinterpret_as_u32(v_dotprod(bg11, bg2y) + v_dotprod(rd11, r12y)) >> shift;
+
+            v_uint16 y0, y1;
+            y0 = v_pack(y00, y01);
+            y1 = v_pack(y10, y11);
+
+            v_uint8 y = v_pack(y0, y1);
+            v_store(dst, y);
+        }
+        vx_cleanup();
+#endif
+
+        for( ; i < n; i++, src += scn, dst++)
+        {
+            int b = src[0], g = src[1], r = src[2];
+            uchar y = (uchar)CV_DESCALE(b*cb + g*cg + r*cr, shift);
+            dst[0] = y;
+        }
+    }
+
+    int srccn;
+    int coeffs[3];
+};
+
+
+template<>
+struct RGB2Gray<ushort>
+{
+    typedef ushort channel_type;
+
+    // can be changed to 15-shift coeffs
+    static const int BY = B2Y;
+    static const int GY = G2Y;
+    static const int RY = R2Y;
+    static const int shift = yuv_shift;
+    static const int fix_shift = (int)(sizeof(short)*8 - shift);
+
+    RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)
+    {
+        const int coeffs0[] = { RY, GY, BY };
+        for(int i = 0; i < 3; i++)
+                coeffs[i] = _coeffs ? _coeffs[i] : coeffs0[i];
+        if(blueIdx == 0)
+            std::swap(coeffs[0], coeffs[2]);
+
+        CV_Assert(coeffs[0] + coeffs[1] + coeffs[2] == (1 << shift));
     }
 
     void operator()(const ushort* src, ushort* dst, int n) const
     {
         int scn = srccn, cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
-        for(int i = 0; i < n; i++, src += scn)
-            dst[i] = (ushort)CV_DESCALE((unsigned)(src[0]*cb + src[1]*cg + src[2]*cr), yuv_shift);
+        int i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint16::nlanes;
+
+        v_int16 b2y = vx_setall_s16(cb);
+        v_int16 g2y = vx_setall_s16(cg);
+        v_int16 r2y = vx_setall_s16(cr);
+        v_int16 one = vx_setall_s16(1);
+        v_int16 z = vx_setzero_s16();
+
+        v_int16 bg2y, r12y;
+        v_int16 dummy;
+        v_zip(b2y, g2y, bg2y, dummy);
+        v_zip(r2y, one, r12y, dummy);
+
+        v_int16 delta = vx_setall_s16(1 << (shift-1));
+
+        for( ; i < n-vsize+1;
+             i += vsize, src += scn*vsize, dst += vsize)
+        {
+            v_uint16 r, g, b, a;
+            if(scn == 3)
+            {
+                v_load_deinterleave(src, b, g, r);
+            }
+            else
+            {
+                v_load_deinterleave(src, b, g, r, a);
+            }
+
+            v_int16 sb = v_reinterpret_as_s16(b);
+            v_int16 sr = v_reinterpret_as_s16(r);
+            v_int16 sg = v_reinterpret_as_s16(g);
+
+            v_int16 bg0, bg1;
+            v_int16 rd0, rd1;
+            v_zip(sb, sg, bg0, bg1);
+            v_zip(sr, delta, rd0, rd1);
+
+            // fixing 16bit signed multiplication
+            v_int16 mr, mg, mb;
+            mr = (sr < z) & r2y;
+            mg = (sg < z) & g2y;
+            mb = (sb < z) & b2y;
+            v_int16 fixmul = v_add_wrap(mr, v_add_wrap(mg, mb)) << fix_shift;
+
+            v_int32 sy0 = (v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y)) >> shift;
+            v_int32 sy1 = (v_dotprod(bg1, bg2y) + v_dotprod(rd1, r12y)) >> shift;
+
+            v_int16 y = v_add_wrap(v_pack(sy0, sy1), fixmul);
+
+            v_store((short*)dst, y);
+        }
+        vx_cleanup();
+#endif
+        for( ; i < n; i++, src += scn, dst++)
+        {
+            int b = src[0], g = src[1], r = src[2];
+            ushort d = (ushort)CV_DESCALE((unsigned)(b*cb + g*cg + r*cr), shift);
+            dst[0] = d;
+        }
     }
+
     int srccn;
     int coeffs[3];
 };
-
-#endif // !CV_NEON && !CV_SSE4_1
-
 
 /////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
 
