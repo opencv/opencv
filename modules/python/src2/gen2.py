@@ -1046,6 +1046,25 @@ class PythonWrapperGenerator(object):
         with open(path + "/" + name, "wt") as f:
             json.dump(value, f)
 
+    def parse_decls(self, decls):
+        for decl in decls:
+            name = decl[0]
+            if name.startswith("struct") or name.startswith("class"):
+                # class/struct
+                p = name.find(" ")
+                stype = name[:p]
+                name = name[p+1:].strip()
+                self.add_class(stype, name, decl)
+            elif name.startswith("const"):
+                # constant
+                self.add_const(name.replace("const ", "").strip(), decl)
+            elif name.startswith("enum"):
+                # enum
+                self.add_enum(name.rsplit(" ", 1)[1], decl)
+            else:
+                # function
+                self.add_func(decl)
+
     def gen(self, srcfiles, output_path):
         self.clear()
         self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
@@ -1053,27 +1072,14 @@ class PythonWrapperGenerator(object):
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
             decls = self.parser.parse(hdr)
-            if len(decls) == 0:
-                continue
-            if hdr.find('opencv2/') >= 0: #Avoid including the shadow files
+            if decls:
                 self.code_include.write( '#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
-            for decl in decls:
-                name = decl[0]
-                if name.startswith("struct") or name.startswith("class"):
-                    # class/struct
-                    p = name.find(" ")
-                    stype = name[:p]
-                    name = name[p+1:].strip()
-                    self.add_class(stype, name, decl)
-                elif name.startswith("const"):
-                    # constant
-                    self.add_const(name.replace("const ", "").strip(), decl)
-                elif name.startswith("enum"):
-                    # enum
-                    self.add_enum(name.rsplit(" ", 1)[1], decl)
-                else:
-                    # function
-                    self.add_func(decl)
+                self.parse_decls(decls)
+
+        # step 1.1: add pregenerated UMAT decls
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "core", "misc"))
+        from umat_decls import UMAT_DECLS
+        self.parse_decls(UMAT_DECLS)
 
         # step 1.5 check if all base classes exist
         for name, classinfo in self.classes.items():

@@ -1131,8 +1131,6 @@ if __name__ == "__main__":
 
     # import header parser
     hdr_parser_path = os.path.abspath(args.parser)
-    if hdr_parser_path.endswith(".py"):
-        hdr_parser_path = os.path.dirname(hdr_parser_path)
     sys.path.append(hdr_parser_path)
     import hdr_parser
 
