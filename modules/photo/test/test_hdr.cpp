@@ -105,12 +105,6 @@ TEST(Photo_Tonemap, regression)
     result.convertTo(result, CV_8UC3, 255);
     checkEqual(result, expected, 3, "Drago");
 
-    Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
-    durand->process(img, result);
-    loadImage(test_path + "durand.png", expected);
-    result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3, "Durand");
-
     Ptr<TonemapReinhard> reinhard = createTonemapReinhard(gamma);
     reinhard->process(img, result);
     loadImage(test_path + "reinhard.png", expected);
