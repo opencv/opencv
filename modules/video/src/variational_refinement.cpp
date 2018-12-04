@@ -93,6 +93,7 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
         int red_even_len, red_odd_len;
         int black_even_len, black_odd_len;
 
+        RedBlackBuffer();
         void create(Size s);
         void release();
     };
@@ -366,6 +367,10 @@ void VariationalRefinementImpl::updateRepeatedBorders(RedBlackBuffer &dst)
     }
 }
 
+VariationalRefinementImpl::RedBlackBuffer::RedBlackBuffer()
+{
+    release();
+}
 void VariationalRefinementImpl::RedBlackBuffer::create(Size s)
 {
     /* Allocate enough memory to include borders */
@@ -386,6 +391,7 @@ void VariationalRefinementImpl::RedBlackBuffer::release()
 {
     red.release();
     black.release();
+    red_even_len = red_odd_len = black_even_len = black_odd_len = 0;
 }
 
 VariationalRefinementImpl::ParallelOp_ParBody::ParallelOp_ParBody(VariationalRefinementImpl &_var, vector<Op> _ops,
