@@ -1266,14 +1266,31 @@ void TFImporter::populateNet(Net dstNet)
                 axis = toNCHW(axis);
             layerParams.set("axis", axis);
 
-            int id = dstNet.addLayer(name, "Concat", layerParams);
-            layer_id[name] = id;
-
-
+            // input(0) or input(n-1) is concat_dim
             int from = (type == "Concat" ? 1 : 0);
             int to = (type == "Concat" ? layer.input_size() : layer.input_size() - 1);
 
-            // input(0) or input(n-1) is concat_dim
+            for (int ii = from; ii < to; ii++)
+            {
+                Pin inp = parsePin(layer.input(ii));
+                if (layer_id.find(inp.name) == layer_id.end())
+                {
+                    // There are constant inputs.
+                    LayerParams lp;
+                    lp.name = inp.name;
+                    lp.type = "Const";
+                    lp.blobs.resize(1);
+                    blobFromTensor(getConstBlob(layer, value_id, ii), lp.blobs.back());
+                    CV_Assert_N(!lp.blobs[0].empty(), lp.blobs[0].type() == CV_32F);
+
+                    int constInpId = dstNet.addLayer(lp.name, lp.type, lp);
+                    layer_id[lp.name] = constInpId;
+                }
+            }
+
+            int id = dstNet.addLayer(name, "Concat", layerParams);
+            layer_id[name] = id;
+
             for (int ii = from; ii < to; ii++)
             {
                 Pin inp = parsePin(layer.input(ii));
