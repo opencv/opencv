@@ -650,6 +650,21 @@ with tf.Session(graph=tf.Graph()) as localSession:
     np.save('mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy', detections)
     np.save('mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy', out[4])
 ################################################################################
+inp = K.Input(shape=(2, 3, 4), name='keras_pad_concat_input', batch_size=1)
+conv = K.layers.Conv2D(filters=4, kernel_size=1, data_format='channels_last',
+                       name='keras_pad_concat_conv', input_shape=(2, 3, 4))(inp)
+
+def pad_depth(x, desired_channels):
+    y = K.backend.random_uniform_variable(x.shape.as_list()[:-1] + [desired_channels], low=0, high=1)
+    return K.layers.concatenate([x, y])
+
+pad = K.layers.Lambda(pad_depth, arguments={'desired_channels': 5}, name='keras_pad_concat')(conv)
+
+sess = K.backend.get_session()
+sess.as_default()
+save(sess.graph.get_tensor_by_name('keras_pad_concat_input:0'),
+     sess.graph.get_tensor_by_name('keras_pad_concat/concatenate/concat:0'),
+     'keras_pad_concat', optimize=False)
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
