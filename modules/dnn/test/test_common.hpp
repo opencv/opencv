@@ -236,8 +236,14 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if (!withCpuOCV && *i == DNN_TARGET_CPU)
+                continue;
             targets.push_back(make_tuple(DNN_BACKEND_OPENCV, *i));
+        }
     }
+    if (targets.empty())  // validate at least CPU mode
+        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
     return testing::ValuesIn(targets);
 }
 
