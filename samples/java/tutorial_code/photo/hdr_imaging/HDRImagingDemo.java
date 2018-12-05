@@ -13,7 +13,7 @@ import org.opencv.photo.CalibrateDebevec;
 import org.opencv.photo.MergeDebevec;
 import org.opencv.photo.MergeMertens;
 import org.opencv.photo.Photo;
-import org.opencv.photo.TonemapDurand;
+import org.opencv.photo.Tonemap;
 
 class HDRImaging {
     public void loadExposureSeq(String path, List<Mat> images, List<Float> times) {
@@ -71,7 +71,7 @@ class HDRImaging {
 
         //! [Tonemap HDR image]
         Mat ldr = new Mat();
-        TonemapDurand tonemap = Photo.createTonemapDurand(2.2f, 4.0f, 1.0f, 2.0f, 2.0f);
+        Tonemap tonemap = Photo.createTonemap(2.2f);
         tonemap.process(hdr, ldr);
         //! [Tonemap HDR image]
 
