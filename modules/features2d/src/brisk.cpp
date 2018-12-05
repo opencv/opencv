@@ -80,6 +80,26 @@ public:
         return NORM_HAMMING;
     }
 
+    virtual void setThreshold(int threshold_in) CV_OVERRIDE
+    {
+        threshold = threshold_in;
+    }
+
+    virtual int getThreshold() const CV_OVERRIDE
+    {
+        return threshold;
+    }
+
+    virtual void setOctaves(int octaves_in) CV_OVERRIDE
+    {
+        octaves = octaves_in;
+    }
+
+    virtual int getOctaves() const CV_OVERRIDE
+    {
+        return octaves;
+    }
+
     // call this to generate the kernel:
     // circle of radius r (pixels), with n points;
     // short pairings with dMax, long pairings with dMin
