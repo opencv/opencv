@@ -98,11 +98,12 @@ private:
 #endif // HAVE_HALIDE
 
 #ifdef HAVE_INF_ENGINE
-
         if (checkIETarget(DNN_TARGET_CPU))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
         if (checkIETarget(DNN_TARGET_MYRIAD))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
+        if (checkIETarget(DNN_TARGET_FPGA))
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_FPGA));
 #  ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
         {
