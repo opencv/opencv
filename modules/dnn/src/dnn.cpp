@@ -74,6 +74,16 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 #endif
 );
 
+// Additional checks (slowdowns execution!)
+static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
+static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
+static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
+
+using std::vector;
+using std::map;
+using std::make_pair;
+using std::set;
+
 //==================================================================================================
 
 class BackendRegistry
@@ -160,6 +170,9 @@ std::vector< std::pair<Backend, Target> > getAvailableBackends()
 
 std::vector<Target> getAvailableTargets(Backend be)
 {
+    if (be == DNN_BACKEND_DEFAULT)
+        be = (Backend)PARAM_DNN_BACKEND_DEFAULT;
+
     std::vector<Target> result;
     const BackendRegistry::BackendsList all_backends = getAvailableBackends();
     for(BackendRegistry::BackendsList::const_iterator i = all_backends.begin(); i != all_backends.end(); ++i )
@@ -171,16 +184,6 @@ std::vector<Target> getAvailableTargets(Backend be)
 }
 
 //==================================================================================================
-
-// Additional checks (slowdowns execution!)
-static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
-static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
-static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
-
-using std::vector;
-using std::map;
-using std::make_pair;
-using std::set;
 
 namespace
 {
