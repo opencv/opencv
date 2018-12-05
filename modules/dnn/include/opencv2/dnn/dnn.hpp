@@ -88,6 +88,9 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_FPGA
     };
 
+    CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
+    CV_EXPORTS std::vector<Target> getAvailableTargets(Backend be);
+
     /** @brief This class provides all data needed to initialize layer.
      *
      * It includes dictionary with scalar params (which can be read by using Dict interface),

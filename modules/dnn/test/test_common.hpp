@@ -191,30 +191,6 @@ static inline void normAssertDetections(cv::Mat ref, cv::Mat out, const char *co
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
-static inline bool checkIETarget(int target)
-{
-#ifndef HAVE_INF_ENGINE
-    return false;
-#else
-    cv::dnn::Net net;
-    cv::dnn::LayerParams lp;
-    net.addLayerToPrev("testLayer", "Identity", lp);
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
-    net.setPreferableTarget(target);
-    static int inpDims[] = {1, 2, 3, 4};
-    net.setInput(cv::Mat(4, &inpDims[0], CV_32FC1, cv::Scalar(0)));
-    try
-    {
-        net.forward();
-    }
-    catch(...)
-    {
-        return false;
-    }
-    return true;
-#endif
-}
-
 static inline bool readFileInMemory(const std::string& filename, std::string& content)
 {
     std::ios::openmode mode = std::ios::in | std::ios::binary;
@@ -239,52 +215,36 @@ namespace opencv_test {
 using namespace cv::dnn;
 
 static inline
-testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets(
+testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
         bool withHalide = false,
         bool withCpuOCV = true,
         bool withVkCom = true
 )
 {
-    std::vector<tuple<Backend, Target> > targets;
-#ifdef HAVE_HALIDE
+    std::vector< tuple<Backend, Target> > targets;
+    std::vector< Target > available;
     if (withHalide)
     {
-        targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(make_tuple(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
-#endif
+        available = getAvailableTargets(DNN_BACKEND_HALIDE);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_HALIDE, *i));
     }
-#endif
-#ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
-        targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_CPU));
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
-        {
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL));
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_OPENCL_FP16));
-        }
-#endif
-        if (checkIETarget(DNN_TARGET_MYRIAD))
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, DNN_TARGET_MYRIAD));
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
     }
-#endif
-    if (withCpuOCV)
-        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
-#ifdef HAVE_OPENCL
-    if (cv::ocl::useOpenCL())
     {
-        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL));
-        targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_OPENCL_FP16));
+        available = getAvailableTargets(DNN_BACKEND_OPENCV);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if (!withCpuOCV && *i == DNN_TARGET_CPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_OPENCV, *i));
+        }
     }
-#endif
-#ifdef HAVE_VULKAN
-    if (withVkCom)
-        targets.push_back(make_tuple(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
-#endif
     if (targets.empty())  // validate at least CPU mode
         targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
     return testing::ValuesIn(targets);
@@ -295,21 +255,6 @@ testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargets
 
 namespace opencv_test {
 using namespace cv::dnn;
-
-static inline
-testing::internal::ParamGenerator<Target> availableDnnTargets()
-{
-    static std::vector<Target> targets;
-    if (targets.empty())
-    {
-        targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(DNN_TARGET_OPENCL);
-#endif
-    }
-    return testing::ValuesIn(targets);
-}
 
 class DNNTestLayer : public TestWithParam<tuple<Backend, Target> >
 {
@@ -339,23 +284,10 @@ public:
        }
    }
 
-   static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
-   {
-       if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-       {
-#ifdef HAVE_OPENCL
-           if (!cv::ocl::useOpenCL())
-#endif
-           {
-               throw SkipTestException("OpenCL is not available/disabled in OpenCV");
-           }
-       }
+    static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
+    {
        if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
        {
-           if (!checkIETarget(DNN_TARGET_MYRIAD))
-           {
-               throw SkipTestException("Myriad is not available/disabled in OpenCV");
-           }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
            if (inp && ref && inp->size[0] != 1)
            {

@@ -280,7 +280,7 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_GT(pairwise_matches[i].matches.size(), 200u);
+        EXPECT_GT(pairwise_matches[i].matches.size(), 150u);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }

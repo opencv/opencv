@@ -157,8 +157,6 @@ TEST_P(setInput, normalization)
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
 
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD && !checkIETarget(DNN_TARGET_MYRIAD))
-        throw SkipTestException("Myriad is not available/disabled in OpenCV");
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         throw SkipTestException("");
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)

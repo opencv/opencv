@@ -1333,7 +1333,7 @@ struct InRange_SIMD
     }
 };
 
-#if CV_SIMD128
+#if CV_SIMD
 
 template <>
 struct InRange_SIMD<uchar>
@@ -1342,16 +1342,17 @@ struct InRange_SIMD<uchar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint8x16::nlanes;
+        const int width = v_uint8::nlanes;
 
         for (; x <= len - width; x += width)
         {
-            v_uint8x16 values = v_load(src1 + x);
-            v_uint8x16 low = v_load(src2 + x);
-            v_uint8x16 high = v_load(src3 + x);
+            v_uint8 values = vx_load(src1 + x);
+            v_uint8 low = vx_load(src2 + x);
+            v_uint8 high = vx_load(src3 + x);
 
             v_store(dst + x, (values >= low) & (high >= values));
         }
+        vx_cleanup();
         return x;
     }
 };
@@ -1363,16 +1364,17 @@ struct InRange_SIMD<schar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_int8x16::nlanes;
+        const int width = v_int8::nlanes;
 
         for (; x <= len - width; x += width)
         {
-            v_int8x16 values = v_load(src1 + x);
-            v_int8x16 low = v_load(src2 + x);
-            v_int8x16 high = v_load(src3 + x);
+            v_int8 values = vx_load(src1 + x);
+            v_int8 low = vx_load(src2 + x);
+            v_int8 high = vx_load(src3 + x);
 
             v_store((schar*)(dst + x), (values >= low) & (high >= values));
         }
+        vx_cleanup();
         return x;
     }
 };
@@ -1384,20 +1386,21 @@ struct InRange_SIMD<ushort>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint16x8::nlanes * 2;
+        const int width = v_uint16::nlanes * 2;
 
         for (; x <= len - width; x += width)
         {
-            v_uint16x8 values1 = v_load(src1 + x);
-            v_uint16x8 low1 = v_load(src2 + x);
-            v_uint16x8 high1 = v_load(src3 + x);
+            v_uint16 values1 = vx_load(src1 + x);
+            v_uint16 low1 = vx_load(src2 + x);
+            v_uint16 high1 = vx_load(src3 + x);
 
-            v_uint16x8 values2 = v_load(src1 + x + v_uint16x8::nlanes);
-            v_uint16x8 low2 = v_load(src2 + x + v_uint16x8::nlanes);
-            v_uint16x8 high2 = v_load(src3 + x + v_uint16x8::nlanes);
+            v_uint16 values2 = vx_load(src1 + x + v_uint16::nlanes);
+            v_uint16 low2 = vx_load(src2 + x + v_uint16::nlanes);
+            v_uint16 high2 = vx_load(src3 + x + v_uint16::nlanes);
 
             v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
+        vx_cleanup();
         return x;
     }
 };
@@ -1409,20 +1412,21 @@ struct InRange_SIMD<short>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int16x8::nlanes * 2;
+        const int width = (int)v_int16::nlanes * 2;
 
         for (; x <= len - width; x += width)
         {
-            v_int16x8 values1 = v_load(src1 + x);
-            v_int16x8 low1 = v_load(src2 + x);
-            v_int16x8 high1 = v_load(src3 + x);
+            v_int16 values1 = vx_load(src1 + x);
+            v_int16 low1 = vx_load(src2 + x);
+            v_int16 high1 = vx_load(src3 + x);
 
-            v_int16x8 values2 = v_load(src1 + x + v_int16x8::nlanes);
-            v_int16x8 low2 = v_load(src2 + x + v_int16x8::nlanes);
-            v_int16x8 high2 = v_load(src3 + x + v_int16x8::nlanes);
+            v_int16 values2 = vx_load(src1 + x + v_int16::nlanes);
+            v_int16 low2 = vx_load(src2 + x + v_int16::nlanes);
+            v_int16 high2 = vx_load(src3 + x + v_int16::nlanes);
 
             v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
         }
+        vx_cleanup();
         return x;
     }
 };
@@ -1434,20 +1438,21 @@ struct InRange_SIMD<int>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int32x4::nlanes * 2;
+        const int width = (int)v_int32::nlanes * 2;
 
         for (; x <= len - width; x += width)
         {
-            v_int32x4 values1 = v_load(src1 + x);
-            v_int32x4 low1 = v_load(src2 + x);
-            v_int32x4 high1 = v_load(src3 + x);
+            v_int32 values1 = vx_load(src1 + x);
+            v_int32 low1 = vx_load(src2 + x);
+            v_int32 high1 = vx_load(src3 + x);
 
-            v_int32x4 values2 = v_load(src1 + x + v_int32x4::nlanes);
-            v_int32x4 low2 = v_load(src2 + x + v_int32x4::nlanes);
-            v_int32x4 high2 = v_load(src3 + x + v_int32x4::nlanes);
+            v_int32 values2 = vx_load(src1 + x + v_int32::nlanes);
+            v_int32 low2 = vx_load(src2 + x + v_int32::nlanes);
+            v_int32 high2 = vx_load(src3 + x + v_int32::nlanes);
 
             v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
         }
+        vx_cleanup();
         return x;
     }
 };
@@ -1459,20 +1464,21 @@ struct InRange_SIMD<float>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_float32x4::nlanes * 2;
+        const int width = (int)v_float32::nlanes * 2;
 
         for (; x <= len - width; x += width)
         {
-            v_float32x4 values1 = v_load(src1 + x);
-            v_float32x4 low1 = v_load(src2 + x);
-            v_float32x4 high1 = v_load(src3 + x);
+            v_float32 values1 = vx_load(src1 + x);
+            v_float32 low1 = vx_load(src2 + x);
+            v_float32 high1 = vx_load(src3 + x);
 
-            v_float32x4 values2 = v_load(src1 + x + v_float32x4::nlanes);
-            v_float32x4 low2 = v_load(src2 + x + v_float32x4::nlanes);
-            v_float32x4 high2 = v_load(src3 + x + v_float32x4::nlanes);
+            v_float32 values2 = vx_load(src1 + x + v_float32::nlanes);
+            v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
+            v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
 
             v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
         }
+        vx_cleanup();
         return x;
     }
 };

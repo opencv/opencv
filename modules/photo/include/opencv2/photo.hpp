@@ -376,43 +376,6 @@ results, default value is 0.85.
  */
 CV_EXPORTS_W Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float saturation = 1.0f, float bias = 0.85f);
 
-/** @brief This algorithm decomposes image into two layers: base layer and detail layer using bilateral filter
-and compresses contrast of the base layer thus preserving all the details.
-
-This implementation uses regular bilateral filter from opencv.
-
-Saturation enhancement is possible as in ocvTonemapDrago.
-
-For more information see @cite DD02 .
- */
-class CV_EXPORTS_W TonemapDurand : public Tonemap
-{
-public:
-
-    CV_WRAP virtual float getSaturation() const = 0;
-    CV_WRAP virtual void setSaturation(float saturation) = 0;
-
-    CV_WRAP virtual float getContrast() const = 0;
-    CV_WRAP virtual void setContrast(float contrast) = 0;
-
-    CV_WRAP virtual float getSigmaSpace() const = 0;
-    CV_WRAP virtual void setSigmaSpace(float sigma_space) = 0;
-
-    CV_WRAP virtual float getSigmaColor() const = 0;
-    CV_WRAP virtual void setSigmaColor(float sigma_color) = 0;
-};
-
-/** @brief Creates TonemapDurand object
-
-@param gamma gamma value for gamma correction. See createTonemap
-@param contrast resulting contrast on logarithmic scale, i. e. log(max / min), where max and min
-are maximum and minimum luminance values of the resulting image.
-@param saturation saturation enhancement value. See createTonemapDrago
-@param sigma_space bilateral filter sigma in color space
-@param sigma_color bilateral filter sigma in coordinate space
- */
-CV_EXPORTS_W Ptr<TonemapDurand>
-createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
 
 /** @brief This is a global tonemapping operator that models human visual system.
 
