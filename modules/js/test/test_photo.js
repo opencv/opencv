@@ -51,14 +51,14 @@ QUnit.module('Photo', {});
 QUnit.test('test_photo', function(assert) {
     // createCalibrateDebevec
     {
-        let calibration = cv.createCalibrateDebevec();
+        let calibration = new cv.CalibrateDebevec();
         assert.ok(true, calibration);
         //let response = calibration.process(images, exposures);
     }
 
     // createMergeDebevec
     {
-        let merge = cv.createMergeDebevec();
+        let merge = new cv.MergeDebevec();
         assert.ok(true, merge);
         //let hdr = merge.process(images, exposures, response);
     }

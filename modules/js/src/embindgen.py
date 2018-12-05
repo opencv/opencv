@@ -142,20 +142,25 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['FAST', 'AGAST', 'drawKeypoints', 'drawMatches']}
 
-photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson',
-              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson',
-              'createTonemapDrago',
-              'createTonemapMantiuk', 'createTonemapReinhard'],
-        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', 'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard'],
+        'CalibrateCRF': [],
+        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
         'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
         'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+        'MergeExposures' : [],
         'MergeDebevec' : ['process'],
-        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', 'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
         'MergeRobertson' : ['process'],
-        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias'],
-        'getSigmaColor', 'setSigmaColor', 'getSigmaSpace', 'setSigmaSpace'],
+        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
         'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
-        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', 'getColorAdaptation', 'setColorAdaptation']}
+        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+                             'getColorAdaptation', 'setColorAdaptation']
+        }
 
 def makeWhiteList(module_list):
     wl = {}
