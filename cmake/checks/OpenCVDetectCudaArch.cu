@@ -18,7 +18,7 @@ int main()
         archs.push_back(arch.str());
         arch.str("");
     }
-    archs.unique(); #Some devices might have the same arch
+    archs.unique(); // Some devices might have the same arch
     for (std::list<std::string>::iterator it=archs.begin(); it!=archs.end(); ++it)
         std::cout << *it << " ";
     return 0;
