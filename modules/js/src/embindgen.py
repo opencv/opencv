@@ -145,16 +145,17 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
 photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
               'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard'],
-        'CalibrateCRF': [],
+        'CalibrateCRF': ['process'],
         'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
                       'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
         'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
         'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
-        'MergeExposures' : [],
+        'MergeExposures' : ['process'],
         'MergeDebevec' : ['process'],
         'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
                           'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
         'MergeRobertson' : ['process'],
+        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
         'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
                           'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
         'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],

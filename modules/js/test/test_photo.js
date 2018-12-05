@@ -49,17 +49,58 @@ if (typeof module !== 'undefined' && module.exports) {
 QUnit.module('Photo', {});
 
 QUnit.test('test_photo', function(assert) {
-    // createCalibrateDebevec
+    // CalibrateDebevec
     {
         let calibration = new cv.CalibrateDebevec();
         assert.ok(true, calibration);
         //let response = calibration.process(images, exposures);
     }
+    // CalibrateRobertson
+    {
+        let calibration = new cv.CalibrateRobertson();
+        assert.ok(true, calibration);
+        //let response = calibration.process(images, exposures);
+    }
 
-    // createMergeDebevec
+    // MergeDebevec
     {
         let merge = new cv.MergeDebevec();
         assert.ok(true, merge);
         //let hdr = merge.process(images, exposures, response);
     }
+    // MergeMertens
+    {
+        let merge = new cv.MergeMertens();
+        assert.ok(true, merge);
+        //let hdr = merge.process(images, exposures, response);
+    }
+    // MergeRobertson
+    {
+        let merge = new cv.MergeRobertson();
+        assert.ok(true, merge);
+        //let hdr = merge.process(images, exposures, response);
+    }
+
+    // TonemapDrago
+    {
+        let tonemap = new cv.TonemapDrago();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+    // TonemapMantiuk
+    {
+        let tonemap = new cv.TonemapMantiuk();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+    // TonemapReinhard
+    {
+        let tonemap = new cv.TonemapReinhard();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+
 });
