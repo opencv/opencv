@@ -49,6 +49,12 @@
 namespace cv
 {
 
+#if defined _WIN32
+void setCodePage(unsigned int CodePage);
+#endif
+String toString(const WString& wstr);
+WString toWString(const String& str);
+
 class BaseImageDecoder;
 class BaseImageEncoder;
 typedef Ptr<BaseImageEncoder> ImageEncoder;
@@ -65,7 +71,7 @@ public:
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
 
-    virtual bool setSource( const String& filename );
+    virtual bool setSource( const Pfad& filename );
     virtual bool setSource( const Mat& buf );
     virtual int setScale( const int& scale_denom );
     virtual bool readHeader() = 0;
@@ -83,7 +89,7 @@ protected:
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
     int  m_scale_denom;
-    String m_filename;
+    Pfad m_filename;
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
@@ -98,20 +104,20 @@ public:
     virtual ~BaseImageEncoder() {}
     virtual bool isFormatSupported( int depth ) const;
 
-    virtual bool setDestination( const String& filename );
+    virtual bool setDestination( const Pfad& filename );
     virtual bool setDestination( std::vector<uchar>& buf );
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
 
-    virtual String getDescription() const;
+    virtual Pfad getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
     virtual void throwOnEror() const;
 
 protected:
-    String m_description;
+    Pfad m_description;
 
-    String m_filename;
+    Pfad m_filename;
     std::vector<uchar>* m_buf;
     bool m_buf_supported;
 

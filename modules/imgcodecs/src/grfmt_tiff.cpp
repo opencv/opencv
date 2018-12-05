@@ -217,7 +217,11 @@ bool TiffDecoder::readHeader()
         }
         else
         {
+#if defined _WIN32
+            tif = TIFFOpenW(m_filename.c_str(), "r");
+#else
             tif = TIFFOpen(m_filename.c_str(), "r");
+#endif
         }
     }
 
@@ -616,7 +620,11 @@ bool TiffDecoder::readData_32FC1(Mat& img)
 
 TiffEncoder::TiffEncoder()
 {
+#if defined _WIN32
+    m_description = L"TIFF Files (*.tiff;*.tif)";
+#else
     m_description = "TIFF Files (*.tiff;*.tif)";
+#endif
     m_buf_supported = true;
 }
 
@@ -742,7 +750,11 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     }
     else
     {
+#if defined _WIN32
+        pTiffHandle = TIFFOpenW(m_filename.c_str(), "w");
+#else
         pTiffHandle = TIFFOpen(m_filename.c_str(), "w");
+#endif
     }
     if (!pTiffHandle)
     {
@@ -911,7 +923,11 @@ bool TiffEncoder::write_32FC3(const Mat& _img)
     }
     else
     {
+#if defined _WIN32
+        tif = TIFFOpenW(m_filename.c_str(), "w");
+#else
         tif = TIFFOpen(m_filename.c_str(), "w");
+#endif
     }
 
     if (!tif)
@@ -948,7 +964,11 @@ bool TiffEncoder::write_32FC1(const Mat& _img)
     }
     else
     {
+#if defined _WIN32
+        tif = TIFFOpenW(m_filename.c_str(), "w");
+#else
         tif = TIFFOpen(m_filename.c_str(), "w");
+#endif
     }
 
     if (!tif)

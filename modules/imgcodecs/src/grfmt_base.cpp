@@ -44,8 +44,107 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
+#if defined _WIN32
+#include <windows.h>
+#endif
+
 namespace cv
 {
+
+#if defined _WIN32
+unsigned int code_page = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+#endif
+
+#if defined _WIN32
+void setCodePage(unsigned int CodePage)
+{
+	code_page = CodePage;
+}
+#endif
+
+String toString(const WString& wstr)
+{
+#if defined _WIN32
+    if(wstr.empty())
+    {
+        //Return the empty string
+        return("");
+    }
+    
+    //Calculate target buffer size (not including the zero terminator)
+    int length = WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
+    if(length == 0)
+    {
+        //Conversion failed
+        return("");
+    }
+    
+    //The elements of a vector are stored contiguously, the standard does not guarantee this for a string
+    std::vector<char> str(length, ' ');
+    WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstr.size(), str.data(), length, NULL, NULL);
+    
+    return(std::string(str.data(), length));
+#else
+    std::size_t size = wstr.size();
+    
+    //Overestimate number of code points
+    std::vector<char> str(length, ' ');
+    
+    //Convert to a narrow character string
+    size = std::wcstombs(str.data(), wstr.c_str(), size);
+    if(size != String::npos)
+    {
+        //Shrink to fit
+        return(String(str.data(), size));
+    }
+    
+    //Conversion failed, return an empty string
+    return("");
+#endif
+}
+
+WString toWString(const String& str)
+{
+#if defined _WIN32
+    if(str.empty())
+    {
+        //Return the empty wstring
+        return(L"");
+    }
+    
+    //Calculate target buffer size (not including the zero terminator)
+    int length = MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), str.size(), NULL, 0);
+    if(length == 0)
+    {
+        //Conversion failed
+        return(L"");
+    }
+    
+    //The elements of a vector are stored contiguously, the standard does not guarantee this for a string
+    std::vector<wchar_t> wstr(length, L' ');
+    
+    //No error checking. We already know, that the conversion will succeed.
+    MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), str.size(), wstr.data(), length);
+    
+    return(WString(wstr.data(), length));
+#else
+    std::size_t size = str.size();
+    
+    //Overestimate number of code points
+    std::vector<wchar_t> wstr(size, L' ');
+    
+    //Convert to a multibyte character string
+    size = std::mbstowcs(wstr.data(), str.c_str(), size);
+    if(size != String::npos)
+    {
+        //Shrink to fit
+        return(WString(wstr.data(), size));
+    }
+    
+    //Conversion failed, return an empty wstring
+    return(L"");
+#endif
+}
 
 BaseImageDecoder::BaseImageDecoder()
 {
@@ -55,7 +154,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
 }
 
-bool BaseImageDecoder::setSource( const String& filename )
+bool BaseImageDecoder::setSource( const Pfad& filename )
 {
     m_filename = filename;
     m_buf.release();
@@ -66,7 +165,7 @@ bool BaseImageDecoder::setSource( const Mat& buf )
 {
     if( !m_buf_supported )
         return false;
-    m_filename = String();
+    m_filename = Pfad();
     m_buf = buf;
     return true;
 }
@@ -105,12 +204,12 @@ bool  BaseImageEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U;
 }
 
-String BaseImageEncoder::getDescription() const
+Pfad BaseImageEncoder::getDescription() const
 {
     return m_description;
 }
 
-bool BaseImageEncoder::setDestination( const String& filename )
+bool BaseImageEncoder::setDestination( const Pfad& filename )
 {
     m_filename = filename;
     m_buf = 0;
@@ -123,7 +222,7 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
         return false;
     m_buf = &buf;
     m_buf->clear();
-    m_filename = String();
+    m_filename = Pfad();
     return true;
 }
 

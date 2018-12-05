@@ -129,6 +129,15 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
+/** @brief Sets the code page for the cv::String file paths.
+
+This function sets the code page for the cv::String file paths.
+@param codepage Code page of the cv::String file paths
+*/
+#if defined _WIN32
+CV_EXPORTS_W void setcodepage(unsigned int codepage);
+#endif
+
 /** @brief Loads an image from a file.
 
 @anchor imread
@@ -177,6 +186,7 @@ Currently, the following file formats are supported:
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 */
+CV_EXPORTS_W Mat imread( const WString& filename, int flags = IMREAD_COLOR );
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 /** @brief Loads a multi-page image from a file.
@@ -187,6 +197,7 @@ The function imreadmulti loads a multi-page image from the specified file into a
 @param mats A vector of Mat objects holding each page, if more than one.
 @sa cv::imread
 */
+CV_EXPORTS_W bool imreadmulti(const WString& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
 /** @brief Saves an image to a specified file.
@@ -215,6 +226,8 @@ compression parameters:
 @param img Image to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
 */
+CV_EXPORTS_W bool imwrite( const WString& filename, InputArray img,
+              const std::vector<int>& params = std::vector<int>());
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
@@ -249,6 +262,9 @@ result. See cv::imwrite for the list of supported formats and flags description.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
+CV_EXPORTS_W bool imencode( const WString& ext, InputArray img,
+                            CV_OUT std::vector<uchar>& buf,
+                            const std::vector<int>& params = std::vector<int>());
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
@@ -257,12 +273,14 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 
 @param filename File name of the image
 */
+CV_EXPORTS_W bool haveImageReader( const WString& filename );
 CV_EXPORTS_W bool haveImageReader( const String& filename );
 
 /** @brief Returns true if an image with the specified filename can be encoded by OpenCV
 
  @param filename File name of the image
  */
+CV_EXPORTS_W bool haveImageWriter( const WString& filename );
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
 

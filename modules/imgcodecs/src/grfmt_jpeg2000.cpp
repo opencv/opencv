@@ -114,7 +114,11 @@ bool  Jpeg2KDecoder::readHeader()
     bool result = false;
 
     close();
+#if defined _WIN32
+    jas_stream_t* stream = jas_stream_wfopen( m_filename.c_str(), "rb" );
+#else
     jas_stream_t* stream = jas_stream_fopen( m_filename.c_str(), "rb" );
+#endif
     m_stream = stream;
 
     if( stream )
@@ -448,7 +452,11 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 
 Jpeg2KEncoder::Jpeg2KEncoder()
 {
+#if defined _WIN32
+    m_description = L"JPEG-2000 files (*.jp2)";
+#else
     m_description = "JPEG-2000 files (*.jp2)";
+#endif
 }
 
 
@@ -508,7 +516,11 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
         result = writeComponent16u( img, _img );
     if( result )
     {
+#if defined _WIN32
+        jas_stream_t *stream = jas_stream_wfopen( m_filename.c_str(), "wb" );
+#else
         jas_stream_t *stream = jas_stream_fopen( m_filename.c_str(), "wb" );
+#endif
         if( stream )
         {
             result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)"" );

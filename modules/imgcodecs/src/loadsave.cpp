@@ -199,7 +199,7 @@ static ImageCodecInitializer codecs;
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+static ImageDecoder findDecoder( const Pfad& filename ) {
 
     size_t i, maxlen = 0;
 
@@ -211,7 +211,11 @@ static ImageDecoder findDecoder( const String& filename ) {
     }
 
     /// Open the file
+#if defined _WIN32
+    FILE* f= _wfopen( filename.c_str(), L"rb" );
+#else
     FILE* f= fopen( filename.c_str(), "rb" );
+#endif
 
     /// in the event of a failure, return an empty image decoder
     if( !f )
@@ -261,8 +265,45 @@ static ImageDecoder findDecoder( const Mat& buf )
     return ImageDecoder();
 }
 
-static ImageEncoder findEncoder( const String& _ext )
+static ImageEncoder findEncoder( const Pfad& _ext )
 {
+#if defined _WIN32
+    if( _ext.size() <= 1 )
+        return ImageEncoder();
+   
+    const wchar_t* ext = wcsrchr( _ext.c_str(), L'.' );
+    if( !ext )
+        return ImageEncoder();
+    int len = 0;
+    for( ext++; len < 128 && iswalnum(ext[len]); len++ )
+        ;
+   
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        Pfad description = codecs.encoders[i]->getDescription();
+        const wchar_t* descr = wcschr( description.c_str(), L'(' );
+   
+        while( descr )
+        {
+            descr = wcschr( descr + 1, L'.' );
+            if( !descr )
+                break;
+            int j = 0;
+            for( descr++; j < len && iswalnum(descr[j]) ; j++ )
+            {
+                int c1 = towlower(ext[j]);
+                int c2 = towlower(descr[j]);
+                if( c1 != c2 )
+                    break;
+            }
+            if( j == len && !iswalnum(descr[j]))
+                return codecs.encoders[i]->newEncoder();
+            descr += j;
+        }
+    }
+
+    return ImageEncoder();
+#else
     if( _ext.size() <= 1 )
         return ImageEncoder();
 
@@ -275,7 +316,7 @@ static ImageEncoder findEncoder( const String& _ext )
 
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
-        String description = codecs.encoders[i]->getDescription();
+        Pfad description = codecs.encoders[i]->getDescription();
         const char* descr = strchr( description.c_str(), '(' );
 
         while( descr )
@@ -298,6 +339,7 @@ static ImageEncoder findEncoder( const String& _ext )
     }
 
     return ImageEncoder();
+#endif
 }
 
 
@@ -338,7 +380,7 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(const String& filename, Mat& img)
+static void ApplyExifOrientation(const Pfad& filename, Mat& img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
@@ -396,7 +438,7 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
  *
 */
 static bool
-imread_( const String& filename, int flags, Mat& mat )
+imread_( const Pfad& filename, int flags, Mat& mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -441,12 +483,20 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imread_('" << toString(filename) << "'): can't read header: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+#endif
         return 0;
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imread_('" << toString(filename) << "'): can't read header: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+#endif
         return 0;
     }
 
@@ -479,11 +529,19 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imread_('" << toString(filename) << "'): can't read data: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+#endif
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imread_('" << toString(filename) << "'): can't read data: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+#endif
     }
     if (!success)
     {
@@ -509,7 +567,7 @@ imread_( const String& filename, int flags, Mat& mat )
 *
 */
 static bool
-imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
+imreadmulti_(const Pfad& filename, int flags, std::vector<Mat>& mats)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -542,12 +600,20 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imreadmulti_('" << toString(filename) << "'): can't read header: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+#endif
         return 0;
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imreadmulti_('" << toString(filename) << "'): can't read header: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+#endif
         return 0;
     }
 
@@ -580,11 +646,19 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         }
         catch (const cv::Exception& e)
         {
+#if defined _WIN32
+            std::cerr << "imreadmulti_('" << toString(filename) << "'): can't read data: " << e.what() << std::endl << std::flush;
+#else
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+#endif
         }
         catch (...)
         {
+#if defined _WIN32
+            std::cerr << "imreadmulti_('" << toString(filename) << "'): can't read data: unknown exception" << std::endl << std::flush;
+#else
             std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+#endif
         }
         if (!success)
             break;
@@ -606,6 +680,20 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 }
 
 /**
+ * Set the code page
+ *
+ *  This function sets the code page for the cv::String file paths.
+ *
+ * @param[in] codepage Code page of the cv::String file paths
+*/
+#if defined _WIN32
+void setcodepage(unsigned int codepage)
+{
+	setCodePage(codepage);
+}
+#endif
+
+/**
  * Read an image
  *
  *  This function merely calls the actual implementation above and returns itself.
@@ -613,7 +701,18 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
 */
+#if defined _WIN32
 Mat imread( const String& filename, int flags )
+{
+    return imread(toWString(filename), flags);
+}
+#else
+Mat imread( const WString& filename, int flags )
+{
+    return imread(toString(filename), flags);
+}
+#endif
+Mat imread( const Pfad& filename, int flags )
 {
     CV_TRACE_FUNCTION();
 
@@ -643,14 +742,25 @@ Mat imread( const String& filename, int flags )
 * @param[in] flags Flags you wish to set.
 *
 */
+#if defined _WIN32
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
+{
+    return imreadmulti(toWString(filename), mats, flags);
+}
+#else
+bool imreadmulti(const WString& filename, std::vector<Mat>& mats, int flags)
+{
+    return imreadmulti(toString(filename), mats, flags);
+}
+#endif
+bool imreadmulti(const Pfad& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
     return imreadmulti_(filename, flags, mats);
 }
 
-static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
+static bool imwrite_( const Pfad& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& params, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
@@ -694,18 +804,39 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imwrite_('" << toString(filename) << "'): can't write data: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imwrite_('" << filename << "'): can't write data: " << e.what() << std::endl << std::flush;
+#endif
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imwrite_('" << toString(filename) << "'): can't write data: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imwrite_('" << filename << "'): can't write data: unknown exception" << std::endl << std::flush;
+#endif
     }
 
     //    CV_Assert( code );
     return code;
 }
 
+#if defined _WIN32
 bool imwrite( const String& filename, InputArray _img,
+              const std::vector<int>& params )
+{
+    return imwrite(toWString(filename), _img, params);
+}
+#else
+bool imwrite( const WString& filename, InputArray _img,
+              const std::vector<int>& params )
+{
+    return imwrite(toString(filename), _img, params);
+}
+#endif
+bool imwrite( const Pfad& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
@@ -723,7 +854,7 @@ static bool
 imdecode_( const Mat& buf, int flags, Mat& mat )
 {
     CV_Assert(!buf.empty() && buf.isContinuous());
-    String filename;
+    Pfad filename;
 
     ImageDecoder decoder = findDecoder(buf);
     if( !decoder )
@@ -731,8 +862,13 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     if( !decoder->setSource(buf) )
     {
+#if defined _WIN32
+        filename = tempfileW();
+        FILE* f = _wfopen( filename.c_str(), L"wb" );
+#else
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
+#endif
         if( !f )
             return 0;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
@@ -756,20 +892,36 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imdecode_('" << toString(filename) << "'): can't read header: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+#endif
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imdecode_('" << toString(filename) << "'): can't read header: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+#endif
     }
     if (!success)
     {
         decoder.release();
         if (!filename.empty())
         {
+#if defined _WIN32
+            if (0 != _wremove(filename.c_str()))
+#else
             if (0 != remove(filename.c_str()))
+#endif
             {
+#if defined _WIN32
+                std::cerr << "unable to remove temporary file:" << toString(filename) << std::endl << std::flush;
+#else
                 std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+#endif
             }
         }
         return 0;
@@ -801,18 +953,34 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
+#if defined _WIN32
+        std::cerr << "imdecode_('" << toString(filename) << "'): can't read data: " << e.what() << std::endl << std::flush;
+#else
         std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+#endif
     }
     catch (...)
     {
+#if defined _WIN32
+        std::cerr << "imdecode_('" << toString(filename) << "'): can't read data: unknown exception" << std::endl << std::flush;
+#else
         std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+#endif
     }
     decoder.release();
     if (!filename.empty())
     {
+#if defined _WIN32
+        if (0 != _wremove(filename.c_str()))
+#else
         if (0 != remove(filename.c_str()))
+#endif
         {
+#if defined _WIN32
+            std::cerr << "unable to remove temporary file:" << toString(filename) << std::endl << std::flush;
+#else
             std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+#endif
         }
     }
 
@@ -859,7 +1027,20 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
+#if defined _WIN32
 bool imencode( const String& ext, InputArray _image,
+               std::vector<uchar>& buf, const std::vector<int>& params )
+{
+    return imencode(toWString(ext), _image, buf, params);
+}
+#else
+bool imencode( const WString& ext, InputArray _image,
+               std::vector<uchar>& buf, const std::vector<int>& params )
+{
+    return imencode(toString(ext), _image, buf, params);
+}
+#endif
+bool imencode( const Pfad& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
@@ -890,7 +1071,11 @@ bool imencode( const String& ext, InputArray _image,
     }
     else
     {
-        String filename = tempfile();
+#if defined _WIN32
+        Pfad filename = tempfileW();
+#else
+        Pfad filename = tempfile();
+#endif
         code = encoder->setDestination(filename);
         CV_Assert( code );
 
@@ -898,7 +1083,11 @@ bool imencode( const String& ext, InputArray _image,
         encoder->throwOnEror();
         CV_Assert( code );
 
+#if defined _WIN32
+        FILE* f = _wfopen( filename.c_str(), L"rb" );
+#else
         FILE* f = fopen( filename.c_str(), "rb" );
+#endif
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
         long pos = ftell(f);
@@ -906,18 +1095,44 @@ bool imencode( const String& ext, InputArray _image,
         fseek( f, 0, SEEK_SET );
         buf.resize(fread( &buf[0], 1, buf.size(), f ));
         fclose(f);
+#if defined _WIN32
+        _wremove(filename.c_str());
+#else
         remove(filename.c_str());
+#endif
     }
     return code;
 }
 
+#if defined _WIN32
 bool haveImageReader( const String& filename )
+{
+    return haveImageReader(toWString(filename));
+}
+#else
+bool haveImageWriter( const WString& filename )
+{
+    return haveImageReader(toString(filename));
+}
+#endif
+bool haveImageReader( const Pfad& filename )
 {
     ImageDecoder decoder = cv::findDecoder(filename);
     return !decoder.empty();
 }
 
+#if defined _WIN32
 bool haveImageWriter( const String& filename )
+{
+    return haveImageWriter(toWString(filename));
+}
+#else
+bool haveImageWriter( const WString& filename )
+{
+    return haveImageWriter(toString(filename));
+}
+#endif
+bool haveImageWriter( const Pfad& filename )
 {
     cv::ImageEncoder encoder = cv::findEncoder(filename);
     return !encoder.empty();

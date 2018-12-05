@@ -293,6 +293,9 @@ typedef struct {
 \******************************************************************************/
 
 /* Open a file as a stream. */
+#if defined _WIN32
+jas_stream_t *jas_stream_wfopen(const wchar_t *filename, const char *mode);
+#endif
 jas_stream_t *jas_stream_fopen(const char *filename, const char *mode);
 
 /* Open a memory buffer as a stream. */

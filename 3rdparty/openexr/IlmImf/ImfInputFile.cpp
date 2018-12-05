@@ -308,6 +308,33 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
 
 
 
+#if defined _WIN32
+InputFile::InputFile (const wchar_t fileNameW[], const char fileName[], int numThreads):
+    _data (new Data (true, numThreads))
+{
+    try
+    {
+    _data->is = new StdIFStream (fileNameW, fileName);
+    initialize();
+    }
+    catch (Iex::BaseExc &e)
+    {
+    delete _data;
+
+        REPLACE_EXC (e, "Cannot read image file "
+            "\"" << fileNameW << "\". " << e);
+        throw;
+    }
+    catch (...)
+    {
+    delete _data;
+        throw;
+    }
+}
+#endif
+
+
+
 InputFile::InputFile (const char fileName[], int numThreads):
     _data (new Data (true, numThreads))
 {

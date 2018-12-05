@@ -842,6 +842,54 @@ String format( const char* fmt, ... )
     }
 }
 
+#if defined _WIN32
+WString tempfileW( const wchar_t* suffix )
+{
+    WString fname;
+#ifndef WINRT
+    const wchar_t *temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
+#endif
+
+#ifdef WINRT
+    RoInitialize(RO_INIT_MULTITHREADED);
+    std::wstring temp_dir = GetTempPathWinRT();
+
+    std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
+    if (temp_file.empty())
+        return WString();
+
+    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
+    DeleteFileW(temp_file.c_str());
+
+    fname = temp_file;
+#else
+    wchar_t temp_dir2[MAX_PATH] = { 0 };
+    wchar_t temp_file[MAX_PATH] = { 0 };
+
+    if (temp_dir == 0 || temp_dir[0] == 0)
+    {
+        ::GetTempPathW(sizeof(temp_dir2), temp_dir2);
+        temp_dir = temp_dir2;
+    }
+    if(0 == ::GetTempFileNameW(temp_dir, L"ocv", 0, temp_file))
+        return WString();
+
+    DeleteFileW(temp_file);
+
+    fname = temp_file;
+#endif
+
+    if (suffix)
+    {
+        if (suffix[0] != L'.')
+            return fname + L"." + suffix;
+        else
+            return fname + suffix;
+    }
+    return fname;
+}
+#endif
+
 String tempfile( const char* suffix )
 {
     String fname;

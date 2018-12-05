@@ -226,7 +226,11 @@ bool  JpegDecoder::readHeader()
         }
         else
         {
+#if defined _WIN32
+            m_f = _wfopen( m_filename.c_str(), L"rb" );
+#else
             m_f = fopen( m_filename.c_str(), "rb" );
+#endif
             if( m_f )
                 jpeg_stdio_src( &state->cinfo, m_f );
         }
@@ -526,7 +530,11 @@ static void jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
 
 JpegEncoder::JpegEncoder()
 {
+#if defined _WIN32
+    m_description = L"JPEG files (*.jpeg;*.jpg;*.jpe)";
+#else
     m_description = "JPEG files (*.jpeg;*.jpg;*.jpe)";
+#endif
     m_buf_supported = true;
 }
 
@@ -569,7 +577,11 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
     if( !m_buf )
     {
+#if defined _WIN32
+        fw.f = _wfopen( m_filename.c_str(), L"wb" );
+#else
         fw.f = fopen( m_filename.c_str(), "wb" );
+#endif
         if( !fw.f )
             goto _exit_;
         jpeg_stdio_dest( &cinfo, fw.f );

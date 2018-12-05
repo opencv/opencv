@@ -176,7 +176,11 @@ void PFMDecoder::close()
 
 PFMEncoder::PFMEncoder()
 {
+#if defined _WIN32
+  m_description = L"Portable image format - float (*.pfm)";
+#else
   m_description = "Portable image format - float (*.pfm)";
+#endif
 }
 
 PFMEncoder::~PFMEncoder()

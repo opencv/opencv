@@ -388,7 +388,11 @@ bad_decoding_end:
 
 SunRasterEncoder::SunRasterEncoder()
 {
+#if defined _WIN32
+    m_description = L"Sun raster files (*.sr;*.ras)";
+#else
     m_description = "Sun raster files (*.sr;*.ras)";
+#endif
 }
 
 
