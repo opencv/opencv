@@ -571,14 +571,21 @@ endmacro()
 # Provides an option that the user can optionally select.
 # Can accept condition to control when option is available for user.
 # Usage:
-#   option(<option_variable> "help string describing the option" <initial value or boolean expression> [IF <condition>])
+#   option(<option_variable>
+#          "help string describing the option"
+#          <initial value or boolean expression>
+#          [IF <condition>]
+#          [VERIFY <condition>])
 macro(OCV_OPTION variable description value)
   set(__value ${value})
   set(__condition "")
+  set(__verification)
   set(__varname "__value")
   foreach(arg ${ARGN})
     if(arg STREQUAL "IF" OR arg STREQUAL "if")
       set(__varname "__condition")
+    elseif(arg STREQUAL "VERIFY")
+      set(__varname "__verification")
     else()
       list(APPEND ${__varname} ${arg})
     endif()
@@ -613,6 +620,10 @@ macro(OCV_OPTION variable description value)
     if(OPENCV_UNSET_UNSUPPORTED_OPTION)
       unset(${variable} CACHE)
     endif()
+  endif()
+  if(__verification)
+    list(APPEND OPENCV_WITH_VERIFICATIONS "${variable}")
+    set(OPENCV_VERIFY_${variable} "${__verification}")
   endif()
   unset(__condition)
   unset(__value)
