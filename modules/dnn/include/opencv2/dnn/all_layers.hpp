@@ -77,6 +77,15 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams &params);
     };
 
+    /**
+     * Constant layer produces the same data blob at an every forward pass.
+     */
+    class CV_EXPORTS ConstLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams &params);
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {
