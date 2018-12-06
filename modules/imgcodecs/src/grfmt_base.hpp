@@ -49,9 +49,6 @@
 namespace cv
 {
 
-#if defined _WIN32
-void setCodePage(unsigned int CodePage);
-#endif
 String toString(const WString& wstr);
 WString toWString(const String& str);
 

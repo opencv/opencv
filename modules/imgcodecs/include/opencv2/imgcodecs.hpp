@@ -129,31 +129,6 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
      };
 
-/** @brief Sets the code page for the cv::String file paths.
-
-@anchor setcodepage
-
-This function sets the code page for the cv::String file paths.
-
-This function can only change the code page in Windows.
-In other operating systems the function has no effect.
-
-The default value is determined by the default value of the Windows file API (either CP_ACP or CP_OEMCP).
-This ensures that the default behavior corresponds to older openCV versions.
-
-The Windows Macros for the code page identifiers are declared in "Stringapiset.h".
-Before Windows 8, it was declared in "Winnls.h".
-In both cases the header is included in "windows.h".
-
-Examples:
-ANSI:  cv::setcodepage(CP_ACP);
-OEM:   cv::setcodepage(CP_OEMCP);
-UTF-8: cv::setcodepage(CP_UTF8);
-
-@param codepage Code page of the cv::String file paths
-*/
-CV_EXPORTS_W void setcodepage(unsigned int codepage);
-
 /** @brief Loads an image from a file.
 
 @anchor imread

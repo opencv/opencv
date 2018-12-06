@@ -680,22 +680,6 @@ imreadmulti_(const Pfad& filename, int flags, std::vector<Mat>& mats)
 }
 
 /**
- * Set the code page
- *
- *  This function sets the code page for the cv::String file paths.
- *
- * @param[in] codepage Code page of the cv::String file paths
-*/
-void setcodepage(unsigned int codepage)
-{
-#if defined _WIN32
-    setCodePage(codepage);
-#else
-    (void)codepage;
-#endif
-}
-
-/**
  * Read an image
  *
  *  This function merely calls the actual implementation above and returns itself.

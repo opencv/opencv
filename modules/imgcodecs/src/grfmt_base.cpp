@@ -55,13 +55,6 @@ namespace cv
 unsigned int code_page = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
 #endif
 
-#if defined _WIN32
-void setCodePage(unsigned int CodePage)
-{
-    code_page = CodePage;
-}
-#endif
-
 String toString(const WString& wstr)
 {
 #if defined _WIN32
@@ -89,7 +82,7 @@ String toString(const WString& wstr)
     std::size_t size = wstr.size();
 
     //Overestimate number of code points
-    std::vector<char> str(length, ' ');
+    std::vector<char> str(size, ' ');
 
     //Convert to a narrow character string
     size = std::wcstombs(str.data(), wstr.c_str(), size);
