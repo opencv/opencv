@@ -58,7 +58,7 @@ unsigned int code_page = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
 #if defined _WIN32
 void setCodePage(unsigned int CodePage)
 {
-	code_page = CodePage;
+    code_page = CodePage;
 }
 #endif
 
@@ -70,26 +70,27 @@ String toString(const WString& wstr)
         //Return the empty string
         return("");
     }
-    
+
     //Calculate target buffer size (not including the zero terminator)
-    int length = WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
+    int wstring_size = static_cast<int>(wstr.size());
+    int length = WideCharToMultiByte(code_page, 0, wstr.c_str(), wstring_size, NULL, 0, NULL, NULL);
     if(length == 0)
     {
         //Conversion failed
         return("");
     }
-    
+
     //The elements of a vector are stored contiguously, the standard does not guarantee this for a string
     std::vector<char> str(length, ' ');
-    WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstr.size(), str.data(), length, NULL, NULL);
-    
+    WideCharToMultiByte(code_page, 0, wstr.c_str(), wstring_size, str.data(), length, NULL, NULL);
+
     return(std::string(str.data(), length));
 #else
     std::size_t size = wstr.size();
-    
+
     //Overestimate number of code points
     std::vector<char> str(length, ' ');
-    
+
     //Convert to a narrow character string
     size = std::wcstombs(str.data(), wstr.c_str(), size);
     if(size != String::npos)
@@ -97,7 +98,7 @@ String toString(const WString& wstr)
         //Shrink to fit
         return(String(str.data(), size));
     }
-    
+
     //Conversion failed, return an empty string
     return("");
 #endif
@@ -111,28 +112,29 @@ WString toWString(const String& str)
         //Return the empty wstring
         return(L"");
     }
-    
+
     //Calculate target buffer size (not including the zero terminator)
-    int length = MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), str.size(), NULL, 0);
+    int string_size = static_cast<int>(str.size());
+    int length = MultiByteToWideChar(code_page, 0, str.c_str(), string_size, NULL, 0);
     if(length == 0)
     {
         //Conversion failed
         return(L"");
     }
-    
+
     //The elements of a vector are stored contiguously, the standard does not guarantee this for a string
     std::vector<wchar_t> wstr(length, L' ');
-    
+
     //No error checking. We already know, that the conversion will succeed.
-    MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), str.size(), wstr.data(), length);
-    
+    MultiByteToWideChar(code_page, 0, str.c_str(), string_size, wstr.data(), length);
+
     return(WString(wstr.data(), length));
 #else
     std::size_t size = str.size();
-    
+
     //Overestimate number of code points
     std::vector<wchar_t> wstr(size, L' ');
-    
+
     //Convert to a multibyte character string
     size = std::mbstowcs(wstr.data(), str.c_str(), size);
     if(size != String::npos)
@@ -140,7 +142,7 @@ WString toWString(const String& str)
         //Shrink to fit
         return(WString(wstr.data(), size));
     }
-    
+
     //Conversion failed, return an empty wstring
     return(L"");
 #endif

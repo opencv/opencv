@@ -270,19 +270,19 @@ static ImageEncoder findEncoder( const Pfad& _ext )
 #if defined _WIN32
     if( _ext.size() <= 1 )
         return ImageEncoder();
-   
+
     const wchar_t* ext = wcsrchr( _ext.c_str(), L'.' );
     if( !ext )
         return ImageEncoder();
     int len = 0;
     for( ext++; len < 128 && iswalnum(ext[len]); len++ )
         ;
-   
+
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
         Pfad description = codecs.encoders[i]->getDescription();
         const wchar_t* descr = wcschr( description.c_str(), L'(' );
-   
+
         while( descr )
         {
             descr = wcschr( descr + 1, L'.' );
@@ -686,12 +686,14 @@ imreadmulti_(const Pfad& filename, int flags, std::vector<Mat>& mats)
  *
  * @param[in] codepage Code page of the cv::String file paths
 */
-#if defined _WIN32
 void setcodepage(unsigned int codepage)
 {
-	setCodePage(codepage);
-}
+#if defined _WIN32
+    setCodePage(codepage);
+#else
+    (void)codepage;
 #endif
+}
 
 /**
  * Read an image
@@ -1110,7 +1112,7 @@ bool haveImageReader( const String& filename )
     return haveImageReader(toWString(filename));
 }
 #else
-bool haveImageWriter( const WString& filename )
+bool haveImageReader( const WString& filename )
 {
     return haveImageReader(toString(filename));
 }
