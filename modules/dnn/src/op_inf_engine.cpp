@@ -424,6 +424,8 @@ void InfEngineBackendNet::init(int targetId)
         InferenceEngine::OutputsDataMap unconnectedOuts;
         for (const auto& l : layers)
         {
+            if (l->type == "Input")
+                continue;
             // Add all outputs.
             for (const InferenceEngine::DataPtr& out : l->outData)
             {
