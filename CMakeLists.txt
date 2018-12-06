@@ -219,7 +219,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        (NOT MI
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
+OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
   VERIFY HAVE_DC1394)
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/Mac)" ON
@@ -374,10 +374,10 @@ OCV_OPTION(WITH_OPENCL "Include OpenCL Runtime support" (NOT ANDROID AND NOT CV_
 OCV_OPTION(WITH_OPENCL_SVM "Include OpenCL Shared Virtual Memory support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_OPENCL_SVM) # experimental
-OCV_OPTION(WITH_OPENCLAMDFFT "Include AMD OpenCL FFT library support" OFF
+OCV_OPTION(WITH_OPENCLAMDFFT "Include AMD OpenCL FFT library support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
   VERIFY HAVE_CLAMDFFT)
-OCV_OPTION(WITH_OPENCLAMDBLAS "Include AMD OpenCL BLAS library support" OFF
+OCV_OPTION(WITH_OPENCLAMDBLAS "Include AMD OpenCL BLAS library support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
   VERIFY HAVE_CLAMDBLAS)
 OCV_OPTION(WITH_DIRECTX "Include DirectX support" ON
