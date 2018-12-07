@@ -665,6 +665,13 @@ sess.as_default()
 save(sess.graph.get_tensor_by_name('keras_pad_concat_input:0'),
      sess.graph.get_tensor_by_name('keras_pad_concat/concatenate/concat:0'),
      'keras_pad_concat', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
+                        bias_initializer=tf.random_normal_initializer())
+sub = conv - inp
+save(inp, sub, 'eltwise_sub')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
