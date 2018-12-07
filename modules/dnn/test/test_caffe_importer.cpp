@@ -471,6 +471,7 @@ TEST(Test_Caffe, shared_weights)
 
   net.setInput(blob_1, "input_1");
   net.setInput(blob_2, "input_2");
+  net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
   Mat sum = net.forward();
 

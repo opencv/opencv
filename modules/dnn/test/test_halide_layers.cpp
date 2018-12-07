@@ -166,7 +166,7 @@ TEST_P(Deconvolution, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU &&
         dilation.width == 2 && dilation.height == 2)
         throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU &&
         hasBias && group != 1)
         throw SkipTestException("Test is disabled for OpenVINO 2018R4");
