@@ -303,10 +303,6 @@ public:
 //==================================================================================================
 
 static const VideoCaptureAPIs backend_params[] = {
-#ifdef HAVE_QUICKTIME
-    CAP_QT,
-#endif
-
 // TODO: Broken?
 //#ifdef HAVE_AVFOUNDATION
 //    CAP_AVFOUNDATION,
@@ -333,7 +329,6 @@ static const VideoCaptureAPIs backend_params[] = {
 };
 
 static const string bunny_params[] = {
-#ifdef HAVE_VIDEO_INPUT
     string("wmv"),
     string("mov"),
     string("mp4"),
@@ -341,7 +336,6 @@ static const string bunny_params[] = {
     string("avi"),
     string("h264"),
     string("h265"),
-#endif
     string("mjpg.avi")
 };
 
@@ -382,18 +376,6 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("wmv", "WMV3", 30.f, CAP_MSMF),
     makeParam("wmv", "WVC1", 30.f, CAP_MSMF),
     makeParam("mov", "H264", 30.f, CAP_MSMF),
-#endif
-
-#ifdef HAVE_QUICKTIME
-    makeParam("mov", "mp4v", 30.f, CAP_QT),
-    makeParam("avi", "XVID", 30.f, CAP_QT),
-    makeParam("avi", "MPEG", 30.f, CAP_QT),
-    makeParam("avi", "IYUV", 30.f, CAP_QT),
-    makeParam("avi", "MJPG", 30.f, CAP_QT),
-
-    makeParam("mkv", "XVID", 30.f, CAP_QT),
-    makeParam("mkv", "MPEG", 30.f, CAP_QT),
-    makeParam("mkv", "MJPG", 30.f, CAP_QT),
 #endif
 
 // TODO: Broken?
