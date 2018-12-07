@@ -202,6 +202,7 @@ endif()
 # ----------------------------------------------------------------------------
 # OpenCV cmake options
 # ----------------------------------------------------------------------------
+
 OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
 
 # 3rd party libs
@@ -1673,6 +1674,7 @@ status("")
 status("  Install to:" "${CMAKE_INSTALL_PREFIX}")
 status("-----------------------------------------------------------------")
 status("")
+
 
 ocv_finalize_status()
 
