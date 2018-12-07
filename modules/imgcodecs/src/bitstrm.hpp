@@ -65,6 +65,12 @@ DECLARE_RBS_EXCEPTION(BAD_HEADER)
 
 typedef unsigned long ulong;
 
+#if defined _WIN32
+typedef WString Pfad;
+#else
+typedef String Pfad;
+#endif
+
 // class RBaseStream - base class for other reading streams.
 class RBaseStream
 {

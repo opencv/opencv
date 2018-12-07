@@ -842,10 +842,10 @@ String format( const char* fmt, ... )
     }
 }
 
-#if defined _WIN32
 WString tempfileW( const wchar_t* suffix )
 {
     WString fname;
+#if defined _WIN32
 #ifndef WINRT
     const wchar_t *temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
 #endif
@@ -886,9 +886,21 @@ WString tempfileW( const wchar_t* suffix )
         else
             return fname + suffix;
     }
+#else
+    std::size_t suffix_size = wcslen(suffix);
+    std::vector<char> asuffix(suffix_size, ' ');
+    wcstombs(asuffix.data(), suffix, suffix_size);
+
+    String temp_suffix = String(asuffix.data(), suffix_size);
+    String temp_file = tempfile(temp_suffix.c_str());
+
+    std::size_t size = temp_file.size();
+    std::vector<wchar_t> aname(size, L' ');
+    std::mbstowcs(aname.data(), temp_file.c_str(), size);
+    fname = WString(aname.data(), size);
+#endif
     return fname;
 }
-#endif
 
 String tempfile( const char* suffix )
 {

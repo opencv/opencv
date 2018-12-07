@@ -196,9 +196,7 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
-#if defined _WIN32
 CV_EXPORTS WString tempfileW( const wchar_t* suffix = 0);
-#endif
 CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 

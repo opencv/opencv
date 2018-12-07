@@ -152,12 +152,6 @@ class CV_EXPORTS FileNode; //for string constructor from FileNode
 typedef std::string String;
 typedef std::wstring WString;
 
-#if defined _WIN32
-typedef WString Pfad;
-#else
-typedef String Pfad;
-#endif
-
 #ifndef OPENCV_DISABLE_STRING_LOWER_UPPER_CONVERSIONS
 
 //! @cond IGNORED
