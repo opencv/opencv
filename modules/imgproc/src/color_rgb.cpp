@@ -246,7 +246,8 @@ struct RGB2RGB5x5
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
-        v_uint16 vn3 = vx_setall_u16(~3), vn7 = vx_setall_u16(~7);
+        v_uint16 vn3 = vx_setall_u16((ushort)(~3));
+        v_uint16 vn7 = vx_setall_u16((ushort)(~7));
         v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
         v_uint8 v7 = vx_setall_u8(~7);
         for(; i < n-vsize+1;
@@ -379,7 +380,7 @@ struct Gray2RGB5x5
         int i = 0;
 #if CV_SIMD
         const int vsize = v_uint16::nlanes;
-        v_uint16 v3 = vx_setall_u16(~3);
+        v_uint16 v3 = vx_setall_u16((ushort)(~3));
         for(; i < n-vsize+1;
             i += vsize, src += vsize, dst += vsize*sizeof(ushort))
         {
@@ -611,7 +612,7 @@ struct RGB2Gray<uchar>
     {
         const int coeffs0[] = { RY, GY, BY };
         for(int i = 0; i < 3; i++)
-                coeffs[i] = _coeffs ? _coeffs[i] : coeffs0[i];
+                coeffs[i] = (short)(_coeffs ? _coeffs[i] : coeffs0[i]);
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -621,7 +622,7 @@ struct RGB2Gray<uchar>
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int scn = srccn;
-        int cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
+        short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
 #if CV_SIMD
@@ -685,7 +686,7 @@ struct RGB2Gray<uchar>
     }
 
     int srccn;
-    int coeffs[3];
+    short coeffs[3];
 };
 
 
@@ -705,7 +706,7 @@ struct RGB2Gray<ushort>
     {
         const int coeffs0[] = { RY, GY, BY };
         for(int i = 0; i < 3; i++)
-                coeffs[i] = _coeffs ? _coeffs[i] : coeffs0[i];
+                coeffs[i] = (short)(_coeffs ? _coeffs[i] : coeffs0[i]);
         if(blueIdx == 0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -714,7 +715,8 @@ struct RGB2Gray<ushort>
 
     void operator()(const ushort* src, ushort* dst, int n) const
     {
-        int scn = srccn, cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
+        int scn = srccn;
+        short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
 #if CV_SIMD
@@ -780,7 +782,7 @@ struct RGB2Gray<ushort>
     }
 
     int srccn;
-    int coeffs[3];
+    short coeffs[3];
 };
 
 /////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
