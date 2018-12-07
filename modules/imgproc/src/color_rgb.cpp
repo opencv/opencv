@@ -249,7 +249,7 @@ struct RGB2RGB5x5
         v_uint16 vn3 = vx_setall_u16((ushort)(~3));
         v_uint16 vn7 = vx_setall_u16((ushort)(~7));
         v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
-        v_uint8 v7 = vx_setall_u8(~7);
+        v_uint8 v7 = vx_setall_u8((ushort)(~7));
         for(; i < n-vsize+1;
             i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
         {
