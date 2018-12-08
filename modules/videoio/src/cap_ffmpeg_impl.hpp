@@ -497,6 +497,8 @@ struct CvCapture_FFMPEG
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
     double  dts_to_sec(int64_t dts);
+    AVPixelFormat getDstPixelFormat(AVPixelFormat srcPixelFormat) const;
+    int getChannelCount(AVPixelFormat srcPixelFormat) const;
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -1103,7 +1105,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
                 buffer_width, buffer_height,
                 video_st->codec->pix_fmt,
                 buffer_width, buffer_height,
-                AV_PIX_FMT_BGR24,
+                getDstPixelFormat(video_st->codec->pix_fmt),
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
@@ -1113,7 +1115,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);
-        rgb_picture.format = AV_PIX_FMT_BGR24;
+        rgb_picture.format = getDstPixelFormat(video_st->codec->pix_fmt);
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
@@ -1125,14 +1127,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         int aligns[AV_NUM_DATA_POINTERS];
         avcodec_align_dimensions2(video_st->codec, &buffer_width, &buffer_height, aligns);
         rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
-                _opencv_ffmpeg_av_image_get_buffer_size( AV_PIX_FMT_BGR24,
+                _opencv_ffmpeg_av_image_get_buffer_size( getDstPixelFormat(video_st->codec->pix_fmt),
                                     buffer_width, buffer_height ));
         _opencv_ffmpeg_av_image_fill_arrays(&rgb_picture, rgb_picture.data[0],
-                        AV_PIX_FMT_BGR24, buffer_width, buffer_height );
+                        getDstPixelFormat(video_st->codec->pix_fmt), buffer_width, buffer_height );
 #endif
         frame.width = video_st->codec->width;
         frame.height = video_st->codec->height;
-        frame.cn = 3;
+        frame.cn = getChannelCount(video_st->codec->pix_fmt);
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
@@ -1281,6 +1283,30 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
+}
+
+AVPixelFormat CvCapture_FFMPEG::getDstPixelFormat(const AVPixelFormat srcPixelFormat) const {
+    switch (srcPixelFormat) {
+        case AV_PIX_FMT_ARGB:
+        case AV_PIX_FMT_RGBA:
+        case AV_PIX_FMT_ABGR:
+        case AV_PIX_FMT_BGRA:
+            return AV_PIX_FMT_BGRA;
+        default:
+            return AV_PIX_FMT_BGR24;
+    }
+}
+
+int CvCapture_FFMPEG::getChannelCount(const AVPixelFormat srcPixelFormat) const {
+    switch (srcPixelFormat) {
+        case AV_PIX_FMT_ARGB:
+        case AV_PIX_FMT_RGBA:
+        case AV_PIX_FMT_ABGR:
+        case AV_PIX_FMT_BGRA:
+            return 4;
+        default:
+            return 3;
+    }
 }
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
