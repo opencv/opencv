@@ -1,4 +1,4 @@
-//  //////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -38,21 +38,69 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 
-let testrunner = require('node-qunit');
-testrunner.options.maxBlockDuration = 20000; // cause opencv_js.js need time to load
+// Author : Rijubrata Bhaumik, Intel Corporation. rijubrata.bhaumik[at]intel[dot]com
 
-testrunner.run(
+if (typeof module !== 'undefined' && module.exports) {
+    // The envrionment is Node.js
+    var cv = require('./opencv.js'); // eslint-disable-line no-var
+}
+
+
+QUnit.module('Photo', {});
+
+QUnit.test('test_photo', function(assert) {
+    // CalibrateDebevec
     {
-        code: 'opencv.js',
-        tests: ['test_mat.js', 'test_utils.js', 'test_imgproc.js',
-                'test_objdetect.js', 'test_video.js', 'test_photo.js'],
-    },
-    function(err, report) {
-        console.log(report.failed + ' failed, ' + report.passed + ' passed');
-        if (report.failed) {
-            process.on('exit', function() {
-                process.exit(1);
-            });
-        }
+        let calibration = new cv.CalibrateDebevec();
+        assert.ok(true, calibration);
+        //let response = calibration.process(images, exposures);
     }
-);
+    // CalibrateRobertson
+    {
+        let calibration = new cv.CalibrateRobertson();
+        assert.ok(true, calibration);
+        //let response = calibration.process(images, exposures);
+    }
+
+    // MergeDebevec
+    {
+        let merge = new cv.MergeDebevec();
+        assert.ok(true, merge);
+        //let hdr = merge.process(images, exposures, response);
+    }
+    // MergeMertens
+    {
+        let merge = new cv.MergeMertens();
+        assert.ok(true, merge);
+        //let hdr = merge.process(images, exposures, response);
+    }
+    // MergeRobertson
+    {
+        let merge = new cv.MergeRobertson();
+        assert.ok(true, merge);
+        //let hdr = merge.process(images, exposures, response);
+    }
+
+    // TonemapDrago
+    {
+        let tonemap = new cv.TonemapDrago();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+    // TonemapMantiuk
+    {
+        let tonemap = new cv.TonemapMantiuk();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+    // TonemapReinhard
+    {
+        let tonemap = new cv.TonemapReinhard();
+        assert.ok(true, tonemap);
+        // let ldr = new cv.Mat();
+        // let retval = tonemap.process(hdr, ldr);
+    }
+
+});
