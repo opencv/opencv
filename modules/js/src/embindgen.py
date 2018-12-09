@@ -142,6 +142,27 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['FAST', 'AGAST', 'drawKeypoints', 'drawMatches']}
 
+photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard'],
+        'CalibrateCRF': ['process'],
+        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+        'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
+        'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+        'MergeExposures' : ['process'],
+        'MergeDebevec' : ['process'],
+        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+        'MergeRobertson' : ['process'],
+        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
+        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
+        'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
+        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+                             'getColorAdaptation', 'setColorAdaptation']
+        }
+
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -152,7 +173,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo])
 
 # Features to be exported
 export_enums = False
