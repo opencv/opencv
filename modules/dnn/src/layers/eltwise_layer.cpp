@@ -98,7 +98,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && (op != SUM || coeffs.empty()));
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+                (preferableTarget != DNN_TARGET_MYRIAD || coeffs.empty()));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -427,6 +428,7 @@ public:
         lp.type = "Eltwise";
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::EltwiseLayer> ieLayer(new InferenceEngine::EltwiseLayer(lp));
+        ieLayer->coeff = coeffs;
         if (op == SUM)
             ieLayer->_operation = InferenceEngine::EltwiseLayer::Sum;
         else if (op == PROD)

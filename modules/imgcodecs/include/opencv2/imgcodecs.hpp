@@ -173,6 +173,8 @@ Currently, the following file formats are supported:
 -   If EXIF information are embedded in the image file, the EXIF orientation will be taken into account
     and thus the image will be rotated accordingly except if the flag @ref IMREAD_IGNORE_ORIENTATION is passed.
 -   Use the IMREAD_UNCHANGED flag to keep the floating point values from PFM image.
+-   By default number of pixels must be less than 2^30. Limit can be set using system
+    variable OPENCV_IO_MAX_IMAGE_PIXELS
 
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes

@@ -139,9 +139,10 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("keras_pad_concat");
 }
 
-TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
+TEST_P(Test_TensorFlow_layers, eltwise)
 {
     runTensorFlowNet("eltwise_add_mul");
+    runTensorFlowNet("eltwise_sub");
 }
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
