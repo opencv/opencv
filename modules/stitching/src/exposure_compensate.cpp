@@ -41,6 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
+#ifdef HAVE_EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#endif
 
 namespace cv {
 namespace detail {
@@ -163,7 +167,23 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
     }
 
     Mat_<double> l_gains;
+
+#ifdef HAVE_EIGEN
+    Eigen::MatrixXf eigen_A, eigen_b, eigen_x;
+    cv2eigen(A, eigen_A);
+    cv2eigen(b, eigen_b);
+
+    Eigen::LLT<Eigen::MatrixXf> solver(eigen_A);
+#if ENABLE_LOG
+    if (solver.info() != Eigen::ComputationInfo::Success)
+        LOGLN("Failed to solve exposure compensation system");
+#endif
+    eigen_x = solver.solve(eigen_b);
+
+    eigen2cv(eigen_x, l_gains);
+#else
     solve(A, b, l_gains);
+#endif
 
     gains_.create(num_images, 1);
     for (int i = 0, j = 0; i < num_images; ++i)
