@@ -1992,7 +1992,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             s22 += v_reduce_sum(v_s22);
             s1 += v_reduce_sum(v_s1);
             s2 += v_reduce_sum(v_s2);
-#elif CV_SIMD
+#elif CV_SIMD && 0 //Disable vectorization for CV_COMP_CORREL if f64 is unsupported due to low precision
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_s11 = vx_setzero_f32();
@@ -2075,7 +2075,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             s1 += v_reduce_sum(v_s1);
             s2 += v_reduce_sum(v_s2);
             result += v_reduce_sum(v_result);
-#elif CV_SIMD
+#elif CV_SIMD && 0 //Disable vectorization for CV_COMP_BHATTACHARYYA if f64 is unsupported due to low precision
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_result = vx_setzero_f32();
