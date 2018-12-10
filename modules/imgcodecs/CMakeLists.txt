@@ -90,11 +90,13 @@ source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
 set(imgcodecs_hdrs
     ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/path.hpp
     ${CMAKE_CURRENT_LIST_DIR}/src/utils.hpp
     )
 
 set(imgcodecs_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/loadsave.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/path.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/utils.cpp
     )
 

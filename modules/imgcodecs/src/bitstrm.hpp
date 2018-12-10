@@ -43,6 +43,8 @@
 #ifndef _BITSTRM_H_
 #define _BITSTRM_H_
 
+#include "path.hpp"
+
 #include <stdio.h>
 
 namespace cv
@@ -65,12 +67,6 @@ DECLARE_RBS_EXCEPTION(BAD_HEADER)
 
 typedef unsigned long ulong;
 
-#if defined _WIN32
-typedef WString Pfad;
-#else
-typedef String Pfad;
-#endif
-
 // class RBaseStream - base class for other reading streams.
 class RBaseStream
 {
@@ -79,7 +75,7 @@ public:
     RBaseStream();
     virtual ~RBaseStream();
 
-    virtual bool  open( const Pfad& filename );
+    virtual bool  open( const Path& filename );
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
@@ -136,7 +132,7 @@ public:
     WBaseStream();
     virtual ~WBaseStream();
 
-    virtual bool  open( const Pfad& filename );
+    virtual bool  open( const Path& filename );
     virtual bool  open( std::vector<uchar>& buf );
     virtual void  close();
     bool          isOpened();

@@ -122,7 +122,7 @@ bool  ExrDecoder::readHeader()
     bool result = false;
 
 #if defined _WIN32
-    m_file = new InputFile( m_filename.c_str(), toString(m_filename).c_str() );
+    m_file = new InputFile( m_filename.c_str(), m_filename.string().c_str() );
 #else
     m_file = new InputFile( m_filename.c_str() );
 #endif
@@ -554,11 +554,7 @@ ImageDecoder ExrDecoder::newDecoder() const
 
 ExrEncoder::ExrEncoder()
 {
-#if defined _WIN32
-    m_description = L"OpenEXR Image files (*.exr)";
-#else
-    m_description = "OpenEXR Image files (*.exr)";
-#endif
+    m_description = _CREATE_PATH("OpenEXR Image files (*.exr)");
 }
 
 
@@ -616,7 +612,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     }
 
 #if defined _WIN32
-    OutputFile file( m_filename.c_str(), toString(m_filename).c_str(), header );
+    OutputFile file( m_filename.c_str(), m_filename.string().c_str(), header );
 #else
     OutputFile file( m_filename.c_str(), header );
 #endif

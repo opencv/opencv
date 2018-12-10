@@ -69,11 +69,7 @@ size_t HdrDecoder::signatureLength() const
 
 bool  HdrDecoder::readHeader()
 {
-#if defined _WIN32
-    file = _wfopen(m_filename.c_str(), L"rb");
-#else
-    file = fopen(m_filename.c_str(), "rb");
-#endif
+    file = m_filename.openPath( _CREATE_PATH("rb") );
     if(!file) {
         return false;
     }
@@ -125,11 +121,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 
 HdrEncoder::HdrEncoder()
 {
-#if defined _WIN32
-    m_description = L"Radiance HDR (*.hdr;*.pic)";
-#else
-    m_description = "Radiance HDR (*.hdr;*.pic)";
-#endif
+    m_description = _CREATE_PATH("Radiance HDR (*.hdr;*.pic)");
 }
 
 HdrEncoder::~HdrEncoder()
@@ -150,11 +142,7 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
         img.convertTo(img, CV_32FC3, 1/255.0f);
     }
     CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);
-#if defined _WIN32
-    FILE *fout = _wfopen(m_filename.c_str(), L"wb");
-#else
-    FILE *fout = fopen(m_filename.c_str(), "wb");
-#endif
+    FILE *fout = m_filename.openPath( _CREATE_PATH("wb") );
     if(!fout) {
         return false;
     }

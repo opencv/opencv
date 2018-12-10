@@ -44,13 +44,11 @@
 #define _GRFMT_BASE_H_
 
 #include "utils.hpp"
+#include "path.hpp"
 #include "bitstrm.hpp"
 
 namespace cv
 {
-
-String toString(const WString& wstr);
-WString toWString(const String& str);
 
 class BaseImageDecoder;
 class BaseImageEncoder;
@@ -68,7 +66,7 @@ public:
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
 
-    virtual bool setSource( const Pfad& filename );
+    virtual bool setSource( const Path& filename );
     virtual bool setSource( const Mat& buf );
     virtual int setScale( const int& scale_denom );
     virtual bool readHeader() = 0;
@@ -86,7 +84,7 @@ protected:
     int  m_height; // height of the image ( filled by readHeader )
     int  m_type;
     int  m_scale_denom;
-    Pfad m_filename;
+    Path m_filename;
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
@@ -101,20 +99,20 @@ public:
     virtual ~BaseImageEncoder() {}
     virtual bool isFormatSupported( int depth ) const;
 
-    virtual bool setDestination( const Pfad& filename );
+    virtual bool setDestination( const Path& filename );
     virtual bool setDestination( std::vector<uchar>& buf );
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
 
-    virtual Pfad getDescription() const;
+    virtual Path getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
     virtual void throwOnEror() const;
 
 protected:
-    Pfad m_description;
+    Path m_description;
 
-    Pfad m_filename;
+    Path m_filename;
     std::vector<uchar>* m_buf;
     bool m_buf_supported;
 

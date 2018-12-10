@@ -379,17 +379,10 @@ PxMEncoder::PxMEncoder(PxMMode mode) :
 {
     switch (mode)
     {
-#if defined _WIN32
-    case PXM_TYPE_AUTO: m_description = L"Portable image format - auto (*.pnm)"; break;
-    case PXM_TYPE_PBM: m_description = L"Portable image format - monochrome (*.pbm)"; break;
-    case PXM_TYPE_PGM: m_description = L"Portable image format - gray (*.pgm)"; break;
-    case PXM_TYPE_PPM: m_description = L"Portable image format - color (*.ppm)"; break;
-#else
-    case PXM_TYPE_AUTO: m_description = "Portable image format - auto (*.pnm)"; break;
-    case PXM_TYPE_PBM: m_description = "Portable image format - monochrome (*.pbm)"; break;
-    case PXM_TYPE_PGM: m_description = "Portable image format - gray (*.pgm)"; break;
-    case PXM_TYPE_PPM: m_description = "Portable image format - color (*.ppm)"; break;
-#endif
+    case PXM_TYPE_AUTO: m_description = _CREATE_PATH("Portable image format - auto (*.pnm)"); break;
+    case PXM_TYPE_PBM: m_description = _CREATE_PATH("Portable image format - monochrome (*.pbm)"); break;
+    case PXM_TYPE_PGM: m_description = _CREATE_PATH("Portable image format - gray (*.pgm)"); break;
+    case PXM_TYPE_PPM: m_description = _CREATE_PATH("Portable image format - color (*.ppm)"); break;
     default:
         CV_Error(Error::StsInternal, "");
     }

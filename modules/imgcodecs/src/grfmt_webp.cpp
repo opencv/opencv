@@ -221,11 +221,7 @@ bool WebPDecoder::readData(Mat &img)
 
 WebPEncoder::WebPEncoder()
 {
-#if defined _WIN32
-    m_description = L"WebP files (*.webp)";
-#else
-    m_description = "WebP files (*.webp)";
-#endif
+    m_description = _CREATE_PATH("WebP files (*.webp)");
     m_buf_supported = true;
 }
 
@@ -314,11 +310,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     }
     else
     {
-#if defined _WIN32
-        FILE *fd = _wfopen(m_filename.c_str(), L"wb");
-#else
-        FILE *fd = fopen(m_filename.c_str(), "wb");
-#endif
+        FILE *fd = m_filename.openPath( _CREATE_PATH("wb") );
         if (fd != NULL)
         {
             fwrite(out, size, sizeof(uint8_t), fd);

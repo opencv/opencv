@@ -111,16 +111,12 @@ void  RBaseStream::readBlock()
 }
 
 
-bool  RBaseStream::open( const Pfad& filename )
+bool  RBaseStream::open( const Path& filename )
 {
     close();
     allocate();
 
-#if defined _WIN32
-    m_file = _wfopen( filename.c_str(), L"rb" );
-#else
-    m_file = fopen( filename.c_str(), "rb" );
-#endif
+    m_file = filename.openPath( _CREATE_PATH("rb") );
     if( m_file )
     {
         m_is_opened = true;
@@ -401,16 +397,12 @@ void  WBaseStream::writeBlock()
 }
 
 
-bool  WBaseStream::open( const Pfad& filename )
+bool  WBaseStream::open( const Path& filename )
 {
     close();
     allocate();
 
-#if defined _WIN32
-    m_file = _wfopen( filename.c_str(), L"wb" );
-#else
-    m_file = fopen( filename.c_str(), "wb" );
-#endif
+    m_file = filename.openPath( _CREATE_PATH("wb") );
     if( m_file )
     {
         m_is_opened = true;

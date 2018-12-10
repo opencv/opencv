@@ -452,11 +452,7 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 
 Jpeg2KEncoder::Jpeg2KEncoder()
 {
-#if defined _WIN32
-    m_description = L"JPEG-2000 files (*.jp2)";
-#else
-    m_description = "JPEG-2000 files (*.jp2)";
-#endif
+    m_description = _CREATE_PATH("JPEG-2000 files (*.jp2)");
 }
 
 
