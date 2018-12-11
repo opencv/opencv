@@ -4,8 +4,5 @@ typedef std::vector<detail::ImageFeatures> vector_ImageFeatures;
 typedef std::vector<detail::MatchesInfo> vector_MatchesInfo;
 typedef std::vector<detail::CameraParams> vector_CameraParams;
 
-CV_PY_TO_CLASS(PyRotationWarper);
-CV_PY_FROM_CLASS(PyRotationWarper);
-
 
 #endif
