@@ -59,6 +59,21 @@ namespace cv
 #define _CREATE_PATH(str) str
 #endif
 
+
+//////////////////////// Path class /////////////////////////////////
+
+/*
+
+The class is designed to handle the operating system dependent differences of the file paths.
+
+On Windows the file API for std::string and const char* is for ANSI characters.
+It is unable to handle valid file path characters, such as Asian characters.
+It is necessary to use the file API for std::wstring and const wchar_t*, which uses Unicode.
+
+On other operating system the file API for std::string and const char* is for UTF-8 characters.
+
+ */
+
 class Path
 {
 public:
