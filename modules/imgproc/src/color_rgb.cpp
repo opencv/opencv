@@ -785,6 +785,7 @@ struct RGB2Gray<ushort>
     short coeffs[3];
 };
 
+
 /////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
 
 template<typename _Tp>
@@ -807,6 +808,88 @@ struct RGBA2mRGBA
             *dst++ = (v1 * v3 + half_val) / max_val;
             *dst++ = (v2 * v3 + half_val) / max_val;
             *dst++ = v3;
+        }
+    }
+};
+
+
+template<>
+struct RGBA2mRGBA<uchar>
+{
+    typedef uchar channel_type;
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        const uchar max_val  = 255;
+        const uchar half_val = 128;
+
+        int i = 0;
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
+        v_uint16 vh = vx_setall_u16(half_val+1);
+
+        // processing 4 registers per loop cycle is about 10% faster
+        // than processing 1 register
+        for( ; i <= n-vsize;
+             i += vsize, src += 4*vsize, dst += 4*vsize)
+        {
+            v_uint8 v[4];
+            for(int j = 0; j < 4; j++)
+                v[j] = vx_load(src + j*vsize);
+
+            // r0,g0,b0,a0,r1,g1,b1,a1 => 00,00,00,a0,00,00,00,a1 =>
+            // => 00,00,a0,a0,00,00,a1,a1
+            // => a0,a0,a0,a0,a1,a1,a1,a1
+
+            v_uint16 a16[4];
+            for(int j = 0; j < 4; j++)
+                a16[j] = v_reinterpret_as_u16(v[j] & amask);
+
+            v_uint32 a32[4];
+            for(int j = 0; j < 4; j++)
+                a32[j] = v_reinterpret_as_u32(a16[j] | (a16[j] >> 8));
+
+            v_uint8 a[4];
+            for(int j = 0; j < 4; j++)
+                a[j] = v_reinterpret_as_u8(a32[j] | (a32[j] >> 16));
+
+            v_uint16 m[8];
+            for(int j = 0; j < 4; j++)
+                v_mul_expand(v[j], a[j], m[j], m[j+4]);
+
+            for(int j = 0; j < 8; j++)
+                m[j] += vh;
+
+            // div 255: (v+1+(v>>8))>8
+            // +1 is in vh, has no effect on (v>>8)
+            for(int j = 0; j < 8; j++)
+                m[j] = (m[j] + (m[j] >> 8)) >> 8;
+
+            v_uint8 d[4];
+            for(int j = 0; j < 4; j++)
+                d[j] = v_pack(m[j], m[j+4]);
+
+            for(int j = 0; j < 4; j++)
+                d[j] = v_select(amask, a[j], d[j]);
+
+            for(int j = 0; j < 4; j++)
+                v_store(dst + j*vsize, d[j]);
+        }
+
+        vx_cleanup();
+#endif
+        for(; i < n; i++, src += 4, dst += 4 )
+        {
+            uchar v0 = src[0];
+            uchar v1 = src[1];
+            uchar v2 = src[2];
+            uchar v3 = src[3];
+
+            dst[0] = (v0 * v3 + half_val) / max_val;
+            dst[1] = (v1 * v3 + half_val) / max_val;
+            dst[2] = (v2 * v3 + half_val) / max_val;
+            dst[3] = v3;
         }
     }
 };
