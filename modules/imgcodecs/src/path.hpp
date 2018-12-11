@@ -82,7 +82,7 @@ public:
     bool empty() const;
 
     const PathType::value_type* c_str() const;
-    
+
     void tempPath();
 
     FILE* openPath( const Path& mode ) const;
