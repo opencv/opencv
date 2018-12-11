@@ -181,8 +181,6 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 /** @brief Loads an image from a file.
 
-@anchor imread
-
 The function imread loads an image from the specified file and returns it. If the image cannot be
 read (because of missing file, improper permissions, unsupported or invalid format), the function
 returns an empty matrix ( Mat::data==NULL ).

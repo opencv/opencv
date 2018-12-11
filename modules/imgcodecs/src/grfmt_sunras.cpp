@@ -388,7 +388,7 @@ bad_decoding_end:
 
 SunRasterEncoder::SunRasterEncoder()
 {
-    m_description = _CREATE_PATH("Sun raster files (*.sr;*.ras)");
+    m_description = "Sun raster files (*.sr;*.ras)";
 }
 
 

@@ -176,7 +176,7 @@ void PFMDecoder::close()
 
 PFMEncoder::PFMEncoder()
 {
-  m_description = _CREATE_PATH("Portable image format - float (*.pfm)");
+  m_description = "Portable image format - float (*.pfm)";
 }
 
 PFMEncoder::~PFMEncoder()

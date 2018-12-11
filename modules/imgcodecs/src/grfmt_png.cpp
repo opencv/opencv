@@ -298,7 +298,7 @@ bool  PngDecoder::readData( Mat& img )
 
 PngEncoder::PngEncoder()
 {
-    m_description = _CREATE_PATH("Portable Network Graphics files (*.png)");
+    m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
 }
 

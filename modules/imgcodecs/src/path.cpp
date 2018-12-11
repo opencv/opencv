@@ -50,58 +50,48 @@
 namespace cv
 {
 
-Path::Path()
-{
-    
-}
-
-Path::Path(const String& value)
+Path::Path( const String& value )
 {
 #if defined _WIN32
-    m_path = toWString(value);
+    m_path = toWString( value );
 #else
     m_path = value;
 #endif
 }
 
-Path::Path(const String::value_type* value)
+Path::Path( const String::value_type* value )
 {
 #if defined _WIN32
-    m_path = toWString(value);
+    m_path = toWString( value );
 #else
     m_path = value;
 #endif
 }
 
-Path::Path(const WString& value)
+Path::Path( const WString& value )
 {
 #if defined _WIN32
     m_path = value;
 #else
-    m_path = toString(value);
+    m_path = toString( value );
 #endif
 }
 
-Path::Path(const WString::value_type* value)
+Path::Path( const WString::value_type* value )
 {
 #if defined _WIN32
     m_path = value;
 #else
-    m_path = toString(value);
+    m_path = toString( value );
 #endif
 }
 
-Path::Path(const Path& rhs)
+Path::Path( const Path& rhs )
 {
     m_path = rhs.m_path;
 }
 
-Path::~Path()
-{
-    
-}
-
-Path& Path::operator=(const Path& rhs)
+Path& Path::operator=( const Path& rhs )
 {
     m_path = rhs.m_path;
     return(*this);
@@ -120,24 +110,6 @@ bool Path::empty() const
 const Path::PathType::value_type* Path::c_str() const
 {
     return( m_path.c_str() );
-}
-
-const Path::PathType::value_type* Path::firstOccurrence( Path::PathType::value_type character ) const
-{
-#if defined _WIN32
-    return( wcschr( m_path.c_str(), character ) );
-#else
-    return( strchr( m_path.c_str(), character ) );
-#endif
-}
-
-const Path::PathType::value_type* Path::lastOccurrence( Path::PathType::value_type character ) const
-{
-#if defined _WIN32
-    return( wcsrchr( m_path.c_str(), character ) );
-#else
-    return( strrchr( m_path.c_str(), character ) );
-#endif
 }
 
 void Path::tempPath()
@@ -188,7 +160,7 @@ void Path::tempPath()
 #endif
 }
 
-FILE* Path::openPath(const Path& mode) const
+FILE* Path::openPath( const Path& mode ) const
 {
 #if defined _WIN32
     return( _wfopen( m_path.c_str(), mode.c_str() ) );
@@ -215,11 +187,6 @@ String Path::string() const
 #endif
 }
 
-Path::PathType Path::native() const
-{
-    return( m_path );
-}
-
 WString Path::wstring() const
 {
 #if defined _WIN32
@@ -229,7 +196,7 @@ WString Path::wstring() const
 #endif
 }
 
-String Path::toString(const WString& wstr)
+String Path::toString( const WString& wstr )
 {
     if(wstr.empty())
     {
@@ -271,7 +238,7 @@ String Path::toString(const WString& wstr)
 #endif
 }
 
-WString Path::toWString(const String& str)
+WString Path::toWString( const String& str )
 {
     if(str.empty())
     {
@@ -316,26 +283,6 @@ WString Path::toWString(const String& str)
     //Conversion failed, return an empty wstring
     return(L"");
 #endif
-}
-
-int Path::toLower(int c)
-{
-    return( tolower( c ) );
-}
-
-wint_t Path::toLower(wint_t c)
-{
-    return( towlower( c ) );
-}
-
-int Path::isAlpaNumeric( int ch )
-{
-    return( isalnum( ch ) );
-}
-
-int Path::isAlpaNumeric( wint_t ch )
-{
-    return( iswalnum( ch ) );
 }
 
 }

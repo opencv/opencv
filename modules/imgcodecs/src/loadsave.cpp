@@ -266,33 +266,33 @@ static ImageEncoder findEncoder( const Path& _ext )
     if( _ext.size() <= 1 )
         return ImageEncoder();
 
-    const Path::PathType::value_type* ext = _ext.lastOccurrence( _CREATE_PATH('.') );
+    String extension = _ext.string();
+    const char* ext = strrchr( extension.c_str(), '.' );
     if( !ext )
         return ImageEncoder();
     int len = 0;
-    for( ext++; len < 128 && Path::isAlpaNumeric(ext[len]); len++ )
+    for( ext++; len < 128 && isalnum(ext[len]); len++ )
         ;
 
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
-        Path description = codecs.encoders[i]->getDescription();
-        const Path::PathType::value_type* descr = description.firstOccurrence( _CREATE_PATH('(') );
+        String description = codecs.encoders[i]->getDescription();
+        const char* descr = strchr( description.c_str(), '(' );
 
         while( descr )
         {
-            Path temp(descr + 1);
-            descr = temp.firstOccurrence( _CREATE_PATH('.') );
+            descr = strchr( descr + 1, '.' );
             if( !descr )
                 break;
             int j = 0;
-            for( descr++; j < len && Path::isAlpaNumeric(descr[j]) ; j++ )
+            for( descr++; j < len && isalnum(descr[j]) ; j++ )
             {
-                int c1 = Path::toLower(ext[j]);
-                int c2 = Path::toLower(descr[j]);
+                int c1 = tolower(ext[j]);
+                int c2 = tolower(descr[j]);
                 if( c1 != c2 )
                     break;
             }
-            if( j == len && !Path::isAlpaNumeric(descr[j]))
+            if( j == len && !isalnum(descr[j]))
                 return codecs.encoders[i]->newEncoder();
             descr += j;
         }

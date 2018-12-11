@@ -622,7 +622,7 @@ bool  PAMDecoder::readData( Mat& img )
 
 PAMEncoder::PAMEncoder()
 {
-    m_description = _CREATE_PATH("Portable arbitrary format (*.pam)");
+    m_description = "Portable arbitrary format (*.pam)";
     m_buf_supported = true;
 }
 

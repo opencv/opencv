@@ -221,7 +221,7 @@ bool WebPDecoder::readData(Mat &img)
 
 WebPEncoder::WebPEncoder()
 {
-    m_description = _CREATE_PATH("WebP files (*.webp)");
+    m_description = "WebP files (*.webp)";
     m_buf_supported = true;
 }
 

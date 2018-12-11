@@ -104,13 +104,13 @@ public:
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
 
-    virtual Path getDescription() const;
+    virtual String getDescription() const;
     virtual ImageEncoder newEncoder() const;
 
     virtual void throwOnEror() const;
 
 protected:
-    Path m_description;
+    String m_description;
 
     Path m_filename;
     std::vector<uchar>* m_buf;

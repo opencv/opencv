@@ -68,42 +68,32 @@ public:
     typedef String PathType;
 #endif
 
-    Path();
-    Path(const String& value);
-    Path(const String::value_type* value);
-    Path(const WString& value);
-    Path(const WString::value_type* value);
-    Path(const Path& rhs);
-    ~Path();
+    Path() {};
+    Path( const String& value );
+    Path( const String::value_type* value );
+    Path( const WString& value );
+    Path( const WString::value_type* value );
+    Path( const Path& rhs );
+    ~Path() {};
 
-    Path& operator=(const Path& rhs);
+    Path& operator=( const Path& rhs );
 
     size_t size() const;
     bool empty() const;
-    
+
     const PathType::value_type* c_str() const;
-
-    const PathType::value_type* firstOccurrence( PathType::value_type character ) const;
-    const PathType::value_type* lastOccurrence( PathType::value_type character ) const;
-
+    
     void tempPath();
 
-    FILE* openPath(const Path& mode) const;
+    FILE* openPath( const Path& mode ) const;
 
     int removePath() const;
 
-    PathType native() const;
     String string() const;
     WString wstring() const;
 
-    static String toString(const WString& wstr);
-    static WString toWString(const String& str);
-
-    static int toLower(int c);
-    static wint_t toLower(wint_t c);
-
-    static int isAlpaNumeric( int ch );
-    static int isAlpaNumeric( wint_t ch );
+    static String toString( const WString& wstr );
+    static WString toWString( const String& str );
 
 private:
     PathType m_path;

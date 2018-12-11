@@ -526,7 +526,7 @@ static void jpeg_buffer_dest(j_compress_ptr cinfo, JpegDestination* destination)
 
 JpegEncoder::JpegEncoder()
 {
-    m_description = _CREATE_PATH("JPEG files (*.jpeg;*.jpg;*.jpe)");
+    m_description = "JPEG files (*.jpeg;*.jpg;*.jpe)";
     m_buf_supported = true;
 }
 

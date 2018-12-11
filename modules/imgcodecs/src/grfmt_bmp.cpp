@@ -503,7 +503,7 @@ decode_rle8_bad: ;
 
 BmpEncoder::BmpEncoder()
 {
-    m_description = _CREATE_PATH("Windows bitmap (*.bmp;*.dib)");
+    m_description = "Windows bitmap (*.bmp;*.dib)";
     m_buf_supported = true;
 }
 

@@ -121,7 +121,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 
 HdrEncoder::HdrEncoder()
 {
-    m_description = _CREATE_PATH("Radiance HDR (*.hdr;*.pic)");
+    m_description = "Radiance HDR (*.hdr;*.pic)";
 }
 
 HdrEncoder::~HdrEncoder()

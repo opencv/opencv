@@ -105,7 +105,7 @@ bool  BaseImageEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U;
 }
 
-Path BaseImageEncoder::getDescription() const
+String BaseImageEncoder::getDescription() const
 {
     return m_description;
 }

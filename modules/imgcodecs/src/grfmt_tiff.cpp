@@ -620,7 +620,7 @@ bool TiffDecoder::readData_32FC1(Mat& img)
 
 TiffEncoder::TiffEncoder()
 {
-    m_description = _CREATE_PATH("TIFF Files (*.tiff;*.tif)");
+    m_description = "TIFF Files (*.tiff;*.tif)";
     m_buf_supported = true;
 }
 
