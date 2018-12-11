@@ -80,7 +80,7 @@ struct RGB2RGB
 #if CV_SIMD
         const int vsize = vt::nlanes;
 
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize*dcn)
         {
             vt a, b, c, d;
@@ -143,7 +143,7 @@ struct RGB5x52RGB
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize*dcn)
         {
             v_uint16 t0 = v_reinterpret_as_u16(vx_load(src));
@@ -250,7 +250,7 @@ struct RGB2RGB5x5
         v_uint16 vn7 = vx_setall_u16((ushort)(~7));
         v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
         v_uint8 v7 = vx_setall_u8((uchar)(~7));
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
         {
             v_uint8 r, g, b, a;
@@ -339,7 +339,7 @@ struct Gray2RGB
 #if CV_SIMD
         const int vsize = vt::nlanes;
         vt valpha = v_set<_Tp>::set(alpha);
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize, dst += vsize*dcn)
         {
             vt g = vx_load(src);
@@ -381,7 +381,7 @@ struct Gray2RGB5x5
 #if CV_SIMD
         const int vsize = v_uint16::nlanes;
         v_uint16 v3 = vx_setall_u16((ushort)(~3));
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize, dst += vsize*sizeof(ushort))
         {
             v_uint8 t8 = vx_load_low(src);
@@ -453,7 +453,7 @@ struct RGB5x52Gray
         v_zip(vx_setall_s16(RY), vx_setall_s16( 1), r12y, dummy);
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize)
         {
             v_uint16 t = vx_load((ushort*)src);
@@ -569,7 +569,7 @@ struct RGB2Gray<float>
 #if CV_SIMD
         const int vsize = v_float32::nlanes;
         v_float32 rv = vx_setall_f32(cr), gv = vx_setall_f32(cg), bv = vx_setall_f32(cb);
-        for(; i < n-vsize+1;
+        for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize)
         {
             v_float32 r, g, b, a;
@@ -634,7 +634,7 @@ struct RGB2Gray<uchar>
         v_zip(vx_setall_s16(cr), vx_setall_s16( 1), r12y, dummy);
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for( ; i < n-vsize+1;
+        for( ; i <= n-vsize;
              i += vsize, src += scn*vsize, dst += vsize)
         {
             v_uint8 r, g, b, a;
@@ -735,7 +735,7 @@ struct RGB2Gray<ushort>
 
         v_int16 delta = vx_setall_s16(1 << (shift-1));
 
-        for( ; i < n-vsize+1;
+        for( ; i <= n-vsize;
              i += vsize, src += scn*vsize, dst += vsize)
         {
             v_uint16 r, g, b, a;
