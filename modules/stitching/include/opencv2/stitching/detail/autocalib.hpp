@@ -76,7 +76,7 @@ void CV_EXPORTS estimateFocal(const std::vector<ImageFeatures> &features,
                               const std::vector<MatchesInfo> &pairwise_matches,
                               std::vector<double> &focals);
 
-bool CV_EXPORTS_W calibrateRotatingCamera(const std::vector<Mat> &Hs, Mat &K);
+bool CV_EXPORTS_W calibrateRotatingCamera(const std::vector<Mat> &Hs,CV_OUT Mat &K);
 
 //! @} stitching_autocalib
 
