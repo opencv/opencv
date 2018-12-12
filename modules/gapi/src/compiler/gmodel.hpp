@@ -61,7 +61,6 @@ struct Op
     std::vector<RcDesc> outs; // TODO: Introduce a new type for resource references
 
     cv::gapi::GBackend  backend;
-    util::any           opaque;
 };
 
 struct Data
