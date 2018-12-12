@@ -57,21 +57,26 @@ const int POSE_PAIRS[3][20][2] = {
 int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv,
-        "{ h help           | false | print this help message }"
-        "{ p proto          |       | (required) model configuration, e.g. hand/pose.prototxt }"
-        "{ m model          |       | (required) model weights, e.g. hand/pose_iter_102000.caffemodel }"
-        "{ i image          |       | (required) path to image file (containing a single person, or hand) }"
-        "{ width            |  368  | Preprocess input image by resizing to a specific width. }"
-        "{ height           |  368  | Preprocess input image by resizing to a specific height. }"
-        "{ t threshold      |  0.1  | threshold or confidence value for the heatmap }"
+        "{ h help           | false     | print this help message }"
+        "{ p proto          |           | (required) model configuration, e.g. hand/pose.prototxt }"
+        "{ m model          |           | (required) model weights, e.g. hand/pose_iter_102000.caffemodel }"
+        "{ i image          |           | (required) path to image file (containing a single person, or hand) }"
+        "{ d dataset        |           | specify what kind of model was trained. It could be (COCO, MPI, HAND) depends on dataset. }"
+        "{ width            |  368      | Preprocess input image by resizing to a specific width. }"
+        "{ height           |  368      | Preprocess input image by resizing to a specific height. }"
+        "{ t threshold      |  0.1      | threshold or confidence value for the heatmap }"
+        "{ s scale          |  0.003922 | scale for blob }"
     );
 
     String modelTxt = samples::findFile(parser.get<string>("proto"));
     String modelBin = samples::findFile(parser.get<string>("model"));
     String imageFile = samples::findFile(parser.get<String>("image"));
+    String dataset = parser.get<String>("dataset");
     int W_in = parser.get<int>("width");
     int H_in = parser.get<int>("height");
     float thresh = parser.get<float>("threshold");
+    float scale  = parser.get<float>("scale");
+
     if (parser.get<bool>("help") || modelTxt.empty() || modelBin.empty() || imageFile.empty())
     {
         cout << "A sample app to demonstrate human or hand pose detection with a pretrained OpenPose dnn." << endl;
@@ -79,9 +84,18 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    // read the network model
-    Net net = readNetFromCaffe(modelTxt, modelBin);
+    int midx, npairs, nparts;
+         if (!dataset.compare("COCO")) {  midx = 0; npairs = 17; nparts = 18; }
+    else if (!dataset.compare("MPI"))  {  midx = 1; npairs = 14; nparts = 16; }
+    else if (!dataset.compare("HAND")) {  midx = 2; npairs = 20; nparts = 22; }
+    else
+    {
+        std::cerr << "Can't interpret dataset parameter: " << dataset << std::endl;
+        exit(-1);
+    }
 
+    // read the network model
+    Net net = readNet(modelBin, modelTxt);
     // and the image
     Mat img = imread(imageFile);
     if (img.empty())
@@ -91,38 +105,13 @@ int main(int argc, char **argv)
     }
 
     // send it through the network
-    Mat inputBlob = blobFromImage(img, 1.0 / 255, Size(W_in, H_in), Scalar(0, 0, 0), false, false);
+    Mat inputBlob = blobFromImage(img, scale, Size(W_in, H_in), Scalar(0, 0, 0), false, false);
     net.setInput(inputBlob);
     Mat result = net.forward();
     // the result is an array of "heatmaps", the probability of a body part being in location x,y
 
-    int midx, npairs;
-    int nparts = result.size[1];
     int H = result.size[2];
     int W = result.size[3];
-
-    // find out, which model we have
-    if (nparts == 19)
-    {   // COCO body
-        midx   = 0;
-        npairs = 17;
-        nparts = 18; // skip background
-    }
-    else if (nparts == 16)
-    {   // MPI body
-        midx   = 1;
-        npairs = 14;
-    }
-    else if (nparts == 22)
-    {   // hand
-        midx   = 2;
-        npairs = 20;
-    }
-    else
-    {
-        cerr << "there should be 19 parts for the COCO model, 16 for MPI, or 22 for the hand one, but this model has " << nparts << " parts." << endl;
-        return (0);
-    }
 
     // find the position of the body parts
     vector<Point> points(22);
