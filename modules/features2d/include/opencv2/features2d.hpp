@@ -289,14 +289,14 @@ public:
     /** @brief Set detection threshold.
     @param threshold AGAST detection threshold score.
     */
-    CV_WRAP virtual void setThreshold(int threshold) { CV_UNUSED(threshold); return; };
-    CV_WRAP virtual int getThreshold() const { return -1; };
+    CV_WRAP virtual void setThreshold(int threshold) { CV_UNUSED(threshold); return; }
+    CV_WRAP virtual int getThreshold() const { return -1; }
 
     /** @brief Set detection octaves.
     @param octaves detection octaves. Use 0 to do single scale.
     */
-    CV_WRAP virtual void setOctaves(int octaves) { CV_UNUSED(octaves); return; };
-    CV_WRAP virtual int getOctaves() const { return -1; };
+    CV_WRAP virtual void setOctaves(int octaves) { CV_UNUSED(octaves); return; }
+    CV_WRAP virtual int getOctaves() const { return -1; }
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
