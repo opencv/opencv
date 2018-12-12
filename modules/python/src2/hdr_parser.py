@@ -831,7 +831,7 @@ class CppHeaderParser(object):
                 l = l[pos+2:]
                 state = SCAN
 
-            if l.startswith('CV__'): # just ignore this lines
+            if l.startswith('CV__') or l.startswith('__CV_'): # just ignore these lines
                 #print('IGNORE: ' + l)
                 state = SCAN
                 continue
@@ -845,11 +845,17 @@ class CppHeaderParser(object):
 
                 if not token:
                     block_head += " " + l
-                    break
+                    block_head = block_head.strip()
+                    if len(block_head) > 0 and block_head[-1] == ')' and block_head.startswith('CV_ENUM_FLAGS('):
+                        l = ''
+                        token = ';'
+                    else:
+                        break
 
                 if token == "//":
                     block_head += " " + l[:pos]
-                    break
+                    l = ''
+                    continue
 
                 if token == "/*":
                     block_head += " " + l[:pos]
