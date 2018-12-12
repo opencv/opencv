@@ -248,7 +248,7 @@ struct RGB2RGB5x5
         const int vsize = v_uint8::nlanes;
         v_uint16 vn3 = vx_setall_u16((ushort)(~3));
         v_uint16 vn7 = vx_setall_u16((ushort)(~7));
-        v_uint16 vz = vx_setzero_u16(), v0x8000 = vx_setall_u16(0x8000);
+        v_uint16 vz = vx_setzero_u16();
         v_uint8 v7 = vx_setall_u8((uchar)(~7));
         for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize*sizeof(ushort))
@@ -278,8 +278,8 @@ struct RGB2RGB5x5
 
             b0 = b0 >> 3;
             b1 = b1 >> 3;
-            a0 = a0 != vz;
-            a1 = a1 != vz;
+            a0 = (a0 != vz) << 15;
+            a1 = (a1 != vz) << 15;
 
             if(gb == 6)
             {
@@ -288,8 +288,8 @@ struct RGB2RGB5x5
             }
             else
             {
-                d0 = b0 | ((g0 & vn7) << 2) | (r0 << 7) | (v_select(a0, v0x8000, vz));
-                d1 = b1 | ((g1 & vn7) << 2) | (r1 << 7) | (v_select(a1, v0x8000, vz));
+                d0 = b0 | ((g0 & vn7) << 2) | (r0 << 7) | a0;
+                d1 = b1 | ((g1 & vn7) << 2) | (r1 << 7) | a1;
             }
 
             v_store((ushort*)dst, d0);
