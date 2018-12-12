@@ -12,8 +12,9 @@ namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-struct Context
+class Context
 {
+public:
     Context();
     ~Context();
 };

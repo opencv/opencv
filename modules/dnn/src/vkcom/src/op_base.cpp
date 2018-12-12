@@ -45,7 +45,9 @@ void OpBase::initVulkanThing(int buffer_num)
 
 void OpBase::createDescriptorSetLayout(int buffer_num)
 {
-    VkDescriptorSetLayoutBinding bindings[buffer_num] = {};
+    if (buffer_num <= 0)
+        return;
+    std::vector<VkDescriptorSetLayoutBinding> bindings(buffer_num);
     for (int i = 0; i < buffer_num; i++)
     {
         bindings[i].binding = i;
@@ -56,7 +58,7 @@ void OpBase::createDescriptorSetLayout(int buffer_num)
     VkDescriptorSetLayoutCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     info.bindingCount = buffer_num;
-    info.pBindings = bindings;
+    info.pBindings = &bindings[0];
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device_, &info, NULL, &descriptor_set_layout_));
 }
 
