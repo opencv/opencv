@@ -281,10 +281,14 @@ Context::~Context()
     if (enableValidationLayers) {
         auto func = (PFN_vkDestroyDebugReportCallbackEXT)
             vkGetInstanceProcAddr(kInstance, "vkDestroyDebugReportCallbackEXT");
-        if (func == nullptr) {
-            throw std::runtime_error("Could not load vkDestroyDebugReportCallbackEXT");
+        if (func == nullptr)
+        {
+            CV_LOG_FATAL(NULL, "Could not load vkDestroyDebugReportCallbackEXT");
         }
-        func(kInstance, kDebugReportCallback, NULL);
+        else
+        {
+            func(kInstance, kDebugReportCallback, NULL);
+        }
     }
     kShaders.clear();
     vkDestroyInstance(kInstance, NULL);
