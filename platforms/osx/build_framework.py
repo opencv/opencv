@@ -38,9 +38,10 @@ if __name__ == "__main__":
     parser.add_argument('--opencv', metavar='DIR', default=folder, help='folder with opencv repository (default is "../.." relative to script location)')
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
+    parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     args = parser.parse_args()
 
-    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without,
+    b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.enablenonfree,
         [
             (["x86_64"], "MacOSX")
         ])
