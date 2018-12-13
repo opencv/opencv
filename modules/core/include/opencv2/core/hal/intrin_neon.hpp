@@ -984,6 +984,13 @@ OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, sum, add, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, max, max, f32)
 OPENCV_HAL_IMPL_NEON_REDUCE_OP_4(v_float32x4, float32x2, float, min, min, f32)
 
+#if CV_SIMD128_64F
+inline double v_reduce_sum(const v_float64x2& a)
+{
+    return vgetq_lane_f64(a.val, 0) + vgetq_lane_f64(a.val, 1);
+}
+#endif
+
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
 {
