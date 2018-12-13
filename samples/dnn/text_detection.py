@@ -2,8 +2,6 @@
 import cv2 as cv
 import math
 import argparse
-import time
-import numpy as np
 
 ############ Add argument parser for command line arguments ############
 parser = argparse.ArgumentParser(description='Use this script to run text detection deep learning networks using OpenCV.')
@@ -58,8 +56,8 @@ def decode(scores, geometry, scoreThresh):
             angle = anglesData[x]
 
             # Calculate cos and sin of angle
-            cosA = np.cos(angle)
-            sinA = np.sin(angle)
+            cosA = math.cos(angle)
+            sinA = math.sin(angle)
             h = x0_data[x] + x2_data[x]
             w = x1_data[x] + x3_data[x]
 
