@@ -357,9 +357,12 @@ OCV_OPTION(WITH_LIBV4L "Use libv4l for Video 4 Linux support" OFF
 OCV_OPTION(WITH_DSHOW "Build VideoIO with DirectShow support" ON
   VISIBLE_IF WIN32 AND NOT ARM AND NOT WINRT
   VERIFY HAVE_DSHOW)
-OCV_OPTION(WITH_MSMF "Build VideoIO with Media Foundation support" ON
+OCV_OPTION(WITH_MSMF "Build VideoIO with Media Foundation support" NOT MINGW
   VISIBLE_IF WIN32
   VERIFY HAVE_MSMF)
+OCV_OPTION(WITH_MSMF_DXVA "Enable hardware acceleration in Media Foundation backend" WITH_MSMF
+  VISIBLE_IF WIN32
+  VERIFY HAVE_MSMF_DXVA)
 OCV_OPTION(WITH_XIMEA "Include XIMEA cameras support" OFF
   VISIBLE_IF NOT ANDROID AND NOT WINRT
   VERIFY HAVE_XIMEA)
@@ -1478,6 +1481,7 @@ endif()
 
 if(WITH_MSMF OR HAVE_MSMF)
   status("    Media Foundation:" HAVE_MSMF    THEN YES                                        ELSE NO)
+  status("      DXVA:"           HAVE_MSMF_DXVA    THEN YES    ELSE NO)
 endif()
 
 if(WITH_XIMEA OR HAVE_XIMEA)
