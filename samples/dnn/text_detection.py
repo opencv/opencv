@@ -7,28 +7,17 @@ import numpy as np
 
 ############ Add argument parser for command line arguments ############
 parser = argparse.ArgumentParser(description='Use this script to run text detection deep learning networks using OpenCV.')
-# Input argument
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-# Model argument
 parser.add_argument('--model', required=True,
-                    help='Path to a binary .pb file of model contains trained weights.'
-                    )
-# Width argument
+                    help='Path to a binary .pb file of model contains trained weights.')
 parser.add_argument('--width', type=int, default=320,
-                    help='Preprocess input image by resizing to a specific width. It should be multiple by 32.'
-                   )
-# Height argument
+                    help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
 parser.add_argument('--height',type=int, default=320,
-                    help='Preprocess input image by resizing to a specific height. It should be multiple by 32.'
-                   )
-# Confidence threshold
+                    help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
 parser.add_argument('--thr',type=float, default=0.5,
-                    help='Confidence threshold.'
-                   )
-# Non-maximum suppression threshold
+                    help='Confidence threshold.')
 parser.add_argument('--nms',type=float, default=0.4,
-                    help='Non-maximum suppression threshold.'
-                   )
+                    help='Non-maximum suppression threshold.')
 args = parser.parse_args()
 
 ############ Utility functions ############
