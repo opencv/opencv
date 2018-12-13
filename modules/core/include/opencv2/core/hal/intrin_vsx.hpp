@@ -716,6 +716,11 @@ OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, sum, vec_add)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, min, vec_min)
 
+inline double v_reduce_sum(const v_float64x2& a)
+{
+    return vec_extract(vec_add(a.val, vec_sld(a.val, a.val, 8)), 0);
+}
+
 #define OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(_Tpvec, _Tpvec2, scalartype, suffix, func) \
 inline scalartype v_reduce_##suffix(const _Tpvec& a)                               \
 {                                                                                  \
