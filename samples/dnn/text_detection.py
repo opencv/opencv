@@ -1,6 +1,6 @@
 # Import required modules
 
-import cv2
+import cv2 as cv
 import math
 import argparse
 import time
@@ -100,24 +100,24 @@ def main():
     inpHeight = args.height
     model = args.model
     # Load network
-    net = cv2.dnn.readNet(model)
+    net = cv.dnn.readNet(model)
     # Create a new named window
     kWinName = "EAST: An Efficient and Accurate Scene Text Detector"
-    cv2.namedWindow(kWinName, cv2.WINDOW_NORMAL)
+    cv.namedWindow(kWinName, cv.WINDOW_NORMAL)
 
     outNames = []
     outNames.append("feature_fusion/Conv_7/Sigmoid")
     outNames.append("feature_fusion/concat_3")
     
     # Open a video file or an image file or a camera stream
-    cap = cv2.VideoCapture(args.input if args.input else 0)
+    cap = cv.VideoCapture(args.input if args.input else 0)
     
-    while cv2.waitKey(1) < 0:
+    while cv.waitKey(1) < 0:
         # Read frame
         hasFrame, frame = cap.read()
         
         if not hasFrame:
-            cv2.waitKey()
+            cv.waitKey()
             break
         
         # Get frame height and width
@@ -129,7 +129,7 @@ def main():
         rH = height_ / float(inpHeight)
         
         # Create a 4D blob from frame.
-        blob = cv2.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
+        blob = cv.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
         
         # Run the model
         start = time.time()
@@ -145,11 +145,11 @@ def main():
         confidences = []
         [boxes, confidences] = decode(scores, geometry, confThreshold,boxes,confidences)
         # Apply NMS
-        indices = cv2.dnn.NMSBoxesRotated(boxes, confidences, confThreshold,nmsThreshold)
+        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold,nmsThreshold)
     
         for i in indices:
             # get 4 corners of the rotated rect
-            vertices = cv2.boxPoints(boxes[i[0]])
+            vertices = cv.boxPoints(boxes[i[0]])
             # scale the bounding box coordinates based on the respective ratios
             for j in range(4):
                 vertices[j][0] *= rW
@@ -157,12 +157,12 @@ def main():
             for j in range(4):
                 p1 = (vertices[j][0], vertices[j][1])
                 p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
-                cv2.line(frame, p1, p2, (0, 255, 0), 1);
+                cv.line(frame, p1, p2, (0, 255, 0), 1);
         
         # Put efficiency information
-        cv2.putText(frame, label, (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
     
         # Display the frame
-        cv2.imshow(kWinName,frame)
+        cv.imshow(kWinName,frame)
 if __name__ == "__main__":
     main()
