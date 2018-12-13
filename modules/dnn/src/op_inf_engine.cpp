@@ -152,6 +152,7 @@ InfEngineBackendNet::InfEngineBackendNet()
 {
     targetDevice = InferenceEngine::TargetDevice::eCPU;
     precision = InferenceEngine::Precision::FP32;
+    hasNetOwner = false;
 }
 
 InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
@@ -162,6 +163,7 @@ InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
     outputs = net.getOutputsInfo();
     layers.resize(net.layerCount());  // A hack to execute InfEngineBackendNet::layerCount correctly.
     netOwner = net;
+    hasNetOwner = true;
 }
 
 void InfEngineBackendNet::Release() CV_NOEXCEPT
@@ -178,12 +180,12 @@ void InfEngineBackendNet::setPrecision(InferenceEngine::Precision p) CV_NOEXCEPT
 
 InferenceEngine::Precision InfEngineBackendNet::getPrecision() CV_NOEXCEPT
 {
-    return precision;
+    return hasNetOwner ? netOwner.getPrecision() : precision;
 }
 
 InferenceEngine::Precision InfEngineBackendNet::getPrecision() const CV_NOEXCEPT
 {
-    return precision;
+    return hasNetOwner ? netOwner.getPrecision() : precision;
 }
 
 // Assume that outputs of network is unconnected blobs.

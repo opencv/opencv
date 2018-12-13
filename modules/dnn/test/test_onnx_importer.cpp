@@ -162,6 +162,10 @@ TEST_P(Test_ONNX_layers, MultyInputs)
     normAssert(ref, out, "", default_l1,  default_lInf);
 }
 
+TEST_P(Test_ONNX_layers, DynamicReshape)
+{
+    testONNXModels("dynamic_reshape");
+}
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
