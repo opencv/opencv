@@ -231,3 +231,18 @@ save_data_and_model("transpose", input, model)
 input = Variable(torch.randn(1, 2, 3, 4))
 pad = nn.ZeroPad2d((4,3, 2,1))  # left,right, top,bottom
 save_data_and_model("padding", input, pad)
+
+
+class DynamicReshapeNet(nn.Module):
+    def __init__(self):
+        super(DynamicReshapeNet, self).__init__()
+
+    def forward(self, image):
+        batch_size = image.size(0)
+        channels = image.size(1)
+        image = image.permute(0, 2, 3, 1).contiguous().view(batch_size, -1, channels)
+        return image
+
+input = Variable(torch.randn(1, 2, 3, 4))
+model = DynamicReshapeNet()
+save_data_and_model("dynamic_reshape", input, model)
