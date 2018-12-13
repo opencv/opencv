@@ -136,7 +136,7 @@ TEST_P(Test_Torch_layers, run_reshape_change_batch_size)
 
 TEST_P(Test_Torch_layers, run_reshape)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled for OpenVINO 2018R4");
 #endif
@@ -172,7 +172,7 @@ TEST_P(Test_Torch_layers, run_depth_concat)
 
 TEST_P(Test_Torch_layers, run_deconv)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled for OpenVINO 2018R4");
 #endif
