@@ -35,7 +35,7 @@ args = parser.parse_args()
 def decode(scores, geometry, scoreThresh):
     detections = []
     confidences = []
-    
+
     ############ CHECK DIMENSIONS AND SHAPES OF geometry AND scores ############
     assert len(scores.shape) == 4, "Incorrect dimensions of scores"
     assert len(geometry.shape) == 4, "Incorrect dimensions of geometry"
