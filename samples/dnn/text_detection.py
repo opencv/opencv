@@ -119,7 +119,6 @@ def main():
         if not hasFrame:
             cv2.waitKey()
             break
-        orig = frame.copy()
         
         # Get frame height and width
         height_ = frame.shape[0]
@@ -129,7 +128,6 @@ def main():
         rW = width_ / float(inpWidth)
         rH = height_ / float(inpHeight)
         
-        frame = cv2.resize(frame, (inpWidth, inpHeight))
         # Create a 4D blob from frame.
         blob = cv2.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
         
@@ -138,7 +136,7 @@ def main():
         net.setInput(blob)
         outs = net.forward(outNames)
         end = time.time()
-        label = 'Inference time: {:.6f} seconds'.format(end-start)
+        label = 'Inference time: %.2f ms'%((end-start)*1000)
         
         # Get scores and geometry
         scores = outs[0]
@@ -159,12 +157,12 @@ def main():
             for j in range(4):
                 p1 = (vertices[j][0], vertices[j][1])
                 p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
-                cv2.line(orig, p1, p2, (0, 255, 0), 1);
+                cv2.line(frame, p1, p2, (0, 255, 0), 1);
         
         # Put efficiency information
-        cv2.putText(orig, label, (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv2.putText(frame, label, (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
     
         # Display the frame
-        cv2.imshow(kWinName,orig)
+        cv2.imshow(kWinName,frame)
 if __name__ == "__main__":
     main()
