@@ -257,6 +257,7 @@ struct RGB2RGB5x5
             if(scn == 3)
             {
                 v_load_deinterleave(src, b, g, r);
+                a = vx_setzero_u8();
             }
             else
             {
