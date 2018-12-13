@@ -136,6 +136,9 @@ private:
     InferenceEngine::InferRequest infRequest;
     // In case of models from Model Optimizer we need to manage their lifetime.
     InferenceEngine::CNNNetwork netOwner;
+    // There is no way to check if netOwner is initialized or not so we use
+    // a separate flag to determine if the model has been loaded from IR.
+    bool hasNetOwner;
 
     std::string name;
 
