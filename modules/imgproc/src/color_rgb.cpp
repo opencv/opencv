@@ -912,10 +912,135 @@ struct mRGBA2RGBA
             _Tp v3 = *src++;
             _Tp v3_half = v3 / 2;
 
-            *dst++ = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
-            *dst++ = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
-            *dst++ = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
+            *dst++ = (v3==0)? 0 : saturate_cast<_Tp>((v0 * max_val + v3_half) / v3);
+            *dst++ = (v3==0)? 0 : saturate_cast<_Tp>((v1 * max_val + v3_half) / v3);
+            *dst++ = (v3==0)? 0 : saturate_cast<_Tp>((v2 * max_val + v3_half) / v3);
             *dst++ = v3;
+        }
+    }
+};
+
+
+template<>
+struct mRGBA2RGBA<uchar>
+{
+    typedef uchar channel_type;
+
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        uchar max_val = ColorChannel<uchar>::max();
+        int i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
+        v_uint8 vmax = vx_setall_u8(max_val);
+
+        for( ; i <= n-vsize/4;
+             i += vsize/4, src += vsize, dst += vsize)
+        {
+            v_uint8 s = vx_load(src + 0*vsize);
+
+            // r0,g0,b0,a0,r1,g1,b1,a1 => 00,00,00,a0,00,00,00,a1 =>
+            // => 00,00,a0,a0,00,00,a1,a1
+            // => a0,a0,a0,a0,a1,a1,a1,a1
+            v_uint8 a;
+            v_uint16 a16;
+            v_uint32 a32;
+            a16 = v_reinterpret_as_u16(s & amask);
+            a32 = v_reinterpret_as_u32(a16 | (a16 >> 8));
+            a = v_reinterpret_as_u8(a32 | (a32 >> 16));
+
+            // s *= max_val
+            v_uint16 s0, s1;
+            v_mul_expand(s, vmax, s0, s1);
+
+            // s += a/2
+            v_uint16 ae0, ae1;
+            v_expand(a, ae0, ae1);
+            s0 += ae0 >> 1; s1 += ae1 >> 1;
+
+            // s, a -> u32 -> float
+            v_uint32 u00, u01, u10, u11;
+            v_int32 s00, s01, s10, s11;
+            v_expand(s0, u00, u01);
+            v_expand(s1, u10, u11);
+            s00 = v_reinterpret_as_s32(u00);
+            s01 = v_reinterpret_as_s32(u01);
+            s10 = v_reinterpret_as_s32(u10);
+            s11 = v_reinterpret_as_s32(u11);
+
+            v_uint32 ua00, ua01, ua10, ua11;
+            v_int32 a00, a01, a10, a11;
+            v_expand(ae0, ua00, ua01);
+            v_expand(ae1, ua10, ua11);
+            a00 = v_reinterpret_as_s32(ua00);
+            a01 = v_reinterpret_as_s32(ua01);
+            a10 = v_reinterpret_as_s32(ua10);
+            a11 = v_reinterpret_as_s32(ua11);
+
+            v_float32 fs00, fs01, fs10, fs11;
+            fs00 = v_cvt_f32(s00);
+            fs01 = v_cvt_f32(s01);
+            fs10 = v_cvt_f32(s10);
+            fs11 = v_cvt_f32(s11);
+
+            v_float32 fa00, fa01, fa10, fa11;
+            fa00 = v_cvt_f32(a00);
+            fa01 = v_cvt_f32(a01);
+            fa10 = v_cvt_f32(a10);
+            fa11 = v_cvt_f32(a11);
+
+            // float d = (float)s/(float)a
+            v_float32 fd00, fd01, fd10, fd11;
+            fd00 = fs00/fa00;
+            fd01 = fs01/fa01;
+            fd10 = fs10/fa10;
+            fd11 = fs11/fa11;
+
+            // d -> u32 -> u8
+            v_uint32 ud00, ud01, ud10, ud11;
+            ud00 = v_reinterpret_as_u32(v_trunc(fd00));
+            ud01 = v_reinterpret_as_u32(v_trunc(fd01));
+            ud10 = v_reinterpret_as_u32(v_trunc(fd10));
+            ud11 = v_reinterpret_as_u32(v_trunc(fd11));
+            v_uint16 ud0, ud1;
+            ud0 = v_pack(ud00, ud01);
+            ud1 = v_pack(ud10, ud11);
+            v_uint8 d;
+            d = v_pack(ud0, ud1);
+
+            // if a == 0 then d = 0
+            v_uint8 am;
+            am = a != vx_setzero_u8();
+            d = d & am;
+
+            // put alpha values
+            d = v_select(amask, a, d);
+
+            v_store(dst, d);
+        }
+
+        vx_cleanup();
+#endif
+        for(; i < n; i++, src += 4, dst += 4 )
+        {
+            uchar v0 = src[0];
+            uchar v1 = src[1];
+            uchar v2 = src[2];
+            uchar v3 = src[3];
+
+            uchar v3_half = v3 / 2;
+
+            dst[0] = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
+            dst[1] = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
+            dst[2] = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
+            dst[3] = v3;
+
+            dst[0] = (v3==0)? 0 : saturate_cast<uchar>((v0 * max_val + v3_half) / v3);
+            dst[1] = (v3==0)? 0 : saturate_cast<uchar>((v1 * max_val + v3_half) / v3);
+            dst[2] = (v3==0)? 0 : saturate_cast<uchar>((v2 * max_val + v3_half) / v3);
+            dst[3] = v3;
         }
     }
 };
