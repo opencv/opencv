@@ -132,11 +132,10 @@ def main():
         blob = cv.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
         
         # Run the model
-        start = time.time()
         net.setInput(blob)
         outs = net.forward(outNames)
-        end = time.time()
-        label = 'Inference time: %.2f ms'%((end-start)*1000)
+        t, _ = net.getPerfProfile()
+        label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
         
         # Get scores and geometry
         scores = outs[0]
