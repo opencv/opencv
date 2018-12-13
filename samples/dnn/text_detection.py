@@ -35,7 +35,9 @@ parser.add_argument('--nms',type=float, default=0.4,
 args = parser.parse_args()
 
 ############ Utility functions ############
-def decode(scores, geometry, scoreThresh, detections, confidences):
+def decode(scores, geometry, scoreThresh):
+    detections = []
+    confidences = []
     
     ############ CHECK DIMENSIONS AND SHAPES OF geometry AND scores ############
     assert len(scores.shape) == 4, "Incorrect dimensions of scores"
@@ -140,9 +142,7 @@ def main():
         # Get scores and geometry
         scores = outs[0]
         geometry = outs[1]
-        boxes = []
-        confidences = []
-        [boxes, confidences] = decode(scores, geometry, confThreshold,boxes,confidences)
+        [boxes, confidences] = decode(scores, geometry, confThreshold)
         # Apply NMS
         indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold,nmsThreshold)
     
