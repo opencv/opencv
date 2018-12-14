@@ -288,7 +288,7 @@ bool CvCapture_Images::open(const std::string& _filename)
             }
         }
 
-        if(!haveImageReader(filename))
+        if(!haveImageReader(str))
             break;
 
         length++;
