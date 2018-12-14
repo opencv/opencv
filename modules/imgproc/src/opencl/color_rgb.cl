@@ -133,10 +133,8 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
                 DATA_TYPE_3 src_pix = vload3(0, src);
 #ifdef DEPTH_5
                 dst[0] = fma(src_pix.B_COMP, B2YF, fma(src_pix.G_COMP, G2YF, src_pix.R_COMP * R2YF));
-#elif defined(DEPTH_0)
-                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, BY15, mad24(src_pix.G_COMP, GY15, mul24(src_pix.R_COMP, RY15))), gray_shift);
 #else
-                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, mul24(src_pix.R_COMP, R2Y))), yuv_shift);
+                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, BY15, mad24(src_pix.G_COMP, GY15, mul24(src_pix.R_COMP, RY15))), gray_shift);
 #endif
                 ++y;
                 src_index += src_step;
@@ -340,9 +338,9 @@ __kernel void BGR5x52Gray(__global const uchar* src, int src_step, int src_offse
                 int t = *((__global const ushort*)(src + src_index));
 
 #if greenbits == 6
-                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, B2Y, mad24((t >> 3) & 0xfc, G2Y, ((t >> 8) & 0xf8) * R2Y)), yuv_shift);
+                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, BY15, mad24((t >> 3) & 0xfc, GY15, ((t >> 8) & 0xf8) * RY15)), gray_shift);
 #else
-                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, B2Y, mad24((t >> 2) & 0xf8, G2Y, ((t >> 7) & 0xf8) * R2Y)), yuv_shift);
+                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, BY15, mad24((t >> 2) & 0xf8, GY15, ((t >> 7) & 0xf8) * RY15)), gray_shift);
 #endif
                 ++y;
                 dst_index += dst_step;
