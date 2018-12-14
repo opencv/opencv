@@ -4,7 +4,7 @@ import math
 import argparse
 
 ############ Add argument parser for command line arguments ############
-parser = argparse.ArgumentParser(description='Use this script to run text detection deep learning networks using OpenCV.')
+parser = argparse.ArgumentParser(description='Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)')
 parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', required=True,
                     help='Path to a binary .pb file of model contains trained weights.')
