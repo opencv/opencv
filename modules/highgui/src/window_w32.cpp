@@ -1131,20 +1131,20 @@ static void icvUpdateWindowPos( CvWindow* window )
         {
             RECT rmw, rw = icvCalcWindowRect(window );
             MoveWindow(window->hwnd, rw.left, rw.top,
-                rw.right - rw.left + 1, rw.bottom - rw.top + 1, FALSE);
+                rw.right - rw.left, rw.bottom - rw.top, FALSE);
             GetClientRect(window->hwnd, &rw);
             GetWindowRect(window->frame, &rmw);
             // Resize the mainhWnd window in order to make the bitmap fit into the child window
             MoveWindow(window->frame, rmw.left, rmw.top,
-                rmw.right - rmw.left + size.cx - rw.right + rw.left,
-                rmw.bottom  - rmw.top + size.cy - rw.bottom + rw.top, TRUE );
+                size.cx + (rmw.right - rmw.left) - (rw.right - rw.left),
+                size.cy + (rmw.bottom - rmw.top) - (rw.bottom - rw.top), TRUE );
         }
     }
 
     rect = icvCalcWindowRect(window);
     MoveWindow(window->hwnd, rect.left, rect.top,
-               rect.right - rect.left + 1,
-               rect.bottom - rect.top + 1, TRUE );
+               rect.right - rect.left,
+               rect.bottom - rect.top, TRUE );
 }
 
 CV_IMPL void
@@ -1331,18 +1331,18 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
     {
         rw = icvCalcWindowRect(window);
         MoveWindow(window->hwnd, rw.left, rw.top,
-            rw.right - rw.left + 1, rw.bottom - rw.top + 1, FALSE);
+            rw.right - rw.left, rw.bottom - rw.top, FALSE);
         GetClientRect(window->hwnd, &rw);
         GetWindowRect(window->frame, &rmw);
         // Resize the mainhWnd window in order to make the bitmap fit into the child window
         MoveWindow(window->frame, rmw.left, rmw.top,
-            rmw.right - rmw.left + width - rw.right + rw.left,
-            rmw.bottom  - rmw.top + height - rw.bottom + rw.top, TRUE);
+            width  + (rmw.right - rmw.left) - (rw.right - rw.left),
+            height + (rmw.bottom - rmw.top) - (rw.bottom - rw.top), TRUE);
     }
 
     rect = icvCalcWindowRect(window);
     MoveWindow(window->hwnd, rect.left, rect.top,
-        rect.right - rect.left + 1, rect.bottom - rect.top + 1, TRUE);
+        rect.right - rect.left, rect.bottom - rect.top, TRUE);
 
     __END__;
 }
@@ -1629,8 +1629,8 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             RECT rect = icvCalcWindowRect(window);
             pos->x = rect.left;
             pos->y = rect.top;
-            pos->cx = rect.right - rect.left + 1;
-            pos->cy = rect.bottom - rect.top + 1;
+            pos->cx = rect.right - rect.left;
+            pos->cy = rect.bottom - rect.top;
         }
         break;
 
