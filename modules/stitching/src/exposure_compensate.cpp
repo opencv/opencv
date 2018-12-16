@@ -180,10 +180,13 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 #endif
     eigen_x = solver.solve(eigen_b);
 
-    eigen2cv(eigen_x, l_gains);
+    Mat_<float> l_gains_float;
+    eigen2cv(eigen_x, l_gains_float);
+    l_gains_float.convertTo(l_gains, CV_64FC1);
 #else
     solve(A, b, l_gains);
 #endif
+    CV_CheckTypeEQ(l_gains.type(), CV_64FC1, "");
 
     gains_.create(num_images, 1);
     for (int i = 0, j = 0; i < num_images; ++i)
