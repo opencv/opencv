@@ -66582,7 +66582,7 @@
       <x>89</x>
       <y>226</y>
       <cn>1</cn>
-      <val>83.</val></rng2></dst></OCL_CvtColorFixture_CvtColor--CvtColor---640x480---COLOR_mRGBA2RGBA--4--4-->
+      <val>255.</val></rng2></dst></OCL_CvtColorFixture_CvtColor--CvtColor---640x480---COLOR_mRGBA2RGBA--4--4-->
 <OCL_CvtColorFixture_CvtColor--CvtColor---1280x720---COLOR_RGB2GRAY--3--1-->
   <dst>
     <kind>655360</kind>
@@ -66851,7 +66851,7 @@
       <x>339</x>
       <y>16</y>
       <cn>2</cn>
-      <val>96.</val></rng1>
+      <val>255.</val></rng1>
     <rng2>
       <x>7</x>
       <y>288</y>
