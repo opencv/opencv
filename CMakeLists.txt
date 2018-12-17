@@ -608,7 +608,7 @@ else()
     endif()
   endif()
   ocv_update(OPENCV_INCLUDE_INSTALL_PATH "include")
-  ocv_update(OPENCV_PYTHON_INSTALL_PATH  "python")
+  #ocv_update(OPENCV_PYTHON_INSTALL_PATH  "python")  # no default value, see https://github.com/opencv/opencv/issues/13202
 endif()
 
 ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
