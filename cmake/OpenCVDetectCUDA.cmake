@@ -52,7 +52,7 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta")
+  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta" "Turing")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
