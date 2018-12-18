@@ -634,6 +634,8 @@ class CppHeaderParser(object):
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
             if block_type in ["file", "enum"]:
                 continue
+            if block_type in ["enum struct", "enum class"] and block_name == name:
+                continue
             if block_type not in ["struct", "class", "namespace", "enum struct", "enum class"]:
                 print("Error at %d: there are non-valid entries in the current block stack %s" % (self.lineno, self.block_stack))
                 sys.exit(-1)
