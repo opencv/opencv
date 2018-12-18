@@ -193,6 +193,9 @@ public:
     CV_WRAP bool waveCorrection() const { return do_wave_correct_; }
     CV_WRAP void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
 
+    CV_WRAP InterpolationFlags interpolationFlags() const { return interp_flags_; }
+    CV_WRAP void setInterpolationFlags(InterpolationFlags interp_flags) { interp_flags_ = interp_flags; }
+
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
@@ -289,6 +292,7 @@ private:
     double seam_est_resol_;
     double compose_resol_;
     double conf_thresh_;
+    InterpolationFlags interp_flags_;
     Ptr<Feature2D> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
     cv::UMat matching_mask_;
