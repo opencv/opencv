@@ -52,7 +52,7 @@ class Model:
         try:
             if self.verify():
                 print('  hash match - skipping')
-                return
+                return True
         except Exception as e:
             print('  catch {}'.format(e))
 
@@ -69,7 +69,7 @@ class Model:
 
         print(' done')
         print(' file {}'.format(self.filename))
-        self.verify()
+        return self.verify()
 
     def download(self):
         r = urlopen(self.url)
@@ -490,7 +490,7 @@ models = [
         name='VGG16_bn (ONNX)',
         archive='vgg16-bn.tar.gz',
         member='vgg16-bn/test_data_set_0/input_0.pb',
-        sha='55c285cfbc4d61e3c026302a3af9e7d220b82d0a ',
+        sha='55c285cfbc4d61e3c026302a3af9e7d220b82d0a',
         filename='onnx/data/input_vgg16-bn.pb'),
     Model(
         name='VGG16_bn (ONNX)',
@@ -558,36 +558,36 @@ models = [
     Model(
         name='ResNet101_DUC_HDC (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/duc/ResNet101_DUC_HDC.tar.gz',
-        sha='1ff3f0f7439af69c0075376082bdb70ec7fd55fe',
+        sha='f8314f381939d01045ac31dbb53d7d35fe3ff9a0',
         filename='ResNet101_DUC_HDC.tar.gz'),
     Model(
         name='ResNet101_DUC_HDC (ONNX)',
         archive='ResNet101_DUC_HDC.tar.gz',
-        member='./ResNet101_DUC_HDC.onnx',
+        member='ResNet101_DUC_HDC/ResNet101_DUC_HDC.onnx',
         sha='83f9cefdf3606a37dd4901a925bb9116795dae39',
         filename='onnx/models/resnet101_duc_hdc.onnx'),
     Model(
         name='ResNet101_DUC_HDC (ONNX)',
         archive='ResNet101_DUC_HDC.tar.gz',
-        member='./test_data_set_0/input_0.pb',
+        member='ResNet101_DUC_HDC/test_data_set_0/input_0.pb',
         sha='099d0e32742a2fa6a69c329f1bff699fb7266b33',
         filename='onnx/data/input_resnet101_duc_hdc.pb'),
     Model(
         name='ResNet101_DUC_HDC (ONNX)',
         archive='ResNet101_DUC_HDC.tar.gz',
-        member='./test_data_set_0/output_0.pb',
+        member='ResNet101_DUC_HDC/test_data_set_0/output_0.pb',
         sha='3713a21bb7228d3179721810bb72565aebee7033',
         filename='onnx/data/output_resnet101_duc_hdc.pb'),
     Model(
         name='TinyYolov2 (ONNX)',
         url='https://www.cntk.ai/OnnxModels/tiny_yolov2/opset_1/tiny_yolov2.tar.gz',
-        sha='5df7f3f8b8c3cec261f98ff7e015d4085d8ceb93',
+        sha='b9102abb8fa6f51368119b52146c30189353164a',
         filename='tiny_yolov2.tar.gz'),
     Model(
         name='TinyYolov2 (ONNX)',
         archive='tiny_yolov2.tar.gz',
         member='tiny_yolov2/model.onnx',
-        sha='c4b0dab30547f4f8e7ff8bfdd1ec64848f0e4342',
+        sha='433fecbd32ac8b9be6f5ee10c39dcecf9dc5c151',
         filename='onnx/models/tiny_yolo2.onnx'),
     Model(
         name='TinyYolov2 (ONNX)',
@@ -610,7 +610,7 @@ models = [
         name='CNN Mnist (ONNX)',
         archive='mnist.tar.gz',
         member='mnist/model.onnx',
-        sha='ce4fb4914cd1d9e0faed3294e5cecfd1847339763',
+        sha='e4fb4914cd1d9e0faed3294e5cecfd1847339763',
         filename='onnx/models/cnn_mnist.onnx'),
     Model(
         name='CNN Mnist (ONNX)',
@@ -673,25 +673,25 @@ models = [
     Model(
         name='Emotion FERPlus (ONNX)',
         url='https://www.cntk.ai/OnnxModels/emotion_ferplus/opset_7/emotion_ferplus.tar.gz',
-        sha='3a430611d47cae5ba84f1019531a3041cf5085c1',
+        sha='9ff80899c0cd468999db5d8ffde98780ef85455e',
         filename='emotion_ferplus.tar.gz'),
     Model(
         name='Emotion FERPlus (ONNX)',
         archive='emotion_ferplus.tar.gz',
         member='emotion_ferplus/model.onnx',
-        sha='3c0546c99910156aed7d7809fe7be9bd92168b05',
+        sha='2ef5b3a6404a5feb8cc396d66c86838c4c750a7e',
         filename='onnx/models/emotion_ferplus.onnx'),
     Model(
         name='Emotion FERPlus (ONNX)',
         archive='emotion_ferplus.tar.gz',
         member='emotion_ferplus/test_data_set_0/input_0.pb',
-        sha='3a3189093cc38a6ffab10c65eda90a24e12d7e1a',
+        sha='29621536528116fc12f02bc81c7265f7ffe7c8bb',
         filename='onnx/data/input_emotion_ferplus.pb'),
     Model(
         name='Emotion FERPlus (ONNX)',
         archive='emotion_ferplus.tar.gz',
         member='emotion_ferplus/test_data_set_0/output_0.pb',
-        sha='a4842733bf293dfa08482509a2a7b2b23af9d5b0',
+        sha='54f7892240d2d9298f5a8064a46fc3a8987015a5',
         filename='onnx/data/output_emotion_ferplus.pb'),
     Model(
         name='Squeezenet (ONNX)',
@@ -788,13 +788,13 @@ models = [
     Model(
         name='Shufflenet (ONNX)',
         url='https://s3.amazonaws.com/download.onnx/models/opset_9/shufflenet.tar.gz',
-        sha='fd2168ed9db9dbea4d134852ca8a69b1b08c5e9b',
+        sha='c99afcb7fcc809c0688cc99cb3709a052fde1de7',
         filename='shufflenet.tar.gz'),
     Model(
         name='Shufflenet (ONNX)',
         archive='shufflenet.tar.gz',
         member='shufflenet/model.onnx',
-        sha='96d3e7b3ea0b9b48c7aa98d7f4cb3fb94e666d86',
+        sha='a781faf9f1fe6d001cd7b6b5a7d1a228da0ff17b',
         filename='onnx/models/shufflenet.onnx'),
     Model(
         name='Shufflenet (ONNX)',
@@ -813,6 +813,13 @@ models = [
 # Note: models will be downloaded to current working directory
 #       expected working directory is opencv_extra/testdata/dnn
 if __name__ == '__main__':
+    failedSums = []
     for m in models:
         print(m)
-        m.get()
+        if not m.get():
+            failedSums.append(m.filename)
+    if failedSums:
+        print("Checksum verification failed for:")
+        for f in failedSums:
+            print("* {}".format(f))
+        exit(15)
