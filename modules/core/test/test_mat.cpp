@@ -3,6 +3,12 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
+#ifdef HAVE_EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include "opencv2/core/eigen.hpp"
+#endif
+
 namespace opencv_test { namespace {
 
 class Core_ReduceTest : public cvtest::BaseTest
@@ -1961,5 +1967,23 @@ TEST(Core_Vectors, issue_13078_workaround)
     ASSERT_EQ(5, ints[2]);
     ASSERT_EQ(7, ints[3]);
 }
+
+
+#ifdef HAVE_EIGEN
+TEST(Core_Eigen, eigen2cv_check_Mat_type)
+{
+    Mat A(4, 4, CV_32FC1, Scalar::all(0));
+    Eigen::MatrixXf eigen_A;
+    cv2eigen(A, eigen_A);
+
+    Mat_<float> f_mat;
+    EXPECT_NO_THROW(eigen2cv(eigen_A, f_mat));
+    EXPECT_EQ(CV_32FC1, f_mat.type());
+
+    Mat_<double> d_mat;
+    EXPECT_ANY_THROW(eigen2cv(eigen_A, d_mat));
+    //EXPECT_EQ(CV_64FC1, d_mat.type());
+}
+#endif // HAVE_EIGEN
 
 }} // namespace
