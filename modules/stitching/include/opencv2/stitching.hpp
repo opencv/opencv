@@ -193,7 +193,7 @@ public:
     CV_WRAP bool waveCorrection() const { return do_wave_correct_; }
     CV_WRAP void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
 
-    CV_WRAP InterpolationFlags getInterpolationFlags() const { return interp_flags_; }
+    CV_WRAP InterpolationFlags interpolationFlags() const { return interp_flags_; }
     CV_WRAP void setInterpolationFlags(InterpolationFlags interp_flags) { interp_flags_ = interp_flags; }
 
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
