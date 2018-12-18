@@ -19,7 +19,7 @@ class stitching_test(NewOpenCVTests):
         self.assertAlmostEqual(pano.shape[0], 685, delta=100, msg="rows: %r" % list(pano.shape))
         self.assertAlmostEqual(pano.shape[1], 1025, delta=100, msg="cols: %r" % list(pano.shape))
 
-class detail_test(NewOpenCVTests):
+class stitching_detail_test(NewOpenCVTests):
 
     def test_simple(self):
         img = self.get_sample('stitching/a1.png')
