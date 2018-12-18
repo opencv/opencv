@@ -441,7 +441,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                ocl_sepFilter3x3_8UC1(_src, _dst, ddepth, kx, ky, delta, borderType));
 
     CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 && (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
-               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), 0, borderType))
+               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType))
 
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();
@@ -494,7 +494,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 
     CV_OCL_RUN(ocl::isOpenCLActivated() && _dst.isUMat() && _src.dims() <= 2 &&
                (size_t)_src.rows() > kx.total() && (size_t)_src.cols() > kx.total(),
-               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), 0, borderType))
+               ocl_sepFilter2D(_src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType))
 
     Mat src = _src.getMat();
     Mat dst = _dst.getMat();

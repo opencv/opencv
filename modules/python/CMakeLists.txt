@@ -20,6 +20,7 @@ add_subdirectory(bindings)
 
 if(NOT OPENCV_SKIP_PYTHON_LOADER)
   include("./python_loader.cmake")
+  message(STATUS "OpenCV Python: during development append to PYTHONPATH: ${CMAKE_BINARY_DIR}/python_loader")
 endif()
 
 if(__disable_python2)
