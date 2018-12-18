@@ -59,6 +59,13 @@ else()
   set(USE_IPPIW FALSE)
 endif()
 
+if(TARGET libprotobuf AND NOT BUILD_SHARED_LIBS AND NOT BUILD_PROTOBUF)
+  set(USE_PROTOBUF TRUE)
+  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-Protobuf.cmake.in" PROTOBUF_CONFIGCMAKE @ONLY)
+else()
+  set(USE_PROTOBUF FALSE)
+endif()
+
 ocv_cmake_hook(PRE_CMAKE_CONFIG_BUILD)
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" @ONLY)
 #support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
@@ -77,6 +84,9 @@ endif()
 if(USE_IPPIW)
   file(RELATIVE_PATH IPPIW_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}" "${IPPIW_INSTALL_PATH}")
   ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-IPPIW.cmake.in" IPPIW_CONFIGCMAKE @ONLY)
+endif()
+if(USE_PROTOBUF)
+  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-Protobuf.cmake.in" PROTOBUF_CONFIGCMAKE @ONLY)
 endif()
 
 function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
