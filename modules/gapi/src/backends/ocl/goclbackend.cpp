@@ -102,7 +102,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
             {
                 const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
                 const auto type = CV_MAKETYPE(mat_desc.depth, mat_desc.chan);
-                m_res.slot<cv::UMat>()[desc.rc].create(mat_desc.size.width, mat_desc.size.height, type);
+                m_res.slot<cv::UMat>()[desc.rc].create(mat_desc.size.height, mat_desc.size.width, type);
             }
             break;
         }
