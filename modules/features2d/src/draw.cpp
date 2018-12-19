@@ -103,9 +103,13 @@ void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, In
         {
             cvtColor( image, outImage, COLOR_GRAY2BGR );
         }
+        else if( image.type() == CV_8UC4 )
+        {
+            cvtColor( image, outImage, COLOR_BGRA2BGR );
+        }
         else
         {
-            CV_Error( Error::StsBadArg, "Incorrect type of input image.\n" );
+            CV_Error( Error::StsBadArg, "Incorrect type of input image: " + typeToString(image.type()) );
         }
     }
 
@@ -146,15 +150,23 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
         outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
         outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
 
-        if( img1.type() == CV_8U )
+        if( img1.type() == CV_8UC1 )
             cvtColor( img1, outImg1, COLOR_GRAY2BGR );
-        else
+        else if( img1.type() == CV_8UC3 )
             img1.copyTo( outImg1 );
-
-        if( img2.type() == CV_8U )
-            cvtColor( img2, outImg2, COLOR_GRAY2BGR );
+        else if( img1.type() == CV_8UC4 )
+            cvtColor( img1, outImg1, COLOR_BGRA2BGR );
         else
+            CV_Error( Error::StsBadArg, "Incorrect type of input image: " + typeToString(img1.type()) );
+
+        if( img2.type() == CV_8UC1 )
+            cvtColor( img2, outImg2, COLOR_GRAY2BGR );
+        else if( img2.type() == CV_8UC3 )
             img2.copyTo( outImg2 );
+        else if( img2.type() == CV_8UC4 )
+            cvtColor( img2, outImg2, COLOR_BGRA2BGR );
+        else
+            CV_Error( Error::StsBadArg, "Incorrect type of input image: "  + typeToString(img2.type()) );
     }
 
     // draw keypoints
