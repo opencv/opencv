@@ -1378,6 +1378,7 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
+#ifdef HAVE_OPENCV_STITCHING
 template<> struct pyopencvVecConverter<detail::ImageFeatures>
 {
     static bool to(PyObject* obj, std::vector<detail::ImageFeatures>& value, const ArgInfo info)
@@ -1416,8 +1417,7 @@ template<> struct pyopencvVecConverter<detail::CameraParams>
         return pyopencv_from_generic_vec(value);
     }
 };
-
-
+#endif  // HAVE_OPENCV_STITCHING
 
 template<> struct pyopencvVecConverter<String>
 {
