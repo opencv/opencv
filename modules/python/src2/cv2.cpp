@@ -1378,47 +1378,6 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
-#ifdef HAVE_OPENCV_STITCHING
-template<> struct pyopencvVecConverter<detail::ImageFeatures>
-{
-    static bool to(PyObject* obj, std::vector<detail::ImageFeatures>& value, const ArgInfo info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<detail::ImageFeatures>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<detail::MatchesInfo>
-{
-    static bool to(PyObject* obj, std::vector<detail::MatchesInfo>& value, const ArgInfo info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<detail::MatchesInfo>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<detail::CameraParams>
-{
-    static bool to(PyObject* obj, std::vector<detail::CameraParams>& value, const ArgInfo info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<detail::CameraParams>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-#endif  // HAVE_OPENCV_STITCHING
-
 template<> struct pyopencvVecConverter<String>
 {
     static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo info)
