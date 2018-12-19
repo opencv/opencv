@@ -11,33 +11,33 @@ namespace cv
 //constants for conversion from/to RGB and YUV, YCrCb according to BT.601
 
 //to YCbCr
-const float YCBF = 0.564f; // == 1/2/(1-B2YF)
-const float YCRF = 0.713f; // == 1/2/(1-R2YF)
-const int YCBI = 9241;  // == YCBF*16384
-const int YCRI = 11682; // == YCRF*16384
+static const float YCBF = 0.564f; // == 1/2/(1-B2YF)
+static const float YCRF = 0.713f; // == 1/2/(1-R2YF)
+static const int YCBI = 9241;  // == YCBF*16384
+static const int YCRI = 11682; // == YCRF*16384
 //to YUV
-const float B2UF = 0.492f;
-const float R2VF = 0.877f;
-const int B2UI = 8061;  // == B2UF*16384
-const int R2VI = 14369; // == R2VF*16384
+static const float B2UF = 0.492f;
+static const float R2VF = 0.877f;
+static const int B2UI = 8061;  // == B2UF*16384
+static const int R2VI = 14369; // == R2VF*16384
 //from YUV
-const float U2BF = 2.032f;
-const float U2GF = -0.395f;
-const float V2GF = -0.581f;
-const float V2RF = 1.140f;
-const int U2BI = 33292;
-const int U2GI = -6472;
-const int V2GI = -9519;
-const int V2RI = 18678;
+static const float U2BF = 2.032f;
+static const float U2GF = -0.395f;
+static const float V2GF = -0.581f;
+static const float V2RF = 1.140f;
+static const int U2BI = 33292;
+static const int U2GI = -6472;
+static const int V2GI = -9519;
+static const int V2RI = 18678;
 //from YCrCb
-const float CB2BF = 1.773f;
-const float CB2GF = -0.344f;
-const float CR2GF = -0.714f;
-const float CR2RF = 1.403f;
-const int CB2BI = 29049;
-const int CB2GI = -5636;
-const int CR2GI = -11698;
-const int CR2RI = 22987;
+static const float CB2BF = 1.773f;
+static const float CB2GF = -0.344f;
+static const float CR2GF = -0.714f;
+static const float CR2RF = 1.403f;
+static const int CB2BI = 29049;
+static const int CB2GI = -5636;
+static const int CR2GI = -11698;
+static const int CR2RI = 22987;
 
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
@@ -251,12 +251,14 @@ struct RGB2YCrCb_f<float>
 template<typename _Tp> struct RGB2YCrCb_i
 {
     typedef _Tp channel_type;
+    static const int shift = yuv_shift;
 
     RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
         : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
+
         memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
@@ -265,13 +267,13 @@ template<typename _Tp> struct RGB2YCrCb_i
         int scn = srccn, bidx = blueIdx;
         int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
-        int delta = ColorChannel<_Tp>::half()*(1 << yuv_shift);
+        int delta = ColorChannel<_Tp>::half()*(1 << shift);
         n *= 3;
         for(int i = 0; i < n; i += 3, src += scn)
         {
-            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
-            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
-            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, shift);
             dst[i] = saturate_cast<_Tp>(Y);
             dst[i+1+yuvOrder] = saturate_cast<_Tp>(Cr);
             dst[i+2-yuvOrder] = saturate_cast<_Tp>(Cb);
@@ -288,6 +290,7 @@ template <>
 struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
+    static const int shift = yuv_shift;
 
     RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
         : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -303,8 +306,8 @@ struct RGB2YCrCb_i<uchar>
         v_c2 = vdup_n_s16(coeffs[2]);
         v_c3 = vdupq_n_s32(coeffs[3]);
         v_c4 = vdupq_n_s32(coeffs[4]);
-        v_delta = vdupq_n_s32(ColorChannel<uchar>::half()*(1 << yuv_shift));
-        v_delta2 = vdupq_n_s32(1 << (yuv_shift - 1));
+        v_delta = vdupq_n_s32(ColorChannel<uchar>::half()*(1 << shift));
+        v_delta2 = vdupq_n_s32(1 << (shift - 1));
     }
 
     void operator()(const uchar * src, uchar * dst, int n) const
@@ -312,7 +315,7 @@ struct RGB2YCrCb_i<uchar>
         int scn = srccn, bidx = blueIdx, i = 0;
         int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
-        int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
+        int delta = ColorChannel<uchar>::half()*(1 << shift);
         n *= 3;
 
         for ( ; i <= n - 24; i += 24, src += scn * 8)
@@ -341,22 +344,22 @@ struct RGB2YCrCb_i<uchar>
             v_src0.val[2] = vget_low_s16(v_src16.val[2]);
 
             int32x4_t v_Y0 = vmlal_s16(vmlal_s16(vmull_s16(v_src0.val[0], v_c0), v_src0.val[1], v_c1), v_src0.val[2], v_c2);
-            v_Y0 = vshrq_n_s32(vaddq_s32(v_Y0, v_delta2), yuv_shift);
+            v_Y0 = vshrq_n_s32(vaddq_s32(v_Y0, v_delta2), shift);
             int32x4_t v_Cr0 = vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[bidx^2]), v_Y0), v_c3);
-            v_Cr0 = vshrq_n_s32(vaddq_s32(v_Cr0, v_delta2), yuv_shift);
+            v_Cr0 = vshrq_n_s32(vaddq_s32(v_Cr0, v_delta2), shift);
             int32x4_t v_Cb0 = vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[bidx]), v_Y0), v_c4);
-            v_Cb0 = vshrq_n_s32(vaddq_s32(v_Cb0, v_delta2), yuv_shift);
+            v_Cb0 = vshrq_n_s32(vaddq_s32(v_Cb0, v_delta2), shift);
 
             v_src0.val[0] = vget_high_s16(v_src16.val[0]);
             v_src0.val[1] = vget_high_s16(v_src16.val[1]);
             v_src0.val[2] = vget_high_s16(v_src16.val[2]);
 
             int32x4_t v_Y1 = vmlal_s16(vmlal_s16(vmull_s16(v_src0.val[0], v_c0), v_src0.val[1], v_c1), v_src0.val[2], v_c2);
-            v_Y1 = vshrq_n_s32(vaddq_s32(v_Y1, v_delta2), yuv_shift);
+            v_Y1 = vshrq_n_s32(vaddq_s32(v_Y1, v_delta2), shift);
             int32x4_t v_Cr1 = vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[bidx^2]), v_Y1), v_c3);
-            v_Cr1 = vshrq_n_s32(vaddq_s32(v_Cr1, v_delta2), yuv_shift);
+            v_Cr1 = vshrq_n_s32(vaddq_s32(v_Cr1, v_delta2), shift);
             int32x4_t v_Cb1 = vmlaq_s32(v_delta, vsubq_s32(vmovl_s16(v_src0.val[bidx]), v_Y1), v_c4);
-            v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
+            v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), shift);
 
             v_dst.val[0] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Y0), vqmovn_s32(v_Y1)));
             v_dst.val[1+yuvOrder] = vqmovun_s16(vcombine_s16(vqmovn_s32(v_Cr0), vqmovn_s32(v_Cr1)));
@@ -367,9 +370,9 @@ struct RGB2YCrCb_i<uchar>
 
         for ( ; i < n; i += 3, src += scn)
         {
-            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
-            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
-            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, shift);
             dst[i] = saturate_cast<uchar>(Y);
             dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
             dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
@@ -385,6 +388,7 @@ template <>
 struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
+    static const int shift = yuv_shift;
 
     RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
         : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -400,8 +404,8 @@ struct RGB2YCrCb_i<ushort>
         v_c2 = vdupq_n_s32(coeffs[2]);
         v_c3 = vdupq_n_s32(coeffs[3]);
         v_c4 = vdupq_n_s32(coeffs[4]);
-        v_delta = vdupq_n_s32(ColorChannel<ushort>::half()*(1 << yuv_shift));
-        v_delta2 = vdupq_n_s32(1 << (yuv_shift - 1));
+        v_delta = vdupq_n_s32(ColorChannel<ushort>::half()*(1 << shift));
+        v_delta2 = vdupq_n_s32(1 << (shift - 1));
     }
 
     void operator()(const ushort * src, ushort * dst, int n) const
@@ -409,7 +413,7 @@ struct RGB2YCrCb_i<ushort>
         int scn = srccn, bidx = blueIdx, i = 0;
         int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
-        int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
+        int delta = ColorChannel<ushort>::half()*(1 << shift);
         n *= 3;
 
         for ( ; i <= n - 24; i += 24, src += scn * 8)
@@ -432,22 +436,22 @@ struct RGB2YCrCb_i<ushort>
             v_src0.val[2] = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2])));
 
             int32x4_t v_Y0 = vmlaq_s32(vmlaq_s32(vmulq_s32(v_src0.val[0], v_c0), v_src0.val[1], v_c1), v_src0.val[2], v_c2);
-            v_Y0 = vshrq_n_s32(vaddq_s32(v_Y0, v_delta2), yuv_shift);
+            v_Y0 = vshrq_n_s32(vaddq_s32(v_Y0, v_delta2), shift);
             int32x4_t v_Cr0 = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx^2], v_Y0), v_c3);
-            v_Cr0 = vshrq_n_s32(vaddq_s32(v_Cr0, v_delta2), yuv_shift);
+            v_Cr0 = vshrq_n_s32(vaddq_s32(v_Cr0, v_delta2), shift);
             int32x4_t v_Cb0 = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx], v_Y0), v_c4);
-            v_Cb0 = vshrq_n_s32(vaddq_s32(v_Cb0, v_delta2), yuv_shift);
+            v_Cb0 = vshrq_n_s32(vaddq_s32(v_Cb0, v_delta2), shift);
 
             v_src0.val[0] = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[0])));
             v_src0.val[1] = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1])));
             v_src0.val[2] = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2])));
 
             int32x4_t v_Y1 = vmlaq_s32(vmlaq_s32(vmulq_s32(v_src0.val[0], v_c0), v_src0.val[1], v_c1), v_src0.val[2], v_c2);
-            v_Y1 = vshrq_n_s32(vaddq_s32(v_Y1, v_delta2), yuv_shift);
+            v_Y1 = vshrq_n_s32(vaddq_s32(v_Y1, v_delta2), shift);
             int32x4_t v_Cr1 = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx^2], v_Y1), v_c3);
-            v_Cr1 = vshrq_n_s32(vaddq_s32(v_Cr1, v_delta2), yuv_shift);
+            v_Cr1 = vshrq_n_s32(vaddq_s32(v_Cr1, v_delta2), shift);
             int32x4_t v_Cb1 = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx], v_Y1), v_c4);
-            v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), yuv_shift);
+            v_Cb1 = vshrq_n_s32(vaddq_s32(v_Cb1, v_delta2), shift);
 
             v_dst.val[0] = vcombine_u16(vqmovun_s32(v_Y0), vqmovun_s32(v_Y1));
             v_dst.val[1+yuvOrder] = vcombine_u16(vqmovun_s32(v_Cr0), vqmovun_s32(v_Cr1));
@@ -477,11 +481,11 @@ struct RGB2YCrCb_i<ushort>
             }
 
             int32x4_t v_Y = vmlaq_s32(vmlaq_s32(vmulq_s32(v_src0.val[0], v_c0), v_src0.val[1], v_c1), v_src0.val[2], v_c2);
-            v_Y = vshrq_n_s32(vaddq_s32(v_Y, v_delta2), yuv_shift);
+            v_Y = vshrq_n_s32(vaddq_s32(v_Y, v_delta2), shift);
             int32x4_t v_Cr = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx^2], v_Y), v_c3);
-            v_Cr = vshrq_n_s32(vaddq_s32(v_Cr, v_delta2), yuv_shift);
+            v_Cr = vshrq_n_s32(vaddq_s32(v_Cr, v_delta2), shift);
             int32x4_t v_Cb = vmlaq_s32(v_delta, vsubq_s32(v_src0.val[bidx], v_Y), v_c4);
-            v_Cb = vshrq_n_s32(vaddq_s32(v_Cb, v_delta2), yuv_shift);
+            v_Cb = vshrq_n_s32(vaddq_s32(v_Cb, v_delta2), shift);
 
             v_dst.val[0] = vqmovun_s32(v_Y);
             v_dst.val[1+yuvOrder] = vqmovun_s32(v_Cr);
@@ -492,9 +496,9 @@ struct RGB2YCrCb_i<ushort>
 
         for ( ; i < n; i += 3, src += scn)
         {
-            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
-            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
-            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, shift);
             dst[i] = saturate_cast<ushort>(Y);
             dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
             dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
@@ -511,6 +515,7 @@ template <>
 struct RGB2YCrCb_i<uchar>
 {
     typedef uchar channel_type;
+    static const int shift = yuv_shift;
 
     RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
         : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -521,7 +526,7 @@ struct RGB2YCrCb_i<uchar>
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
-        short delta = 1 << (yuv_shift - 1);
+        short delta = 1 << (shift - 1);
         v_delta_16 = _mm_set1_epi16(delta);
         v_delta_32 = _mm_set1_epi32(delta);
         short delta2 = 1 + ColorChannel<uchar>::half() * 2;
@@ -545,8 +550,8 @@ struct RGB2YCrCb_i<uchar>
         v_rgb[2] = _mm_hadd_epi32(v_rgb[2], v_rgb[3]);
         v_rgb[0] = _mm_add_epi32(v_rgb[0], v_delta_32);
         v_rgb[2] = _mm_add_epi32(v_rgb[2], v_delta_32);
-        v_rgb[0] = _mm_srai_epi32(v_rgb[0], yuv_shift);
-        v_rgb[2] = _mm_srai_epi32(v_rgb[2], yuv_shift);
+        v_rgb[0] = _mm_srai_epi32(v_rgb[0], shift);
+        v_rgb[2] = _mm_srai_epi32(v_rgb[2], shift);
         __m128i v_y = _mm_packs_epi32(v_rgb[0], v_rgb[2]);
 
         v_rb[0] = _mm_cvtepu8_epi16(v_rb[0]);
@@ -561,10 +566,10 @@ struct RGB2YCrCb_i<uchar>
         v_rgb[1] = _mm_madd_epi16(v_rgb[1], v_coeff);
         v_rgb[2] = _mm_madd_epi16(v_rgb[2], v_coeff);
         v_rgb[3] = _mm_madd_epi16(v_rgb[3], v_coeff);
-        v_rgb[0] = _mm_srai_epi32(v_rgb[0], yuv_shift);
-        v_rgb[1] = _mm_srai_epi32(v_rgb[1], yuv_shift);
-        v_rgb[2] = _mm_srai_epi32(v_rgb[2], yuv_shift);
-        v_rgb[3] = _mm_srai_epi32(v_rgb[3], yuv_shift);
+        v_rgb[0] = _mm_srai_epi32(v_rgb[0], shift);
+        v_rgb[1] = _mm_srai_epi32(v_rgb[1], shift);
+        v_rgb[2] = _mm_srai_epi32(v_rgb[2], shift);
+        v_rgb[3] = _mm_srai_epi32(v_rgb[3], shift);
         v_rgb[0] = _mm_packs_epi32(v_rgb[0], v_rgb[1]);
         v_rgb[2] = _mm_packs_epi32(v_rgb[2], v_rgb[3]);
         v_rgb[0] = _mm_packus_epi16(v_rgb[0], v_rgb[2]);
@@ -585,7 +590,7 @@ struct RGB2YCrCb_i<uchar>
         int scn = srccn, bidx = blueIdx, i = 0;
         int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
-        int delta = ColorChannel<uchar>::half()*(1 << yuv_shift);
+        int delta = ColorChannel<uchar>::half()*(1 << shift);
         n *= 3;
 
         if (haveSIMD)
@@ -656,9 +661,9 @@ struct RGB2YCrCb_i<uchar>
 
         for ( ; i < n; i += 3, src += scn)
         {
-            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
-            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
-            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, shift);
             dst[i] = saturate_cast<uchar>(Y);
             dst[i+1+yuvOrder] = saturate_cast<uchar>(Cr);
             dst[i+2-yuvOrder] = saturate_cast<uchar>(Cb);
@@ -677,6 +682,7 @@ template <>
 struct RGB2YCrCb_i<ushort>
 {
     typedef ushort channel_type;
+    static const int shift = yuv_shift;
 
     RGB2YCrCb_i(int _srccn, int _blueIdx, bool _isCrCb)
         : srccn(_srccn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -692,8 +698,8 @@ struct RGB2YCrCb_i<ushort>
         v_c2 = _mm_set1_epi32(coeffs[2]);
         v_c3 = _mm_set1_epi32(coeffs[3]);
         v_c4 = _mm_set1_epi32(coeffs[4]);
-        v_delta2 = _mm_set1_epi32(1 << (yuv_shift - 1));
-        v_delta = _mm_set1_epi32(ColorChannel<ushort>::half()*(1 << yuv_shift));
+        v_delta2 = _mm_set1_epi32(1 << (shift - 1));
+        v_delta = _mm_set1_epi32(ColorChannel<ushort>::half()*(1 << shift));
         v_delta = _mm_add_epi32(v_delta, v_delta2);
         v_zero = _mm_setzero_si128();
 
@@ -711,12 +717,12 @@ struct RGB2YCrCb_i<ushort>
         __m128i v_y0 = _mm_add_epi32(_mm_mullo_epi32(v_r_p, v_c0),
                        _mm_add_epi32(_mm_mullo_epi32(v_g_p, v_c1),
                                      _mm_mullo_epi32(v_b_p, v_c2)));
-        v_y0 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y0), yuv_shift);
+        v_y0 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y0), shift);
 
         __m128i v_cr0 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 2 ? v_r_p : v_b_p, v_y0), v_c3);
         __m128i v_cb0 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 0 ? v_r_p : v_b_p, v_y0), v_c4);
-        v_cr0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr0), yuv_shift);
-        v_cb0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb0), yuv_shift);
+        v_cr0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr0), shift);
+        v_cb0 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb0), shift);
 
         v_r_p = _mm_unpackhi_epi16(v_r, v_zero);
         v_g_p = _mm_unpackhi_epi16(v_g, v_zero);
@@ -725,12 +731,12 @@ struct RGB2YCrCb_i<ushort>
         __m128i v_y1 = _mm_add_epi32(_mm_mullo_epi32(v_r_p, v_c0),
                        _mm_add_epi32(_mm_mullo_epi32(v_g_p, v_c1),
                                      _mm_mullo_epi32(v_b_p, v_c2)));
-        v_y1 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y1), yuv_shift);
+        v_y1 = _mm_srli_epi32(_mm_add_epi32(v_delta2, v_y1), shift);
 
         __m128i v_cr1 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 2 ? v_r_p : v_b_p, v_y1), v_c3);
         __m128i v_cb1 = _mm_mullo_epi32(_mm_sub_epi32(blueIdx == 0 ? v_r_p : v_b_p, v_y1), v_c4);
-        v_cr1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr1), yuv_shift);
-        v_cb1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb1), yuv_shift);
+        v_cr1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cr1), shift);
+        v_cb1 = _mm_srai_epi32(_mm_add_epi32(v_delta, v_cb1), shift);
 
         v_y = _mm_packus_epi32(v_y0, v_y1);
         v_cr = _mm_packus_epi32(v_cr0, v_cr1);
@@ -742,7 +748,7 @@ struct RGB2YCrCb_i<ushort>
         int scn = srccn, bidx = blueIdx, i = 0;
         int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3], C4 = coeffs[4];
-        int delta = ColorChannel<ushort>::half()*(1 << yuv_shift);
+        int delta = ColorChannel<ushort>::half()*(1 << shift);
         n *= 3;
 
         if (haveSIMD)
@@ -791,9 +797,9 @@ struct RGB2YCrCb_i<ushort>
 
         for ( ; i < n; i += 3, src += scn)
         {
-            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, yuv_shift);
-            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, yuv_shift);
-            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, yuv_shift);
+            int Y = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, shift);
+            int Cr = CV_DESCALE((src[bidx^2] - Y)*C3 + delta, shift);
+            int Cb = CV_DESCALE((src[bidx] - Y)*C4 + delta, shift);
             dst[i] = saturate_cast<ushort>(Y);
             dst[i+1+yuvOrder] = saturate_cast<ushort>(Cr);
             dst[i+2-yuvOrder] = saturate_cast<ushort>(Cb);
@@ -1047,6 +1053,7 @@ struct YCrCb2RGB_f<float>
 template<typename _Tp> struct YCrCb2RGB_i
 {
     typedef _Tp channel_type;
+    static const int shift = yuv_shift;
 
     YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
         : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -1069,9 +1076,9 @@ template<typename _Tp> struct YCrCb2RGB_i
             _Tp Cr = src[i+1+yuvOrder];
             _Tp Cb = src[i+2-yuvOrder];
 
-            int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
-            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
-            int r = Y + CV_DESCALE((Cr - delta)*C0, yuv_shift);
+            int b = Y + CV_DESCALE((Cb - delta)*C3, shift);
+            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, shift);
+            int r = Y + CV_DESCALE((Cr - delta)*C0, shift);
 
             dst[bidx] = saturate_cast<_Tp>(b);
             dst[1] = saturate_cast<_Tp>(g);
@@ -1091,6 +1098,7 @@ template <>
 struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
+    static const int shift = yuv_shift;
 
     YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
         : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -1104,7 +1112,7 @@ struct YCrCb2RGB_i<uchar>
         v_c2 = vdupq_n_s32(coeffs[2]);
         v_c3 = vdupq_n_s32(coeffs[3]);
         v_delta = vdup_n_s16(ColorChannel<uchar>::half());
-        v_delta2 = vdupq_n_s32(1 << (yuv_shift - 1));
+        v_delta2 = vdupq_n_s32(1 << (shift - 1));
         v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
     }
 
@@ -1129,22 +1137,22 @@ struct YCrCb2RGB_i<uchar>
                       v_Cb = vget_low_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
-            v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
+            v_b0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), shift), v_Y);
             int32x4_t v_g0 = vmlaq_s32(vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1), vsubl_s16(v_Cb, v_delta), v_c2);
-            v_g0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), yuv_shift), v_Y);
+            v_g0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), shift), v_Y);
             int32x4_t v_r0 = vmulq_s32(v_c0, vsubl_s16(v_Cr, v_delta));
-            v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
+            v_r0 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), shift), v_Y);
 
             v_Y = vget_high_s16(v_src16.val[0]);
             v_Cr = vget_high_s16(v_src16.val[1+yuvOrder]);
             v_Cb = vget_high_s16(v_src16.val[2-yuvOrder]);
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubl_s16(v_Cb, v_delta));
-            v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
+            v_b1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), shift), v_Y);
             int32x4_t v_g1 = vmlaq_s32(vmulq_s32(vsubl_s16(v_Cr, v_delta), v_c1), vsubl_s16(v_Cb, v_delta), v_c2);
-            v_g1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), yuv_shift), v_Y);
+            v_g1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), shift), v_Y);
             int32x4_t v_r1 = vmulq_s32(v_c0, vsubl_s16(v_Cr, v_delta));
-            v_r1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), yuv_shift), v_Y);
+            v_r1 = vaddw_s16(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), shift), v_Y);
 
             uint8x8_t v_b = vqmovun_s16(vcombine_s16(vmovn_s32(v_b0), vmovn_s32(v_b1)));
             uint8x8_t v_g = vqmovun_s16(vcombine_s16(vmovn_s32(v_g0), vmovn_s32(v_g1)));
@@ -1175,9 +1183,9 @@ struct YCrCb2RGB_i<uchar>
             uchar Cr = src[i+1+yuvOrder];
             uchar Cb = src[i+2-yuvOrder];
 
-            int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
-            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
-            int r = Y + CV_DESCALE((Cr - delta)*C0, yuv_shift);
+            int b = Y + CV_DESCALE((Cb - delta)*C3, shift);
+            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, shift);
+            int r = Y + CV_DESCALE((Cr - delta)*C0, shift);
 
             dst[bidx] = saturate_cast<uchar>(b);
             dst[1] = saturate_cast<uchar>(g);
@@ -1199,6 +1207,7 @@ template <>
 struct YCrCb2RGB_i<ushort>
 {
     typedef ushort channel_type;
+    static const int shift = yuv_shift;
 
     YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
         : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -1212,7 +1221,7 @@ struct YCrCb2RGB_i<ushort>
         v_c2 = vdupq_n_s32(coeffs[2]);
         v_c3 = vdupq_n_s32(coeffs[3]);
         v_delta = vdupq_n_s32(ColorChannel<ushort>::half());
-        v_delta2 = vdupq_n_s32(1 << (yuv_shift - 1));
+        v_delta2 = vdupq_n_s32(1 << (shift - 1));
         v_alpha = vdupq_n_u16(ColorChannel<ushort>::max());
         v_alpha2 = vget_low_u16(v_alpha);
     }
@@ -1234,22 +1243,22 @@ struct YCrCb2RGB_i<ushort>
                       v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b0 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
-            v_b0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), yuv_shift), v_Y);
+            v_b0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b0, v_delta2), shift), v_Y);
             int32x4_t v_g0 = vmlaq_s32(vmulq_s32(vsubq_s32(v_Cr, v_delta), v_c1), vsubq_s32(v_Cb, v_delta), v_c2);
-            v_g0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), yuv_shift), v_Y);
+            v_g0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g0, v_delta2), shift), v_Y);
             int32x4_t v_r0 = vmulq_s32(v_c0, vsubq_s32(v_Cr, v_delta));
-            v_r0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), yuv_shift), v_Y);
+            v_r0 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r0, v_delta2), shift), v_Y);
 
             v_Y = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[0]))),
             v_Cr = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[1+yuvOrder]))),
             v_Cb = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(v_src.val[2-yuvOrder])));
 
             int32x4_t v_b1 = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
-            v_b1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), yuv_shift), v_Y);
+            v_b1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b1, v_delta2), shift), v_Y);
             int32x4_t v_g1 = vmlaq_s32(vmulq_s32(vsubq_s32(v_Cr, v_delta), v_c1), vsubq_s32(v_Cb, v_delta), v_c2);
-            v_g1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), yuv_shift), v_Y);
+            v_g1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g1, v_delta2), shift), v_Y);
             int32x4_t v_r1 = vmulq_s32(v_c0, vsubq_s32(v_Cr, v_delta));
-            v_r1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), yuv_shift), v_Y);
+            v_r1 = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r1, v_delta2), shift), v_Y);
 
             uint16x8_t v_b = vcombine_u16(vqmovun_s32(v_b0), vqmovun_s32(v_b1));
             uint16x8_t v_g = vcombine_u16(vqmovun_s32(v_g0), vqmovun_s32(v_g1));
@@ -1283,11 +1292,11 @@ struct YCrCb2RGB_i<ushort>
                       v_Cb = vreinterpretq_s32_u32(vmovl_u16(v_src.val[2-yuvOrder]));
 
             int32x4_t v_b = vmulq_s32(v_c3, vsubq_s32(v_Cb, v_delta));
-            v_b = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b, v_delta2), yuv_shift), v_Y);
+            v_b = vaddq_s32(vshrq_n_s32(vaddq_s32(v_b, v_delta2), shift), v_Y);
             int32x4_t v_g = vmlaq_s32(vmulq_s32(vsubq_s32(v_Cr, v_delta), v_c1), vsubq_s32(v_Cb, v_delta), v_c2);
-            v_g = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g, v_delta2), yuv_shift), v_Y);
+            v_g = vaddq_s32(vshrq_n_s32(vaddq_s32(v_g, v_delta2), shift), v_Y);
             int32x4_t v_r = vmulq_s32(vsubq_s32(v_Cr, v_delta), v_c0);
-            v_r = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r, v_delta2), yuv_shift), v_Y);
+            v_r = vaddq_s32(vshrq_n_s32(vaddq_s32(v_r, v_delta2), shift), v_Y);
 
             uint16x4_t v_bd = vqmovun_s32(v_b);
             uint16x4_t v_gd = vqmovun_s32(v_g);
@@ -1318,9 +1327,9 @@ struct YCrCb2RGB_i<ushort>
             ushort Cr = src[i+1+yuvOrder];
             ushort Cb = src[i+2-yuvOrder];
 
-            int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
-            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
-            int r = Y + CV_DESCALE((Cr - delta)*C0, yuv_shift);
+            int b = Y + CV_DESCALE((Cb - delta)*C3, shift);
+            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, shift);
+            int r = Y + CV_DESCALE((Cr - delta)*C0, shift);
 
             dst[bidx] = saturate_cast<ushort>(b);
             dst[1] = saturate_cast<ushort>(g);
@@ -1344,6 +1353,7 @@ template <>
 struct YCrCb2RGB_i<uchar>
 {
     typedef uchar channel_type;
+    static const int shift = yuv_shift;
 
     YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
         : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
@@ -1357,7 +1367,7 @@ struct YCrCb2RGB_i<uchar>
         v_c2 = _mm_set1_epi16((short)coeffs[2]);
         v_c3 = _mm_set1_epi16((short)coeffs[3]);
         v_delta = _mm_set1_epi16(ColorChannel<uchar>::half());
-        v_delta2 = _mm_set1_epi32(1 << (yuv_shift - 1));
+        v_delta2 = _mm_set1_epi32(1 << (shift - 1));
         v_zero = _mm_setzero_si128();
 
         uchar alpha = ColorChannel<uchar>::max();
@@ -1415,12 +1425,12 @@ struct YCrCb2RGB_i<uchar>
         v_rgb[4] = _mm_add_epi32(v_rgb[4], v_delta2);
         v_rgb[5] = _mm_add_epi32(v_rgb[5], v_delta2);
 
-        v_rgb[0] = _mm_srai_epi32(v_rgb[0], yuv_shift);
-        v_rgb[1] = _mm_srai_epi32(v_rgb[1], yuv_shift);
-        v_rgb[2] = _mm_srai_epi32(v_rgb[2], yuv_shift);
-        v_rgb[3] = _mm_srai_epi32(v_rgb[3], yuv_shift);
-        v_rgb[4] = _mm_srai_epi32(v_rgb[4], yuv_shift);
-        v_rgb[5] = _mm_srai_epi32(v_rgb[5], yuv_shift);
+        v_rgb[0] = _mm_srai_epi32(v_rgb[0], shift);
+        v_rgb[1] = _mm_srai_epi32(v_rgb[1], shift);
+        v_rgb[2] = _mm_srai_epi32(v_rgb[2], shift);
+        v_rgb[3] = _mm_srai_epi32(v_rgb[3], shift);
+        v_rgb[4] = _mm_srai_epi32(v_rgb[4], shift);
+        v_rgb[5] = _mm_srai_epi32(v_rgb[5], shift);
 
         v_rgb[0] = _mm_packs_epi32(v_rgb[0], v_rgb[1]);
         v_rgb[2] = _mm_packs_epi32(v_rgb[2], v_rgb[3]);
@@ -1454,11 +1464,11 @@ struct YCrCb2RGB_i<uchar>
         __m128i v_mulhi_1 = _mm_mulhi_epi16(v_cr, v_c1);
         __m128i v_mulhi_0 = _mm_mulhi_epi16(v_cr, v_c0);
 
-        __m128i v_b0 = _mm_srai_epi32(_mm_add_epi32(_mm_unpacklo_epi16(v_mullo_3, v_mulhi_3), v_delta2), yuv_shift);
+        __m128i v_b0 = _mm_srai_epi32(_mm_add_epi32(_mm_unpacklo_epi16(v_mullo_3, v_mulhi_3), v_delta2), shift);
         __m128i v_g0 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(_mm_unpacklo_epi16(v_mullo_2, v_mulhi_2),
                                                                   _mm_unpacklo_epi16(v_mullo_1, v_mulhi_1)), v_delta2),
-                                      yuv_shift);
-        __m128i v_r0 = _mm_srai_epi32(_mm_add_epi32(_mm_unpacklo_epi16(v_mullo_0, v_mulhi_0), v_delta2), yuv_shift);
+                                      shift);
+        __m128i v_r0 = _mm_srai_epi32(_mm_add_epi32(_mm_unpacklo_epi16(v_mullo_0, v_mulhi_0), v_delta2), shift);
 
         v_r0 = _mm_add_epi32(v_r0, v_y_p);
         v_g0 = _mm_add_epi32(v_g0, v_y_p);
@@ -1466,11 +1476,11 @@ struct YCrCb2RGB_i<uchar>
 
         v_y_p = _mm_unpackhi_epi16(v_y, v_zero);
 
-        __m128i v_b1 = _mm_srai_epi32(_mm_add_epi32(_mm_unpackhi_epi16(v_mullo_3, v_mulhi_3), v_delta2), yuv_shift);
+        __m128i v_b1 = _mm_srai_epi32(_mm_add_epi32(_mm_unpackhi_epi16(v_mullo_3, v_mulhi_3), v_delta2), shift);
         __m128i v_g1 = _mm_srai_epi32(_mm_add_epi32(_mm_add_epi32(_mm_unpackhi_epi16(v_mullo_2, v_mulhi_2),
                                                                   _mm_unpackhi_epi16(v_mullo_1, v_mulhi_1)), v_delta2),
-                                      yuv_shift);
-        __m128i v_r1 = _mm_srai_epi32(_mm_add_epi32(_mm_unpackhi_epi16(v_mullo_0, v_mulhi_0), v_delta2), yuv_shift);
+                                      shift);
+        __m128i v_r1 = _mm_srai_epi32(_mm_add_epi32(_mm_unpackhi_epi16(v_mullo_0, v_mulhi_0), v_delta2), shift);
 
         v_r1 = _mm_add_epi32(v_r1, v_y_p);
         v_g1 = _mm_add_epi32(v_g1, v_y_p);
@@ -1652,9 +1662,9 @@ struct YCrCb2RGB_i<uchar>
             uchar Cr = src[i+1+yuvOrder];
             uchar Cb = src[i+2-yuvOrder];
 
-            int b = Y + CV_DESCALE((Cb - delta)*C3, yuv_shift);
-            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, yuv_shift);
-            int r = Y + CV_DESCALE((Cr - delta)*C0, yuv_shift);
+            int b = Y + CV_DESCALE((Cb - delta)*C3, shift);
+            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, shift);
+            int r = Y + CV_DESCALE((Cr - delta)*C0, shift);
 
             dst[bidx] = saturate_cast<uchar>(b);
             dst[1] = saturate_cast<uchar>(g);
