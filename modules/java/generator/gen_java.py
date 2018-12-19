@@ -427,9 +427,12 @@ class JavaWrapperGenerator(object):
         constinfo = ConstInfo(decl, namespaces=self.namespaces, enumType=enumType)
         if constinfo.isIgnored():
             logging.info('ignored: %s', constinfo)
-        elif not self.isWrapped(constinfo.classname):
-            logging.info('class not found: %s', constinfo)
         else:
+            if not self.isWrapped(constinfo.classname):
+                logging.info('class not found: %s', constinfo)
+                constinfo.name = constinfo.classname + '_' + constinfo.name
+                constinfo.classname = ''
+
             ci = self.getClass(constinfo.classname)
             duplicate = ci.getConst(constinfo.name)
             if duplicate:
