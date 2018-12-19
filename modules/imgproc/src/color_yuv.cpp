@@ -1704,8 +1704,8 @@ const int ITUR_BT_601_CBU =  460324;
 const int ITUR_BT_601_CGV = -385875;
 const int ITUR_BT_601_CBV = -74448;
 
-template<int bIdx, int uIdx>
-struct YUV420sp2RGB888Invoker : ParallelLoopBody
+template<int bIdx, int uIdx, int dcn>
+struct YUV420sp2RGB8Invoker : ParallelLoopBody
 {
     uchar * dst_data;
     size_t dst_step;
@@ -1713,7 +1713,7 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
     const uchar* my1, *muv;
     size_t stride;
 
-    YUV420sp2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
+    YUV420sp2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -1737,7 +1737,7 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
             uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
-            for (int i = 0; i < width; i += 2, row1 += 6, row2 += 6)
+            for (int i = 0; i < width; i += 2, row1 += dcn*2, row2 += dcn*2)
             {
                 int u = int(uv[i + 0 + uIdx]) - 128;
                 int v = int(uv[i + 1 - uIdx]) - 128;
@@ -1750,98 +1750,37 @@ struct YUV420sp2RGB888Invoker : ParallelLoopBody
                 row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
                 row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
                 row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row1[3] = uchar(0xff);
 
                 int y01 = std::max(0, int(y1[i + 1]) - 16) * ITUR_BT_601_CY;
-                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+2-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+1]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+0+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row1[7] = uchar(0xff);
 
                 int y10 = std::max(0, int(y2[i]) - 16) * ITUR_BT_601_CY;
                 row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
                 row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
                 row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row2[3] = uchar(0xff);
 
                 int y11 = std::max(0, int(y2[i + 1]) - 16) * ITUR_BT_601_CY;
-                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[4]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
-                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+2-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+1]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+0+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row2[7] = uchar(0xff);
             }
         }
     }
 };
 
-template<int bIdx, int uIdx>
-struct YUV420sp2RGBA8888Invoker : ParallelLoopBody
-{
-    uchar * dst_data;
-    size_t dst_step;
-    int width;
-    const uchar* my1, *muv;
-    size_t stride;
 
-    YUV420sp2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
-        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
-
-    void operator()(const Range& range) const CV_OVERRIDE
-    {
-        int rangeBegin = range.start * 2;
-        int rangeEnd = range.end * 2;
-
-        //R = 1.164(Y - 16) + 1.596(V - 128)
-        //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
-        //B = 1.164(Y - 16)                  + 2.018(U - 128)
-
-        //R = (1220542(Y - 16) + 1673527(V - 128)                  + (1 << 19)) >> 20
-        //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
-        //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
-
-        const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
-
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, uv += stride)
-        {
-            uchar* row1 = dst_data + dst_step * j;
-            uchar* row2 = dst_data + dst_step * (j + 1);
-            const uchar* y2 = y1 + stride;
-
-            for (int i = 0; i < width; i += 2, row1 += 8, row2 += 8)
-            {
-                int u = int(uv[i + 0 + uIdx]) - 128;
-                int v = int(uv[i + 1 - uIdx]) - 128;
-
-                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
-                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
-                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
-
-                int y00 = std::max(0, int(y1[i]) - 16) * ITUR_BT_601_CY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
-                row1[3]      = uchar(0xff);
-
-                int y01 = std::max(0, int(y1[i + 1]) - 16) * ITUR_BT_601_CY;
-                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
-                row1[7]      = uchar(0xff);
-
-                int y10 = std::max(0, int(y2[i]) - 16) * ITUR_BT_601_CY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
-                row2[3]      = uchar(0xff);
-
-                int y11 = std::max(0, int(y2[i + 1]) - 16) * ITUR_BT_601_CY;
-                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[5]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
-                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
-                row2[7]      = uchar(0xff);
-            }
-        }
-    }
-};
-
-template<int bIdx>
-struct YUV420p2RGB888Invoker : ParallelLoopBody
+template<int bIdx, int dcn>
+struct YUV420p2RGB8Invoker : ParallelLoopBody
 {
     uchar * dst_data;
     size_t dst_step;
@@ -1850,7 +1789,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
     size_t stride;
     int ustepIdx, vstepIdx;
 
-    YUV420p2RGB888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
+    YUV420p2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
         : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -1877,7 +1816,7 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
             uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
-            for (int i = 0; i < width / 2; i += 1, row1 += 6, row2 += 6)
+            for (int i = 0; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
             {
                 int u = int(u1[i]) - 128;
                 int v = int(v1[i]) - 128;
@@ -1890,116 +1829,41 @@ struct YUV420p2RGB888Invoker : ParallelLoopBody
                 row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
                 row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
                 row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row1[3] = uchar(0xff);
 
                 int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * ITUR_BT_601_CY;
-                row1[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row1[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+2-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+1]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row1[dcn+0+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row1[7] = uchar(0xff);
 
                 int y10 = std::max(0, int(y2[2 * i]) - 16) * ITUR_BT_601_CY;
                 row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
                 row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
                 row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row2[3] = uchar(0xff);
 
                 int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * ITUR_BT_601_CY;
-                row2[5-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[4]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
-                row2[3+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+2-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+1]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
+                row2[dcn+0+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row2[7] = uchar(0xff);
             }
         }
     }
 };
 
-template<int bIdx>
-struct YUV420p2RGBA8888Invoker : ParallelLoopBody
-{
-    uchar * dst_data;
-    size_t dst_step;
-    int width;
-    const uchar* my1, *mu, *mv;
-    size_t  stride;
-    int ustepIdx, vstepIdx;
-
-    YUV420p2RGBA8888Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
-        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
-
-    void operator()(const Range& range) const CV_OVERRIDE
-    {
-        int rangeBegin = range.start * 2;
-        int rangeEnd = range.end * 2;
-
-        int uvsteps[2] = {width/2, static_cast<int>(stride) - width/2};
-        int usIdx = ustepIdx, vsIdx = vstepIdx;
-
-        const uchar* y1 = my1 + rangeBegin * stride;
-        const uchar* u1 = mu + (range.start / 2) * stride;
-        const uchar* v1 = mv + (range.start / 2) * stride;
-
-        if(range.start % 2 == 1)
-        {
-            u1 += uvsteps[(usIdx++) & 1];
-            v1 += uvsteps[(vsIdx++) & 1];
-        }
-
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
-        {
-            uchar* row1 = dst_data + dst_step * j;
-            uchar* row2 = dst_data + dst_step * (j + 1);
-            const uchar* y2 = y1 + stride;
-
-            for (int i = 0; i < width / 2; i += 1, row1 += 8, row2 += 8)
-            {
-                int u = int(u1[i]) - 128;
-                int v = int(v1[i]) - 128;
-
-                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
-                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
-                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
-
-                int y00 = std::max(0, int(y1[2 * i]) - 16) * ITUR_BT_601_CY;
-                row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
-                row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
-                row1[3]      = uchar(0xff);
-
-                int y01 = std::max(0, int(y1[2 * i + 1]) - 16) * ITUR_BT_601_CY;
-                row1[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row1[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row1[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
-                row1[7]      = uchar(0xff);
-
-                int y10 = std::max(0, int(y2[2 * i]) - 16) * ITUR_BT_601_CY;
-                row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
-                row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
-                row2[3]      = uchar(0xff);
-
-                int y11 = std::max(0, int(y2[2 * i + 1]) - 16) * ITUR_BT_601_CY;
-                row2[6-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
-                row2[5]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
-                row2[4+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
-                row2[7]      = uchar(0xff);
-            }
-        }
-    }
-};
 
 #define MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION (320*240)
 
-template<int bIdx, int uIdx>
+template<int bIdx, int uIdx, int dcn>
 inline void cvtYUV420sp2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _uv)
 {
-    YUV420sp2RGB888Invoker<bIdx, uIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
-    if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
-        parallel_for_(Range(0, dst_height/2), converter);
-    else
-        converter(Range(0, dst_height/2));
-}
-
-template<int bIdx, int uIdx>
-inline void cvtYUV420sp2RGBA(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _uv)
-{
-    YUV420sp2RGBA8888Invoker<bIdx, uIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
+    YUV420sp2RGB8Invoker<bIdx, uIdx, dcn> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
     if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for_(Range(0, dst_height/2), converter);
     else
@@ -2009,7 +1873,7 @@ inline void cvtYUV420sp2RGBA(uchar * dst_data, size_t dst_step, int dst_width, i
 template<int bIdx>
 inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGB888Invoker<bIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
+    YUV420p2RGB8Invoker<bIdx, 3> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
     if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for_(Range(0, dst_height/2), converter);
     else
@@ -2019,7 +1883,7 @@ inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int
 template<int bIdx>
 inline void cvtYUV420p2RGBA(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
 {
-    YUV420p2RGBA8888Invoker<bIdx> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
+    YUV420p2RGB8Invoker<bIdx, 4> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
     if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for_(Range(0, dst_height/2), converter);
     else
@@ -2139,8 +2003,8 @@ private:
 
 ///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
 
-template<int bIdx, int uIdx, int yIdx>
-struct YUV422toRGB888Invoker : ParallelLoopBody
+template<int bIdx, int uIdx, int yIdx, int dcn>
+struct YUV422toRGB8Invoker : ParallelLoopBody
 {
     uchar * dst_data;
     size_t dst_step;
@@ -2148,9 +2012,9 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
     size_t src_step;
     int width;
 
-    YUV422toRGB888Invoker(uchar * _dst_data, size_t _dst_step,
-                          const uchar * _src_data, size_t _src_step,
-                          int _width)
+    YUV422toRGB8Invoker(uchar * _dst_data, size_t _dst_step,
+                        const uchar * _src_data, size_t _src_step,
+                        int _width)
         : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -2166,7 +2030,7 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
         {
             uchar* row = dst_data + dst_step * j;
 
-            for (int i = 0; i < 2 * width; i += 4, row += 6)
+            for (int i = 0; i < 2 * width; i += 4, row += dcn*2)
             {
                 int u = int(yuv_src[i + uidx]) - 128;
                 int v = int(yuv_src[i + vidx]) - 128;
@@ -2179,63 +2043,15 @@ struct YUV422toRGB888Invoker : ParallelLoopBody
                 row[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
                 row[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
                 row[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row[3] = uchar(0xff);
 
                 int y01 = std::max(0, int(yuv_src[i + yIdx + 2]) - 16) * ITUR_BT_601_CY;
-                row[5-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row[4]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row[3+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
-            }
-        }
-    }
-};
-
-template<int bIdx, int uIdx, int yIdx>
-struct YUV422toRGBA8888Invoker : ParallelLoopBody
-{
-    uchar * dst_data;
-    size_t dst_step;
-    const uchar * src_data;
-    size_t src_step;
-    int width;
-
-    YUV422toRGBA8888Invoker(uchar * _dst_data, size_t _dst_step,
-                            const uchar * _src_data, size_t _src_step,
-                            int _width)
-        : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
-
-    void operator()(const Range& range) const CV_OVERRIDE
-    {
-        int rangeBegin = range.start;
-        int rangeEnd = range.end;
-
-        const int uidx = 1 - yIdx + uIdx * 2;
-        const int vidx = (2 + uidx) % 4;
-        const uchar* yuv_src = src_data + rangeBegin * src_step;
-
-        for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += src_step)
-        {
-            uchar* row = dst_data + dst_step * j;
-
-            for (int i = 0; i < 2 * width; i += 4, row += 8)
-            {
-                int u = int(yuv_src[i + uidx]) - 128;
-                int v = int(yuv_src[i + vidx]) - 128;
-
-                int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
-                int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
-                int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
-
-                int y00 = std::max(0, int(yuv_src[i + yIdx]) - 16) * ITUR_BT_601_CY;
-                row[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
-                row[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
-                row[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
-                row[3]      = uchar(0xff);
-
-                int y01 = std::max(0, int(yuv_src[i + yIdx + 2]) - 16) * ITUR_BT_601_CY;
-                row[6-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-                row[5]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-                row[4+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
-                row[7]      = uchar(0xff);
+                row[dcn+2-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
+                row[dcn+1]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
+                row[dcn+0+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
+                if(dcn == 4)
+                    row[7] = uchar(0xff);
             }
         }
     }
@@ -2247,7 +2063,7 @@ template<int bIdx, int uIdx, int yIdx>
 inline void cvtYUV422toRGB(uchar * dst_data, size_t dst_step, const uchar * src_data, size_t src_step,
                            int width, int height)
 {
-    YUV422toRGB888Invoker<bIdx, uIdx, yIdx> converter(dst_data, dst_step, src_data, src_step, width);
+    YUV422toRGB8Invoker<bIdx, uIdx, yIdx, 3> converter(dst_data, dst_step, src_data, src_step, width);
     if (width * height >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
         parallel_for_(Range(0, height), converter);
     else
@@ -2258,7 +2074,7 @@ template<int bIdx, int uIdx, int yIdx>
 inline void cvtYUV422toRGBA(uchar * dst_data, size_t dst_step, const uchar * src_data, size_t src_step,
                            int width, int height)
 {
-    YUV422toRGBA8888Invoker<bIdx, uIdx, yIdx> converter(dst_data, dst_step, src_data, src_step, width);
+    YUV422toRGB8Invoker<bIdx, uIdx, yIdx, 4> converter(dst_data, dst_step, src_data, src_step, width);
     if (width * height >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
         parallel_for_(Range(0, height), converter);
     else
@@ -2400,19 +2216,23 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
     CV_INSTRUMENT_REGION();
 
     // TODO: add hal replacement method
+
     int blueIdx = swapBlue ? 2 : 0;
+    auto cvtPtr = cvtYUV420sp2RGB<0, 0, 3>;
     switch(dcn*100 + blueIdx * 10 + uIdx)
     {
-    case 300: cvtYUV420sp2RGB<0, 0> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 301: cvtYUV420sp2RGB<0, 1> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 320: cvtYUV420sp2RGB<2, 0> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 321: cvtYUV420sp2RGB<2, 1> (dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 400: cvtYUV420sp2RGBA<0, 0>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 401: cvtYUV420sp2RGBA<0, 1>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 420: cvtYUV420sp2RGBA<2, 0>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
-    case 421: cvtYUV420sp2RGBA<2, 1>(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data); break;
+    case 300: cvtPtr = cvtYUV420sp2RGB<0, 0, 3>; break;
+    case 301: cvtPtr = cvtYUV420sp2RGB<0, 1, 3>; break;
+    case 320: cvtPtr = cvtYUV420sp2RGB<2, 0, 3>; break;
+    case 321: cvtPtr = cvtYUV420sp2RGB<2, 1, 3>; break;
+    case 400: cvtPtr = cvtYUV420sp2RGB<0, 0, 4>; break;
+    case 401: cvtPtr = cvtYUV420sp2RGB<0, 1, 4>; break;
+    case 420: cvtPtr = cvtYUV420sp2RGB<2, 0, 4>; break;
+    case 421: cvtPtr = cvtYUV420sp2RGB<2, 1, 4>; break;
     default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
+
+    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data);
 }
 
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
