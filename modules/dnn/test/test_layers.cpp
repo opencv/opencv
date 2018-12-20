@@ -295,6 +295,10 @@ TEST_P(Test_Caffe_layers, Eltwise)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled for OpenVINO 2018R5");
+#endif
     testLayerUsingCaffeModels("layer_eltwise");
 }
 
