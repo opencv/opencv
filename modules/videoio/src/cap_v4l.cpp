@@ -1757,7 +1757,7 @@ bool CvCaptureCAM_V4L::icvSetFrameSize(int _width, int _height)
     if (_width > 0)
         width_set = _width;
 
-    if (height > 0)
+    if (_height > 0)
         height_set = _height;
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
