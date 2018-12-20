@@ -190,6 +190,14 @@ TEST_P(DNNTestOpenVINO, models)
                                          modelName == "landmarks-regression-retail-0009" ||
                                           modelName == "semantic-segmentation-adas-0001")))
         throw SkipTestException("");
+#elif INF_ENGINE_RELEASE == 2018050000
+    if (modelName == "single-image-super-resolution-0063" ||
+        modelName == "single-image-super-resolution-1011" ||
+        modelName == "single-image-super-resolution-1021" ||
+        (target == DNN_TARGET_OPENCL_FP16 && modelName == "face-reidentification-retail-0095") ||
+        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
+                                         modelName == "semantic-segmentation-adas-0001")))
+        throw SkipTestException("");
 #endif
 #endif
 
