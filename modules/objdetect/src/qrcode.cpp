@@ -782,6 +782,9 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
     CV_Assert(inarr.depth() == CV_8U);
+    if (inarr.cols <= 20 || inarr.rows <= 20)
+        return false;  // image data is not enough for providing reliable results
+
     int incn = inarr.channels();
     if( incn == 3 || incn == 4 )
     {
@@ -1070,6 +1073,8 @@ cv::String QRCodeDetector::decode(InputArray in, InputArray points,
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
     CV_Assert(inarr.depth() == CV_8U);
+    if (inarr.cols <= 20 || inarr.rows <= 20)
+        return cv::String();  // image data is not enough for providing reliable results
 
     int incn = inarr.channels();
     if( incn == 3 || incn == 4 )
@@ -1108,6 +1113,8 @@ cv::String QRCodeDetector::detectAndDecode(InputArray in,
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
     CV_Assert(inarr.depth() == CV_8U);
+    if (inarr.cols <= 20 || inarr.rows <= 20)
+        return cv::String();  // image data is not enough for providing reliable results
 
     int incn = inarr.channels();
     if( incn == 3 || incn == 4 )
