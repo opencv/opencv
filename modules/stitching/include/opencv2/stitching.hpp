@@ -283,6 +283,7 @@ public:
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
     CV_WRAP double workScale() const { return work_scale_; }
+    UMat resultMask() const { return result_mask_; }
 
 private:
     Status matchImages();
@@ -313,6 +314,7 @@ private:
     std::vector<cv::UMat> seam_est_imgs_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
+    UMat result_mask_;
     double work_scale_;
     double seam_scale_;
     double seam_work_aspect_;
