@@ -116,9 +116,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+            return !zeroDev && eps <= 1e-7f;
+#else
             return !zeroDev && (preferableTarget == DNN_TARGET_CPU || eps <= 1e-7f);
+#endif
         else
+#endif  // HAVE_INF_ENGINE
             return backendId == DNN_BACKEND_OPENCV;
     }
 

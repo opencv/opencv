@@ -420,31 +420,30 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Sub")
         {
-            Mat blob = (-1.0f) * getBlob(node_proto, constBlobs, 1);
-            blob = blob.reshape(1, 1);
+            Mat blob = getBlob(node_proto, constBlobs, 1);
             if (blob.total() == 1) {
                 layerParams.type = "Power";
-                layerParams.set("shift", blob.at<float>(0));
+                layerParams.set("shift", -blob.at<float>(0));
             }
             else {
                 layerParams.type = "Scale";
                 layerParams.set("has_bias", true);
-                layerParams.blobs.push_back(blob);
+                layerParams.blobs.push_back(-1.0f * blob.reshape(1, 1));
             }
         }
         else if (layer_type == "Div")
         {
             Mat blob = getBlob(node_proto, constBlobs, 1);
             CV_Assert_N(blob.type() == CV_32F, blob.total());
-            divide(1.0, blob, blob);
             if (blob.total() == 1)
             {
-                layerParams.set("scale", blob.at<float>(0));
+                layerParams.set("scale", 1.0f / blob.at<float>(0));
                 layerParams.type = "Power";
             }
             else
             {
                 layerParams.type = "Scale";
+                divide(1.0, blob, blob);
                 layerParams.blobs.push_back(blob);
                 layerParams.set("bias_term", false);
             }

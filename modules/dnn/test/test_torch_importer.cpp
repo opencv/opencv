@@ -266,9 +266,9 @@ class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+#if defined(INF_ENGINE_RELEASE) && (INF_ENGINE_RELEASE < 2018030000 || INF_ENGINE_RELEASE == 2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+        throw SkipTestException("");
 #endif
     checkBackend();
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
@@ -389,6 +389,10 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 //   -model models/instance_norm/feathers.t7
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
     checkBackend();
     std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
                             "dnn/fast_neural_style_instance_norm_feathers.t7"};
