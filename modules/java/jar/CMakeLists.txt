@@ -18,6 +18,13 @@ set(depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
 ocv_copyfiles_add_target(${the_module}_jar_source_copy JAVA_SRC_COPY "Copy Java(JAR) source files" ${depends})
 set(depends ${the_module}_jar_source_copy "${OPENCV_DEPHELPER}/${the_module}_jar_source_copy")
 
+if(OPENCV_JAVA_SOURCE_VERSION)
+  set(OPENCV_ANT_JAVAC_EXTRA_ATTRS "${OPENCV_ANT_JAVAC_EXTRA_ATTRS} source=\"${OPENCV_JAVA_SOURCE_VERSION}\"")
+endif()
+if(OPENCV_JAVA_TARGET_VERSION)
+  set(OPENCV_ANT_JAVAC_EXTRA_ATTRS "${OPENCV_ANT_JAVAC_EXTRA_ATTRS} target=\"${OPENCV_JAVA_TARGET_VERSION}\"")
+endif()
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
 list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 
