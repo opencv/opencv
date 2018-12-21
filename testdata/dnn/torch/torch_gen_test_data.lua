@@ -1,10 +1,10 @@
 import 'nn'
 import 'dpnn'
 
-function fill_net(net)
+function fill_net(net, training)
   if net.modules then
     for i = 1, #net.modules do
-      fill_net(net.modules[i])
+      fill_net(net.modules[i], training)
     end
   end
   if net.weight then
@@ -13,13 +13,13 @@ function fill_net(net)
   if net.bias then
     net.bias = torch.rand(net.bias:size())
   end
-  if net.train then
+  if (training == nil or not training) and net.train then
     net.train = 0
   end
 end
 
-function save(net, input, label, is_binary)
-  fill_net(net)
+function save(net, input, label, is_binary, training)
+  fill_net(net, training)
   output = net:forward(input)
 
   net:apply(function(module)
@@ -98,6 +98,10 @@ save(net_deconv, torch.rand(2, 3, 4, 3) - 0.5, 'net_deconv')
 local net_batch_norm = nn.Sequential()
 net_batch_norm:add(nn.SpatialBatchNormalization(4, 1e-3))
 save(net_batch_norm, torch.rand(1, 4, 5, 6) - 0.5, 'net_batch_norm', true)
+
+local net_batch_norm_train = nn.Sequential()
+net_batch_norm_train:add(nn.SpatialBatchNormalization(4))
+save(net_batch_norm_train, torch.randn(1, 4, 5, 6), 'net_batch_norm_train', true, --[[training]]true)
 
 local net_prelu = nn.Sequential()
 net_prelu:add(nn.PReLU(5))
