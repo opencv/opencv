@@ -149,7 +149,7 @@ set_target_properties(libprotobuf
     COMPILE_PDB_NAME libprotobuf
     COMPILE_PDB_NAME_DEBUG "libprotobuf${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
-	CXX_VISIBILITY_PRESET hidden
+	  CXX_VISIBILITY_PRESET hidden
     )
 
 get_protobuf_version(Protobuf_VERSION "${PROTOBUF_ROOT}/src")
