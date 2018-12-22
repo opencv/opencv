@@ -750,6 +750,7 @@ CV__DNN_INLINE_NS_BEGIN
      *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
      *  @param model    path to the file, dumped from Torch by using torch.save() function.
      *  @param isBinary specifies whether the network was serialized in ascii mode or binary.
+     *  @param evaluate specifies testing phase of network. If true, it's similar to evaluate() method in Torch.
      *  @returns Net object.
      *
      *  @note Ascii mode of Torch serializer is more preferable, because binary mode extensively use `long` type of C language,
@@ -771,7 +772,7 @@ CV__DNN_INLINE_NS_BEGIN
      *
      * Also some equivalents of these classes from cunn, cudnn, and fbcunn may be successfully imported.
      */
-     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true);
+     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true, bool evaluate = true);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.

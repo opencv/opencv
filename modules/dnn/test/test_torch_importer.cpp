@@ -73,7 +73,7 @@ class Test_Torch_layers : public DNNTestLayer
 {
 public:
     void runTorchNet(const String& prefix, String outLayerName = "",
-                     bool check2ndBlob = false, bool isBinary = false,
+                     bool check2ndBlob = false, bool isBinary = false, bool evaluate = true,
                      double l1 = 0.0, double lInf = 0.0)
     {
         String suffix = (isBinary) ? ".dat" : ".txt";
@@ -84,7 +84,7 @@ public:
 
         checkBackend(backend, target, &inp, &outRef);
 
-        Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary);
+        Net net = readNetFromTorch(_tf(prefix + "_net" + suffix), isBinary, evaluate);
         ASSERT_FALSE(net.empty());
 
         net.setPreferableBackend(backend);
@@ -114,7 +114,7 @@ TEST_P(Test_Torch_layers, run_convolution)
     // Output reference values are in range [23.4018, 72.0181]
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.08 : default_l1;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.42 : default_lInf;
-    runTorchNet("net_conv", "", false, true, l1, lInf);
+    runTorchNet("net_conv", "", false, true, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_pool_max)
@@ -147,7 +147,7 @@ TEST_P(Test_Torch_layers, run_reshape)
 TEST_P(Test_Torch_layers, run_reshape_single_sample)
 {
     // Reference output values in range [14.4586, 18.4492].
-    runTorchNet("net_reshape_single_sample", "", false, false,
+    runTorchNet("net_reshape_single_sample", "", false, false, true,
                 (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.0073 : default_l1,
                 (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.025 : default_lInf);
 }
@@ -166,7 +166,7 @@ TEST_P(Test_Torch_layers, run_concat)
 
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
-    runTorchNet("net_depth_concat", "", false, true, 0.0,
+    runTorchNet("net_depth_concat", "", false, true, true, 0.0,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.021 : 0.0);
 }
 
@@ -182,6 +182,7 @@ TEST_P(Test_Torch_layers, run_deconv)
 TEST_P(Test_Torch_layers, run_batch_norm)
 {
     runTorchNet("net_batch_norm", "", false, true);
+    runTorchNet("net_batch_norm_train", "", false, true, false);
 }
 
 TEST_P(Test_Torch_layers, net_prelu)
@@ -216,7 +217,7 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
-    runTorchNet("net_conv_gemm_lrn", "", false, true,
+    runTorchNet("net_conv_gemm_lrn", "", false, true, true,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.046 : 0.0,
                 target == DNN_TARGET_OPENCL_FP16 ? 0.023 : 0.0);
 }
@@ -266,9 +267,9 @@ class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+#if defined(INF_ENGINE_RELEASE) && (INF_ENGINE_RELEASE < 2018030000 || INF_ENGINE_RELEASE == 2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+        throw SkipTestException("");
 #endif
     checkBackend();
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
@@ -389,6 +390,10 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 //   -model models/instance_norm/feathers.t7
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
     checkBackend();
     std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
                             "dnn/fast_neural_style_instance_norm_feathers.t7"};

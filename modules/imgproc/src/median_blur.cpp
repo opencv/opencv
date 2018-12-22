@@ -282,10 +282,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         for ( ; luc[c][k] < j+r+1; ++luc[c][k] )
                         {
 #if CV_SIMD256
-                            v_fine += v256_load(px + 16 * MIN(luc[c][k], n - 1)) - v256_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
+                            v_fine = v_fine + v256_load(px + 16 * MIN(luc[c][k], n - 1)) - v256_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
 #elif CV_SIMD128
-                            v_finel += v_load(px + 16 * MIN(luc[c][k], n - 1)    ) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
-                            v_fineh += v_load(px + 16 * MIN(luc[c][k], n - 1) + 8) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0) + 8);
+                            v_finel = v_finel + v_load(px + 16 * MIN(luc[c][k], n - 1)    ) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
+                            v_fineh = v_fineh + v_load(px + 16 * MIN(luc[c][k], n - 1) + 8) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0) + 8);
 #else
                             for (int ind = 0; ind < 16; ++ind)
                                 H[c].fine[k][ind] += px[16 * MIN(luc[c][k], n - 1) + ind] - px[16 * MAX(luc[c][k] - 2 * r - 1, 0) + ind];
@@ -321,10 +321,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     CV_Assert( b < 16 );
                 }
             }
-#if CV_SIMD
-            vx_cleanup();
-#endif
         }
+#if CV_SIMD
+        vx_cleanup();
+#endif
     }
 
 #undef HOP
