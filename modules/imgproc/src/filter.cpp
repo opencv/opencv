@@ -587,7 +587,6 @@ struct RowVec_8u32s
                 i += v_uint32::nlanes;
             }
         }
-        vx_cleanup();
         return i;
     }
 
@@ -1084,7 +1083,6 @@ struct SymmRowSmallVec_8u32s
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -1108,8 +1106,6 @@ struct SymmColumnVec_32s8u
     int operator()(const uchar** _src, uchar* dst, int width) const
     {
         int _ksize = kernel.rows + kernel.cols - 1;
-        if( _ksize == 1 )
-            return 0;
         int ksize2 = _ksize/2;
         const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
@@ -1119,8 +1115,9 @@ struct SymmColumnVec_32s8u
         v_float32 d4 = vx_setall_f32(delta);
         if( symmetrical )
         {
+            if (_ksize == 1)
+                return 0;
             v_float32 f0 = vx_setall_f32(ky[0]);
-            v_float32 f1 = vx_setall_f32(ky[1]);
             for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
             {
                 const int* S = src[0] + i;
@@ -1128,17 +1125,11 @@ struct SymmColumnVec_32s8u
                 v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + v_int32::nlanes)), f0, d4);
                 v_float32 s2 = v_muladd(v_cvt_f32(vx_load(S + 2*v_int32::nlanes)), f0, d4);
                 v_float32 s3 = v_muladd(v_cvt_f32(vx_load(S + 3*v_int32::nlanes)), f0, d4);
-                const int* S0 = src[1] + i;
-                const int* S1 = src[-1] + i;
-                s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f1, s0);
-                s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f1, s1);
-                s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2 * v_int32::nlanes) + vx_load(S1 + 2 * v_int32::nlanes)), f1, s2);
-                s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3 * v_int32::nlanes) + vx_load(S1 + 3 * v_int32::nlanes)), f1, s3);
-                for( k = 2; k <= ksize2; k++ )
+                for( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
-                    S0 = src[k] + i;
-                    S1 = src[-k] + i;
+                    const int* S0 = src[k] + i;
+                    const int* S1 = src[-k] + i;
                     s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f, s0);
                     s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f, s1);
                     s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2*v_int32::nlanes) + vx_load(S1 + 2*v_int32::nlanes)), f, s2);
@@ -1151,15 +1142,11 @@ struct SymmColumnVec_32s8u
                 const int* S = src[0] + i;
                 v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S)), f0, d4);
                 v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S + v_int32::nlanes)), f0, d4);
-                const int* S0 = src[1] + i;
-                const int* S1 = src[-1] + i;
-                s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f1, s0);
-                s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f1, s1);
-                for( k = 2; k <= ksize2; k++ )
+                for( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
-                    S0 = src[k] + i;
-                    S1 = src[-k] + i;
+                    const int* S0 = src[k] + i;
+                    const int* S1 = src[-k] + i;
                     s0 = v_muladd(v_cvt_f32(vx_load(S0) + vx_load(S1)), f, s0);
                     s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) + vx_load(S1 + v_int32::nlanes)), f, s1);
                 }
@@ -1173,8 +1160,7 @@ struct SymmColumnVec_32s8u
 #endif
             {
                 v_float32x4 s0 = v_muladd(v_cvt_f32(v_load(src[0] + i)), v_setall_f32(ky[0]), v_setall_f32(delta));
-                s0 = v_muladd(v_cvt_f32(v_load(src[1] + i) + v_load(src[-1] + i)), v_setall_f32(ky[1]), s0);
-                for( k = 2; k <= ksize2; k++ )
+                for( k = 1; k <= ksize2; k++ )
                     s0 = v_muladd(v_cvt_f32(v_load(src[k] + i) + v_load(src[-k] + i)), v_setall_f32(ky[k]), s0);
                 v_int32x4 s32 = v_round(s0);
                 v_int16x8 s16 = v_pack(s32, s32);
@@ -1184,20 +1170,17 @@ struct SymmColumnVec_32s8u
         }
         else
         {
-            v_float32 f1 = vx_setall_f32(ky[1]);
             for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
             {
-                const int* S0 = src[1] + i;
-                const int* S1 = src[-1] + i;
-                v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f1, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f1, d4);
-                v_float32 s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2 * v_int32::nlanes) - vx_load(S1 + 2 * v_int32::nlanes)), f1, d4);
-                v_float32 s3 = v_muladd(v_cvt_f32(vx_load(S0 + 3 * v_int32::nlanes) - vx_load(S1 + 3 * v_int32::nlanes)), f1, d4);
-                for ( k = 2; k <= ksize2; k++ )
+                v_float32 s0 = d4;
+                v_float32 s1 = d4;
+                v_float32 s2 = d4;
+                v_float32 s3 = d4;
+                for ( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
-                    S0 = src[k] + i;
-                    S1 = src[-k] + i;
+                    const int* S0 = src[k] + i;
+                    const int* S1 = src[-k] + i;
                     s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f, s0);
                     s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f, s1);
                     s2 = v_muladd(v_cvt_f32(vx_load(S0 + 2*v_int32::nlanes) - vx_load(S1 + 2*v_int32::nlanes)), f, s2);
@@ -1207,15 +1190,13 @@ struct SymmColumnVec_32s8u
             }
             if( i <= width - v_uint16::nlanes )
             {
-                const int* S0 = src[1] + i;
-                const int* S1 = src[-1] + i;
-                v_float32 s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f1, d4);
-                v_float32 s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f1, d4);
-                for ( k = 2; k <= ksize2; k++ )
+                v_float32 s0 = d4;
+                v_float32 s1 = d4;
+                for ( k = 1; k <= ksize2; k++ )
                 {
                     v_float32 f = vx_setall_f32(ky[k]);
-                    S0 = src[k] + i;
-                    S1 = src[-k] + i;
+                    const int* S0 = src[k] + i;
+                    const int* S1 = src[-k] + i;
                     s0 = v_muladd(v_cvt_f32(vx_load(S0) - vx_load(S1)), f, s0);
                     s1 = v_muladd(v_cvt_f32(vx_load(S0 + v_int32::nlanes) - vx_load(S1 + v_int32::nlanes)), f, s1);
                 }
@@ -1228,8 +1209,8 @@ struct SymmColumnVec_32s8u
             if( i <= width - v_int32x4::nlanes )
 #endif
             {
-                v_float32x4 s0 = v_muladd(v_cvt_f32(v_load(src[1] + i) - v_load(src[-1] + i)), v_setall_f32(ky[1]), v_setall_f32(delta));
-                for (k = 2; k <= ksize2; k++)
+                v_float32x4 s0 = v_setall_f32(delta);
+                for (k = 1; k <= ksize2; k++)
                     s0 = v_muladd(v_cvt_f32(v_load(src[k] + i) - v_load(src[-k] + i)), v_setall_f32(ky[k]), s0);
                 v_int32x4 s32 = v_round(s0);
                 v_int16x8 s16 = v_pack(s32, s32);
@@ -1238,7 +1219,6 @@ struct SymmColumnVec_32s8u
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -1270,104 +1250,57 @@ struct SymmColumnSmallVec_32s16s
         short* dst = (short*)_dst;
 
         v_float32 df4 = vx_setall_f32(delta);
-        int d = cvRound(delta);
-        v_int16 d8 = vx_setall_s16((short)d);
+        v_int32 d4 = v_round(df4);
         if( symmetrical )
         {
             if( ky[0] == 2 && ky[1] == 1 )
             {
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
-                    v_int32 s0 = vx_load(S1 + i);
-                    v_int32 s1 = vx_load(S1 + i + v_int32::nlanes);
-                    v_int32 s2 = vx_load(S1 + i + 2*v_int32::nlanes);
-                    v_int32 s3 = vx_load(S1 + i + 3*v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + (s0 + s0), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + (s1 + s1)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes) + (s2 + s2),
-                                                              vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes) + (s3 + s3)) + d8);
-                }
-                if( i <= width - v_int16::nlanes )
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
                 {
                     v_int32 sl = vx_load(S1 + i);
                     v_int32 sh = vx_load(S1 + i + v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + (sh + sh)) + d8);
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + d4 + (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + d4 + (sh + sh)));
                 }
                 if( i <= width - v_int32::nlanes )
                 {
                     v_int32 s = vx_load(S1 + i);
-                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + vx_setall_s32(d) + (s + s));
+                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 + (s + s));
                     i += v_int32::nlanes;
                 }
             }
             else if( ky[0] == -2 && ky[1] == 1 )
             {
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
-                    v_int32 s0 = vx_load(S1 + i);
-                    v_int32 s1 = vx_load(S1 + i + v_int32::nlanes);
-                    v_int32 s2 = vx_load(S1 + i + 2*v_int32::nlanes);
-                    v_int32 s3 = vx_load(S1 + i + 3*v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) - (s0 + s0),
-                                            vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) - (s1 + s1)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes) - (s2 + s2),
-                                                              vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes) - (s3 + s3)) + d8);
-                }
-                if( i <= width - v_int16::nlanes )
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
                 {
                     v_int32 sl = vx_load(S1 + i);
                     v_int32 sh = vx_load(S1 + i + v_int32::nlanes);
-                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) - (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) - (sh + sh)) + d8);
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(vx_load(S0 + i) + vx_load(S2 + i) + d4 - (sl + sl), vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes) + d4 - (sh + sh)));
                 }
                 if( i <= width - v_int32::nlanes )
                 {
                     v_int32 s = vx_load(S1 + i);
-                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + vx_setall_s32(d) - (s + s));
+                    v_pack_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 - (s + s));
                     i += v_int32::nlanes;
                 }
             }
-#if CV_NEON
             else if( ky[0] == (float)((int)ky[0]) && ky[1] == (float)((int)ky[1]) )
             {
                 v_int32 k0 = vx_setall_s32((int)ky[0]), k1 = vx_setall_s32((int)ky[1]);
-                v_int32 d4 = vx_setall_s32(d);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
                     v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
                                             v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_muladd(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 2*v_int32::nlanes), k0, d4)),
-                                                              v_muladd(vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 3*v_int32::nlanes), k0, d4))));
-                }
-                if( i <= width - v_int16::nlanes )
-                {
-                    v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
-                                            v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    i += v_int16::nlanes;
-                }
                 if( i <= width - v_int32::nlanes )
                 {
                     v_pack_store(dst + i, v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)));
                     i += v_int32::nlanes;
                 }
             }
-#endif
             else
             {
                 v_float32 k0 = vx_setall_f32(ky[0]), k1 = vx_setall_f32(ky[1]);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
                     v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
                                             v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + v_int32::nlanes)), k0, df4)))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 2*v_int32::nlanes)), k0, df4))),
-                                                              v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + 3*v_int32::nlanes)), k0, df4)))));
-                }
-                if( i <= width - v_int16::nlanes )
-                {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i + v_int32::nlanes)), k0, df4)))));
-                    i += v_int16::nlanes;
-                }
                 if( i <= width - v_int32::nlanes )
                 {
                     v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(vx_load(S0 + i) + vx_load(S2 + i)), k1, v_muladd(v_cvt_f32(vx_load(S1 + i)), k0, df4))));
@@ -1381,38 +1314,20 @@ struct SymmColumnSmallVec_32s16s
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
-                    v_store(dst + i, v_pack(vx_load(S2 + i) - vx_load(S0 + i), vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)) + d8);
-                    v_store(dst + i + v_int16::nlanes, v_pack(vx_load(S2 + i + 2*v_int32::nlanes) - vx_load(S0 + i + 2*v_int32::nlanes), vx_load(S2 + i + 3*v_int32::nlanes) - vx_load(S0 + i + 3*v_int32::nlanes)) + d8);
-                }
-                if( i <= width - v_int16::nlanes )
-                {
-                    v_store(dst + i, v_pack(vx_load(S2 + i) - vx_load(S0 + i), vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)) + d8);
-                    i += v_int16::nlanes;
-                }
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
+                    v_store(dst + i, v_pack(vx_load(S2 + i) - vx_load(S0 + i) + d4, vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes) + d4));
                 if( i <= width - v_int32::nlanes )
                 {
-                    v_pack_store(dst + i, vx_load(S2 + i) - vx_load(S0 + i) + vx_setall_s32(d));
+                    v_pack_store(dst + i, vx_load(S2 + i) - vx_load(S0 + i) + d4);
                     i += v_int32::nlanes;
                 }
             }
             else
             {
                 v_float32 k1 = vx_setall_f32(ky[1]);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-                {
+                for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
                     v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)),
                                             v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)), k1, df4))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + 2*v_int32::nlanes) - vx_load(S0 + i + 2*v_int32::nlanes)), k1, df4)),
-                                                              v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + 3*v_int32::nlanes) - vx_load(S0 + i + 3*v_int32::nlanes)), k1, df4))));
-                }
-                if( i <= width - v_int16::nlanes )
-                {
-                    v_store(dst + i, v_pack(v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)),
-                                            v_round(v_muladd(v_cvt_f32(vx_load(S2 + i + v_int32::nlanes) - vx_load(S0 + i + v_int32::nlanes)), k1, df4))));
-                    i += v_int16::nlanes;
-                }
                 if( i <= width - v_int32::nlanes )
                 {
                     v_pack_store(dst + i, v_round(v_muladd(v_cvt_f32(vx_load(S2 + i) - vx_load(S0 + i)), k1, df4)));
@@ -1421,7 +1336,6 @@ struct SymmColumnSmallVec_32s16s
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -1448,43 +1362,19 @@ struct RowVec_16s32f
         const float* _kx = kernel.ptr<float>();
         width *= cn;
 
-        for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
-        {
-            const short* src = (const short*)_src + i;
-            v_float32 s0 = vx_setzero_f32();
-            v_float32 s1 = vx_setzero_f32();
-            v_float32 s2 = vx_setzero_f32();
-            v_float32 s3 = vx_setzero_f32();
-            for( k = 0; k < _ksize; k++, src += cn )
-            {
-                v_float32 f = vx_setall_f32(_kx[k]);
-                v_int16 xl = vx_load(src);
-                v_int16 xh = vx_load(src + v_int16::nlanes);
-                s0 = v_muladd(v_cvt_f32(v_expand_low(xl)), f, s0);
-                s1 = v_muladd(v_cvt_f32(v_expand_high(xl)), f, s1);
-                s2 = v_muladd(v_cvt_f32(v_expand_low(xh)), f, s2);
-                s3 = v_muladd(v_cvt_f32(v_expand_high(xh)), f, s3);
-            }
-            v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
-        }
-        if( i <= width - v_int16::nlanes )
+        for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
         {
             const short* src = (const short*)_src + i;
             v_float32 s0 = vx_setzero_f32();
             v_float32 s1 = vx_setzero_f32();
             for( k = 0; k < _ksize; k++, src += cn )
             {
-                v_float32 f = vx_setall_f32(_kx[k]);
                 v_int16 x = vx_load(src);
-                s0 = v_muladd(v_cvt_f32(v_expand_low(x)), f, s0);
-                s1 = v_muladd(v_cvt_f32(v_expand_high(x)), f, s1);
+                s0 = v_muladd(v_cvt_f32(v_expand_low(x)), vx_setall_f32(_kx[k]), s0);
+                s1 = v_muladd(v_cvt_f32(v_expand_high(x)), vx_setall_f32(_kx[k]), s1);
             }
             v_store(dst + i, s0);
             v_store(dst + i + v_float32::nlanes, s1);
-            i += v_int16::nlanes;
         }
         if( i <= width - v_float32::nlanes )
         {
@@ -1495,7 +1385,6 @@ struct RowVec_16s32f
             v_store(dst + i, s0);
             i += v_float32::nlanes;
         }
-        vx_cleanup();
         return i;
     }
 
@@ -1517,8 +1406,6 @@ struct SymmColumnVec_32f16s
     int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         int _ksize = kernel.rows + kernel.cols - 1;
-        if( _ksize == 1 )
-            return 0;
         int ksize2 = _ksize / 2;
         const float* ky = kernel.ptr<float>() + ksize2;
         int i = 0, k;
@@ -1529,49 +1416,25 @@ struct SymmColumnVec_32f16s
         v_float32 d4 = vx_setall_f32(delta);
         if( symmetrical )
         {
+            if (_ksize == 1)
+                return 0;
             v_float32 k0 = vx_setall_f32(ky[0]);
-            v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+            for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
                 v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), k0, d4);
-                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
-                s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) + vx_load(src[-1] + i + v_float32::nlanes), k1, s1);
-                s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) + vx_load(src[-1] + i + 2*v_float32::nlanes), k1, s2);
-                s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) + vx_load(src[-1] + i + 3*v_float32::nlanes), k1, s3);
-                for( k = 2; k <= ksize2; k++ )
+                for( k = 1; k <= ksize2; k++ )
                 {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) + vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) + vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
+                    v_float32 k1 = vx_setall_f32(ky[k]);
+                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k1, s0);
+                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                v_store(dst + i + v_int16::nlanes, v_pack(v_round(s2), v_round(s3)));
-            }
-            if( i <= width - v_int16::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
-                s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) + vx_load(src[-1] + i + v_float32::nlanes), k1, s1);
-                for( k = 2; k <= ksize2; k++ )
-                {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                }
-                v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_int16::nlanes;
             }
             if( i <= width - v_float32::nlanes )
             {
                 v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                s0 = v_muladd(vx_load(src[1] + i) + vx_load(src[-1] + i), k1, s0);
-                for( k = 2; k <= ksize2; k++ )
+                for( k = 1; k <= ksize2; k++ )
                     s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
                 v_pack_store(dst + i, v_round(s0));
                 i += v_float32::nlanes;
@@ -1579,48 +1442,28 @@ struct SymmColumnVec_32f16s
         }
         else
         {
-            v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+            for( ; i <= width - v_int16::nlanes; i += v_int16::nlanes )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                v_float32 s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) - vx_load(src[-1] + i + 2*v_float32::nlanes), k1, d4);
-                v_float32 s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) - vx_load(src[-1] + i + 3*v_float32::nlanes), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
+                v_float32 s0 = d4;
+                v_float32 s1 = d4;
+                for( k = 1; k <= ksize2; k++ )
                 {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s0 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) - vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s1 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) - vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
+                    v_float32 k1 = vx_setall_f32(ky[k]);
+                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k1, s0);
+                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
                 }
                 v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                v_store(dst + i + v_int16::nlanes, v_pack(v_round(s2), v_round(s3)));
-            }
-            if( i <= width - v_int16::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
-                {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                }
-                v_store(dst + i, v_pack(v_round(s0), v_round(s1)));
-                i += v_int16::nlanes;
             }
             if( i <= width - v_float32::nlanes )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
+                v_float32 s0 = d4;
+                for( k = 1; k <= ksize2; k++ )
                     s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
                 v_pack_store(dst + i, v_round(s0));
                 i += v_float32::nlanes;
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -1662,7 +1505,6 @@ struct RowVec_32f
         }
 #endif
         int _ksize = kernel.rows + kernel.cols - 1;
-        CV_DbgAssert(_ksize > 0);
         const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
         const float* _kx = kernel.ptr<float>();
@@ -1674,55 +1516,14 @@ struct RowVec_32f
         if (haveAVX2)
             return RowVec_32f_AVX(src0, _kx, dst, width, cn, _ksize);
 #endif
-        v_float32 k0 = vx_setall_f32(_kx[0]);
-        for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
         {
             const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
-            v_float32 s1 = vx_load(src + v_float32::nlanes) * k0;
-            v_float32 s2 = vx_load(src + 2*v_float32::nlanes) * k0;
-            v_float32 s3 = vx_load(src + 3*v_float32::nlanes) * k0;
-            src += cn;
-            for( k = 1; k < _ksize; k++, src += cn )
-            {
-                v_float32 k1 = vx_setall_f32(_kx[k]);
-                s0 = v_muladd(vx_load(src), k1, s0);
-                s1 = v_muladd(vx_load(src + v_float32::nlanes), k1, s1);
-                s2 = v_muladd(vx_load(src + 2*v_float32::nlanes), k1, s2);
-                s3 = v_muladd(vx_load(src + 3*v_float32::nlanes), k1, s3);
-            }
-            v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
-        }
-        if( i <= width - 2*v_float32::nlanes )
-        {
-            const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
-            v_float32 s1 = vx_load(src + v_float32::nlanes) * k0;
-            src += cn;
-            for( k = 1; k < _ksize; k++, src += cn )
-            {
-                v_float32 k1 = vx_setall_f32(_kx[k]);
-                s0 = v_muladd(vx_load(src), k1, s0);
-                s1 = v_muladd(vx_load(src + v_float32::nlanes), k1, s1);
-            }
-            v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            i += 2*v_float32::nlanes;
-        }
-        if( i <= width - v_float32::nlanes )
-        {
-            const float* src = src0 + i;
-            v_float32 s0 = vx_load(src) * k0;
-            src += cn;
-            for( k = 1; k < _ksize; k++, src += cn )
+            v_float32 s0 = vx_setzero_f32();
+            for( k = 0; k < _ksize; k++, src += cn )
                 s0 = v_muladd(vx_load(src), vx_setall_f32(_kx[k]), s0);
             v_store(dst + i, s0);
-            i += v_float32::nlanes;
         }
-        vx_cleanup();
         return i;
     }
 
@@ -1783,8 +1584,6 @@ struct SymmRowSmallVec_32f
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         int i = 0, _ksize = kernel.rows + kernel.cols - 1;
-        if( _ksize == 1 )
-            return 0;
         float* dst = (float*)_dst;
         const float* src = (const float*)_src + (_ksize/2)*cn;
         bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
@@ -1793,28 +1592,15 @@ struct SymmRowSmallVec_32f
 
         if( symmetrical )
         {
+            if( _ksize == 1 )
+                return 0;
             if( _ksize == 3 )
             {
                 if( fabs(kx[0]) == 2 && kx[1] == 1 )
                 {
-#if CV_FMA3 || CV_AVX2
                     v_float32 k0 = vx_setall_f32(kx[0]);
                     for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
                         v_store(dst + i, v_muladd(vx_load(src), k0, vx_load(src - cn) + vx_load(src + cn)));
-#else
-                    if( kx[0] > 0 )
-                        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        {
-                            v_float32 x = vx_load(src);
-                            v_store(dst + i, vx_load(src - cn) + vx_load(src + cn) + (x + x));
-                        }
-                    else
-                        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                        {
-                            v_float32 x = vx_load(src);
-                            v_store(dst + i, vx_load(src - cn) + vx_load(src + cn) - (x + x));
-                        }
-#endif
                 }
                 else
                 {
@@ -1827,17 +1613,9 @@ struct SymmRowSmallVec_32f
             {
                 if( kx[0] == -2 && kx[1] == 0 && kx[2] == 1 )
                 {
-#if CV_FMA3 || CV_AVX2
                     v_float32 k0 = vx_setall_f32(-2);
                     for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
                         v_store(dst + i, v_muladd(vx_load(src), k0, vx_load(src - 2*cn) + vx_load(src + 2*cn)));
-#else
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes, src += v_float32::nlanes )
-                    {
-                        v_float32 x = vx_load(src);
-                        v_store(dst + i, vx_load(src - 2*cn) + vx_load(src + 2*cn) - (x + x));
-                    }
-#endif
                 }
                 else
                 {
@@ -1869,7 +1647,6 @@ struct SymmRowSmallVec_32f
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -1911,47 +1688,12 @@ struct SymmColumnVec_32f
                 return SymmColumnVec_32f_Symm_AVX(src, ky, dst, delta, width, ksize2);
 #endif
             const v_float32 d4 = vx_setall_f32(delta);
-            const v_float32 k0 = vx_setall_f32(ky[0]);
-            for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+            for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
             {
-                v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), k0, d4);
-                v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), k0, d4);
-                for( k = 1; k <= ksize2; k++ )
-                {
-                    v_float32 k1 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k1, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) + vx_load(src[-k] + i + 2*v_float32::nlanes), k1, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) + vx_load(src[-k] + i + 3*v_float32::nlanes), k1, s3);
-                }
-                v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                v_store(dst + i + 2*v_float32::nlanes, s2);
-                v_store(dst + i + 3*v_float32::nlanes, s3);
-            }
-            if( i <= width - 2*v_float32::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
-                v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), k0, d4);
-                for( k = 1; k <= ksize2; k++ )
-                {
-                    v_float32 k1 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), k1, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) + vx_load(src[-k] + i + v_float32::nlanes), k1, s1);
-                }
-                v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                i += 2*v_float32::nlanes;
-            }
-            if( i <= width - v_float32::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[0] + i), k0, d4);
+                v_float32 s0 = v_muladd(vx_load(src[0] + i), vx_setall_f32(ky[0]), d4);
                 for( k = 1; k <= ksize2; k++ )
                     s0 = v_muladd(vx_load(src[k] + i) + vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
                 v_store(dst + i, s0);
-                i += v_float32::nlanes;
             }
         }
         else
@@ -1960,53 +1702,16 @@ struct SymmColumnVec_32f
             if (haveAVX2)
                 return SymmColumnVec_32f_Unsymm_AVX(src, ky, dst, delta, width, ksize2);
 #endif
-            CV_DbgAssert(ksize2 > 0);
             const v_float32 d4 = vx_setall_f32(delta);
-            const v_float32 k1 = vx_setall_f32(ky[1]);
-            for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+            for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
             {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                v_float32 s2 = v_muladd(vx_load(src[1] + i + 2*v_float32::nlanes) - vx_load(src[-1] + i + 2*v_float32::nlanes), k1, d4);
-                v_float32 s3 = v_muladd(vx_load(src[1] + i + 3*v_float32::nlanes) - vx_load(src[-1] + i + 3*v_float32::nlanes), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
-                {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                    s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes) - vx_load(src[-k] + i + 2*v_float32::nlanes), k2, s2);
-                    s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes) - vx_load(src[-k] + i + 3*v_float32::nlanes), k2, s3);
-                }
-                v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                v_store(dst + i + 2*v_float32::nlanes, s2);
-                v_store(dst + i + 3*v_float32::nlanes, s3);
-            }
-            if( i <= width - 2*v_float32::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                v_float32 s1 = v_muladd(vx_load(src[1] + i + v_float32::nlanes) - vx_load(src[-1] + i + v_float32::nlanes), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
-                {
-                    v_float32 k2 = vx_setall_f32(ky[k]);
-                    s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), k2, s0);
-                    s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes) - vx_load(src[-k] + i + v_float32::nlanes), k2, s1);
-                }
-                v_store(dst + i, s0);
-                v_store(dst + i + v_float32::nlanes, s1);
-                i += 2*v_float32::nlanes;
-            }
-            if( i <= width - v_float32::nlanes )
-            {
-                v_float32 s0 = v_muladd(vx_load(src[1] + i) - vx_load(src[-1] + i), k1, d4);
-                for( k = 2; k <= ksize2; k++ )
+                v_float32 s0 = d4;
+                for( k = 1; k <= ksize2; k++ )
                     s0 = v_muladd(vx_load(src[k] + i) - vx_load(src[-k] + i), vx_setall_f32(ky[k]), s0);
                 v_store(dst + i, s0);
-                i += v_float32::nlanes;
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -2043,24 +1748,9 @@ struct SymmColumnSmallVec_32f
         {
             if( fabs(ky[0]) == 2 && ky[1] == 1 )
             {
-#if CV_FMA3 || CV_AVX2
                 v_float32 k0 = vx_setall_f32(ky[0]);
-                for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
+                for ( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
                     v_store(dst + i, v_muladd(vx_load(S1 + i), k0, vx_load(S0 + i) + vx_load(S2 + i) + d4));
-#else
-                if(ky[0] > 0)
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    {
-                        v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 + (x + x));
-                    }
-                else
-                    for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
-                    {
-                        v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, vx_load(S0 + i) + vx_load(S2 + i) + d4 - (x + x));
-                    }
-#endif
             }
             else
             {
@@ -2086,7 +1776,6 @@ struct SymmColumnSmallVec_32f
             }
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -2115,27 +1804,19 @@ struct FilterVec_8u
 
     int operator()(const uchar** src, uchar* dst, int width) const
     {
-        CV_DbgAssert(_nz > 0);
         const float* kf = (const float*)&coeffs[0];
         int i = 0, k, nz = _nz;
 
         v_float32 d4 = vx_setall_f32(delta);
-        v_float32 f0 = vx_setall_f32(kf[0]);
         for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
         {
-            v_uint16 xl, xh;
-            v_expand(vx_load(src[0] + i), xl, xh);
-            v_uint32 x0, x1, x2, x3;
-            v_expand(xl, x0, x1);
-            v_expand(xh, x2, x3);
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x0)), f0, d4);
-            v_float32 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x1)), f0, d4);
-            v_float32 s2 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x2)), f0, d4);
-            v_float32 s3 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x3)), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4, s1 = d4, s2 = d4, s3 = d4;
+            for( k = 0; k < nz; k++ )
             {
                 v_float32 f = vx_setall_f32(kf[k]);
+                v_uint16 xl, xh;
                 v_expand(vx_load(src[k] + i), xl, xh);
+                v_uint32 x0, x1, x2, x3;
                 v_expand(xl, x0, x1);
                 v_expand(xh, x2, x3);
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x0)), f, s0);
@@ -2147,13 +1828,11 @@ struct FilterVec_8u
         }
         if( i <= width - v_uint16::nlanes )
         {
-            v_uint32 x0, x1;
-            v_expand(vx_load_expand(src[0] + i), x0, x1);
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x0)), f0, d4);
-            v_float32 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x1)), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4, s1 = d4;
+            for( k = 0; k < nz; k++ )
             {
                 v_float32 f = vx_setall_f32(kf[k]);
+                v_uint32 x0, x1;
                 v_expand(vx_load_expand(src[k] + i), x0, x1);
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x0)), f, s0);
                 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(x1)), f, s1);
@@ -2167,8 +1846,8 @@ struct FilterVec_8u
         if( i <= width - v_int32x4::nlanes )
 #endif
         {
-            v_float32x4 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src[0] + i))), v_setall_f32(kf[0]), v_setall_f32(delta));
-            for( k = 1; k < nz; k++ )
+            v_float32x4 s0 = v_setall_f32(delta);
+            for( k = 0; k < nz; k++ )
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src[k] + i))), v_setall_f32(kf[k]), s0);
             v_int32x4 s32 = v_round(s0);
             v_int16x8 s16 = v_pack(s32, s32);
@@ -2176,7 +1855,6 @@ struct FilterVec_8u
             i += v_int32x4::nlanes;
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -2201,24 +1879,18 @@ struct FilterVec_8u16s
 
     int operator()(const uchar** src, uchar* _dst, int width) const
     {
-        CV_DbgAssert(_nz > 0);
         const float* kf = (const float*)&coeffs[0];
         short* dst = (short*)_dst;
         int i = 0, k, nz = _nz;
 
         v_float32 d4 = vx_setall_f32(delta);
-        v_float32 f0 = vx_setall_f32(kf[0]);
         for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
         {
-            v_uint16 xl, xh;
-            v_expand(vx_load(src[0] + i), xl, xh);
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(xl))), f0, d4);
-            v_float32 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(xl))), f0, d4);
-            v_float32 s2 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(xh))), f0, d4);
-            v_float32 s3 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(xh))), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4, s1 = d4, s2 = d4, s3 = d4;
+            for( k = 0; k < nz; k++ )
             {
                 v_float32 f = vx_setall_f32(kf[k]);
+                v_uint16 xl, xh;
                 v_expand(vx_load(src[k] + i), xl, xh);
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(xl))), f, s0);
                 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(xl))), f, s1);
@@ -2230,13 +1902,11 @@ struct FilterVec_8u16s
         }
         if( i <= width - v_uint16::nlanes )
         {
-            v_uint16 x = vx_load_expand(src[0] + i);
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(x))), f0, d4);
-            v_float32 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(x))), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4, s1 = d4;
+            for( k = 0; k < nz; k++ )
             {
                 v_float32 f = vx_setall_f32(kf[k]);
-                x = vx_load_expand(src[k] + i);
+                v_uint16 x = vx_load_expand(src[k] + i);
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_low(x))), f, s0);
                 s1 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(v_expand_high(x))), f, s1);
             }
@@ -2245,14 +1915,13 @@ struct FilterVec_8u16s
         }
         if( i <= width - v_int32::nlanes )
         {
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[0] + i))), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4;
+            for( k = 0; k < nz; k++ )
                 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[k] + i))), vx_setall_f32(kf[k]), s0);
             v_pack_store(dst + i, v_round(s0));
             i += v_int32::nlanes;
         }
 
-        vx_cleanup();
         return i;
     }
 
@@ -2281,50 +1950,14 @@ struct FilterVec_32f
         int i = 0, k, nz = _nz;
 
         v_float32 d4 = vx_setall_f32(delta);
-        v_float32 f0 = vx_setall_f32(kf[0]);
-        for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
+        for( ; i <= width - v_float32::nlanes; i += v_float32::nlanes )
         {
-            v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
-            v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), f0, d4);
-            v_float32 s2 = v_muladd(vx_load(src[0] + i + 2*v_float32::nlanes), f0, d4);
-            v_float32 s3 = v_muladd(vx_load(src[0] + i + 3*v_float32::nlanes), f0, d4);
-            for( k = 1; k < nz; k++ )
-            {
-                v_float32 f1 = vx_setall_f32(kf[k]);
-                s0 = v_muladd(vx_load(src[k] + i), f1, s0);
-                s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes), f1, s1);
-                s2 = v_muladd(vx_load(src[k] + i + 2*v_float32::nlanes), f1, s2);
-                s3 = v_muladd(vx_load(src[k] + i + 3*v_float32::nlanes), f1, s3);
-            }
-            v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            v_store(dst + i + 2*v_float32::nlanes, s2);
-            v_store(dst + i + 3*v_float32::nlanes, s3);
-        }
-        if( i <= width - 2*v_float32::nlanes )
-        {
-            v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
-            v_float32 s1 = v_muladd(vx_load(src[0] + i + v_float32::nlanes), f0, d4);
-            for( k = 1; k < nz; k++ )
-            {
-                v_float32 f1 = vx_setall_f32(kf[k]);
-                s0 = v_muladd(vx_load(src[k] + i), f1, s0);
-                s1 = v_muladd(vx_load(src[k] + i + v_float32::nlanes), f1, s1);
-            }
-            v_store(dst + i, s0);
-            v_store(dst + i + v_float32::nlanes, s1);
-            i += 2*v_float32::nlanes;
-        }
-        if( i <= width - v_float32::nlanes )
-        {
-            v_float32 s0 = v_muladd(vx_load(src[0] + i), f0, d4);
-            for( k = 1; k < nz; k++ )
+            v_float32 s0 = d4;
+            for( k = 0; k < nz; k++ )
                 s0 = v_muladd(vx_load(src[k] + i), vx_setall_f32(kf[k]), s0);
             v_store(dst + i, s0);
-            i += v_float32::nlanes;
         }
 
-        vx_cleanup();
         return i;
     }
 
