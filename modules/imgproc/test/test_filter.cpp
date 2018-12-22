@@ -2200,4 +2200,15 @@ TEST(Imgproc_Filter2D, dftFilter2d_regression_10683)
 
     EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 2);
 }
+
+TEST(Imgproc_MedianBlur, hires_regression_13409)
+{
+    Mat src(2048, 2048, CV_8UC1), dst_hires, dst_ref;
+    randu(src, 0, 256);
+
+    medianBlur(src, dst_hires, 9);
+    medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
+
+    ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
+}
 }} // namespace

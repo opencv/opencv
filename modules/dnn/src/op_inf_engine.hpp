@@ -26,10 +26,11 @@
 #define INF_ENGINE_RELEASE_2018R2 2018020000
 #define INF_ENGINE_RELEASE_2018R3 2018030000
 #define INF_ENGINE_RELEASE_2018R4 2018040000
+#define INF_ENGINE_RELEASE_2018R5 2018050000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2018R4 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2018R4
+#warning("IE version have not been provided via command-line. Using 2018R5 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2018R5
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
