@@ -350,7 +350,8 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
         for (int j = i + 1; j < num_images; ++j)
             if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
                 near_pairs.push_back(std::make_pair(i, j));
-
+    
+    pairwise_matches.clear(); // clear history values
     pairwise_matches.resize(num_images * num_images);
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
 
