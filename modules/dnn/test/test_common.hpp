@@ -236,6 +236,12 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
     }
+    if (withVkCom)
+    {
+        available = getAvailableTargets(DNN_BACKEND_VKCOM);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
+    }
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
