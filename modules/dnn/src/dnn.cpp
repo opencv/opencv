@@ -137,7 +137,8 @@ private:
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
 #ifdef HAVE_VULKAN
-        backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));  // TODO Add device check
+        if (haveVulkan())
+            backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
     }
     static inline bool checkIETarget(int target)
