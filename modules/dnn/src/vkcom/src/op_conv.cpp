@@ -15,6 +15,11 @@ namespace cv { namespace dnn { namespace vkcom {
 #ifdef HAVE_VULKAN
 
 #define LOCAL_SZ_X 256
+#define MAX_COMPUTE_GFLOPS 10
+// TODO: query group count from vulkan device
+#define MAX_GROUP_COUNT_X 65535
+#define MAX_GROUP_COUNT_Y 65535
+#define MAX_GROUP_COUNT_Z 65535
 
 struct ShaderParam {
     int in_h;
@@ -35,6 +40,9 @@ struct ShaderParam {
     int M;
     int K;
     int N;
+    int basic_shader_batch_idx;
+    int basic_shader_partition_idx;
+    int basic_shader_partition_size;
 };
 
 OpConv::OpConv(const int out_channel, const bool has_bias,
@@ -153,10 +161,26 @@ bool OpConv::forward(Tensor& in, Tensor& filter_weights, Tensor& bias, Tensor& o
                          filter_height_, filter_width_,
                          dilation_height_, dilation_width_,
                          in_channel_, batch_, has_bias_,
-                         M, K, N};
+                         M, K, N, 0, 0, 0};
 
-    recordCommandBuffer((void *)&param, sizeof(ShaderParam));
-    runCommandBuffer();
+    int partition_num = 1;
+    if (!dwconv_)
+    {
+        param.basic_shader_partition_size = group_y_;
+        partition_num = (int)ceil(1.0 * out_channel_ / group_y_);
+    }
+
+    for (int b = 0;  b < batch_; b++)
+    {
+        param.basic_shader_batch_idx = b;
+        for (int n = 0;  n < partition_num; n++)
+        {
+            param.basic_shader_partition_idx = n;
+            recordCommandBuffer((void *)&param, sizeof(ShaderParam));
+            runCommandBuffer();
+        }
+    }
+
     return true;
 }
 
@@ -167,20 +191,23 @@ bool OpConv::computeGroupCount()
         group_x_ = alignSize(out_width_, config_.local_size_x) / config_.local_size_x;
         group_y_ = alignSize(out_height_, config_.local_size_y) / config_.local_size_y;
         group_z_ = alignSize(in_channel_, config_.local_size_z) / config_.local_size_z;
-        return true;
     }
-
-    int M = out_height_ * out_width_;
-    int N = out_channel_;
-
-    if (config_.shader_type == kConvShaderTypeBasic)
+    else if (config_.shader_type == kConvShaderTypeBasic)
     {
-        group_x_ = alignSize(M, config_.local_size_x) / config_.local_size_x;
-        group_y_ = alignSize(N, config_.local_size_y) / config_.local_size_y;
-        group_z_ = alignSize(batch_, config_.local_size_z) / config_.local_size_z;
+
+        group_x_ = alignSize(out_height_ * out_width_, config_.local_size_x) / config_.local_size_x;
+        float GFLOPS = (2.0 * filter_height_ * filter_width_ * in_channel_ + 1) *
+                       (out_channel_ * out_height_ * out_width_) / 1000 / 1000 / 1000;
+        CV_Assert(config_.local_size_y == 1);
+        group_y_ = std::min(MAX_GROUP_COUNT_Y, (int)floor(MAX_COMPUTE_GFLOPS / (GFLOPS / out_channel_)));
+        group_z_ = 1;
     }
     else
         CV_Assert(0);
+
+    CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);
+    CV_Assert(group_y_ <= MAX_GROUP_COUNT_Y);
+    CV_Assert(group_z_ <= MAX_GROUP_COUNT_Z);
 
     return true;
 }
