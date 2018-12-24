@@ -110,7 +110,9 @@ intensities, see @cite BL07 and @cite WJ10 for details.
 class CV_EXPORTS_W GainCompensator : public ExposureCompensator
 {
 public:
-    CV_WRAP GainCompensator(int nr_feeds=1)
+    CV_WRAP GainCompensator()
+            : GainCompensator(1) {}
+    CV_WRAP GainCompensator(int nr_feeds)
             : nr_feeds_(nr_feeds) {}
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
@@ -134,7 +136,9 @@ intensities, see @cite UES01 for details.
 class CV_EXPORTS_W BlocksGainCompensator : public ExposureCompensator
 {
 public:
-    CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32, int nr_feeds=1)
+    CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
+            : BlocksGainCompensator(bl_width, bl_height, 1) {}
+    CV_WRAP BlocksGainCompensator(int bl_width, int bl_height, int nr_feeds)
             : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds) {setUpdateGain(true);}
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
