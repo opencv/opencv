@@ -403,9 +403,9 @@ void CV_FilterTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng)%3;
+    int depth = cvtest::randInt(rng)%4;
     int cn = CV_MAT_CN(types[INPUT][0]);
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : CV_32F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, cn);
 }
 
@@ -457,10 +457,11 @@ void CV_DerivBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng) % 2;
-    depth = depth == 0 ? CV_8U : CV_32F;
+    int depth = cvtest::randInt(rng) % 4;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = CV_MAKETYPE(depth,1);
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
+    int sameDepth = cvtest::randInt(rng) % 2;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = sameDepth ? depth : CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     _aperture_size = (cvtest::randInt(rng)%5)*2 - 1;
     sizes[INPUT][1] = aperture_size = cvSize(_aperture_size, _aperture_size);
 }
@@ -2210,5 +2211,28 @@ TEST(Imgproc_MedianBlur, hires_regression_13409)
     medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
 
     ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
+}
+
+TEST(Imgproc_Sobel, s16_regression_13506)
+{
+    Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
+                                     164,   3,  51, 124, 151,  89, 154, 117,  36,  88, 116, 117, 180, 112, 147, 124,
+                                      63,  50, 115, 103,  83, 148, 106,  79, 213, 106, 135,  53,  79, 106, 122, 112,
+                                     218, 107,  81, 126,  78, 138,  85, 142, 151, 108, 104, 158, 155,  81, 112, 178,
+                                     184,  96, 187, 148, 150, 112, 138, 162, 222, 146, 128,  49, 124,  46, 165, 104,
+                                     119, 164,  77, 144, 186,  98, 106, 148, 155, 157, 160, 151, 156, 149,  43, 122,
+                                     106, 155, 120, 132, 159, 115, 126, 188,  44,  79, 164, 201, 153,  97, 139, 133,
+                                     133,  98, 111, 165,  66, 106, 131,  85, 176, 156,  67, 108, 142,  91,  74, 137);
+    Mat ref = (Mat_<short>(8, 16) <<     0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0,
+                                     -1020, -796, -489, -469,  -247,  317,  760,  1429,  1983,  1384,   254, -459, -899, -1197, -1172, -1058,
+                                      2552, 2340, 1617,  591,     9,   96,  722,  1985,  2746,  1916,   676,    9, -635, -1115,  -779,  -380,
+                                      3546, 3349, 2838, 2206,  1388,  669,  938,  1880,  2252,  1785,  1083,  606,  180,  -298,  -464,  -418,
+                                       816,  966, 1255, 1652,  1619,  924,  535,   288,     5,   601,  1581, 1870, 1520,   625,  -627, -1260,
+                                      -782, -610, -395, -267,  -122,  -42, -317, -1378, -2293, -1451,   596, 1870, 1679,   763,   -69,  -394,
+                                      -882, -681, -463, -818, -1167, -732, -463, -1042, -1604, -1592, -1047, -334, -104,  -117,   229,   512,
+                                         0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0);
+    Mat dst;
+    Sobel(src, dst, CV_16S, 0, 1, 5);
+    ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
 }
 }} // namespace
