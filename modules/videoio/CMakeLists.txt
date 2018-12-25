@@ -167,23 +167,15 @@ if(WIN32 AND HAVE_FFMPEG_WRAPPER)
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${ffmpeg_dir}/${ffmpeg_bare_name}")
   if(MSVC_IDE)
-    set(command
+    execute_process(
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Debug/${ffmpeg_bare_name_ver}")
   elseif(MSVC AND (CMAKE_GENERATOR MATCHES "Visual"))
-    set(command
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}/${ffmpeg_bare_name_ver}")
   else()
-    set(command
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/${ffmpeg_bare_name_ver}")
   endif()
-  add_custom_target(copy_ffmpeg ${command}
-    COMMENT "Copying ${ffmpeg_path} to the output directory")
-  if(TARGET ${the_module})
-    add_dependencies(${the_module} copy_ffmpeg)
-  elseif(BUILD_opencv_world AND OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD)
-    ocv_add_dependencies(opencv_world copy_ffmpeg)
-  endif()
+  ${command})
   install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs RENAME "${ffmpeg_bare_name_ver}")
   if(INSTALL_CREATE_DISTRIB)
     install(FILES "${ffmpeg_dir}/opencv_ffmpeg.dll" DESTINATION "bin/" COMPONENT libs RENAME "opencv_ffmpeg${OPENCV_DLLVERSION}.dll")
