@@ -1243,14 +1243,6 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
   endif()
 endmacro()
 
-# read single version info from the pkg file
-macro(ocv_parse_pkg LIBNAME PKG_PATH SCOPE)
-  if(EXISTS "${PKG_PATH}/${LIBNAME}.pc")
-    file(STRINGS "${PKG_PATH}/${LIBNAME}.pc" line_to_parse REGEX "^Version:[ \t]+[0-9.]*.*$" LIMIT_COUNT 1)
-    STRING(REGEX REPLACE ".*Version: ([^ ]+).*" "\\1" ALIASOF_${LIBNAME}_VERSION "${line_to_parse}" )
-  endif()
-endmacro()
-
 ################################################################################################
 # short command to setup source group
 function(ocv_source_group group)
