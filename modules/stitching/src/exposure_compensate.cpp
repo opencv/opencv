@@ -370,19 +370,16 @@ void BlocksGainCompensator::apply(int index, Point /*corner*/, InputOutputArray 
     else
         resize(gain_maps_[index], u_gain_map, _image.size(), 0, 0, INTER_LINEAR);
 
-    Mat_<float> gain_map = u_gain_map.getMat(ACCESS_READ);
-    Mat image = _image.getMat();
-    for (int y = 0; y < image.rows; ++y)
+    if (u_gain_map.channels() != 3)
     {
-        const float* gain_row = gain_map.ptr<float>(y);
-        Point3_<uchar>* row = image.ptr<Point3_<uchar> >(y);
-        for (int x = 0; x < image.cols; ++x)
-        {
-            row[x].x = saturate_cast<uchar>(row[x].x * gain_row[x]);
-            row[x].y = saturate_cast<uchar>(row[x].y * gain_row[x]);
-            row[x].z = saturate_cast<uchar>(row[x].z * gain_row[x]);
-        }
+        std::vector<UMat> gains_channels;
+        gains_channels.push_back(u_gain_map);
+        gains_channels.push_back(u_gain_map);
+        gains_channels.push_back(u_gain_map);
+        merge(gains_channels, u_gain_map);
     }
+
+    multiply(_image, u_gain_map, _image, 1, _image.type());
 }
 
 void BlocksGainCompensator::getMatGains(std::vector<Mat>& umv)
