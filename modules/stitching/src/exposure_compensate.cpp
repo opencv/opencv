@@ -114,12 +114,19 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
 {
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
+    if (images.size() == 0)
+        return;
+
+    const int num_channels = images[0].channels();
+    CV_Assert(std::all_of(images.begin(), images.end(),
+        [num_channels](const UMat& image) { return image.channels() == num_channels; }));
+    CV_Assert(num_channels == 1 || num_channels == 3);
+
     const int num_images = static_cast<int>(images.size());
     Mat_<int> N(num_images, num_images); N.setTo(0);
     Mat_<double> I(num_images, num_images); I.setTo(0);
     Mat_<bool> skip(num_images, 1); skip.setTo(true);
 
-    //Rect dst_roi = resultRoi(corners, images);
     Mat subimg1, subimg2;
     Mat_<uchar> submask1, submask2, intersect;
 
@@ -154,14 +161,30 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
                 double Isum1 = 0, Isum2 = 0;
                 for (int y = 0; y < roi.height; ++y)
                 {
-                    const Point3_<uchar>* r1 = subimg1.ptr<Point3_<uchar> >(y);
-                    const Point3_<uchar>* r2 = subimg2.ptr<Point3_<uchar> >(y);
-                    for (int x = 0; x < roi.width; ++x)
+                    if (num_channels == 3)
                     {
-                        if (intersect(y, x))
+                        const Vec<uchar, 3>* r1 = subimg1.ptr<Vec<uchar, 3> >(y);
+                        const Vec<uchar, 3>* r2 = subimg2.ptr<Vec<uchar, 3> >(y);
+                        for (int x = 0; x < roi.width; ++x)
                         {
-                            Isum1 += std::sqrt(static_cast<double>(sqr(r1[x].x) + sqr(r1[x].y) + sqr(r1[x].z)));
-                            Isum2 += std::sqrt(static_cast<double>(sqr(r2[x].x) + sqr(r2[x].y) + sqr(r2[x].z)));
+                            if (intersect(y, x))
+                            {
+                                Isum1 += norm(r1[x]);
+                                Isum2 += norm(r2[x]);
+                            }
+                        }
+                    }
+                    else // if (num_channels == 1)
+                    {
+                        const uchar* r1 = subimg1.ptr<uchar>(y);
+                        const uchar* r2 = subimg2.ptr<uchar>(y);
+                        for (int x = 0; x < roi.width; ++x)
+                        {
+                            if (intersect(y, x))
+                            {
+                                Isum1 += r1[x];
+                                Isum2 += r2[x];
+                            }
                         }
                     }
                 }
