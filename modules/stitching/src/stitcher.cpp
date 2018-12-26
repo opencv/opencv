@@ -357,8 +357,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #if ENABLE_LOG
         int64 blend_t = getTickCount();
 #endif
-    UMat result, result_mask;
-    blender_->blend(result, result_mask);
+    UMat result;
+    blender_->blend(result, result_mask_);
     LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
