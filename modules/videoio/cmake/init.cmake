@@ -15,7 +15,6 @@ function(ocv_add_external_target name inc link def)
     INTERFACE_LINK_LIBRARIES "${link}"
     INTERFACE_COMPILE_DEFINITIONS "${def}")
   if(NOT BUILD_SHARED_LIBS)
-    export(TARGETS ocv.3rdparty.${name} APPEND FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
     install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
   endif()
 endfunction()
