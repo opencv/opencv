@@ -85,6 +85,33 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
     int64 t = getTickCount();
 #endif
 
+    const int num_images = static_cast<int>(images.size());
+    Mat accumulated_gains;
+
+    for (int n = 0; n < nr_feeds_; ++n)
+    {
+        if (n > 0)
+        {
+            // Apply previous iteration gains
+            for (int i = 0; i < num_images; ++i)
+                apply(i, corners[i], images[i], masks[i].first);
+        }
+
+        singleFeed(corners, images, masks);
+
+        if (n == 0)
+            accumulated_gains = gains_.clone();
+        else
+            multiply(accumulated_gains, gains_, accumulated_gains);
+    }
+    gains_ = accumulated_gains;
+
+    LOGLN("Exposure compensation, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+}
+
+void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                                 const std::vector<std::pair<UMat,uchar> > &masks)
+{
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 
     const int num_images = static_cast<int>(images.size());
@@ -204,8 +231,6 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
                 gains_.at<double>(i, 0) = l_gains(j++, 0);
         }
     }
-
-    LOGLN("Exposure compensation, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 
@@ -282,7 +307,7 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 
     if (getUpdateGain())
     {
-        GainCompensator compensator;
+        GainCompensator compensator(nr_feeds_);
         compensator.feed(block_corners, block_images, block_masks);
         std::vector<double> gains = compensator.gains();
         gain_maps_.resize(num_images);

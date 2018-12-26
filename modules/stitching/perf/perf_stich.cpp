@@ -15,6 +15,7 @@ using namespace perf;
 typedef TestBaseWithParam<string> stitch;
 typedef TestBaseWithParam<int> stitchExposureCompensation;
 typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
+typedef TestBaseWithParam<tuple<string, int>> stitchExposureCompMultiFeed;
 
 #ifdef HAVE_OPENCV_XFEATURES2D
 #define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
@@ -22,6 +23,8 @@ typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
 #define TEST_DETECTORS testing::Values("orb", "akaze")
 #endif
 #define TEST_EXP_COMP_BS testing::Values(32, 16, 12, 10, 8)
+#define TEST_EXP_COMP_NR_FEED testing::Values(1, 2, 3, 4, 5)
+#define TEST_EXP_COMP_MODE testing::Values("gain", "blocks")
 #define AFFINE_DATASETS testing::Values("s", "budapest", "newspaper", "prague")
 
 PERF_TEST_P(stitch, a123, TEST_DETECTORS)
@@ -80,6 +83,45 @@ PERF_TEST_P(stitchExposureCompensation, a123, TEST_EXP_COMP_BS)
         stitcher->setRegistrationResol(WORK_MEGAPIX);
         stitcher->setExposureCompensator(
             makePtr<detail::BlocksGainCompensator>(bs, bs));
+
+        startTimer();
+        stitcher->stitch(imgs, pano);
+        stopTimer();
+    }
+
+    EXPECT_NEAR(pano.size().width, 1182, 50);
+    EXPECT_NEAR(pano.size().height, 682, 30);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(stitchExposureCompMultiFeed, a123, testing::Combine(TEST_EXP_COMP_MODE, TEST_EXP_COMP_NR_FEED))
+{
+    const int block_size = 32;
+    Mat pano;
+
+    vector<Mat> imgs;
+    imgs.push_back( imread( getDataPath("stitching/a1.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
+
+    string mode = get<0>(GetParam());
+    int nr_feeds = get<1>(GetParam());
+
+    declare.time(30 * 10).iterations(10);
+
+    Ptr<detail::ExposureCompensator> exp_comp;
+    if (mode == "blocks")
+        exp_comp = makePtr<detail::BlocksGainCompensator>(block_size, block_size, nr_feeds);
+    else if (mode == "gain")
+        exp_comp = makePtr<detail::GainCompensator>(nr_feeds);
+
+    while(next())
+    {
+        Ptr<Stitcher> stitcher = Stitcher::create();
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setRegistrationResol(WORK_MEGAPIX);
+        stitcher->setExposureCompensator(exp_comp);
 
         startTimer();
         stitcher->stitch(imgs, pano);

@@ -110,15 +110,24 @@ intensities, see @cite BL07 and @cite WJ10 for details.
 class CV_EXPORTS_W GainCompensator : public ExposureCompensator
 {
 public:
+    CV_WRAP GainCompensator()
+            : GainCompensator(1) {}
+    CV_WRAP GainCompensator(int nr_feeds)
+            : nr_feeds_(nr_feeds) {}
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
+    void singleFeed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                    const std::vector<std::pair<UMat,uchar> > &masks);
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE ;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE ;
+    CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
+    CV_WRAP int getNrFeeds() { return nr_feeds_; }
     std::vector<double> gains() const;
 
 private:
     Mat_<double> gains_;
+    int nr_feeds_;
 };
 
 /** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
@@ -128,18 +137,22 @@ class CV_EXPORTS_W BlocksGainCompensator : public ExposureCompensator
 {
 public:
     CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
-            : bl_width_(bl_width), bl_height_(bl_height) {setUpdateGain(true);}
+            : BlocksGainCompensator(bl_width, bl_height, 1) {}
+    CV_WRAP BlocksGainCompensator(int bl_width, int bl_height, int nr_feeds)
+            : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds) {setUpdateGain(true);}
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
+    CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
+    CV_WRAP int getNrFeeds() { return nr_feeds_; }
 
 private:
     int bl_width_, bl_height_;
     std::vector<UMat> gain_maps_;
+    int nr_feeds_;
 };
-
 //! @}
 
 } // namespace detail
