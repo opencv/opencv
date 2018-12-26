@@ -221,10 +221,13 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        (NOT MI
 # ===================================================
 OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
-  VERIFY HAVE_DC1394)
+  VERIFY HAVE_DC1394_2)
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
+OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
+  VISIBLE_IF IOS
+  VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" ON
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT (CMAKE_VERSION VERSION_LESS "2.8.11"))
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
@@ -253,10 +256,7 @@ OCV_OPTION(WITH_FFMPEG "Include FFMPEG support" ON
   VERIFY HAVE_FFMPEG)
 OCV_OPTION(WITH_GSTREAMER "Include Gstreamer support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
-  VERIFY HAVE_GSTREAMER AND GSTREAMER_BASE_VERSION VERSION_GREATER "0.99")
-OCV_OPTION(WITH_GSTREAMER_0_10 "Enable Gstreamer 0.10 support (instead of 1.x)" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_GSTREAMER AND GSTREAMER_BASE_VERSION VERSION_LESS "1.0")
+  VERIFY HAVE_GSTREAMER AND GSTREAMER_VERSION VERSION_GREATER "0.99")
 OCV_OPTION(WITH_GTK "Include GTK support" ON
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK)
@@ -308,9 +308,6 @@ OCV_OPTION(WITH_GDCM "Include DICOM support" OFF
 OCV_OPTION(WITH_PVAPI "Include Prosilica GigE support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
   VERIFY HAVE_PVAPI)
-OCV_OPTION(WITH_GIGEAPI "Include Smartek GigE support" OFF
-  VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
-  VERIFY HAVE_GIGE_API)
 OCV_OPTION(WITH_ARAVIS "Include Aravis GigE support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT WIN32
   VERIFY HAVE_ARAVIS_API)
@@ -371,9 +368,6 @@ OCV_OPTION(WITH_OPENCLAMDBLAS "Include AMD OpenCL BLAS library support" ON
 OCV_OPTION(WITH_DIRECTX "Include DirectX support" ON
   VISIBLE_IF WIN32 AND NOT WINRT
   VERIFY HAVE_DIRECTX)
-OCV_OPTION(WITH_INTELPERC "Include Intel Perceptual Computing support" OFF
-  VISIBLE_IF WIN32 AND NOT WINRT
-  VERIFY HAVE_INTELPERC)
 OCV_OPTION(WITH_LIBREALSENSE "Include Intel librealsense support" OFF
   VISIBLE_IF NOT WITH_INTELPERC
   VERIFY HAVE_LIBREALSENSE)
@@ -1351,7 +1345,7 @@ if(WITH_GDAL OR HAVE_GDAL)
 endif()
 
 if(WITH_GDCM OR HAVE_GDCM)
-  status("    GDCM:" HAVE_GDCM THEN "YES (ver ${GDCM_VERSION})" ELSE "NO")
+  status("    GDCM:" HAVE_GDCM THEN "YES (${GDCM_VERSION})" ELSE "NO")
 endif()
 
 if(WITH_IMGCODEC_HDR OR DEFINED HAVE_IMGCODEC_HDR)
@@ -1375,11 +1369,7 @@ status("")
 status("  Video I/O:")
 
 if(WITH_1394 OR HAVE_DC1394_2)
-  if (HAVE_DC1394_2)
-    status("    DC1394:" "YES (ver ${ALIASOF_libdc1394-2_VERSION})")
-  else()
-    status("    DC1394:" "NO")
-  endif()
+  status("    DC1394:" HAVE_DC1394_2 THEN "YES (${DC1394_2_VERSION})" ELSE NO)
 endif()
 
 if(WITH_FFMPEG OR HAVE_FFMPEG)
@@ -1390,79 +1380,64 @@ if(WITH_FFMPEG OR HAVE_FFMPEG)
   else()
     status("    FFMPEG:"       HAVE_FFMPEG         THEN YES ELSE NO)
   endif()
-  status("      avcodec:"      FFMPEG_libavcodec_FOUND    THEN "YES (ver ${FFMPEG_libavcodec_VERSION})"    ELSE NO)
-  status("      avformat:"     FFMPEG_libavformat_FOUND   THEN "YES (ver ${FFMPEG_libavformat_VERSION})"   ELSE NO)
-  status("      avutil:"       FFMPEG_libavutil_FOUND     THEN "YES (ver ${FFMPEG_libavutil_VERSION})"     ELSE NO)
-  status("      swscale:"      FFMPEG_libswscale_FOUND    THEN "YES (ver ${FFMPEG_libswscale_VERSION})"    ELSE NO)
-  status("      avresample:"   FFMPEG_libavresample_FOUND THEN "YES (ver ${FFMPEG_libavresample_VERSION})" ELSE NO)
+  status("      avcodec:"      FFMPEG_libavcodec_VERSION    THEN "YES (${FFMPEG_libavcodec_VERSION})"    ELSE NO)
+  status("      avformat:"     FFMPEG_libavformat_VERSION   THEN "YES (${FFMPEG_libavformat_VERSION})"   ELSE NO)
+  status("      avutil:"       FFMPEG_libavutil_VERSION     THEN "YES (${FFMPEG_libavutil_VERSION})"     ELSE NO)
+  status("      swscale:"      FFMPEG_libswscale_VERSION    THEN "YES (${FFMPEG_libswscale_VERSION})"    ELSE NO)
+  status("      avresample:"   FFMPEG_libavresample_VERSION THEN "YES (${FFMPEG_libavresample_VERSION})" ELSE NO)
 endif()
 
 if(WITH_GSTREAMER OR HAVE_GSTREAMER)
-  status("    GStreamer:"      HAVE_GSTREAMER      THEN ""                                         ELSE NO)
-  if(HAVE_GSTREAMER)
-    status("      base:"       "YES (ver ${GSTREAMER_BASE_VERSION})")
-    status("      video:"      "YES (ver ${GSTREAMER_VIDEO_VERSION})")
-    status("      app:"        "YES (ver ${GSTREAMER_APP_VERSION})")
-    status("      riff:"       "YES (ver ${GSTREAMER_RIFF_VERSION})")
-    status("      pbutils:"    "YES (ver ${GSTREAMER_PBUTILS_VERSION})")
-  endif(HAVE_GSTREAMER)
-endif()
-
-if(WITH_OPENNI OR HAVE_OPENNI)
-  status("    OpenNI:"         HAVE_OPENNI         THEN "YES (ver ${OPENNI_VERSION_STRING}, build ${OPENNI_VERSION_BUILD})" ELSE NO)
-  status("    OpenNI PrimeSensor Modules:" HAVE_OPENNI_PRIME_SENSOR_MODULE THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"      ELSE NO)
+  status("    GStreamer:" HAVE_GSTREAMER THEN "YES (${GSTREAMER_VERSION})" ELSE NO)
 endif()
 
 if(WITH_OPENNI2 OR HAVE_OPENNI2)
-  status("    OpenNI2:"        HAVE_OPENNI2    THEN "YES (ver ${OPENNI2_VERSION_STRING}, build ${OPENNI2_VERSION_BUILD})" ELSE NO)
+  status("    OpenNI2:"        HAVE_OPENNI2    THEN "YES (${OPENNI2_VERSION})" ELSE NO)
 endif()
 
 if(WITH_PVAPI OR HAVE_PVAPI)
-  status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
-endif()
-
-if(WITH_GIGEAPI OR HAVE_GIGE_API)
-  status("    GigEVisionSDK:"  HAVE_GIGE_API       THEN YES                                        ELSE NO)
+  status("    PvAPI:" HAVE_PVAPI THEN YES ELSE NO)
 endif()
 
 if(WITH_ARAVIS OR HAVE_ARAVIS_API)
-  status("    Aravis SDK:"     HAVE_ARAVIS_API     THEN "YES (${ARAVIS_LIBRARIES})"                ELSE NO)
+  status("    Aravis SDK:" HAVE_ARAVIS_API THEN "YES (${ARAVIS_VERSION})" ELSE NO)
 endif()
 
-if(APPLE)
-  status("    AVFoundation:"   HAVE_AVFOUNDATION   THEN YES                                        ELSE NO)
-  if(WITH_QUICKTIME OR HAVE_QUICKTIME)
-    status("    QuickTime:"      HAVE_QUICKTIME      THEN YES                                        ELSE NO)
-  endif()
+if(WITH_AVFOUNDATION OR HAVE_AVFOUNDATION)
+  status("    AVFoundation:" HAVE_AVFOUNDATION THEN YES ELSE NO)
 endif()
 
-if(WITH_V4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
+if(HAVE_CAP_IOS)
+  status("    iOS capture:" YES)
+endif()
+
+if(WITH_V4L OR HAVE_V4L)
   ocv_build_features_string(v4l_status
     IF HAVE_CAMV4L2 THEN "linux/videodev2.h"
     IF HAVE_VIDEOIO THEN "sys/videoio.h"
     ELSE "NO")
-  status("    v4l/v4l2:" "${v4l_status}")
+  status("    v4l/v4l2:" HAVE_V4L THEN "YES (${v4l_status})" ELSE NO)
 endif()
 
 if(WITH_DSHOW OR HAVE_DSHOW)
-  status("    DirectShow:"     HAVE_DSHOW     THEN YES                                        ELSE NO)
+  status("    DirectShow:" HAVE_DSHOW THEN YES ELSE NO)
 endif()
 
 if(WITH_MSMF OR HAVE_MSMF)
-  status("    Media Foundation:" HAVE_MSMF    THEN YES                                        ELSE NO)
-  status("      DXVA:"           HAVE_MSMF_DXVA    THEN YES    ELSE NO)
+  status("    Media Foundation:" HAVE_MSMF THEN YES ELSE NO)
+  status("      DXVA:" HAVE_MSMF_DXVA THEN YES ELSE NO)
 endif()
 
 if(WITH_XIMEA OR HAVE_XIMEA)
-  status("    XIMEA:"          HAVE_XIMEA          THEN YES                                        ELSE NO)
+  status("    XIMEA:" HAVE_XIMEA THEN YES ELSE NO)
 endif()
 
 if(WITH_XINE OR HAVE_XINE)
-  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
+  status("    Xine:" HAVE_XINE THEN "YES (${XINE_VERSION})" ELSE NO)
 endif()
 
-if(WITH_INTELPERC OR HAVE_INTELPERC)
-  status("    Intel PerC:"     HAVE_INTELPERC      THEN "YES"                                 ELSE NO)
+if(WITH_LIBREALSENSE OR HAVE_LIBREALSENSE)
+  status("    Intel RealSense:" HAVE_LIBREALSENSE THEN "YES (${LIBREALSENSE_VERSION})" ELSE NO)
 endif()
 
 if(WITH_MFX OR HAVE_MFX)
