@@ -56,8 +56,10 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
         e = makePtr<NoExposureCompensator>();
     else if (type == GAIN)
         e = makePtr<GainCompensator>();
-    if (type == GAIN_BLOCKS)
+    else if (type == GAIN_BLOCKS)
         e = makePtr<BlocksGainCompensator>();
+    else if (type == CHANNELS)
+        e = makePtr<ChannelsCompensator>();
     if (e.get() != nullptr)
     {
         e->setUpdateGain(true);
@@ -291,6 +293,65 @@ void GainCompensator::setMatGains(std::vector<Mat>& umv)
     }
 }
 
+void ChannelsCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+                               const std::vector<std::pair<UMat,uchar> > &masks)
+{
+    std::array<std::vector<UMat>, 3> images_channels;
+
+    // Split channels of each input image
+    for (const UMat& image: images)
+    {
+        std::vector<UMat> image_channels;
+        image_channels.resize(3);
+        split(image, image_channels);
+
+        for (int i = 0; i < int(images_channels.size()); ++i)
+            images_channels[i].emplace_back(std::move(image_channels[i]));
+    }
+
+    // For each channel, feed the channel of each image in a GainCompensator
+    gains_.clear();
+    gains_.resize(images.size());
+    for (int c = 0; c < 3; ++c)
+    {
+        const std::vector<UMat>& channels = images_channels[c];
+
+        GainCompensator compensator(getNrFeeds());
+        compensator.feed(corners, channels, masks);
+
+        std::vector<double> gains = compensator.gains();
+        for (int i = 0; i < int(gains.size()); ++i)
+            gains_.at(i)[c] = gains[i];
+    }
+}
+
+void ChannelsCompensator::apply(int index, Point /*corner*/, InputOutputArray image, InputArray /*mask*/)
+{
+    CV_INSTRUMENT_REGION();
+
+    multiply(image, gains_.at(index), image);
+}
+
+void ChannelsCompensator::getMatGains(std::vector<Mat>& umv)
+{
+    umv.clear();
+    for (int i = 0; i < static_cast<int>(gains_.size()); ++i)
+    {
+        Mat m;
+        Mat(gains_[i]).copyTo(m);
+        umv.push_back(m);
+    }
+}
+
+void ChannelsCompensator::setMatGains(std::vector<Mat>& umv)
+{
+    for (int i = 0; i < static_cast<int>(umv.size()); i++)
+    {
+        Scalar s;
+        umv[i].copyTo(s);
+        gains_.push_back(s);
+    }
+}
 
 void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
                                      const std::vector<std::pair<UMat,uchar> > &masks)

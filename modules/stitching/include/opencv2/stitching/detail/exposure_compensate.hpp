@@ -62,7 +62,7 @@ class CV_EXPORTS_W ExposureCompensator
 public:
     virtual ~ExposureCompensator() {}
 
-    enum { NO, GAIN, GAIN_BLOCKS };
+    enum { NO, GAIN, GAIN_BLOCKS, CHANNELS };
     CV_WRAP static Ptr<ExposureCompensator> createDefault(int type);
 
     /**
@@ -127,6 +127,27 @@ public:
 
 private:
     Mat_<double> gains_;
+    int nr_feeds_;
+};
+
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image
+intensities on each channel independantly.
+ */
+class CV_EXPORTS_W ChannelsCompensator : public ExposureCompensator
+{
+public:
+    CV_WRAP ChannelsCompensator(int nr_feeds=1) : nr_feeds_(nr_feeds) {}
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+              const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
+    CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
+    CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
+    CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
+    CV_WRAP int getNrFeeds() { return nr_feeds_; }
+    std::vector<Scalar> gains() const { return gains_; }
+
+private:
+    std::vector<Scalar> gains_;
     int nr_feeds_;
 };
 
