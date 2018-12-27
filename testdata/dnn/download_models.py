@@ -100,16 +100,6 @@ models = [
         sha='405fc5acd08a3bb12de8ee5e23a96bec22f08204',
         filename='bvlc_googlenet.caffemodel'),
     Model(
-        name='VGG16',
-        url='http://www.robots.ox.ac.uk/~vgg/software/very_deep/caffe/VGG_ILSVRC_16_layers.caffemodel',
-        sha='9363e1f6d65f7dba68c4f27a1e62105cdf6c4e24',
-        filename='VGG_ILSVRC_16_layers.caffemodel'),
-    Model(
-        name='voc-fcn32s',
-        url='http://dl.caffe.berkeleyvision.org/fcn32s-heavy-pascal.caffemodel',
-        sha='05eb922d7829c39448f57e5ab9d8cd75d6c0be6d',
-        filename='fcn32s-heavy-pascal.caffemodel'),
-    Model(
         name='Alexnet',
         url='http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel',
         sha='9116a64c0fbe4459d18f4bb6b56d647b63920377',
