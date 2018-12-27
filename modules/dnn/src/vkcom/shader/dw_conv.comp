@@ -19,6 +19,9 @@ layout(push_constant) uniform pushBlock {
     int M;
     int K;
     int N;
+    int basic_shader_batch_idx;
+    int basic_shader_partition_idx;
+    int basic_shader_partition_size;
 } p;
 
 layout(binding = 0) readonly buffer Input0{
@@ -36,7 +39,7 @@ layout(binding = 3) writeonly buffer Output{
 layout(local_size_x = LOCAL_SZ_X, local_size_y = 1, local_size_z = 1) in;
 
 /*
-   Each work item compute batch * multiplier output cell along the output depth dimension and batch
+   Each work item compute one output cell
 */
 void main()
 {
@@ -51,7 +54,7 @@ void main()
         int org_x = gx * p.stride_w - p.pad_w;
 
         int weight_off = gz * p.filter_h * p.filter_w;
-        int input_off = gz * p.in_h * p.in_w + org_y * p.in_w + org_x;
+        int input_off = (p.basic_shader_batch_idx * p.channels + gz) * p.in_h * p.in_w + org_y * p.in_w + org_x;
         for(int y = 0; y < p.filter_h; y++)
         {
             for(int x = 0; x < p.filter_w; x++)
@@ -65,7 +68,7 @@ void main()
             input_off += p.in_w * p.dilation_h;
         }
 
-        int offset = gz * p.out_h * p.out_w + gy * p.out_w + gx;
+        int offset = (p.basic_shader_batch_idx * p.channels + gz) * p.out_h * p.out_w + gy * p.out_w + gx;
         if (p.has_bias == 1)
             out_buffer[offset] = sum + bias_data[gz];
         else

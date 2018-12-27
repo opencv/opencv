@@ -32,15 +32,18 @@ layout(push_constant) uniform pushBlock {
     int M;
     int K;
     int N;
+    int basic_shader_batch_idx;
+    int basic_shader_partition_idx;
+    int basic_shader_partition_size;
 } p;
 
 layout(local_size_x = LOCAL_SZ_X, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
     int gx = int(gl_GlobalInvocationID.x);
-    int gy = int(gl_GlobalInvocationID.y);
-    int gz = int(gl_GlobalInvocationID.z);
-    if(gx < p.M && gy < p.N && gz < p.batch)
+    int gy = int(gl_GlobalInvocationID.y) + p.basic_shader_partition_idx * p.basic_shader_partition_size;
+    int gz = p.basic_shader_batch_idx;
+    if(gx < p.M && gy < p.N)
     {
         float sum = 0.0f;
         int output_y = gx / p.out_w;
