@@ -31,6 +31,18 @@ if(NOT HAVE_FFMPEG AND PKG_CONFIG_FOUND)
     if(FFMPEG_libavresample_FOUND)
       list(APPEND FFMPEG_LIBRARIES ${FFMPEG_libavresample_LIBRARIES})
     endif()
+
+    # rewrite libraries to absolute paths
+    foreach(lib ${FFMPEG_LIBRARIES})
+      find_library(FFMPEG_ABSOLUTE_${lib} "${lib}" PATHS "${FFMPEG_lib${lib}_LIBDIR}" NO_DEFAULT_PATH)
+      if(FFMPEG_ABSOLUTE_${lib})
+        list(APPEND ffmpeg_abs_libs "${FFMPEG_ABSOLUTE_${lib}}")
+      else()
+        list(APPEND ffmpeg_abs_libs "${lib}")
+      endif()
+    endforeach()
+    set(FFMPEG_LIBRARIES "${ffmpeg_abs_libs}" CACHE INTERNAL "" FORCE)
+
     set(HAVE_FFMPEG TRUE)
   endif()
 endif()
@@ -42,7 +54,6 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
       "${OpenCV_BINARY_DIR}"
       "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
       CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
-                  "-DLINK_DIRECTORIES:STRING=${FFMPEG_LIBRARY_DIRS}"
                   "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
       OUTPUT_VARIABLE TRY_OUT
   )
