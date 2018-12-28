@@ -62,7 +62,7 @@ class CV_EXPORTS_W ExposureCompensator
 public:
     virtual ~ExposureCompensator() {}
 
-    enum { NO, GAIN, GAIN_BLOCKS };
+    enum { NO, GAIN, GAIN_BLOCKS, CHANNELS, CHANNELS_BLOCKS };
     CV_WRAP static Ptr<ExposureCompensator> createDefault(int type);
 
     /**
@@ -110,6 +110,7 @@ intensities, see @cite BL07 and @cite WJ10 for details.
 class CV_EXPORTS_W GainCompensator : public ExposureCompensator
 {
 public:
+    // This Constructor only exists to make source level compatibility detector happy
     CV_WRAP GainCompensator()
             : GainCompensator(1) {}
     CV_WRAP GainCompensator(int nr_feeds)
@@ -130,16 +131,13 @@ private:
     int nr_feeds_;
 };
 
-/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
-intensities, see @cite UES01 for details.
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image
+intensities on each channel independantly.
  */
-class CV_EXPORTS_W BlocksGainCompensator : public ExposureCompensator
+class CV_EXPORTS_W ChannelsCompensator : public ExposureCompensator
 {
 public:
-    CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
-            : BlocksGainCompensator(bl_width, bl_height, 1) {}
-    CV_WRAP BlocksGainCompensator(int bl_width, int bl_height, int nr_feeds)
-            : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds) {setUpdateGain(true);}
+    CV_WRAP ChannelsCompensator(int nr_feeds=1) : nr_feeds_(nr_feeds) {}
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
@@ -147,11 +145,75 @@ public:
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
     CV_WRAP int getNrFeeds() { return nr_feeds_; }
+    std::vector<Scalar> gains() const { return gains_; }
 
 private:
+    std::vector<Scalar> gains_;
+    int nr_feeds_;
+};
+
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image blocks.
+ */
+class CV_EXPORTS_W BlocksCompensator : public ExposureCompensator
+{
+public:
+    BlocksCompensator(int bl_width=32, int bl_height=32, int nr_feeds=1)
+            : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds) {}
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
+    CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
+    CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
+    CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
+    CV_WRAP int getNrFeeds() { return nr_feeds_; }
+
+protected:
+    template<class Compensator>
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+              const std::vector<std::pair<UMat,uchar> > &masks);
+
+private:
+    UMat getGainMap(const GainCompensator& compensator, int bl_idx, Size bl_per_img);
+    UMat getGainMap(const ChannelsCompensator& compensator, int bl_idx, Size bl_per_img);
+
     int bl_width_, bl_height_;
     std::vector<UMat> gain_maps_;
     int nr_feeds_;
+};
+
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
+intensities, see @cite UES01 for details.
+ */
+class CV_EXPORTS_W BlocksGainCompensator : public BlocksCompensator
+{
+public:
+    // This Constructor only exists to make source level compatibility detector happy
+    CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
+            : BlocksGainCompensator(bl_width, bl_height, 1) {}
+    CV_WRAP BlocksGainCompensator(int bl_width, int bl_height, int nr_feeds)
+            : BlocksCompensator(bl_width, bl_height, nr_feeds) {setUpdateGain(true);}
+
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+              const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
+
+    // This function only exists to make source level compatibility detector happy
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE {
+        BlocksCompensator::apply(index, corner, image, mask); }
+    // This function only exists to make source level compatibility detector happy
+    CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE { BlocksCompensator::getMatGains(umv); }
+    // This function only exists to make source level compatibility detector happy
+    CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE { BlocksCompensator::setMatGains(umv); }
+};
+
+/** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
+on each channel.
+ */
+class CV_EXPORTS_W BlocksChannelsCompensator : public BlocksCompensator
+{
+public:
+    CV_WRAP BlocksChannelsCompensator(int bl_width=32, int bl_height=32, int nr_feeds=1)
+            : BlocksCompensator(bl_width, bl_height, nr_feeds) {setUpdateGain(true);}
+
+    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+              const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
 };
 //! @}
 
