@@ -206,6 +206,37 @@ INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_mo
 
 //==================================================================================================
 
+typedef testing::TestWithParam<int> Imgcodecs_Tiff_Modes_W;
+
+TEST_P(Imgcodecs_Tiff_Modes_W, decode_multipage_W)
+{
+    const int mode = GetParam();
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const std::wstring filenameW = toWString(root) + L"readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files)/sizeof(page_files[0]);
+    vector<Mat> pages;
+    bool res = imreadmultiW(filenameW, pages, mode);
+    ASSERT_TRUE(res == true);
+    ASSERT_EQ(page_count, pages.size());
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i], mode);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page, pages[i]);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes_W, testing::ValuesIn(all_modes));
+
+//==================================================================================================
+
 TEST(Imgcodecs_Tiff_Modes, write_multipage)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -232,6 +263,42 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
 
     vector<Mat> read_pages;
     imreadmulti(tmp_filename, read_pages);
+    for (size_t i = 0; i < page_count; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
+    }
+}
+
+//==================================================================================================
+
+//==================================================================================================
+
+TEST(Imgcodecs_Tiff_Modes_W, write_multipage_W)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> pages;
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i]);
+        pages.push_back(page);
+    }
+
+    std::wstring tmp_filename = cv::tempfileW(L".tiff");
+    bool res = imwriteW(tmp_filename, pages);
+    ASSERT_TRUE(res);
+
+    vector<Mat> read_pages;
+    imreadmultiW(tmp_filename, read_pages);
     for (size_t i = 0; i < page_count; i++)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);

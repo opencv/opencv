@@ -133,6 +133,78 @@ TEST(Imgcodecs_Image, regression_9376)
 
 //==================================================================================================
 
+typedef std::wstring ExtW;
+typedef testing::TestWithParam<ExtW> Imgcodecs_Image_W;
+
+TEST_P(Imgcodecs_Image_W, read_write_W)
+{
+    const std::wstring extW = this->GetParam();
+    const std::wstring full_nameW = cv::tempfileW(extW.c_str());
+    const string full_name = cv::toString(full_nameW);
+    const string _name = TS::ptr()->get_data_path() + "../cv/shared/baboon.png";
+    const double thresDbell = 32;
+
+    Mat image = imread(_name);
+    image.convertTo(image, CV_8UC3);
+    ASSERT_FALSE(image.empty());
+
+    imwriteW(full_nameW, image);
+    Mat loaded = imreadW(full_nameW);
+    ASSERT_FALSE(loaded.empty());
+
+    double psnr = cvtest::PSNR(loaded, image);
+    EXPECT_GT(psnr, thresDbell);
+
+    vector<uchar> from_file;
+    FILE *f = fopen(full_name.c_str(), "rb");
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    from_file.resize((size_t)len);
+    fseek(f, 0, SEEK_SET);
+    from_file.resize(fread(&from_file[0], 1, from_file.size(), f));
+    fclose(f);
+    vector<uchar> buf;
+    imencodeW(L"." + extW, image, buf);
+    ASSERT_EQ(buf, from_file);
+
+    Mat buf_loaded = imdecode(Mat(buf), 1);
+    ASSERT_FALSE(buf_loaded.empty());
+
+    psnr = cvtest::PSNR(buf_loaded, image);
+    EXPECT_GT(psnr, thresDbell);
+
+    EXPECT_EQ(0, remove(full_name.c_str()));
+}
+
+const std::wstring extsW[] = {
+#ifdef HAVE_PNG
+    L"png",
+#endif
+#ifdef HAVE_TIFF
+    L"tiff",
+#endif
+#ifdef HAVE_JPEG
+    L"jpg",
+#endif
+#ifdef HAVE_JASPER
+    L"jp2",
+#endif
+#if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/
+    L"exr",
+#endif
+    L"bmp",
+#ifdef HAVE_IMGCODEC_PXM
+    L"ppm",
+#endif
+#ifdef HAVE_IMGCODEC_SUNRASTER
+    L"ras",
+#endif
+};
+
+INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image_W, testing::ValuesIn(extsW));
+
+//==================================================================================================
+
 TEST(Imgcodecs_Image, write_umat)
 {
     const string src_name = TS::ptr()->get_data_path() + "../python/images/baboon.bmp";

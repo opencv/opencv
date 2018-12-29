@@ -196,7 +196,11 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+CV_EXPORTS String toString( const WString& wstr );
+CV_EXPORTS WString toWString( const String& str );
+
 CV_EXPORTS String tempfile( const char* suffix = 0);
+CV_EXPORTS WString tempfileW( const wchar_t* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
 /** @brief OpenCV will try to set the number of threads for the next parallel region.

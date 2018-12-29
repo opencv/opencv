@@ -107,9 +107,6 @@ public:
     String string() const;
     WString wstring() const;
 
-    static String toString( const WString& wstr );
-    static WString toWString( const String& str );
-
 private:
     PathType m_path;
 };
