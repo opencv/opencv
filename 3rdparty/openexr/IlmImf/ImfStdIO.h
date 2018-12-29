@@ -63,9 +63,6 @@ class StdIFStream: public IStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
-#if defined _WIN32
-    StdIFStream (const wchar_t fileNameW[], const char fileName[]);
-#endif
     StdIFStream (const char fileName[]);
 
 
@@ -106,9 +103,6 @@ class StdOFStream: public OStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
-#if defined _WIN32
-    StdOFStream (const wchar_t fileNameW[], const char fileName[]);
-#endif
     StdOFStream (const char fileName[]);
 
 

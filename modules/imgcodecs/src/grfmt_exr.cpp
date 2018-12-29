@@ -83,6 +83,8 @@ namespace cv
 ExrDecoder::ExrDecoder()
 {
     m_signature = "\x76\x2f\x31\x01";
+    m_filestream = 0;
+    m_stream = 0;
     m_file = 0;
     m_red = m_green = m_blue = 0;
     m_type = ((Imf::PixelType)0);
@@ -108,6 +110,16 @@ void  ExrDecoder::close()
         delete m_file;
         m_file = 0;
     }
+    if( m_stream )
+    {
+        delete m_stream;
+        m_stream = 0;
+    }
+    if( m_filestream )
+    {
+        delete m_filestream;
+        m_filestream = 0;
+    }
 }
 
 
@@ -121,11 +133,9 @@ bool  ExrDecoder::readHeader()
 {
     bool result = false;
 
-#if defined _WIN32
-    m_file = new InputFile( m_filename.c_str(), m_filename.string().c_str() );
-#else
-    m_file = new InputFile( m_filename.c_str() );
-#endif
+    m_filestream = new std::ifstream( m_filename.c_str(), std::ios_base::binary );
+    m_stream = new StdIFStream( *m_filestream, m_filename.string().c_str() );
+    m_file = new InputFile( *m_stream);
 
     if( !m_file ) // probably paranoid
         return false;
@@ -611,11 +621,9 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
         //printf("gray\n");
     }
 
-#if defined _WIN32
-    OutputFile file( m_filename.c_str(), m_filename.string().c_str(), header );
-#else
-    OutputFile file( m_filename.c_str(), header );
-#endif
+    std::ofstream filestream( m_filename.c_str(), std::ios_base::binary );
+    StdOFStream stream( filestream, m_filename.string().c_str() );
+    OutputFile file( stream, header );
 
     FrameBuffer frame;
 

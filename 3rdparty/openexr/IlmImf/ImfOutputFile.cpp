@@ -646,38 +646,6 @@ LineBufferTask::execute ()
 } // namespace
 
 
-#if defined _WIN32
-OutputFile::OutputFile
-    (const wchar_t fileNameW[],
-     const char fileName[],
-     const Header &header,
-     int numThreads)
-:
-    _data (new Data (true, numThreads))
-{
-    try
-    {
-    header.sanityCheck();
-    _data->os = new StdOFStream (fileNameW, fileName);
-    initialize (header);
-    }
-    catch (Iex::BaseExc &e)
-    {
-    delete _data;
-
-    REPLACE_EXC (e, "Cannot open image file "
-            "\"" << fileNameW << "\". " << e);
-    throw;
-    }
-    catch (...)
-    {
-    delete _data;
-        throw;
-    }
-}
-#endif
-
-
 OutputFile::OutputFile
     (const char fileName[],
      const Header &header,

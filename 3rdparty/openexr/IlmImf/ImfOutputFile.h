@@ -68,10 +68,6 @@ class OutputFile
     // used to write the file (see ImfThreading.h).
     //-----------------------------------------------------------
 
-#if defined _WIN32
-    OutputFile (const wchar_t fileNameW[], const char fileName[], const Header &header,
-                int numThreads = globalThreadCount());
-#endif
     OutputFile (const char fileName[], const Header &header,
                 int numThreads = globalThreadCount());
 

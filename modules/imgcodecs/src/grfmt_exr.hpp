@@ -52,6 +52,7 @@
 #include <ImfChromaticities.h>
 #include <ImfInputFile.h>
 #include <ImfChannelList.h>
+#include <ImfStdIO.h>
 #include <ImathBox.h>
 #include "grfmt_base.hpp"
 
@@ -84,6 +85,8 @@ protected:
     void  ChromaToBGR( float *data, int numlines, int step );
     void  RGBToGray( float *in, float *out );
 
+    std::ifstream  *m_filestream;
+    StdIFStream    *m_stream;
     InputFile      *m_file;
     Imf::PixelType  m_type;
     Box2i           m_datawindow;

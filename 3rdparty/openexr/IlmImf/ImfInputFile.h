@@ -68,9 +68,6 @@ class InputFile
     // used to read the file (see ImfThreading.h).
     //-----------------------------------------------------------
 
-#if defined _WIN32
-    InputFile (const wchar_t fileNameW[], const char fileName[], int numThreads = globalThreadCount());
-#endif
     InputFile (const char fileName[], int numThreads = globalThreadCount());
 
 

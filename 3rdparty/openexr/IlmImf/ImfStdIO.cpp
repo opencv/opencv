@@ -91,21 +91,6 @@ checkError (ostream &os)
 } // namespace
 
 
-#if defined _WIN32
-StdIFStream::StdIFStream (const wchar_t fileNameW[], const char fileName[]):
-    IStream (fileName),
-    _is (new ifstream (fileNameW, ios_base::binary)),
-    _deleteStream (true)
-{
-    if (!*_is)
-    {
-    delete _is;
-    Iex::throwErrnoExc();
-    }
-}
-#endif
-
-
 StdIFStream::StdIFStream (const char fileName[]):
     IStream (fileName),
     _is (new ifstream (fileName, ios_base::binary)),
@@ -167,21 +152,6 @@ StdIFStream::clear ()
 {
     _is->clear();
 }
-
-
-#if defined _WIN32
-StdOFStream::StdOFStream (const wchar_t fileNameW[], const char fileName[]):
-    OStream (fileName),
-    _os (new ofstream (fileNameW, ios_base::binary)),
-    _deleteStream (true)
-{
-    if (!*_os)
-    {
-    delete _os;
-    Iex::throwErrnoExc();
-    }
-}
-#endif
 
 
 StdOFStream::StdOFStream (const char fileName[]):

@@ -114,11 +114,9 @@ bool  Jpeg2KDecoder::readHeader()
     bool result = false;
 
     close();
-#if defined _WIN32
-    jas_stream_t* stream = jas_stream_wfopen( m_filename.c_str(), "rb" );
-#else
-    jas_stream_t* stream = jas_stream_fopen( m_filename.c_str(), "rb" );
-#endif
+
+    FILE* fp = m_filename.openPath( _CREATE_PATH("rb") );
+    jas_stream_t* stream = jas_stream_freopen( "", "rb", fp );
     m_stream = stream;
 
     if( stream )
@@ -166,6 +164,11 @@ bool  Jpeg2KDecoder::readHeader()
                 result = true;
             }
         }
+    }
+    else
+    {
+        // jas_stream_close() will only close the input file, if a stream was created
+        fclose( fp );
     }
 
     if( !result )
@@ -512,16 +515,18 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
         result = writeComponent16u( img, _img );
     if( result )
     {
-#if defined _WIN32
-        jas_stream_t *stream = jas_stream_wfopen( m_filename.c_str(), "wb" );
-#else
-        jas_stream_t *stream = jas_stream_fopen( m_filename.c_str(), "wb" );
-#endif
+        FILE* fp = m_filename.openPath( _CREATE_PATH("wb") );
+        jas_stream_t *stream = jas_stream_freopen( "", "wb", fp );
         if( stream )
         {
             result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)"" );
 
             jas_stream_close( stream );
+        }
+        else
+        {
+            // jas_stream_close() will only close the input file, if a stream was created
+            fclose( fp );
         }
 
     }
