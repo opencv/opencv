@@ -101,7 +101,12 @@ Thanks to:
 
 #include <tchar.h>
 #include <stdlib.h>
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
+// MinGW sprintf is would be defined as non stdio one. So 
+// include this later after dshow.h declaration, otherwise compile failure 
+// because mingw dshow sprintf has it's own declaration that is different from the standard
 #include <stdio.h>
+#endif
 #include <math.h>
 #include <string.h>
 #include <wchar.h>
@@ -115,6 +120,10 @@ Thanks to:
 #include "dvdmedia.h"
 #include "bdaiface.h"
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#undef sprintf
+#include <stdio.h>
+#endif
 //for threading
 #include <process.h>
 
