@@ -305,6 +305,8 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
+    CV_IPP_RUN(allch1, ipp_merge(mv, dst, (int)n));
+
     if( !allch1 )
     {
         AutoBuffer<int> pairs(cn*2);
@@ -322,8 +324,6 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         mixChannels( mv, n, &dst, 1, &pairs[0], cn );
         return;
     }
-
-    CV_IPP_RUN_FAST(ipp_merge(mv, dst, (int)n));
 
     MergeFunc func = getMergeFunc(depth);
     CV_Assert( func != 0 );

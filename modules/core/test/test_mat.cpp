@@ -1896,6 +1896,7 @@ TEST(Core_Merge, bug_13544)
     Mat src_arr[] = { src1, src2, src3 };
     Mat dst;
     merge(src_arr, 3, dst);
+    ASSERT_EQ(9, dst.channels());  // Avoid memory access out of buffer
     EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[6]);
     EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[7]);
     EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[8]);
