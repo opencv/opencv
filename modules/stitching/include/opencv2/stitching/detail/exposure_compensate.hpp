@@ -60,6 +60,7 @@ namespace detail {
 class CV_EXPORTS_W ExposureCompensator
 {
 public:
+    ExposureCompensator(): updateGain(true) {}
     virtual ~ExposureCompensator() {}
 
     enum { NO, GAIN, GAIN_BLOCKS, CHANNELS, CHANNELS_BLOCKS };
@@ -189,7 +190,7 @@ public:
     CV_WRAP BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
             : BlocksGainCompensator(bl_width, bl_height, 1) {}
     CV_WRAP BlocksGainCompensator(int bl_width, int bl_height, int nr_feeds)
-            : BlocksCompensator(bl_width, bl_height, nr_feeds) {setUpdateGain(true);}
+            : BlocksCompensator(bl_width, bl_height, nr_feeds) {}
 
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
@@ -210,7 +211,7 @@ class CV_EXPORTS_W BlocksChannelsCompensator : public BlocksCompensator
 {
 public:
     CV_WRAP BlocksChannelsCompensator(int bl_width=32, int bl_height=32, int nr_feeds=1)
-            : BlocksCompensator(bl_width, bl_height, nr_feeds) {setUpdateGain(true);}
+            : BlocksCompensator(bl_width, bl_height, nr_feeds) {}
 
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
