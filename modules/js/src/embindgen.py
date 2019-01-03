@@ -163,6 +163,13 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
                              'getColorAdaptation', 'setColorAdaptation']
         }
 
+aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+        'aruco_Dictionary': ['get', 'drawMarker'],
+        'aruco_Board': ['create'],
+        'aruco_GridBoard': ['create', 'draw'],
+        'aruco_CharucoBoard': ['create', 'draw'],
+        }
+
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -173,7 +180,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco])
 
 # Features to be exported
 export_enums = False
