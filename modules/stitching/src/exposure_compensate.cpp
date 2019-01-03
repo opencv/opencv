@@ -62,11 +62,10 @@ Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
         e = makePtr<ChannelsCompensator>();
     else if (type == CHANNELS_BLOCKS)
         e = makePtr<BlocksChannelsCompensator>();
+
     if (e.get() != nullptr)
-    {
-        e->setUpdateGain(true);
         return e;
-    }
+
     CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
 }
 
