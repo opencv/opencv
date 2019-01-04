@@ -83,8 +83,11 @@ parser.add_argument('--seam_megapix',action = 'store', default = 0.1,help=' Reso
 parser.add_argument('--seam',action = 'store', default = 'no',help='Seam estimation method. The default is "gc_color".',type=str,dest = 'seam' )
 parser.add_argument('--compose_megapix',action = 'store', default = -1,help='Resolution for compositing step. Use -1 for original resolution.',type=float,dest = 'compose_megapix' )
 parser.add_argument('--expos_comp',action = 'store', default = 'no',help='Exposure compensation method. The default is "gain_blocks".',type=str,dest = 'expos_comp' )
+parser.add_argument('--expos_comp_nr_feeds',action = 'store', default = 1,help='Number of exposure compensation feed.',type=np.int32,dest = 'expos_comp_nr_feeds' )
+parser.add_argument('--expos_comp_nr_filtering',action = 'store', default = 2,help='Number of filtering iterations of the exposure compensation gains',type=float,dest = 'expos_comp_nr_filtering' )
+parser.add_argument('--expos_comp_block_size',action = 'store', default = 32,help='BLock size in pixels used by the exposure compensator.',type=np.int32,dest = 'expos_comp_block_size' )
 parser.add_argument('--blend',action = 'store', default = 'multiband',help='Blending method. The default is "multiband".',type=str,dest = 'blend' )
-parser.add_argument('--blend_strength',action = 'store', default = 5,help='Blending strength from [0,100] range.',type=int,dest = 'blend_strength' )
+parser.add_argument('--blend_strength',action = 'store', default = 5,help='Blending strength from [0,100] range.',type=np.int32,dest = 'blend_strength' )
 parser.add_argument('--output',action = 'store', default = 'result.jpg',help='The default is "result.jpg"',type=str,dest = 'output' )
 parser.add_argument('--timelapse',action = 'store', default = None,help='Output warped images separately as frames of a time lapse movie, with "fixed_" prepended to input file names.',type=str,dest = 'timelapse' )
 parser.add_argument('--rangewidth',action = 'store', default = -1,help='uses range_width to limit number of images to match with.',type=int,dest = 'rangewidth' )
@@ -119,10 +122,16 @@ elif  args.expos_comp=='gain':
     expos_comp_type = cv.detail.ExposureCompensator_GAIN
 elif  args.expos_comp=='gain_blocks':
     expos_comp_type = cv.detail.ExposureCompensator_GAIN_BLOCKS
+elif  args.expos_comp=='channel':
+    expos_comp_type = cv.detail.ExposureCompensator_CHANNELS
+elif  args.expos_comp=='channel_blocks':
+    expos_comp_type = cv.detail.ExposureCompensator_CHANNELS_BLOCKS
 else:
     print("Bad exposure compensation method")
-    exit
-
+    exit()
+expos_comp_nr_feeds = args.expos_comp_nr_feeds
+expos_comp_nr_filtering = args.expos_comp_nr_filtering
+expos_comp_block_size = args.expos_comp_block_size
 match_conf = args.match_conf
 seam_find_type = args.seam
 blend_type = args.blend
@@ -180,7 +189,7 @@ for name in img_names:
     img = cv.resize(src=full_img, dsize=None, fx=seam_scale, fy=seam_scale, interpolation=cv.INTER_LINEAR_EXACT)
     images.append(img)
 if matcher_type== "affine":
-    matcher = cv.detail.AffineBestOf2NearestMatcher_create(False, try_cuda, match_conf)
+    matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
 elif range_width==-1:
     matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
 else:
@@ -189,14 +198,14 @@ p=matcher.apply2(features)
 matcher.collectGarbage()
 if save_graph:
     f = open(save_graph_to,"w")
-#        f.write(matchesGraphAsString(img_names, pairwise_matches, conf_thresh))
+    f.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
     f.close()
 indices=cv.detail.leaveBiggestComponent(features,p,0.3)
 img_subset =[]
 img_names_subset=[]
 full_img_sizes_subset=[]
 num_images=len(indices)
-for i in range(0,num_images):
+for i in range(len(indices)):
     img_names_subset.append(img_names[indices[i,0]])
     img_subset.append(images[indices[i,0]])
     full_img_sizes_subset.append(full_img_sizes[indices[i,0]])
@@ -273,26 +282,33 @@ for i in range(0,num_images):
     masks.append(um)
 
 warper = cv.PyRotationWarper(warp_type,warped_image_scale*seam_work_aspect) # warper peut etre nullptr?
-for i in range(0,num_images):
-    K = cameras[i].K().astype(np.float32)
+for idx in range(0,num_images):
+    K = cameras[idx].K().astype(np.float32)
     swa = seam_work_aspect
     K[0,0] *= swa
     K[0,2] *= swa
     K[1,1] *= swa
     K[1,2] *= swa
-    corner,image_wp =warper.warp(images[i],K,cameras[i].R,cv.INTER_LINEAR, cv.BORDER_REFLECT)
+    corner,image_wp =warper.warp(images[idx],K,cameras[idx].R,cv.INTER_LINEAR, cv.BORDER_REFLECT)
     corners.append(corner)
     sizes.append((image_wp.shape[1],image_wp.shape[0]))
     images_warped.append(image_wp)
 
-    p,mask_wp =warper.warp(masks[i],K,cameras[i].R,cv.INTER_NEAREST, cv.BORDER_CONSTANT)
-    masks_warped.append(mask_wp)
+    p,mask_wp =warper.warp(masks[idx],K,cameras[idx].R,cv.INTER_NEAREST, cv.BORDER_CONSTANT)
+    masks_warped.append(mask_wp.get())
 images_warped_f=[]
 for img in images_warped:
     imgf=img.astype(np.float32)
     images_warped_f.append(imgf)
-compensator=cv.detail.ExposureCompensator_createDefault(expos_comp_type)
-compensator.feed(corners, images_warped, masks_warped)
+if cv.detail.ExposureCompensator_CHANNELS == expos_comp_type:
+    compensator = cv.detail_ChannelsCompensator(expos_comp_nr_feeds)
+#    compensator.setNrGainsFilteringIterations(expos_comp_nr_filtering)
+elif cv.detail.ExposureCompensator_CHANNELS_BLOCKS == expos_comp_type:
+    compensator=cv.detail_BlocksChannelsCompensator(expos_comp_block_size, expos_comp_block_size,expos_comp_nr_feeds)
+#    compensator.setNrGainsFilteringIterations(expos_comp_nr_filtering)
+else:
+    compensator=cv.detail.ExposureCompensator_createDefault(expos_comp_type)
+compensator.feed(corners=corners, images=images_warped, masks=masks_warped)
 if seam_find_type == "no":
     seam_finder = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_NO)
 elif seam_find_type == "voronoi":
@@ -332,7 +348,7 @@ for idx,name in enumerate(img_names): # https://github.com/opencv/opencv/blob/ma
             cameras[i].focal *= compose_work_aspect
             cameras[i].ppx *= compose_work_aspect
             cameras[i].ppy *= compose_work_aspect
-            sz = (full_img.shape[1] * compose_scale,full_img.shape[0] * compose_scale)
+            sz = (full_img_sizes[i][0] * compose_scale,full_img_sizes[i][1]* compose_scale)
             K = cameras[i].K().astype(np.float32)
             roi = warper.warpRoi(sz, K, cameras[i].R);
             corners.append(roi[0:2])
@@ -353,21 +369,20 @@ for idx,name in enumerate(img_names): # https://github.com/opencv/opencv/blob/ma
     seam_mask = cv.resize(dilated_mask,(mask_warped.shape[1],mask_warped.shape[0]),0,0,cv.INTER_LINEAR_EXACT)
     mask_warped = cv.bitwise_and(seam_mask,mask_warped)
     if blender==None and not timelapse:
-        blender = cv.detail.Blender_createDefault(1)
-        dst_sz = cv.detail.resultRoi(corners,sizes)
-        blend_strength=1
+        blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
+        dst_sz = cv.detail.resultRoi(corners=corners,sizes=sizes)
         blend_width = np.sqrt(dst_sz[2]*dst_sz[3]) * blend_strength / 100
         if blend_width < 1:
             blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
-        elif blend_type == "MULTI_BAND":
-            blender = cv.detail.Blender_createDefault(cv.detail.Blender_MULTIBAND)
+        elif blend_type == "multiband":
+            blender = cv.detail_MultiBandBlender()
             blender.setNumBands((np.log(blend_width)/np.log(2.) - 1.).astype(np.int))
-        elif blend_type == "FEATHER":
-            blender = cv.detail.Blender_createDefault(cv.detail.Blender_FEATHER)
+        elif blend_type == "feather":
+            blender = cv.detail_FeatherBlender()
             blender.setSharpness(1./blend_width)
-        blender.prepare(corners, sizes)
+        blender.prepare(dst_sz)
     elif timelapser==None  and timelapse:
-        timelapser = cv.detail.createDefault(timelapse_type);
+        timelapser = cv.detail.Timelapser_createDefault(timelapse_type)
         timelapser.initialize(corners, sizes)
     if timelapse:
         matones=np.ones((image_warped_s.shape[0],image_warped_s.shape[1]), np.uint8)
@@ -379,9 +394,14 @@ for idx,name in enumerate(img_names): # https://github.com/opencv/opencv/blob/ma
             fixedFileName = img_names[idx][:pos_s + 1 ]+"fixed_" + img_names[idx][pos_s + 1: ]
         cv.imwrite(fixedFileName, timelapser.getDst())
     else:
-        blender.feed(image_warped_s, mask_warped, corners[idx])
+        blender.feed(cv.UMat(image_warped_s), mask_warped, corners[idx])
 if not timelapse:
     result=None
     result_mask=None
     result,result_mask = blender.blend(result,result_mask)
     cv.imwrite(result_name,result)
+    zoomx =600/result.shape[1]
+    dst=cv.normalize(src=result,dst=None,alpha=255.,norm_type=cv.NORM_MINMAX,dtype=cv.CV_8U)
+    dst=cv.resize(dst,dsize=None,fx=zoomx,fy=zoomx)
+    cv.imshow(result_name,dst)
+    cv.waitKey()
