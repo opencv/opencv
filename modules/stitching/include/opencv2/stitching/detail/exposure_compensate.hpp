@@ -159,12 +159,14 @@ class CV_EXPORTS_W BlocksCompensator : public ExposureCompensator
 {
 public:
     BlocksCompensator(int bl_width=32, int bl_height=32, int nr_feeds=1)
-            : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds) {}
+            : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds), nr_gain_filtering_iterations_(2) {}
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
     CV_WRAP int getNrFeeds() { return nr_feeds_; }
+    CV_WRAP void setNrGainsFilteringIterations(int nr_iterations) { nr_gain_filtering_iterations_ = nr_iterations; }
+    CV_WRAP int getNrGainsFilteringIterations() const { return nr_gain_filtering_iterations_; }
 
 protected:
     template<class Compensator>
@@ -178,6 +180,7 @@ private:
     int bl_width_, bl_height_;
     std::vector<UMat> gain_maps_;
     int nr_feeds_;
+    int nr_gain_filtering_iterations_;
 };
 
 /** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image block
