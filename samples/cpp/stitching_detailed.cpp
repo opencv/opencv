@@ -707,6 +707,11 @@ int main(int argc, char* argv[])
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
+    LOGLN("Compensating exposure...");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
+
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     if (dynamic_cast<GainCompensator*>(compensator.get()))
     {
@@ -729,6 +734,13 @@ int main(int argc, char* argv[])
     }
 
     compensator->feed(corners, images_warped, masks_warped);
+
+    LOGLN("Compensating exposure, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+
+    LOGLN("Finding seams...");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
 
     Ptr<SeamFinder> seam_finder;
     if (seam_find_type == "no")
@@ -764,6 +776,8 @@ int main(int argc, char* argv[])
     }
 
     seam_finder->find(images_warped_f, corners, masks_warped);
+
+    LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Release unused memory
     images.clear();
