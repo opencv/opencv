@@ -44,7 +44,7 @@ static void printUsage()
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb|sift)\n"
+        "  --features (surf|orb|sift|akaze)\n"
         "      Type of features used for images matching.\n"
         "      The default is surf if available, orb otherwise.\n"
         "  --matcher (homography|affine)\n"
@@ -419,6 +419,10 @@ int main(int argc, char* argv[])
     if (features_type == "orb")
     {
         finder = ORB::create();
+    }
+    else if (features_type == "akaze")
+    {
+        finder = AKAZE::create();
     }
 #ifdef HAVE_OPENCV_XFEATURES2D
     else if (features_type == "surf")
