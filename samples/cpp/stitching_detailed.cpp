@@ -45,7 +45,8 @@ static void printUsage()
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
         "  --features (surf|orb|sift)\n"
-        "      Type of features used for images matching. The default is surf.\n"
+        "      Type of features used for images matching.\n"
+        "      The default is surf if available, orb otherwise.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
         "  --estimator (homography|affine)\n"
@@ -113,7 +114,11 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
+#ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
+#else
+string features_type = "orb";
+#endif
 string matcher_type = "homography";
 string estimator_type = "homography";
 string ba_cost_func = "ray";
