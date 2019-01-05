@@ -1,0 +1,44 @@
+#include "opencv2/opencv.hpp"
+#include "opencv2\videostab.hpp"
+#include <opencv2/opencv.hpp"
+#include "iostream"
+ 
+using namespace std;
+using namespace cv::videostab;
+using namespace cv;
+
+int main(int argc, const char * argv[])
+{
+	
+		 auto  vid_to_stab =makePtr<VideoFileSource>(argv[1]);  // create a video file  source to use for stabilazation, this will be passed to the stabilizer
+     
+	   auto   vid_to_disp = makePtr<VideoFileSource>(argv[1]); // while this source will be used to display the original video file
+     
+		 auto stabilizer = makePtr<OnePassStabilizer>(); //create a one pass stabilizer for the stabilization
+		 stabilizer->setFrameSource(vid_to_stab); //
+     
+		 //stabilizer->setBorderMode(BORDER_CONSTANT);
+     
+	  Mat stabilizeredframe, both;
+
+		
+		while (!(stabilizeredframe = stabilizer->nextFrame()).empty() && 27 != waitKey(1)) // this is a while loop where the stabilizer gives us the next
+			//frame of the video till there is no more frame or some specific  keys are pressed 
+
+		{						
+			
+			hconcat(vid_to_disp->nextFrame(), stabilizeredframe, both); // hconcat will display the videos in a horizontal  format while, 
+			// vid_to_disp will give us the next frame of the video, stabilizeredframe will contain the stabilizered video  
+			namedWindow("ORIGINAL :::: STABILIZERED", WINDOW_NORMAL);
+      
+			resizeWindow("ORIGINAL :::: STABILIZERED", 900, 900 * both.rows / both.cols); // resize the video window to suit my want 
+      
+			imshow("ORIGINAL :::: STABILIZERED", both);
+
+		}
+		
+
+
+	
+	return 0;
+}
