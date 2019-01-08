@@ -1383,4 +1383,16 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
 }
 
+TEST(UMat, resize_Mat_issue_13577)
+{
+    // save the current state
+    bool useOCL = cv::ocl::useOpenCL();
+
+    cv::ocl::setUseOpenCL(false);
+    UMat foo(10, 10, CV_32FC1);
+    cv::resize(foo, foo, cv::Size(), .5, .5);
+
+    cv::ocl::setUseOpenCL(useOCL);  // restore state
+}
+
 } } // namespace opencv_test::ocl
