@@ -201,6 +201,12 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
         double alpha = 0.01;
         double beta = 100;
         int num_eq = num_images - countNonZero(skip);
+        gains_.create(num_images, 1);
+        gains_.setTo(1);
+
+        // No image process, gains are all set to one, stop here
+        if (num_eq == 0)
+            return;
 
         Mat_<double> A(num_eq, num_eq); A.setTo(0);
         Mat_<double> b(num_eq, 1); b.setTo(0);
@@ -248,12 +254,10 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
 #endif
         CV_CheckTypeEQ(l_gains.type(), CV_64FC1, "");
 
-        gains_.create(num_images, 1);
         for (int i = 0, j = 0; i < num_images; ++i)
         {
-            if (skip(i, 0))
-                gains_.at<double>(i, 0) = 1;
-            else
+            // Only assign non-skipped gains. Other gains are already set to 1
+            if (!skip(i, 0))
                 gains_.at<double>(i, 0) = l_gains(j++, 0);
         }
     }
