@@ -1644,7 +1644,40 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
+TEST(Mat, regression_13586_mat)
+{
+    Mat mat1(2, 2, CV_8UC3, Scalar::all(1));
+    mat1 += 3;
+    mat1 -= 1;
+    EXPECT_EQ(3, mat1.ptr<uchar>(0)[0]);
+    EXPECT_EQ(3, mat1.ptr<uchar>(0)[1]);
+    EXPECT_EQ(3, mat1.ptr<uchar>(0)[2]);
+    mat1 &= 5;
+    mat1 |= 12;
+    mat1 ^= 6;
+    EXPECT_EQ(11, mat1.ptr<uchar>(1)[0]);
+    EXPECT_EQ(11, mat1.ptr<uchar>(1)[1]);
+    EXPECT_EQ(11, mat1.ptr<uchar>(1)[2]);
+}
+
+TEST(Mat_, regression_13586_mat_)
+{
+    Mat3b mat2(2,2, Vec3b::all(1));
+    mat2 += 7;
+    mat2 -= 1;
+    EXPECT_EQ(7, mat2.ptr<uchar>(0)[0]);
+    EXPECT_EQ(7, mat2.ptr<uchar>(0)[1]);
+    EXPECT_EQ(7, mat2.ptr<uchar>(0)[2]);
+    mat2 &= 5;
+    mat2 |= 12;
+    mat2 ^= 7;
+    EXPECT_EQ(10, mat2.ptr<uchar>(1)[0]);
+    EXPECT_EQ(10, mat2.ptr<uchar>(1)[1]);
+    EXPECT_EQ(10, mat2.ptr<uchar>(1)[2]);
+}
+
 #ifdef CV_CXX_STD_ARRAY
+
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
