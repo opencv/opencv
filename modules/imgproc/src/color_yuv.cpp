@@ -102,11 +102,44 @@ struct RGB2YCrCb_f<float>
 
         int i = 0;
 #if CV_SIMD
+        v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
+        v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4);
+        v_float32 vdelta = vx_setall_f32(delta);
+        const int vsize = v_float32::nlanes;
+        for( ; i <= n-vsize;
+             i += vsize, src += vsize*scn, dst += vsize*3)
+        {
+            v_float32 b, g, r, dummy;
+            if(scn == 3)
+            {
+                v_load_deinterleave(src, b, g, r);
+            }
+            else
+            {
+                v_load_deinterleave(src, b, g, r, dummy);
+            }
 
+            v_float32 y, cr, cb;
+            y = b*vc0 + g*vc1 + r*vc2;
 
+            if(bidx)
+                std::swap(r, b);
+
+            cr = v_fma(r - y, vc3, vdelta);
+            cb = v_fma(b - y, vc4, vdelta);
+
+            if(yuvOrder)
+            {
+                v_store_interleave(dst, y, cb, cr);
+            }
+            else
+            {
+                v_store_interleave(dst, y, cr, cb);
+            }
+        }
         vx_cleanup();
 #endif
-        for ( ; i < n; i += 3, src += scn, dst += 3)
+        for ( ; i < n; i ++, src += scn, dst += 3)
         {
             float Y = src[0]*C0 + src[1]*C1 + src[2]*C2;
             float Cr = (src[bidx^2] - Y)*C3 + delta;
