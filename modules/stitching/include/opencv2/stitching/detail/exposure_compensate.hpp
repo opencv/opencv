@@ -165,6 +165,9 @@ public:
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
     CV_WRAP int getNrFeeds() { return nr_feeds_; }
+    CV_WRAP void setBlockSize(int width, int height) { bl_width_ = width; bl_height_ = height; }
+    CV_WRAP void setBlockSize(Size size) { setBlockSize(size.width, size.height); }
+    CV_WRAP Size getBlockSize() const { return Size(bl_width_, bl_height_); }
     CV_WRAP void setNrGainsFilteringIterations(int nr_iterations) { nr_gain_filtering_iterations_ = nr_iterations; }
     CV_WRAP int getNrGainsFilteringIterations() const { return nr_gain_filtering_iterations_; }
 
