@@ -60,7 +60,7 @@ namespace
 #ifdef WINRT
         WIN32_FIND_DATAW data;
 #else
-        WIN32_FIND_DATA data;
+        WIN32_FIND_DATAA data;
 #endif
         HANDLE handle;
         dirent ent;
