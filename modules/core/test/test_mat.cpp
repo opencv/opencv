@@ -1878,6 +1878,29 @@ TEST(Core_Split, crash_12171)
     EXPECT_EQ(2, dst2.ptr<uchar>(1)[1]);
 }
 
+TEST(Core_Merge, bug_13544)
+{
+    Mat src1(2, 2, CV_8UC3, Scalar::all(1));
+    Mat src2(2, 2, CV_8UC3, Scalar::all(2));
+    Mat src3(2, 2, CV_8UC3, Scalar::all(3));
+    Mat src_arr[] = { src1, src2, src3 };
+    Mat dst;
+    merge(src_arr, 3, dst);
+    ASSERT_EQ(9, dst.channels());  // Avoid memory access out of buffer
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[6]);
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[7]);
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(0)[8]);
+    EXPECT_EQ(1, (int)dst.ptr<uchar>(1)[0]);
+    EXPECT_EQ(1, (int)dst.ptr<uchar>(1)[1]);
+    EXPECT_EQ(1, (int)dst.ptr<uchar>(1)[2]);
+    EXPECT_EQ(2, (int)dst.ptr<uchar>(1)[3]);
+    EXPECT_EQ(2, (int)dst.ptr<uchar>(1)[4]);
+    EXPECT_EQ(2, (int)dst.ptr<uchar>(1)[5]);
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(1)[6]);
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(1)[7]);
+    EXPECT_EQ(3, (int)dst.ptr<uchar>(1)[8]);
+}
+
 struct CustomType  // like cv::Keypoint
 {
     Point2f pt;
