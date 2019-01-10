@@ -262,6 +262,9 @@ public:
         }
 
         int ngroups = inpCn / blobs[0].size[1];
+        if (ngroups == 0 || ngroups * blobs[0].size[1] != inpCn)
+            CV_Error(Error::StsError, format("Number of input channels should "
+                     "be multiple of %d but got %d", blobs[0].size[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
         int dims[] = {inputs[0][0], outCn, out.height, out.width};
