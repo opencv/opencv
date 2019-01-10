@@ -260,7 +260,7 @@ InferenceEngine::TBlob<int16_t>::Ptr convertFp16(const InferenceEngine::Blob::Pt
 class InfEngineBackendLayer : public Layer
 {
 public:
-    InfEngineBackendLayer(const InferenceEngine::DataPtr& output);
+    InfEngineBackendLayer(const InferenceEngine::CNNNetwork &t_net_) : t_net(t_net_) {};
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
@@ -273,7 +273,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE;
 
 private:
-    InferenceEngine::DataPtr output;
+    InferenceEngine::CNNNetwork t_net;
 };
 
 #endif  // HAVE_INF_ENGINE

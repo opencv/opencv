@@ -2600,7 +2600,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
     for (auto& it : ieNet.getOutputsInfo())
     {
-        Ptr<Layer> cvLayer(new InfEngineBackendLayer(it.second));
+        Ptr<Layer> cvLayer(new InfEngineBackendLayer(ieNet));
         InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(it.first.c_str());
         CV_Assert(ieLayer);
 

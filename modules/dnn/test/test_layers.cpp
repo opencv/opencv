@@ -1008,8 +1008,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Convolution_DLDT,
 // net.save('/path/to/caffemodel')
 //
 // 3. Convert using ModelOptimizer.
-typedef testing::TestWithParam<tuple<int, int, Target> > Test_DLDT_two_inputs;
-TEST_P(Test_DLDT_two_inputs, as_IR)
+typedef testing::TestWithParam<tuple<int, int, Target, std::vector<int> > > Test_DLDT_two_inputs_3dim;
+TEST_P(Test_DLDT_two_inputs_3dim, as_IR)
 {
     int firstInpType = get<0>(GetParam());
     int secondInpType = get<1>(GetParam());
@@ -1021,9 +1021,9 @@ TEST_P(Test_DLDT_two_inputs, as_IR)
 #endif
 
     Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
-    int inpSize[] = {1, 2, 3};
-    Mat firstInp(3, &inpSize[0], firstInpType);
-    Mat secondInp(3, &inpSize[0], secondInpType);
+    std::vector<int> inpSize = get<3>(GetParam());
+    Mat firstInp(3, inpSize.data(), firstInpType);
+    Mat secondInp(3, inpSize.data(), secondInpType);
     randu(firstInp, 0, 255);
     randu(secondInp, 0, 255);
 
@@ -1046,6 +1046,15 @@ TEST_P(Test_DLDT_two_inputs, as_IR)
     }
 }
 
+std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13, 7, 11} };
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
+  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+  testing::ValuesIn(list_sizes)
+));
+
+typedef testing::TestWithParam<tuple<int, int, Target> > Test_DLDT_two_inputs;
 TEST_P(Test_DLDT_two_inputs, as_backend)
 {
     static const float kScale = 0.5f;
