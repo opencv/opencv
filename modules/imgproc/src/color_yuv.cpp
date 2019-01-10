@@ -170,7 +170,10 @@ template<typename _Tp> struct RGB2YCrCb_i
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
 
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
         if(blueIdx==0) std::swap(coeffs[0], coeffs[2]);
     }
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -208,7 +211,10 @@ struct RGB2YCrCb_i<uchar>
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -306,7 +312,10 @@ struct RGB2YCrCb_i<ushort>
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -433,7 +442,10 @@ struct RGB2YCrCb_i<uchar>
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -600,7 +612,10 @@ struct RGB2YCrCb_i<ushort>
     {
         static const int coeffs_crb[] = { R2Y, G2Y, B2Y, YCRI, YCBI };
         static const int coeffs_yuv[] = { R2Y, G2Y, B2Y, R2VI, B2UI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 5*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
         if (blueIdx==0)
             std::swap(coeffs[0], coeffs[2]);
 
@@ -857,7 +872,10 @@ template<typename _Tp> struct YCrCb2RGB_i
     {
         static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
         static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
+        for(int i = 0; i < 4; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
     }
 
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -902,7 +920,10 @@ struct YCrCb2RGB_i<uchar>
     {
         static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
         static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
-        memcpy(coeffs, isCrCb ? coeffs_crb : coeffs_yuv, 4*sizeof(coeffs[0]));
+        for(int i = 0; i < 5; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
 
         v_c0 = vdupq_n_s32(coeffs[0]);
         v_c1 = vdupq_n_s32(coeffs[1]);
