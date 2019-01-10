@@ -1644,36 +1644,39 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
-TEST(Mat, regression_13586_mat)
+template<typename MatType, typename Type>
+static void OverloadingTestFor1Channel_EachOp(const MatType& m, Type c)
 {
-    Mat mat1(2, 2, CV_8UC3, Scalar::all(1));
-    mat1 += 3;
-    mat1 -= 1;
-    EXPECT_EQ(3, mat1.ptr<uchar>(0)[0]);
-    EXPECT_EQ(3, mat1.ptr<uchar>(0)[1]);
-    EXPECT_EQ(3, mat1.ptr<uchar>(0)[2]);
-    mat1 &= 5;
-    mat1 |= 12;
-    mat1 ^= 6;
-    EXPECT_EQ(11, mat1.ptr<uchar>(1)[0]);
-    EXPECT_EQ(11, mat1.ptr<uchar>(1)[1]);
-    EXPECT_EQ(11, mat1.ptr<uchar>(1)[2]);
+    EXPECT_ANY_THROW(m += c);
+    EXPECT_ANY_THROW(m -= c);
+    EXPECT_ANY_THROW(m &= c);
+    EXPECT_ANY_THROW(m |= c);
+    EXPECT_ANY_THROW(m ^= c);
 }
 
-TEST(Mat_, regression_13586_mat_)
+template<typename MatType>
+static void OverloadingTestFor1Channel_EachType(const MatType& m)
 {
-    Mat3b mat2(2,2, Vec3b::all(1));
-    mat2 += 7;
-    mat2 -= 1;
-    EXPECT_EQ(7, mat2.ptr<uchar>(0)[0]);
-    EXPECT_EQ(7, mat2.ptr<uchar>(0)[1]);
-    EXPECT_EQ(7, mat2.ptr<uchar>(0)[2]);
-    mat2 &= 5;
-    mat2 |= 12;
-    mat2 ^= 7;
-    EXPECT_EQ(10, mat2.ptr<uchar>(1)[0]);
-    EXPECT_EQ(10, mat2.ptr<uchar>(1)[1]);
-    EXPECT_EQ(10, mat2.ptr<uchar>(1)[2]);
+    OverloadingTestFor1Channel_EachOp< MatType, bool>               (m, true);
+    OverloadingTestFor1Channel_EachOp< MatType, char>               (m, (char)1);
+    OverloadingTestFor1Channel_EachOp< MatType, unsigned char>      (m, (unsigned char)1);
+    OverloadingTestFor1Channel_EachOp< MatType, short>              (m, (short)1);
+    OverloadingTestFor1Channel_EachOp< MatType, unsigned short>     (m, (unsigned short)1);
+    OverloadingTestFor1Channel_EachOp< MatType, int>                (m, 1);
+    OverloadingTestFor1Channel_EachOp< MatType, unsigned int>       (m, (unsigned int)1);
+    OverloadingTestFor1Channel_EachOp< MatType, long>               (m, (long)1);
+    OverloadingTestFor1Channel_EachOp< MatType, unsigned long>      (m, (unsigned long)1);
+    OverloadingTestFor1Channel_EachOp< MatType, float>              (m, 1.0f);
+    OverloadingTestFor1Channel_EachOp< MatType, double>             (m, 1.0);
+}
+
+TEST(Mat, regression_13586)
+{
+    Mat m1(2, 2, CV_8UC3, Scalar::all(1));
+    OverloadingTestFor1Channel_EachType(m1);
+    Mat4b m2(2, 2);
+    m2.setTo(0);
+    OverloadingTestFor1Channel_EachType(m2);
 }
 
 #ifdef CV_CXX_STD_ARRAY
