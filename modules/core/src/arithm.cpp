@@ -603,7 +603,41 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
                       void* usrdata=0, int oclop=-1 )
 {
-    const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
+    struct InputArray_backup
+    {
+        InputArray_backup(InputArray src, OutputArray dst)
+        {
+            if (src.getObj() == dst.getObj())
+            {
+                _InputArray::KindFlag k = src.kind();
+                if (k == _InputArray::KindFlag::UMAT)
+                {
+                    tmp_umat = src.getUMat();
+                    input_arr = _InputArray(tmp_umat);
+                }
+                else
+                {
+                    tmp_mat = src.getMat();
+                    input_arr = _InputArray(tmp_mat);
+                }
+            }
+            else
+            {
+                input_arr = src;
+            }
+        }
+        Mat tmp_mat;
+        UMat tmp_umat;
+        _InputArray input_arr;
+    };
+
+    const InputArray_backup src_backup1(_src1, _dst);
+    const InputArray_backup src_backup2(_src2, _dst);
+
+    CV_Assert(src_backup1.input_arr.getObj() != _dst.getObj());
+    CV_Assert(src_backup2.input_arr.getObj() != _dst.getObj());
+
+    const _InputArray *psrc1 = &src_backup1.input_arr, *psrc2 = &src_backup2.input_arr;
     int kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
     bool reallocate = false;

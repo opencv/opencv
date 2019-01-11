@@ -1969,6 +1969,29 @@ TEST(Core_InputArray, support_CustomType)
     }
 }
 
+TEST(Core_InputArray, issue_8385)
+{
+    Mat x(1, 2, CV_8UC1, Scalar::all(3)), y;
+    cv::add(x, 2.0, x);
+    cv::multiply(x, x, x, 1, CV_16UC1);
+    EXPECT_EQ(25, (int)x.ptr<ushort>()[0]);
+    EXPECT_EQ(25, (int)x.ptr<ushort>()[1]);
+}
+
+TEST(Core_InputArray, issue_9688)
+{
+    Mat x(1, 1, CV_64FC1);
+    Mat p(10, 4, CV_64FC1);
+    x.setTo(0);
+    p.setTo(Scalar::all(5));
+    for (int i = 0; i < p.rows; i++)
+        x += p.row(i);
+    ASSERT_DOUBLE_EQ(50.0, x.ptr<double>()[0]);
+    ASSERT_DOUBLE_EQ(50.0, x.ptr<double>()[1]);
+    ASSERT_DOUBLE_EQ(50.0, x.ptr<double>()[2]);
+    ASSERT_DOUBLE_EQ(50.0, x.ptr<double>()[3]);
+}
+
 TEST(Core_Vectors, issue_13078)
 {
     float floats_[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
