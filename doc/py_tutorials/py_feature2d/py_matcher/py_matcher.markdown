@@ -53,8 +53,8 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-img1 = cv.imread('box.png',cv.IMREAD_UNCHANGED)          # queryImage
-img2 = cv.imread('box_in_scene.png',cv.IMREAD_UNCHANGED) # trainImage
+img1 = cv.imread('box.png',cv.IMREAD_GRAYSCALE)          # queryImage
+img2 = cv.imread('box_in_scene.png',cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate ORB detector
 orb = cv.ORB_create()
@@ -106,8 +106,8 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-img1 = cv.imread('box.png',cv.IMREAD_UNCHANGED)          # queryImage
-img2 = cv.imread('box_in_scene.png',cv.IMREAD_UNCHANGED) # trainImage
+img1 = cv.imread('box.png',cv.IMREAD_GRAYSCALE)          # queryImage
+img2 = cv.imread('box_in_scene.png',cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
 sift = cv.xfeatures2d.SIFT_create()
@@ -170,8 +170,8 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-img1 = cv.imread('box.png',cv.IMREAD_UNCHANGED)          # queryImage
-img2 = cv.imread('box_in_scene.png',cv.IMREAD_UNCHANGED) # trainImage
+img1 = cv.imread('box.png',cv.IMREAD_GRAYSCALE)          # queryImage
+img2 = cv.imread('box_in_scene.png',cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
 sift = cv.xfeatures2d.SIFT_create()
