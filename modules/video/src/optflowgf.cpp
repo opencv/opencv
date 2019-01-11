@@ -646,8 +646,6 @@ private:
         Size size = frame0.size();
         UMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
         UMat flowx0 = flowx;
         UMat flowy0 = flowy;
 
@@ -1075,12 +1073,19 @@ private:
             return false;
 
         std::vector<UMat> flowar;
-        if (!_flow0.empty())
+
+        // If flag is set, check for integrity; if not set, allocate memory space
+        if (flags_ & OPTFLOW_USE_INITIAL_FLOW)
+        {
+            if (_flow0.empty() || _flow0.size() != _prev0.size() || _flow0.channels() != 2 ||
+                _flow0.depth() != CV_32F)
+                return false;
             split(_flow0, flowar);
+        }
         else
         {
-            flowar.push_back(UMat());
-            flowar.push_back(UMat());
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
         }
         if(!this->operator()(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1])){
             return false;
@@ -1112,7 +1117,14 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
     CV_Assert( prev0.size() == next0.size() && prev0.channels() == next0.channels() &&
                prev0.channels() == 1 && pyrScale_ < 1 );
-    _flow0.create( prev0.size(), CV_32FC2 );
+
+    // If flag is set, check for integrity; if not set, allocate memory space
+    if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
+        CV_Assert( _flow0.size() == prev0.size() && _flow0.channels() == 2 &&
+                   _flow0.depth() == CV_32F );
+    else
+        _flow0.create( prev0.size(), CV_32FC2 );
+
     Mat flow0 = _flow0.getMat();
 
     for( k = 0, scale = 1; k < levels; k++ )
