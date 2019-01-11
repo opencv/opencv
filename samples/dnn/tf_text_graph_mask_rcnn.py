@@ -55,7 +55,7 @@ graph_def = parseTextGraph(args.output)
 removeIdentity(graph_def)
 
 def to_remove(name, op):
-    return name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep) or \
+    return op == 'Const' or name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep) or \
            (name.startswith('CropAndResize') and op != 'CropAndResize')
 
 removeUnusedNodesAndAttrs(to_remove, graph_def)

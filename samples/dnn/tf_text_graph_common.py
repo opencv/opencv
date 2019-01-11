@@ -289,7 +289,7 @@ def removeUnusedNodesAndAttrs(to_remove, graph_def):
         op = graph_def.node[i].op
         name = graph_def.node[i].name
 
-        if op == 'Const' or to_remove(name, op):
+        if to_remove(name, op):
             if op != 'Const':
                 removedNodes.append(name)
 
