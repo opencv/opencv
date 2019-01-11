@@ -353,7 +353,7 @@ protected:
         rvecs_spnp.resize(brdsNum);
         tvecs_spnp.resize(brdsNum);
         for(size_t i = 0; i < brdsNum; ++i)
-            solvePnP(Mat(objectPoints[i]), Mat(imagePoints[i]), camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
+            solvePnP(objectPoints[i], imagePoints[i], camMat, distCoeffs, rvecs_spnp[i], tvecs_spnp[i]);
 
         compareShiftVecs(tvecs_exp, tvecs_spnp);
         compareRotationVecs(rvecs_exp, rvecs_spnp);
