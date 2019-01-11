@@ -197,8 +197,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
     centers.clear();
 
     std::vector < std::vector<Point> > contours;
-    Mat tmpBinaryImage = binaryImage.clone();
-    findContours(tmpBinaryImage, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    findContours(binaryImage, contours, RETR_LIST, CHAIN_APPROX_NONE);
 
 #ifdef DEBUG_BLOB_DETECTOR
     //  Mat keypointsImage;
@@ -214,7 +213,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
     {
         Center center;
         center.confidence = 1;
-        Moments moms = moments(Mat(contours[contourIdx]));
+        Moments moms = moments(contours[contourIdx]);
         if (params.filterByArea)
         {
             double area = moms.m00;
@@ -225,7 +224,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         if (params.filterByCircularity)
         {
             double area = moms.m00;
-            double perimeter = arcLength(Mat(contours[contourIdx]), true);
+            double perimeter = arcLength(contours[contourIdx], true);
             double ratio = 4 * CV_PI * area / (perimeter * perimeter);
             if (ratio < params.minCircularity || ratio >= params.maxCircularity)
                 continue;
@@ -261,9 +260,9 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         if (params.filterByConvexity)
         {
             std::vector < Point > hull;
-            convexHull(Mat(contours[contourIdx]), hull);
-            double area = contourArea(Mat(contours[contourIdx]));
-            double hullArea = contourArea(Mat(hull));
+            convexHull(contours[contourIdx], hull);
+            double area = contourArea(contours[contourIdx]);
+            double hullArea = contourArea(hull);
             if (fabs(hullArea) < DBL_EPSILON)
                 continue;
             double ratio = area / hullArea;
