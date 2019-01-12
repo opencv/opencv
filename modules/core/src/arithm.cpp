@@ -609,8 +609,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         {
             if (src.getObj() == dst.getObj())
             {
-                _InputArray::KindFlag k = src.kind();
-                if (k == _InputArray::KindFlag::UMAT)
+                if (src.isUMat())
                 {
                     tmp_umat = src.getUMat();
                     input_arr = _InputArray(tmp_umat);
