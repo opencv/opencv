@@ -40,7 +40,7 @@ TEST(Test_TensorFlow, read_inception)
     ASSERT_TRUE(!sample.empty());
     Mat input;
     resize(sample, input, Size(224, 224));
-    input -= 128; // mean sub
+    input -= Scalar::all(117); // mean sub
 
     Mat inputBlob = blobFromImage(input);
 
