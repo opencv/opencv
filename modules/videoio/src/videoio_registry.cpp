@@ -3,10 +3,13 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
+#include <map>
 
 #include "videoio_registry.hpp"
 
 #include "opencv2/videoio/registry.hpp"
+
+#include <iostream>
 
 #include "cap_librealsense.hpp"
 #include "cap_dshow.hpp"
@@ -15,6 +18,8 @@
 #include "cap_mfx_reader.hpp"
 #include "cap_mfx_writer.hpp"
 #endif
+
+#include "plugin_api.hpp"
 
 // All WinRT versions older than 8.0 should provide classes used for video support
 #if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
@@ -28,18 +33,21 @@
 #pragma warning(disable: 4748)
 #endif
 
-using namespace cv;
+//=================================================================
+// Private interface
+//=================================================================
 
 namespace cv
 {
+#define DECLARE_DYNAMIC_BACKEND(cap, name, mode) \
+{ \
+    cap, (BackendMode)(mode | MODE_DYNAMIC), 1000, name "_DYNAMIC", 0 \
+}
 
-static bool param_VIDEOIO_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_DEBUG", false);
-static bool param_VIDEOCAPTURE_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOCAPTURE_DEBUG", false);
-static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOWRITER_DEBUG", false);
-
-namespace {
-
-#define DECLARE_BACKEND(cap, name, mode) { cap, (BackendMode)(mode), 1000, name }
+#define DECLARE_STATIC_BACKEND(cap, name, mode, f1, f2, f3) \
+{ \
+    cap, (BackendMode)(mode), 1000, name, Ptr<StaticBackend>(new StaticBackend(f1, f2, f3)) \
+}
 
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
@@ -52,245 +60,220 @@ namespace {
 static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
-    DECLARE_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
-#endif
-#ifdef HAVE_GSTREAMER
-    DECLARE_BACKEND(CAP_GSTREAMER, "GSTREAMER", MODE_CAPTURE_ALL | MODE_WRITER),
-#endif
-#ifdef HAVE_MFX // Media SDK
-    DECLARE_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
+    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateVideoWriter_FFMPEG_proxy),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 #endif
 
+#ifdef HAVE_GSTREAMER
+    DECLARE_STATIC_BACKEND(CAP_GSTREAMER, "GSTREAMER", MODE_CAPTURE_ALL | MODE_WRITER, createGStreamerCapture_file, createGStreamerCapture_cam, create_GStreamer_writer),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_GSTREAMER, "GSTREAMER", MODE_CAPTURE_ALL | MODE_WRITER),
+#endif
+
+#ifdef HAVE_MFX // Media SDK
+    DECLARE_STATIC_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, create_MFX_capture, 0, create_MFX_writer),
+#endif
 
     // Apple platform
 #ifdef HAVE_AVFOUNDATION
-    DECLARE_BACKEND(CAP_AVFOUNDATION, "AVFOUNDATION", MODE_CAPTURE_ALL | MODE_WRITER),
+    DECLARE_STATIC_BACKEND(CAP_AVFOUNDATION, "AVFOUNDATION", MODE_CAPTURE_ALL | MODE_WRITER, create_AVFoundation_capture_file, create_AVFoundation_capture_cam, create_AVFoundation_writer),
 #endif
 
     // Windows
 #ifdef WINRT_VIDEO
-    DECLARE_BACKEND(CAP_WINRT, "WINRT", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_WINRT, "WINRT", MODE_CAPTURE_BY_INDEX, 0, create_WRT_capture, 0),
 #endif
 #ifdef HAVE_MSMF
-    DECLARE_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER),
+    DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF),
 #endif
 #ifdef HAVE_DSHOW
-    DECLARE_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0),
 #endif
 
     // Linux, some Unix
 #if defined HAVE_CAMV4L2
-    DECLARE_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL),
+    DECLARE_STATIC_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0),
 #elif defined HAVE_VIDEOIO
-    DECLARE_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL),
+    DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0),
 #endif
 
 
     // RGB-D universal
 #ifdef HAVE_OPENNI2
-    DECLARE_BACKEND(CAP_OPENNI2, "OPENNI2", MODE_CAPTURE_ALL),
+    DECLARE_STATIC_BACKEND(CAP_OPENNI2, "OPENNI2", MODE_CAPTURE_ALL, create_OpenNI2_capture_file, create_OpenNI2_capture_cam, 0),
 #endif
 
 #ifdef HAVE_LIBREALSENSE
-    DECLARE_BACKEND(CAP_REALSENSE, "INTEL_REALSENSE", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_REALSENSE, "INTEL_REALSENSE", MODE_CAPTURE_BY_INDEX, 0, create_RealSense_capture, 0),
 #endif
 
     // OpenCV file-based only
-    DECLARE_BACKEND(CAP_IMAGES, "CV_IMAGES", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
-    DECLARE_BACKEND(CAP_OPENCV_MJPEG, "CV_MJPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
+    DECLARE_STATIC_BACKEND(CAP_IMAGES, "CV_IMAGES", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, create_Images_capture, 0, create_Images_writer),
+    DECLARE_STATIC_BACKEND(CAP_OPENCV_MJPEG, "CV_MJPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, createMotionJpegCapture, 0, createMotionJpegWriter),
 
     // special interfaces / stereo cameras / other SDKs
 #if defined(HAVE_DC1394_2)
-    DECLARE_BACKEND(CAP_FIREWIRE, "FIREWIRE", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_FIREWIRE, "FIREWIRE", MODE_CAPTURE_BY_INDEX, 0, create_DC1394_capture, 0),
 #endif
     // GigE
 #ifdef HAVE_PVAPI
-    DECLARE_BACKEND(CAP_PVAPI, "PVAPI", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_PVAPI, "PVAPI", MODE_CAPTURE_BY_INDEX, 0, create_PvAPI_capture, 0),
 #endif
 #ifdef HAVE_XIMEA
-    DECLARE_BACKEND(CAP_XIAPI, "XIMEA", MODE_CAPTURE_ALL),
+    DECLARE_STATIC_BACKEND(CAP_XIAPI, "XIMEA", MODE_CAPTURE_ALL, create_XIMEA_capture_file, create_XIMEA_capture_cam, 0),
 #endif
 #ifdef HAVE_ARAVIS_API
-    DECLARE_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX),
+    DECLARE_STATIC_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX, 0, create_Aravis_capture, 0),
 #endif
 
 #ifdef HAVE_GPHOTO2
-    DECLARE_BACKEND(CAP_GPHOTO2, "GPHOTO2", MODE_CAPTURE_ALL),
+    DECLARE_STATIC_BACKEND(CAP_GPHOTO2, "GPHOTO2", MODE_CAPTURE_ALL, createGPhoto2Capture, createGPhoto2Capture, 0),
 #endif
 #ifdef HAVE_XINE
-    DECLARE_BACKEND(CAP_XINE, "XINE", MODE_CAPTURE_BY_FILENAME),
+    DECLARE_STATIC_BACKEND(CAP_XINE, "XINE", MODE_CAPTURE_BY_FILENAME, createXINECapture, 0, 0),
 #endif
-
     // dropped backends: MIL, TYZX, Android
 };
 
-bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
+inline static bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
 {
     return lhs.priority > rhs.priority;
 }
 
-/** @brief Manages list of enabled backends
- */
-class VideoBackendRegistry
+inline static std::vector<std::string> tokenize_string(const std::string& input, char token = ',')
 {
-protected:
-    std::vector<VideoBackendInfo> enabledBackends;
-    VideoBackendRegistry()
+    std::vector<std::string> result;
+    std::string::size_type prev_pos = 0, pos = 0;
+    while((pos = input.find(token, pos)) != std::string::npos)
     {
-        const int N = sizeof(builtin_backends)/sizeof(builtin_backends[0]);
-        enabledBackends.assign(builtin_backends, builtin_backends + N);
-        for (int i = 0; i < N; i++)
+        result.push_back(input.substr(prev_pos, pos-prev_pos));
+        prev_pos = ++pos;
+    }
+    result.push_back(input.substr(prev_pos));
+    return result;
+}
+
+VideoBackendRegistry::VideoBackendRegistry()
+{
+    typedef std::vector<std::string> PriorityVec;
+    using namespace cv::utils;
+    const std::string backendOrder_str = getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
+    const PriorityVec backendOrder = tokenize_string(backendOrder_str);
+    if (!backendOrder.empty())
+    {
+        CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << backendOrder_str);
+    }
+
+    const int N = sizeof(builtin_backends)/sizeof(builtin_backends[0]);
+    for (int i = 0; i < N; ++i)
+    {
+        VideoBackendInfo be = builtin_backends[i];
+
+        // Check if backend needs plugin
+        if (be.mode & MODE_DYNAMIC)
         {
-            VideoBackendInfo& info = enabledBackends[i];
-            info.priority = 1000 - i * 10;
-        }
-        CV_LOG_DEBUG(NULL, "VIDEOIO: Builtin backends(" << N << "): " << dumpBackends());
-        if (readPrioritySettings())
-        {
-            CV_LOG_INFO(NULL, "VIDEOIO: Updated backends priorities: " << dumpBackends());
-        }
-        int enabled = 0;
-        for (int i = 0; i < N; i++)
-        {
-            VideoBackendInfo& info = enabledBackends[enabled];
-            if (enabled != i)
-                info = enabledBackends[i];
-            size_t param_priority = utils::getConfigurationParameterSizeT(cv::format("OPENCV_VIDEOIO_PRIORITY_%s", info.name).c_str(), (size_t)info.priority);
-            CV_Assert(param_priority == (size_t)(int)param_priority); // overflow check
-            if (param_priority > 0)
+            Ptr<DynamicBackend> plugin = DynamicBackend::load(be.id, (int)be.mode);
+            if (!plugin)
             {
-                info.priority = (int)param_priority;
-                enabled++;
+                CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << be.name << " (no plugin)");
+                continue;
             }
             else
             {
-                CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << info.name);
+                be.backendFactory = plugin;
             }
         }
-        enabledBackends.resize(enabled);
-        CV_LOG_DEBUG(NULL, "VIDEOIO: Available backends(" << enabled << "): " << dumpBackends());
-        std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
-        CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
-    }
 
-    static std::vector<std::string> tokenize_string(const std::string& input, char token)
-    {
-        std::vector<std::string> result;
-        std::string::size_type prev_pos = 0, pos = 0;
-        while((pos = input.find(token, pos)) != std::string::npos)
+        // initial priority (e.g. for 4 elems: 1000, 990, 980, 970)
+        be.priority = 1000 - i * 10;
+        CV_LOG_INFO(NULL, "VIDEOIO: Init backend priority: " << be.name << " -> " << be.priority);
+
+        // priority from environment list (e.g. for 4 elems: 13000, 12000, 11000, 10000)
+        PriorityVec::const_iterator backendPos = std::find(backendOrder.begin(), backendOrder.end(), be.name);
+        if (backendPos != backendOrder.end())
         {
-            result.push_back(input.substr(prev_pos, pos-prev_pos));
-            prev_pos = ++pos;
+            const int env_priority2 = static_cast<int>(backendOrder.end() - backendPos - 1);
+            be.priority = 10000 + 1000 * env_priority2;
+            CV_LOG_INFO(NULL, "VIDEOIO: Update backend priority: " << be.name << " -> " << be.priority);
         }
-        result.push_back(input.substr(prev_pos));
-        return result;
-    }
-    bool readPrioritySettings()
-    {
-        bool hasChanges = false;
-        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
-        if (prioritized_backends.empty())
-            return hasChanges;
-        CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << prioritized_backends);
-        const std::vector<std::string> names = tokenize_string(prioritized_backends, ',');
-        for (size_t i = 0; i < names.size(); i++)
+
+        // priority from environment variable
+        const std::string priority_var = std::string("OPENCV_VIDEOIO_PRIORITY_") + be.name;
+        const size_t env_priority2 = getConfigurationParameterSizeT(priority_var.c_str(), (size_t)be.priority);
+        CV_Assert(env_priority2 == (size_t)(int)env_priority2); // overflow check
+        if (env_priority2 == 0)
         {
-            const std::string& name = names[i];
-            bool found = false;
-            for (size_t k = 0; k < enabledBackends.size(); k++)
-            {
-                VideoBackendInfo& info = enabledBackends[k];
-                if (name == info.name)
-                {
-                    info.priority = (int)(100000 + (names.size() - i) * 1000);
-                    CV_LOG_DEBUG(NULL, "VIDEOIO: New backend priority: '" << name << "' => " << info.priority);
-                    found = true;
-                    hasChanges = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                CV_LOG_WARNING(NULL, "VIDEOIO: Can't prioritize unknown/unavailable backend: '" << name << "'");
-            }
+            CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << be.name << " (user)");
+            continue;
         }
-        return hasChanges;
-    }
-public:
-    std::string dumpBackends() const
-    {
-        std::ostringstream os;
-        for (size_t i = 0; i < enabledBackends.size(); i++)
+        else if (be.priority != (int)env_priority2)
         {
-            if (i > 0) os << "; ";
-            const VideoBackendInfo& info = enabledBackends[i];
-            os << info.name << '(' << info.priority << ')';
+            be.priority = (int)env_priority2;
+            CV_LOG_INFO(NULL, "VIDEOIO: Update backend priority: " << be.name << " -> " << be.priority);
         }
-        return os.str();
+
+        enabledBackends.push_back(be);
     }
+    std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
+    CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends: " << dumpBackends());
+}
 
-    static VideoBackendRegistry& getInstance()
-    {
-        static VideoBackendRegistry g_instance;
-        return g_instance;
-    }
-
-    inline std::vector<VideoBackendInfo> getEnabledBackends() const { return enabledBackends; }
-
-    inline std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex() const
-    {
-        std::vector<VideoBackendInfo> result;
-        for (size_t i = 0; i < enabledBackends.size(); i++)
-        {
-            const VideoBackendInfo& info = enabledBackends[i];
-            if (info.mode & MODE_CAPTURE_BY_INDEX)
-                result.push_back(info);
-        }
-        return result;
-    }
-    inline std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename() const
-    {
-        std::vector<VideoBackendInfo> result;
-        for (size_t i = 0; i < enabledBackends.size(); i++)
-        {
-            const VideoBackendInfo& info = enabledBackends[i];
-            if (info.mode & MODE_CAPTURE_BY_FILENAME)
-                result.push_back(info);
-        }
-        return result;
-    }
-    inline std::vector<VideoBackendInfo> getAvailableBackends_Writer() const
-    {
-        std::vector<VideoBackendInfo> result;
-        for (size_t i = 0; i < enabledBackends.size(); i++)
-        {
-            const VideoBackendInfo& info = enabledBackends[i];
-            if (info.mode & MODE_WRITER)
-                result.push_back(info);
-        }
-        return result;
-    }
-};
-
-} // namespace
-
-namespace videoio_registry {
-
-std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex()
+std::string VideoBackendRegistry::dumpBackends() const
 {
-    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
+    std::ostringstream os;
+    for (size_t i = 0; i < enabledBackends.size(); i++)
+    {
+        if (i > 0) os << "; ";
+        const VideoBackendInfo& info = enabledBackends[i];
+        os << info.name << '(' << info.priority << ')';
+    }
+    return os.str();
+}
+
+VideoBackendRegistry &VideoBackendRegistry::getInstance()
+{
+    static VideoBackendRegistry g_instance;
+    return g_instance;
+}
+
+Ptr<IBackend> VideoBackendRegistry::getBackend(VideoCaptureAPIs api) const
+{
+    BackendsVec result;
+    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
+        if (api == i->id)
+            return i->backendFactory;
+    return Ptr<IBackend>(0);
+}
+
+VideoBackendRegistry::BackendsVec VideoBackendRegistry::getBackends(int capabilityMask, VideoCaptureAPIs filter) const
+{
+    BackendsVec result;
+    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
+    {
+        if (filter != CAP_ANY && filter != i->id)
+            continue;
+        if (i->mode & capabilityMask)
+            result.push_back(*i);
+    }
     return result;
 }
-std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename()
+
+bool VideoBackendRegistry::hasBackend(int mask, VideoCaptureAPIs api) const
 {
-    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
-    return result;
+    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
+        if (api == i->id && mask & i->mode)
+            return true;
+    return false;
 }
-std::vector<VideoBackendInfo> getAvailableBackends_Writer()
-{
-    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_Writer();
-    return result;
-}
+
+} // cv::
+
+//=================================================================
+// Public interface
+//=================================================================
+
+namespace cv {  namespace videoio_registry {
 
 cv::String getBackendName(VideoCaptureAPIs api)
 {
@@ -306,317 +289,42 @@ cv::String getBackendName(VideoCaptureAPIs api)
     return cv::format("UnknownVideoAPI(%d)", (int)api);
 }
 
-std::vector<VideoCaptureAPIs> getBackends()
+bool hasBackend(VideoCaptureAPIs api, Capability cap)
 {
-    std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getEnabledBackends();
+    int mask = 0;
+    if (cap == Read || cap == ReadWrite)
+        mask |= MODE_CAPTURE_ALL;
+    if (cap == Write || cap == ReadWrite)
+        mask |= MODE_WRITER;
+    return VideoBackendRegistry::getInstance().hasBackend(mask, api);
+}
+
+inline static std::vector<VideoCaptureAPIs> toIDs(const std::vector<VideoBackendInfo> &backends)
+{
     std::vector<VideoCaptureAPIs> result;
     for (size_t i = 0; i < backends.size(); i++)
         result.push_back((VideoCaptureAPIs)backends[i].id);
     return result;
+}
+
+std::vector<VideoCaptureAPIs> getBackends()
+{
+    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_ALL + MODE_WRITER));
 }
 
 std::vector<VideoCaptureAPIs> getCameraBackends()
 {
-    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
-    std::vector<VideoCaptureAPIs> result;
-    for (size_t i = 0; i < backends.size(); i++)
-        result.push_back((VideoCaptureAPIs)backends[i].id);
-    return result;
-
+    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_BY_INDEX));
 }
 
 std::vector<VideoCaptureAPIs> getStreamBackends()
 {
-    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
-    std::vector<VideoCaptureAPIs> result;
-    for (size_t i = 0; i < backends.size(); i++)
-        result.push_back((VideoCaptureAPIs)backends[i].id);
-    return result;
-
+    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_BY_FILENAME));
 }
 
 std::vector<VideoCaptureAPIs> getWriterBackends()
 {
-    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_Writer();
-    std::vector<VideoCaptureAPIs> result;
-    for (size_t i = 0; i < backends.size(); i++)
-        result.push_back((VideoCaptureAPIs)backends[i].id);
-    return result;
+    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_WRITER));
 }
 
-} // namespace registry
-
-#define TRY_OPEN(backend_func) \
-{ \
-    try { \
-        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
-        icap = backend_func; \
-        if (param_VIDEOIO_DEBUG ||param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p isOpened=%d ...\n", \
-                #backend_func, icap.empty() ? NULL : icap.get(), icap.empty() ? -1: icap->isOpened())); \
-    } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
-    } \
-    break; \
-}
-
-#define TRY_OPEN_LEGACY(backend_func) \
-{ \
-    try { \
-        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
-        capture = backend_func; \
-        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p ...\n", #backend_func, capture)); \
-    } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
-    } \
-    break; \
-}
-
-
-void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, int index)
-{
-    CV_UNUSED(capture); CV_UNUSED(icap);
-    switch (api)
-    {
-    default:
-        CV_LOG_WARNING(NULL, "VideoCapture(index=" << index << ") was built without support of requested backendID=" << (int)api);
-        break;
-#ifdef HAVE_GSTREAMER
-    case CAP_GSTREAMER:
-        TRY_OPEN(createGStreamerCapture(index));
-        break;
-#endif
-#ifdef HAVE_MSMF
-    case CAP_MSMF:
-        TRY_OPEN(cvCreateCapture_MSMF(index));
-        break;
-#endif
-#ifdef HAVE_DSHOW
-    case CAP_DSHOW:
-        TRY_OPEN(makePtr<VideoCapture_DShow>(index));
-        break;
-#endif
-#ifdef HAVE_LIBREALSENSE
-    case CAP_REALSENSE:
-        TRY_OPEN(makePtr<VideoCapture_LibRealsense>(index));
-        break;
-#endif
-#ifdef WINRT_VIDEO
-    case CAP_WINRT:
-        TRY_OPEN(makePtr<cv::VideoCapture_WinRT>(index));
-        break;
-#endif
-#ifdef HAVE_GPHOTO2
-    case CAP_GPHOTO2:
-        TRY_OPEN(createGPhoto2Capture(index));
-        break;
-#endif
-#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
-    case CAP_V4L:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(index))
-        break;
-#endif
-    case CAP_FIREWIRE:
-#ifdef HAVE_DC1394_2
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_DC1394_2(index))
-#endif
-        break; // CAP_FIREWIRE
-#ifdef HAVE_MIL
-    case CAP_MIL:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_MIL(index))
-        break;
-#endif
-#ifdef HAVE_PVAPI
-    case CAP_PVAPI:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_PvAPI(index))
-        break;
-#endif
-#ifdef HAVE_OPENNI2
-    case CAP_OPENNI2:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_OpenNI2(index))
-        break;
-#endif
-#ifdef HAVE_XIMEA
-    case CAP_XIAPI:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_XIMEA(index))
-        break;
-#endif
-
-#ifdef HAVE_AVFOUNDATION
-    case CAP_AVFOUNDATION:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_AVFoundation(index))
-        break;
-#endif
-
-#ifdef HAVE_ARAVIS_API
-    case CAP_ARAVIS:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_Aravis(index))
-        break;
-#endif
-    } // switch (api)
-}
-
-void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, const cv::String& filename)
-{
-    CV_UNUSED(capture);
-    switch (api)
-    {
-    default:
-        CV_LOG_WARNING(NULL, "VideoCapture(filename=" << filename << ") was built without support of requested backendID=" << (int)api);
-        break;
-#if defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
-    case CAP_V4L:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_V4L(filename.c_str()))
-        break;
-#endif
-
-#ifdef HAVE_AVFOUNDATION
-    case CAP_AVFOUNDATION:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_AVFoundation(filename.c_str()))
-        break;
-#endif
-
-#ifdef HAVE_OPENNI2
-    case CAP_OPENNI2:
-        TRY_OPEN_LEGACY(cvCreateFileCapture_OpenNI2(filename.c_str()))
-        break;
-#endif
-#ifdef HAVE_XIMEA
-    case CAP_XIAPI:
-        TRY_OPEN_LEGACY(cvCreateCameraCapture_XIMEA(filename.c_str()))
-        break;
-#endif
-    case CAP_IMAGES:
-        TRY_OPEN(createFileCapture_Images(filename))
-        break;
-#ifdef HAVE_FFMPEG
-    case CAP_FFMPEG:
-        TRY_OPEN(cvCreateFileCapture_FFMPEG_proxy(filename))
-        break;
-#endif
-#ifdef HAVE_GSTREAMER
-    case CAP_GSTREAMER:
-        TRY_OPEN(createGStreamerCapture(filename))
-        break;
-#endif
-#ifdef HAVE_XINE
-    case CAP_XINE:
-        TRY_OPEN(createXINECapture(filename.c_str()))
-        break;
-#endif
-#ifdef HAVE_MSMF
-    case CAP_MSMF:
-        TRY_OPEN(cvCreateCapture_MSMF(filename))
-        break;
-#endif
-#ifdef HAVE_GPHOTO2
-    case CAP_GPHOTO2:
-        TRY_OPEN(createGPhoto2Capture(filename))
-        break;
-#endif
-#ifdef HAVE_MFX
-    case CAP_INTEL_MFX:
-        TRY_OPEN(makePtr<VideoCapture_IntelMFX>(filename))
-        break;
-#endif
-    case CAP_OPENCV_MJPEG:
-        TRY_OPEN(createMotionJpegCapture(filename))
-        break;
-    } // switch
-}
-
-
-void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, VideoCaptureAPIs api,
-        const String& filename, int fourcc, double fps, const Size& frameSize, bool isColor)
-{
-#define CREATE_WRITER(backend_func) \
-{ \
-    try { \
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
-        iwriter = backend_func; \
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", #backend_func, iwriter.empty() ? NULL : iwriter.get(), iwriter.empty() ? iwriter->isOpened() : -1)); \
-    } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
-    } \
-    break; \
-}
-
-#define CREATE_WRITER_LEGACY(backend_func) \
-{ \
-    try { \
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", #backend_func)); \
-        writer = backend_func; \
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p...\n", #backend_func, writer)); \
-    } catch(const cv::Exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch (const std::exception& e) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", #backend_func, e.what())); \
-    } catch(...) { \
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", #backend_func)); \
-    } \
-    break; \
-}
-
-    switch (api)
-    {
-    default:
-        CV_LOG_ERROR(NULL, "Unknown VideoWriter backend (check getBuildInformation()): " << (int)api);
-        break;
-#ifdef HAVE_FFMPEG
-    case CAP_FFMPEG:
-        CREATE_WRITER(cvCreateVideoWriter_FFMPEG_proxy(filename, fourcc, fps, frameSize, isColor));
-        break;
-#endif
-#ifdef HAVE_MSMF
-    case CAP_MSMF:
-        CREATE_WRITER(cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, isColor));
-        break;
-#endif
-#ifdef HAVE_MFX
-    case CAP_INTEL_MFX:
-        CREATE_WRITER(VideoWriter_IntelMFX::create(filename, fourcc, fps, frameSize, isColor));
-        break;
-#endif
-#ifdef HAVE_AVFOUNDATION
-    case CAP_AVFOUNDATION:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
-        break;
-#endif
-#ifdef HAVE_GSTREAMER
-case CAP_GSTREAMER:
-        CREATE_WRITER_LEGACY(cvCreateVideoWriter_GStreamer (filename.c_str(), fourcc, fps, cvSize(frameSize), isColor))
-        break;
-#endif
-    case CAP_OPENCV_MJPEG:
-        CREATE_WRITER(createMotionJpegWriter(filename, fourcc, fps, frameSize, isColor));
-        break;
-    case CAP_IMAGES:
-        if(!fourcc || !fps)
-        {
-            CREATE_WRITER_LEGACY(cvCreateVideoWriter_Images(filename.c_str()));
-        }
-        break;
-    } // switch(api)
-}
-
-
-} // namespace
+}} // cv::videoio_registry::
