@@ -306,7 +306,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     // batch size 1
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_MYRIAD)
 #endif
     // batch size 2
