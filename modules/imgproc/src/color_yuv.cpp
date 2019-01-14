@@ -1503,6 +1503,142 @@ struct YCrCb2RGB_i<uchar>
 #endif // CV_SSE2
 
 
+template <>
+struct YCrCb2RGB_i<ushort>
+{
+    typedef ushort channel_type;
+    static const int shift = yuv_shift;
+
+    YCrCb2RGB_i(int _dstcn, int _blueIdx, bool _isCrCb)
+        : dstcn(_dstcn), blueIdx(_blueIdx), isCrCb(_isCrCb)
+    {
+        static const int coeffs_crb[] = { CR2RI, CR2GI, CB2GI, CB2BI};
+        static const int coeffs_yuv[] = {  V2RI,  V2GI,  U2GI, U2BI };
+        for(int i = 0; i < 4; i++)
+        {
+            coeffs[i] = isCrCb ? coeffs_crb[i] : coeffs_yuv[i];
+        }
+    }
+
+    void operator()(const ushort* src, ushort* dst, int n) const
+    {
+        int dcn = dstcn, bidx = blueIdx, i = 0;
+        int yuvOrder = !isCrCb; //1 if YUV, 0 if YCrCb
+        const ushort delta = ColorChannel<ushort>::half(), alpha = ColorChannel<ushort>::max();
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2], C3 = coeffs[3];
+
+#if CV_SIMD
+        const int vsize = v_uint16::nlanes;
+        const int descaleShift = 1 << (shift-1);
+        v_uint16 valpha = vx_setall_u16(alpha);
+        v_uint16 vdelta = vx_setall_u16(delta);
+        v_int16 vc0 = vx_setall_s16(C0), vc1 = vx_setall_s16(C1), vc2 = vx_setall_s16(C2);
+        // if YUV then C3 > 2^15, need to subtract it
+        // to fit in short by short multiplication
+        v_int16 vc3 = vx_setall_s16(yuvOrder ? C3-(1 << 15) : C3);
+        v_int32 z32 = vx_setzero_s32();
+        v_int32 vdescale = vx_setall_s32(descaleShift);
+        for(; i <= n-vsize;
+            i += vsize, src += vsize*3, dst += vsize*dcn)
+        {
+            v_uint16 y, cr, cb;
+            if(yuvOrder)
+            {
+                v_load_deinterleave(src, y, cb, cr);
+            }
+            else
+            {
+                v_load_deinterleave(src, y, cr, cb);
+            }
+
+            v_uint32 uy0, uy1;
+            v_expand(y, uy0, uy1);
+            v_int32 y0 = v_reinterpret_as_s32(uy0);
+            v_int32 y1 = v_reinterpret_as_s32(uy1);
+
+            cr = v_sub_wrap(cr, vdelta);
+            cb = v_sub_wrap(cb, vdelta);
+
+            v_int32 b0, b1, g0, g1, r0, r1;
+
+            v_int16 scb = v_reinterpret_as_s16(cb);
+            v_int16 scr = v_reinterpret_as_s16(cr);
+            v_mul_expand(scb, vc3, b0, b1);
+            if(yuvOrder)
+            {
+                // if YUV then C3 > 2^15
+                // so we fix the multiplication
+                v_int32 cb0, cb1;
+                v_expand(scb, cb0, cb1);
+                b0 += cb0 << 15;
+                b1 += cb1 << 15;
+            }
+            v_int32 t0, t1;
+            v_mul_expand(scb, vc2, t0, t1);
+            v_mul_expand(scr, vc1, g0, g1);
+            g0 += t0; g1 += t1;
+            v_mul_expand(scr, vc0, r0, r1);
+
+            b0 = ((b0 + vdescale) >> shift) + y0;
+            b1 = ((b1 + vdescale) >> shift) + y1;
+            g0 = ((g0 + vdescale) >> shift) + y0;
+            g1 = ((g1 + vdescale) >> shift) + y1;
+            r0 = ((r0 + vdescale) >> shift) + y0;
+            r1 = ((r1 + vdescale) >> shift) + y1;
+
+            // cut zeros
+            v_uint32 ub0, ub1, ug0, ug1, ur0, ur1;
+            ub0 = v_reinterpret_as_u32((b0 > z32) & b0);
+            ub1 = v_reinterpret_as_u32((b1 > z32) & b1);
+            ug0 = v_reinterpret_as_u32((g0 > z32) & g0);
+            ug1 = v_reinterpret_as_u32((g1 > z32) & g1);
+            ur0 = v_reinterpret_as_u32((r0 > z32) & r0);
+            ur1 = v_reinterpret_as_u32((r1 > z32) & r1);
+
+            v_uint16 b, g, r;
+            // saturate and pack
+            b = v_pack(ub0, ub1);
+            g = v_pack(ug0, ug1);
+            r = v_pack(ur0, ur1);
+
+            if(bidx)
+                swap(r, b);
+
+            if(dcn == 3)
+            {
+                v_store_interleave(dst, b, g, r);
+            }
+            else
+            {
+                v_store_interleave(dst, b, g, r, valpha);
+            }
+        }
+        vx_cleanup();
+#endif
+
+        for ( ; i < n; i++, src += 3, dst += dcn)
+        {
+            ushort Y  = src[0];
+            ushort Cr = src[1+yuvOrder];
+            ushort Cb = src[2-yuvOrder];
+
+            int b = Y + CV_DESCALE((Cb - delta)*C3, shift);
+            int g = Y + CV_DESCALE((Cb - delta)*C2 + (Cr - delta)*C1, shift);
+            int r = Y + CV_DESCALE((Cr - delta)*C0, shift);
+
+            dst[bidx]   = saturate_cast<ushort>(b);
+            dst[1]      = saturate_cast<ushort>(g);
+            dst[bidx^2] = saturate_cast<ushort>(r);
+            if( dcn == 4 )
+                dst[3] = alpha;
+        }
+    }
+    int dstcn, blueIdx;
+    bool isCrCb;
+    int coeffs[4];
+};
+
+
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
 const int ITUR_BT_601_CY = 1220542;
