@@ -124,7 +124,7 @@ protected:
 
         vector<Point2f> projectedPoints;
         projectedPoints.resize(points.size());
-        projectPoints(Mat(points), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
+        projectPoints(points, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
         for (size_t i = 0; i < projectedPoints.size(); i++)
         {
             if (i % 20 == 0)
@@ -241,7 +241,7 @@ protected:
 
         vector<Point2f> projectedPoints;
         projectedPoints.resize(opoints.size());
-        projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
+        projectPoints(opoints, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
         bool isEstimateSuccess = solvePnP(opoints, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, method);
         if (isEstimateSuccess == false)
@@ -291,7 +291,7 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
 
     vector<Point2f> projectedPoints;
     projectedPoints.resize(opoints.size());
-    projectPoints(Mat(opoints), trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
+    projectPoints(opoints, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
 
     int num_of_solutions = solveP3P(opoints, projectedPoints, intrinsics, distCoeffs, rvecs, tvecs, method);
     if (num_of_solutions != (int) rvecs.size() || num_of_solutions != (int) tvecs.size() || num_of_solutions == 0)
