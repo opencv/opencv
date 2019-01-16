@@ -128,7 +128,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                 // then add its operands to stack to continue recursion.
                 ops.visit(&node.priv(), node);
 
-                const cv::GCall         call   = origin.node.call();
+                const cv::GCall&        call   = origin.node.call();
                 const cv::GCall::Priv&  call_p = call.priv();
 
                 // Put the outputs object description of the node
