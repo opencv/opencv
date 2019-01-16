@@ -188,8 +188,8 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, bstep);
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, cstep);
-#ifdef _MSC_VER
-    const float MAGIC_SCALE = 0x0.01010102;
+#ifdef _WIN32
+    const float MAGIC_SCALE = 0x0.01010102p0;
 #else
     const float MAGIC_SCALE = 0x1.010102p-8;
 #endif

@@ -990,9 +990,11 @@ static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 #endif
 
 #ifdef HAVE_OPENVX
+} // close anonymous namespace #13634
 namespace ovx {
     template <> inline bool skipSmallImages<VX_KERNEL_MEDIAN_3x3>(int w, int h) { return w*h < 1280 * 720; }
 }
+namespace { // reopen it
 static bool openvx_medianFilter(InputArray _src, OutputArray _dst, int ksize)
 {
     if (_src.type() != CV_8UC1 || _dst.type() != CV_8U
