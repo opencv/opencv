@@ -242,7 +242,6 @@ struct RGB2YCrCb_i<ushort>
         v_zip(b2y, g2y, bg2y, dummy);
         v_zip(r2y, one, r12y, dummy);
 
-        v_int32 z32 = vx_setzero_s32();
         v_int16 vdescale = vx_setall_s16(1 << (shift-1));
         v_int32 vc3 = vx_setall_s32(C3);
         v_int32 vc4 = vx_setall_s32(C4);
@@ -312,16 +311,9 @@ struct RGB2YCrCb_i<ushort>
             scb0 = (sb0*vc4 + vdd) >> shift;
             scb1 = (sb1*vc4 + vdd) >> shift;
 
-            // cut zeros
-            v_uint32 cr0, cr1, cb0, cb1;
-            cr0 = v_reinterpret_as_u32((scr0 > z32) & scr0);
-            cr1 = v_reinterpret_as_u32((scr1 > z32) & scr1);
-            cb0 = v_reinterpret_as_u32((scb0 > z32) & scb0);
-            cb1 = v_reinterpret_as_u32((scb1 > z32) & scb1);
-
             // saturate and pack
-            cr = v_pack(cr0, cr1);
-            cb = v_pack(cb0, cb1);
+            cr = v_pack_u(scr0, scr1);
+            cb = v_pack_u(scb0, scb1);
 
             if(yuvOrder)
             {
@@ -507,8 +499,6 @@ struct RGB2YCrCb_i<uchar>
                 v_store_interleave(dst, y, cr, cb);
             }
         }
-        //TODO: write SIMD to use v_dotprod if possible
-
         vx_cleanup();
 #endif
 
@@ -525,11 +515,6 @@ struct RGB2YCrCb_i<uchar>
 
     int srccn, blueIdx, coeffs[5];
     bool isCrCb;
-    //TODO: remove this
-    __m128i v_delta_16, v_delta_32;
-    __m128i v_coeff;
-    __m128i v_shuffle2;
-    bool haveSIMD;
 };
 
 
@@ -1182,7 +1167,6 @@ struct YCrCb2RGB_i<ushort>
         // if YUV then C3 > 2^15, need to subtract it
         // to fit in short by short multiplication
         v_int16 vc3 = vx_setall_s16(yuvOrder ? C3-(1 << 15) : C3);
-        v_int32 z32 = vx_setzero_s32();
         v_int32 vdescale = vx_setall_s32(descaleShift);
         for(; i <= n-vsize;
             i += vsize, src += vsize*3, dst += vsize*dcn)
@@ -1232,20 +1216,11 @@ struct YCrCb2RGB_i<ushort>
             r0 = ((r0 + vdescale) >> shift) + y0;
             r1 = ((r1 + vdescale) >> shift) + y1;
 
-            // cut zeros
-            v_uint32 ub0, ub1, ug0, ug1, ur0, ur1;
-            ub0 = v_reinterpret_as_u32((b0 > z32) & b0);
-            ub1 = v_reinterpret_as_u32((b1 > z32) & b1);
-            ug0 = v_reinterpret_as_u32((g0 > z32) & g0);
-            ug1 = v_reinterpret_as_u32((g1 > z32) & g1);
-            ur0 = v_reinterpret_as_u32((r0 > z32) & r0);
-            ur1 = v_reinterpret_as_u32((r1 > z32) & r1);
-
-            v_uint16 b, g, r;
             // saturate and pack
-            b = v_pack(ub0, ub1);
-            g = v_pack(ug0, ug1);
-            r = v_pack(ur0, ur1);
+            v_uint16 b, g, r;
+            b = v_pack_u(b0, b1);
+            g = v_pack_u(g0, g1);
+            r = v_pack_u(r0, r1);
 
             if(bidx)
                 swap(r, b);
