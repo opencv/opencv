@@ -67,6 +67,45 @@ LogLevel getLogLevel()
     return getLogLevelVariable();
 }
 
+/**
+Default log filter.
+This default log filter preserves old behavior: it compares the message log level
+against the global log level. Other log message attributes are not checked.
+
+This filter must fit function prototype:
+typedef bool(*LogFilterFunctionType) (const ::cv::utils::logging::LogMeta&);
+*/
+
+static bool defaultLogFilter(const LogMeta& meta)
+{
+    // For example, compare this to original code, macro CV_LOG_FATAL
+    // ...
+    // if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_FATAL) break;
+    // ...
+    // LOG_LEVEL_FATAL is the level of the message itself;
+    // getLogLevel is the global log level filter threshold.
+    //
+    return (getLogLevelVariable() >= meta.level);
+}
+
+static LogFilterFunctionType& getLogFilterVariable()
+{
+    static LogFilterFunctionType g_logFilter = defaultLogFilter;
+    return g_logFilter;
+}
+
+LogFilterFunctionType setLogFilter(LogFilterFunctionType filter)
+{
+    LogFilterFunctionType old = getLogFilterVariable();
+    getLogFilterVariable() = filter;
+    return old;
+}
+
+LogFilterFunctionType getLogFilter()
+{
+    return getLogFilterVariable();
+}
+
 namespace internal {
 
 void writeLogMessage(LogLevel logLevel, const char* message)
