@@ -49,6 +49,15 @@ cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 }
 
+std::vector<cv::GMatDesc> cv::gapi::own::descr_of(std::vector<cv::gapi::own::Mat> const& vec)
+{
+    std::vector<cv::GMatDesc> vec_descr;
+    for(auto& mat : vec){
+        vec_descr.emplace_back(descr_of(mat));
+    }
+    return vec_descr;
+}
+
 namespace cv {
 std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
 {

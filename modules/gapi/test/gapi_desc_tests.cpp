@@ -40,6 +40,25 @@ TEST(GAPI_MetaDesc, MatDesc)
     EXPECT_EQ(480,     desc2.size.height);
 }
 
+TEST(GAPI_MetaDesc, VecMatDesc)
+{
+    using Mat = cv::gapi::own::Mat;
+    std::vector<Mat> vec = {
+    Mat(240, 320, CV_8U, nullptr),
+    Mat(480, 640, CV_8UC3, nullptr)};
+
+    const auto desc = cv::gapi::own::descr_of(vec);
+    EXPECT_EQ(CV_8U, desc[0].depth);
+    EXPECT_EQ(1,       desc[0].chan);
+    EXPECT_EQ(320,     desc[0].size.width);
+    EXPECT_EQ(240,     desc[0].size.height);
+
+    EXPECT_EQ(CV_8U, desc[1].depth);
+    EXPECT_EQ(3,       desc[1].chan);
+    EXPECT_EQ(640,     desc[1].size.width);
+    EXPECT_EQ(480,     desc[1].size.height);
+}
+
 TEST(GAPI_MetaDesc, Compare_Equal_MatDesc)
 {
     const auto desc1 = cv::GMatDesc{CV_8U, 1, {64, 64}};
