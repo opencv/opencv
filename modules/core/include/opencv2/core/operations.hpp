@@ -256,14 +256,6 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     template<typename _Tp, int m, int n> static inline A& operator op (A& a, const Matx<_Tp,m,n>& b) { cvop; return a; } \
     template<typename _Tp, int m, int n> static inline const A& operator op (const A& a, const Matx<_Tp,m,n>& b) { cvop; return a; }
 
-#define CV_MAT_AUG_OPERATOR_FOR1CHANNEL(op, cvop, A)   \
-    CV_MAT_AUG_OPERATOR1(op, CV_Assert(a.channels() == 1); cvop, A, double) \
-    CV_MAT_AUG_OPERATOR1(op, CV_Assert(a.channels() == 1); cvop, const A, double)
-
-#define CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(op, cvop, A) \
-    template<typename _Tp> CV_MAT_AUG_OPERATOR1(op, CV_Assert(a.channels() == 1); cvop, A, double) \
-    template<typename _Tp> CV_MAT_AUG_OPERATOR1(op, CV_Assert(a.channels() == 1); cvop, const A, double)
-
 CV_MAT_AUG_OPERATOR  (+=, cv::add(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (+=, cv::add(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Mat)
@@ -271,8 +263,6 @@ CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR_TN(+=, cv::add(a,Mat(b),a), Mat)
 CV_MAT_AUG_OPERATOR_TN(+=, cv::add(a,Mat(b),a), Mat_<_Tp>)
-CV_MAT_AUG_OPERATOR_FOR1CHANNEL  (+=, cv::add(a, b, a), Mat)
-CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(+=, cv::add(a, b, a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (-=, cv::subtract(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (-=, cv::subtract(a,b,a), Mat, Scalar)
@@ -281,8 +271,6 @@ CV_MAT_AUG_OPERATOR_T(-=, cv::subtract(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(-=, cv::subtract(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR_TN(-=, cv::subtract(a,Mat(b),a), Mat)
 CV_MAT_AUG_OPERATOR_TN(-=, cv::subtract(a,Mat(b),a), Mat_<_Tp>)
-CV_MAT_AUG_OPERATOR_FOR1CHANNEL  (-=, cv::subtract(a, b, a), Mat)
-CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(-=, cv::subtract(a, b, a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (*=, cv::gemm(a, b, 1, Mat(), 0, a, 0), Mat, Mat)
 CV_MAT_AUG_OPERATOR_T(*=, cv::gemm(a, b, 1, Mat(), 0, a, 0), Mat_<_Tp>, Mat)
@@ -307,8 +295,6 @@ CV_MAT_AUG_OPERATOR_T(&=, cv::bitwise_and(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(&=, cv::bitwise_and(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR_TN(&=, cv::bitwise_and(a, Mat(b), a), Mat)
 CV_MAT_AUG_OPERATOR_TN(&=, cv::bitwise_and(a, Mat(b), a), Mat_<_Tp>)
-CV_MAT_AUG_OPERATOR_FOR1CHANNEL  (&=, cv::bitwise_and(a, b, a), Mat)
-CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(&=, cv::bitwise_and(a, b, a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (|=, cv::bitwise_or(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (|=, cv::bitwise_or(a,b,a), Mat, Scalar)
@@ -317,8 +303,6 @@ CV_MAT_AUG_OPERATOR_T(|=, cv::bitwise_or(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(|=, cv::bitwise_or(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR_TN(|=, cv::bitwise_or(a, Mat(b), a), Mat)
 CV_MAT_AUG_OPERATOR_TN(|=, cv::bitwise_or(a, Mat(b), a), Mat_<_Tp>)
-CV_MAT_AUG_OPERATOR_FOR1CHANNEL  (|=, cv::bitwise_or(a, b, a), Mat)
-CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(|=, cv::bitwise_or(a, b, a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (^=, cv::bitwise_xor(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (^=, cv::bitwise_xor(a,b,a), Mat, Scalar)
@@ -327,11 +311,7 @@ CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR_TN(^=, cv::bitwise_xor(a, Mat(b), a), Mat)
 CV_MAT_AUG_OPERATOR_TN(^=, cv::bitwise_xor(a, Mat(b), a), Mat_<_Tp>)
-CV_MAT_AUG_OPERATOR_FOR1CHANNEL  (^=, cv::bitwise_xor(a, b, a), Mat)
-CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL(^=, cv::bitwise_xor(a, b, a), Mat_<_Tp>)
 
-#undef CV_MAT_AUG_OPERATOR_T_FOR1CHANNEL
-#undef CV_MAT_AUG_OPERATOR_FOR1CHANNEL
 #undef CV_MAT_AUG_OPERATOR_TN
 #undef CV_MAT_AUG_OPERATOR_T
 #undef CV_MAT_AUG_OPERATOR
