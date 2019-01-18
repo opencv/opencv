@@ -110,6 +110,11 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::SplitLayer ieLayer(name);
+        ieLayer.setOutputPorts({InferenceEngine::Port()});
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
         CV_Assert(!input->dims.empty());
 
@@ -123,6 +128,7 @@ public:
         ieLayer->params["out_sizes"] = format("%d", (int)input->dims[0]);
 #endif
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
