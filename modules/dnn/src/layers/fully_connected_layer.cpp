@@ -442,6 +442,18 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::FullyConnectedLayer ieLayer(name);
+
+        const int outNum = blobs[0].size[0];
+        ieLayer.setOutputNum(outNum);
+
+        ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW));
+        if (blobs.size() > 1)
+            ieLayer.setBiases(wrapToInfEngineBlob(blobs[1], {(size_t)outNum}, InferenceEngine::Layout::C));
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "FullyConnected";
@@ -456,6 +468,7 @@ public:
         if (blobs.size() > 1)
             ieLayer->_biases = wrapToInfEngineBlob(blobs[1], {(size_t)ieLayer->_out_num}, InferenceEngine::Layout::C);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

@@ -163,7 +163,7 @@ TEST_P(Deconvolution, Accuracy)
     bool hasBias = get<6>(GetParam());
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU &&
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_MYRIAD) &&
         dilation.width == 2 && dilation.height == 2)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
@@ -466,6 +466,7 @@ void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
     pool.set("stride_w", 2);
     pool.set("stride_h", 2);
     pool.type = "Pooling";
+    pool.name = "ave_pool";
 
     Net net;
     int poolId = net.addLayer(pool.name, pool.type, pool);
