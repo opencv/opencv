@@ -231,9 +231,9 @@ struct RGB2YCrCb_i<ushort>
         const int vsize = v_uint16::nlanes;
         const int descale = 1 << (shift-1);
 
-        v_int16 b2y = vx_setall_s16(C0);
-        v_int16 g2y = vx_setall_s16(C1);
-        v_int16 r2y = vx_setall_s16(C2);
+        v_int16 b2y = vx_setall_s16((short)C0);
+        v_int16 g2y = vx_setall_s16((short)C1);
+        v_int16 r2y = vx_setall_s16((short)C2);
         v_int16 one = vx_setall_s16(1);
         v_int16 z = vx_setzero_s16();
 
@@ -374,14 +374,14 @@ struct RGB2YCrCb_i<uchar>
         v_int16 bg2y;
         v_int16 r12y;
         v_int16 dummy;
-        v_zip(vx_setall_s16(C0), vx_setall_s16(C1), bg2y, dummy);
-        v_zip(vx_setall_s16(C2), vx_setall_s16( 1), r12y, dummy);
+        v_zip(vx_setall_s16((short)C0), vx_setall_s16((short)C1), bg2y, dummy);
+        v_zip(vx_setall_s16((short)C2), vx_setall_s16( 1), r12y, dummy);
 
         // delta + descaleShift == descaleShift*(half*2+1)
         v_int16 c3h, c4h;
-        const int h21 = ColorChannel<uchar>::half()*2+1;
-        v_zip(vx_setall_s16(C3), vx_setall_s16(h21), c3h, dummy);
-        v_zip(vx_setall_s16(C4), vx_setall_s16(h21), c4h, dummy);
+        const short h21 = (short)(ColorChannel<uchar>::half()*2+1);
+        v_zip(vx_setall_s16((short)C3), vx_setall_s16(h21), c3h, dummy);
+        v_zip(vx_setall_s16((short)C4), vx_setall_s16(h21), c4h, dummy);
 
         v_int16 vdescale = vx_setall_s16(descaleShift);
 
@@ -714,10 +714,10 @@ struct YCrCb2RGB_i<uchar>
         const int descaleShift = 1 << (shift - 1);
         v_int32 vdescale = vx_setall_s32(descaleShift);
 
-        v_int16 vc0 = vx_setall_s16(C0), vc1 = vx_setall_s16(C1), vc2 = vx_setall_s16(C2);
+        v_int16 vc0 = vx_setall_s16((short)C0), vc1 = vx_setall_s16((short)C1), vc2 = vx_setall_s16((short)C2);
         // if YUV then C3 > 2^15, need to subtract it
         // to fit in short by short multiplication
-        v_int16 vc3 = vx_setall_s16(yuvOrder ? C3-(1 << 15) : C3);
+        v_int16 vc3 = vx_setall_s16(yuvOrder ? (short)(C3-(1 << 15)) : (short)C3);
 
         for( ; i <= n-vsize;
              i += vsize, src += 3*vsize, dst += dcn*vsize)
@@ -863,10 +863,10 @@ struct YCrCb2RGB_i<ushort>
         const int descaleShift = 1 << (shift-1);
         v_uint16 valpha = vx_setall_u16(alpha);
         v_uint16 vdelta = vx_setall_u16(delta);
-        v_int16 vc0 = vx_setall_s16(C0), vc1 = vx_setall_s16(C1), vc2 = vx_setall_s16(C2);
+        v_int16 vc0 = vx_setall_s16((short)C0), vc1 = vx_setall_s16((short)C1), vc2 = vx_setall_s16((short)C2);
         // if YUV then C3 > 2^15, need to subtract it
         // to fit in short by short multiplication
-        v_int16 vc3 = vx_setall_s16(yuvOrder ? C3-(1 << 15) : C3);
+        v_int16 vc3 = vx_setall_s16(yuvOrder ? (short)(C3-(1 << 15)) : (short)C3);
         v_int32 vdescale = vx_setall_s32(descaleShift);
         for(; i <= n-vsize;
             i += vsize, src += vsize*3, dst += vsize*dcn)
@@ -1285,7 +1285,7 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
                 int vy0 = int(yuv_src[i + yIdx]);
                 int vy1 = int(yuv_src[i + yIdx + 2]);
 
-                cvtYuv42xxp2RGB8<bIdx, dcn, false>(u, v, vy0, vy1, 0, 0, row, nullptr);
+                cvtYuv42xxp2RGB8<bIdx, dcn, false>(u, v, vy0, vy1, 0, 0, row, (uchar*)(0));
             }
         }
     }
@@ -1431,6 +1431,14 @@ void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     cvtTwoPlaneYUVtoBGR(src_data, uv, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
 }
 
+typedef void (*cvt_2plane_yuv_ptr_t)(uchar * /* dst_data*/,
+                       size_t /* dst_step */,
+                       int /* dst_width */,
+                       int /* dst_height */,
+                       size_t /* _stride */,
+                       const uchar* /* _y1 */,
+                       const uchar* /* _uv */);
+
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
@@ -1441,7 +1449,8 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
     // TODO: add hal replacement method
 
     int blueIdx = swapBlue ? 2 : 0;
-    auto cvtPtr = cvtYUV420sp2RGB<0, 0, 3>;
+
+    cvt_2plane_yuv_ptr_t cvtPtr;
     switch(dcn*100 + blueIdx * 10 + uIdx)
     {
     case 300: cvtPtr = cvtYUV420sp2RGB<0, 0, 3>; break;
@@ -1457,6 +1466,17 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
 
     cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data);
 }
+
+typedef void (*cvt_3plane_yuv_ptr_t)(uchar * /* dst_data */,
+                                     size_t /* dst_step */,
+                                     int /* dst_width */,
+                                     int /* dst_height */,
+                                     size_t /* _stride */,
+                                     const uchar* /* _y1 */,
+                                     const uchar* /* _u */,
+                                     const uchar* /* _v */,
+                                     int /* ustepIdx */,
+                                     int /* vstepIdx */);
 
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                   uchar * dst_data, size_t dst_step,
@@ -1475,7 +1495,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
     int blueIdx = swapBlue ? 2 : 0;
 
-    auto cvtPtr = cvtYUV420p2RGB<0, 3>;
+    cvt_3plane_yuv_ptr_t cvtPtr;
     switch(dcn*10 + blueIdx)
     {
     case 30: cvtPtr = cvtYUV420p2RGB<0, 3>; break;
@@ -1525,6 +1545,13 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
         cvt(Range(0, height/2));
 }
 
+typedef void (*cvt_1plane_yuv_ptr_t)(uchar * /* dst_data */,
+                                     size_t /* dst_step */,
+                                     const uchar * /* src_data */,
+                                     size_t /* src_step */,
+                                     int /* width */,
+                                     int /* height */);
+
 void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
@@ -1534,7 +1561,7 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
 
-    auto cvtPtr = cvtYUV422toRGB<0,0,0,3>;
+    cvt_1plane_yuv_ptr_t cvtPtr;
     int blueIdx = swapBlue ? 2 : 0;
     switch(dcn*1000 + blueIdx*100 + uIdx*10 + ycn)
     {
