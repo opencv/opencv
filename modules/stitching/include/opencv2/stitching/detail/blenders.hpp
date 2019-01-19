@@ -73,7 +73,7 @@ public:
     @param corners Source images top-left corners
     @param sizes Source image sizes
      */
-    CV_WRAP void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    CV_WRAP virtual void prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes);
     /** @overload */
     CV_WRAP virtual void prepare(Rect dst_roi);
     /** @brief Processes the image.

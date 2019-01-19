@@ -120,6 +120,8 @@ final transformation for each camera.
  */
 class CV_EXPORTS_W AffineBasedEstimator : public Estimator
 {
+public:
+    CV_WRAP AffineBasedEstimator(){}
 private:
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,

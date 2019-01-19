@@ -96,10 +96,63 @@ or (dataset from professional book scanner):
 Examples above expects POSIX platform, on windows you have to provide all files names explicitly
 (e.g. `boat1.jpg` `boat2.jpg`...) as windows command line does not support `*` expansion.
 
-See also
+Stitching detailed (python opencv >4.0.1)
 --------
 
 If you want to study internals of the stitching pipeline or you want to experiment with detailed
-configuration see
-[stitching_detailed.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/stitching_detailed.cpp)
-in `opencv/samples/cpp` folder.
+configuration you can use stitching_detailed source code available in C++ or python
+
+<H4>stitching_detailed</H4>
+@add_toggle_cpp
+[stitching_detailed.cpp](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/stitching_detailed.cpp)
+@end_toggle
+
+@add_toggle_python
+[stitching_detailed.py](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/stitching_detailed.py)
+@end_toggle
+
+stitching_detailed program uses command line to get stitching parameter. Many parameters exists. Above examples shows some command line parameters possible :
+
+boat5.jpg boat2.jpg boat3.jpg boat4.jpg boat1.jpg boat6.jpg --work_megapix 0.6 --features orb --matcher homography --estimator homography --match_conf 0.3 --conf_thresh 0.3 --ba ray --ba_refine_mask xxxxx --save_graph test.txt --wave_correct no --warp fisheye --blend  multiband --expos_comp no --seam gc_colorgrad
+
+![](images/fisheye.jpg)
+
+Pairwise images are matched using an homography --matcher homography and estimator used for transformation estimation too --estimator homography
+
+Confidence for feature matching step is 0.3 : --match_conf 0.3. You can decrease this value if you have some difficulties to match images
+
+Threshold for two images are from the same panorama confidence is 0. : --conf_thresh 0.3 You can decrease this value if you have some difficulties to match images
+
+Bundle adjustment cost function is ray --ba ray
+
+Refinement mask for bundle adjustment is xxxxx ( --ba_refine_mask xxxxx) where 'x' means refine respective parameter and '_' means don't. Refine one, and has the following format: fx,skew,ppx,aspect,ppy
+
+Save matches graph represented in DOT language to test.txt ( --save_graph test.txt) : Labels description: Nm is number of matches, Ni is number of inliers, C is confidence
+
+![](images/gvedit.jpg)
+
+Perform wave effect correction is no (--wave_correct no)
+
+Warp surface type is fisheye (--warp fisheye)
+
+Blending method is multiband (--blend  multiband)
+
+Exposure compensation method is not used (--expos_comp no)
+
+Seam estimation estimator is  Minimum graph cut-based seam (--seam gc_colorgrad)
+
+you can use those arguments on command line too :
+
+boat5.jpg boat2.jpg boat3.jpg boat4.jpg boat1.jpg boat6.jpg --work_megapix 0.6 --features orb --matcher homography --estimator homography --match_conf 0.3 --conf_thresh 0.3 --ba ray --ba_refine_mask xxxxx --wave_correct horiz --warp compressedPlaneA2B1 --blend multiband --expos_comp channels_blocks --seam gc_colorgrad
+
+You will get :
+
+![](images/compressedPlaneA2B1.jpg)
+
+For images captured using a scanner or a drone ( affine motion) you can use those arguments on command line :
+
+newspaper1.jpg newspaper2.jpg --work_megapix 0.6 --features surf --matcher affine --estimator affine --match_conf 0.3 --conf_thresh 0.3 --ba affine --ba_refine_mask xxxxx --wave_correct no --warp affine
+
+![](images/affinepano.jpg)
+
+You can find  all images in https://github.com/opencv/opencv_extra/tree/master/testdata/stitching
