@@ -133,7 +133,6 @@ void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     dst_mask_.release();
 }
 
-
 void FeatherBlender::prepare(Rect dst_roi)
 {
     Blender::prepare(dst_roi);
@@ -230,7 +229,6 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
     weight_type_ = weight_type;
 }
-
 
 void MultiBandBlender::prepare(Rect dst_roi)
 {
