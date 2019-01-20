@@ -26,7 +26,7 @@ void cvt16f32f( const float16_t* src, float* dst, int len )
         v_store(dst + j, vx_load_expand(src + j));
     }
 #endif
-    for( ; j < len; j++ )
+    for( ; j < len; ++j )
         dst[j] = (float)src[j];
 }
 
@@ -46,21 +46,21 @@ void cvt32f16f( const float* src, float16_t* dst, int len )
         v_pack_store(dst + j, vx_load(src + j));
     }
 #endif
-    for( ; j < len; j++ )
+    for( ; j < len; ++j )
         dst[j] = float16_t(src[j]);
 }
 
 void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len )
 {
     // the loop is simple enough, so we let the compiler to vectorize it
-    for( int i = 0; i < len; i++ )
+    for( int i = 0; i < len; ++i )
         arr[i] += scaleBiasPairs[i*2 + 1];
 }
 
 void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len )
 {
     // the loop is simple enough, so we let the compiler to vectorize it
-    for( int i = 0; i < len; i++ )
+    for( int i = 0; i < len; ++i )
         arr[i] += scaleBiasPairs[i*2 + 1];
 }
 
@@ -72,7 +72,7 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    for( int i = 0; i < size.height; ++i, src += sstep, dst += dstep )
     {
         int j = 0;
 #if CV_SIMD
@@ -90,7 +90,7 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
             v_store_pair_as(dst + j, v0, v1);
         }
 #endif
-        for( ; j < size.width; j++ )
+        for( ; j < size.width; ++j )
             dst[j] = saturate_cast<_Td>(src[j]);
     }
 }
@@ -103,7 +103,7 @@ cvt1_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
 
-    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    for( int i = 0; i < size.height; ++i, src += sstep, dst += dstep )
     {
         int j = 0;
 #if CV_SIMD
@@ -122,7 +122,7 @@ cvt1_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
         }
         vx_cleanup();
 #endif
-        for( ; j < size.width; j++ )
+        for( ; j < size.width; ++j )
             dst[j] = saturate_cast<_Td>(src[j]);
     }
 }
@@ -131,7 +131,7 @@ static void cvtCopy( const uchar* src, size_t sstep,
                      uchar* dst, size_t dstep, Size size, size_t elemsize)
 {
     size_t len = size.width*elemsize;
-    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    for( int i = 0; i < size.height; ++i, src += sstep, dst += dstep )
     {
         memcpy( dst, src, len );
     }
@@ -459,7 +459,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)(it.size*cn), 1);
 
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        for( size_t i = 0; i < it.nplanes; ++i, ++it )
             func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, scale);
     }
 }
@@ -520,7 +520,7 @@ void cv::convertFp16( InputArray _src, OutputArray _dst )
         NAryMatIterator it(arrays, ptrs);
         Size sz((int)(it.size*cn), 1);
 
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
+        for( size_t i = 0; i < it.nplanes; ++i, ++it )
             func(ptrs[0], 0, 0, 0, ptrs[1], 0, sz, 0);
     }
 }
