@@ -446,8 +446,8 @@ struct RGB2YCrCb_i<uchar>
                 swap(sr0, sb0); swap(sr1, sb1);
             }
 
-            v_uint32 cr00, cr01, cr10, cr11;
-            v_uint32 cb00, cb01, cb10, cb11;
+            v_int32 cr00, cr01, cr10, cr11;
+            v_int32 cb00, cb01, cb10, cb11;
 
             // delta + descaleShift == descaleShift*(half*2+1)
             {
@@ -460,15 +460,15 @@ struct RGB2YCrCb_i<uchar>
                 v_zip(sb0, vdescale, bd00, bd01);
                 v_zip(sb1, vdescale, bd10, bd11);
 
-                cr00 = v_reinterpret_as_u32(v_dotprod(rd00, c3h));
-                cr01 = v_reinterpret_as_u32(v_dotprod(rd01, c3h));
-                cr10 = v_reinterpret_as_u32(v_dotprod(rd10, c3h));
-                cr11 = v_reinterpret_as_u32(v_dotprod(rd11, c3h));
+                cr00 = v_dotprod(rd00, c3h);
+                cr01 = v_dotprod(rd01, c3h);
+                cr10 = v_dotprod(rd10, c3h);
+                cr11 = v_dotprod(rd11, c3h);
 
-                cb00 = v_reinterpret_as_u32(v_dotprod(bd00, c4h));
-                cb01 = v_reinterpret_as_u32(v_dotprod(bd01, c4h));
-                cb10 = v_reinterpret_as_u32(v_dotprod(bd10, c4h));
-                cb11 = v_reinterpret_as_u32(v_dotprod(bd11, c4h));
+                cb00 = v_dotprod(bd00, c4h);
+                cb01 = v_dotprod(bd01, c4h);
+                cb10 = v_dotprod(bd10, c4h);
+                cb11 = v_dotprod(bd11, c4h);
             }
 
             v_uint8 cr, cb;
@@ -483,12 +483,12 @@ struct RGB2YCrCb_i<uchar>
             cb10 = cb10 >> shift;
             cb11 = cb11 >> shift;
 
-            v_uint16 cr0, cr1, cb0, cb1;
+            v_int16 cr0, cr1, cb0, cb1;
             cr0 = v_pack(cr00, cr01); cr1 = v_pack(cr10, cr11);
             cb0 = v_pack(cb00, cb01); cb1 = v_pack(cb10, cb11);
 
-            cr = v_pack(cr0, cr1);
-            cb = v_pack(cb0, cb1);
+            cr = v_pack_u(cr0, cr1);
+            cb = v_pack_u(cb0, cb1);
 
             if(yuvOrder)
             {
