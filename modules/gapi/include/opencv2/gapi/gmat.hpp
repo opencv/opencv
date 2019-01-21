@@ -133,6 +133,8 @@ static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
 class Mat;
 GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
 GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
+GAPI_EXPORTS std::vector<GMatDesc> descr_of(std::vector<cv::Mat> const& vec);
+GAPI_EXPORTS std::vector<GMatDesc> descr_of(std::vector<cv::UMat> const& vec);
 #endif // !defined(GAPI_STANDALONE)
 
 /** @} */

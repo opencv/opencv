@@ -38,9 +38,28 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 }
+
 cv::GMatDesc cv::descr_of(const cv::UMat &mat)
 {
     return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
+}
+
+std::vector<cv::GMatDesc> cv::descr_of(std::vector<cv::Mat> const& vec)
+{
+    std::vector<cv::GMatDesc> vec_descr;
+    for(auto& mat : vec){
+        vec_descr.emplace_back(descr_of(mat));
+    }
+    return vec_descr;
+}
+
+std::vector<cv::GMatDesc> cv::descr_of(std::vector<cv::UMat> const& vec)
+{
+    std::vector<cv::GMatDesc> vec_descr;
+    for(auto& mat : vec){
+        vec_descr.emplace_back(descr_of(mat));
+    }
+    return vec_descr;
 }
 #endif
 
