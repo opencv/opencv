@@ -3062,4 +3062,14 @@ TEST(ImgProc_BGR2RGBA, 3ch24ch)
     EXPECT_DOUBLE_EQ(cvtest::norm(expected - dst, NORM_INF), 0.);
 }
 
+TEST(ImgProc_RGB2YUV, regression_13668)
+{
+    Mat src(Size(32, 4), CV_8UC3, Scalar(9, 250,  82));  // Ensure that SIMD code path works
+    Mat dst;
+    cvtColor(src, dst, COLOR_RGB2YUV);
+    Vec3b res = dst.at<Vec3b>(0, 0);
+    Vec3b ref(159, 90, 0);
+    EXPECT_EQ(res, ref);
+}
+
 }} // namespace
