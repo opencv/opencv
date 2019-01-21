@@ -136,7 +136,12 @@ public:
               indices.resize( feature_size_ * CHAR_BIT );
               for (size_t j = 0; j < feature_size_ * CHAR_BIT; ++j)
                   indices[j] = j;
+
+#ifndef OPENCV_FLANN_USE_STD_RAND
+              cv::randShuffle(indices);
+#else
               std::random_shuffle(indices.begin(), indices.end());
+#endif
             }
 
             lsh::LshTable<ElementType>& table = tables_[i];
