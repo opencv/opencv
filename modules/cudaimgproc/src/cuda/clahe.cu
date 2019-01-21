@@ -42,15 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/emulation.hpp"
-#include "opencv2/core/cuda/scan.hpp"
-#include "opencv2/core/cuda/reduce.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/cudev.hpp"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+using namespace cv::cudev;
 
 namespace clahe
 {
@@ -73,7 +67,7 @@ namespace clahe
             for (int j = threadIdx.x; j < tileSize.x; j += blockDim.x)
             {
                 const int data = srcPtr[j];
-                Emulation::smem::atomicAdd(&smem[data], 1);
+                ::atomicAdd(&smem[data], 1);
             }
         }
 
@@ -96,7 +90,7 @@ namespace clahe
 
             // find number of overall clipped samples
 
-            reduce<256>(smem, clipped, tid, plus<int>());
+            blockReduce<256>(smem, clipped, tid, plus<int>());
 
             // broadcast evaluated value
 
@@ -128,10 +122,10 @@ namespace clahe
 
         calcLutKernel<<<grid, block, 0, stream>>>(src, lut, tileSize, tilesX, clipLimit, lutScale);
 
-        cudaSafeCall( cudaGetLastError() );
+        CV_CUDEV_SAFE_CALL( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
     }
 
     __global__ void transformKernel(const PtrStepSzb src, PtrStepb dst, const PtrStepb lut, const int2 tileSize, const int tilesX, const int tilesY)
@@ -173,13 +167,13 @@ namespace clahe
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        cudaSafeCall( cudaFuncSetCacheConfig(transformKernel, cudaFuncCachePreferL1) );
+        CV_CUDEV_SAFE_CALL( cudaFuncSetCacheConfig(transformKernel, cudaFuncCachePreferL1) );
 
         transformKernel<<<grid, block, 0, stream>>>(src, dst, lut, tileSize, tilesX, tilesY);
-        cudaSafeCall( cudaGetLastError() );
+        CV_CUDEV_SAFE_CALL( cudaGetLastError() );
 
         if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+            CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
     }
 }
 

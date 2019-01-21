@@ -215,7 +215,7 @@ namespace integral_detail
         #pragma unroll
         for (int i = 1; i < 32; i *= 2)
         {
-            const int n = shfl_up(sum, i, 32);
+            const int n = compatible_shfl_up(sum, i, 32);
 
             if (lane_id >= i)
             {
@@ -245,9 +245,9 @@ namespace integral_detail
             int warp_sum = sums[lane_id];
 
             #pragma unroll
-            for (int i = 1; i <= 32; i *= 2)
+            for (int i = 1; i < 32; i *= 2)
             {
-                const int n = shfl_up(warp_sum, i, 32);
+                const int n = compatible_shfl_up(warp_sum, i, 32);
 
                 if (lane_id >= i)
                     warp_sum += n;
@@ -453,7 +453,7 @@ namespace integral_detail
 
             for (int i = 1; i <= 8; i *= 2)
             {
-                T n = shfl_up(partial_sum, i, 32);
+                T n = compatible_shfl_up(partial_sum, i, 32);
 
                 if (lane_id >= i)
                     partial_sum += n;
