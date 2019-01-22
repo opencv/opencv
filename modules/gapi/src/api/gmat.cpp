@@ -33,20 +33,45 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
+template <typename T> std::vector<cv::GMatDesc> vec_descr_of(const std::vector<T> &vec)
+{
+    std::vector<cv::GMatDesc> vec_descr;
+    for(auto& mat : vec){
+        vec_descr.emplace_back(descr_of(mat));
+    }
+    return vec_descr;
+}
+
 #if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 }
+
 cv::GMatDesc cv::descr_of(const cv::UMat &mat)
 {
     return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
+}
+
+std::vector<cv::GMatDesc> cv::descr_of(const std::vector<cv::Mat> &vec)
+{
+    return vec_descr_of(vec);
+}
+
+std::vector<cv::GMatDesc> cv::descr_of(const std::vector<cv::UMat> &vec)
+{
+    return vec_descr_of(vec);
 }
 #endif
 
 cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
+}
+
+std::vector<cv::GMatDesc> cv::gapi::own::descr_of(const std::vector<cv::gapi::own::Mat> &vec)
+{
+    return vec_descr_of(vec);
 }
 
 namespace cv {
