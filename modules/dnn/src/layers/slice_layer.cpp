@@ -110,8 +110,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        {
+            return INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5) &&
+                   sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
+        }
+        else
+#endif
+            return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -254,9 +261,10 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
         InferenceEngine::LayerParams lp;
         lp.name = name;
@@ -286,10 +294,11 @@ public:
             ieLayer->dim.push_back(sliceRanges[0][i].end - sliceRanges[0][i].start);
         }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-
-#endif  // HAVE_INF_ENGINE
+#else
         return Ptr<BackendNode>();
+#endif  // IE < R5
     }
+#endif
 };
 
 Ptr<SliceLayer> SliceLayer::create(const LayerParams& params)

@@ -90,6 +90,18 @@ squeezenet:
   classes: "classification_classes_ILSVRC2012.txt"
   sample: "classification"
 
+# Googlenet from https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
+googlenet:
+  model: "bvlc_googlenet.caffemodel"
+  config: "bvlc_googlenet.prototxt"
+  mean: [104, 117, 123]
+  scale: 1.0
+  width: 224
+  height: 224
+  rgb: false
+  classes: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
 ################################################################################
 # Semantic segmentation models.
 ################################################################################

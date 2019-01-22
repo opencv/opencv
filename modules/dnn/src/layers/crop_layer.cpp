@@ -67,8 +67,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && crop_ranges.size() == 4);
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5) && crop_ranges.size() == 4;
+        else
+#endif
+            return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -145,9 +149,10 @@ public:
         input(&crop_ranges[0]).copyTo(outputs[0]);
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "Crop";
@@ -181,9 +186,11 @@ public:
         ieLayer->dim.push_back(crop_ranges[3].end - crop_ranges[3].start);
 #endif
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
+#else
         return Ptr<BackendNode>();
+#endif  // IE < R5
     }
+#endif
 
     std::vector<Range> crop_ranges;
 };

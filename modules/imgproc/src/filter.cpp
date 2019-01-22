@@ -213,7 +213,7 @@ int FilterEngine::start(const Size &_wholeSize, const Size &sz, const Point &ofs
     }
 
     // adjust bufstep so that the used part of the ring buffer stays compact in memory
-    bufStep = bufElemSize*(int)alignSize(roi.width + (!isSeparable() ? ksize.width - 1 : 0),16);
+    bufStep = bufElemSize*(int)alignSize(roi.width + (!isSeparable() ? ksize.width - 1 : 0),VEC_ALIGN);
 
     dx1 = std::max(anchor.x - roi.x, 0);
     dx2 = std::max(ksize.width - anchor.x - 1 + roi.x + roi.width - wholeSize.width, 0);

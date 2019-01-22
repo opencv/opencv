@@ -40,7 +40,7 @@ TEST(Test_TensorFlow, read_inception)
     ASSERT_TRUE(!sample.empty());
     Mat input;
     resize(sample, input, Size(224, 224));
-    input -= 128; // mean sub
+    input -= Scalar::all(117); // mean sub
 
     Mat inputBlob = blobFromImage(input);
 
@@ -351,8 +351,8 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
-    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1e-5;
-    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0098 : 1e-3;
+    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1.5e-5;
+    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 1e-3;
     normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
 }
 
@@ -366,6 +366,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
+    double scoresDiff = backend == DNN_BACKEND_INFERENCE_ENGINE ? 2.9e-5 : 1e-5;
     for (int i = 0; i < 2; ++i)
     {
         std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt", false);
@@ -381,7 +382,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
         Mat out = net.forward();
 
         Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/" + names[i] + ".detection_out.npy"));
-        normAssertDetections(ref, out, names[i].c_str(), 0.3);
+        normAssertDetections(ref, out, names[i].c_str(), 0.3, scoresDiff);
     }
 }
 
@@ -406,7 +407,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     net.setInput(blob);
     Mat out = net.forward();
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : default_l1;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 1.1e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.021 : default_lInf;
     normAssertDetections(ref, out, "", 0.4, scoreDiff, iouDiff);
 }
@@ -568,10 +569,6 @@ TEST_P(Test_TensorFlow_layers, slice)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
-#endif
     runTensorFlowNet("slice_4d");
 }
 
