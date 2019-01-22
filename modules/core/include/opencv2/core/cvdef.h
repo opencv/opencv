@@ -216,7 +216,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #  define CV_ENABLE_UNROLLED 1
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__) ||  defined(__clang__)
 #  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
 #elif defined _MSC_VER
 #  define CV_DECL_ALIGNED(x) __declspec(align(x))
