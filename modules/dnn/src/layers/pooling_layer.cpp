@@ -295,6 +295,48 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        if (type == MAX || type == AVE)
+        {
+            InferenceEngine::Builder::PoolingLayer ieLayer(name);
+            ieLayer.setKernel({kernel.height, kernel.width});
+            ieLayer.setStrides({stride.height, stride.width});
+            ieLayer.setPaddingsBegin({pad_t, pad_l});
+            ieLayer.setPaddingsEnd({pad_b, pad_r});
+            ieLayer.setPoolingType(type == MAX ?
+                                   InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
+                                   InferenceEngine::Builder::PoolingLayer::PoolingType::AVG);
+            ieLayer.setRoundingType(ceilMode ?
+                                    InferenceEngine::Builder::PoolingLayer::RoundingType::CEIL :
+                                    InferenceEngine::Builder::PoolingLayer::RoundingType::FLOOR);
+            ieLayer.setExcludePad(type == AVE && padMode == "SAME");
+
+            InferenceEngine::Builder::Layer l = ieLayer;
+            if (!padMode.empty())
+                l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
+            return Ptr<BackendNode>(new InfEngineBackendNode(l));
+        }
+        else if (type == ROI)
+        {
+            InferenceEngine::Builder::ROIPoolingLayer ieLayer(name);
+            ieLayer.setSpatialScale(spatialScale);
+            ieLayer.setPooled({pooledSize.height, pooledSize.width});
+            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
+            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+        }
+        else if (type == PSROI)
+        {
+            InferenceEngine::Builder::PSROIPoolingLayer ieLayer(name);
+            ieLayer.setSpatialScale(spatialScale);
+            ieLayer.setOutputDim(psRoiOutChannels);
+            ieLayer.setGroupSize(pooledSize.width);
+            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
+            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+        return Ptr<BackendNode>();
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.precision = InferenceEngine::Precision::FP32;
@@ -353,6 +395,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

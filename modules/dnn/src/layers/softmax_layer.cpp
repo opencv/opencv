@@ -326,6 +326,13 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+
+        InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
+        ieLayer.setAxis(clamp(axisRaw, input->dims.size()));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::LayerParams lp;
@@ -335,6 +342,7 @@ public:
         std::shared_ptr<InferenceEngine::SoftMaxLayer> ieLayer(new InferenceEngine::SoftMaxLayer(lp));
         ieLayer->axis = clamp(axisRaw, input->dims.size());
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

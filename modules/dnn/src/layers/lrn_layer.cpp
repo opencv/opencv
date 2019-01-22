@@ -393,6 +393,17 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::NormLayer ieLayer(name);
+        ieLayer.setSize(size);
+        ieLayer.setAlpha(alpha);
+        ieLayer.setBeta(beta);
+        ieLayer.setAcrossMaps(type == CHANNEL_NRM);
+
+        InferenceEngine::Builder::Layer l = ieLayer;
+        l.getParameters()["k"] = bias;
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "Norm";
@@ -405,6 +416,7 @@ public:
         ieLayer->_alpha = alpha;
         ieLayer->_isAcrossMaps = (type == CHANNEL_NRM);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

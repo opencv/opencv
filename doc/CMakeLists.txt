@@ -144,6 +144,7 @@ if(DOXYGEN_FOUND)
   string(REPLACE ";" " " CMAKE_DOXYGEN_ENABLED_SECTIONS "${CMAKE_DOXYGEN_ENABLED_SECTIONS}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INCLUDE_ROOTS "${paths_include}")
   set(CMAKE_DOXYGEN_LAYOUT "${CMAKE_CURRENT_BINARY_DIR}/DoxygenLayout.xml")
   set(CMAKE_DOXYGEN_OUTPUT_PATH "doxygen")
   set(CMAKE_DOXYGEN_MAIN_REFERENCE "${refs_main}")

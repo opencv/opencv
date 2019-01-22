@@ -387,7 +387,7 @@ bool QRDetect::computeTransformationPoints()
         findNonZero(mask_roi, non_zero_elem[i]);
         newHull.insert(newHull.end(), non_zero_elem[i].begin(), non_zero_elem[i].end());
     }
-    convexHull(Mat(newHull), locations);
+    convexHull(newHull, locations);
     for (size_t i = 0; i < locations.size(); i++)
     {
         for (size_t j = 0; j < 3; j++)
@@ -556,7 +556,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     }
 
     vector<Point> integer_hull;
-    convexHull(Mat(locations), integer_hull);
+    convexHull(locations, integer_hull);
     int hull_size = (int)integer_hull.size();
     vector<Point2f> hull(hull_size);
     for (int i = 0; i < hull_size; i++)
@@ -901,7 +901,7 @@ bool QRDecode::versionDefinition()
     vector<Point> locations, non_zero_elem;
     Mat mask_roi = mask(Range(1, intermediate.rows - 1), Range(1, intermediate.cols - 1));
     findNonZero(mask_roi, non_zero_elem);
-    convexHull(Mat(non_zero_elem), locations);
+    convexHull(non_zero_elem, locations);
     Point offset = computeOffset(locations);
 
     Point temp_remote = locations[0], remote_point;

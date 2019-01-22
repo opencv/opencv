@@ -35,6 +35,11 @@
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+#include <ie_builders.hpp>
+#endif
 
 #endif  // HAVE_INF_ENGINE
 
@@ -42,6 +47,7 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
 class InfEngineBackendNet : public InferenceEngine::ICNNNetwork
 {
 public:
@@ -146,17 +152,75 @@ private:
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 };
 
+#else  // IE < R5
+
+class InfEngineBackendNet
+{
+public:
+    InfEngineBackendNet();
+
+    InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
+
+    void addLayer(const InferenceEngine::Builder::Layer& layer);
+
+    void addOutput(const std::string& name);
+
+    void connect(const std::vector<Ptr<BackendWrapper> >& inputs,
+                 const std::vector<Ptr<BackendWrapper> >& outputs,
+                 const std::string& layerName);
+
+    bool isInitialized();
+
+    void init(int targetId);
+
+    void forward();
+
+    void initPlugin(InferenceEngine::ICNNNetwork& net);
+
+    void addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs);
+
+private:
+    InferenceEngine::Builder::Network netBuilder;
+
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
+    InferenceEngine::ExecutableNetwork netExec;
+    InferenceEngine::InferRequest infRequest;
+    InferenceEngine::BlobMap allBlobs;
+    InferenceEngine::BlobMap inpBlobs;
+    InferenceEngine::BlobMap outBlobs;
+    InferenceEngine::TargetDevice targetDevice;
+
+    InferenceEngine::CNNNetwork cnn;
+    bool hasNetOwner;
+
+    std::map<std::string, int> layers;
+    std::vector<std::string> requestedOutputs;
+
+    std::set<int> unconnectedLayersIds;
+};
+#endif  // IE < R5
+
 class InfEngineBackendNode : public BackendNode
 {
 public:
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+    InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
+#else
     InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& layer);
+#endif
 
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
 
-    InferenceEngine::CNNLayerPtr layer;
     // Inference Engine network object that allows to obtain the outputs of this layer.
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+    InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
+#else
+    InferenceEngine::CNNLayerPtr layer;
+    Ptr<InfEngineBackendNet> net;
+#endif
 };
 
 class InfEngineBackendWrapper : public BackendWrapper

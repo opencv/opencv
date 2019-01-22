@@ -1408,7 +1408,7 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
         for( x = 0; x < N; x++ )
             pts.push_back(Point2f((float)x*imgsize.width/(N-1), (float)y*imgsize.height/(N-1)));
 
-    undistortPoints(Mat(pts), upts, M, D, R, P );
+    undistortPoints(pts, upts, M, D, R, P );
     for( k = 0; k < N*N; k++ )
         if( upts[k].x < -imgsize.width*eps || upts[k].x > imgsize.width*(1+eps) ||
             upts[k].y < -imgsize.height*eps || upts[k].y > imgsize.height*(1+eps) )
@@ -1717,8 +1717,8 @@ void CV_StereoCalibrationTest::run( int )
         for( int i = 0, k = 0; i < nframes; i++ )
         {
             vector<Point2f> temp[2];
-            undistortPoints(Mat(imgpt1[i]), temp[0], M1, D1, R1, P1);
-            undistortPoints(Mat(imgpt2[i]), temp[1], M2, D2, R2, P2);
+            undistortPoints(imgpt1[i], temp[0], M1, D1, R1, P1);
+            undistortPoints(imgpt2[i], temp[1], M2, D2, R2, P2);
 
             for( int j = 0; j < npoints; j++, k++ )
             {

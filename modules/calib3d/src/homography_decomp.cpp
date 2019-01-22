@@ -185,6 +185,10 @@ bool HomographyDecompZhang::findMotionFrom_tstar_n(const cv::Vec3d& tstar, const
     temp(1, 1) += 1.0;
     temp(2, 2) += 1.0;
     motion.R = getHnorm() * temp.inv();
+    if (cv::determinant(motion.R) < 0)
+    {
+        motion.R *= -1;
+    }
     motion.t = motion.R * tstar;
     motion.n = n;
     return passesSameSideOfPlaneConstraint(motion);
@@ -312,6 +316,10 @@ void HomographyDecompInria::findRmatFrom_tstar_n(const cv::Vec3d& tstar, const c
               0.0, 0.0, 1.0);
 
     R = getHnorm() * (I - (2/v) * tstar_m * n_m.t() );
+    if (cv::determinant(R) < 0)
+    {
+        R *= -1;
+    }
 }
 
 void HomographyDecompInria::decompose(std::vector<CameraMotion>& camMotions)

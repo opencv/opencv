@@ -577,7 +577,7 @@ else()
     # Note: layout differs from OpenCV 3.4
     include(GNUInstallDirs)
     ocv_update(OPENCV_INCLUDE_INSTALL_PATH       "${CMAKE_INSTALL_INCLUDEDIR}/opencv4")
-    ocv_update(OPENCV_LIB_INSTALL_PATH           "${CMAKE_INSTALL_LIBDIR}${LIB_SUFFIX}")
+    ocv_update(OPENCV_LIB_INSTALL_PATH           "${CMAKE_INSTALL_LIBDIR}")
     ocv_update(OPENCV_CONFIG_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/cmake/opencv4")
     ocv_update(OPENCV_3P_LIB_INSTALL_PATH        "${OPENCV_LIB_INSTALL_PATH}/opencv4/3rdparty")
     ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH   "${CMAKE_INSTALL_DATAROOTDIR}/opencv4/samples")

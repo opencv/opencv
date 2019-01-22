@@ -45,6 +45,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include <iostream>
 #include "hal_replacement.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 
 /****************************************************************************************\
@@ -97,73 +98,65 @@ struct MorphNoVec
     int operator()(uchar**, int, uchar*, int) const { return 0; }
 };
 
-#if CV_SSE2
+#if CV_SIMD
 
-template<class VecUpdate> struct MorphRowIVec
+template<class VecUpdate> struct MorphRowVec
 {
-    enum { ESZ = VecUpdate::ESZ };
-
-    MorphRowIVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
+    typedef typename VecUpdate::vtype vtype;
+    typedef typename vtype::lane_type stype;
+    MorphRowVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
     int operator()(const uchar* src, uchar* dst, int width, int cn) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE2) )
-            return 0;
-
-        cn *= ESZ;
         int i, k, _ksize = ksize*cn;
-        width = (width & -4)*cn;
+        width *= cn;
         VecUpdate updateOp;
 
-        for( i = 0; i <= width - 16; i += 16 )
+        for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes )
         {
-            __m128i s = _mm_loadu_si128((const __m128i*)(src + i));
-            for( k = cn; k < _ksize; k += cn )
+            vtype s0 = vx_load((const stype*)src + i);
+            vtype s1 = vx_load((const stype*)src + i + vtype::nlanes);
+            vtype s2 = vx_load((const stype*)src + i + 2*vtype::nlanes);
+            vtype s3 = vx_load((const stype*)src + i + 3*vtype::nlanes);
+            for (k = cn; k < _ksize; k += cn)
             {
-                __m128i x = _mm_loadu_si128((const __m128i*)(src + i + k));
-                s = updateOp(s, x);
+                s0 = updateOp(s0, vx_load((const stype*)src + i + k));
+                s1 = updateOp(s1, vx_load((const stype*)src + i + k + vtype::nlanes));
+                s2 = updateOp(s2, vx_load((const stype*)src + i + k + 2*vtype::nlanes));
+                s3 = updateOp(s3, vx_load((const stype*)src + i + k + 3*vtype::nlanes));
             }
-            _mm_storeu_si128((__m128i*)(dst + i), s);
+            v_store((stype*)dst + i, s0);
+            v_store((stype*)dst + i + vtype::nlanes, s1);
+            v_store((stype*)dst + i + 2*vtype::nlanes, s2);
+            v_store((stype*)dst + i + 3*vtype::nlanes, s3);
         }
-
-        for( ; i < width; i += 4 )
+        if( i <= width - 2*vtype::nlanes )
         {
-            __m128i s = _mm_cvtsi32_si128(*(const int*)(src + i));
+            vtype s0 = vx_load((const stype*)src + i);
+            vtype s1 = vx_load((const stype*)src + i + vtype::nlanes);
             for( k = cn; k < _ksize; k += cn )
             {
-                __m128i x = _mm_cvtsi32_si128(*(const int*)(src + i + k));
-                s = updateOp(s, x);
+                s0 = updateOp(s0, vx_load((const stype*)src + i + k));
+                s1 = updateOp(s1, vx_load((const stype*)src + i + k + vtype::nlanes));
             }
-            *(int*)(dst + i) = _mm_cvtsi128_si32(s);
+            v_store((stype*)dst + i, s0);
+            v_store((stype*)dst + i + vtype::nlanes, s1);
+            i += 2*vtype::nlanes;
         }
-
-        return i/ESZ;
-    }
-
-    int ksize, anchor;
-};
-
-
-template<class VecUpdate> struct MorphRowFVec
-{
-    MorphRowFVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
-    int operator()(const uchar* src, uchar* dst, int width, int cn) const
-    {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
-        int i, k, _ksize = ksize*cn;
-        width = (width & -4)*cn;
-        VecUpdate updateOp;
-
-        for( i = 0; i < width; i += 4 )
+        if( i <= width - vtype::nlanes )
         {
-            __m128 s = _mm_loadu_ps((const float*)src + i);
+            vtype s = vx_load((const stype*)src + i);
             for( k = cn; k < _ksize; k += cn )
-            {
-                __m128 x = _mm_loadu_ps((const float*)src + i + k);
-                s = updateOp(s, x);
-            }
-            _mm_storeu_ps((float*)dst + i, s);
+                s = updateOp(s, vx_load((const stype*)src + i + k));
+            v_store((stype*)dst + i, s);
+            i += vtype::nlanes;
+        }
+        if( i <= width - vtype::nlanes/2 )
+        {
+            vtype s = vx_load_low((const stype*)src + i);
+            for( k = cn; k < _ksize; k += cn )
+                s = updateOp(s, vx_load_low((const stype*)src + i + k));
+            v_store_low((stype*)dst + i, s);
+            i += vtype::nlanes/2;
         }
 
         return i;
@@ -173,230 +166,156 @@ template<class VecUpdate> struct MorphRowFVec
 };
 
 
-template<class VecUpdate> struct MorphColumnIVec
+template<class VecUpdate> struct MorphColumnVec
 {
-    enum { ESZ = VecUpdate::ESZ };
-
-    MorphColumnIVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
-    int operator()(const uchar** src, uchar* dst, int dststep, int count, int width) const
-    {
-        if( !checkHardwareSupport(CV_CPU_SSE2) )
-            return 0;
-
-        int i = 0, k, _ksize = ksize;
-        width *= ESZ;
-        VecUpdate updateOp;
-
-        for( i = 0; i < count + ksize - 1; i++ )
-            CV_Assert( ((size_t)src[i] & 15) == 0 );
-
-        for( ; _ksize > 1 && count > 1; count -= 2, dst += dststep*2, src += 2 )
-        {
-            for( i = 0; i <= width - 32; i += 32 )
-            {
-                const uchar* sptr = src[1] + i;
-                __m128i s0 = _mm_load_si128((const __m128i*)sptr);
-                __m128i s1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                __m128i x0, x1;
-
-                for( k = 2; k < _ksize; k++ )
-                {
-                    sptr = src[k] + i;
-                    x0 = _mm_load_si128((const __m128i*)sptr);
-                    x1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                    s0 = updateOp(s0, x0);
-                    s1 = updateOp(s1, x1);
-                }
-
-                sptr = src[0] + i;
-                x0 = _mm_load_si128((const __m128i*)sptr);
-                x1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                _mm_storeu_si128((__m128i*)(dst + i), updateOp(s0, x0));
-                _mm_storeu_si128((__m128i*)(dst + i + 16), updateOp(s1, x1));
-
-                sptr = src[k] + i;
-                x0 = _mm_load_si128((const __m128i*)sptr);
-                x1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                _mm_storeu_si128((__m128i*)(dst + dststep + i), updateOp(s0, x0));
-                _mm_storeu_si128((__m128i*)(dst + dststep + i + 16), updateOp(s1, x1));
-            }
-
-            for( ; i <= width - 8; i += 8 )
-            {
-                __m128i s0 = _mm_loadl_epi64((const __m128i*)(src[1] + i)), x0;
-
-                for( k = 2; k < _ksize; k++ )
-                {
-                    x0 = _mm_loadl_epi64((const __m128i*)(src[k] + i));
-                    s0 = updateOp(s0, x0);
-                }
-
-                x0 = _mm_loadl_epi64((const __m128i*)(src[0] + i));
-                _mm_storel_epi64((__m128i*)(dst + i), updateOp(s0, x0));
-                x0 = _mm_loadl_epi64((const __m128i*)(src[k] + i));
-                _mm_storel_epi64((__m128i*)(dst + dststep + i), updateOp(s0, x0));
-            }
-        }
-
-        for( ; count > 0; count--, dst += dststep, src++ )
-        {
-            for( i = 0; i <= width - 32; i += 32 )
-            {
-                const uchar* sptr = src[0] + i;
-                __m128i s0 = _mm_load_si128((const __m128i*)sptr);
-                __m128i s1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                __m128i x0, x1;
-
-                for( k = 1; k < _ksize; k++ )
-                {
-                    sptr = src[k] + i;
-                    x0 = _mm_load_si128((const __m128i*)sptr);
-                    x1 = _mm_load_si128((const __m128i*)(sptr + 16));
-                    s0 = updateOp(s0, x0);
-                    s1 = updateOp(s1, x1);
-                }
-                _mm_storeu_si128((__m128i*)(dst + i), s0);
-                _mm_storeu_si128((__m128i*)(dst + i + 16), s1);
-            }
-
-            for( ; i <= width - 8; i += 8 )
-            {
-                __m128i s0 = _mm_loadl_epi64((const __m128i*)(src[0] + i)), x0;
-
-                for( k = 1; k < _ksize; k++ )
-                {
-                    x0 = _mm_loadl_epi64((const __m128i*)(src[k] + i));
-                    s0 = updateOp(s0, x0);
-                }
-                _mm_storel_epi64((__m128i*)(dst + i), s0);
-            }
-        }
-
-        return i/ESZ;
-    }
-
-    int ksize, anchor;
-};
-
-
-template<class VecUpdate> struct MorphColumnFVec
-{
-    MorphColumnFVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
+    typedef typename VecUpdate::vtype vtype;
+    typedef typename vtype::lane_type stype;
+    MorphColumnVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
     int operator()(const uchar** _src, uchar* _dst, int dststep, int count, int width) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
         int i = 0, k, _ksize = ksize;
         VecUpdate updateOp;
 
         for( i = 0; i < count + ksize - 1; i++ )
-            CV_Assert( ((size_t)_src[i] & 15) == 0 );
+            CV_Assert( ((size_t)_src[i] & (CV_SIMD_WIDTH-1)) == 0 );
 
-        const float** src = (const float**)_src;
-        float* dst = (float*)_dst;
+        const stype** src = (const stype**)_src;
+        stype* dst = (stype*)_dst;
         dststep /= sizeof(dst[0]);
 
         for( ; _ksize > 1 && count > 1; count -= 2, dst += dststep*2, src += 2 )
         {
-            for( i = 0; i <= width - 16; i += 16 )
+            for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes)
             {
-                const float* sptr = src[1] + i;
-                __m128 s0 = _mm_load_ps(sptr);
-                __m128 s1 = _mm_load_ps(sptr + 4);
-                __m128 s2 = _mm_load_ps(sptr + 8);
-                __m128 s3 = _mm_load_ps(sptr + 12);
-                __m128 x0, x1, x2, x3;
+                const stype* sptr = src[1] + i;
+                vtype s0 = vx_load_aligned(sptr);
+                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
+                vtype s2 = vx_load_aligned(sptr + 2*vtype::nlanes);
+                vtype s3 = vx_load_aligned(sptr + 3*vtype::nlanes);
 
                 for( k = 2; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
-                    x0 = _mm_load_ps(sptr);
-                    x1 = _mm_load_ps(sptr + 4);
-                    s0 = updateOp(s0, x0);
-                    s1 = updateOp(s1, x1);
-                    x2 = _mm_load_ps(sptr + 8);
-                    x3 = _mm_load_ps(sptr + 12);
-                    s2 = updateOp(s2, x2);
-                    s3 = updateOp(s3, x3);
+                    s0 = updateOp(s0, vx_load_aligned(sptr));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
+                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes));
+                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes));
                 }
 
                 sptr = src[0] + i;
-                x0 = _mm_load_ps(sptr);
-                x1 = _mm_load_ps(sptr + 4);
-                x2 = _mm_load_ps(sptr + 8);
-                x3 = _mm_load_ps(sptr + 12);
-                _mm_storeu_ps(dst + i, updateOp(s0, x0));
-                _mm_storeu_ps(dst + i + 4, updateOp(s1, x1));
-                _mm_storeu_ps(dst + i + 8, updateOp(s2, x2));
-                _mm_storeu_ps(dst + i + 12, updateOp(s3, x3));
+                v_store(dst + i, updateOp(s0, vx_load_aligned(sptr)));
+                v_store(dst + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
+                v_store(dst + i + 2*vtype::nlanes, updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes)));
+                v_store(dst + i + 3*vtype::nlanes, updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes)));
 
                 sptr = src[k] + i;
-                x0 = _mm_load_ps(sptr);
-                x1 = _mm_load_ps(sptr + 4);
-                x2 = _mm_load_ps(sptr + 8);
-                x3 = _mm_load_ps(sptr + 12);
-                _mm_storeu_ps(dst + dststep + i, updateOp(s0, x0));
-                _mm_storeu_ps(dst + dststep + i + 4, updateOp(s1, x1));
-                _mm_storeu_ps(dst + dststep + i + 8, updateOp(s2, x2));
-                _mm_storeu_ps(dst + dststep + i + 12, updateOp(s3, x3));
+                v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(sptr)));
+                v_store(dst + dststep + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
+                v_store(dst + dststep + i + 2*vtype::nlanes, updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes)));
+                v_store(dst + dststep + i + 3*vtype::nlanes, updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes)));
             }
-
-            for( ; i <= width - 4; i += 4 )
+            if( i <= width - 2*vtype::nlanes )
             {
-                __m128 s0 = _mm_load_ps(src[1] + i), x0;
+                const stype* sptr = src[1] + i;
+                vtype s0 = vx_load_aligned(sptr);
+                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
 
                 for( k = 2; k < _ksize; k++ )
                 {
-                    x0 = _mm_load_ps(src[k] + i);
-                    s0 = updateOp(s0, x0);
+                    sptr = src[k] + i;
+                    s0 = updateOp(s0, vx_load_aligned(sptr));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
                 }
 
-                x0 = _mm_load_ps(src[0] + i);
-                _mm_storeu_ps(dst + i, updateOp(s0, x0));
-                x0 = _mm_load_ps(src[k] + i);
-                _mm_storeu_ps(dst + dststep + i, updateOp(s0, x0));
+                sptr = src[0] + i;
+                v_store(dst + i, updateOp(s0, vx_load_aligned(sptr)));
+                v_store(dst + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
+
+                sptr = src[k] + i;
+                v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(sptr)));
+                v_store(dst + dststep + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
+                i += 2*vtype::nlanes;
+            }
+            if( i <= width - vtype::nlanes )
+            {
+                vtype s0 = vx_load_aligned(src[1] + i);
+
+                for( k = 2; k < _ksize; k++ )
+                    s0 = updateOp(s0, vx_load_aligned(src[k] + i));
+
+                v_store(dst + i, updateOp(s0, vx_load_aligned(src[0] + i)));
+                v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(src[k] + i)));
+                i += vtype::nlanes;
+            }
+            if( i <= width - vtype::nlanes/2 )
+            {
+                vtype s0 = vx_load_low(src[1] + i);
+
+                for( k = 2; k < _ksize; k++ )
+                    s0 = updateOp(s0, vx_load_low(src[k] + i));
+
+                v_store_low(dst + i, updateOp(s0, vx_load_low(src[0] + i)));
+                v_store_low(dst + dststep + i, updateOp(s0, vx_load_low(src[k] + i)));
+                i += vtype::nlanes/2;
             }
         }
 
         for( ; count > 0; count--, dst += dststep, src++ )
         {
-            for( i = 0; i <= width - 16; i += 16 )
+            for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes)
             {
-                const float* sptr = src[0] + i;
-                __m128 s0 = _mm_load_ps(sptr);
-                __m128 s1 = _mm_load_ps(sptr + 4);
-                __m128 s2 = _mm_load_ps(sptr + 8);
-                __m128 s3 = _mm_load_ps(sptr + 12);
-                __m128 x0, x1, x2, x3;
+                const stype* sptr = src[0] + i;
+                vtype s0 = vx_load_aligned(sptr);
+                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
+                vtype s2 = vx_load_aligned(sptr + 2*vtype::nlanes);
+                vtype s3 = vx_load_aligned(sptr + 3*vtype::nlanes);
 
                 for( k = 1; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
-                    x0 = _mm_load_ps(sptr);
-                    x1 = _mm_load_ps(sptr + 4);
-                    s0 = updateOp(s0, x0);
-                    s1 = updateOp(s1, x1);
-                    x2 = _mm_load_ps(sptr + 8);
-                    x3 = _mm_load_ps(sptr + 12);
-                    s2 = updateOp(s2, x2);
-                    s3 = updateOp(s3, x3);
+                    s0 = updateOp(s0, vx_load_aligned(sptr));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
+                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes));
+                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes));
                 }
-                _mm_storeu_ps(dst + i, s0);
-                _mm_storeu_ps(dst + i + 4, s1);
-                _mm_storeu_ps(dst + i + 8, s2);
-                _mm_storeu_ps(dst + i + 12, s3);
+                v_store(dst + i, s0);
+                v_store(dst + i + vtype::nlanes, s1);
+                v_store(dst + i + 2*vtype::nlanes, s2);
+                v_store(dst + i + 3*vtype::nlanes, s3);
             }
-
-            for( i = 0; i <= width - 4; i += 4 )
+            if( i <= width - 2*vtype::nlanes )
             {
-                __m128 s0 = _mm_load_ps(src[0] + i), x0;
+                const stype* sptr = src[0] + i;
+                vtype s0 = vx_load_aligned(sptr);
+                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
+
                 for( k = 1; k < _ksize; k++ )
                 {
-                    x0 = _mm_load_ps(src[k] + i);
-                    s0 = updateOp(s0, x0);
+                    sptr = src[k] + i;
+                    s0 = updateOp(s0, vx_load_aligned(sptr));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
                 }
-                _mm_storeu_ps(dst + i, s0);
+                v_store(dst + i, s0);
+                v_store(dst + i + vtype::nlanes, s1);
+                i += 2*vtype::nlanes;
+            }
+            if( i <= width - vtype::nlanes )
+            {
+                vtype s0 = vx_load_aligned(src[0] + i);
+
+                for( k = 1; k < _ksize; k++ )
+                    s0 = updateOp(s0, vx_load_aligned(src[k] + i));
+                v_store(dst + i, s0);
+                i += vtype::nlanes;
+            }
+            if( i <= width - vtype::nlanes/2 )
+            {
+                vtype s0 = vx_load_low(src[0] + i);
+
+                for( k = 1; k < _ksize; k++ )
+                    s0 = updateOp(s0, vx_load_low(src[k] + i));
+                v_store_low(dst + i, s0);
+                i += vtype::nlanes/2;
             }
         }
 
@@ -407,185 +326,109 @@ template<class VecUpdate> struct MorphColumnFVec
 };
 
 
-template<class VecUpdate> struct MorphIVec
+template<class VecUpdate> struct MorphVec
 {
-    enum { ESZ = VecUpdate::ESZ };
-
-    int operator()(uchar** src, int nz, uchar* dst, int width) const
-    {
-        if( !checkHardwareSupport(CV_CPU_SSE2) )
-            return 0;
-
-        int i, k;
-        width *= ESZ;
-        VecUpdate updateOp;
-
-        for( i = 0; i <= width - 32; i += 32 )
-        {
-            const uchar* sptr = src[0] + i;
-            __m128i s0 = _mm_loadu_si128((const __m128i*)sptr);
-            __m128i s1 = _mm_loadu_si128((const __m128i*)(sptr + 16));
-            __m128i x0, x1;
-
-            for( k = 1; k < nz; k++ )
-            {
-                sptr = src[k] + i;
-                x0 = _mm_loadu_si128((const __m128i*)sptr);
-                x1 = _mm_loadu_si128((const __m128i*)(sptr + 16));
-                s0 = updateOp(s0, x0);
-                s1 = updateOp(s1, x1);
-            }
-            _mm_storeu_si128((__m128i*)(dst + i), s0);
-            _mm_storeu_si128((__m128i*)(dst + i + 16), s1);
-        }
-
-        for( ; i <= width - 8; i += 8 )
-        {
-            __m128i s0 = _mm_loadl_epi64((const __m128i*)(src[0] + i)), x0;
-
-            for( k = 1; k < nz; k++ )
-            {
-                x0 = _mm_loadl_epi64((const __m128i*)(src[k] + i));
-                s0 = updateOp(s0, x0);
-            }
-            _mm_storel_epi64((__m128i*)(dst + i), s0);
-        }
-
-        return i/ESZ;
-    }
-};
-
-
-template<class VecUpdate> struct MorphFVec
-{
+    typedef typename VecUpdate::vtype vtype;
+    typedef typename vtype::lane_type stype;
     int operator()(uchar** _src, int nz, uchar* _dst, int width) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
-        const float** src = (const float**)_src;
-        float* dst = (float*)_dst;
+        const stype** src = (const stype**)_src;
+        stype* dst = (stype*)_dst;
         int i, k;
         VecUpdate updateOp;
 
-        for( i = 0; i <= width - 16; i += 16 )
+        for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes )
         {
-            const float* sptr = src[0] + i;
-            __m128 s0 = _mm_loadu_ps(sptr);
-            __m128 s1 = _mm_loadu_ps(sptr + 4);
-            __m128 s2 = _mm_loadu_ps(sptr + 8);
-            __m128 s3 = _mm_loadu_ps(sptr + 12);
-            __m128 x0, x1, x2, x3;
-
+            const stype* sptr = src[0] + i;
+            vtype s0 = vx_load(sptr);
+            vtype s1 = vx_load(sptr + vtype::nlanes);
+            vtype s2 = vx_load(sptr + 2*vtype::nlanes);
+            vtype s3 = vx_load(sptr + 3*vtype::nlanes);
             for( k = 1; k < nz; k++ )
             {
                 sptr = src[k] + i;
-                x0 = _mm_loadu_ps(sptr);
-                x1 = _mm_loadu_ps(sptr + 4);
-                x2 = _mm_loadu_ps(sptr + 8);
-                x3 = _mm_loadu_ps(sptr + 12);
-                s0 = updateOp(s0, x0);
-                s1 = updateOp(s1, x1);
-                s2 = updateOp(s2, x2);
-                s3 = updateOp(s3, x3);
+                s0 = updateOp(s0, vx_load(sptr));
+                s1 = updateOp(s1, vx_load(sptr + vtype::nlanes));
+                s2 = updateOp(s2, vx_load(sptr + 2*vtype::nlanes));
+                s3 = updateOp(s3, vx_load(sptr + 3*vtype::nlanes));
             }
-            _mm_storeu_ps(dst + i, s0);
-            _mm_storeu_ps(dst + i + 4, s1);
-            _mm_storeu_ps(dst + i + 8, s2);
-            _mm_storeu_ps(dst + i + 12, s3);
+            v_store(dst + i, s0);
+            v_store(dst + i + vtype::nlanes, s1);
+            v_store(dst + i + 2*vtype::nlanes, s2);
+            v_store(dst + i + 3*vtype::nlanes, s3);
         }
-
-        for( ; i <= width - 4; i += 4 )
+        if( i <= width - 2*vtype::nlanes )
         {
-            __m128 s0 = _mm_loadu_ps(src[0] + i), x0;
-
+            const stype* sptr = src[0] + i;
+            vtype s0 = vx_load(sptr);
+            vtype s1 = vx_load(sptr + vtype::nlanes);
             for( k = 1; k < nz; k++ )
             {
-                x0 = _mm_loadu_ps(src[k] + i);
-                s0 = updateOp(s0, x0);
+                sptr = src[k] + i;
+                s0 = updateOp(s0, vx_load(sptr));
+                s1 = updateOp(s1, vx_load(sptr + vtype::nlanes));
             }
-            _mm_storeu_ps(dst + i, s0);
+            v_store(dst + i, s0);
+            v_store(dst + i + vtype::nlanes, s1);
+            i += 2*vtype::nlanes;
         }
-
-        for( ; i < width; i++ )
+        if( i <= width - vtype::nlanes )
         {
-            __m128 s0 = _mm_load_ss(src[0] + i), x0;
-
+            vtype s0 = vx_load(src[0] + i);
             for( k = 1; k < nz; k++ )
-            {
-                x0 = _mm_load_ss(src[k] + i);
-                s0 = updateOp(s0, x0);
-            }
-            _mm_store_ss(dst + i, s0);
+                s0 = updateOp(s0, vx_load(src[k] + i));
+            v_store(dst + i, s0);
+            i += vtype::nlanes;
         }
-
+        if( i <= width - vtype::nlanes/2 )
+        {
+            vtype s0 = vx_load_low(src[0] + i);
+            for( k = 1; k < nz; k++ )
+                s0 = updateOp(s0, vx_load_low(src[k] + i));
+            v_store_low(dst + i, s0);
+            i += vtype::nlanes/2;
+        }
         return i;
     }
 };
 
-struct VMin8u
+template <typename T> struct VMin
 {
-    enum { ESZ = 1 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_min_epu8(a,b); }
+    typedef T vtype;
+    vtype operator()(const vtype& a, const vtype& b) const { return v_min(a,b); }
 };
-struct VMax8u
+template <typename T> struct VMax
 {
-    enum { ESZ = 1 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_max_epu8(a,b); }
+    typedef T vtype;
+    vtype operator()(const vtype& a, const vtype& b) const { return v_max(a,b); }
 };
-struct VMin16u
-{
-    enum { ESZ = 2 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_subs_epu16(a,_mm_subs_epu16(a,b)); }
-};
-struct VMax16u
-{
-    enum { ESZ = 2 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_adds_epu16(_mm_subs_epu16(a,b), b); }
-};
-struct VMin16s
-{
-    enum { ESZ = 2 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_min_epi16(a, b); }
-};
-struct VMax16s
-{
-    enum { ESZ = 2 };
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_max_epi16(a, b); }
-};
-struct VMin32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_min_ps(a,b); }};
-struct VMax32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_max_ps(a,b); }};
 
-typedef MorphRowIVec<VMin8u> ErodeRowVec8u;
-typedef MorphRowIVec<VMax8u> DilateRowVec8u;
-typedef MorphRowIVec<VMin16u> ErodeRowVec16u;
-typedef MorphRowIVec<VMax16u> DilateRowVec16u;
-typedef MorphRowIVec<VMin16s> ErodeRowVec16s;
-typedef MorphRowIVec<VMax16s> DilateRowVec16s;
-typedef MorphRowFVec<VMin32f> ErodeRowVec32f;
-typedef MorphRowFVec<VMax32f> DilateRowVec32f;
+typedef MorphRowVec<VMin<v_uint8> > ErodeRowVec8u;
+typedef MorphRowVec<VMax<v_uint8> > DilateRowVec8u;
+typedef MorphRowVec<VMin<v_uint16> > ErodeRowVec16u;
+typedef MorphRowVec<VMax<v_uint16> > DilateRowVec16u;
+typedef MorphRowVec<VMin<v_int16> > ErodeRowVec16s;
+typedef MorphRowVec<VMax<v_int16> > DilateRowVec16s;
+typedef MorphRowVec<VMin<v_float32> > ErodeRowVec32f;
+typedef MorphRowVec<VMax<v_float32> > DilateRowVec32f;
 
-typedef MorphColumnIVec<VMin8u> ErodeColumnVec8u;
-typedef MorphColumnIVec<VMax8u> DilateColumnVec8u;
-typedef MorphColumnIVec<VMin16u> ErodeColumnVec16u;
-typedef MorphColumnIVec<VMax16u> DilateColumnVec16u;
-typedef MorphColumnIVec<VMin16s> ErodeColumnVec16s;
-typedef MorphColumnIVec<VMax16s> DilateColumnVec16s;
-typedef MorphColumnFVec<VMin32f> ErodeColumnVec32f;
-typedef MorphColumnFVec<VMax32f> DilateColumnVec32f;
+typedef MorphColumnVec<VMin<v_uint8> > ErodeColumnVec8u;
+typedef MorphColumnVec<VMax<v_uint8> > DilateColumnVec8u;
+typedef MorphColumnVec<VMin<v_uint16> > ErodeColumnVec16u;
+typedef MorphColumnVec<VMax<v_uint16> > DilateColumnVec16u;
+typedef MorphColumnVec<VMin<v_int16> > ErodeColumnVec16s;
+typedef MorphColumnVec<VMax<v_int16> > DilateColumnVec16s;
+typedef MorphColumnVec<VMin<v_float32> > ErodeColumnVec32f;
+typedef MorphColumnVec<VMax<v_float32> > DilateColumnVec32f;
 
-typedef MorphIVec<VMin8u> ErodeVec8u;
-typedef MorphIVec<VMax8u> DilateVec8u;
-typedef MorphIVec<VMin16u> ErodeVec16u;
-typedef MorphIVec<VMax16u> DilateVec16u;
-typedef MorphIVec<VMin16s> ErodeVec16s;
-typedef MorphIVec<VMax16s> DilateVec16s;
-typedef MorphFVec<VMin32f> ErodeVec32f;
-typedef MorphFVec<VMax32f> DilateVec32f;
+typedef MorphVec<VMin<v_uint8> > ErodeVec8u;
+typedef MorphVec<VMax<v_uint8> > DilateVec8u;
+typedef MorphVec<VMin<v_uint16> > ErodeVec16u;
+typedef MorphVec<VMax<v_uint16> > DilateVec16u;
+typedef MorphVec<VMin<v_int16> > ErodeVec16s;
+typedef MorphVec<VMax<v_int16> > DilateVec16s;
+typedef MorphVec<VMin<v_float32> > ErodeVec32f;
+typedef MorphVec<VMax<v_float32> > DilateVec32f;
 
 #else
 
