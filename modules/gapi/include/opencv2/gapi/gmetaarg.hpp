@@ -61,6 +61,16 @@ namespace detail
 
 } // namespace detail
 
+// Forward declaration for gmat
+class Mat;
+class UMat;
+GAPI_EXPORTS std::vector<cv::GMetaArg> descr_of(const std::vector<cv::Mat> &vec);
+GAPI_EXPORTS std::vector<cv::GMetaArg> descr_of(const std::vector<cv::UMat> &vec);
+namespace gapi { namespace own {
+    class Mat;
+    GAPI_EXPORTS std::vector<cv::GMetaArg> descr_of(const std::vector<Mat> &vec);
+}} // namespace gapi::own
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GMETAARG_HPP
