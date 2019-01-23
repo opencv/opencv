@@ -113,10 +113,16 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 
     int STRIPE_SIZE = std::min( _dst.cols, 512/cn );
 
-    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
-    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
-    HT* h_coarse = alignPtr(&_h_coarse[0], 16);
-    HT* h_fine = alignPtr(&_h_fine[0], 16);
+#if defined(CV_SIMD_WIDTH) && CV_SIMD_WIDTH >= 16
+# define CV_ALIGNMENT CV_SIMD_WIDTH
+#else
+# define CV_ALIGNMENT 16
+#endif
+
+    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    HT* h_coarse = alignPtr(&_h_coarse[0], CV_ALIGNMENT);
+    HT* h_fine = alignPtr(&_h_fine[0], CV_ALIGNMENT);
 
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
     {
@@ -146,11 +152,11 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
             const uchar* p0 = src + sstep * std::max( 0, i-r-1 );
             const uchar* p1 = src + sstep * std::min( m-1, i+r );
 
-            Histogram CV_DECL_ALIGNED(16) H;
-            HT CV_DECL_ALIGNED(16) luc[16];
-
             for( c = 0; c < cn; c++ )
             {
+                Histogram CV_DECL_ALIGNED(CV_ALIGNMENT) H;
+                HT CV_DECL_ALIGNED(CV_ALIGNMENT) luc[16];
+
                 memset(&H, 0, sizeof(H));
                 memset(luc, 0, sizeof(luc));
 
