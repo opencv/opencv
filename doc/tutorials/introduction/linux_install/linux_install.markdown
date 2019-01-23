@@ -96,6 +96,11 @@ Building OpenCV from Source Using CMake
     -   Unset parameter: BUILD_SHARED_LIBS
     -   It is useful also to unset BUILD_EXAMPLES, BUILD_TESTS, BUILD_PERF_TESTS - as they all
         will be statically linked with OpenCV and can take a lot of memory.
+        
+-#  [optional] Generate pkg-config info
+    -   Add this flag when running cmake: -D OPENCV_GENERATE_PKGCONFIG = YES
+    -   Will generate the .pc file for pkg-config and install it.
+    -   Useful if not using cmake in projects that use OpenCV
 
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 
