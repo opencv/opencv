@@ -55,6 +55,7 @@
 
 #ifdef CV_CXX11
 #include <type_traits>
+#include <future>
 #endif
 
 namespace cv
@@ -3043,6 +3044,51 @@ public:
 };
 
 
+//////////////////////////////// Future_Mat /////////////////////////////////
+
+/** @brief Class which wraps `std::future<Mat>` in bindings (since C++11).
+ */
+class CV_EXPORTS_W_SIMPLE Future_Mat
+{
+public:
+    //! default constructor
+    Future_Mat();
+
+    //! Wait for Mat object readiness and return it.
+    CV_WRAP Mat get();
+
+    //! Wait for Mat object readiness.
+    CV_WRAP void wait() const;
+
+    /** @brief Wait for Mat object readiness specific amount of time.
+     *  @param timeout Timeout in milliseconds
+     *  @returns [std::future_status](https://en.cppreference.com/w/cpp/thread/future_status)
+     */
+    CV_WRAP int wait(size_t timeout) const;
+
+#if defined(CV_CXX11) || defined(CV_DOXYGEN)
+    //! copy constructor
+    Future_Mat(const Future_Mat& F);
+
+    //! move constructor
+    Future_Mat(Future_Mat&& F);
+
+    //! constructor from std::future<Mat>
+    Future_Mat(std::future<Mat>&& other);
+
+    //! copy assignment operator
+    Future_Mat& operator=(const Future_Mat& F);
+
+    //! move assignment operator
+    Future_Mat& operator=(Future_Mat&& F);
+
+    //! cast to std::future<Mat>
+    operator std::future<Mat>&&();
+
+private:
+    std::future<Mat> f;
+#endif  // CV_CXX11
+};
 
 ////////////////////////////////// MatConstIterator //////////////////////////////////
 

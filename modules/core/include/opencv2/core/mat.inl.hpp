@@ -2650,7 +2650,65 @@ SparseMatConstIterator_<_Tp> SparseMat_<_Tp>::end() const
     return it;
 }
 
+////////////////////////////// Future_Mat //////////////////////////////
+#ifdef CV_CXX11
+inline Future_Mat::Future_Mat() {}
 
+inline Future_Mat::Future_Mat(const Future_Mat& F)
+{
+    f = std::move(const_cast<Future_Mat&>(F).f);
+}
+
+inline Future_Mat& Future_Mat::operator=(const Future_Mat& F)
+{
+    f = std::move(const_cast<Future_Mat&>(F).f);
+    return *this;
+}
+
+inline Future_Mat::Future_Mat(std::future<Mat>&& other) : f(std::move(other)) {}
+
+inline Future_Mat::Future_Mat(Future_Mat&& F) : f(std::move(F.f)) {}
+
+inline Future_Mat::operator std::future<Mat>&&()
+{
+    return std::move(f);
+}
+
+inline Future_Mat& Future_Mat::operator=(Future_Mat&& F)
+{
+    f = std::move(F.f);
+    return *this;
+}
+
+inline Mat Future_Mat::get()
+{
+    return f.get();
+}
+
+inline void Future_Mat::wait() const
+{
+    f.wait();
+}
+
+inline int Future_Mat::wait(size_t timeout) const
+{
+    return (int)f.wait_for(std::chrono::milliseconds(timeout));
+}
+
+#else
+
+inline Future_Mat::Future_Mat()
+{
+    CV_Error(Error::StsNotImplemented, "C++11 is required!");
+}
+
+inline Mat Future_Mat::get() { return Mat(); }
+
+inline void Future_Mat::wait() const {}
+
+inline int Future_Mat::wait(size_t) const { return -1; }
+
+#endif  // CV_CXX11
 
 ////////////////////////// MatConstIterator /////////////////////////
 

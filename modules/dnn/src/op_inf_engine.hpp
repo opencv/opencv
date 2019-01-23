@@ -185,7 +185,8 @@ public:
 
     void init(int targetId);
 
-    void forward();
+    void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                 bool isAsync);
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 
@@ -197,11 +198,21 @@ private:
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
-    InferenceEngine::InferRequest infRequest;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::BlobMap inpBlobs;
-    InferenceEngine::BlobMap outBlobs;
     InferenceEngine::TargetDevice targetDevice;
+
+    struct InfEngineReqWrapper
+    {
+        InfEngineReqWrapper() : isReady(true) {}
+
+        void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
+
+        InferenceEngine::InferRequest req;
+        std::vector<std::promise<Mat> > outProms;
+        bool isReady;
+    };
+
+    std::vector<Ptr<InfEngineReqWrapper> > infRequests;
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
@@ -252,6 +263,7 @@ public:
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
+    std::promise<Mat>* promPtr;
 };
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
@@ -302,7 +314,8 @@ CV__DNN_EXPERIMENTAL_NS_END
 
 bool haveInfEngine();
 
-void forwardInfEngine(Ptr<BackendNode>& node);
+void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                      Ptr<BackendNode>& node, bool isAsync);
 
 }}  // namespace dnn, namespace cv
 
