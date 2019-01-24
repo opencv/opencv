@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
+#include <atomic>
 #include <limits.h> // INT_MAX
 
 #include "logger.defines.hpp"
@@ -34,64 +36,228 @@ enum LogLevel {
 #endif
 };
 
+//! Config layers for allowing config changes made during runtime to have
+//! higher priority over launch-time configs
+enum class LogConfigLayer
+{
+    LOG_CONFIG_LAUNCH = 0, //!< for canned configs loaded from file, command-line, or environment strings
+    LOG_CONFIG_RUNTIME = 1, //!< for programmatic config changes higher priority than "LAUNCH" (canned configs)
+#ifndef CV_DOXYGEN
+    ENUM_LOG_CONFIG_FORCE_INT = INT_MAX
+#endif
+};
+
+
 #if 1 // TENTATIVE
 
 // Macros that expand to default declarations of special class methods
 
-// DC: Default (argumentless) constructor
-#define DECLARE_MEMBER_DEFAULTS_DC(ClassName) ClassName() = default;
+//! DC: Default (argumentless) constructor
+#define CV_DECLARE_MEMBER_DEFAULTS_DC(ClassName) ClassName() = default;
 
-// CC: Copy constructor
-#define DECLARE_MEMBER_DEFAULTS_CC(ClassName) ClassName(const ClassName&) = default;
+//! CC: Copy constructor
+#define CV_DECLARE_MEMBER_DEFAULTS_CC(ClassName) ClassName(const ClassName&) = default;
 
-// MC: Move constructor
-#define DECLARE_MEMBER_DEFAULTS_MC(ClassName) ClassName(ClassName&&) = default;
+//! NOCC: Copy constructor is deleted
+#define CV_DECLARE_MEMBER_DEFAULTS_NOCC(ClassName) ClassName(const ClassName&) = delete;
 
-// CA: Copy assignment operator
-#define DECLARE_MEMBER_DEFAULTS_CA(ClassName) ClassName& operator = (const ClassName&) = default;
+//! MC: Move constructor
+#define CV_DECLARE_MEMBER_DEFAULTS_MC(ClassName) ClassName(ClassName&&) = default;
 
-// MA: Move assignment operator
-#define DECLARE_MEMBER_DEFAULTS_MA(ClassName) ClassName& operator = (ClassName&&) = default;
+//! NOMC: Move constructor is deleted
+#define CV_DECLARE_MEMBER_DEFAULTS_NOMC(ClassName) ClassName(ClassName&&) = delete;
 
-// ALL: All of above
-#define DECLARE_MEMBER_DEFAULTS_ALL(ClassName) \
-    DECLARE_MEMBER_DEFAULTS_DC(ClassName) \
-    DECLARE_MEMBER_DEFAULTS_CC(ClassName) \
-    DECLARE_MEMBER_DEFAULTS_MC(ClassName) \
-    DECLARE_MEMBER_DEFAULTS_CA(ClassName) \
-    DECLARE_MEMBER_DEFAULTS_MA(ClassName)
+//! CA: Copy assignment operator
+#define CV_DECLARE_MEMBER_DEFAULTS_CA(ClassName) ClassName& operator = (const ClassName&) = default;
+
+//! NOCA: Copy assignment operator is deleted
+#define CV_DECLARE_MEMBER_DEFAULTS_NOCA(ClassName) ClassName& operator = (const ClassName&) = delete;
+
+//! MA: Move assignment operator
+#define CV_DECLARE_MEMBER_DEFAULTS_MA(ClassName) ClassName& operator = (ClassName&&) = default;
+
+//! NOMA: Move assignment operator is deleted
+#define CV_DECLARE_MEMBER_DEFAULTS_NOMA(ClassName) ClassName& operator = (ClassName&&) = delete;
+
+//! ALL: All of above is declared default (constructor: argumentless, copy, move; assignment: copy, move)
+#define CV_DECLARE_MEMBER_DEFAULTS_ALL(ClassName) \
+    CV_DECLARE_MEMBER_DEFAULTS_DC(ClassName) \
+    CV_DECLARE_MEMBER_DEFAULTS_CC(ClassName) \
+    CV_DECLARE_MEMBER_DEFAULTS_MC(ClassName) \
+    CV_DECLARE_MEMBER_DEFAULTS_CA(ClassName) \
+    CV_DECLARE_MEMBER_DEFAULTS_MA(ClassName)
 
 #endif // TENTATIVE
 
+// class forward declaration
+class LogThreshold;
+
 /**
-Information about the module that generates a log message.
+@brief Identifies the scope from which a log message is generated.
+
+LogScope is intended to be a static fixture. The recommended hierarchy is:
+- Root (which is nameless - not to be used for logging)
+- Module
+- Class
+- Function
+
+Other hierarchies can also be used. However, the string formed from the
+fully qualified name, in  the style of "ModuleOne.ClassA.FunctionX", must
+be globally unique across all hierarchies.
+
+Recommended insertion (injection) into C++ code
+- For "module", declare as namespace-level extern (global static), and then
+  point a macro to that name. The macro should only be visible to files
+  inside that module.
+- For "class", declare as public static member of that class.
+- For "function", declare as a static local inside that function.
 */
-class LogModuleInfo
+class CV_EXPORTS LogScope
 {
+private:
+    // For within-class use by LogScope::getRoot() only. Initializes a nameless, global scope.
+    LogScope();
+
+private:
+    CV_DECLARE_MEMBER_DEFAULTS_NOCC(LogScope);
+    CV_DECLARE_MEMBER_DEFAULTS_NOMC(LogScope);
+    CV_DECLARE_MEMBER_DEFAULTS_NOCA(LogScope);
+    CV_DECLARE_MEMBER_DEFAULTS_NOMA(LogScope);
+
 public:
-    DECLARE_MEMBER_DEFAULTS_ALL(LogModuleInfo);
+    // Initializes a nested scope with the specified name and the parent.
+    LogScope(const char* name, const LogScope& parent);
+
+    // Retrieves the nameless, global scope.
+    static LogScope& getRoot();
+
+public:
+    ~LogScope();
 
 public:
     /**
-    Name of the OpenCV module or component.
-    Might be nullptr. If not nullptr, the string needs to be static lifetime or const literal.
+    @brief The nesting level of scopes.
+    The nesting level of the global scope is defined as zero.
+    Each nesting increments the level by one.
+    @remark This is not the log filtering level.
     */
-    const char* name;
+    int scopeLevel() const;
+
+    /**
+    @brief Returns the simple name of this scope.
+    */
+    const std::string& name() const;
+
+    /**
+    @brief Returns the full name of this scope, which is
+    the concatenation of all scope names joined with a period (".")
+    */
+    std::string fullName() const;
+
+    /**
+    @brief Returns the hash value computed from the full name.
+    */
+    uint64_t fullNameHash() const;
+
+    /**
+    @brief Returns the current filtering threshold applied to the log level
+    of messages associated with this scope.
+    */
+    int getLogThreshold() const;
+
+private:
+    /**
+    @brief Returns the hash value computed from the full name, without closing,
+    so that more substrings can be concatenated.
+    */
+    uint64_t internal_fullHash_unclosed() const;
+
+private:
+    std::string m_name;
+    const LogScope* m_parent;
+    int m_scopeLevel;
+    mutable std::atomic<uint64_t> m_fullHashLazy;
+    mutable std::atomic<LogThreshold*> m_dataLazy;
+};
+
+// Logging-related configuration data (mutable) associated with a scope.
+// Currently it just contains log level filtering threshold.
+class CV_EXPORTS LogThreshold
+{
+public:
+    // Log level filtering threshold for the associated scope for LogConfigLayer::LOG_CONFIG_LAUNCH
+    int m_launchTimeLogLevel;
+
+    // Log level filtering threshold for the associated scope for LogConfigLayer::LOG_CONFIG_RUNTIME
+    int m_runTimeLogLevel;
 
 public:
-    LogModuleInfo(const char* name_)
-        : name(name_)
-    {
-    }
+    // Sets all log levels to special value CV_LOG_LEVEL_CHECK_PARENT, which means there is no
+    // filtering threshold in effect in this scope for any config layer.
+    constexpr LogThreshold();
+
+public:
+    // Destructor (trivial)
+    ~LogThreshold() = default;
+};
+
+/**
+@brief A global singleton manager for logging configurations.
+
+Configurable aspects are:
+
+Log level filtering threshold can be specified for a "scope". A "scope" can be module, class,
+function, or something else. Internally, a "scope" is identified by a fully qualified name,
+for example "ModuleOne.ClassA.FunctionX".
+
+Thread-local configs can be specified. Details to emerge later.
+
+String formatting can be specified. Details to emerge later.
+
+Logging backends (sinks) can be specified. Details to emerge later.
+*/
+class CV_EXPORTS LogManager
+{
+public:
+    using MutexType = std::recursive_mutex;
+    using LockType = std::lock_guard<MutexType>;
+
+    //! @{
+public:
+    static LogThreshold& getThresholdForScope(const LogScope& scope);
+    static LogThreshold& getThresholdForScope(const char* fullScopeName);
+    static LogThreshold& getThresholdForScope(const std::string& fullScopeName);
+    static LogThreshold& getThresholdForHash(uint64_t hash);
+    //! @}
+
+    //! @{
+public:
+    static void setLogThreshold(const LogScope& scope, int logThresholdLevel, LogConfigLayer configLayer = LogConfigLayer::LOG_CONFIG_RUNTIME);
+    static void setLogThreshold(const char* fullScopeName, int logThresholdLevel, LogConfigLayer configLayer = LogConfigLayer::LOG_CONFIG_RUNTIME);
+    static void setLogThreshold(const std::string& fullScopeName, int logThresholdLevel, LogConfigLayer configLayer = LogConfigLayer::LOG_CONFIG_RUNTIME);
+    static void setLogThreshold(uint64_t hash, int logThresholdLevel, LogConfigLayer configLayer = LogConfigLayer::LOG_CONFIG_RUNTIME);
+    //! @}
+
+    //! @{
+public:
+    static uint64_t getHash(const LogScope& scope);
+    static uint64_t getHash(const char* fullScopeName);
+    static void setLogThreshold(LogThreshold& data, int logThresholdLevel, LogConfigLayer configLayer = LogConfigLayer::LOG_CONFIG_RUNTIME);
+    static int getLogThreshold(const LogThreshold& data);
+    //! @}
+
+private:
+    class StaticData;
+    static StaticData& internal_getStaticData();
 };
 
 /**
 Information about the current object (the "this" pointer) collected alongside each log message.
 */
-class LogObjInfo
+class CV_EXPORTS LogObjInfo
 {
 public:
-    DECLARE_MEMBER_DEFAULTS_ALL(LogObjInfo);
+    CV_DECLARE_MEMBER_DEFAULTS_ALL(LogObjInfo);
 
 public:
     /**
@@ -125,10 +291,10 @@ public:
 /**
 Information about the line of code (source file, line number, etc) collected alongside each log message
 */
-class LogLoc
+class CV_EXPORTS LogLoc
 {
 public:
-    DECLARE_MEMBER_DEFAULTS_ALL(LogLoc);
+    CV_DECLARE_MEMBER_DEFAULTS_ALL(LogLoc);
 
 public:
     /**
@@ -172,10 +338,10 @@ invoked via cv::parallel_for_
 
 @todo Currently empty and not implemented yet.
 */
-class LogPar
+class CV_EXPORTS LogPar
 {
 public:
-    DECLARE_MEMBER_DEFAULTS_ALL(LogPar);
+    CV_DECLARE_MEMBER_DEFAULTS_ALL(LogPar);
 
 public:
 public:
@@ -189,10 +355,10 @@ Because OpenCV splits the VERBOSE log level into sub-levels of verbosity via the
 argument "v" in macro CV_LOG_VERBOSE(tag, v, ...) a wrapper class is needed so that
 it can be updated to LogMeta class via the stream insertion operator.
 */
-class LogVerboseLevel
+class CV_EXPORTS LogVerboseLevel
 {
 public:
-    DECLARE_MEMBER_DEFAULTS_ALL(LogVerboseLevel);
+    CV_DECLARE_MEMBER_DEFAULTS_ALL(LogVerboseLevel);
 
 public:
     int verboseLevel;
@@ -207,18 +373,18 @@ public:
 /**
 Attributes collected alongside each logged message.
 */
-class LogMeta
+class CV_EXPORTS LogMeta
 {
 public:
-    DECLARE_MEMBER_DEFAULTS_CC(LogMeta);
-    DECLARE_MEMBER_DEFAULTS_MC(LogMeta);
-    DECLARE_MEMBER_DEFAULTS_CA(LogMeta);
-    DECLARE_MEMBER_DEFAULTS_MA(LogMeta);
+    CV_DECLARE_MEMBER_DEFAULTS_CC(LogMeta);
+    CV_DECLARE_MEMBER_DEFAULTS_MC(LogMeta);
+    CV_DECLARE_MEMBER_DEFAULTS_CA(LogMeta);
+    CV_DECLARE_MEMBER_DEFAULTS_MA(LogMeta);
 
 public:
     LogLevel level;
     int verboseLevel;
-    const char* moduleName;
+    const LogScope* scope;
     int thread;
     LogObjInfo objInfo;
     LogLoc loc;
@@ -228,10 +394,10 @@ public:
 #endif // TENTATIVE
 
 public:
-    LogMeta(LogLevel level_, const char* moduleName_ = nullptr, int thread_ = cv::utils::getThreadID())
+    LogMeta(LogLevel level_, const LogScope* scope_ = std::addressof(LogScope::getRoot()), int thread_ = cv::utils::getThreadID())
         : level(level_)
         , verboseLevel()
-        , moduleName(moduleName_)
+        , scope(scope_)
         , thread(thread_)
         , objInfo()
         , loc()
@@ -266,11 +432,11 @@ public:
     }
 
     /**
-    Updates the module info via the stream insertion operator.
+    Updates the scope info via the stream insertion operator.
     */
-    LogMeta& operator << (const LogModuleInfo& moduleInfo)
+    LogMeta& operator << (const LogScope& scope_)
     {
-        this->moduleName = moduleInfo.name;
+        this->scope = std::addressof(scope_);
         return *this;
     }
 
@@ -314,39 +480,8 @@ public:
     }
 };
 
-#if 1 // TENTATIVE
-/**
-Serializes the log message metadata to a string that is inserted into an std::ostream.
-*/
-inline std::ostream& operator << (std::ostream& o, const LogMeta& meta)
-{
-    if (meta.moduleName && meta.moduleName[0])
-    {
-        o << "(module:" << meta.moduleName << ") ";
-    }
-    if (meta.loc.file && meta.loc.file[0])
-    {
-        o << "(file: " << meta.loc.file << ") ";
-    }
-    if (meta.loc.line >= 1)
-    {
-        o << "(line: " << meta.loc.line << ") ";
-    }
-    if (meta.loc.func && meta.loc.func[0])
-    {
-        o << "(func: " << meta.loc.func << ") ";
-    }
-    if (meta.objInfo.typeName && meta.objInfo.typeName[0])
-    {
-        o << "(class: " << meta.objInfo.typeName << ") ";
-    }
-    if (meta.objInfo.ptr)
-    {
-        o << "(this_ptr: " << meta.objInfo.ptr << ") ";
-    }
-    return o;
-}
-#endif // TENTATIVE
+//! Serializes the log message metadata to a string that is inserted into an std::ostream.
+CV_EXPORTS std::ostream& operator << (std::ostream& o, const LogMeta& meta);
 
 /** Set global logging level
 @return previous logging level

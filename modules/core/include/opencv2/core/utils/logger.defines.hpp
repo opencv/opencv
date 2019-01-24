@@ -19,4 +19,11 @@
 
 //! @}
 
+//! @addtogroup core_logging
+//! @{
+
+#define CV_LOG_LEVEL_CHECK_PARENT 128 //!< for use in scope-based filtering
+
+//! @}
+
 #endif // OPENCV_LOGGER_DEFINES_HPP
