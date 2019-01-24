@@ -36,8 +36,8 @@ const cv::GOrigin& cv::GMat::priv() const
 namespace{
     template <typename T> std::vector<cv::GMetaArg> vec_descr_of(const std::vector<T> &vec)
         {
-        std::vector<cv::GMetaArg> vec_descr{vec.size()};
-        vec_descr.clear();
+        std::vector<cv::GMetaArg> vec_descr;
+        vec_descr.reserve(vec.size());
         for(auto& mat : vec){
             vec_descr.emplace_back(descr_of(mat));
         }
