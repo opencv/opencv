@@ -142,7 +142,7 @@ namespace gapi { namespace own {
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
 
-std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);
+GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc);
 
 } // namespace cv
 

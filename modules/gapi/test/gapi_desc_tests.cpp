@@ -46,21 +46,13 @@ TEST(GAPI_MetaDesc, VecMatDesc)
     cv::Mat(240, 320, CV_8U)};
 
     const auto desc1 = cv::descr_of(vec1);
-    const auto mat1 = get<GMatDesc>(desc1[0]);
-    EXPECT_EQ(CV_8U, mat1.depth);
-    EXPECT_EQ(1,     mat1.chan);
-    EXPECT_EQ(320,   mat1.size.width);
-    EXPECT_EQ(240,   mat1.size.height);
+    EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc1[0]));
 
     std::vector<cv::UMat> vec2 = {
     cv::UMat(480, 640, CV_8UC3)};
 
     const auto desc2 = cv::descr_of(vec2);
-    const auto mat2 = get<GMatDesc>(desc2[0]);
-    EXPECT_EQ(CV_8U, mat2.depth);
-    EXPECT_EQ(3,     mat2.chan);
-    EXPECT_EQ(640,   mat2.size.width);
-    EXPECT_EQ(480,   mat2.size.height);
+    EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc2[0]));
 }
 
 TEST(GAPI_MetaDesc, VecOwnMatDesc)
@@ -69,18 +61,20 @@ TEST(GAPI_MetaDesc, VecOwnMatDesc)
     cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
     cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
 
-    const auto desc = descr_of(vec);
-    const auto mat1 = get<GMatDesc>(desc[0]);
-    const auto mat2 = get<GMatDesc>(desc[1]);
-    EXPECT_EQ(CV_8U, mat1.depth);
-    EXPECT_EQ(1,     mat1.chan);
-    EXPECT_EQ(320,   mat1.size.width);
-    EXPECT_EQ(240,   mat1.size.height);
+    const auto desc = cv::gapi::own::descr_of(vec);
+    EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc[0]));
+    EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc[1]));
+}
 
-    EXPECT_EQ(CV_8U, mat2.depth);
-    EXPECT_EQ(3,     mat2.chan);
-    EXPECT_EQ(640,   mat2.size.width);
-    EXPECT_EQ(480,   mat2.size.height);
+TEST(GAPI_MetaDesc, AdlVecOwnMatDesc)
+{
+    std::vector<cv::gapi::own::Mat> vec = {
+    cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
+    cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
+
+    const auto desc = descr_of(vec);
+    EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc[0]));
+    EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc[1]));
 }
 
 TEST(GAPI_MetaDesc, Compare_Equal_MatDesc)
