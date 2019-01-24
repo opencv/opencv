@@ -930,9 +930,13 @@ namespace
                 {
                     // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
                     auto &fd     = fg.metadata(out_data_node).get<FluidData>();
-                    fd.latency   = out_latency;
+                    // If fluid node is external, it will be bound to a real image without
+                    // fluid buffer allocation, so set its latency to 0 not to confuse later latency propagation.
+                    // Latency is used in fluid buffer allocation process and is not used by the scheduler
+                    // so latency doesn't affect the execution and setting it to 0 is legal
+                    fd.latency   = fd.internal ? out_latency : 0;
                     fd.lpi_write = fu.k.m_lpi;
-                    GModel::log(g, out_data_node, "Latency: " + std::to_string(out_latency));
+                    GModel::log(g, out_data_node, "Latency: " + std::to_string(fd.latency));
                 }
             }
         }
@@ -1207,35 +1211,41 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
 
         for (const auto& nh : gim.nodes())
         {
-            if (gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND)
+            switch (gim.metadata(nh).get<NodeKind>().k)
+            {
+            case NodeKind::ISLAND:
             {
                 const auto isl = gim.metadata(nh).get<FusedIsland>().object;
                 if (isl->backend() == cv::gapi::fluid::backend())
                 {
-                    // add FluidData to all data nodes inside island
+                    // Add FluidData to all data nodes inside island,
+                    // set internal = true if node is not a slot in terms of higher-level GIslandModel
                     for (const auto node : isl->contents())
                     {
-                        if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
+                        if (g.metadata(node).get<NodeType>().t == NodeType::DATA &&
+                            !fg.metadata(node).contains<FluidData>())
                             setFluidData(node, true);
                     }
-
-                    // add FluidData to slot if it's read/written by fluid
-                    std::vector<ade::NodeHandle> io_handles;
-                    for (const auto &in_op : isl->in_ops())
-                    {
-                        ade::util::copy(in_op->inNodes(), std::back_inserter(io_handles));
-                    }
-                    for (const auto &out_op : isl->out_ops())
-                    {
-                        ade::util::copy(out_op->outNodes(), std::back_inserter(io_handles));
-                    }
-                    for (const auto &io_node : io_handles)
-                    {
-                        if (!fg.metadata(io_node).contains<FluidData>())
-                            setFluidData(io_node, false);
-                    }
                 } // if (fluid backend)
-            } // if (ISLAND)
+            } break; // case::ISLAND
+            case NodeKind::SLOT:
+            {
+                // add FluidData to slot if it's read/written by fluid
+                // regardless if it is one fluid island (both writing to and reading from this object)
+                // or two distinct islands (both fluid)
+                auto isFluidIsland = [&](const ade::NodeHandle& node) {
+                    const auto isl = gim.metadata(node).get<FusedIsland>().object;
+                    return isl->backend() == cv::gapi::fluid::backend();
+                };
+
+                if (ade::util::any_of(ade::util::chain(nh->inNodes(), nh->outNodes()), isFluidIsland))
+                {
+                    auto data_node = gim.metadata(nh).get<DataSlot>().original_data_node;
+                    setFluidData(data_node, false);
+                }
+            } break; // case::SLOT
+            default: GAPI_Assert(false);
+            } // switch
         } // for (gim.nodes())
     });
     // FIXME:
