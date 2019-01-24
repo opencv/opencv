@@ -307,10 +307,9 @@ static const VideoCaptureAPIs backend_params[] = {
     CAP_QT,
 #endif
 
-// TODO: Broken?
-//#ifdef HAVE_AVFOUNDATION
-//    CAP_AVFOUNDATION,
-//#endif
+#ifdef HAVE_AVFOUNDATION
+   CAP_AVFOUNDATION,
+#endif
 
 #ifdef HAVE_MSMF
     CAP_MSMF,
@@ -413,18 +412,16 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("mkv", "MJPG", 30.f, CAP_QT),
 #endif
 
-// TODO: Broken?
-//#ifdef HAVE_AVFOUNDATION
-//    makeParam("mov", "mp4v", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "XVID", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "MPEG", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "IYUV", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "MJPG", 30.f, CAP_AVFOUNDATION),
-
-//    makeParam("mkv", "XVID", 30.f, CAP_AVFOUNDATION),
-//    makeParam("mkv", "MPEG", 30.f, CAP_AVFOUNDATION),
-//    makeParam("mkv", "MJPG", 30.f, CAP_AVFOUNDATION),
-//#endif
+#ifdef HAVE_AVFOUNDATION
+   makeParam("mov", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("mov", "MJPG", 30.f, CAP_AVFOUNDATION),
+   makeParam("mp4", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("mp4", "MJPG", 30.f, CAP_AVFOUNDATION),
+   makeParam("m4v", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("m4v", "MJPG", 30.f, CAP_AVFOUNDATION),
+   makeParam("3gp", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("3gp", "MJPG", 30.f, CAP_AVFOUNDATION),
+#endif
 
 #ifdef HAVE_FFMPEG
     makeParam("avi", "XVID", 30.f, CAP_FFMPEG),
