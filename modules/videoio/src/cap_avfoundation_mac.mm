@@ -800,9 +800,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     mFrameTimestamp = position;
     mFrameNum = round((mFrameTimestamp.value * mAssetTrack.nominalFrameRate) / double(mFrameTimestamp.timescale));
     [mAssetReader addOutput: mTrackOutput];
-    [mAssetReader startReading];
-
-    return true;
+    return [mAssetReader startReading];
 }
 
 int CvCaptureFile::didStart() {
@@ -1020,7 +1018,7 @@ double CvCaptureFile::getProperty(int property_id) const{
         case CV_CAP_PROP_POS_MSEC:
             return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
         case CV_CAP_PROP_POS_FRAMES:
-            return  mFrameNum;
+            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = [mAsset duration];
             return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
@@ -1056,18 +1054,15 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
         case CV_CAP_PROP_POS_MSEC:
             t = mAsset.duration;
             t.value = value * t.timescale / 1000;
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
-            retval = true;
+            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
             break;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
         case CV_CAP_PROP_FOURCC:
             uint32_t mode;
@@ -1081,8 +1076,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                     case CV_CAP_MODE_GRAY:
                     case CV_CAP_MODE_YUYV:
                         mMode = mode;
-                        setupReadingAt(mFrameTimestamp);
-                        retval = true;
+                        retval = setupReadingAt(mFrameTimestamp);
                         break;
                     default:
                         fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
