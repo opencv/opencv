@@ -718,19 +718,33 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     return Mat(size, CV_32F, (void*)blob->buffer());
 }
 
-InfEngineBackendLayer::InfEngineBackendLayer(const InferenceEngine::DataPtr& output_)
-{
-    output = output_;
-}
-
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             const int requiredOutputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
-    std::vector<size_t> dims = output->dims;
-    std::vector<int> shape(dims.rbegin(), dims.rend());
-    outputs.assign(1, shape);
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+    InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
+    bool equal_flag = true;
+    size_t i = 0;
+    for (itr = inShapes.begin(); itr != inShapes.end(); ++itr)
+    {
+        InferenceEngine::SizeVector currentInShape(inputs[i].begin(), inputs[i].end());
+        if (itr->second != currentInShape)
+        {
+            itr->second = currentInShape;
+            equal_flag = false;
+        }
+        i++;
+    }
+
+    if (!equal_flag)
+    {
+        InferenceEngine::CNNNetwork curr_t_net(t_net);
+        curr_t_net.reshape(inShapes);
+    }
+    std::vector<size_t> dims = t_net.getOutputsInfo()[name]->getDims();
+    outputs.push_back(MatShape(dims.begin(), dims.end()));
     return false;
 }
 
