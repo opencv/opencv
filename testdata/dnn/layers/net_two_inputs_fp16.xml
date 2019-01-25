@@ -1,0 +1,48 @@
+<net name="default" version="2" batch="1">
+    <layers>
+        <layer name="second_input" type="Input" precision="FP16" id="1">
+            <output>
+                <port id="1">
+                    <dim>1</dim>
+                    <dim>2</dim>
+                    <dim>3</dim>
+                </port>
+            </output>
+        </layer>
+        <layer name="data" type="Input" precision="FP16" id="0">
+            <output>
+                <port id="0">
+                    <dim>1</dim>
+                    <dim>2</dim>
+                    <dim>3</dim>
+                </port>
+            </output>
+        </layer>
+        <layer name="output" type="Eltwise" precision="FP16" id="2">
+            <elementwise_data operation="sum"/>
+            <input>
+                <port id="2">
+                    <dim>1</dim>
+                    <dim>2</dim>
+                    <dim>3</dim>
+                </port>
+                <port id="3">
+                    <dim>1</dim>
+                    <dim>2</dim>
+                    <dim>3</dim>
+                </port>
+            </input>
+            <output>
+                <port id="4">
+                    <dim>1</dim>
+                    <dim>2</dim>
+                    <dim>3</dim>
+                </port>
+            </output>
+        </layer>
+    </layers>
+    <edges>
+        <edge from-layer="0" from-port="0" to-layer="2" to-port="2"/>
+        <edge from-layer="1" from-port="1" to-layer="2" to-port="3"/>
+    </edges>
+</net>
