@@ -123,7 +123,7 @@ struct RGB2YCrCb_f<float>
             }
 
             v_float32 y, cr, cb;
-            y = b*vc0 + g*vc1 + r*vc2;
+            y = v_fma(b, vc0, v_fma(g, vc1, r*vc2));
 
             if(bidx)
                 std::swap(r, b);
