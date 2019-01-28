@@ -1193,64 +1193,44 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
                     v_load_deinterleave(uv + i, u, v);
                 }
 
-                v_uint8 vy01, vy11, vy02, vy12;
-                v_load_deinterleave(y1 + i, vy01, vy11);
-                v_load_deinterleave(y2 + i, vy02, vy12);
+                v_uint8 vy[4];
+                v_load_deinterleave(y1 + i, vy[0], vy[1]);
+                v_load_deinterleave(y2 + i, vy[2], vy[3]);
 
-                v_int32 ruv00, guv00, buv00;
-                v_int32 ruv01, guv01, buv01;
-                v_int32 ruv10, guv10, buv10;
-                v_int32 ruv11, guv11, buv11;
+                v_int32 ruv[4], guv[4], buv[4];
                 uvToRGBuv(u, v,
-                          ruv00, guv00, buv00,
-                          ruv01, guv01, buv01,
-                          ruv10, guv10, buv10,
-                          ruv11, guv11, buv11);
+                          ruv[0], guv[0], buv[0],
+                          ruv[1], guv[1], buv[1],
+                          ruv[2], guv[2], buv[2],
+                          ruv[3], guv[3], buv[3]);
 
-                v_uint8 r00, g00, b00;
-                v_uint8 r01, g01, b01;
+                v_uint8 r[4], g[4], b[4];
 
-                v_uint8 r10, g10, b10;
-                v_uint8 r11, g11, b11;
-
-                yRGBuvToRGBA(vy01,
-                             ruv00, ruv01, ruv10, ruv11,
-                             guv00, guv01, guv10, guv11,
-                             buv00, buv01, buv10, buv11,
-                             r00, g00, b00);
-                yRGBuvToRGBA(vy11,
-                             ruv00, ruv01, ruv10, ruv11,
-                             guv00, guv01, guv10, guv11,
-                             buv00, buv01, buv10, buv11,
-                             r01, g01, b01);
-
-                yRGBuvToRGBA(vy02,
-                             ruv00, ruv01, ruv10, ruv11,
-                             guv00, guv01, guv10, guv11,
-                             buv00, buv01, buv10, buv11,
-                             r10, g10, b10);
-                yRGBuvToRGBA(vy12,
-                             ruv00, ruv01, ruv10, ruv11,
-                             guv00, guv01, guv10, guv11,
-                             buv00, buv01, buv10, buv11,
-                             r11, g11, b11);
+                for(int k = 0; k < 4; k++)
+                {
+                    yRGBuvToRGBA(vy[k],
+                                 ruv[0], ruv[1], ruv[2], ruv[3],
+                                 guv[0], guv[1], guv[2], guv[3],
+                                 buv[0], buv[1], buv[2], buv[3],
+                                 r[k], g[k], b[k]);
+                }
 
                 if(bIdx)
                 {
-                    swap(r00, b00); swap(r01, b01);
-                    swap(r10, b10); swap(r11, b11);
+                    for(int k = 0; k < 4; k++)
+                        swap(r[k], b[k]);
                 }
 
                 // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
                 v_uint8 r0_0, r0_1, r1_0, r1_1;
-                v_zip(r00, r01, r0_0, r0_1);
-                v_zip(r10, r11, r1_0, r1_1);
+                v_zip(r[0], r[1], r0_0, r0_1);
+                v_zip(r[2], r[3], r1_0, r1_1);
                 v_uint8 g0_0, g0_1, g1_0, g1_1;
-                v_zip(g00, g01, g0_0, g0_1);
-                v_zip(g10, g11, g1_0, g1_1);
+                v_zip(g[0], g[1], g0_0, g0_1);
+                v_zip(g[2], g[3], g1_0, g1_1);
                 v_uint8 b0_0, b0_1, b1_0, b1_1;
-                v_zip(b00, b01, b0_0, b0_1);
-                v_zip(b10, b11, b1_0, b1_1);
+                v_zip(b[0], b[1], b0_0, b0_1);
+                v_zip(b[2], b[3], b1_0, b1_1);
 
                 if(dcn == 4)
                 {
