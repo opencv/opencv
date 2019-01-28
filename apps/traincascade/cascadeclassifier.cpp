@@ -340,7 +340,7 @@ int CvCascadeClassifier::fillPassedSamples( int first, int count, bool isPositiv
             if( predict( i ) == 1 )
             {
                 getcount++;
-                printf("%s current samples: %d\r", isPositive ? "POS":"NEG", getcount);
+                std::cout << (isPositive ? "POS" : "NEG") << " current samples: " << getcount << "\r" << std::flush;
                 break;
             }
         }
