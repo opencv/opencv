@@ -342,14 +342,6 @@ static inline void writeReal(uchar* p, double fval)
 class FileStorage::Impl : public FileStorage_API
 {
 public:
-    enum State
-    {
-        UNDEFINED      = 0,
-        VALUE_EXPECTED = 1,
-        NAME_EXPECTED  = 2,
-        INSIDE_MAP     = 4
-    };
-
     void init()
     {
         flags = 0;

@@ -320,7 +320,7 @@ public:
         BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
         WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64
     };
-    enum
+    enum State
     {
         UNDEFINED      = 0,
         VALUE_EXPECTED = 1,

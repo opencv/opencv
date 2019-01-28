@@ -78,7 +78,7 @@ template<typename T> struct tuple_wrap_helper
 template<typename... Objs>
 struct tuple_wrap_helper<std::tuple<Objs...>>
 {
-    static std::tuple<Objs...> get(std::tuple<Objs...>&& objs) { return objs; }
+    static std::tuple<Objs...> get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
 };
 
 template<typename, typename, typename>
