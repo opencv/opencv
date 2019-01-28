@@ -1000,43 +1000,33 @@ static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, i
 }
 
 static inline void uvToRGBuv(const v_uint8 u, const v_uint8 v,
-                             v_int32& ruv00, v_int32& guv00, v_int32& buv00,
-                             v_int32& ruv01, v_int32& guv01, v_int32& buv01,
-                             v_int32& ruv10, v_int32& guv10, v_int32& buv10,
-                             v_int32& ruv11, v_int32& guv11, v_int32& buv11)
+                             v_int32 (&ruv)[4],
+                             v_int32 (&guv)[4],
+                             v_int32 (&buv)[4])
 {
     v_uint8 v128 = vx_setall_u8(128);
-    v_int8 uu = v_reinterpret_as_s8(v_sub_wrap(u, v128));
-    v_int8 vv = v_reinterpret_as_s8(v_sub_wrap(v, v128));
+    v_int8 su = v_reinterpret_as_s8(v_sub_wrap(u, v128));
+    v_int8 sv = v_reinterpret_as_s8(v_sub_wrap(v, v128));
 
     v_int16 uu0, uu1, vv0, vv1;
-    v_expand(uu, uu0, uu1);
-    v_expand(vv, vv0, vv1);
-    v_int32 uu00, uu01, uu10, uu11;
-    v_int32 vv00, vv01, vv10, vv11;
-    v_expand(uu0, uu00, uu01); v_expand(uu1, uu10, uu11);
-    v_expand(vv0, vv00, vv01); v_expand(vv1, vv10, vv11);
+    v_expand(su, uu0, uu1);
+    v_expand(sv, vv0, vv1);
+    v_int32 uu[4], vv[4];
+    v_expand(uu0, uu[0], uu[1]); v_expand(uu1, uu[2], uu[3]);
+    v_expand(vv0, vv[0], vv[1]); v_expand(vv1, vv[2], vv[3]);
 
     v_int32 vshift = vx_setall_s32(1 << (ITUR_BT_601_SHIFT - 1));
-    v_int32 vvr = vx_setall_s32(ITUR_BT_601_CVR);
-    v_int32 vvg = vx_setall_s32(ITUR_BT_601_CVG);
-    v_int32 vug = vx_setall_s32(ITUR_BT_601_CUG);
-    v_int32 vub = vx_setall_s32(ITUR_BT_601_CUB);
+    v_int32 vr = vx_setall_s32(ITUR_BT_601_CVR);
+    v_int32 vg = vx_setall_s32(ITUR_BT_601_CVG);
+    v_int32 ug = vx_setall_s32(ITUR_BT_601_CUG);
+    v_int32 ub = vx_setall_s32(ITUR_BT_601_CUB);
 
-    ruv00 = vshift + vvr * vv00;
-    ruv01 = vshift + vvr * vv01;
-    ruv10 = vshift + vvr * vv10;
-    ruv11 = vshift + vvr * vv11;
-
-    guv00 = vshift + vvg * vv00 + vug * uu00;
-    guv01 = vshift + vvg * vv01 + vug * uu01;
-    guv10 = vshift + vvg * vv10 + vug * uu10;
-    guv11 = vshift + vvg * vv11 + vug * uu11;
-
-    buv00 = vshift + vub * uu00;
-    buv01 = vshift + vub * uu01;
-    buv10 = vshift + vub * uu10;
-    buv11 = vshift + vub * uu11;
+    for (int k = 0; k < 4; k++)
+    {
+        ruv[k] = vshift + vr * vv[k];
+        guv[k] = vshift + vg * vv[k] + ug * uu[k];
+        buv[k] = vshift + ub * uu[k];
+    }
 }
 
 static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, const int buv,
@@ -1051,55 +1041,42 @@ static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, co
 }
 
 static inline void yRGBuvToRGBA(const v_uint8 vy,
-                                const v_int32 ruv00, const v_int32 ruv01,
-                                const v_int32 ruv10, const v_int32 ruv11,
-                                const v_int32 guv00, const v_int32 guv01,
-                                const v_int32 guv10, const v_int32 guv11,
-                                const v_int32 buv00, const v_int32 buv01,
-                                const v_int32 buv10, const v_int32 buv11,
-                                v_uint8& r, v_uint8& g, v_uint8& b)
+                                const v_int32 (&ruv)[4],
+                                const v_int32 (&guv)[4],
+                                const v_int32 (&buv)[4],
+                                v_uint8& rr, v_uint8& gg, v_uint8& bb)
 {
     v_uint8 v16 = vx_setall_u8(16);
-    v_uint8 yy = vy - v16;
+    v_uint8 posY = vy - v16;
     v_uint16 yy0, yy1;
-    v_expand(yy, yy0, yy1);
+    v_expand(posY, yy0, yy1);
+    v_int32 yy[4];
     v_int32 yy00, yy01, yy10, yy11;
-    v_expand(v_reinterpret_as_s16(yy0), yy00, yy01);
-    v_expand(v_reinterpret_as_s16(yy1), yy10, yy11);
+    v_expand(v_reinterpret_as_s16(yy0), yy[0], yy[1]);
+    v_expand(v_reinterpret_as_s16(yy1), yy[2], yy[3]);
 
     v_int32 vcy = vx_setall_s32(ITUR_BT_601_CY);
 
-    v_int32 y00 = yy00*vcy;
-    v_int32 y01 = yy01*vcy;
-    v_int32 y10 = yy10*vcy;
-    v_int32 y11 = yy11*vcy;
-
-    v_int32 r00 = (y00 + ruv00) >> ITUR_BT_601_SHIFT;
-    v_int32 r01 = (y01 + ruv01) >> ITUR_BT_601_SHIFT;
-    v_int32 r10 = (y10 + ruv10) >> ITUR_BT_601_SHIFT;
-    v_int32 r11 = (y11 + ruv11) >> ITUR_BT_601_SHIFT;
-
-    v_int32 g00 = (y00 + guv00) >> ITUR_BT_601_SHIFT;
-    v_int32 g01 = (y01 + guv01) >> ITUR_BT_601_SHIFT;
-    v_int32 g10 = (y10 + guv10) >> ITUR_BT_601_SHIFT;
-    v_int32 g11 = (y11 + guv11) >> ITUR_BT_601_SHIFT;
-
-    v_int32 b00 = (y00 + buv00) >> ITUR_BT_601_SHIFT;
-    v_int32 b01 = (y01 + buv01) >> ITUR_BT_601_SHIFT;
-    v_int32 b10 = (y10 + buv10) >> ITUR_BT_601_SHIFT;
-    v_int32 b11 = (y11 + buv11) >> ITUR_BT_601_SHIFT;
+    v_int32 y[4], r[4], g[4], b[4];
+    for(int k = 0; k < 4; k++)
+    {
+        y[k] = yy[k]*vcy;
+        r[k] = (y[k] + ruv[k]) >> ITUR_BT_601_SHIFT;
+        g[k] = (y[k] + guv[k]) >> ITUR_BT_601_SHIFT;
+        b[k] = (y[k] + buv[k]) >> ITUR_BT_601_SHIFT;
+    }
 
     v_int16 r0, r1, g0, g1, b0, b1;
-    r0 = v_pack(r00, r01);
-    r1 = v_pack(r10, r11);
-    g0 = v_pack(g00, g01);
-    g1 = v_pack(g10, g11);
-    b0 = v_pack(b00, b01);
-    b1 = v_pack(b10, b11);
+    r0 = v_pack(r[0], r[1]);
+    r1 = v_pack(r[2], r[3]);
+    g0 = v_pack(g[0], g[1]);
+    g1 = v_pack(g[2], g[3]);
+    b0 = v_pack(b[0], b[1]);
+    b1 = v_pack(b[2], b[3]);
 
-    r = v_pack_u(r0, r1);
-    g = v_pack_u(g0, g1);
-    b = v_pack_u(b0, b1);
+    rr = v_pack_u(r0, r1);
+    gg = v_pack_u(g0, g1);
+    bb = v_pack_u(b0, b1);
 }
 
 template<int bIdx, int dcn, bool is420>
@@ -1184,13 +1161,11 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
                  i += 2*vsize, row1 += vsize*dcn*2, row2 += vsize*dcn*2)
             {
                 v_uint8 u, v;
+                v_load_deinterleave(uv + i, u, v);
+
                 if(uIdx)
                 {
-                    v_load_deinterleave(uv + i, v, u);
-                }
-                else
-                {
-                    v_load_deinterleave(uv + i, u, v);
+                    swap(u, v);
                 }
 
                 v_uint8 vy[4];
@@ -1198,21 +1173,13 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
                 v_load_deinterleave(y2 + i, vy[2], vy[3]);
 
                 v_int32 ruv[4], guv[4], buv[4];
-                uvToRGBuv(u, v,
-                          ruv[0], guv[0], buv[0],
-                          ruv[1], guv[1], buv[1],
-                          ruv[2], guv[2], buv[2],
-                          ruv[3], guv[3], buv[3]);
+                uvToRGBuv(u, v, ruv, guv, buv);
 
                 v_uint8 r[4], g[4], b[4];
 
                 for(int k = 0; k < 4; k++)
                 {
-                    yRGBuvToRGBA(vy[k],
-                                 ruv[0], ruv[1], ruv[2], ruv[3],
-                                 guv[0], guv[1], guv[2], guv[3],
-                                 buv[0], buv[1], buv[2], buv[3],
-                                 r[k], g[k], b[k]);
+                    yRGBuvToRGBA(vy[k], ruv, guv, buv, r[k], g[k], b[k]);
                 }
 
                 if(bIdx)
@@ -1320,21 +1287,13 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
                 v_load_deinterleave(y2 + 2*i, vy[2], vy[3]);
 
                 v_int32 ruv[4], guv[4], buv[4];
-                uvToRGBuv(u, v,
-                          ruv[0], guv[0], buv[0],
-                          ruv[1], guv[1], buv[1],
-                          ruv[2], guv[2], buv[2],
-                          ruv[3], guv[3], buv[3]);
+                uvToRGBuv(u, v, ruv, guv, buv);
 
                 v_uint8 r[4], g[4], b[4];
 
                 for(int k = 0; k < 4; k++)
                 {
-                    yRGBuvToRGBA(vy[k],
-                                 ruv[0], ruv[1], ruv[2], ruv[3],
-                                 guv[0], guv[1], guv[2], guv[3],
-                                 buv[0], buv[1], buv[2], buv[3],
-                                 r[k], g[k], b[k]);
+                    yRGBuvToRGBA(vy[k], ruv, guv, buv, r[k], g[k], b[k]);
                 }
 
                 if(bIdx)
@@ -1579,35 +1538,22 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
                 {
                     v_load_deinterleave(yuv_src + i, u, vy[0], v, vy[1]);
                 }
-                else
+                else // YUYV or YVYU
                 {
+                    v_load_deinterleave(yuv_src + i, vy[0], u, vy[1], v);
                     if(uIdx == 1) // YVYU
                     {
-                        v_load_deinterleave(yuv_src + i, vy[0], v, vy[1], u);
-                    }
-                    else // YUYV
-                    {
-                        v_load_deinterleave(yuv_src + i, vy[0], u, vy[1], v);
+                        swap(u, v);
                     }
                 }
 
                 v_int32 ruv[4], guv[4], buv[4];
-                uvToRGBuv(u, v,
-                          ruv[0], guv[0], buv[0],
-                          ruv[1], guv[1], buv[1],
-                          ruv[2], guv[2], buv[2],
-                          ruv[3], guv[3], buv[3]);
+                uvToRGBuv(u, v, ruv, guv, buv);
 
                 v_uint8 r[2], g[2], b[2];
 
-                for(int k = 0; k < 2; k++)
-                {
-                    yRGBuvToRGBA(vy[k],
-                                 ruv[0], ruv[1], ruv[2], ruv[3],
-                                 guv[0], guv[1], guv[2], guv[3],
-                                 buv[0], buv[1], buv[2], buv[3],
-                                 r[k], g[k], b[k]);
-                }
+                yRGBuvToRGBA(vy[0], ruv, guv, buv, r[0], g[0], b[0]);
+                yRGBuvToRGBA(vy[1], ruv, guv, buv, r[1], g[1], b[1]);
 
                 if(bIdx)
                 {
