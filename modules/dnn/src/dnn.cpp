@@ -2795,8 +2795,7 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
     {
-        std::vector<LayerPin> lp = impl->getLayerOutPins(outBlobNames[i]);
-        pins.insert(pins.end(), lp.begin(), lp.end());
+        pins.push_back(impl->getPinByAlias(outBlobNames[i]));
     }
 
     impl->setUpNet(pins);
@@ -2809,9 +2808,10 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
     for (int i = 0; i < outBlobNames.size(); i++)
     {
         std::vector<LayerPin> lp = impl->getLayerOutPins(outBlobNames[i]);
-        for (int i = 0; i < lp.size(); i++)
+        outputBlobs[i].resize(lp.size());
+        for (int j = 0; j < lp.size(); j++)
         {
-            outputBlobs[i].push_back(impl->getBlob(lp[i]));
+            outputBlobs[i][j] = impl->getBlob(lp[j]);
         }
     }
 }
