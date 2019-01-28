@@ -142,7 +142,13 @@ private:
 #else
         cv::dnn::Net net;
         cv::dnn::LayerParams lp;
-        net.addLayerToPrev("testLayer", "Identity", lp);
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testLayer";
+        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
         net.setPreferableTarget(target);
         static int inpDims[] = {1, 2, 3, 4};

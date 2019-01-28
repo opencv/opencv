@@ -481,13 +481,13 @@ public:
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(outCn);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)outCn);
 
         ieLayer.setWeights(ieWeights);
         if (ieBiases)
@@ -1713,13 +1713,13 @@ public:
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(numOutput);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)numOutput);
 
         ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW));
         if (hasBias())

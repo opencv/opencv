@@ -82,7 +82,7 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
     CV_Assert(it != layers.end());
 
     const int layerId = it->second;
-    for (int i = 0; i < inpWrappers.size(); ++i)
+    for (size_t i = 0; i < inpWrappers.size(); ++i)
     {
         const auto& inp = inpWrappers[i];
         const std::string& inpName = inp->dataPtr->name;
@@ -103,7 +103,7 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
         else
             inpId = it->second;
 
-        netBuilder.connect(inpId, {layerId, i});
+        netBuilder.connect((size_t)inpId, {(size_t)layerId, i});
         unconnectedLayersIds.erase(inpId);
     }
     CV_Assert(!outputs.empty());
@@ -119,7 +119,7 @@ void InfEngineBackendNet::init(int targetId)
         for (int id : unconnectedLayersIds)
         {
             InferenceEngine::Builder::OutputLayer outLayer("myconv1");
-            netBuilder.addLayer({id}, outLayer);
+            netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
         }
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
     }
