@@ -1303,8 +1303,77 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
             uchar* row1 = dst_data + dst_step * j;
             uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
+            int i = 0;
 
-            for (int i = 0; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+            v_uint8 a = vx_setall_u8(uchar(0xff));
+            for( ; i <= width/2 - vsize;
+                 i += vsize, row1 += vsize*dcn*2, row2 += vsize*dcn*2)
+            {
+                v_uint8 u, v;
+                u = vx_load(u1 + i);
+                v = vx_load(v1 + i);
+
+                v_uint8 vy[4];
+                v_load_deinterleave(y1 + 2*i, vy[0], vy[1]);
+                v_load_deinterleave(y2 + 2*i, vy[2], vy[3]);
+
+                v_int32 ruv[4], guv[4], buv[4];
+                uvToRGBuv(u, v,
+                          ruv[0], guv[0], buv[0],
+                          ruv[1], guv[1], buv[1],
+                          ruv[2], guv[2], buv[2],
+                          ruv[3], guv[3], buv[3]);
+
+                v_uint8 r[4], g[4], b[4];
+
+                for(int k = 0; k < 4; k++)
+                {
+                    yRGBuvToRGBA(vy[k],
+                                 ruv[0], ruv[1], ruv[2], ruv[3],
+                                 guv[0], guv[1], guv[2], guv[3],
+                                 buv[0], buv[1], buv[2], buv[3],
+                                 r[k], g[k], b[k]);
+                }
+
+                if(bIdx)
+                {
+                    for(int k = 0; k < 4; k++)
+                        swap(r[k], b[k]);
+                }
+
+                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
+                v_uint8 r0_0, r0_1, r1_0, r1_1;
+                v_zip(r[0], r[1], r0_0, r0_1);
+                v_zip(r[2], r[3], r1_0, r1_1);
+                v_uint8 g0_0, g0_1, g1_0, g1_1;
+                v_zip(g[0], g[1], g0_0, g0_1);
+                v_zip(g[2], g[3], g1_0, g1_1);
+                v_uint8 b0_0, b0_1, b1_0, b1_1;
+                v_zip(b[0], b[1], b0_0, b0_1);
+                v_zip(b[2], b[3], b1_0, b1_1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
+                    v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
+                    v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
+                }
+                else //dcn == 3
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
+                    v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
+                    v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
+                }
+            }
+            vx_cleanup();
+#endif
+            for (; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
             {
                 int u = int(u1[i]);
                 int v = int(v1[i]);
