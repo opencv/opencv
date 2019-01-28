@@ -331,6 +331,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::DMatch>("DMatchVector");
     register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
     
+    
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
         .constructor<const Mat&>()
