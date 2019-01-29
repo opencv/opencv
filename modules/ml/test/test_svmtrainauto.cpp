@@ -123,7 +123,6 @@ TEST(ML_SVM, trainauto_sigmoid)
     // If gamma is zero then all data will be put in the same class
     svm->setGamma(10.0);
     svm->setCoef0(10.0);
-
     svm->trainAuto( data, 10 );  // 2-fold cross validation.
 
     float test_data0[2] = {radius, radius};
