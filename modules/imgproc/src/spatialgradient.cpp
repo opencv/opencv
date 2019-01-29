@@ -123,16 +123,9 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         }
     }
 
-    // Pointer to row vectors
-    uchar *p_src, *c_src, *n_src; // previous, current, next row
-    short *c_dx,  *c_dy;
-
     int i_start = 0;
     int j_start = 0;
 #if CV_SIMD
-    uchar *m_src;
-    short *n_dx, *n_dy;
-
     // Characters in variable names have the following meanings:
     // u: unsigned char
     // s: signed int
@@ -144,19 +137,15 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     // Example: umn is offset -1 in row and offset 0 in column
     for ( i = 0; i < H - 1; i += 2 )
     {
-        if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
-        else            p_src = src.ptr<uchar>(i-1);
+        uchar *p_src = src.ptr<uchar>(i == 0 ? i_top : i - 1);
+        uchar *c_src = src.ptr<uchar>(i);
+        uchar *n_src = src.ptr<uchar>(i+1);
+        uchar *m_src = src.ptr<uchar>(i == H - 2 ? i_bottom : i + 2);
 
-        c_src = src.ptr<uchar>(i);
-        n_src = src.ptr<uchar>(i+1);
-
-        if ( i == H - 2 ) m_src = src.ptr<uchar>(i_bottom);
-        else              m_src = src.ptr<uchar>(i+2);
-
-        c_dx = dx.ptr<short>(i);
-        c_dy = dy.ptr<short>(i);
-        n_dx = dx.ptr<short>(i+1);
-        n_dy = dy.ptr<short>(i+1);
+        short *c_dx = dx.ptr<short>(i);
+        short *c_dy = dy.ptr<short>(i);
+        short *n_dx = dx.ptr<short>(i+1);
+        short *n_dy = dy.ptr<short>(i+1);
 
         // Process rest of columns 16-column chunks at a time
         for ( j = 1; j < W - v_uint8::nlanes; j += v_uint8::nlanes)
@@ -262,16 +251,12 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
     uchar v00, v01, v02, v10, v11, v12, v20, v21, v22;
     for ( i = 0; i < H; i++ )
     {
-        if   ( i == 0 ) p_src = src.ptr<uchar>(i_top);
-        else            p_src = src.ptr<uchar>(i-1);
+        uchar *p_src = src.ptr<uchar>(i == 0 ? i_top : i - 1);
+        uchar *c_src = src.ptr<uchar>(i);
+        uchar *n_src = src.ptr<uchar>(i == H - 1 ? i_bottom : i + 1);
 
-        c_src = src.ptr<uchar>(i);
-
-        if ( i == H - 1 ) n_src = src.ptr<uchar>(i_bottom);
-        else              n_src = src.ptr<uchar>(i+1);
-
-        c_dx = dx.ptr<short>(i);
-        c_dy = dy.ptr<short>(i);
+        short *c_dx = dx.ptr<short>(i);
+        short *c_dy = dy.ptr<short>(i);
 
         // Process left-most column
         j = 0;
