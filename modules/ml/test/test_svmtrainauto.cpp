@@ -161,6 +161,18 @@ void CV_SVMGetSupportVectorsTest::run(int /*startFrom*/ )
     CV_Assert(sv.rows == 0);    // inapplicable for non-linear SVMs
 
 
+    // Test retrieval of SVs and compressed SVs on sigmoid SVM
+    svm->setKernel(SVM::SIGMOID);
+    svm->setGamma(0.5);
+    svm->setCoef0(1.5);
+    svm->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
+
+    sv = svm->getSupportVectors();
+    CV_Assert(sv.rows == 2);
+    sv = svm->getUncompressedSupportVectors();
+    CV_Assert(sv.rows == 0);    // inapplicable for non-linear SVMs
+
+
     ts->set_failed_test_info(code);
 }
 
