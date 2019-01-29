@@ -120,7 +120,6 @@ TEST(ML_SVM, trainauto_sigmoid)
     cv::Ptr<SVM> svm = SVM::create();
     svm->setKernel(SVM::SIGMOID);
 
-    // If gamma is zero then all data will be put in the same class
     svm->setGamma(10.0);
     svm->setCoef0(-10.0);
     svm->trainAuto( data, 10 );  // 2-fold cross validation.

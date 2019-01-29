@@ -213,7 +213,6 @@ public:
         }
     }
 
-
     void calc_rbf( int vcount, int var_count, const float* vecs,
                    const float* another, Qfloat* results )
     {
