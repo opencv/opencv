@@ -278,7 +278,7 @@ public:
         const int outCn = blobs[0].size[0];
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs[0].reshape(1, outCn).clone();
+        Mat wm = blobs[0].reshape(1, outCn);
         if( wm.step1() % VEC_ALIGN != 0 )
         {
             int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
@@ -371,6 +371,10 @@ public:
 
         if (!w.empty())
         {
+            // Keep origin weights unchanged.
+            if (weightsMat.data == blobs[0].data)
+                weightsMat = weightsMat.clone();
+
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
