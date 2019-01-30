@@ -126,11 +126,11 @@ TEST(ML_SVM, trainauto_sigmoid)
 
     float test_data0[2] = {radius, radius};
     cv::Mat test_point0 = cv::Mat( 1, 2, CV_32FC1, test_data0 );
-    CV_Assert(0 == svm->predict( test_point0 ));
+    ASSERT_EQ(0, svm->predict( test_point0 ));
 
     float test_data1[2] = {scale_factor * radius, scale_factor * radius};
     cv::Mat test_point1 = cv::Mat( 1, 2, CV_32FC1, test_data1 );
-    CV_Assert(1 == svm->predict( test_point1 ));
+    ASSERT_EQ(1, svm->predict( test_point1 ));
 }
 
 
