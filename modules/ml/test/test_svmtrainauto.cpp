@@ -100,7 +100,7 @@ TEST(ML_SVM, trainauto_sigmoid)
     // Populate samples with data that can be split into two concentric circles
     for (int i = 0; i < datasize; i+=2)
     {
-        const float pi = 3.14159;
+        const float pi = 3.14159f;
         const float angle_rads = (i/datasize) * pi;
         const float x = radius * cos(angle_rads);
         const float y = radius * cos(angle_rads);
