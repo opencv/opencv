@@ -101,9 +101,9 @@ TEST(ML_SVM, trainauto_sigmoid)
     for (int i = 0; i < datasize; i+=2)
     {
         const float pi = 3.14159;
-        const double angle_rads = (i/datasize) * pi;
-        const double x = radius * cos(angle_rads);
-        const double y = radius * cos(angle_rads);
+        const float angle_rads = (i/datasize) * pi;
+        const float x = radius * cos(angle_rads);
+        const float y = radius * cos(angle_rads);
 
         // Larger circle
         samples.at<float>( i, 0 ) = x;
