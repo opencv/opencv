@@ -11,6 +11,12 @@
 #include "opencv2/gapi/cpu/imgproc.hpp"
 #include "backends/cpu/gcpuimgproc.hpp"
 
+cv::Rect add_border(const cv::Mat& in, cv::Mat& temp_in, const int ksize, const int borderType, const cv::Scalar& bordVal){
+    int add = (ksize - 1) / 2;
+    cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal);
+    return cv::Rect(add, add, in.cols, in.rows);
+}
+
 GAPI_OCV_KERNEL(GCPUSepFilter, cv::gapi::imgproc::GSepFilter)
 {
     static void run(const cv::Mat& in, int ddepth, const cv::Mat& kernX, const cv::Mat& kernY, const cv::Point& anchor, const cv::Scalar& delta,
@@ -136,13 +142,29 @@ GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
         if( borderType == cv::BORDER_CONSTANT )
         {
             cv::Mat temp_in;
-            int add = (ksize - 1) / 2;
-            cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal );
-            cv::Rect rect = cv::Rect(add, add, in.cols, in.rows);
+            cv::Rect rect = add_border(in, temp_in, ksize, borderType, bordVal);
             cv::Sobel(temp_in(rect), out, ddepth, dx, dy, ksize, scale, delta, borderType);
         }
         else
         cv::Sobel(in, out, ddepth, dx, dy, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
+{
+    static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
+                    const cv::Scalar& bordVal, cv::Mat &out_dx, cv::Mat &out_dy)
+    {
+        if( borderType == cv::BORDER_CONSTANT )
+        {
+            cv::Mat temp_in;
+            cv::Rect rect = add_border(in, temp_in, ksize, borderType, bordVal);
+            cv::Sobel(temp_in(rect), out_dx, ddepth, dx, 0, ksize, scale, delta, borderType);
+            cv::Sobel(temp_in(rect), out_dy, ddepth, 0, dy, ksize, scale, delta, borderType);
+        }
+        else
+        cv::Sobel(in, out_dx, ddepth, dx, 0, ksize, scale, delta, borderType);
+        cv::Sobel(in, out_dy, ddepth, 0, dy, ksize, scale, delta, borderType);
     }
 };
 
@@ -256,6 +278,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUErode
         , GCPUDilate
         , GCPUSobel
+        , GCPUSobelXY
         , GCPUCanny
         , GCPUEqualizeHist
         , GCPURGB2YUV
