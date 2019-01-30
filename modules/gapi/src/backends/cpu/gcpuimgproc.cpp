@@ -244,6 +244,15 @@ GAPI_OCV_KERNEL(GCPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUnormalize, cv::gapi::imgproc::Gnormalize)
+{
+    static void run(const cv::Mat& src, double a, double b,
+                    int norm_type, int ddepth, cv::Mat& out)
+    {
+        cv::normalize(src, out, a, b, norm_type, ddepth);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -268,6 +277,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBGR2Gray
         , GCPURGB2Gray
         , GCPURGB2GrayCustom
+        , GCPUnormalize
         >();
     return pkg;
 }
