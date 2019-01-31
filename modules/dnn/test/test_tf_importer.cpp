@@ -241,7 +241,7 @@ TEST_P(Test_TensorFlow_layers, unfused_flatten)
 
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
         throw SkipTestException("");
 #endif
@@ -388,7 +388,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("Unstable test case");
 #endif

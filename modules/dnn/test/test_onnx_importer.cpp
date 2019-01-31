@@ -395,7 +395,7 @@ TEST_P(Test_ONNX_nets, DenseNet121)
 
 TEST_P(Test_ONNX_nets, Inception_v1)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled for OpenVINO 2018R5");
 #endif
