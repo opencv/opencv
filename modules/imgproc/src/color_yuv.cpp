@@ -1220,13 +1220,13 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
 #endif
             for ( ; i < width; i += 2, row1 += dcn*2, row2 += dcn*2)
             {
-                int u = int(uv[i + 0 + uIdx]);
-                int v = int(uv[i + 1 - uIdx]);
+                uchar u = uv[i + 0 + uIdx];
+                uchar v = uv[i + 1 - uIdx];
 
-                int vy01 = int(y1[i]);
-                int vy11 = int(y1[i + 1]);
-                int vy02 = int(y2[i]);
-                int vy12 = int(y2[i + 1]);
+                uchar vy01 = y1[i];
+                uchar vy11 = y1[i + 1];
+                uchar vy02 = y2[i];
+                uchar vy12 = y2[i + 1];
 
                 cvtYuv42xxp2RGB8<bIdx, dcn, true>(u, v, vy01, vy11, vy02, vy12, row1, row2);
             }
@@ -1334,13 +1334,13 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
 #endif
             for (; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
             {
-                int u = int(u1[i]);
-                int v = int(v1[i]);
+                uchar u = u1[i];
+                uchar v = v1[i];
 
-                int vy01 = int(y1[2 * i]);
-                int vy11 = int(y1[2 * i + 1]);
-                int vy02 = int(y2[2 * i]);
-                int vy12 = int(y2[2 * i + 1]);
+                uchar vy01 = y1[2 * i];
+                uchar vy11 = y1[2 * i + 1];
+                uchar vy02 = y2[2 * i];
+                uchar vy12 = y2[2 * i + 1];
 
                 cvtYuv42xxp2RGB8<bIdx, dcn, true>(u, v, vy01, vy11, vy02, vy12, row1, row2);
             }
@@ -1471,20 +1471,6 @@ static inline void rgbToUV42x(v_uint8 r0, v_uint8 r1, v_uint8 g0, v_uint8 g1,
     v = v_pack_u(v0, v1);
 }
 
-static inline void rgbToYUV420(uchar r00, uchar g00, uchar b00,
-                               uchar r01, uchar g01, uchar b01,
-                               uchar r10, uchar g10, uchar b10,
-                               uchar r11, uchar g11, uchar b11,
-                               uchar& y00, uchar& y01, uchar& y10, uchar& y11,
-                               uchar& uu, uchar& vv)
-{
-    y00 = rgbToY42x(r00, g00, b00);
-    y01 = rgbToY42x(r01, g01, b01);
-    y10 = rgbToY42x(r10, g10, b10);
-    y11 = rgbToY42x(r11, g11, b11);
-
-    rgbToUV42x(r00, g00, b00, uu, vv);
-}
 
 struct RGB8toYUV420pInvoker: public ParallelLoopBody
 {
