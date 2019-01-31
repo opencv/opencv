@@ -88,6 +88,51 @@ void CV_SVMTrainAutoTest::run( int /*start_from*/ )
 
 TEST(ML_SVM, trainauto) { CV_SVMTrainAutoTest test; test.safe_run(); }
 
+TEST(ML_SVM, trainauto_sigmoid)
+{
+    const int datasize = 100;
+    cv::Mat samples = cv::Mat::zeros( datasize, 2, CV_32FC1 );
+    cv::Mat responses = cv::Mat::zeros( datasize, 1, CV_32S );
+
+    const float scale_factor = 0.5;
+    const float radius = 2.0;
+
+    // Populate samples with data that can be split into two concentric circles
+    for (int i = 0; i < datasize; i+=2)
+    {
+        const float pi = 3.14159f;
+        const float angle_rads = (i/datasize) * pi;
+        const float x = radius * cos(angle_rads);
+        const float y = radius * cos(angle_rads);
+
+        // Larger circle
+        samples.at<float>( i, 0 ) = x;
+        samples.at<float>( i, 1 ) = y;
+        responses.at<int>( i, 0 ) = 0;
+
+        // Smaller circle
+        samples.at<float>( i + 1, 0 ) = x * scale_factor;
+        samples.at<float>( i + 1, 1 ) = y * scale_factor;
+        responses.at<int>( i + 1, 0 ) = 1;
+    }
+
+    cv::Ptr<TrainData> data = TrainData::create( samples, cv::ml::ROW_SAMPLE, responses );
+    cv::Ptr<SVM> svm = SVM::create();
+    svm->setKernel(SVM::SIGMOID);
+
+    svm->setGamma(10.0);
+    svm->setCoef0(-10.0);
+    svm->trainAuto( data, 10 );  // 2-fold cross validation.
+
+    float test_data0[2] = {radius, radius};
+    cv::Mat test_point0 = cv::Mat( 1, 2, CV_32FC1, test_data0 );
+    ASSERT_EQ(0, svm->predict( test_point0 ));
+
+    float test_data1[2] = {scale_factor * radius, scale_factor * radius};
+    cv::Mat test_point1 = cv::Mat( 1, 2, CV_32FC1, test_data1 );
+    ASSERT_EQ(1, svm->predict( test_point1 ));
+}
+
 
 TEST(ML_SVM, trainAuto_regression_5369)
 {
