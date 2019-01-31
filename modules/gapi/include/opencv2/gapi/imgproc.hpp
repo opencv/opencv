@@ -155,16 +155,10 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(Gnormalize, <GMat(GMat, double, double,
-                    int, int)>, "org.opencv.imgproc.normalize") {
-        static GMatDesc outMeta(GMatDesc in, double, double,
-                    int, int ddepth) {
+    G_TYPED_KERNEL(Gnormalize, <GMat(GMat, double, double, int, int)>, "org.opencv.imgproc.normalize") {
+        static GMatDesc outMeta(GMatDesc in, double, double, int, int ddepth) {
             // unlike opencv doesn't have a mask as a parameter
-            if (ddepth < 0){
-                return in;
-            }else{
-                return in.withDepth(ddepth);
-            }
+            return (ddepth < 0 ? in : in.withDepth(ddepth));
         }
     };
 }
@@ -694,18 +688,20 @@ when normType=NORM_MINMAX (for dense arrays only).
 In case of sparse matrices, only the non-zero values are analyzed and transformed. Because of this,
 the range transformation for sparse matrices is not allowed since it can shift the zero level.
 
+@note Function textual ID is "org.opencv.imgproc.normalize"
+
 @param src input array.
 @param alpha norm value to normalize to or the lower range boundary in case of the range
 normalization.
 @param beta upper range boundary in case of the range normalization; it is not used for the norm
 normalization.
 @param norm_type normalization type (see cv::NormTypes).
-@param dtype when negative, the output array has the same type as src; otherwise, it has the same
-number of channels as src and the depth =CV_MAT_DEPTH(dtype).
+@param ddepth when negative, the output array has the same type as src; otherwise, it has the same
+number of channels as src and the depth =ddepth.
 @sa norm, Mat::convertTo, SparseMat::convertTo
 */
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
-                    int norm_type, int ddepth);
+                            int norm_type, int ddepth);
 
 //! @} gapi_colorconvert
 } //namespace gapi

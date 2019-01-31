@@ -630,18 +630,18 @@ TEST_P(NormalizeTest, Test)
 {
     auto param = GetParam();
 
-    compare_f cmpF = std::get<0>(param);
-    const auto in_type = std::get<1>(param);
-    const auto in_size = std::get<2>(param);
-    const auto a = std::get<3>(param);
-    const auto b = std::get<4>(param);
-    const auto norm_type = std::get<5>(param);
-    const auto ddepth = std::get<6>(param);
-    const auto createOut = std::get<7>(param);
-    auto compile_args = std::get<8>(param);
-    int dtype = CV_MAKETYPE(ddepth, CV_MAT_CN(in_type));
+    compare_f cmpF;
+    MatType type, ddepth;
+    cv::Size sz;
+    double a = 0 , b = 0;
+    int norm_type = 0;
+    bool createOut = 0;
+    cv::GCompileArgs compile_args;
 
-    initMatsRandN(in_type, in_size, dtype, createOut);
+    std::tie(cmpF, type, sz, a, b, norm_type, ddepth, createOut, compile_args) = GetParam();
+    int dtype = CV_MAKETYPE(ddepth, CV_MAT_CN(type));
+
+    initMatsRandN(type, sz, dtype, createOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -657,7 +657,7 @@ TEST_P(NormalizeTest, Test)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), in_size);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 } // opencv_test
