@@ -436,8 +436,6 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
 #if CV_SIMD128
     float* simd_kernel = alignPtr(kernel + m+1, 16);
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE) || checkHardwareSupport(CV_CPU_VSX);
-    if( useSIMD )
     {
         for( i = 0; i <= m; i++ )
             v_store(simd_kernel + i*4, v_setall_f32(kernel[i]));
@@ -459,7 +457,6 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         x = 0;
 #if CV_SIMD128
-        if( useSIMD )
         {
             for( ; x <= width*5 - 16; x += 16 )
             {
@@ -527,7 +524,6 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         // horizontal blur
         x = 0;
 #if CV_SIMD128
-        if( useSIMD )
         {
             for( ; x <= width*5 - 8; x += 8 )
             {
