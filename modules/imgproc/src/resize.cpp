@@ -340,155 +340,6 @@ static void hlineResizeCn(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_mi
     hline<ET, FT, n, mulall, cncnt>::ResizeCn(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
 };
 
-#if CV_SIMD512
-inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint16(
-                 *((uint16_t*)(src + ofst[ 0])), *((uint16_t*)(src + ofst[ 1])), *((uint16_t*)(src + ofst[ 2])), *((uint16_t*)(src + ofst[ 3])),
-                 *((uint16_t*)(src + ofst[ 4])), *((uint16_t*)(src + ofst[ 5])), *((uint16_t*)(src + ofst[ 6])), *((uint16_t*)(src + ofst[ 7])),
-                 *((uint16_t*)(src + ofst[ 8])), *((uint16_t*)(src + ofst[ 9])), *((uint16_t*)(src + ofst[10])), *((uint16_t*)(src + ofst[11])),
-                 *((uint16_t*)(src + ofst[12])), *((uint16_t*)(src + ofst[13])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])),
-                 *((uint16_t*)(src + ofst[16])), *((uint16_t*)(src + ofst[17])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])),
-                 *((uint16_t*)(src + ofst[20])), *((uint16_t*)(src + ofst[21])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])),
-                 *((uint16_t*)(src + ofst[24])), *((uint16_t*)(src + ofst[25])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])),
-                 *((uint16_t*)(src + ofst[28])), *((uint16_t*)(src + ofst[29])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])))),
-             v_src0, v_src1);
-}
-inline void v_load_indexed2(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint32(
-                 *((uint32_t*)(src + 2 * ofst[ 0])), *((uint32_t*)(src + 2 * ofst[ 1])), *((uint32_t*)(src + 2 * ofst[ 2])), *((uint32_t*)(src + 2 * ofst[ 3])),
-                 *((uint32_t*)(src + 2 * ofst[ 4])), *((uint32_t*)(src + 2 * ofst[ 5])), *((uint32_t*)(src + 2 * ofst[ 6])), *((uint32_t*)(src + 2 * ofst[ 7])),
-                 *((uint32_t*)(src + 2 * ofst[ 8])), *((uint32_t*)(src + 2 * ofst[ 9])), *((uint32_t*)(src + 2 * ofst[10])), *((uint32_t*)(src + 2 * ofst[11])),
-                 *((uint32_t*)(src + 2 * ofst[12])), *((uint32_t*)(src + 2 * ofst[13])), *((uint32_t*)(src + 2 * ofst[14])), *((uint32_t*)(src + 2 * ofst[15])))),
-             v_src0, v_src1);
-    v_uint32 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
-    v_zip(v_reinterpret_as_u32(v_src0), v_reinterpret_as_u32(v_src1), v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_reinterpret_as_u16(v_tmp0), v_reinterpret_as_u16(v_tmp1), v_src0, v_src1);
-}
-inline void v_load_indexed4(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint64(
-                 *((uint64_t*)(src + 4 * ofst[0])), *((uint64_t*)(src + 4 * ofst[1])), *((uint64_t*)(src + 4 * ofst[2])), *((uint64_t*)(src + 4 * ofst[3])),
-                 *((uint64_t*)(src + 4 * ofst[4])), *((uint64_t*)(src + 4 * ofst[5])), *((uint64_t*)(src + 4 * ofst[6])), *((uint64_t*)(src + 4 * ofst[7])))),
-             v_src0, v_src1);
-    v_uint64 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
-    v_zip(v_reinterpret_as_u64(v_src0), v_reinterpret_as_u64(v_src1), v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
-    v_zip(v_reinterpret_as_u16(v_tmp2), v_reinterpret_as_u16(v_tmp3), v_src0, v_src1);
-}
-inline void v_load_indexed_deinterleave(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32 &v_src1)
-{
-    v_expand(v_reinterpret_as_u16(v_uint32(
-                 *((uint32_t*)(src + ofst[ 0])), *((uint32_t*)(src + ofst[ 1])), *((uint32_t*)(src + ofst[ 2])), *((uint32_t*)(src + ofst[ 3])),
-                 *((uint32_t*)(src + ofst[ 4])), *((uint32_t*)(src + ofst[ 5])), *((uint32_t*)(src + ofst[ 6])), *((uint32_t*)(src + ofst[ 7])),
-                 *((uint32_t*)(src + ofst[ 8])), *((uint32_t*)(src + ofst[ 9])), *((uint32_t*)(src + ofst[10])), *((uint32_t*)(src + ofst[11])),
-                 *((uint32_t*)(src + ofst[12])), *((uint32_t*)(src + ofst[13])), *((uint32_t*)(src + ofst[14])), *((uint32_t*)(src + ofst[15])))),
-             v_src0, v_src1);
-    v_uint32 v_tmp0, v_tmp1;
-    v_zip(v_src0, v_src1, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-    v_zip(v_src0, v_src1, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-}
-#elif CV_SIMD256
-inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint16(
-                 *((uint16_t*)(src + ofst[ 0])), *((uint16_t*)(src + ofst[ 1])), *((uint16_t*)(src + ofst[ 2])), *((uint16_t*)(src + ofst[ 3])),
-                 *((uint16_t*)(src + ofst[ 4])), *((uint16_t*)(src + ofst[ 5])), *((uint16_t*)(src + ofst[ 6])), *((uint16_t*)(src + ofst[ 7])),
-                 *((uint16_t*)(src + ofst[ 8])), *((uint16_t*)(src + ofst[ 9])), *((uint16_t*)(src + ofst[10])), *((uint16_t*)(src + ofst[11])),
-                 *((uint16_t*)(src + ofst[12])), *((uint16_t*)(src + ofst[13])), *((uint16_t*)(src + ofst[14])), *((uint16_t*)(src + ofst[15])))),
-             v_src0, v_src1);
-}
-inline void v_load_indexed2(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint32(
-                 *((uint32_t*)(src + 2 * ofst[0])), *((uint32_t*)(src + 2 * ofst[1])), *((uint32_t*)(src + 2 * ofst[2])), *((uint32_t*)(src + 2 * ofst[3])),
-                 *((uint32_t*)(src + 2 * ofst[4])), *((uint32_t*)(src + 2 * ofst[5])), *((uint32_t*)(src + 2 * ofst[6])), *((uint32_t*)(src + 2 * ofst[7])))),
-             v_src0, v_src1);
-    v_uint32 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
-    v_zip(v_reinterpret_as_u32(v_src0), v_reinterpret_as_u32(v_src1), v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
-    v_zip(v_reinterpret_as_u16(v_tmp2), v_reinterpret_as_u16(v_tmp3), v_src0, v_src1);
-}
-inline void v_load_indexed4(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_expand(v_reinterpret_as_u8(v_uint64(
-                 *((uint64_t*)(src + 4 * ofst[0])), *((uint64_t*)(src + 4 * ofst[1])), *((uint64_t*)(src + 4 * ofst[2])), *((uint64_t*)(src + 4 * ofst[3])))),
-             v_src0, v_src1);
-    v_uint64 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
-    v_zip(v_reinterpret_as_u64(v_src0), v_reinterpret_as_u64(v_src1), v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_reinterpret_as_u16(v_tmp0), v_reinterpret_as_u16(v_tmp1), v_src0, v_src1);
-}
-inline void v_load_indexed_deinterleave(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32 &v_src1)
-{
-    v_uint32 v_tmp0, v_tmp1;
-    v_expand(v_reinterpret_as_u16(v_uint32(
-                 *((uint32_t*)(src + ofst[0])), *((uint32_t*)(src + ofst[1])), *((uint32_t*)(src + ofst[2])), *((uint32_t*)(src + ofst[3])),
-                 *((uint32_t*)(src + ofst[4])), *((uint32_t*)(src + ofst[5])), *((uint32_t*)(src + ofst[6])), *((uint32_t*)(src + ofst[7])))),
-             v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-    v_zip(v_src0, v_src1, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-}
-#elif CV_SIMD128
-inline void v_load_indexed1(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    uint16_t buf[8];
-    buf[0] = *((uint16_t*)(src + ofst[0]));
-    buf[1] = *((uint16_t*)(src + ofst[1]));
-    buf[2] = *((uint16_t*)(src + ofst[2]));
-    buf[3] = *((uint16_t*)(src + ofst[3]));
-    buf[4] = *((uint16_t*)(src + ofst[4]));
-    buf[5] = *((uint16_t*)(src + ofst[5]));
-    buf[6] = *((uint16_t*)(src + ofst[6]));
-    buf[7] = *((uint16_t*)(src + ofst[7]));
-    v_src0 = vx_load_expand((uint8_t*)buf);
-    v_src1 = vx_load_expand((uint8_t*)buf + 8);
-}
-inline void v_load_indexed2(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    uint32_t buf[4];
-    buf[0] = *((uint32_t*)(src + 2 * ofst[0]));
-    buf[1] = *((uint32_t*)(src + 2 * ofst[1]));
-    buf[2] = *((uint32_t*)(src + 2 * ofst[2]));
-    buf[3] = *((uint32_t*)(src + 2 * ofst[3]));
-    v_uint32 v_tmp0, v_tmp1, v_tmp2, v_tmp3;
-    v_tmp0 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf));
-    v_tmp1 = v_reinterpret_as_u32(vx_load_expand((uint8_t*)buf + 8));
-    v_zip(v_tmp0, v_tmp1, v_tmp2, v_tmp3);
-    v_zip(v_tmp2, v_tmp3, v_tmp0, v_tmp1);
-    v_zip(v_reinterpret_as_u16(v_tmp0), v_reinterpret_as_u16(v_tmp1), v_src0, v_src1);
-}
-inline void v_load_indexed4(uint8_t* src, int *ofst, v_uint16 &v_src0, v_uint16 &v_src1)
-{
-    v_uint16 v_tmp0, v_tmp1;
-    v_src0 = vx_load_expand(src + 4 * ofst[0]);
-    v_src1 = vx_load_expand(src + 4 * ofst[1]);
-    v_recombine(v_src0, v_src1, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-}
-inline void v_load_indexed_deinterleave(uint16_t* src, int *ofst, v_uint32 &v_src0, v_uint32 &v_src1)
-{
-    uint32_t buf[4];
-    buf[0] = *((uint32_t*)(src + ofst[0]));
-    buf[1] = *((uint32_t*)(src + ofst[1]));
-    buf[2] = *((uint32_t*)(src + ofst[2]));
-    buf[3] = *((uint32_t*)(src + ofst[3]));
-    v_src0 = vx_load_expand((uint16_t*)buf);
-    v_src1 = vx_load_expand((uint16_t*)buf + 4);
-    v_uint32 v_tmp0, v_tmp1;
-    v_zip(v_src0, v_src1, v_tmp0, v_tmp1);
-    v_zip(v_tmp0, v_tmp1, v_src0, v_src1);
-}
-#endif
 template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
 {
@@ -507,16 +358,23 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
         *(dst++) = src_0;
     }
 #if CV_SIMD
-    for (; i <= dst_max - VECSZ; i += VECSZ, m += 2*VECSZ, dst += VECSZ)
+    for (; i <= dst_max - 2*VECSZ; i += 2*VECSZ, m += 4*VECSZ, dst += 2*VECSZ)
     {
         v_uint16 v_src0, v_src1;
-        v_load_indexed1(src, ofst + i, v_src0, v_src1);
-
-        v_int16 v_mul0 = vx_load((int16_t*)m);
-        v_int16 v_mul1 = vx_load((int16_t*)m + VECSZ);
-        v_uint32 v_res0 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0), v_mul0));
-        v_uint32 v_res1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src1), v_mul1));
-        v_store((uint16_t*)dst, v_pack(v_res0, v_res1));
+        v_expand(vx_lut_pairs(src, ofst + i), v_src0, v_src1);
+        v_store((uint16_t*)dst      , v_pack(v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0), vx_load((int16_t*)m))),
+                                             v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src1), vx_load((int16_t*)m + VECSZ)))));
+        v_expand(vx_lut_pairs(src, ofst + i + VECSZ), v_src0, v_src1);
+        v_store((uint16_t*)dst+VECSZ, v_pack(v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0), vx_load((int16_t*)m + 2*VECSZ))),
+                                             v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src1), vx_load((int16_t*)m + 3*VECSZ)))));
+    }
+    if (i <= dst_max - VECSZ)
+    {
+        v_uint16 v_src0, v_src1;
+        v_expand(vx_lut_pairs(src, ofst + i), v_src0, v_src1);
+        v_store((uint16_t*)dst, v_pack(v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0), vx_load((int16_t*)m))),
+                                       v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src1), vx_load((int16_t*)m + VECSZ)))));
+        i += VECSZ; m += 2*VECSZ; dst += VECSZ;
     }
 #endif
     for (; i < dst_max; i += 1, m += 2)
@@ -564,7 +422,7 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
     for (; i <= dst_max - VECSZ/2; i += VECSZ/2, m += VECSZ, dst += VECSZ)
     {
         v_uint16 v_src0, v_src1;
-        v_load_indexed2(src, ofst + i, v_src0, v_src1);
+        v_expand(v_interleave_pairs(v_reinterpret_as_u8(vx_lut_pairs((uint16_t*)src, ofst + i))), v_src0, v_src1);
 
         v_uint32 v_mul = vx_load((uint32_t*)m);//AaBbCcDd
         v_uint32 v_zip0, v_zip1;
@@ -626,8 +484,8 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
     for (; i <= dst_max - VECSZ/2; i += VECSZ/2, m += VECSZ, dst += 2*VECSZ)
     {
         v_uint16 v_src0, v_src1, v_src2, v_src3;
-        v_load_indexed4(src, ofst + i, v_src0, v_src1);
-        v_load_indexed4(src, ofst + i + VECSZ/4, v_src2, v_src3);
+        v_expand(v_interleave_quads(v_reinterpret_as_u8(vx_lut_pairs((uint32_t*)src, ofst + i))), v_src0, v_src1);
+        v_expand(v_interleave_quads(v_reinterpret_as_u8(vx_lut_pairs((uint32_t*)src, ofst + i + VECSZ/4))), v_src2, v_src3);
 
         v_uint32 v_mul0, v_mul1, v_mul2, v_mul3, v_tmp;
         v_mul0 = vx_load((uint32_t*)m);//AaBbCcDd
@@ -689,10 +547,12 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     for (; i <= dst_max - VECSZ; i += VECSZ, m += 2*VECSZ, dst += VECSZ)
     {
         v_uint32 v_src0, v_src1;
-        v_load_indexed_deinterleave(src, ofst + i, v_src0, v_src1);
-        v_uint32 v_mul0, v_mul1;
-        v_load_deinterleave((uint32_t*)m, v_mul0, v_mul1);
-        v_store((uint32_t*)dst, v_src0 * v_mul0 + v_src1 * v_mul1);//abcd
+        v_expand(vx_lut_pairs(src, ofst + i), v_src0, v_src1);
+
+        v_uint64 v_res0 = v_reinterpret_as_u64(v_src0 * vx_load((uint32_t*)m));
+        v_uint64 v_res1 = v_reinterpret_as_u64(v_src1 * vx_load((uint32_t*)m + VECSZ));
+        v_store((uint32_t*)dst, v_pack((v_res0 & vx_setall_u64(0xFFFFFFFF)) + (v_res0 >> 32),
+                                       (v_res1 & vx_setall_u64(0xFFFFFFFF)) + (v_res1 >> 32)));
     }
 #endif
     for (; i < dst_max; i += 1, m += 2)
