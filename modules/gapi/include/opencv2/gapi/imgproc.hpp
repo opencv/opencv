@@ -84,8 +84,8 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL_M(GSobelXY, <GMat2(GMat,int,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobelxy") {
-        static std::tuple<GMatDesc, GMatDesc> outMeta(GMatDesc in, int ddepth, int, int, int, double, double, int, Scalar) {
+    G_TYPED_KERNEL_M(GSobelXY, <GMat2(GMat,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobelxy") {
+        static std::tuple<GMatDesc, GMatDesc> outMeta(GMatDesc in, int ddepth, int, int, double, double, int, Scalar) {
             return std::make_tuple(in.withDepth(ddepth), in.withDepth(ddepth));
         }
     };
@@ -532,8 +532,7 @@ The second case corresponds to a kernel of:
 @param src input image.
 @param ddepth output image depth, see @ref filter_depths "combinations"; in the case of
     8-bit input images it will result in truncated derivatives.
-@param dx order of the derivative x.
-@param dy order of the derivative y.
+@param order order of the derivatives.
 @param ksize size of the extended Sobel kernel; it must be odd.
 @param scale optional scale factor for the computed derivative values; by default, no scaling is
 applied (see cv::getDerivKernels for details).
@@ -542,7 +541,7 @@ applied (see cv::getDerivKernels for details).
 @param borderValue border value in case of constant border type
 @sa filter2D, gaussianBlur, cartToPolar
  */
-GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
+GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize = 3,
                         double scale = 1, double delta = 0,
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));

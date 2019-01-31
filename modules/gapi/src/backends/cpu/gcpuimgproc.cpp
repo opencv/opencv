@@ -11,10 +11,17 @@
 #include "opencv2/gapi/cpu/imgproc.hpp"
 #include "backends/cpu/gcpuimgproc.hpp"
 
-cv::Rect add_border(const cv::Mat& in, cv::Mat& temp_in, const int ksize, const int borderType, const cv::Scalar& bordVal){
-    int add = (ksize - 1) / 2;
-    cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal);
-    return cv::Rect(add, add, in.cols, in.rows);
+namespace {
+    cv::Mat add_border(const cv::Mat& in, const int ksize, const int borderType, const cv::Scalar& bordVal){
+        if( borderType == cv::BORDER_CONSTANT )
+        {
+            cv::Mat temp_in;
+            int add = (ksize - 1) / 2;
+            cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal);
+            return temp_in(cv::Rect(add, add, in.cols, in.rows));
+        }
+        return in;
+    }
 }
 
 GAPI_OCV_KERNEL(GCPUSepFilter, cv::gapi::imgproc::GSepFilter)
@@ -139,32 +146,19 @@ GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
     static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
                     const cv::Scalar& bordVal, cv::Mat &out)
     {
-        if( borderType == cv::BORDER_CONSTANT )
-        {
-            cv::Mat temp_in;
-            cv::Rect rect = add_border(in, temp_in, ksize, borderType, bordVal);
-            cv::Sobel(temp_in(rect), out, ddepth, dx, dy, ksize, scale, delta, borderType);
-        }
-        else
-        cv::Sobel(in, out, ddepth, dx, dy, ksize, scale, delta, borderType);
+        cv::Mat temp_in = add_border(in, ksize, borderType, bordVal);
+        cv::Sobel(temp_in, out, ddepth, dx, dy, ksize, scale, delta, borderType);
     }
 };
 
 GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
 {
-    static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
+    static void run(const cv::Mat& in, int ddepth, int order, int ksize, double scale, double delta, int borderType,
                     const cv::Scalar& bordVal, cv::Mat &out_dx, cv::Mat &out_dy)
     {
-        if( borderType == cv::BORDER_CONSTANT )
-        {
-            cv::Mat temp_in;
-            cv::Rect rect = add_border(in, temp_in, ksize, borderType, bordVal);
-            cv::Sobel(temp_in(rect), out_dx, ddepth, dx, 0, ksize, scale, delta, borderType);
-            cv::Sobel(temp_in(rect), out_dy, ddepth, 0, dy, ksize, scale, delta, borderType);
-        }
-        else
-        cv::Sobel(in, out_dx, ddepth, dx, 0, ksize, scale, delta, borderType);
-        cv::Sobel(in, out_dy, ddepth, 0, dy, ksize, scale, delta, borderType);
+        cv::Mat temp_in = add_border(in, ksize, borderType, bordVal);
+        cv::Sobel(temp_in, out_dx, ddepth, order, 0, ksize, scale, delta, borderType);
+        cv::Sobel(temp_in, out_dy, ddepth, 0, order, ksize, scale, delta, borderType);
     }
 };
 

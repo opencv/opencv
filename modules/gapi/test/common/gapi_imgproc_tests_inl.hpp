@@ -357,25 +357,24 @@ TEST_P(SobelXYTest, AccuracyTest)
 {
     compare_f cmpF;
     MatType type = 0;
-    int kernSize = 0, dtype = 0, dx = 0, dy = 0;
+    int kernSize = 0, dtype = 0, order = 0, border_type = 0;
     cv::Size sz;
-    bool initOut = false;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, kernSize, sz, dtype, dx, dy, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, dtype, initOut);
+    std::tie(cmpF, type, kernSize, sz, dtype, order, border_type, compile_args) = GetParam();
+    initMatsRandN(type, sz, dtype);
     cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
     cv::Mat out_mat_gapi2 = cv::Mat(sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::SobelXY(in, dtype, dx, dy, kernSize );
+    auto out = cv::gapi::SobelXY(in, dtype, order, kernSize, 1, 0, border_type);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(std::get<0>(out), std::get<1>(out)));
     c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat_gapi2), std::move(compile_args));
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::Sobel(in_mat1, out_mat_ocv, dtype, dx, 0, kernSize);
-        cv::Sobel(in_mat1, out_mat_ocv2, dtype, 0, dy, kernSize);
+        cv::Sobel(in_mat1, out_mat_ocv, dtype, order, 0, kernSize, 1, 0, border_type);
+        cv::Sobel(in_mat1, out_mat_ocv2, dtype, 0, order, kernSize, 1, 0, border_type);
     }
     // Comparison //////////////////////////////////////////////////////////////
     {

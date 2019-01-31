@@ -161,8 +161,7 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU, SobelXYTest,
                                        cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
                                 Values(1, 2),
-                                Values(1, 2),
-/*init output matrices or not*/ testing::Bool(),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(SobelXYTestCPU32F, SobelXYTest,
@@ -173,8 +172,7 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU32F, SobelXYTest,
                                        cv::Size(640, 480)),
                                 Values(CV_32F),
                                 Values(1, 2),
-                                Values(1, 2),
-/*init output matrices or not*/ testing::Bool(),
+                                Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
 INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
