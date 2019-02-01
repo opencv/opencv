@@ -236,6 +236,10 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
     testLayerUsingCaffeModels("layer_concat_shared_input", true, false);
@@ -923,8 +927,9 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 {
     Target targetId = GetParam();
 
+    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
-    Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+    Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
 
     Mat inp = blobFromNPY(_tf("blob.npy"));
 
@@ -935,22 +940,15 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     net.setInput(inp);
     net.setPreferableTarget(targetId);
 
-    if (targetId != DNN_TARGET_MYRIAD)
-    {
-        Mat out = net.forward();
+    Mat out = net.forward();
 
-        normAssert(outDefault, out);
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.4e-3 : 1e-5;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.8e-2 : 1e-4;
+    normAssert(outDefault, out, "", l1, lInf);
 
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        ASSERT_EQ(net.getLayer(outLayers[0])->name, "output_merge");
-        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Concat");
-    }
-    else
-    {
-        // An assertion is expected because the model is in FP32 format but
-        // Myriad plugin supports only FP16 models.
-        ASSERT_ANY_THROW(net.forward());
-    }
+    std::vector<int> outLayers = net.getUnconnectedOutLayers();
+    ASSERT_EQ(net.getLayer(outLayers[0])->name, "output");
+    ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
@@ -962,23 +960,16 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     randu(inputs[0], 0, 255);
     inputs[0].convertTo(inputs[1], CV_32F);
 
+    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+
     Mat outs[2];
     for (int i = 0; i < 2; ++i)
     {
-        Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
+        Net net = readNet(_tf("layer_convolution" + suffix + ".xml"), _tf("layer_convolution" + suffix + ".bin"));
         net.setPreferableTarget(targetId);
         net.setInput(inputs[i]);
-        if (targetId != DNN_TARGET_MYRIAD)
-        {
-            outs[i] = net.forward();
-            ASSERT_EQ(outs[i].type(), CV_32F);
-        }
-        else
-        {
-            // An assertion is expected because the model is in FP32 format but
-            // Myriad plugin supports only FP16 models.
-            ASSERT_ANY_THROW(net.forward());
-        }
+        outs[i] = net.forward();
+        ASSERT_EQ(outs[i].type(), CV_32F);
     }
     if (targetId != DNN_TARGET_MYRIAD)
         normAssert(outs[0], outs[1]);
@@ -1008,8 +999,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Convolution_DLDT,
 // net.save('/path/to/caffemodel')
 //
 // 3. Convert using ModelOptimizer.
-typedef testing::TestWithParam<tuple<int, int, Target> > Test_DLDT_two_inputs;
-TEST_P(Test_DLDT_two_inputs, as_IR)
+typedef testing::TestWithParam<tuple<int, int, Target, std::vector<int> > > Test_DLDT_two_inputs_3dim;
+TEST_P(Test_DLDT_two_inputs_3dim, as_IR)
 {
     int firstInpType = get<0>(GetParam());
     int secondInpType = get<1>(GetParam());
@@ -1020,32 +1011,39 @@ TEST_P(Test_DLDT_two_inputs, as_IR)
         throw SkipTestException("Test is enabled starts from OpenVINO 2018R4");
 #endif
 
-    Net net = readNet(_tf("net_two_inputs.xml"), _tf("net_two_inputs.bin"));
-    int inpSize[] = {1, 2, 3};
-    Mat firstInp(3, &inpSize[0], firstInpType);
-    Mat secondInp(3, &inpSize[0], secondInpType);
+    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+    Net net = readNet(_tf("net_two_inputs" + suffix + ".xml"), _tf("net_two_inputs.bin"));
+    std::vector<int> inpSize = get<3>(GetParam());
+    Mat firstInp(3, inpSize.data(), firstInpType);
+    Mat secondInp(3, inpSize.data(), secondInpType);
     randu(firstInp, 0, 255);
     randu(secondInp, 0, 255);
 
     net.setInput(firstInp, "data");
     net.setInput(secondInp, "second_input");
     net.setPreferableTarget(targetId);
-    if (targetId != DNN_TARGET_MYRIAD)
-    {
-        Mat out = net.forward();
 
-        Mat ref;
-        cv::add(firstInp, secondInp, ref, Mat(), CV_32F);
-        normAssert(out, ref);
-    }
-    else
-    {
-        // An assertion is expected because the model is in FP32 format but
-        // Myriad plugin supports only FP16 models.
-        ASSERT_ANY_THROW(net.forward());
-    }
+    double l1 = ((targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) &&
+                 (firstInpType == CV_32F || secondInpType == CV_32F)) ? 0.06 : 0.0;
+    double lInf = ((targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) &&
+                   (firstInpType == CV_32F || secondInpType == CV_32F)) ? 0.23 : 0.0;
+
+    Mat out = net.forward();
+
+    Mat ref;
+    cv::add(firstInp, secondInp, ref, Mat(), CV_32F);
+    normAssert(out, ref, "", l1, lInf);
 }
 
+std::vector< std::vector<int> > list_sizes{ {1, 2, 3}, {3, 2, 1}, {5, 5, 5}, {13, 7, 11} };
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
+  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+  testing::ValuesIn(list_sizes)
+));
+
+typedef testing::TestWithParam<tuple<int, int, Target> > Test_DLDT_two_inputs;
 TEST_P(Test_DLDT_two_inputs, as_backend)
 {
     static const float kScale = 0.5f;

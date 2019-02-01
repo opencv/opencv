@@ -341,6 +341,9 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
+    register_vector<cv::DMatch>("DMatchVector");
+    register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
+
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
@@ -493,6 +496,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("pt", &cv::KeyPoint::pt)
         .field("response", &cv::KeyPoint::response)
         .field("size", &cv::KeyPoint::size);
+
+    emscripten::value_object<cv::DMatch>("DMatch")
+        .field("queryIdx", &cv::DMatch::queryIdx)
+        .field("trainIdx", &cv::DMatch::trainIdx)
+        .field("imgIdx", &cv::DMatch::imgIdx)
+        .field("distance", &cv::DMatch::distance);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
         .element(index<0>())

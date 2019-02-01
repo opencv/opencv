@@ -112,6 +112,7 @@ struct PyrDownVec_32s8u
             v_rshr_pack_store<8>(dst + x, t0);
             x += v_uint16::nlanes;
         }
+        typedef int CV_DECL_ALIGNED(1) unaligned_int;
         for ( ; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
         {
             v_int32x4 r0, r1, r2, r3, r4, t0;
@@ -122,7 +123,7 @@ struct PyrDownVec_32s8u
             r4 = v_load(row4 + x);
             t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
 
-            *(int*)(dst + x) = v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())).get0();
+            *((unaligned_int*) (dst + x)) = v_reinterpret_as_s32(v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16())).get0();
         }
 
         return x;

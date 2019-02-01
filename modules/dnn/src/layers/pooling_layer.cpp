@@ -299,10 +299,10 @@ public:
         if (type == MAX || type == AVE)
         {
             InferenceEngine::Builder::PoolingLayer ieLayer(name);
-            ieLayer.setKernel({kernel.height, kernel.width});
-            ieLayer.setStrides({stride.height, stride.width});
-            ieLayer.setPaddingsBegin({pad_t, pad_l});
-            ieLayer.setPaddingsEnd({pad_b, pad_r});
+            ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+            ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+            ieLayer.setPaddingsBegin({(size_t)pad_t, (size_t)pad_l});
+            ieLayer.setPaddingsEnd({(size_t)pad_b, (size_t)pad_r});
             ieLayer.setPoolingType(type == MAX ?
                                    InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
                                    InferenceEngine::Builder::PoolingLayer::PoolingType::AVG);

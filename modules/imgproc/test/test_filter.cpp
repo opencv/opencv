@@ -2235,4 +2235,13 @@ TEST(Imgproc_Sobel, s16_regression_13506)
     Sobel(src, dst, CV_16S, 0, 1, 5);
     ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
 }
+
+TEST(Imgproc_Pyrdown, issue_12961)
+{
+    Mat src(9, 9, CV_8UC1, Scalar::all(0));
+    Mat dst;
+    cv::pyrDown(src, dst);
+    ASSERT_EQ(0.0, cv::norm(dst));
+}
+
 }} // namespace

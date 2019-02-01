@@ -200,19 +200,18 @@ public:
     {
         int j;
         calc_non_rbf_base( vcount, var_count, vecs, another, results,
-                          -2*params.gamma, -2*params.coef0 );
+                          2*params.gamma, 2*params.coef0 );
         // TODO: speedup this
         for( j = 0; j < vcount; j++ )
         {
             Qfloat t = results[j];
-            Qfloat e = std::exp(-std::abs(t));
+            Qfloat e = std::exp(std::abs(t));
             if( t > 0 )
-                results[j] = (Qfloat)((1. - e)/(1. + e));
-            else
                 results[j] = (Qfloat)((e - 1.)/(e + 1.));
+            else
+                results[j] = (Qfloat)((1. - e)/(1. + e));
         }
     }
-
 
     void calc_rbf( int vcount, int var_count, const float* vecs,
                    const float* another, Qfloat* results )
@@ -1310,8 +1309,6 @@ public:
 
             if( kernelType != SIGMOID && kernelType != POLY )
                 params.coef0 = 0;
-            else if( params.coef0 < 0 )
-                CV_Error( CV_StsOutOfRange, "The kernel parameter <coef0> must be positive or zero" );
 
             if( kernelType != POLY )
                 params.degree = 0;

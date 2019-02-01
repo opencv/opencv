@@ -110,15 +110,19 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     int cn = _dst.channels(), m = _dst.rows, r = (ksize-1)/2;
     CV_Assert(cn > 0 && cn <= 4);
     size_t sstep = _src.step, dstep = _dst.step;
-    Histogram CV_DECL_ALIGNED(16) H[4];
-    HT CV_DECL_ALIGNED(16) luc[4][16];
 
     int STRIPE_SIZE = std::min( _dst.cols, 512/cn );
 
-    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
-    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + 16);
-    HT* h_coarse = alignPtr(&_h_coarse[0], 16);
-    HT* h_fine = alignPtr(&_h_fine[0], 16);
+#if defined(CV_SIMD_WIDTH) && CV_SIMD_WIDTH >= 16
+# define CV_ALIGNMENT CV_SIMD_WIDTH
+#else
+# define CV_ALIGNMENT 16
+#endif
+
+    std::vector<HT> _h_coarse(1 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    std::vector<HT> _h_fine(16 * 16 * (STRIPE_SIZE + 2*r) * cn + CV_ALIGNMENT);
+    HT* h_coarse = alignPtr(&_h_coarse[0], CV_ALIGNMENT);
+    HT* h_fine = alignPtr(&_h_fine[0], CV_ALIGNMENT);
 
     for( int x = 0; x < _dst.cols; x += STRIPE_SIZE )
     {
@@ -148,10 +152,14 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
             const uchar* p0 = src + sstep * std::max( 0, i-r-1 );
             const uchar* p1 = src + sstep * std::min( m-1, i+r );
 
-            memset( H, 0, cn*sizeof(H[0]) );
-            memset( luc, 0, cn*sizeof(luc[0]) );
             for( c = 0; c < cn; c++ )
             {
+                Histogram CV_DECL_ALIGNED(CV_ALIGNMENT) H;
+                HT CV_DECL_ALIGNED(CV_ALIGNMENT) luc[16];
+
+                memset(&H, 0, sizeof(H));
+                memset(luc, 0, sizeof(luc));
+
                 // Update column histograms for the entire row.
                 for( j = 0; j < n; j++ )
                 {
@@ -163,21 +171,21 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 for (k = 0; k < 16; ++k)
                 {
 #if CV_SIMD256
-                    v_store(H[c].fine[k], v_mul_wrap(v256_load(h_fine + 16 * n*(16 * c + k)), v256_setall_u16(2 * r + 1)) + v256_load(H[c].fine[k]));
+                    v_store(H.fine[k], v_mul_wrap(v256_load(h_fine + 16 * n*(16 * c + k)), v256_setall_u16(2 * r + 1)) + v256_load(H.fine[k]));
 #elif CV_SIMD128
-                    v_store(H[c].fine[k], v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k)), v_setall_u16((ushort)(2 * r + 1))) + v_load(H[c].fine[k]));
-                    v_store(H[c].fine[k] + 8, v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k) + 8), v_setall_u16((ushort)(2 * r + 1))) + v_load(H[c].fine[k] + 8));
+                    v_store(H.fine[k], v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k)), v_setall_u16((ushort)(2 * r + 1))) + v_load(H.fine[k]));
+                    v_store(H.fine[k] + 8, v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k) + 8), v_setall_u16((ushort)(2 * r + 1))) + v_load(H.fine[k] + 8));
 #else
                     for (int ind = 0; ind < 16; ++ind)
-                        H[c].fine[k][ind] = (HT)(H[c].fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
+                        H.fine[k][ind] = (HT)(H.fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
 #endif
                 }
 
 #if CV_SIMD256
-                v_uint16x16 v_coarse = v256_load(H[c].coarse);
+                v_uint16x16 v_coarse = v256_load(H.coarse);
 #elif CV_SIMD128
-                v_uint16x8 v_coarsel = v_load(H[c].coarse);
-                v_uint16x8 v_coarseh = v_load(H[c].coarse + 8);
+                v_uint16x8 v_coarsel = v_load(H.coarse);
+                v_uint16x8 v_coarseh = v_load(H.coarse + 8);
 #endif
                 HT* px = h_coarse + 16 * n*c;
                 for( j = 0; j < 2*r; ++j, px += 16 )
@@ -189,7 +197,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     v_coarseh += v_load(px + 8);
 #else
                     for (int ind = 0; ind < 16; ++ind)
-                        H[c].coarse[ind] += px[ind];
+                        H.coarse[ind] += px[ind];
 #endif
                 }
 
@@ -201,24 +209,24 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     px = h_coarse + 16 * (n*c + std::min(j + r, n - 1));
 #if CV_SIMD256
                     v_coarse += v256_load(px);
-                    v_store(H[c].coarse, v_coarse);
+                    v_store(H.coarse, v_coarse);
 #elif CV_SIMD128
                     v_coarsel += v_load(px);
                     v_coarseh += v_load(px + 8);
-                    v_store(H[c].coarse, v_coarsel);
-                    v_store(H[c].coarse + 8, v_coarseh);
+                    v_store(H.coarse, v_coarsel);
+                    v_store(H.coarse + 8, v_coarseh);
 #else
                     for (int ind = 0; ind < 16; ++ind)
-                        H[c].coarse[ind] += px[ind];
+                        H.coarse[ind] += px[ind];
 #endif
 
                     // Find median at coarse level
                     for ( k = 0; k < 16 ; ++k )
                     {
-                        sum += H[c].coarse[k];
+                        sum += H.coarse[k];
                         if ( sum > t )
                         {
-                            sum -= H[c].coarse[k];
+                            sum -= H.coarse[k];
                             break;
                         }
                     }
@@ -231,7 +239,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     v_uint16x8 v_finel;
                     v_uint16x8 v_fineh;
 #endif
-                    if ( luc[c][k] <= j-r )
+                    if ( luc[k] <= j-r )
                     {
 #if CV_SIMD256
                         v_fine = v256_setzero_u16();
@@ -239,10 +247,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         v_finel = v_setzero_u16();
                         v_fineh = v_setzero_u16();
 #else
-                        memset(&H[c].fine[k], 0, 16 * sizeof(HT));
+                        memset(&H.fine[k], 0, 16 * sizeof(HT));
 #endif
                         px = h_fine + 16 * (n*(16 * c + k) + j - r);
-                        for (luc[c][k] = HT(j - r); luc[c][k] < MIN(j + r + 1, n); ++luc[c][k], px += 16)
+                        for (luc[k] = HT(j - r); luc[k] < MIN(j + r + 1, n); ++luc[k], px += 16)
                         {
 #if CV_SIMD256
                             v_fine += v256_load(px);
@@ -251,11 +259,11 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                             v_fineh += v_load(px + 8);
 #else
                             for (int ind = 0; ind < 16; ++ind)
-                                H[c].fine[k][ind] += px[ind];
+                                H.fine[k][ind] += px[ind];
 #endif
                         }
 
-                        if ( luc[c][k] < j+r+1 )
+                        if ( luc[k] < j+r+1 )
                         {
                             px = h_fine + 16 * (n*(16 * c + k) + (n - 1));
 #if CV_SIMD256
@@ -265,50 +273,50 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                             v_fineh += v_mul_wrap(v_load(px + 8), v_setall_u16((ushort)(j + r + 1 - n)));
 #else
                             for (int ind = 0; ind < 16; ++ind)
-                                H[c].fine[k][ind] = (HT)(H[c].fine[k][ind] + (j + r + 1 - n) * px[ind]);
+                                H.fine[k][ind] = (HT)(H.fine[k][ind] + (j + r + 1 - n) * px[ind]);
 #endif
-                            luc[c][k] = (HT)(j+r+1);
+                            luc[k] = (HT)(j+r+1);
                         }
                     }
                     else
                     {
 #if CV_SIMD256
-                        v_fine = v256_load(H[c].fine[k]);
+                        v_fine = v256_load(H.fine[k]);
 #elif CV_SIMD128
-                        v_finel = v_load(H[c].fine[k]);
-                        v_fineh = v_load(H[c].fine[k] + 8);
+                        v_finel = v_load(H.fine[k]);
+                        v_fineh = v_load(H.fine[k] + 8);
 #endif
                         px = h_fine + 16*n*(16 * c + k);
-                        for ( ; luc[c][k] < j+r+1; ++luc[c][k] )
+                        for ( ; luc[k] < j+r+1; ++luc[k] )
                         {
 #if CV_SIMD256
-                            v_fine = v_fine + v256_load(px + 16 * MIN(luc[c][k], n - 1)) - v256_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
+                            v_fine = v_fine + v256_load(px + 16 * MIN(luc[k], n - 1)) - v256_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0));
 #elif CV_SIMD128
-                            v_finel = v_finel + v_load(px + 16 * MIN(luc[c][k], n - 1)    ) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0));
-                            v_fineh = v_fineh + v_load(px + 16 * MIN(luc[c][k], n - 1) + 8) - v_load(px + 16 * MAX(luc[c][k] - 2 * r - 1, 0) + 8);
+                            v_finel = v_finel + v_load(px + 16 * MIN(luc[k], n - 1)    ) - v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0));
+                            v_fineh = v_fineh + v_load(px + 16 * MIN(luc[k], n - 1) + 8) - v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0) + 8);
 #else
                             for (int ind = 0; ind < 16; ++ind)
-                                H[c].fine[k][ind] += px[16 * MIN(luc[c][k], n - 1) + ind] - px[16 * MAX(luc[c][k] - 2 * r - 1, 0) + ind];
+                                H.fine[k][ind] += px[16 * MIN(luc[k], n - 1) + ind] - px[16 * MAX(luc[k] - 2 * r - 1, 0) + ind];
 #endif
                         }
                     }
 
                     px = h_coarse + 16 * (n*c + MAX(j - r, 0));
 #if CV_SIMD256
-                    v_store(H[c].fine[k], v_fine);
+                    v_store(H.fine[k], v_fine);
                     v_coarse -= v256_load(px);
 #elif CV_SIMD128
-                    v_store(H[c].fine[k], v_finel);
-                    v_store(H[c].fine[k] + 8, v_fineh);
+                    v_store(H.fine[k], v_finel);
+                    v_store(H.fine[k] + 8, v_fineh);
                     v_coarsel -= v_load(px);
                     v_coarseh -= v_load(px + 8);
 #else
                     for (int ind = 0; ind < 16; ++ind)
-                        H[c].coarse[ind] -= px[ind];
+                        H.coarse[ind] -= px[ind];
 #endif
 
                     /* Find median in segment */
-                    segment = H[c].fine[k];
+                    segment = H.fine[k];
                     for ( b = 0; b < 16 ; b++ )
                     {
                         sum += segment[b];
