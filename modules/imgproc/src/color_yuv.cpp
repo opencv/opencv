@@ -999,7 +999,7 @@ static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, i
     buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * uu;
 }
 
-static inline void uvToRGBuv(const v_uint8 u, const v_uint8 v,
+static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
                              v_int32 (&ruv)[4],
                              v_int32 (&guv)[4],
                              v_int32 (&buv)[4])
@@ -1040,7 +1040,7 @@ static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, co
     a = uchar(0xff);
 }
 
-static inline void yRGBuvToRGBA(const v_uint8 vy,
+static inline void yRGBuvToRGBA(const v_uint8& vy,
                                 const v_int32 (&ruv)[4],
                                 const v_int32 (&guv)[4],
                                 const v_int32 (&buv)[4],
@@ -1382,7 +1382,7 @@ static inline uchar rgbToY42x(uchar r, uchar g, uchar b)
     return saturate_cast<uchar>(yy >> ITUR_BT_601_SHIFT);
 }
 
-static inline v_uint8 rgbToY42x(v_uint8 r, v_uint8 g, v_uint8 b)
+static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint8& b)
 {
     const int shifted16 = (16 << ITUR_BT_601_SHIFT);
     const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
@@ -1423,8 +1423,8 @@ static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
     v = saturate_cast<uchar>(vv >> ITUR_BT_601_SHIFT);
 }
 
-static inline void rgbToUV42x(v_uint8 r0, v_uint8 r1, v_uint8 g0, v_uint8 g1,
-                              v_uint8 b0, v_uint8 b1, v_uint8& u, v_uint8& v)
+static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint8& g0, const v_uint8& g1,
+                              const v_uint8& b0, const v_uint8& b1, v_uint8& u, v_uint8& v)
 {
     // [r0, r1, r2, r3,..] => [r0, 0, r2, 0,..]
     v_int16 vlowByte = vx_setall_s16(0x00ff);
