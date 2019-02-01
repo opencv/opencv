@@ -1154,7 +1154,7 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (INF_ENGINE_RELEASE == 2018050000 && (adjustPad.height || adjustPad.width))
+            if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
                 return false;
 
             const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
