@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <net batch="1" name="test_Convolution" version="4">
 	<layers>
-		<layer id="0" name="input" precision="FP32" type="Input">
+		<layer id="0" name="input" precision="FP16" type="Input">
 			<output>
 				<port id="0">
 					<dim>2</dim>
@@ -11,7 +11,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="1" name="output" precision="FP32" type="Convolution">
+		<layer id="1" name="output" precision="FP16" type="Convolution">
 			<data dilations="1,1" group="3" kernel="4,5" output="12" pads_begin="0,1" pads_end="0,1" strides="2,3"/>
 			<input>
 				<port id="0">
@@ -30,8 +30,8 @@
 				</port>
 			</output>
 			<blobs>
-				<weights offset="0" size="1920"/>
-				<biases offset="1920" size="48"/>
+				<weights offset="0" size="960"/>
+				<biases offset="960" size="24"/>
 			</blobs>
 		</layer>
 	</layers>
@@ -41,7 +41,7 @@
 	<meta_data>
 		<MO_version value="1.5.12.49d067a0"/>
 		<cli_parameters>
-			<data_type value="FP32"/>
+			<data_type value="FP16"/>
 			<disable_fusing value="False"/>
 			<disable_gfusing value="False"/>
 			<disable_omitting_optional value="False"/>
