@@ -357,22 +357,30 @@ TEST_P(SobelXYTest, AccuracyTest)
 {
     compare_f cmpF;
     MatType type = 0;
-    int kernSize = 0, dtype = 0, order = 0, border_type = 0;
+    int kernSize = 0, dtype = 0, order = 0, border_type = 0, border_val = 0;
     cv::Size sz;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, kernSize, sz, dtype, order, border_type, compile_args) = GetParam();
+    std::tie(cmpF, type, kernSize, sz, dtype, order, border_type, border_val, compile_args) = GetParam();
     initMatsRandN(type, sz, dtype);
     cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
     cv::Mat out_mat_gapi2 = cv::Mat(sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::SobelXY(in, dtype, order, kernSize, 1, 0, border_type);
+    auto out = cv::gapi::SobelXY(in, dtype, order, kernSize, 1, 0, border_type, border_val);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(std::get<0>(out), std::get<1>(out)));
     c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat_gapi2), std::move(compile_args));
     // OpenCV code /////////////////////////////////////////////////////////////
     {
+        // workaround for cv::Sobel
+        cv::Mat temp_in;
+        if(border_type == cv::BORDER_CONSTANT)
+        {
+            int add = (kernSize - 1) / 2;
+            cv::copyMakeBorder(in_mat1, temp_in, add, add, add, add, border_type, border_val);
+            in_mat1 = temp_in(cv::Rect(add, add, in_mat1.cols, in_mat1.rows));
+        }
         cv::Sobel(in_mat1, out_mat_ocv, dtype, order, 0, kernSize, 1, 0, border_type);
         cv::Sobel(in_mat1, out_mat_ocv2, dtype, 0, order, kernSize, 1, 0, border_type);
     }
