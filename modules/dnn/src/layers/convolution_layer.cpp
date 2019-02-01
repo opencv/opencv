@@ -281,7 +281,7 @@ public:
         const int outCn = blobs[0].size[0];
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs[0].reshape(1, outCn).clone();
+        Mat wm = blobs[0].reshape(1, outCn);
         if( wm.step1() % VEC_ALIGN != 0 )
         {
             int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
@@ -374,6 +374,10 @@ public:
 
         if (!w.empty())
         {
+            // Keep origin weights unchanged.
+            if (weightsMat.data == blobs[0].data)
+                weightsMat = weightsMat.clone();
+
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
@@ -551,13 +555,13 @@ public:
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(outCn);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)outCn);
 
         ieLayer.setWeights(ieWeights);
         if (ieBiases)
@@ -1220,7 +1224,7 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (INF_ENGINE_RELEASE == 2018050000 && (adjustPad.height || adjustPad.width))
+            if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
                 return false;
 
             const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
@@ -1783,13 +1787,13 @@ public:
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(numOutput);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)numOutput);
 
         ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW));
         if (hasBias())
