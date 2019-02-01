@@ -162,6 +162,18 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
                inp, "detection_out", "", diffScores);
 }
 
+TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
+    float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.029 : 0.0;
+    float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09  : 0.0;
+    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
+               inp, "detection_out", "", diffScores, diffSquares);
+}
+
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
@@ -169,6 +181,18 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : 0.0;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
+    processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
+               inp, "detection_out", "", l1, lInf);
+}
+
+TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
+{
+    if (backend == DNN_BACKEND_HALIDE)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);
