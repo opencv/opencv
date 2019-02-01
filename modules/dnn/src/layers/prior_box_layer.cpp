@@ -487,9 +487,7 @@ public:
         if (_explicitSizes)
         {
             InferenceEngine::Builder::PriorBoxClusteredLayer ieLayer(name);
-
-            CV_Assert(_stepX == _stepY);
-            ieLayer.setStep(_stepX);
+            ieLayer.setSteps({_stepY, _stepX});
 
             CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
             ieLayer.setOffset(_offsetsX[0]);
@@ -516,9 +514,6 @@ public:
             if (_maxSize > 0)
                 ieLayer.setMaxSize(_maxSize);
 
-            CV_Assert(_stepX == _stepY);
-            ieLayer.setStep(_stepX);
-
             CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
             ieLayer.setOffset(_offsetsX[0]);
 
@@ -526,6 +521,18 @@ public:
             ieLayer.setFlip(false);  // We already flipped aspect ratios.
 
             InferenceEngine::Builder::Layer l = ieLayer;
+            if (_stepX == _stepY)
+            {
+                l.getParameters()["step"] = _stepX;
+                l.getParameters()["step_h"] = 0.0;
+                l.getParameters()["step_w"] = 0.0;
+            }
+            else
+            {
+                l.getParameters()["step"] = 0.0;
+                l.getParameters()["step_h"] = _stepY;
+                l.getParameters()["step_w"] = _stepX;
+            }
             if (!_aspectRatios.empty())
             {
                 l.getParameters()["aspect_ratio"] = _aspectRatios;
