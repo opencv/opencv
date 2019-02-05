@@ -963,22 +963,22 @@ struct YCrCb2RGB_i<ushort>
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
-const int ITUR_BT_601_CY = 1220542;
-const int ITUR_BT_601_CUB = 2116026;
-const int ITUR_BT_601_CUG = -409993;
-const int ITUR_BT_601_CVG = -852492;
-const int ITUR_BT_601_CVR = 1673527;
-const int ITUR_BT_601_SHIFT = 20;
+static const int ITUR_BT_601_CY = 1220542;
+static const int ITUR_BT_601_CUB = 2116026;
+static const int ITUR_BT_601_CUG = -409993;
+static const int ITUR_BT_601_CVG = -852492;
+static const int ITUR_BT_601_CVR = 1673527;
+static const int ITUR_BT_601_SHIFT = 20;
 
 // Coefficients for RGB to YUV420p conversion
-const int ITUR_BT_601_CRY =  269484;
-const int ITUR_BT_601_CGY =  528482;
-const int ITUR_BT_601_CBY =  102760;
-const int ITUR_BT_601_CRU = -155188;
-const int ITUR_BT_601_CGU = -305135;
-const int ITUR_BT_601_CBU =  460324;
-const int ITUR_BT_601_CGV = -385875;
-const int ITUR_BT_601_CBV = -74448;
+static const int ITUR_BT_601_CRY =  269484;
+static const int ITUR_BT_601_CGY =  528482;
+static const int ITUR_BT_601_CBY =  102760;
+static const int ITUR_BT_601_CRU = -155188;
+static const int ITUR_BT_601_CGU = -305135;
+static const int ITUR_BT_601_CBU =  460324;
+static const int ITUR_BT_601_CGV = -385875;
+static const int ITUR_BT_601_CBV = -74448;
 
 //R = 1.164(Y - 16) + 1.596(V - 128)
 //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
@@ -988,49 +988,146 @@ const int ITUR_BT_601_CBV = -74448;
 //G = (1220542(Y - 16) - 852492(V - 128) - 409993(U - 128) + (1 << 19)) >> 20
 //B = (1220542(Y - 16)                  + 2116026(U - 128) + (1 << 19)) >> 20
 
-template<int bIdx, int dcn, bool is420>
-static inline void cvtYuv42xxp2RGB8(int u, int v, int vy01, int vy11, int vy02, int vy12,
-                                    uchar* row1, uchar* row2)
+static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, int& buv)
 {
-    u = u - 128;
-    v = v - 128;
+    int uu, vv;
+    uu = int(u) - 128;
+    vv = int(v) - 128;
 
-    int ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * v;
-    int guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * v + ITUR_BT_601_CUG * u;
-    int buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * u;
+    ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * vv;
+    guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * vv + ITUR_BT_601_CUG * uu;
+    buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * uu;
+}
 
-    int y00 = std::max(0, vy01 - 16) * ITUR_BT_601_CY;
-    row1[2-bIdx] = saturate_cast<uchar>((y00 + ruv) >> ITUR_BT_601_SHIFT);
-    row1[1]      = saturate_cast<uchar>((y00 + guv) >> ITUR_BT_601_SHIFT);
-    row1[bIdx]   = saturate_cast<uchar>((y00 + buv) >> ITUR_BT_601_SHIFT);
-    if(dcn == 4)
-        row1[3] = uchar(0xff);
+static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
+                             v_int32 (&ruv)[4],
+                             v_int32 (&guv)[4],
+                             v_int32 (&buv)[4])
+{
+    v_uint8 v128 = vx_setall_u8(128);
+    v_int8 su = v_reinterpret_as_s8(v_sub_wrap(u, v128));
+    v_int8 sv = v_reinterpret_as_s8(v_sub_wrap(v, v128));
 
-    int y01 = std::max(0, vy11 - 16) * ITUR_BT_601_CY;
-    row1[dcn+2-bIdx] = saturate_cast<uchar>((y01 + ruv) >> ITUR_BT_601_SHIFT);
-    row1[dcn+1]      = saturate_cast<uchar>((y01 + guv) >> ITUR_BT_601_SHIFT);
-    row1[dcn+0+bIdx] = saturate_cast<uchar>((y01 + buv) >> ITUR_BT_601_SHIFT);
-    if(dcn == 4)
-        row1[7] = uchar(0xff);
+    v_int16 uu0, uu1, vv0, vv1;
+    v_expand(su, uu0, uu1);
+    v_expand(sv, vv0, vv1);
+    v_int32 uu[4], vv[4];
+    v_expand(uu0, uu[0], uu[1]); v_expand(uu1, uu[2], uu[3]);
+    v_expand(vv0, vv[0], vv[1]); v_expand(vv1, vv[2], vv[3]);
 
-    if(is420)
+    v_int32 vshift = vx_setall_s32(1 << (ITUR_BT_601_SHIFT - 1));
+    v_int32 vr = vx_setall_s32(ITUR_BT_601_CVR);
+    v_int32 vg = vx_setall_s32(ITUR_BT_601_CVG);
+    v_int32 ug = vx_setall_s32(ITUR_BT_601_CUG);
+    v_int32 ub = vx_setall_s32(ITUR_BT_601_CUB);
+
+    for (int k = 0; k < 4; k++)
     {
-        int y10 = std::max(0, vy02 - 16) * ITUR_BT_601_CY;
-        row2[2-bIdx] = saturate_cast<uchar>((y10 + ruv) >> ITUR_BT_601_SHIFT);
-        row2[1]      = saturate_cast<uchar>((y10 + guv) >> ITUR_BT_601_SHIFT);
-        row2[bIdx]   = saturate_cast<uchar>((y10 + buv) >> ITUR_BT_601_SHIFT);
-        if(dcn == 4)
-            row2[3] = uchar(0xff);
-
-        int y11 = std::max(0, vy12 - 16) * ITUR_BT_601_CY;
-        row2[dcn+2-bIdx] = saturate_cast<uchar>((y11 + ruv) >> ITUR_BT_601_SHIFT);
-        row2[dcn+1]      = saturate_cast<uchar>((y11 + guv) >> ITUR_BT_601_SHIFT);
-        row2[dcn+0+bIdx] = saturate_cast<uchar>((y11 + buv) >> ITUR_BT_601_SHIFT);
-        if(dcn == 4)
-            row2[7] = uchar(0xff);
+        ruv[k] = vshift + vr * vv[k];
+        guv[k] = vshift + vg * vv[k] + ug * uu[k];
+        buv[k] = vshift + ub * uu[k];
     }
 }
 
+static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, const int buv,
+                                uchar& r, uchar& g, uchar& b, uchar& a)
+{
+    int yy = int(vy);
+    int y = std::max(0, yy - 16) * ITUR_BT_601_CY;
+    r = saturate_cast<uchar>((y + ruv) >> ITUR_BT_601_SHIFT);
+    g = saturate_cast<uchar>((y + guv) >> ITUR_BT_601_SHIFT);
+    b = saturate_cast<uchar>((y + buv) >> ITUR_BT_601_SHIFT);
+    a = uchar(0xff);
+}
+
+static inline void yRGBuvToRGBA(const v_uint8& vy,
+                                const v_int32 (&ruv)[4],
+                                const v_int32 (&guv)[4],
+                                const v_int32 (&buv)[4],
+                                v_uint8& rr, v_uint8& gg, v_uint8& bb)
+{
+    v_uint8 v16 = vx_setall_u8(16);
+    v_uint8 posY = vy - v16;
+    v_uint16 yy0, yy1;
+    v_expand(posY, yy0, yy1);
+    v_int32 yy[4];
+    v_int32 yy00, yy01, yy10, yy11;
+    v_expand(v_reinterpret_as_s16(yy0), yy[0], yy[1]);
+    v_expand(v_reinterpret_as_s16(yy1), yy[2], yy[3]);
+
+    v_int32 vcy = vx_setall_s32(ITUR_BT_601_CY);
+
+    v_int32 y[4], r[4], g[4], b[4];
+    for(int k = 0; k < 4; k++)
+    {
+        y[k] = yy[k]*vcy;
+        r[k] = (y[k] + ruv[k]) >> ITUR_BT_601_SHIFT;
+        g[k] = (y[k] + guv[k]) >> ITUR_BT_601_SHIFT;
+        b[k] = (y[k] + buv[k]) >> ITUR_BT_601_SHIFT;
+    }
+
+    v_int16 r0, r1, g0, g1, b0, b1;
+    r0 = v_pack(r[0], r[1]);
+    r1 = v_pack(r[2], r[3]);
+    g0 = v_pack(g[0], g[1]);
+    g1 = v_pack(g[2], g[3]);
+    b0 = v_pack(b[0], b[1]);
+    b1 = v_pack(b[2], b[3]);
+
+    rr = v_pack_u(r0, r1);
+    gg = v_pack_u(g0, g1);
+    bb = v_pack_u(b0, b1);
+}
+
+template<int bIdx, int dcn, bool is420>
+static inline void cvtYuv42xxp2RGB8(const uchar u, const uchar v,
+                                    const uchar vy01, const uchar vy11, const uchar vy02, const uchar vy12,
+                                    uchar* row1, uchar* row2)
+{
+    int ruv, guv, buv;
+    uvToRGBuv(u, v, ruv, guv, buv);
+
+    uchar r00, g00, b00, a00;
+    uchar r01, g01, b01, a01;
+
+    yRGBuvToRGBA(vy01, ruv, guv, buv, r00, g00, b00, a00);
+    yRGBuvToRGBA(vy11, ruv, guv, buv, r01, g01, b01, a01);
+
+    row1[2-bIdx] = r00;
+    row1[1]      = g00;
+    row1[bIdx]   = b00;
+    if(dcn == 4)
+        row1[3] = a00;
+
+    row1[dcn+2-bIdx] = r01;
+    row1[dcn+1]      = g01;
+    row1[dcn+0+bIdx] = b01;
+    if(dcn == 4)
+        row1[7] = a01;
+
+    if(is420)
+    {
+        uchar r10, g10, b10, a10;
+        uchar r11, g11, b11, a11;
+
+        yRGBuvToRGBA(vy02, ruv, guv, buv, r10, g10, b10, a10);
+        yRGBuvToRGBA(vy12, ruv, guv, buv, r11, g11, b11, a11);
+
+        row2[2-bIdx] = r10;
+        row2[1]      = g10;
+        row2[bIdx]   = b10;
+        if(dcn == 4)
+            row2[3] = a10;
+
+        row2[dcn+2-bIdx] = r11;
+        row2[dcn+1]      = g11;
+        row2[dcn+0+bIdx] = b11;
+        if(dcn == 4)
+            row2[7] = a11;
+    }
+}
+
+// bIdx is 0 or 2, uIdx is 0 or 1, dcn is 3 or 4
 template<int bIdx, int uIdx, int dcn>
 struct YUV420sp2RGB8Invoker : ParallelLoopBody
 {
@@ -1056,15 +1153,80 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
             uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
 
-            for (int i = 0; i < width; i += 2, row1 += dcn*2, row2 += dcn*2)
+            int i = 0;
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+            v_uint8 a = vx_setall_u8(uchar(0xff));
+            for( ; i <= width - 2*vsize;
+                 i += 2*vsize, row1 += vsize*dcn*2, row2 += vsize*dcn*2)
             {
-                int u = int(uv[i + 0 + uIdx]);
-                int v = int(uv[i + 1 - uIdx]);
+                v_uint8 u, v;
+                v_load_deinterleave(uv + i, u, v);
 
-                int vy01 = int(y1[i]);
-                int vy11 = int(y1[i + 1]);
-                int vy02 = int(y2[i]);
-                int vy12 = int(y2[i + 1]);
+                if(uIdx)
+                {
+                    swap(u, v);
+                }
+
+                v_uint8 vy[4];
+                v_load_deinterleave(y1 + i, vy[0], vy[1]);
+                v_load_deinterleave(y2 + i, vy[2], vy[3]);
+
+                v_int32 ruv[4], guv[4], buv[4];
+                uvToRGBuv(u, v, ruv, guv, buv);
+
+                v_uint8 r[4], g[4], b[4];
+
+                for(int k = 0; k < 4; k++)
+                {
+                    yRGBuvToRGBA(vy[k], ruv, guv, buv, r[k], g[k], b[k]);
+                }
+
+                if(bIdx)
+                {
+                    for(int k = 0; k < 4; k++)
+                        swap(r[k], b[k]);
+                }
+
+                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
+                v_uint8 r0_0, r0_1, r1_0, r1_1;
+                v_zip(r[0], r[1], r0_0, r0_1);
+                v_zip(r[2], r[3], r1_0, r1_1);
+                v_uint8 g0_0, g0_1, g1_0, g1_1;
+                v_zip(g[0], g[1], g0_0, g0_1);
+                v_zip(g[2], g[3], g1_0, g1_1);
+                v_uint8 b0_0, b0_1, b1_0, b1_1;
+                v_zip(b[0], b[1], b0_0, b0_1);
+                v_zip(b[2], b[3], b1_0, b1_1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
+                    v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
+                    v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
+                }
+                else //dcn == 3
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
+                    v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
+                    v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
+                }
+            }
+            vx_cleanup();
+#endif
+            for ( ; i < width; i += 2, row1 += dcn*2, row2 += dcn*2)
+            {
+                uchar u = uv[i + 0 + uIdx];
+                uchar v = uv[i + 1 - uIdx];
+
+                uchar vy01 = y1[i];
+                uchar vy11 = y1[i + 1];
+                uchar vy02 = y2[i];
+                uchar vy12 = y2[i + 1];
 
                 cvtYuv42xxp2RGB8<bIdx, dcn, true>(u, v, vy01, vy11, vy02, vy12, row1, row2);
             }
@@ -1108,16 +1270,77 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
             uchar* row1 = dst_data + dst_step * j;
             uchar* row2 = dst_data + dst_step * (j + 1);
             const uchar* y2 = y1 + stride;
+            int i = 0;
 
-            for (int i = 0; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+            v_uint8 a = vx_setall_u8(uchar(0xff));
+            for( ; i <= width/2 - vsize;
+                 i += vsize, row1 += vsize*dcn*2, row2 += vsize*dcn*2)
             {
-                int u = int(u1[i]);
-                int v = int(v1[i]);
+                v_uint8 u, v;
+                u = vx_load(u1 + i);
+                v = vx_load(v1 + i);
 
-                int vy01 = int(y1[2 * i]);
-                int vy11 = int(y1[2 * i + 1]);
-                int vy02 = int(y2[2 * i]);
-                int vy12 = int(y2[2 * i + 1]);
+                v_uint8 vy[4];
+                v_load_deinterleave(y1 + 2*i, vy[0], vy[1]);
+                v_load_deinterleave(y2 + 2*i, vy[2], vy[3]);
+
+                v_int32 ruv[4], guv[4], buv[4];
+                uvToRGBuv(u, v, ruv, guv, buv);
+
+                v_uint8 r[4], g[4], b[4];
+
+                for(int k = 0; k < 4; k++)
+                {
+                    yRGBuvToRGBA(vy[k], ruv, guv, buv, r[k], g[k], b[k]);
+                }
+
+                if(bIdx)
+                {
+                    for(int k = 0; k < 4; k++)
+                        swap(r[k], b[k]);
+                }
+
+                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
+                v_uint8 r0_0, r0_1, r1_0, r1_1;
+                v_zip(r[0], r[1], r0_0, r0_1);
+                v_zip(r[2], r[3], r1_0, r1_1);
+                v_uint8 g0_0, g0_1, g1_0, g1_1;
+                v_zip(g[0], g[1], g0_0, g0_1);
+                v_zip(g[2], g[3], g1_0, g1_1);
+                v_uint8 b0_0, b0_1, b1_0, b1_1;
+                v_zip(b[0], b[1], b0_0, b0_1);
+                v_zip(b[2], b[3], b1_0, b1_1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0, a);
+                    v_store_interleave(row1 + 4*vsize, b0_1, g0_1, r0_1, a);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0, a);
+                    v_store_interleave(row2 + 4*vsize, b1_1, g1_1, r1_1, a);
+                }
+                else //dcn == 3
+                {
+                    v_store_interleave(row1 + 0*vsize, b0_0, g0_0, r0_0);
+                    v_store_interleave(row1 + 3*vsize, b0_1, g0_1, r0_1);
+
+                    v_store_interleave(row2 + 0*vsize, b1_0, g1_0, r1_0);
+                    v_store_interleave(row2 + 3*vsize, b1_1, g1_1, r1_1);
+                }
+            }
+            vx_cleanup();
+#endif
+            for (; i < width / 2; i += 1, row1 += dcn*2, row2 += dcn*2)
+            {
+                uchar u = u1[i];
+                uchar v = v1[i];
+
+                uchar vy01 = y1[2 * i];
+                uchar vy11 = y1[2 * i + 1];
+                uchar vy02 = y2[2 * i];
+                uchar vy12 = y2[2 * i + 1];
 
                 cvtYuv42xxp2RGB8<bIdx, dcn, true>(u, v, vy01, vy11, vy02, vy12, row1, row2);
             }
@@ -1150,106 +1373,258 @@ inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int
 
 ///////////////////////////////////// RGB -> YUV420p /////////////////////////////////////
 
+static inline uchar rgbToY42x(uchar r, uchar g, uchar b)
+{
+    const int shifted16 = (16 << ITUR_BT_601_SHIFT);
+    const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
+    int yy = ITUR_BT_601_CRY * r + ITUR_BT_601_CGY * g + ITUR_BT_601_CBY * b + halfShift + shifted16;
+
+    return saturate_cast<uchar>(yy >> ITUR_BT_601_SHIFT);
+}
+
+static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint8& b)
+{
+    const int shifted16 = (16 << ITUR_BT_601_SHIFT);
+    const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
+    v_uint16 r0, r1, g0, g1, b0, b1;
+    v_expand(r, r0, r1);
+    v_expand(g, g0, g1);
+    v_expand(b, b0, b1);
+
+    v_uint32 rq[4], gq[4], bq[4];
+    v_expand(r0, rq[0], rq[1]); v_expand(r1, rq[2], rq[3]);
+    v_expand(g0, gq[0], gq[1]); v_expand(g1, gq[2], gq[3]);
+    v_expand(b0, bq[0], bq[1]); v_expand(b1, bq[2], bq[3]);
+
+    v_uint32 ry = vx_setall_u32(ITUR_BT_601_CRY), gy = vx_setall_u32(ITUR_BT_601_CGY);
+    v_uint32 by = vx_setall_u32(ITUR_BT_601_CBY), shift = vx_setall_u32(halfShift + shifted16);
+
+    v_uint32 y[4];
+    for(int k = 0; k < 4; k++)
+    {
+        y[k] = (rq[k]*ry + gq[k]*gy + bq[k]*by + shift) >> ITUR_BT_601_SHIFT;
+    }
+
+    v_uint16 y0, y1;
+    y0 = v_pack(y[0], y[1]);
+    y1 = v_pack(y[2], y[3]);
+
+    return v_pack(y0, y1);
+}
+
+static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
+{
+    const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
+    const int shifted128 = (128 << ITUR_BT_601_SHIFT);
+    int uu = ITUR_BT_601_CRU * r + ITUR_BT_601_CGU * g + ITUR_BT_601_CBU * b + halfShift + shifted128;
+    int vv = ITUR_BT_601_CBU * r + ITUR_BT_601_CGV * g + ITUR_BT_601_CBV * b + halfShift + shifted128;
+
+    u = saturate_cast<uchar>(uu >> ITUR_BT_601_SHIFT);
+    v = saturate_cast<uchar>(vv >> ITUR_BT_601_SHIFT);
+}
+
+static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint8& g0, const v_uint8& g1,
+                              const v_uint8& b0, const v_uint8& b1, v_uint8& u, v_uint8& v)
+{
+    // [r0, r1, r2, r3,..] => [r0, 0, r2, 0,..]
+    v_int16 vlowByte = vx_setall_s16(0x00ff);
+    v_int16 rd0, rd1, gd0, gd1, bd0, bd1;
+    rd0 = v_reinterpret_as_s16(r0) & vlowByte;
+    rd1 = v_reinterpret_as_s16(r1) & vlowByte;
+    gd0 = v_reinterpret_as_s16(g0) & vlowByte;
+    gd1 = v_reinterpret_as_s16(g1) & vlowByte;
+    bd0 = v_reinterpret_as_s16(b0) & vlowByte;
+    bd1 = v_reinterpret_as_s16(b1) & vlowByte;
+
+    v_int32 rq[4], gq[4], bq[4];
+    v_expand(rd0, rq[0], rq[1]);
+    v_expand(rd1, rq[2], rq[3]);
+    v_expand(gd0, gq[0], gq[1]);
+    v_expand(gd1, gq[2], gq[3]);
+    v_expand(bd0, bq[0], bq[1]);
+    v_expand(bd1, bq[2], bq[3]);
+
+    const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
+    const int shifted128 = (128 << ITUR_BT_601_SHIFT);
+    v_int32 shift = vx_setall_s32(halfShift + shifted128);
+    v_int32 ru, gu, bu, gv, bv;
+    ru = vx_setall_s32(ITUR_BT_601_CRU);
+    gu = vx_setall_s32(ITUR_BT_601_CGU);
+    gv = vx_setall_s32(ITUR_BT_601_CGV);
+    bu = vx_setall_s32(ITUR_BT_601_CBU);
+    bv = vx_setall_s32(ITUR_BT_601_CBV);
+
+    v_int32 uq[4], vq[4];
+    for(int k = 0; k < 4; k++)
+    {
+        uq[k] = (ru*rq[k] + gu*gq[k] + bu*bq[k] + shift) >> ITUR_BT_601_SHIFT;
+        vq[k] = (bu*rq[k] + gv*gq[k] + bv*bq[k] + shift) >> ITUR_BT_601_SHIFT;
+    }
+
+    v_int16 u0, u1, v0, v1;
+    u0 = v_pack(uq[0], uq[1]);
+    u1 = v_pack(uq[2], uq[3]);
+    v0 = v_pack(vq[0], vq[1]);
+    v1 = v_pack(vq[2], vq[3]);
+
+    u = v_pack_u(u0, u1);
+    v = v_pack_u(v0, v1);
+}
+
+
 struct RGB8toYUV420pInvoker: public ParallelLoopBody
 {
-    RGB8toYUV420pInvoker(const uchar * _src_data, size_t _src_step,
-                           uchar * _y_data, uchar * _uv_data, size_t _dst_step,
-                           int _src_width, int _src_height, int _scn, bool swapBlue_, bool swapUV_, bool interleaved_)
-        : src_data(_src_data), src_step(_src_step),
-          y_data(_y_data), uv_data(_uv_data), dst_step(_dst_step),
-          src_width(_src_width), src_height(_src_height),
-          scn(_scn), swapBlue(swapBlue_), swapUV(swapUV_), interleaved(interleaved_) { }
+    RGB8toYUV420pInvoker(const uchar * _srcData, size_t _srcStep,
+                           uchar * _yData, uchar * _uvData, size_t _dstStep,
+                           int _srcWidth, int _srcHeight, int _scn, bool _swapBlue, bool _swapUV, bool _interleave)
+        : srcData(_srcData), srcStep(_srcStep),
+          yData(_yData), uvData(_uvData), dstStep(_dstStep),
+          srcWidth(_srcWidth), srcHeight(_srcHeight),
+          srcCn(_scn), swapBlue(_swapBlue), swapUV(_swapUV), interleave(_interleave) { }
 
     void operator()(const Range& rowRange) const CV_OVERRIDE
     {
-        const int w = src_width;
-        const int h = src_height;
-        const int cn = scn;
-        for( int i = rowRange.start; i < rowRange.end; i++ )
+        const int w = srcWidth;
+        const int h = srcHeight;
+        const int scn = srcCn;
+        const uchar* srcRow = (uchar*)0;
+        uchar* yRow = (uchar*)0, *uRow = (uchar*)0, *vRow = (uchar*)0, *uvRow = (uchar*)0;
+        for( int sRow = rowRange.start*2; sRow < rowRange.end*2; sRow++)
         {
-            const uchar* brow0 = src_data + src_step * (2 * i);
-            const uchar* grow0 = brow0 + 1;
-            const uchar* rrow0 = brow0 + 2;
-            const uchar* brow1 = src_data + src_step * (2 * i + 1);
-            const uchar* grow1 = brow1 + 1;
-            const uchar* rrow1 = brow1 + 2;
-            if (swapBlue)
+            srcRow = srcData + srcStep*sRow;
+            yRow = yData + dstStep * sRow;
+            bool evenRow = (sRow % 2) == 0;
+            if(evenRow)
             {
-                std::swap(brow0, rrow0);
-                std::swap(brow1, rrow1);
-            }
-
-            uchar* y = y_data + dst_step * (2*i);
-            uchar* u;
-            uchar* v;
-            if (interleaved)
-            {
-                u = uv_data + dst_step * i;
-                v = uv_data + dst_step * i + 1;
-            }
-            else
-            {
-                u = uv_data + dst_step * (i/2) + (i % 2) * (w/2);
-                v = uv_data + dst_step * ((i + h/2)/2) + ((i + h/2) % 2) * (w/2);
-            }
-
-            if (swapUV)
-            {
-                std::swap(u, v);
-            }
-
-            for( int j = 0, k = 0; j < w * cn; j += 2 * cn, k++ )
-            {
-                int r00 = rrow0[j];      int g00 = grow0[j];      int b00 = brow0[j];
-                int r01 = rrow0[cn + j]; int g01 = grow0[cn + j]; int b01 = brow0[cn + j];
-                int r10 = rrow1[j];      int g10 = grow1[j];      int b10 = brow1[j];
-                int r11 = rrow1[cn + j]; int g11 = grow1[cn + j]; int b11 = brow1[cn + j];
-
-                const int shifted16 = (16 << ITUR_BT_601_SHIFT);
-                const int halfShift = (1 << (ITUR_BT_601_SHIFT - 1));
-                int y00 = ITUR_BT_601_CRY * r00 + ITUR_BT_601_CGY * g00 + ITUR_BT_601_CBY * b00 + halfShift + shifted16;
-                int y01 = ITUR_BT_601_CRY * r01 + ITUR_BT_601_CGY * g01 + ITUR_BT_601_CBY * b01 + halfShift + shifted16;
-                int y10 = ITUR_BT_601_CRY * r10 + ITUR_BT_601_CGY * g10 + ITUR_BT_601_CBY * b10 + halfShift + shifted16;
-                int y11 = ITUR_BT_601_CRY * r11 + ITUR_BT_601_CGY * g11 + ITUR_BT_601_CBY * b11 + halfShift + shifted16;
-
-                y[2*k + 0]            = saturate_cast<uchar>(y00 >> ITUR_BT_601_SHIFT);
-                y[2*k + 1]            = saturate_cast<uchar>(y01 >> ITUR_BT_601_SHIFT);
-                y[2*k + dst_step + 0] = saturate_cast<uchar>(y10 >> ITUR_BT_601_SHIFT);
-                y[2*k + dst_step + 1] = saturate_cast<uchar>(y11 >> ITUR_BT_601_SHIFT);
-
-                const int shifted128 = (128 << ITUR_BT_601_SHIFT);
-                int u00 = ITUR_BT_601_CRU * r00 + ITUR_BT_601_CGU * g00 + ITUR_BT_601_CBU * b00 + halfShift + shifted128;
-                int v00 = ITUR_BT_601_CBU * r00 + ITUR_BT_601_CGV * g00 + ITUR_BT_601_CBV * b00 + halfShift + shifted128;
-
-                if (interleaved)
+                if (interleave)
                 {
-                    u[k*2] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
-                    v[k*2] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                    uvRow = uvData + dstStep*(sRow/2);
                 }
                 else
                 {
-                    u[k] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
-                    v[k] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                    uRow = uvData + dstStep * (sRow/4) + ((sRow/2) % 2) * (w/2);
+                    vRow = uvData + dstStep * ((sRow + h)/4) + (((sRow + h)/2) % 2) * (w/2);
+                }
+            }
+            int i = 0;
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+
+            for( ; i <= w/2 - vsize;
+                 i += vsize)
+            {
+                // processing (2*vsize) pixels at once
+                v_uint8 b0, b1, g0, g1, r0, r1, a0, a1;
+                if(scn == 4)
+                {
+                    v_load_deinterleave(srcRow + 2*4*i + 0*vsize, b0, g0, r0, a0);
+                    v_load_deinterleave(srcRow + 2*4*i + 4*vsize, b1, g1, r1, a1);
+                }
+                else // scn == 3
+                {
+                    v_load_deinterleave(srcRow + 2*3*i + 0*vsize, b0, g0, r0);
+                    v_load_deinterleave(srcRow + 2*3*i + 3*vsize, b1, g1, r1);
+                }
+
+                if(swapBlue)
+                {
+                    swap(b0, r0); swap(b1, r1);
+                }
+
+                v_uint8 y0, y1;
+
+                y0 = rgbToY42x(r0, g0, b0);
+                y1 = rgbToY42x(r1, g1, b1);
+
+                v_store(yRow + 2*i + 0*vsize, y0);
+                v_store(yRow + 2*i + 1*vsize, y1);
+
+                if(evenRow)
+                {
+                    v_uint8 u, v;
+                    rgbToUV42x(r0, r1, g0, g1, b0, b1, u, v);
+
+                    if(swapUV)
+                    {
+                        swap(u, v);
+                    }
+
+                    if(interleave)
+                    {
+                        v_store_interleave(uvRow + 2*i, u, v);
+                    }
+                    else
+                    {
+                        v_store(uRow + i, u);
+                        v_store(vRow + i, v);
+                    }
+                }
+            }
+            vx_cleanup();
+#endif
+            // processing two pixels at once
+            for( ; i < w/2; i++)
+            {
+                uchar b0, g0, r0;
+                uchar b1, g1, r1;
+                b0 = srcRow[(2*i+0)*scn + 0];
+                g0 = srcRow[(2*i+0)*scn + 1];
+                r0 = srcRow[(2*i+0)*scn + 2];
+                b1 = srcRow[(2*i+1)*scn + 0];
+                g1 = srcRow[(2*i+1)*scn + 1];
+                r1 = srcRow[(2*i+1)*scn + 2];
+
+                if(swapBlue)
+                {
+                    swap(b0, r0); swap(b1, r1);
+                }
+
+                uchar y0 = rgbToY42x(r0, g0, b0);
+                uchar y1 = rgbToY42x(r1, g1, b1);
+
+                yRow[2*i+0] = y0;
+                yRow[2*i+1] = y1;
+
+                if(evenRow)
+                {
+                    uchar uu, vv;
+                    rgbToUV42x(r0, g0, b0, uu, vv);
+                    if(swapUV)
+                    {
+                        swap(uu, vv);
+                    }
+
+                    if(interleave)
+                    {
+                        uvRow[2*i+0] = uu;
+                        uvRow[2*i+1] = vv;
+                    }
+                    else
+                    {
+                        uRow[i] = uu;
+                        vRow[i] = vv;
+                    }
                 }
             }
         }
     }
 
-    const uchar * src_data;
-    size_t src_step;
-    uchar *y_data, *uv_data;
-    size_t dst_step;
-    int src_width;
-    int src_height;
-    const int scn;
+    const uchar * srcData;
+    size_t srcStep;
+    uchar *yData, *uvData;
+    size_t dstStep;
+    int srcWidth;
+    int srcHeight;
+    const int srcCn;
     bool swapBlue;
     bool swapUV;
-    bool interleaved;
+    bool interleave;
 };
 
 
 ///////////////////////////////////// YUV422 -> RGB /////////////////////////////////////
 
+// bIdx is 0 or 2; [uIdx, yIdx] is [0, 0], [0, 1], [1, 0]; dcn is 3 or 4
 template<int bIdx, int uIdx, int yIdx, int dcn>
 struct YUV422toRGB8Invoker : ParallelLoopBody
 {
@@ -1269,6 +1644,10 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
         int rangeBegin = range.start;
         int rangeEnd = range.end;
 
+        // [yIdx, uIdx] | [uidx, vidx]:
+        //     0, 0     |     1, 3
+        //     0, 1     |     3, 1
+        //     1, 0     |     0, 2
         const int uidx = 1 - yIdx + uIdx * 2;
         const int vidx = (2 + uidx) % 4;
         const uchar* yuv_src = src_data + rangeBegin * src_step;
@@ -1276,14 +1655,69 @@ struct YUV422toRGB8Invoker : ParallelLoopBody
         for (int j = rangeBegin; j < rangeEnd; j++, yuv_src += src_step)
         {
             uchar* row = dst_data + dst_step * j;
-
-            for (int i = 0; i < 2 * width; i += 4, row += dcn*2)
+            int i = 0;
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+            v_uint8 a = vx_setall_u8(uchar(0xff));
+            for(; i <= 2*width - 4*vsize;
+                i += 4*vsize, row += vsize*dcn*2)
             {
-                int u = int(yuv_src[i + uidx]);
-                int v = int(yuv_src[i + vidx]);
+                v_uint8 u, v, vy[2];
+                if(yIdx == 1) // UYVY
+                {
+                    v_load_deinterleave(yuv_src + i, u, vy[0], v, vy[1]);
+                }
+                else // YUYV or YVYU
+                {
+                    v_load_deinterleave(yuv_src + i, vy[0], u, vy[1], v);
+                    if(uIdx == 1) // YVYU
+                    {
+                        swap(u, v);
+                    }
+                }
 
-                int vy0 = int(yuv_src[i + yIdx]);
-                int vy1 = int(yuv_src[i + yIdx + 2]);
+                v_int32 ruv[4], guv[4], buv[4];
+                uvToRGBuv(u, v, ruv, guv, buv);
+
+                v_uint8 r[2], g[2], b[2];
+
+                yRGBuvToRGBA(vy[0], ruv, guv, buv, r[0], g[0], b[0]);
+                yRGBuvToRGBA(vy[1], ruv, guv, buv, r[1], g[1], b[1]);
+
+                if(bIdx)
+                {
+                    swap(r[0], b[0]);
+                    swap(r[1], b[1]);
+                }
+
+                // [r0...], [r1...] => [r0, r1, r0, r1...], [r0, r1, r0, r1...]
+                v_uint8 r0_0, r0_1;
+                v_zip(r[0], r[1], r0_0, r0_1);
+                v_uint8 g0_0, g0_1;
+                v_zip(g[0], g[1], g0_0, g0_1);
+                v_uint8 b0_0, b0_1;
+                v_zip(b[0], b[1], b0_0, b0_1);
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(row + 0*vsize, b0_0, g0_0, r0_0, a);
+                    v_store_interleave(row + 4*vsize, b0_1, g0_1, r0_1, a);
+                }
+                else //dcn == 3
+                {
+                    v_store_interleave(row + 0*vsize, b0_0, g0_0, r0_0);
+                    v_store_interleave(row + 3*vsize, b0_1, g0_1, r0_1);
+                }
+            }
+            vx_cleanup();
+#endif
+            for (; i < 2 * width; i += 4, row += dcn*2)
+            {
+                uchar u = yuv_src[i + uidx];
+                uchar v = yuv_src[i + vidx];
+
+                uchar vy0 = yuv_src[i + yIdx];
+                uchar vy1 = yuv_src[i + yIdx + 2];
 
                 cvtYuv42xxp2RGB8<bIdx, dcn, false>(u, v, vy0, vy1, 0, 0, row, (uchar*)(0));
             }
