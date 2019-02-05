@@ -140,11 +140,5 @@ GMat RGB2Lab(const GMat& src)
     return imgproc::GRGB2Lab::on(src);
 }
 
-GMat normalize(const GMat& _src, double a, double b,
-                    int norm_type, int ddepth)
-{
-    return imgproc::Gnormalize::on(_src, a, b, norm_type, ddepth);
-}
-
 } //namespace gapi
 } //namespace cv
