@@ -153,51 +153,39 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<Rect> boxes;
-    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
+    if (outLayerType == "DetectionOutput")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
         // [batchId, classId, confidence, left, top, right, bottom]
-        CV_Assert(outs.size() == 1);
-        float* data = (float*)outs[0].data;
-        for (size_t i = 0; i < outs[0].total(); i += 7)
+        CV_Assert(outs.size() > 0);
+        for (size_t k = 0; k < outs.size(); k++)
         {
-            float confidence = data[i + 2];
-            if (confidence > confThreshold)
+            float* data = (float*)outs[k].data;
+            for (size_t i = 0; i < outs[k].total(); i += 7)
             {
-                int left = (int)data[i + 3];
-                int top = (int)data[i + 4];
-                int right = (int)data[i + 5];
-                int bottom = (int)data[i + 6];
-                int width = right - left + 1;
-                int height = bottom - top + 1;
-                classIds.push_back((int)(data[i + 1]) - 1);  // Skip 0th background class id.
-                boxes.push_back(Rect(left, top, width, height));
-                confidences.push_back(confidence);
-            }
-        }
-    }
-    else if (outLayerType == "DetectionOutput")
-    {
-        // Network produces output blob with a shape 1x1xNx7 where N is a number of
-        // detections and an every detection is a vector of values
-        // [batchId, classId, confidence, left, top, right, bottom]
-        CV_Assert(outs.size() == 1);
-        float* data = (float*)outs[0].data;
-        for (size_t i = 0; i < outs[0].total(); i += 7)
-        {
-            float confidence = data[i + 2];
-            if (confidence > confThreshold)
-            {
-                int left = (int)(data[i + 3] * frame.cols);
-                int top = (int)(data[i + 4] * frame.rows);
-                int right = (int)(data[i + 5] * frame.cols);
-                int bottom = (int)(data[i + 6] * frame.rows);
-                int width = right - left + 1;
-                int height = bottom - top + 1;
-                classIds.push_back((int)(data[i + 1]) - 1);  // Skip 0th background class id.
-                boxes.push_back(Rect(left, top, width, height));
-                confidences.push_back(confidence);
+                float confidence = data[i + 2];
+                if (confidence > confThreshold)
+                {
+                    int left   = (int)data[i + 3];
+                    int top    = (int)data[i + 4];
+                    int right  = (int)data[i + 5];
+                    int bottom = (int)data[i + 6];
+                    int width  = right - left + 1;
+                    int height = bottom - top + 1;
+                    if (width * height <= 1)
+                    {
+                        left   = (int)(data[i + 3] * frame.cols);
+                        top    = (int)(data[i + 4] * frame.rows);
+                        right  = (int)(data[i + 5] * frame.cols);
+                        bottom = (int)(data[i + 6] * frame.rows);
+                        width  = right - left + 1;
+                        height = bottom - top + 1;
+                    }
+                    classIds.push_back((int)(data[i + 1]) - 1);  // Skip 0th background class id.
+                    boxes.push_back(Rect(left, top, width, height));
+                    confidences.push_back(confidence);
+                }
             }
         }
     }
