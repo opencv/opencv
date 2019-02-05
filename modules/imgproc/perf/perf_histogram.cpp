@@ -141,18 +141,20 @@ PERF_TEST_P(Dim_Cmpmethod, compareHist,
     SANITY_CHECK_NOTHING();
 }
 
-typedef tuple<Size, double> Sz_ClipLimit_t;
+typedef tuple<Size, double, MatType> Sz_ClipLimit_t;
 typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;
 
 PERF_TEST_P(Sz_ClipLimit, CLAHE,
             testing::Combine(testing::Values(::perf::szVGA, ::perf::sz720p, ::perf::sz1080p),
-                             testing::Values(0.0, 40.0))
+                             testing::Values(0.0, 40.0),
+                             testing::Values(MatType(CV_8UC1), MatType(CV_16UC1)))
             )
 {
     const Size size = get<0>(GetParam());
     const double clipLimit = get<1>(GetParam());
+    const int type = get<2>(GetParam());
 
-    Mat src(size, CV_8UC1);
+    Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
     Ptr<CLAHE> clahe = createCLAHE(clipLimit);
