@@ -118,6 +118,14 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     rvec = _rvec.getMat();
     tvec = _tvec.getMat();
 
+    //TODO:
+    if (useExtrinsicGuess)
+    {
+        std::cout << "useExtrinsicGuess" << std::endl;
+        std::cout << "rvec: " << rvec.t() << std::endl;
+        std::cout << "tvec: " << tvec.t() << std::endl;
+    }
+
     Mat cameraMatrix0 = _cameraMatrix.getMat();
     Mat distCoeffs0 = _distCoeffs.getMat();
     Mat cameraMatrix = Mat_<double>(cameraMatrix0);
