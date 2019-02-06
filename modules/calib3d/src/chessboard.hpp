@@ -319,7 +319,7 @@ class Chessboard: public cv::Feature2D
                  * \brief Estimates the pose of the chessboard
                  *
                  */
-                bool estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const;
+                bool estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::InputOutputArray rvec,cv::InputOutputArray tvec)const;
 
                 /**
                  * \brief Clears all internal data of the object

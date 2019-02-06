@@ -745,9 +745,8 @@ a 3D point expressed in the world frame into the camera frame:
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
-       unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, **SOLVEPNP_EPNP** method will be used instead.
+   -   The method **SOLVEPNP_UPNP** cannot be used as the current implementation is
+       unstable and give completely wrong results. If you pass this flag, **SOLVEPNP_EPNP** method will be used instead.
    -   The minimum number of points is 4 in the general case. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
@@ -757,7 +756,7 @@ a 3D point expressed in the world frame into the camera frame:
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
-                            OutputArray rvec, OutputArray tvec,
+                            InputOutputArray rvec, InputOutputArray tvec,
                             bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
 /** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
@@ -771,10 +770,10 @@ where N is the number of points. vector\<Point2f\> can be also passed here.
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
 assumed.
-@param rvec Output rotation vector (see Rodrigues ) that, together with tvec , brings points from
+@param rvec Output rotation vector (see #Rodrigues ) that, together with tvec , brings points from
 the model coordinate system to the camera coordinate system.
 @param tvec Output translation vector.
-@param useExtrinsicGuess Parameter used for SOLVEPNP_ITERATIVE. If true (1), the function uses
+@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param iterationsCount Number of iterations.
@@ -783,12 +782,12 @@ is the maximum allowed distance between the observed and computed point projecti
 an inlier.
 @param confidence The probability that the algorithm produces a useful result.
 @param inliers Output vector that contains indices of inliers in objectPoints and imagePoints .
-@param flags Method for solving a PnP problem (see solvePnP ).
+@param flags Method for solving a PnP problem (see #solvePnP ).
 
 The function estimates an object pose given a set of object points, their corresponding image
 projections, as well as the camera matrix and the distortion coefficients. This function finds such
 a pose that minimizes reprojection error, that is, the sum of squared distances between the observed
-projections imagePoints and the projected (using projectPoints ) objectPoints. The use of RANSAC
+projections imagePoints and the projected (using #projectPoints ) objectPoints. The use of RANSAC
 makes the function resistant to outliers.
 
 @note
@@ -804,7 +803,7 @@ makes the function resistant to outliers.
  */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                  OutputArray rvec, OutputArray tvec,
+                                  InputOutputArray rvec, InputOutputArray tvec,
                                   bool useExtrinsicGuess = false, int iterationsCount = 100,
                                   float reprojectionError = 8.0, double confidence = 0.99,
                                   OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );

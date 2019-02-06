@@ -82,7 +82,7 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
 
 bool solvePnP( InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
-               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
+               InputOutputArray _rvec, InputOutputArray _tvec, bool useExtrinsicGuess, int flags )
 {
     CV_INSTRUMENT_REGION();
 
@@ -118,21 +118,13 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     rvec = _rvec.getMat();
     tvec = _tvec.getMat();
 
-    //TODO:
-    if (useExtrinsicGuess)
-    {
-        std::cout << "useExtrinsicGuess" << std::endl;
-        std::cout << "rvec: " << rvec.t() << std::endl;
-        std::cout << "tvec: " << tvec.t() << std::endl;
-    }
-
     Mat cameraMatrix0 = _cameraMatrix.getMat();
     Mat distCoeffs0 = _distCoeffs.getMat();
     Mat cameraMatrix = Mat_<double>(cameraMatrix0);
     Mat distCoeffs = Mat_<double>(distCoeffs0);
     bool result = false;
 
-    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
+    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_UPNP) //UPnP is broken and is remaped to EPnP
     {
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -177,20 +169,19 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
         result = true;
     }
-    /*else if (flags == SOLVEPNP_DLS)
+    else if (flags == SOLVEPNP_DLS)
     {
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
         dls PnP(opoints, undistortedPoints);
 
-        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        bool result = PnP.compute_pose(R, tvec);
+        Mat R;
+        result = PnP.compute_pose(R, tvec);
         if (result)
             Rodrigues(R, rvec);
-        return result;
     }
-    else if (flags == SOLVEPNP_UPNP)
+    /*else if (flags == SOLVEPNP_UPNP)
     {
         upnp PnP(cameraMatrix, opoints, ipoints);
 
@@ -200,7 +191,7 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
         return true;
     }*/
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
+        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_AP3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
     return result;
 }
 
@@ -208,7 +199,6 @@ class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 
 public:
-
     PnPRansacCallback(Mat _cameraMatrix=Mat(3,3,CV_64F), Mat _distCoeffs=Mat(4,1,CV_64F), int _flags=SOLVEPNP_ITERATIVE,
             bool _useExtrinsicGuess=false, Mat _rvec=Mat(), Mat _tvec=Mat() )
         : cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), flags(_flags), useExtrinsicGuess(_useExtrinsicGuess),
@@ -221,7 +211,7 @@ public:
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
 
         bool correspondence = solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
-                                            rvec, tvec, useExtrinsicGuess, flags );
+                                        rvec, tvec, useExtrinsicGuess, flags );
 
         Mat _local_model;
         hconcat(rvec, tvec, _local_model);
@@ -234,13 +224,11 @@ public:
     /* Post: fill _err with projection errors */
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
-
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat(), model = _model.getMat();
 
-        int i, count = opoints.checkVector(3);
+        int count = opoints.checkVector(3);
         Mat _rvec = model.col(0);
         Mat _tvec = model.col(1);
-
 
         Mat projpoints(count, 2, CV_32FC1);
         projectPoints(opoints, _rvec, _tvec, cameraMatrix, distCoeffs, projpoints);
@@ -251,11 +239,11 @@ public:
         _err.create(count, 1, CV_32FC1);
         float* err = _err.getMat().ptr<float>();
 
-        for ( i = 0; i < count; ++i)
+        for ( int i = 0; i < count; ++i)
+        {
             err[i] = (float)norm( Matx21f(ipoints_ptr[i] - projpoints_ptr[i]), NORM_L2SQR );
-
+        }
     }
-
 
     Mat cameraMatrix;
     Mat distCoeffs;
@@ -267,7 +255,7 @@ public:
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         InputArray _cameraMatrix, InputArray _distCoeffs,
-                        OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
+                        InputOutputArray _rvec, InputOutputArray _tvec, bool useExtrinsicGuess,
                         int iterationsCount, float reprojectionError, double confidence,
                         OutputArray _inliers, int flags)
 {

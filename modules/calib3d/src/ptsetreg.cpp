@@ -89,8 +89,8 @@ public:
         const float* errptr = err.ptr<float>();
         uchar* maskptr = mask.ptr<uchar>();
         float t = (float)(thresh*thresh);
-        int i, n = (int)err.total(), nz = 0;
-        for( i = 0; i < n; i++ )
+        int n = (int)err.total(), nz = 0;
+        for( int i = 0; i < n; i++ )
         {
             int f = errptr[i] <= t;
             maskptr[i] = (uchar)f;
@@ -156,7 +156,7 @@ public:
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         Mat err, mask, model, bestModel, ms1, ms2;
 
-        int iter, niters = MAX(maxIters, 1);
+        int niters = MAX(maxIters, 1);
         int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2), maxGoodCount = 0;
@@ -193,9 +193,8 @@ public:
             return true;
         }
 
-        for( iter = 0; iter < niters; iter++ )
+        for( int iter = 0; iter < niters; iter++ )
         {
-            int i, nmodels;
             if( count > modelPoints )
             {
                 bool found = getSubset( m1, m2, ms1, ms2, rng, 10000 );
@@ -207,13 +206,13 @@ public:
                 }
             }
 
-            nmodels = cb->runKernel( ms1, ms2, model );
+            int nmodels = cb->runKernel( ms1, ms2, model );
             if( nmodels <= 0 )
                 continue;
             CV_Assert( model.rows % nmodels == 0 );
             Size modelSize(model.cols, model.rows/nmodels);
 
-            for( i = 0; i < nmodels; i++ )
+            for( int i = 0; i < nmodels; i++ )
             {
                 Mat model_i = model.rowRange( i*modelSize.height, (i+1)*modelSize.height );
                 int goodCount = findInliers( m1, m2, model_i, err, mask, threshold );

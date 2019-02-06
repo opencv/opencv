@@ -1250,7 +1250,7 @@ void Chessboard::Board::draw(cv::InputArray m,cv::OutputArray out,cv::InputArray
     image.copyTo(out.getMat());
 }
 
-bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::OutputArray rvec,cv::OutputArray tvec)const
+bool Chessboard::Board::estimatePose(const cv::Size2f &real_size,cv::InputArray _K,cv::InputOutputArray rvec,cv::InputOutputArray tvec)const
 {
     cv::Mat K = _K.getMat();
     CV_CheckTypeEQ(K.type(), CV_64FC1, "wrong K type");
