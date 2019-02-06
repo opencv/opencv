@@ -377,9 +377,9 @@ TEST_P(SobelXYTest, AccuracyTest)
         cv::Mat temp_in;
         if(border_type == cv::BORDER_CONSTANT)
         {
-            int add = (kernSize - 1) / 2;
-            cv::copyMakeBorder(in_mat1, temp_in, add, add, add, add, border_type, border_val);
-            in_mat1 = temp_in(cv::Rect(add, add, in_mat1.cols, in_mat1.rows));
+            int n_pixels = (kernSize - 1) / 2;
+            cv::copyMakeBorder(in_mat1, temp_in, n_pixels, n_pixels, n_pixels, n_pixels, border_type, border_val);
+            in_mat1 = temp_in(cv::Rect(n_pixels, n_pixels, in_mat1.cols, in_mat1.rows));
         }
         cv::Sobel(in_mat1, out_mat_ocv, dtype, order, 0, kernSize, 1, 0, border_type);
         cv::Sobel(in_mat1, out_mat_ocv2, dtype, 0, order, kernSize, 1, 0, border_type);
