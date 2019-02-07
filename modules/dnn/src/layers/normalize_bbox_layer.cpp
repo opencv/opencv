@@ -65,16 +65,12 @@ public:
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (pnorm != 2)
+            if (!(pnorm == 2 || pnorm == 1)) {
                 return false;
-            if (!blobs.empty())
-                return true;
-            if (preferableTarget == DNN_TARGET_MYRIAD)
-                return !acrossSpatial;
-            return startAxis == 1 && (!acrossSpatial || endAxis > 1);
+            }
+            return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
-        else
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
