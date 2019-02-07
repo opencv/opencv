@@ -67,7 +67,6 @@ int main(int argc, char** argv)
         r = strtod (line.c_str(), &pEnd);
         g = strtod (pEnd, NULL);
         b = strtod (pEnd, NULL);
-        Scalar color = Scalar(r, g, b, 255.0);
         colors.push_back(Scalar(r, g, b, 255.0));
     }
 
@@ -174,7 +173,6 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
     // C - number of classes (excluding background)
     // HxW - segmentation shape
     const int numDetections = outDetections.size[2];
-    const int numClasses = outMasks.size[1];
 
     outDetections = outDetections.reshape(1, outDetections.total() / 7);
     for (int i = 0; i < numDetections; ++i)
