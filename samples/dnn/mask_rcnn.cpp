@@ -159,10 +159,10 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
     // N - number of detected boxes
     // C - number of classes (excluding background)
     // HxW - segmentation shape
-    const int numDetections = outDetections.size[2];
+    const size_t numDetections = outDetections.size[2];
 
     outDetections = outDetections.reshape(1, outDetections.total() / 7);
-    for (int i = 0; i < numDetections; ++i)
+    for (size_t i = 0; i < numDetections; ++i)
     {
         float score = outDetections.at<float>(i, 2);
         if (score > confThreshold)
