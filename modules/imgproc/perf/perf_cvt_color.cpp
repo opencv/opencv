@@ -391,7 +391,7 @@ PERF_TEST_P(Size_CvtMode32F, cvtColor_32f,
     int runs = sz.width <= 320 ? 100 : 5;
     TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
