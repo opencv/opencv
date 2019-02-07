@@ -200,7 +200,7 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask)
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
     box.y = max(box.y, labelSize.height);
-    rectangle(frame, Point(box.x, box.y - (int)round(1.5*labelSize.height)), Point(box.x + round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
+    rectangle(frame, Point(box.x, box.y - (int)round(1.5*labelSize.height)), Point(box.x + (int)round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
     putText(frame, label, Point(box.x, box.y), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,0),1);
 
     Scalar color = colors[classId%colors.size()];
