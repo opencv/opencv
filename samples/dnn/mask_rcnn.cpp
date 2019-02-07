@@ -20,6 +20,8 @@ std::string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --media=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
+    "{ weights w | ./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
+    "{ textgraph g |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr         | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
 
@@ -50,6 +52,8 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
+    String textGraph = parser.get<string>("textgraph");
+    String modelWeights = parser.get<string>("weights");
 
     string classesFile = "mscoco_labels.names";
     ifstream ifs(classesFile.c_str());
@@ -66,9 +70,6 @@ int main(int argc, char** argv)
         b = strtod (pEnd, NULL);
         colors.push_back(Scalar(r, g, b, 255.0));
     }
-
-    String textGraph = "./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt";
-    String modelWeights = "./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb";
 
     Net net = readNetFromTensorflow(modelWeights, textGraph);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
