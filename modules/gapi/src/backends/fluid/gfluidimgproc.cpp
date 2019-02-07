@@ -1032,6 +1032,35 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
 {
     static const int Window = 3;
 
+    struct BufHelper
+    {
+        float *kx_dx, *ky_dx,
+              *kx_dy, *ky_dy;
+        float *buf_start;
+        int buf_width, buf_chan;
+
+        static int length(int ksz, int width, int chan)
+        {
+            return ksz + ksz + ksz + ksz    // kernels: kx_dx, ky_dx, kx_dy, ky_dy
+                   + 2 * ksz * width * chan;
+        }
+
+        BufHelper(int ksz, int width, int chan, Buffer& scratch)
+        {
+            kx_dx = scratch.OutLine<float>();
+            ky_dx = kx_dx + ksz;
+            kx_dy = ky_dx + ksz;
+            ky_dy = kx_dy + ksz;
+            buf_start = ky_dy + ksz;
+            buf_width = width;
+            buf_chan = chan;
+        }
+
+        float* operator [](int i) {
+            return buf_start + i *  buf_width * buf_chan;
+        }
+    };
+
     static void run(const     View  &    in,
                               int     /* ddepth */,
                               int     /* order */,
@@ -1049,21 +1078,25 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
 
         int ksz = (ksize == FILTER_SCHARR)? 3: ksize;
 
-        auto *kx_dx = scratch.OutLine<float>();
-        auto *ky_dx = kx_dx + ksz;
-        auto *kx_dy = ky_dx + ksz;
-        auto *ky_dy = kx_dy + ksz;
-
         GAPI_Assert(out_x.meta().size.width == out_y.meta().size.width);
         GAPI_Assert(out_x.meta().chan == out_y.meta().chan);
 
         int width = out_x.meta().size.width;
         int chan  = out_x.meta().chan;
 
+        BufHelper buf_helper(ksz, width, chan, scratch);
+
+        auto *kx_dx = buf_helper.kx_dx;
+        auto *ky_dx = buf_helper.ky_dx;
+        auto *kx_dy = buf_helper.kx_dy;
+        auto *ky_dy = buf_helper.ky_dy;
+
+        // Scratch buffer layout:
+        // |kx_dx|ky_dx|kx_dy|ky_dy|3 lines for horizontal kernel|3 lines for vertical kernel|
         float *buf[3];
-        buf[0] = ky_dy + ksz;
-        buf[1] = buf[0] + width*chan;
-        buf[2] = buf[1] + width*chan;
+        buf[0] = buf_helper[0];
+        buf[1] = buf_helper[1];
+        buf[2] = buf_helper[2];
 
         auto scale = static_cast<float>(_scale);
         auto delta = static_cast<float>(_delta);
@@ -1086,10 +1119,10 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
         // calculate x-derivative
         calc(in, out_x, kx_dx, ky_dx);
 
-        // Move pointers to calculate dy
-        buf[0] = buf[0] + ksz * width * chan;
-        buf[1] = buf[1] + ksz * width * chan;
-        buf[2] = buf[2] + ksz * width * chan;
+        // Move pointers to calculate dy(preventing buffer data corruption)
+        buf[0] = buf_helper[3];
+        buf[1] = buf_helper[4];
+        buf[2] = buf_helper[5];
 
         // calculate y-derivative
         calc(in, out_y, kx_dy, ky_dy);
@@ -1111,19 +1144,19 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
 
         int width = in.size.width;
         int chan  = in.chan;
-
-        int buflen = ksz + ksz + ksz + ksz // kernels: kx_dx, ky_dx, kx_dy, ky_dy
-                   + 2 * ksz * width * chan;   // working buffers (for x and for y)
+        int buflen = BufHelper::length(ksz, width, chan);
 
         cv::gapi::own::Size bufsize(buflen, 1);
         GMatDesc bufdesc = {CV_32F, 1, bufsize};
         Buffer buffer(bufdesc);
         scratch = std::move(buffer);
 
-        auto *kx_dx = scratch.OutLine<float>();
-        auto *ky_dx = kx_dx + ksz;
-        auto *kx_dy = ky_dx + ksz;
-        auto *ky_dy = kx_dy + ksz;
+        BufHelper buf_helper(ksz, width, chan, scratch);
+
+        auto *kx_dx = buf_helper.kx_dx;
+        auto *ky_dx = buf_helper.ky_dx;
+        auto *kx_dy = buf_helper.kx_dy;
+        auto *ky_dy = buf_helper.ky_dy;
 
         Mat kxmatX(1, ksize, CV_32FC1, kx_dx);
         Mat kymatX(ksize, 1, CV_32FC1, ky_dx);
