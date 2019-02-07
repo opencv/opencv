@@ -159,7 +159,7 @@ template<class VecUpdate> struct MorphRowVec
             i += vtype::nlanes/2;
         }
 
-        return i;
+        return i - i % cn;
     }
 
     int ksize, anchor;
