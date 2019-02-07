@@ -3,7 +3,7 @@
 // Downloads:
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
 // https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt
-
+// More Information : Alessandro de Oliveira Faria (A.K.A. CABELO)- cabelo@opensuse.org
 
 #include <fstream>
 #include <sstream>
@@ -41,7 +41,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs);
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Use this script to run object detection using YOLO3 in OpenCV.");
+    parser.about("Use this script to run object detection using Segmentation using Mask R-CNN in OpenCV.");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -50,9 +50,6 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
-
-    confThreshold = 0.5;
-    maskThreshold = 0.3;
 
     string classesFile = "mscoco_labels.names";
     ifstream ifs(classesFile.c_str());
@@ -84,7 +81,6 @@ int main(int argc, char** argv)
 
     try {
 
-        outputFile = "mask_rcnn_out_cpp.avi";
         if (parser.has("image"))
         {
             str = parser.get<String>("image");
@@ -92,8 +88,6 @@ int main(int argc, char** argv)
             ifstream ifile(str);
             if (!ifile) throw("error");
             cap.open(str);
-            str.replace(str.end()-4, str.end(), "_mask_rcnn_out.jpg");
-            outputFile = str;
         }
         else if (parser.has("video"))
         {
@@ -101,8 +95,6 @@ int main(int argc, char** argv)
             ifstream ifile(str);
             if (!ifile) throw("error");
             cap.open(str);
-            str.replace(str.end()-4, str.end(), "_mask_rcnn_out.avi");
-            outputFile = str;
         }
         else cap.open(parser.get<int>("device"));
 
@@ -112,9 +104,6 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    if (!parser.has("image")) {
-        video.open(outputFile, VideoWriter::fourcc('M','J','P','G'), 28, Size(cap.get(CAP_PROP_FRAME_WIDTH), cap.get(CAP_PROP_FRAME_HEIGHT)));
-    }
 
     static const string kWinName = "Deep learning object detection in OpenCV";
     namedWindow(kWinName, WINDOW_NORMAL);
@@ -125,8 +114,7 @@ int main(int argc, char** argv)
 
         if (frame.empty()) {
             cout << "Done processing !!!" << endl;
-            cout << "Output file is stored as " << outputFile << endl;
-            waitKey(3000);
+            waitKey(0);
             break;
         }
         
@@ -145,15 +133,13 @@ int main(int argc, char** argv)
         vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
-        string label = format("openCV with Inference - cabelo@opensuse.org : %0.0f ms", t);
+        string label = format("openCV Mask R-CNN : %0.0f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         Mat detectedFrame;
         frame.convertTo(detectedFrame, CV_8U);
-        if (parser.has("image")) imwrite(outputFile, detectedFrame);
-        else video.write(detectedFrame);
-
-        imshow(kWinName, frame);
+        
+	imshow(kWinName, frame);
 
     }
 
