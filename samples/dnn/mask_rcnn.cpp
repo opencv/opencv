@@ -1,4 +1,4 @@
-// Deep learning based Object Detection and Instance Segmentation using Mask R-CNN 
+// Deep learning based Object Detection and Instance Segmentation using Mask R-CNN
 // VIDEO 360 DEMO: https://www.youtube.com/watch?v=0tU8991QgE8
 // Downloads:
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
             waitKey(0);
             break;
         }
-        
+
         blobFromImage(frame, blob, 1.0, Size(frame.cols, frame.rows), Scalar(), true, false);
 
         net.setInput(blob);
@@ -139,8 +139,7 @@ int main(int argc, char** argv)
 
         Mat detectedFrame;
         frame.convertTo(detectedFrame, CV_8U);
-        
-	imshow(kWinName, frame);
+        imshow(kWinName, frame);
 
     }
 
