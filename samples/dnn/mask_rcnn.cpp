@@ -161,7 +161,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
     // HxW - segmentation shape
     const int numDetections = outDetections.size[2];
 
-    outDetections = outDetections.reshape(1, outDetections.total() / 7);
+    outDetections = outDetections.reshape(1,(int)(outDetections.total() / 7));
     for ( int i = 0; i < numDetections; ++i)
     {
         float score = outDetections.at<float>(i, 2);
@@ -200,7 +200,7 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask)
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
     box.y = max(box.y, labelSize.height);
-    rectangle(frame, Point(box.x, box.y - round(1.5*labelSize.height)), Point(box.x + round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
+    rectangle(frame, Point(box.x, box.y - (int)round(1.5*labelSize.height)), Point(box.x + round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
     putText(frame, label, Point(box.x, box.y), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,0),1);
 
     Scalar color = colors[classId%colors.size()];
