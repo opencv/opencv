@@ -625,6 +625,7 @@ TEST_P(YUV2BGRTest, AccuracyTest)
         EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
     }
 }
+
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_INL_HPP

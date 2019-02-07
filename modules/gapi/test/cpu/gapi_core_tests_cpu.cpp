@@ -403,4 +403,16 @@ INSTANTIATE_TEST_CASE_P(ConcatHorVecTestCPU, ConcatHorVecTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(0.0, 15.0),
+                                Values(1.0, 120.0, 255.0),
+                                Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
+                                Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(CORE_CPU))));
 }

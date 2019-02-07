@@ -1437,6 +1437,40 @@ TEST_P(SqrtTest, AccuracyTest)
     }
 }
 
+TEST_P(NormalizeTest, Test)
+{
+    auto param = GetParam();
+
+    compare_f cmpF;
+    MatType type, ddepth;
+    cv::Size sz;
+    double a = 0 , b = 0;
+    int norm_type = 0;
+    bool createOut = 0;
+    cv::GCompileArgs compile_args;
+
+    std::tie(cmpF, type, sz, a, b, norm_type, ddepth, createOut, compile_args) = GetParam();
+    int dtype = CV_MAKETYPE(ddepth, CV_MAT_CN(type));
+
+    initMatsRandN(type, sz, dtype, createOut);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::normalize(in, a, b, norm_type, ddepth);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi), std::move(compile_args));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::normalize(in_mat1, out_mat_ocv, a, b, norm_type, ddepth);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+}
 
 } // opencv_test
 
