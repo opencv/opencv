@@ -344,7 +344,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
 typedef tuple<Size, CvtMode16U> Size_CvtMode16U_t;
 typedef perf::TestBaseWithParam<Size_CvtMode16U_t> Size_CvtMode16U;
 
-PERF_TEST_P(Size_CvtMode16U, cvtColor_16u,
+PERF_TEST_P(Size_CvtMode16U, DISABLED_cvtColor_16u,
             testing::Combine(
                 testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
                 CvtMode16U::all()
@@ -371,7 +371,7 @@ PERF_TEST_P(Size_CvtMode16U, cvtColor_16u,
 typedef tuple<Size, CvtMode32F> Size_CvtMode32F_t;
 typedef perf::TestBaseWithParam<Size_CvtMode32F_t> Size_CvtMode32F;
 
-PERF_TEST_P(Size_CvtMode32F, cvtColor_32f,
+PERF_TEST_P(Size_CvtMode32F, DISABLED_cvtColor_32f,
             testing::Combine(
                 testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
                 CvtMode32F::all()
