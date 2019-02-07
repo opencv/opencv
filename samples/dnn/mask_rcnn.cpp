@@ -20,9 +20,10 @@ std::string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --media=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
-    "{ weights w | ./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
-    "{ textgraph g |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
-    "{ cthr         | .5 | Confidence threshold. }"
+    "{ classes n   | imscoco_labels.names | Path to a text file with names of classes.  }"
+    "{ model w     |./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
+    "{ config c    |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
+    "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
 
 
@@ -43,7 +44,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs);
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
-    parser.about("Use this script to run object detection using Segmentation using Mask R-CNN in OpenCV.");
+    parser.about("This sample demonstrates instance segmentation network called Mask-RCNN.");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -52,10 +53,10 @@ int main(int argc, char** argv)
 
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
-    String textGraph = parser.get<string>("textgraph");
-    String modelWeights = parser.get<string>("weights");
+    String textGraph = parser.get<string>("config");
+    String modelWeights = parser.get<string>("model");
+    string classesFile = parser.get<string>("classes");
 
-    string classesFile = "mscoco_labels.names";
     ifstream ifs(classesFile.c_str());
     string line;
     while (getline(ifs, line)) classes.push_back(line);
