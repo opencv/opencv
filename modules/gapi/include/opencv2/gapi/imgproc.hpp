@@ -669,7 +669,6 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2Lab, RGB2YUV
 */
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
-
 //! @} gapi_colorconvert
 } //namespace gapi
 } //namespace cv
