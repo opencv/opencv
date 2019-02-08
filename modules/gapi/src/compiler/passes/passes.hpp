@@ -42,7 +42,8 @@ void inferMeta(ade::passes::PassContext &ctx, bool meta_is_initialized);
 void storeResultingMeta(ade::passes::PassContext &ctx);
 
 void expandKernels(ade::passes::PassContext &ctx,
-                   const gapi::GKernelPackage& kernels);
+                   const gapi::GKernelPackage& kernels,
+                   const gapi::GLookupOrder& lookup_order);
 
 void resolveKernels(ade::passes::PassContext       &ctx,
                     const gapi::GKernelPackage &kernels,

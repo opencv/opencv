@@ -124,7 +124,9 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
     gr.metadata().set(ActiveBackends{active_backends});
 }
 
-void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi::GKernelPackage &kernels)
+void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx,
+                                      const gapi::GKernelPackage &kernels,
+                                      const gapi::GLookupOrder &lookup_order)
 {
     GModel::Graph gr(ctx.graph);
 
@@ -142,7 +144,7 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
 
                 cv::gapi::GBackend selected_backend;
                 cv::GKernelImpl    selected_impl;
-                std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
+                std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name, lookup_order);
 
                 if (selected_backend == cv::gapi::compound::backend())
                 {

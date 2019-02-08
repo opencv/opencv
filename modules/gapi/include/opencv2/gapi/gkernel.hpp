@@ -368,7 +368,8 @@ namespace gapi {
         // Check if package contains ANY implementation of a kernel API
         // by API textual id.
         bool includesAPI(const std::string &id) const;
-
+        bool includes   (const GBackend& backend,
+                         const std::string& id) const;
         /// @private
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
@@ -383,6 +384,14 @@ namespace gapi {
         std::size_t size() const;
 
         /**
+         * @brief Check that package contains conflict kernels
+         * included in this kernel package.
+         *
+         * @return names of conflicting kernels, if any.
+         */
+        std::vector<std::string> getConflictKernels(const GLookupOrder& lookup_order) const;
+
+        /**
          * @brief Test if a particular kernel _implementation_ KImpl is
          * included in this kernel package.
          *
@@ -393,10 +402,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            const auto set_iter = m_backend_kernels.find(KImpl::backend());
-            return (set_iter != m_backend_kernels.end())
-                ? (set_iter->second.count(KImpl::API::id()) > 0)
-                : false;
+            return includes(KImpl::backend(), KImpl::API::id());
         }
 
         /**

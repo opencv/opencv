@@ -229,20 +229,20 @@ namespace
 
 } // namespace
 
-// FIXME avoid cv::combine that use custom and default kernels together
 TEST(GCompoundKernel, ReplaceDefaultKernel)
 {
     cv::GMat in1, in2;
     auto out = cv::gapi::add(in1, in2);
-    const auto custom_pkg = cv::gapi::kernels<GCompoundAddImpl>();
-    const auto full_pkg   = cv::gapi::combine(cv::gapi::core::cpu::kernels(), custom_pkg, cv::unite_policy::REPLACE);
+
+    const auto pkg = cv::gapi::kernels<GCompoundAddImpl>();
+
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out));
     cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
             in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
             out_mat(3, 3, CV_8UC1),
             ref_mat(3, 3, CV_8UC1);
 
-    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(full_pkg));
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
     ref_mat = in_mat1 - in_mat2 - in_mat2;
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));

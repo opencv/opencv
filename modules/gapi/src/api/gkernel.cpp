@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 #include <iostream> // cerr
 #include <functional> // hash
+#include <unordered_set>
 #include <numeric> // accumulate
 
 #include <ade/util/algorithm.hpp>
@@ -50,6 +51,60 @@ std::size_t cv::gapi::GKernelPackage::size() const
                            });
 }
 
+std::vector<std::string>
+cv::gapi::GKernelPackage::getConflictKernels(const cv::gapi::GLookupOrder& lookup_order) const
+{
+    std::vector<std::string> conflict_kernels;
+    std::unordered_map<std::string, int> kernels;
+
+    for (const auto &backend : m_backend_kernels)
+    {
+        for (const auto &kimpl : backend.second)
+        {
+            kernels[kimpl.first]++;
+        }
+    }
+
+    for (const auto& k : kernels)
+    {
+        // Kernel is contained in more than one backend
+        if (k.second > 1)
+        {
+            auto kernel_name = k.first;
+            if (lookup_order.empty())
+            {
+                conflict_kernels.push_back(kernel_name);
+            }
+            else
+            {
+                // If lookuporder contains at least one backend
+                // with conflicting kernel implementation, the conflict is resolved
+                auto conflict_resolved = ade::util::any_of(lookup_order, [this, &kernel_name](const GBackend& backend_from_lookup)
+                        {
+                            auto it = m_backend_kernels.find(backend_from_lookup);
+                            bool backend_in_package = it != m_backend_kernels.end();
+                            auto backend_from_package = it->second;
+                            return (backend_in_package && ade::util::contains(backend_from_package, kernel_name));
+                        });
+
+                if (!conflict_resolved)
+                {
+                    conflict_kernels.push_back(kernel_name);
+                }
+            }
+        }
+    }
+    return conflict_kernels;
+}
+
+bool cv::gapi::GKernelPackage::includes(const GBackend& backend, const std::string& id)  const
+{
+    const auto set_iter = m_backend_kernels.find(backend);
+    return (set_iter != m_backend_kernels.end())
+        ? (ade::util::contains(set_iter->second, id))
+        : false;
+}
+
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
                                            const GKernelPackage  &rhs,
                                            const cv::unite_policy policy)
@@ -67,8 +122,10 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
         {
             for (const auto &kimpl : backend.second)
             {
-                if (!result.includesAPI(kimpl.first))
+                if (!result.includes(backend.first, kimpl.first))
+                {
                     result.m_backend_kernels[backend.first].insert(kimpl);
+                }
             }
         }
         return result;

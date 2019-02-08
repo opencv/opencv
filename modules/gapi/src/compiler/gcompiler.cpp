@@ -32,6 +32,7 @@
 
 #include "executor/gexecutor.hpp"
 #include "backends/common/gbackend.hpp"
+#include "opencv2/gapi/cpu/gcpukernel.hpp" // cv::gapi::cpu::backend()
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
@@ -46,7 +47,52 @@
 
 namespace
 {
-    cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
+    void addBackendsTo(cv::gapi::GLookupOrder& lookup_order,
+            const std::vector<cv::gapi::GBackend>& backends)
+    {
+        std::unordered_set<cv::gapi::GBackend> lookup_order_set(lookup_order.begin(), lookup_order.end());
+        for (auto& backend : backends)
+        {
+            if (backend != cv::gapi::cpu::backend() && !ade::util::contains(lookup_order_set, backend))
+            {
+                lookup_order.push_back(backend);
+            }
+        }
+
+        if (!ade::util::contains(lookup_order_set, cv::gapi::cpu::backend()))
+        {
+            lookup_order.push_back(cv::gapi::cpu::backend());
+        }
+    }
+
+    cv::gapi::GKernelPackage getUserKernelPackage(const cv::GCompileArgs& args,
+            const cv::gapi::GLookupOrder& lookup_order)
+    {
+        auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
+        if (user_pkg)
+        {
+            // Check conflicts between kernels
+            auto conflict_kernels = user_pkg.value().getConflictKernels(lookup_order);
+            if (!conflict_kernels.empty())
+            {
+                std::stringstream ss;
+                std::copy(conflict_kernels.begin(), conflict_kernels.end(),
+                          std::ostream_iterator<std::string>(ss,", "));
+
+                if (!lookup_order.empty())
+                {
+                    cv::util::throw_error(std::logic_error("Lookup order does not resolve conflict"
+                                                           "between kernels: " + ss.str() + "\b\b."));
+                }
+                cv::util::throw_error(std::logic_error("kernel package has a backend conflict with "
+                                                       "kernels: " + ss.str() + "\b\b. please pass lookup"
+                                                       " order to graph compile arguments"));
+            }
+        }
+        return user_pkg.value_or(cv::gapi::GKernelPackage{});
+    }
+
+    cv::gapi::GKernelPackage getFullKernelPackage(const cv::gapi::GKernelPackage& user_pkg)
     {
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
@@ -56,8 +102,7 @@ namespace
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
-        auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}), cv::unite_policy::REPLACE);
+        return combine(ocv_pkg, user_pkg, cv::unite_policy::REPLACE);
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
@@ -86,14 +131,19 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     : m_c(c), m_metas(std::move(metas)), m_args(std::move(args))
 {
     using namespace std::placeholders;
-    m_all_kernels       = getKernelPackage(m_args);
-    auto lookup_order   = getCompileArg<gapi::GLookupOrder>(m_args).value_or(gapi::GLookupOrder());
+    auto lookup_order   = cv::gimpl::getCompileArg<gapi::GLookupOrder>(m_args).value_or(gapi::GLookupOrder());
+    auto user_pkg       = getUserKernelPackage(m_args, lookup_order);
+    m_all_kernels       = getFullKernelPackage(user_pkg);
+    addBackendsTo(lookup_order, user_pkg.backends());
+
     auto dump_path      = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
     m_e.addPass("init", "expand_kernels",  std::bind(passes::expandKernels, _1,
-                                                     m_all_kernels)); // NB: package is copied
+                                                     m_all_kernels,
+                                                     lookup_order)); // NB: package is copied
+
     m_e.addPass("init", "topo_sort",     ade::passes::TopologicalSort());
     m_e.addPass("init", "init_islands",  passes::initIslands);
     m_e.addPass("init", "check_islands", passes::checkIslands);
