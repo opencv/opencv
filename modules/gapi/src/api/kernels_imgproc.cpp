@@ -80,6 +80,13 @@ GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize,
     return imgproc::GSobel::on(src, ddepth, dx, dy, ksize, scale, delta, borderType, bordVal);
 }
 
+std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize,
+           double scale, double delta,
+           int borderType, const Scalar& bordVal)
+{
+    return imgproc::GSobelXY::on(src, ddepth, order, ksize, scale, delta, borderType, bordVal);
+}
+
 GMat equalizeHist(const GMat& src)
 {
     return imgproc::GEqHist::on(src);

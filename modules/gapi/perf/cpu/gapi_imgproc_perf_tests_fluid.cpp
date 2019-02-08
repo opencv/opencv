@@ -32,7 +32,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterPerfTestFluid_other, SepFilterPerfTest,
 INSTANTIATE_TEST_CASE_P(Filter2DPerfTestFluid, Filter2DPerfTest,
     Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add 4, 5, 7 when kernel is ready
+            Values(3),                                     // TODO: add 4, 5, 7 when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::BORDER_DEFAULT),
             Values(-1, CV_32F),
@@ -41,7 +41,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DPerfTestFluid, Filter2DPerfTest,
 INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestFluid, BoxFilterPerfTest,
     Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::BORDER_DEFAULT),
             Values(-1, CV_32F),
@@ -50,7 +50,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterPerfTestFluid, BoxFilterPerfTest,
 INSTANTIATE_TEST_CASE_P(BlurPerfTestFluid, BlurPerfTest,
     Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::BORDER_DEFAULT),
             Values(cv::compile_args(IMGPROC_FLUID))));
@@ -58,21 +58,21 @@ INSTANTIATE_TEST_CASE_P(BlurPerfTestFluid, BlurPerfTest,
 INSTANTIATE_TEST_CASE_P(GaussianBlurPerfTestFluid, GaussianBlurPerfTest,
     Combine(Values(ToleranceFilter(1e-3f, 0.01).to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(MedianBlurPerfTestFluid, MedianBlurPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ErodePerfTestFluid, ErodePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::MorphShapes::MORPH_RECT,
                    cv::MorphShapes::MORPH_CROSS,
@@ -90,7 +90,7 @@ INSTANTIATE_TEST_CASE_P(DISABLED_Erode3x3PerfTestFluid, Erode3x3PerfTest,
 INSTANTIATE_TEST_CASE_P(DilatePerfTestFluid, DilatePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-            Values(3),                                     // add size=5, when kernel is ready
+            Values(3),                                     // TODO: add size=5, when kernel is ready
             Values(szVGA, sz720p, sz1080p),
             Values(cv::MorphShapes::MORPH_RECT,
                    cv::MorphShapes::MORPH_CROSS,
@@ -108,7 +108,7 @@ INSTANTIATE_TEST_CASE_P(DISABLED_Dilate3x3PerfTestFluid, Dilate3x3PerfTest,
 INSTANTIATE_TEST_CASE_P(SobelPerfTestFluid, SobelPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
-            Values(3),                                     // add 5x5 once supported
+            Values(3),                                     // TODO: add 5x5 once supported
             Values(szVGA, sz720p, sz1080p),
             Values(-1, CV_16S, CV_32F),
             Values(0, 1),
@@ -118,10 +118,28 @@ INSTANTIATE_TEST_CASE_P(SobelPerfTestFluid, SobelPerfTest,
 INSTANTIATE_TEST_CASE_P(SobelPerfTestFluid32F, SobelPerfTest,
     Combine(Values(ToleranceFilter(1e-3f, 0.0).to_compare_f()),
             Values(CV_32FC1),
-            Values(3),                                     // add 5x5 once supported
+            Values(3),                                     // TODO: add 5x5 once supported
             Values(szVGA, sz720p, sz1080p),
             Values(CV_32F),
             Values(0, 1),
+            Values(1, 2),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SobelXYPerfTestFluid, SobelXYPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(3),                                     // TODO: add 5x5 once supported
+            Values(szVGA, sz720p, sz1080p),
+            Values(-1, CV_16S, CV_32F),
+            Values(1, 2),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SobelXYPerfTestFluid32F, SobelXYPerfTest,
+    Combine(Values(ToleranceFilter(1e-3f, 0.0).to_compare_f()),
+            Values(CV_32FC1),
+            Values(3),                                     // TODO: add 5x5 once supported
+            Values(szVGA, sz720p, sz1080p),
+            Values(CV_32F),
             Values(1, 2),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
