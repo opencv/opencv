@@ -61,8 +61,8 @@ public:
     ~CV_solvePnPRansac_Test() {}
 protected:
     void generate3DPointCloud(vector<Point3f>& points,
-        Point3f pmin = Point3f(-1, -1, 5),
-        Point3f pmax = Point3f(1, 1, 10))
+                              Point3f pmin = Point3f(-1, -1, 5),
+                              Point3f pmax = Point3f(1, 1, 10))
     {
         RNG rng = cv::theRNG(); // fix the seed to use "fixed" input 3D points
 
@@ -104,7 +104,7 @@ protected:
         for (int i = 0; i < 3; i++)
         {
             rvec.at<double>(i,0) = rng.uniform(minVal, maxVal);
-            tvec.at<double>(i,0) = rng.uniform(minVal, maxVal/10);
+            tvec.at<double>(i,0) = (i == 2) ? rng.uniform(minVal*10, maxVal) : rng.uniform(-maxVal, maxVal);
         }
     }
 
@@ -177,7 +177,7 @@ protected:
                         method, totalTestsCount - successfulTestsCount, totalTestsCount, maxError, mode);
                     ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 }
-                cout << "mode: " <<printMode(mode) << ", method: " << printMethod(method) << " -> "
+                cout << "mode: " << printMode(mode) << ", method: " << printMethod(method) << " -> "
                      << ((double)successfulTestsCount / totalTestsCount) * 100 << "%"
                      << " (err < " << maxError << ")" << endl;
             }
@@ -223,7 +223,7 @@ public:
     {
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
-        eps[SOLVEPNP_P3P] = 2.0e-4;
+        eps[SOLVEPNP_P3P] = 5.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-6;
 //        eps[SOLVEPNP_UPNP] = 1.0e-4; //UPnP is broken and is remaped to EPnP

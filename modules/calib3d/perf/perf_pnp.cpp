@@ -4,12 +4,44 @@ namespace opencv_test
 {
 using namespace perf;
 
-CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
+CV_ENUM(pnpAlgo, SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_AP3P, SOLVEPNP_DLS, SOLVEPNP_UPNP)
 
 typedef tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
 
 typedef perf::TestBaseWithParam<int> PointsNum;
+
+namespace
+{
+void generate3DPointCloud(vector<Point3f>& points,
+                          Point3f pmin = Point3f(-1, -1, 5),
+                          Point3f pmax = Point3f(1, 1, 10))
+{
+    RNG rng = cv::theRNG(); // fix the seed to use "fixed" input 3D points
+
+    for (size_t i = 0; i < points.size(); i++)
+    {
+        float _x = rng.uniform(pmin.x, pmax.x);
+        float _y = rng.uniform(pmin.y, pmax.y);
+        float _z = rng.uniform(pmin.z, pmax.z);
+        points[i] = Point3f(_x, _y, _z);
+    }
+}
+
+void generatePose(Mat& rvec, Mat& tvec)
+{
+    RNG rng = cv::theRNG();
+    const double minVal = 1.0e-3;
+    const double maxVal = 1.0;
+    rvec.create(3, 1, CV_64FC1);
+    tvec.create(3, 1, CV_64FC1);
+    for (int i = 0; i < 3; i++)
+    {
+        rvec.at<double>(i,0) = rng.uniform(minVal, maxVal);
+        tvec.at<double>(i,0) = (i == 2) ? rng.uniform(minVal*10, maxVal) : rng.uniform(-maxVal, maxVal);
+    }
+}
+}
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
@@ -33,9 +65,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     intrinsics.at<float> (0, 2) = 640 / 2;
     intrinsics.at<float> (1, 2) = 480 / 2;
 
-    warmup(points3d, WARMUP_RNG);
-    warmup(rvec, WARMUP_RNG);
-    warmup(tvec, WARMUP_RNG);
+    generate3DPointCloud(points3d);
+    generatePose(rvec, tvec);
 
     projectPoints(points3d, rvec, tvec, intrinsics, distortion, points2d);
 
@@ -59,13 +90,13 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
             testing::Combine(
                 testing::Values(5),
-                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
+                testing::Values((int)SOLVEPNP_P3P, (int)SOLVEPNP_AP3P, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_DLS, (int)SOLVEPNP_UPNP)
                 )
             )
 {
     int pointsNum = get<0>(GetParam());
     pnpAlgo algo = get<1>(GetParam());
-    if( algo == SOLVEPNP_P3P )
+    if( algo == SOLVEPNP_P3P || algo == SOLVEPNP_AP3P )
         pointsNum = 4;
 
     vector<Point2f> points2d(pointsNum);
@@ -80,9 +111,8 @@ PERF_TEST_P(PointsNum_Algo, solvePnPSmallPoints,
     intrinsics.at<float> (0, 2) = 640 / 2;
     intrinsics.at<float> (1, 2) = 480 / 2;
 
-    warmup(points3d, WARMUP_RNG);
-    warmup(rvec, WARMUP_RNG);
-    warmup(tvec, WARMUP_RNG);
+    generate3DPointCloud(points3d);
+    generatePose(rvec, tvec);
 
     // normalize Rodrigues vector
     Mat rvec_tmp = Mat::eye(3, 3, CV_32F);
