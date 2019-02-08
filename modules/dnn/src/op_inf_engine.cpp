@@ -622,7 +622,11 @@ void InfEngineBackendNet::init(int targetId)
 
 #endif  // IE < R5
 
-static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
+{
+    static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+    return sharedPlugins;
+}
 
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
@@ -630,6 +634,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 
     try
     {
+        AutoLock lock(getInitializationMutex());
+        auto& sharedPlugins = getSharedPlugins();
         auto pluginIt = sharedPlugins.find(targetDevice);
         if (pluginIt != sharedPlugins.end())
         {
@@ -797,7 +803,8 @@ CV__DNN_INLINE_NS_BEGIN
 void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE
-    sharedPlugins.erase(InferenceEngine::TargetDevice::eMYRIAD);
+    AutoLock lock(getInitializationMutex());
+    getSharedPlugins().erase(InferenceEngine::TargetDevice::eMYRIAD);
 #endif  // HAVE_INF_ENGINE
 }
 

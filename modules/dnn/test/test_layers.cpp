@@ -46,6 +46,10 @@
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 
+#ifdef HAVE_INF_ENGINE
+#include <thread>
+#endif
+
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -974,6 +978,36 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     if (targetId != DNN_TARGET_MYRIAD)
         normAssert(outs[0], outs[1]);
 }
+
+TEST_P(Layer_Test_Convolution_DLDT, multithreading)
+{
+    Target targetId = GetParam();
+    std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+    std::string xmlPath = _tf("layer_convolution" + suffix + ".xml");
+    std::string binPath = _tf("layer_convolution" + suffix + ".bin");
+    Net firstNet = readNet(xmlPath, binPath);
+    Net secondNet = readNet(xmlPath, binPath);
+    Mat inp = blobFromNPY(_tf("blob.npy"));
+
+    firstNet.setInput(inp);
+    secondNet.setInput(inp);
+    firstNet.setPreferableTarget(targetId);
+    secondNet.setPreferableTarget(targetId);
+
+    Mat out1, out2;
+    std::thread t1([&]{out1 = firstNet.forward();});
+    std::thread t2([&]{out2 = secondNet.forward();});
+
+    t1.join();
+    t2.join();
+
+    Mat ref = blobFromNPY(_tf("layer_convolution.npy"));
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-3 : 1e-5;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.8e-2 : 1e-4;
+    normAssert(out1, ref, "first thread", l1, lInf);
+    normAssert(out2, ref, "second thread", l1, lInf);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Convolution_DLDT,
     testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)));
 
