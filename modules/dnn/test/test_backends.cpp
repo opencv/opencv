@@ -305,9 +305,16 @@ TEST_P(DNNTestNetwork, DenseNet_121)
 TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
+
+#if defined(INF_ENGINE_RELEASE)
+#if INF_ENGINE_RELEASE <= 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("");
+#endif
+#endif
+
     Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
     // Output image has values in range [-143.526, 148.539].
