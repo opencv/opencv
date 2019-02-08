@@ -76,6 +76,30 @@ template<typename... Ts> inline GProtoOutputArgs GOut(Ts&&... ts)
     return GProtoOutputArgs(detail::packArgs(std::forward<Ts>(ts)...));
 }
 
+namespace detail
+{
+    // Extract elements form tuple
+    // FIXME: Someday utilize a generic tuple_to_vec<> routine
+    template<typename... Ts, int... Indexes>
+    static GProtoOutputArgs getGOut_impl(const std::tuple<Ts...>& ts, detail::Seq<Indexes...>)
+    {
+        return GProtoOutputArgs{ detail::packArgs(std::get<Indexes>(ts)...)};
+    }
+}
+
+template<typename... Ts> inline GProtoOutputArgs GOut(const std::tuple<Ts...>& ts)
+{
+    // TODO: think of std::forward(ts)
+    return detail::getGOut_impl(ts, typename detail::MkSeq<sizeof...(Ts)>::type());
+}
+
+// Takes rvalue as input arg
+template<typename... Ts> inline GProtoOutputArgs GOut(std::tuple<Ts...>&& ts)
+{
+    // TODO: think of std::forward(ts)
+    return detail::getGOut_impl(ts, typename detail::MkSeq<sizeof...(Ts)>::type());
+}
+
 // Extract run-time arguments from node origin
 // Can be used to extract constant values associated with G-objects
 // (like GScalar) at graph construction time
