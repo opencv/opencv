@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-<opencv_storage>
+<?xml version="1.0" ?><opencv_storage>
 <Sz_Depth_Cn_BlendLinear--BlendLinear---1280x720--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
@@ -10770,116 +10769,7 @@
       <x>1149</x>
       <y>135</y>
       <val>23.</val></rng2></gpu_dst></Sz_EqualizeHist--EqualizeHist--1920x1080>
-<Sz_ClipLimit_CLAHE--CLAHE---1280x720--0->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>179.</val></last>
-    <rng1>
-      <x>659</x>
-      <y>118</y>
-      <val>175.</val></rng1>
-    <rng2>
-      <x>428</x>
-      <y>254</y>
-      <val>64.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--0->
-<Sz_ClipLimit_CLAHE--CLAHE---1280x720--40->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>179.</val></last>
-    <rng1>
-      <x>511</x>
-      <y>434</y>
-      <val>10.</val></rng1>
-    <rng2>
-      <x>343</x>
-      <y>675</y>
-      <val>203.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--40->
-<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>1023</y>
-      <val>251.</val></last>
-    <rng1>
-      <x>864</x>
-      <y>23</y>
-      <val>35.</val></rng1>
-    <rng2>
-      <x>1121</x>
-      <y>1007</y>
-      <val>239.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0->
-<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>1023</y>
-      <val>251.</val></last>
-    <rng1>
-      <x>543</x>
-      <y>240</y>
-      <val>75.</val></rng1>
-    <rng2>
-      <x>1120</x>
-      <y>758</y>
-      <val>54.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40->
-<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>204</x>
-      <y>1011</y>
-      <val>6.</val></rng1>
-    <rng2>
-      <x>1429</x>
-      <y>57</y>
-      <val>91.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0->
-<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>931</x>
-      <y>217</y>
-      <val>123.</val></rng1>
-    <rng2>
-      <x>1385</x>
-      <y>420</y>
-      <val>174.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
  <!-- resumed -->
-
 <Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1280x720>
   <gpu_positions>
     <kind>65536</kind>
@@ -10969,7 +10859,6 @@
       <cn>1</cn>
       <val>396.</val></rng2></gpu_positions></Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1920x1080>
  <!-- resumed -->
-
 <Sz_Depth_Code_CvtColor--CvtColor---1280x720--CV_8U--BGRA2RGBA->
   <gpu_dst>
     <kind>65536</kind>
@@ -12936,7 +12825,6 @@
       <cn>2</cn>
       <val>1.0423476342111826e-03</val></rng2></gpu_dst></Sz_Depth_Code_CvtColor--CvtColor---1920x1080--CV_32F--Lab2LBGR->
 <!-- resumed -->
-
 <Sz_Depth_Code_CvtColor--CvtColor---1280x720--CV_8U--BGR2Luv->
   <gpu_dst>
     <kind>65536</kind>
@@ -13173,7 +13061,6 @@
       <y>275</y>
       <val>8.5436431884765625e+001</val></rng2></gpu_dst></Sz_Depth_Code_CvtColor--CvtColor---1920x1080--CV_32F--LBGR2Luv->
  <!-- resumed -->
-
 <Sz_Depth_Code_CvtColor--CvtColor---1280x720--CV_8U--Luv2RGB->
   <gpu_dst>
     <kind>65536</kind>
@@ -13408,7 +13295,6 @@
       <cn>1</cn>
       <val>2.3426744155585766e-03</val></rng2></gpu_dst></Sz_Depth_Code_CvtColor--CvtColor---1920x1080--CV_32F--Luv2LRGB->
  <!-- resumed -->
-
 <Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
@@ -16452,7 +16338,6 @@
       <cn>1</cn>
       <val>6.9766225000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PREMUL->
  <!-- resumed -->
-
 <Image_HoughLinesP--HoughLinesP---cv-shared-pic5-png->
   <gpu_lines>
     <kind>65536</kind>
@@ -16493,4 +16378,221 @@
       <y>0</y>
       <cn>2</cn>
       <val>471.</val></rng2></gpu_lines></Image_HoughLinesP--HoughLinesP---stitching-a1-png->
+ <!-- resumed -->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--0--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>171</x>
+      <y>278</y>
+      <val>223.</val></rng1>
+    <rng2>
+      <x>119</x>
+      <y>651</y>
+      <val>219.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--0--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--0--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>2.</min>
+    <max>65535.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>48482.</val></last>
+    <rng1>
+      <x>931</x>
+      <y>309</y>
+      <val>15953.</val></rng1>
+    <rng2>
+      <x>454</x>
+      <y>433</y>
+      <val>13487.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--0--16UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--40--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>656</x>
+      <y>392</y>
+      <val>253.</val></rng1>
+    <rng2>
+      <x>1108</x>
+      <y>146</y>
+      <val>129.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--40--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x720--40--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>2.</min>
+    <max>65535.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>48482.</val></last>
+    <rng1>
+      <x>1196</x>
+      <y>182</y>
+      <val>11874.</val></rng1>
+    <rng2>
+      <x>490</x>
+      <y>484</y>
+      <val>19416.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x720--40--16UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>251.</val></last>
+    <rng1>
+      <x>44</x>
+      <y>502</y>
+      <val>91.</val></rng1>
+    <rng2>
+      <x>809</x>
+      <y>452</y>
+      <val>188.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>1.</min>
+    <max>65535.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>44815.</val></last>
+    <rng1>
+      <x>1228</x>
+      <y>807</y>
+      <val>16101.</val></rng1>
+    <rng2>
+      <x>361</x>
+      <y>592</y>
+      <val>20281.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--0--16UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>251.</val></last>
+    <rng1>
+      <x>893</x>
+      <y>544</y>
+      <val>36.</val></rng1>
+    <rng2>
+      <x>1265</x>
+      <y>469</y>
+      <val>80.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>1.</min>
+    <max>65535.</max>
+    <last>
+      <x>1279</x>
+      <y>1023</y>
+      <val>44815.</val></last>
+    <rng1>
+      <x>117</x>
+      <y>422</y>
+      <val>2701.</val></rng1>
+    <rng2>
+      <x>965</x>
+      <y>362</y>
+      <val>937.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1280x1024--40--16UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>1860</x>
+      <y>243</y>
+      <val>208.</val></rng1>
+    <rng2>
+      <x>213</x>
+      <y>1027</y>
+      <val>250.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>1.</min>
+    <max>65535.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>32923.</val></last>
+    <rng1>
+      <x>1277</x>
+      <y>998</y>
+      <val>19897.</val></rng1>
+    <rng2>
+      <x>719</x>
+      <y>35</y>
+      <val>61364.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--0--16UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40--8UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>1676</x>
+      <y>507</y>
+      <val>173.</val></rng1>
+    <rng2>
+      <x>473</x>
+      <y>213</y>
+      <val>99.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40--8UC1->
+<Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40--16UC1->
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>1.</min>
+    <max>65535.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>32923.</val></last>
+    <rng1>
+      <x>1087</x>
+      <y>182</y>
+      <val>64846.</val></rng1>
+    <rng2>
+      <x>184</x>
+      <y>120</y>
+      <val>1239.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40--16UC1->
 </opencv_storage>
