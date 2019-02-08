@@ -1022,6 +1022,168 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
     }
 };
 
+//---------------------
+//
+// Fluid kernels: SobelXY
+//
+//---------------------
+
+GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
+{
+    static const int Window = 3;
+
+    struct BufHelper
+    {
+        float *kx_dx, *ky_dx,
+              *kx_dy, *ky_dy;
+        float *buf_start;
+        int buf_width, buf_chan;
+
+        static int length(int ksz, int width, int chan)
+        {
+            return ksz + ksz + ksz + ksz    // kernels: kx_dx, ky_dx, kx_dy, ky_dy
+                   + 2 * ksz * width * chan;
+        }
+
+        BufHelper(int ksz, int width, int chan, Buffer& scratch)
+        {
+            kx_dx = scratch.OutLine<float>();
+            ky_dx = kx_dx + ksz;
+            kx_dy = ky_dx + ksz;
+            ky_dy = kx_dy + ksz;
+            buf_start = ky_dy + ksz;
+            buf_width = width;
+            buf_chan = chan;
+        }
+
+        float* operator [](int i) {
+            return buf_start + i *  buf_width * buf_chan;
+        }
+    };
+
+    static void run(const     View  &    in,
+                              int     /* ddepth */,
+                              int     /* order */,
+                              int        ksize,
+                              double    _scale,
+                              double    _delta,
+                              int     /* borderType */,
+                    const cv::Scalar& /* borderValue */,
+                              Buffer&    out_x,
+                              Buffer&    out_y,
+                              Buffer&    scratch)
+    {
+        // TODO: support kernel height 3, 5, 7, 9, ...
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
+
+        int ksz = (ksize == FILTER_SCHARR)? 3: ksize;
+
+        GAPI_Assert(out_x.meta().size.width == out_y.meta().size.width);
+        GAPI_Assert(out_x.meta().chan == out_y.meta().chan);
+
+        int width = out_x.meta().size.width;
+        int chan  = out_x.meta().chan;
+
+        BufHelper buf_helper(ksz, width, chan, scratch);
+
+        auto *kx_dx = buf_helper.kx_dx;
+        auto *ky_dx = buf_helper.ky_dx;
+        auto *kx_dy = buf_helper.kx_dy;
+        auto *ky_dy = buf_helper.ky_dy;
+
+        // Scratch buffer layout:
+        // |kx_dx|ky_dx|kx_dy|ky_dy|3 lines for horizontal kernel|3 lines for vertical kernel|
+        float *buf[3];
+        buf[0] = buf_helper[0];
+        buf[1] = buf_helper[1];
+        buf[2] = buf_helper[2];
+
+        auto scale = static_cast<float>(_scale);
+        auto delta = static_cast<float>(_delta);
+
+        auto calc = [&](const View& src, Buffer& dst, float* kx, float* ky) {
+            //     DST     SRC     OP         __VA_ARGS__
+            UNARY_(uchar , uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_(ushort, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( short, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( short, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( short,  short, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( float, uchar , run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( float, ushort, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( float,  short, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+            UNARY_( float,  float, run_sobel, dst, src, kx, ky, ksz, scale, delta, buf);
+
+            CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+        };
+
+        // calculate x-derivative
+        calc(in, out_x, kx_dx, ky_dx);
+
+        // Move pointers to calculate dy(preventing buffer data corruption)
+        buf[0] = buf_helper[3];
+        buf[1] = buf_helper[4];
+        buf[2] = buf_helper[5];
+
+        // calculate y-derivative
+        calc(in, out_y, kx_dy, ky_dy);
+    }
+
+    static void initScratch(const GMatDesc&    in,
+                                  int       /* ddepth */,
+                                  int          order,
+                                  int          ksize,
+                                  double    /* scale */,
+                                  double    /* delta */,
+                                  int       /* borderType */,
+                            const Scalar  & /* borderValue */,
+                                  Buffer  &    scratch)
+    {
+        // TODO: support kernel height 3, 5, 7, 9, ...
+        GAPI_Assert(ksize == 3 || ksize == FILTER_SCHARR);
+        int ksz = (ksize == FILTER_SCHARR) ? 3 : ksize;
+
+        int width = in.size.width;
+        int chan  = in.chan;
+        int buflen = BufHelper::length(ksz, width, chan);
+
+        cv::gapi::own::Size bufsize(buflen, 1);
+        GMatDesc bufdesc = {CV_32F, 1, bufsize};
+        Buffer buffer(bufdesc);
+        scratch = std::move(buffer);
+
+        BufHelper buf_helper(ksz, width, chan, scratch);
+
+        auto *kx_dx = buf_helper.kx_dx;
+        auto *ky_dx = buf_helper.ky_dx;
+        auto *kx_dy = buf_helper.kx_dy;
+        auto *ky_dy = buf_helper.ky_dy;
+
+        Mat kxmatX(1, ksize, CV_32FC1, kx_dx);
+        Mat kymatX(ksize, 1, CV_32FC1, ky_dx);
+        getDerivKernels(kxmatX, kymatX, order, 0, ksize);
+
+        Mat kxmatY(1, ksize, CV_32FC1, kx_dy);
+        Mat kymatY(ksize, 1, CV_32FC1, ky_dy);
+        getDerivKernels(kxmatY, kymatY, 0, order, ksize);
+    }
+
+    static void resetScratch(Buffer& /* scratch */)
+    {
+    }
+
+    static Border getBorder(const cv::GMatDesc& /* src */,
+                                      int       /* ddepth */,
+                                      int       /* order */,
+                                      int       /* ksize */,
+                                      double    /* scale */,
+                                      double    /* delta */,
+                                      int          borderType,
+                            const cv::Scalar  &    borderValue)
+    {
+        return {borderType, borderValue};
+    }
+};
+
 //------------------------
 //
 // Fluid kernels: filter2D
@@ -1546,6 +1708,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::fluid::kernels()
       , GFluidMedianBlur
       , GFluidGaussBlur
       , GFluidSobel
+      , GFluidSobelXY
     #if 0
       , GFluidCanny        -- not fluid (?)
       , GFluidEqualizeHist -- not fluid

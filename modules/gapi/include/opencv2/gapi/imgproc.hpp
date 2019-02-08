@@ -27,6 +27,7 @@
 namespace cv { namespace gapi {
 
 namespace imgproc {
+    using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
 
     G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
@@ -80,6 +81,12 @@ namespace imgproc {
     G_TYPED_KERNEL(GSobel, <GMat(GMat,int,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobel") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, int, int, int, double, double, int, Scalar) {
             return in.withDepth(ddepth);
+        }
+    };
+
+    G_TYPED_KERNEL_M(GSobelXY, <GMat2(GMat,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobelxy") {
+        static std::tuple<GMatDesc, GMatDesc> outMeta(GMatDesc in, int ddepth, int, int, double, double, int, Scalar) {
+            return std::make_tuple(in.withDepth(ddepth), in.withDepth(ddepth));
         }
     };
 
@@ -483,6 +490,58 @@ applied (see cv::getDerivKernels for details).
 @sa filter2D, gaussianBlur, cartToPolar
  */
 GAPI_EXPORTS GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize = 3,
+                        double scale = 1, double delta = 0,
+                        int borderType = BORDER_DEFAULT,
+                        const Scalar& borderValue = Scalar(0));
+
+/** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
+
+In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
+calculate the derivative. When \f$\texttt{ksize = 1}\f$, the \f$3 \times 1\f$ or \f$1 \times 3\f$
+kernel is used (that is, no Gaussian smoothing is done). `ksize = 1` can only be used for the first
+or the second x- or y- derivatives.
+
+There is also the special value `ksize = FILTER_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
+filter that may give more accurate results than the \f$3\times3\f$ Sobel. The Scharr aperture is
+
+\f[\vecthreethree{-3}{0}{3}{-10}{0}{10}{-3}{0}{3}\f]
+
+for the x-derivative, or transposed for the y-derivative.
+
+The function calculates an image derivative by convolving the image with the appropriate kernel:
+
+\f[\texttt{dst} =  \frac{\partial^{xorder+yorder} \texttt{src}}{\partial x^{xorder} \partial y^{yorder}}\f]
+
+The Sobel operators combine Gaussian smoothing and differentiation, so the result is more or less
+resistant to the noise. Most often, the function is called with ( xorder = 1, yorder = 0, ksize = 3)
+or ( xorder = 0, yorder = 1, ksize = 3) to calculate the first x- or y- image derivative. The first
+case corresponds to a kernel of:
+
+\f[\vecthreethree{-1}{0}{1}{-2}{0}{2}{-1}{0}{1}\f]
+
+The second case corresponds to a kernel of:
+
+\f[\vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}\f]
+
+@note First returned matrix correspons to dx derivative while the second one to dy.
+
+@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+
+@note Function textual ID is "org.opencv.imgproc.filters.sobelxy"
+
+@param src input image.
+@param ddepth output image depth, see @ref filter_depths "combinations"; in the case of
+    8-bit input images it will result in truncated derivatives.
+@param order order of the derivatives.
+@param ksize size of the extended Sobel kernel; it must be odd.
+@param scale optional scale factor for the computed derivative values; by default, no scaling is
+applied (see cv::getDerivKernels for details).
+@param delta optional delta value that is added to the results prior to storing them in dst.
+@param borderType pixel extrapolation method, see cv::BorderTypes
+@param borderValue border value in case of constant border type
+@sa filter2D, gaussianBlur, cartToPolar
+ */
+GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize = 3,
                         double scale = 1, double delta = 0,
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));

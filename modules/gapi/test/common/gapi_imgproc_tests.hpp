@@ -26,6 +26,7 @@ struct Erode3x3Test : public TestParams <std::tuple<compare_f,MatType,cv::Size,b
 struct DilateTest : public TestParams <std::tuple<compare_f,MatType,int,cv::Size,int,bool,cv::GCompileArgs>> {};
 struct Dilate3x3Test : public TestParams <std::tuple<compare_f,MatType,cv::Size,bool,int,cv::GCompileArgs>> {};
 struct SobelTest : public TestParams <std::tuple<compare_f,MatType,int,cv::Size,int,int,int,bool,cv::GCompileArgs>> {};
+struct SobelXYTest : public TestParams <std::tuple<compare_f,MatType,int,cv::Size,int,int,int,int,cv::GCompileArgs>> {};
 struct EqHistTest : public TestParams <std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct CannyTest : public TestParams <std::tuple<compare_f,MatType,cv::Size,double,double,int,bool,bool,cv::GCompileArgs>> {};
 struct RGB2GrayTest : public  TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
