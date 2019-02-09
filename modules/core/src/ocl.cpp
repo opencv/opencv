@@ -3579,6 +3579,7 @@ struct Program::Impl
         // We don't cache OpenCL binaries
         if (src_->kind_ == ProgramSource::Impl::PROGRAM_BINARIES)
         {
+            CV_LOG_VERBOSE(NULL, 0, "Load program binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
             bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
             return isLoaded;
         }
@@ -3620,6 +3621,7 @@ struct Program::Impl
                 if (res)
                 {
                     CV_Assert(!binaryBuf.empty());
+                    CV_LOG_VERBOSE(NULL, 0, "Load program binary from cache: " << src_->module_.c_str() << "/" << src_->name_.c_str());
                     bool isLoaded = createFromBinary(ctx, binaryBuf, errmsg);
                     if (isLoaded)
                         return true;
@@ -3651,6 +3653,7 @@ struct Program::Impl
             {
                 buildflags = joinBuildOptions(buildflags, " -spir-std=1.2");
             }
+            CV_LOG_VERBOSE(NULL, 0, "Load program SPIR binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
             bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
             if (!isLoaded)
                 return false;
@@ -3821,7 +3824,7 @@ struct Program::Impl
     {
         CV_Assert(handle == NULL);
         CV_INSTRUMENT_REGION_OPENCL_COMPILE("Load OpenCL program");
-        CV_LOG_VERBOSE(NULL, 0, "Load from binary... " << src.getImpl()->module_.c_str() << "/" << src.getImpl()->name_.c_str());
+        CV_LOG_VERBOSE(NULL, 0, "Load from binary... (" << binarySize << " bytes)");
 
         CV_Assert(binarySize > 0);
 
