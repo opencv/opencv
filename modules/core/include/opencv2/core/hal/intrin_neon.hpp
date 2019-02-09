@@ -1635,7 +1635,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 }
 #endif
 
-////// FP16 suport ///////
+////// FP16 support ///////
 #if CV_FP16
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {

@@ -376,7 +376,7 @@ namespace gapi {
     public:
         /**
          * @brief Returns total number of kernels in the package
-         * (accross all backends included)
+         * (across all backends included)
          *
          * @return a number of kernels in the package
          */

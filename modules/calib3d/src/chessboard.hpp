@@ -426,7 +426,7 @@ class Chessboard: public cv::Feature2D
                 size_t rowCount() const;
 
                 /**
-                 * \brief Returns the inner contour of the board inlcuding only valid corners
+                 * \brief Returns the inner contour of the board including only valid corners
                  *
                  * \info the contour might be non squared if not all points of the board are defined
                  *

@@ -117,7 +117,7 @@ struct Ptr : public std::shared_ptr<T>
     T* operator->() const CV_NOEXCEPT { return std::shared_ptr<T>::get();}
     typename std::add_lvalue_reference<T>::type operator*() const CV_NOEXCEPT { return *std::shared_ptr<T>::get(); }
 
-    // OpenCV 3.x methods (not a part of standart C++ library)
+    // OpenCV 3.x methods (not a part of standard C++ library)
     inline void release() { std::shared_ptr<T>::reset(); }
     inline operator T* () const { return std::shared_ptr<T>::get(); }
     inline bool empty() const { return std::shared_ptr<T>::get() == nullptr; }

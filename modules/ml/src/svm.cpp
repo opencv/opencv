@@ -99,7 +99,7 @@ static void checkParamGrid(const ParamGrid& pg)
     if( pg.minVal < DBL_EPSILON )
         CV_Error( CV_StsBadArg, "Lower bound of the grid must be positive" );
     if( pg.logStep < 1. + FLT_EPSILON )
-        CV_Error( CV_StsBadArg, "Grid step must greater then 1" );
+        CV_Error( CV_StsBadArg, "Grid step must greater than 1" );
 }
 
 // SVM training parameters

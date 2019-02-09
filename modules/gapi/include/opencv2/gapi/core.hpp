@@ -1255,7 +1255,7 @@ GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, i
 /** @brief Applies a fixed-level threshold to each matrix element.
 
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
-The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp funtions could be also used for
+The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp functions could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several depths of thresholding supported by the function. They are determined by
 depth parameter.
