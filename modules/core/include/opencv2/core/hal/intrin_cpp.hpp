@@ -2266,7 +2266,7 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
-////// FP16 suport ///////
+////// FP16 support ///////
 
 inline v_reg<float, V_TypeTraits<float>::nlanes128>
 v_load_expand(const float16_t* ptr)
