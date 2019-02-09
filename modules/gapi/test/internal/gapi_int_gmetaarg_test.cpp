@@ -73,7 +73,7 @@ TEST(GMetaArg, Traits_Are_ButLast_Positive)
     using namespace cv::detail;
 
     static_assert(are_meta_descrs_but_last<cv::GScalarDesc, int>::value,
-                  "List is valid (int is ommitted)");
+                  "List is valid (int is omitted)");
 
     static_assert(are_meta_descrs_but_last<cv::GMatDesc, cv::GScalarDesc, cv::GCompileArgs>::value,
                   "List is valid (GCompileArgs are omitted)");

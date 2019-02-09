@@ -262,7 +262,7 @@ Fluid backend to make our graph cache-efficient on CPU.
 G-API defines _backend_ as the lower-level entity which knows how to
 run kernels. Backends may have (and, in fact, do have) different
 _Kernel APIs_ which are used to program and integrate kernels for that
-backends. In this context, _kernel_ is an implementaion of an
+backends. In this context, _kernel_ is an implementation of an
 _operation_, which is defined on the top API level (see
 G_TYPED_KERNEL() macro).
 

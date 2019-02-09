@@ -129,7 +129,7 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
     GModel::Graph gr(ctx.graph);
 
     // Repeat the loop while there are compound kernels.
-    // Restart procedure after every successfull unrolling
+    // Restart procedure after every successful unrolling
     bool has_compound_kernel = true;
     while (has_compound_kernel)
     {

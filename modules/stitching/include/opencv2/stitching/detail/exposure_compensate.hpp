@@ -133,7 +133,7 @@ private:
 };
 
 /** @brief Exposure compensator which tries to remove exposure related artifacts by adjusting image
-intensities on each channel independantly.
+intensities on each channel independently.
  */
 class CV_EXPORTS_W ChannelsCompensator : public ExposureCompensator
 {

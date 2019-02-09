@@ -320,7 +320,7 @@ TEST(IslandsFusion, PartionOverlapUserIsland)
     //                                    |
     //    (in1) --------------------------`
 
-    // Check that internal islands does't overlap user island
+    // Check that internal islands doesn't overlap user island
 
     namespace J = Jupiter;
     namespace S = Saturn;
