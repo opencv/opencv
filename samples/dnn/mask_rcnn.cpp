@@ -196,7 +196,7 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, flo
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
     box.y = max(box.y, labelSize.height);
-    rectangle(frame, Point(box.x, box.y - static_cast<int>round(1.5*labelSize.height)), Point(box.x + static_cast<int>round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
+    rectangle(frame, Point(box.x, box.y - static_cast<int>(round(1.5*labelSize.height))), Point(box.x + static_cast<int>(round(1.5*labelSize.width)), box.y + baseLine), Scalar(255, 255, 255), FILLED);
     putText(frame, label, Point(box.x, box.y), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,0),1);
 
     Scalar color = colors[classId%colors.size()];
@@ -212,5 +212,5 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, flo
     mask.convertTo(mask, CV_8U);
     findContours(mask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
     drawContours(roi, contours, -1, color, 5, LINE_8, hierarchy, 100);
-    coloredRoi.copyTo(frame(box), mask);
+    roi.copyTo(frame(box), mask);
 }
