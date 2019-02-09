@@ -3,20 +3,21 @@
 // Downloads:
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
 // https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt
-// More Information : Alessandro de Oliveira Faria (A.K.A. CABELO)- cabelo@opensuse.org
 
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <string.h>
+#include <string>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#include "common.hpp"
+using namespace cv;
+using namespace dnn;
+using namespace std;
 
-std::string keys =
+string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --media=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
@@ -26,20 +27,12 @@ std::string keys =
     "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
 
+void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float confThreshold);
 
-using namespace cv;
-using namespace dnn;
-using namespace std;
-
-float confThreshold;
-float maskThreshold;
+void postprocess(Mat& frame, const vector<Mat>& outs, float maskThreshold);
 
 vector<string> classes;
 vector<Scalar> colors;
-
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask);
-
-void postprocess(Mat& frame, const vector<Mat>& outs);
 
 int main(int argc, char** argv)
 {
@@ -51,8 +44,12 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    float confThreshold;
+    float maskThreshold;
+
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
+
     String textGraph = parser.get<string>("config");
     String modelWeights = parser.get<string>("model");
     string classesFile = parser.get<string>("classes");
@@ -130,7 +127,7 @@ int main(int argc, char** argv)
         vector<Mat> outs;
         net.forward(outs, outNames);
 
-        postprocess(frame, outs);
+        postprocess(frame, outs,maskThreshold);
 
         vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
@@ -150,7 +147,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs)
+void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold)
 {
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
@@ -179,17 +176,16 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
             bottom = max(0, min(bottom, frame.rows - 1));
             Rect box = Rect(left, top, right - left + 1, bottom - top + 1);
 
-            Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32F, outMasks.ptr<float>(i,classId));
+            Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
 
-            drawBox(frame, classId, score, box, objectMask);
+            drawBox(frame, classId, score, box, objectMask, confThreshold);
         }
     }
 }
 
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask)
+void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold)
 {
-    rectangle(frame, Point(box.x, box.y), Point(box.x+box.width, box.y+box.height), Scalar(255, 178, 50), 3);
-
+    rectangle(frame, Point(box.x, box.y), Point(box.x + box.width, box.y + box.height), Scalar(255, 178, 50), 3);
     string label = format("%.2f", conf);
     if (!classes.empty())
     {
@@ -200,21 +196,21 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask)
     int baseLine;
     Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
     box.y = max(box.y, labelSize.height);
-    rectangle(frame, Point(box.x, box.y - (int)round(1.5*labelSize.height)), Point(box.x + (int)round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
+    rectangle(frame, Point(box.x, box.y - static_cast<int>round(1.5*labelSize.height)), Point(box.x + static_cast<int>round(1.5*labelSize.width), box.y + baseLine), Scalar(255, 255, 255), FILLED);
     putText(frame, label, Point(box.x, box.y), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,0),1);
 
     Scalar color = colors[classId%colors.size()];
 
     resize(objectMask, objectMask, Size(box.width, box.height));
     Mat mask = (objectMask > maskThreshold);
-    Mat coloredRoi = (0.3 * color + 0.7 * frame(box));
-    coloredRoi.convertTo(coloredRoi, CV_8UC3);
+    Mat roi = frame(box);
+    roi = roi * 0.7 + color * 0.3;
+    roi.convertTo(roi, CV_8UC3);
 
     vector<Mat> contours;
     Mat hierarchy;
     mask.convertTo(mask, CV_8U);
     findContours(mask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-    drawContours(coloredRoi, contours, -1, color, 5, LINE_8, hierarchy, 100);
+    drawContours(roi, contours, -1, color, 5, LINE_8, hierarchy, 100);
     coloredRoi.copyTo(frame(box), mask);
-
 }
