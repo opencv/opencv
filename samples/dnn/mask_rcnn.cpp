@@ -178,7 +178,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float
 
             Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
 
-            drawBox(frame, classId, score, box, objectMask, maskThreshold, colors, classes); 
+            drawBox(frame, classId, score, box, objectMask, maskThreshold, colors, classes);
         }
     }
 }
