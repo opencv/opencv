@@ -27,12 +27,9 @@ string keys =
     "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
 
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float confThreshold);
+void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar> colors, vector<string> classes);
 
-void postprocess(Mat& frame, const vector<Mat>& outs, float maskThreshold);
-
-vector<string> classes;
-vector<Scalar> colors;
+void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar> colors, vector<string> classes);
 
 int main(int argc, char** argv)
 {
@@ -46,6 +43,9 @@ int main(int argc, char** argv)
 
     float confThreshold;
     float maskThreshold;
+    vector<string> classes;
+    vector<Scalar> colors;
+
 
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
         vector<Mat> outs;
         net.forward(outs, outNames);
 
-        postprocess(frame, outs,maskThreshold);
+        postprocess(frame, outs,maskThreshold,confThreshold,colors,classes);
 
         vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold)
+void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar> colors, vector<string> classes )
 {
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
@@ -178,12 +178,12 @@ void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold)
 
             Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
 
-            drawBox(frame, classId, score, box, objectMask, confThreshold);
+            drawBox(frame, classId, score, box, objectMask, maskThreshold, colors, classes); 
         }
     }
 }
 
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold)
+void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar> colors, vector<string> classes)
 {
     rectangle(frame, Point(box.x, box.y), Point(box.x + box.width, box.y + box.height), Scalar(255, 178, 50), 3);
     string label = format("%.2f", conf);
