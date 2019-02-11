@@ -7,7 +7,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/gapi/cpu/gcpukernel.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
 #include "gapi_mock_kernels.hpp"
 
 #include "opencv2/gapi/ocl/goclkernel.hpp"     // ocl::backend
@@ -417,7 +416,7 @@ TEST(KernelPackage, Unite_REPLACE_Same_Backend)
 
 TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 {
-    // in0 -> gapi::GAdd -> tmp -> U::GClone -> gapi::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
     //            ^
     //            |
     // in1 -------`
@@ -437,7 +436,7 @@ TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 
 TEST_F(HeteroGraph, Replace_Default)
 {
-    // in0 -> U::GAdd -> tmp -> U::GClone -> gapi::GResize -> out
+    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
     //            ^
     //            |
     // in1 -------`
@@ -458,7 +457,7 @@ TEST_F(HeteroGraph, Replace_Default)
 
 TEST_F(HeteroGraph, User_Kernel_Not_Found)
 {
-    // in0 -> gapi::GAdd -> tmp -> U::GClone -> gapi::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
     //            ^
     //            |
     // in1 -------`
@@ -472,7 +471,7 @@ TEST_F(HeteroGraph, User_Kernel_Not_Found)
 
 TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 {
-    // in0 -> gapi::GAdd -> tmp -> U::GClone -> ocl::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
     //            ^
     //            |
     // in1 -------`
@@ -492,7 +491,7 @@ TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 
 TEST_F(HeteroGraph, Conflict_Customs)
 {
-    // in0 -> gapi::GAdd -> tmp -> U::GClone -> (ocl::GResize/fluid::GResize) -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> (ocl::GResize/fluid::GResize) -> out
     //            ^
     //            |
     // in1 -------`
@@ -534,7 +533,7 @@ TEST_F(HeteroGraph, Resolve_Custom_Conflict)
 
 TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 {
-    // in0 -> gapi::GAdd -> tmp -> U::GClone -> N::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
     //            ^
     //            |
     // in1 -------`
