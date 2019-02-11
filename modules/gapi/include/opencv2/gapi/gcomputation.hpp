@@ -123,7 +123,7 @@ public:
      *
      * This may be useful since all temporary objects (cv::GMats) and
      * namespaces can be localized to scope of lambda, without
-     * contaminating the parent scope with probably unecessary objects
+     * contaminating the parent scope with probably unnecessary objects
      * and information.
      *
      * @param gen generator function which returns a cv::GComputation,

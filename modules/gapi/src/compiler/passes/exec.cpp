@@ -579,7 +579,7 @@ namespace
                         auto l_obj = gim.metadata(lhs_nh).get<FusedIsland>().object;
                         auto r_obj = gim.metadata(rhs_nh).get<FusedIsland>().object;
                         GAPI_LOG_INFO(NULL, r_obj->name() << " can be merged into " << l_obj->name());
-                        // Try to do a merge. If merge was succesfull, check if the
+                        // Try to do a merge. If merge was successful, check if the
                         // graph have cycles (cycles are prohibited at this point).
                         // If there are cycles, roll-back the merge and mark a pair of
                         // these Islands with a special tag - "cycle-causing".

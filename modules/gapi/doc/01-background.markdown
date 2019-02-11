@@ -41,7 +41,7 @@ but it requires extra skills and knowledge of the target platform and
 the algorithm implementation changes irrevocably -- becoming more
 specific, less flexible, and harder to extend and maintain.
 
-G-API takes this responsiblity and complexity from user and does the
+G-API takes this responsibility and complexity from user and does the
 majority of the work by itself, keeping the algorithm code clean from
 device or optimization details. This approach has its own limitations,
 though, as graph model is a _constrained_ model and not every
