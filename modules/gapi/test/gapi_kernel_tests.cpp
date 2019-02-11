@@ -297,10 +297,10 @@ TEST(KernelPackage, Combine_REPLACE_Full)
     auto s_pkg = cv::gapi::kernels<S::Foo, S::Bar, S::Baz>();
     auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::REPLACE);
 
-    EXPECT_EQ(3u, u_pkg.size());
-    EXPECT_FALSE(u_pkg.includes<J::Foo>());
-    EXPECT_FALSE(u_pkg.includes<J::Bar>());
-    EXPECT_FALSE(u_pkg.includes<J::Baz>());
+    EXPECT_EQ(6u, u_pkg.size());
+    EXPECT_TRUE(u_pkg.includes<J::Foo>());
+    EXPECT_TRUE(u_pkg.includes<J::Bar>());
+    EXPECT_TRUE(u_pkg.includes<J::Baz>());
     EXPECT_TRUE (u_pkg.includes<S::Foo>());
     EXPECT_TRUE (u_pkg.includes<S::Bar>());
     EXPECT_TRUE (u_pkg.includes<S::Baz>());
@@ -314,9 +314,9 @@ TEST(KernelPackage, Combine_REPLACE_Partial)
     auto s_pkg = cv::gapi::kernels<S::Bar>();
     auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::REPLACE);
 
-    EXPECT_EQ(2u, u_pkg.size());
+    EXPECT_EQ(3u, u_pkg.size());
     EXPECT_TRUE (u_pkg.includes<J::Foo>());
-    EXPECT_FALSE(u_pkg.includes<J::Bar>());
+    EXPECT_TRUE(u_pkg.includes<J::Bar>());
     EXPECT_TRUE (u_pkg.includes<S::Bar>());
 }
 
