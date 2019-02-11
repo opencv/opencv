@@ -3141,10 +3141,17 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
 
     for( i = 0; i < nimages; i++ )
     {
-        ni = objectPoints.getMat(i).checkVector(3, CV_32F);
+        Mat objectPoint = objectPoints.getMat(i);
+        if (objectPoint.empty())
+            CV_Error(CV_StsBadSize, "objectPoints should not contain empty vector of vectors of points");
+        ni = objectPoint.checkVector(3, CV_32F);
         if( ni <= 0 )
             CV_Error(CV_StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
-        int ni1 = imagePoints1.getMat(i).checkVector(2, CV_32F);
+
+        Mat imagePoint1 = imagePoints1.getMat(i);
+        if (imagePoint1.empty())
+            CV_Error(CV_StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
+        int ni1 = imagePoint1.checkVector(2, CV_32F);
         if( ni1 <= 0 )
             CV_Error(CV_StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
         CV_Assert( ni == ni1 );
