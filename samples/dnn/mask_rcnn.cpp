@@ -75,7 +75,6 @@ int main(int argc, char** argv)
 
     string str, outputFile;
     VideoCapture cap;
-    VideoWriter video;
     Mat frame, blob;
 
     try {
@@ -104,8 +103,7 @@ int main(int argc, char** argv)
     }
 
 
-    static const string kWinName = "Deep learning object detection in OpenCV";
-    namedWindow(kWinName, WINDOW_NORMAL);
+   // namedWindow("Deep learning object detection in OpenCV", WINDOW_NORMAL);
 
     while (waitKey(1) < 0)
     {
@@ -132,17 +130,16 @@ int main(int argc, char** argv)
         vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
-        string label = format("openCV Mask R-CNN : %0.0f ms", t);
+        string label = format("OpenCV Mask R-CNN : %0.0f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         Mat detectedFrame;
         frame.convertTo(detectedFrame, CV_8U);
-        imshow(kWinName, frame);
+        imshow("Deep learning object detection in OpenCV", frame);
 
     }
 
     cap.release();
-    if (!parser.has("image")) video.release();
 
     return 0;
 }
@@ -170,13 +167,11 @@ void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float
             int right = static_cast<int>(frame.cols * outDetections.at<float>(i, 5));
             int bottom = static_cast<int>(frame.rows * outDetections.at<float>(i, 6));
 
-            left = max(0, min(left, frame.cols - 1));
-            top = max(0, min(top, frame.rows - 1));
-            right = max(0, min(right, frame.cols - 1));
-            bottom = max(0, min(bottom, frame.rows - 1));
-            Rect box = Rect(left, top, right - left + 1, bottom - top + 1);
+	    Rect box(Point(left, top), Point(right, bottom));
+	    Rect imageBox(0, 0, frame.cols - 1, frame.rows - 1);
+	    box &= imageBox;
 
-            Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
+	    Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
 
             drawBox(frame, classId, score, box, objectMask, maskThreshold, colors, classes);
         }
