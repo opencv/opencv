@@ -105,7 +105,7 @@ double memory deallocation.
 CV_EXPORTS void fastFree(void* ptr);
 
 /*!
-  The STL-compilant memory Allocator based on cv::fastMalloc() and cv::fastFree()
+  The STL-compliant memory Allocator based on cv::fastMalloc() and cv::fastFree()
 */
 template<typename _Tp> class Allocator
 {

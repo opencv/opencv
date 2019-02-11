@@ -416,7 +416,7 @@ GAPI_FLUID_KERNEL(GFluidBlur, cv::gapi::imgproc::GBlur, true)
         // TODO: support sizes 3, 5, 7, 9, ...
         GAPI_Assert(kernelSize.width  == 3 && kernelSize.height == 3);
 
-        // TODO: suport non-trivial anchor
+        // TODO: support non-trivial anchor
         GAPI_Assert(anchor.x == -1 && anchor.y == -1);
 
         static const bool normalize = true;
@@ -488,7 +488,7 @@ GAPI_FLUID_KERNEL(GFluidBoxFilter, cv::gapi::imgproc::GBoxFilter, true)
         // TODO: support sizes 3, 5, 7, 9, ...
         GAPI_Assert(kernelSize.width  == 3 && kernelSize.height == 3);
 
-        // TODO: suport non-trivial anchor
+        // TODO: support non-trivial anchor
         GAPI_Assert(anchor.x == -1 && anchor.y == -1);
 
         int width = src.length();
