@@ -209,8 +209,6 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, flo
 
     vector<Mat> contours;
     Mat hierarchy;
-    mask.convertTo(mask, CV_8U);
     findContours(mask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
     drawContours(roi, contours, -1, color, 5, LINE_8, hierarchy, 100);
-    roi.copyTo(frame(box), mask);
 }
