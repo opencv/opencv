@@ -344,7 +344,7 @@ cv::String findDataFile(const cv::String& relative_path,
 #if defined OPENCV_INSTALL_PREFIX && defined OPENCV_DATA_INSTALL_PATH
     cv::String install_dir(OPENCV_INSTALL_PREFIX);
     // use core/world module path and verify that library is running from installation directory
-    // It is neccessary to avoid touching of unrelated common /usr/local path
+    // It is necessary to avoid touching of unrelated common /usr/local path
     if (module_path.empty()) // can't determine
         module_path = install_dir;
     if (isSubDirectory(install_dir, module_path) || isSubDirectory(utils::fs::canonical(install_dir), utils::fs::canonical(module_path)))

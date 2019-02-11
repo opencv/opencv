@@ -120,7 +120,7 @@ public:
     \f[(minVal, minVal*step, minVal*{step}^2, \dots,  minVal*{logStep}^n),\f]
     where \f$n\f$ is the maximal index satisfying
     \f[\texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}\f]
-    The grid is logarithmic, so logStep must always be greater then 1. Default value is 1.
+    The grid is logarithmic, so logStep must always be greater than 1. Default value is 1.
     */
     CV_PROP_RW double logStep;
 
