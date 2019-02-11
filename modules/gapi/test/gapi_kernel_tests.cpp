@@ -570,7 +570,7 @@ TEST_F(HeteroGraph, Resolve_Default_Conflict)
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg, lookup_order));
 
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_ADD));
-}    
+}
 
 TEST_F(HeteroGraph, Not_Resolve_Conflict)
 {
