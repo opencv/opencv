@@ -24,16 +24,21 @@ namespace
         {
             static GMatDesc outMeta(GMatDesc in) { return in; }
         };
+
+        G_TYPED_KERNEL(Corge, <GMat(GMat)>, "org.opencv.test.Corge")
+        {
+            static GMatDesc outMeta(GMatDesc in) { return in; }
+        };
     }
 
     enum class KernelTags {
-        CPU_CUSTOM_RESIZE,
+        CPU_CUSTOM_BGR2GRAY,
         CPU_CUSTOM_ADD,
         CPU_CUSTOM_CLONE,
-        OCL_CUSTOM_RESIZE,
+        OCL_CUSTOM_BGR2GRAY,
         OCL_CUSTOM_ADD,
         OCL_CUSTOM_CLONE,
-        FLUID_CUSTOM_RESIZE,
+        FLUID_CUSTOM_BGR2GRAY,
         FLUID_CUSTOM_CLONE
     };
 
@@ -51,9 +56,8 @@ namespace
 
         GraphFixture()
         {
-            sz_out = cv::Size(5, 5);
             auto tmp = I::GClone::on(cv::gapi::add(in[0], in[1]));
-            out = cv::gapi::resize(tmp, sz_out);
+            out = cv::gapi::imgproc::GBGR2Gray::on(tmp);
         }
 
         static void registerCallKernel(KernelTags kernel_tag) {
@@ -68,18 +72,11 @@ namespace
     };
 
     namespace ocl {
-        GAPI_OCL_KERNEL(GResize, cv::gapi::core::GResize)
-        {
-            static void run(const cv::UMat&, cv::Size, double, double, int, cv::UMat&)
-            {
-                GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_RESIZE);
-            }
-        };
-
         GAPI_OCL_KERNEL(GAdd, cv::gapi::core::GAdd)
         {
-            static void run(const cv::UMat&, const cv::UMat&, int, cv::UMat&)
+            static void run(const cv::UMat& in1, const cv::UMat& in2, int dtype, cv::UMat& out)
             {
+                cv::add(in1, in2, out, cv::noArray(), dtype);
                 GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_ADD);
             }
         };
@@ -91,31 +88,51 @@ namespace
                 GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_CLONE);
             }
         };
+
+        GAPI_OCL_KERNEL(BGR2Gray, cv::gapi::imgproc::GBGR2Gray)
+        {
+            static void run(const cv::UMat& in, cv::UMat &out)
+            {
+                GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY);
+                //cv::cvtColor(in, out, cv::COLOR_BGR2GRAY);
+            }
+        };
     }
 
     namespace cpu
     {
         GAPI_OCV_KERNEL(GAdd, cv::gapi::core::GAdd)
         {
-            static void run(const cv::Mat&, const cv::Mat&, int, cv::Mat&)
+            static void run(const cv::Mat& in1, const cv::Mat& in2, int dtype, cv::Mat& out)
             {
+                cv::add(in1, in2, out, cv::noArray(), dtype);
                 GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_ADD);
             }
         };
 
         GAPI_OCV_KERNEL(GClone, I::GClone)
         {
-            static void run(const cv::Mat&, cv::Mat&)
+            static void run(const cv::Mat& in, cv::Mat& out)
             {
+                in.copyTo(out);
                 GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_CLONE);
             }
         };
 
-        GAPI_OCV_KERNEL(GResize, cv::gapi::core::GResize)
+        GAPI_OCV_KERNEL(BGR2Gray, cv::gapi::imgproc::GBGR2Gray)
         {
-            static void run(const cv::Mat&, cv::Size, double, double, int, cv::Mat&)
+            static void run(const cv::Mat& in, cv::Mat& out)
             {
-                GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_RESIZE);
+                GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_BGR2GRAY);
+                cv::cvtColor(in, out, cv::COLOR_BGR2GRAY);
+            }
+        };
+
+        GAPI_OCV_KERNEL(Not, cv::gapi::core::GNot)
+        {
+            static void run(const cv::Mat& in, cv::Mat& out)
+            {
+                cv::bitwise_not(in, out);
             }
         };
     }
@@ -131,12 +148,12 @@ namespace
             }
         };
 
-        GAPI_FLUID_KERNEL(GResize, cv::gapi::core::GResize, false)
+        GAPI_FLUID_KERNEL(BGR2Gray, cv::gapi::imgproc::GBGR2Gray, false)
         {
             static const int Window = 1;
-            static void run(const cv::gapi::fluid::View&, cv::Size, double, double, int, cv::gapi::fluid::Buffer&)
+            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
-                GraphFixture::registerCallKernel(KernelTags::FLUID_CUSTOM_RESIZE);
+                GraphFixture::registerCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY);
             }
         };
     }
@@ -416,13 +433,13 @@ TEST(KernelPackage, Unite_REPLACE_Same_Backend)
 
 TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC3),
+            in_mat2 = cv::Mat::eye(3, 3, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
@@ -436,13 +453,13 @@ TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 
 TEST_F(HeteroGraph, Replace_Default)
 {
-    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
+    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC3),
+            in_mat2 = cv::Mat::eye(3, 3, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
@@ -457,13 +474,13 @@ TEST_F(HeteroGraph, Replace_Default)
 
 TEST_F(HeteroGraph, User_Kernel_Not_Found)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1);
+    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC3),
+            in_mat2 = cv::Mat::eye(3, 3, CV_8UC3);
 
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         compile(cv::descr_of(in_mat1), cv::descr_of(in_mat2)));
@@ -471,39 +488,39 @@ TEST_F(HeteroGraph, User_Kernel_Not_Found)
 
 TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
-    //            ^
-    //            |
-    // in1 -------`
+     //in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+                //^
+                //|
+     //in1 -------`
 
-    cv::Mat in_mat1(3, 3, CV_8UC1),
-            in_mat2(3, 3, CV_8UC1),
+    cv::Mat in_mat1(300, 300, CV_8UC3),
+            in_mat2(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
 
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::GResize>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray>();
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
 
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_RESIZE));
+    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Conflict_Customs)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> (ocl::GResize/fluid::GResize) -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> (ocl::BGR2Gray/fluid::BGR2Gray) -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
-    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::GResize, ocl::GResize>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray, ocl::BGR2Gray>();
 
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
                          .compile({in_meta, in_meta}, cv::compile_args(pkg)));
@@ -511,35 +528,35 @@ TEST_F(HeteroGraph, Conflict_Customs)
 
 TEST_F(HeteroGraph, Resolve_Custom_Conflict)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
 
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::GResize, fluid::GResize>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::ocl::backend() };
 
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg, lookup_order));
 
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_RESIZE));
+    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::GResize, fluid::GResize>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
 
     // Lookup order contains only ocl backend
     // CPU backend for GClone and gapi::GAdd pass implicitly
@@ -551,13 +568,13 @@ TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 
 TEST_F(HeteroGraph, Resolve_Default_Conflict)
 {
-    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::GResize -> out
+    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
@@ -573,13 +590,13 @@ TEST_F(HeteroGraph, Resolve_Default_Conflict)
 
 TEST_F(HeteroGraph, Not_Resolve_Conflict)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::GResize -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::GResize, fluid::GResize>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::cpu::backend() };
 
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
@@ -588,18 +605,18 @@ TEST_F(HeteroGraph, Not_Resolve_Conflict)
 
 TEST_F(HeteroGraph, Implicit_Pass_To_Lookup)
 {
-    // in0 -> ocl::GAdd -> tmp -> cpu::GClone -> fluid::GResize -> out
+    // in0 -> ocl::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
 
-    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::GClone, ocl::GResize, ocl::GAdd>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::GClone, ocl::BGR2Gray, ocl::GAdd>();
 
     // ocl backend pass implicity
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend() };
@@ -609,18 +626,18 @@ TEST_F(HeteroGraph, Implicit_Pass_To_Lookup)
 
     EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_RESIZE));
+    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Priority_Backend)
 {
-    // in0 -> ocl::GAdd -> tmp -> fluid::GClone -> ocl::GResize -> out
+    // in0 -> ocl::GAdd -> tmp -> fluid::GClone -> ocl::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
             out_mat,
             ref_mat,
             tmp_mat;
@@ -628,8 +645,8 @@ TEST_F(HeteroGraph, Priority_Backend)
     auto pkg = cv::gapi::kernels<ocl::GAdd,
                                  fluid::GClone,
                                  ocl::GClone,
-                                 cpu::GResize,
-                                 ocl::GResize>();
+                                 cpu::BGR2Gray,
+                                 ocl::BGR2Gray>();
 
     // For GClone fluid backend more priority
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend(), cv::gapi::ocl::backend() };
@@ -639,7 +656,22 @@ TEST_F(HeteroGraph, Priority_Backend)
 
     EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_RESIZE));
+    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
+}
+TEST(OCL, TestName1) 
+{
+    cv::GMat in[2];
+    cv::GMat out = cv::gapi::imgproc::GBGR2Gray::on(cv::gapi::core::GNot::on(cv::gapi::add(in[0], in[1])));
+
+    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
+            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
+            out_mat;
+
+    auto pkg = cv::gapi::kernels<cpu::GAdd, cpu::Not, ocl::BGR2Gray>();
+    //auto pkg = cv::gapi::ocl::kernels
+
+    cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
 }
 
-} // namespace opencv_test
+}// namespace opencv_test
