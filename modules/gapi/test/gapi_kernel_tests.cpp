@@ -433,10 +433,10 @@ TEST(KernelPackage, Unite_REPLACE_Same_Backend)
 
 TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
-    //            ^
-    //            |
-    // in1 -------`
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> cv::gapi::BGR2Gray -> out
+    //             ^
+    //             |
+    // in1 ------- `
 
     cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC3),
             in_mat2 = cv::Mat::eye(3, 3, CV_8UC3),
@@ -453,7 +453,7 @@ TEST_F(HeteroGraph, Correct_Use_Custom_Kernel)
 
 TEST_F(HeteroGraph, Replace_Default)
 {
-    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
+    // in0 -> cpu::GAdd -> tmp -> cpu::GClone -> cv::gapi::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -474,10 +474,10 @@ TEST_F(HeteroGraph, Replace_Default)
 
 TEST_F(HeteroGraph, User_Kernel_Not_Found)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> gapi::BGR2Gray -> out
-    //            ^
-    //            |
-    // in1 -------`
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> cv::gapi::BGR2Gray -> out
+    //             ^
+    //             |
+    // in1 --------`
 
     cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC3),
             in_mat2 = cv::Mat::eye(3, 3, CV_8UC3);
@@ -488,10 +488,10 @@ TEST_F(HeteroGraph, User_Kernel_Not_Found)
 
 TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 {
-     //in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
-                //^
-                //|
-     //in1 -------`
+     //in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+     //            ^
+     //            |
+     //in1 --------`
 
     cv::Mat in_mat1(300, 300, CV_8UC3),
             in_mat2(300, 300, CV_8UC3),
@@ -508,10 +508,10 @@ TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 
 TEST_F(HeteroGraph, Conflict_Customs)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> (ocl::BGR2Gray/fluid::BGR2Gray) -> out
-    //            ^
-    //            |
-    // in1 -------`
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> (ocl::BGR2Gray/fluid::BGR2Gray) -> out
+    //             ^
+    //             |
+    // in1 --------`
 
     cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
             in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
@@ -550,10 +550,10 @@ TEST_F(HeteroGraph, Resolve_Custom_Conflict)
 
 TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
-    //            ^
-    //            |
-    // in1 -------`
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+    //             ^
+    //             |
+    // in1 --------`
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
     auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
@@ -658,20 +658,27 @@ TEST_F(HeteroGraph, Priority_Backend)
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
     EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
 }
-TEST(OCL, TestName1) 
+
+TEST_F(HeteroGraph, Unused_Backend)
 {
-    cv::GMat in[2];
-    cv::GMat out = cv::gapi::imgproc::GBGR2Gray::on(cv::gapi::core::GNot::on(cv::gapi::add(in[0], in[1])));
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> cv::gapi::BGR2Gray -> out
+    //             ^
+    //             |
+    // in1 --------`
 
-    cv::Mat in_mat1 = cv::Mat::eye(300, 300, CV_8UC3),
-            in_mat2 = cv::Mat::eye(300, 300, CV_8UC3),
-            out_mat;
+    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
+            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
+            out_mat,
+            ref_mat,
+            tmp_mat;
 
-    auto pkg = cv::gapi::kernels<cpu::GAdd, cpu::Not, ocl::BGR2Gray>();
-    //auto pkg = cv::gapi::ocl::kernels
+    auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
+    auto pkg = cv::gapi::kernels<cpu::GClone>();
+    auto lookup_order = { cv::gapi::fluid::backend() };
 
-    cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
+    EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
+            .compile({in_meta, in_meta}, cv::compile_args(pkg, lookup_order)));
+
 }
 
 }// namespace opencv_test
