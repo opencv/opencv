@@ -18,7 +18,7 @@ using namespace dnn;
 using namespace std;
 
 string keys =
-    "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --media=teste.mp4}"
+    "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
     "{ classes n   | imscoco_labels.names | Path to a text file with names of classes.  }"
