@@ -3,10 +3,16 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
-#include "opencl_kernels_core.hpp"
 #include "convert.hpp"
 
 namespace cv {
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc get_cvt32f16f();
+BinaryFunc get_cvt16f32f();
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 /*namespace hal {
 
@@ -66,7 +72,7 @@ void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len )
 
 }*/
 
-template<typename _Ts, typename _Td, typename _Twvec> inline void
+template<typename _Ts, typename _Td, typename _Twvec> static inline void
 cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
 {
     sstep /= sizeof(src[0]);
@@ -97,7 +103,7 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
 
 // in order to reduce the code size, for (16f <-> ...) conversions
 // we add a conversion function without loop unrolling
-template<typename _Ts, typename _Td, typename _Twvec> inline void
+template<typename _Ts, typename _Td, typename _Twvec> static inline void
 cvt1_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
 {
     sstep /= sizeof(src[0]);
@@ -140,7 +146,10 @@ static void cvtCopy( const uchar* src, size_t sstep,
 #define DEF_CVT_FUNC(suffix, cvtfunc, _Ts, _Td, _Twvec) \
 static void cvt##suffix(const _Ts* src, size_t sstep, uchar*, size_t, \
                         _Td* dst, size_t dstep, Size size, void*) \
-{ cvtfunc<_Ts, _Td, _Twvec>(src, sstep, dst, dstep, size); }
+{ \
+    CV_INSTRUMENT_REGION(); \
+    cvtfunc<_Ts, _Td, _Twvec>(src, sstep, dst, dstep, size); \
+}
 
 ////////////////////// 8u -> ... ////////////////////////
 
@@ -225,16 +234,16 @@ DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,  v_float32)
 ///////////// "conversion" w/o conversion ///////////////
 
 static void cvt8u(const uchar* src, size_t sstep, uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
-{ cvtCopy(src, sstep, dst, dstep, size, 1); }
+{ CV_INSTRUMENT_REGION(); cvtCopy(src, sstep, dst, dstep, size, 1); }
 
 static void cvt16u(const ushort* src, size_t sstep, uchar*, size_t, ushort* dst, size_t dstep, Size size, void*)
-{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
+{ CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
 
 static void cvt32s(const int* src, size_t sstep, uchar*, size_t, int* dst, size_t dstep, Size size, void*)
-{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
+{ CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
 
 static void cvt64s(const int64* src, size_t sstep, uchar*, size_t, int64* dst, size_t dstep, Size size, void*)
-{ cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
+{ CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
 
 /* [TODO] Recover IPP calls
@@ -380,148 +389,17 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
-#ifdef HAVE_OPENCL
-static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int ddepth )
+BinaryFunc get_cvt32f16f()
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
-
-    _dst.createSameSize( _src, CV_MAKETYPE(ddepth, cn) );
-    int kercn = 1;
-    int rowsPerWI = 1;
-    String build_opt = format("-D HALF_SUPPORT -D srcT=%s -D dstT=%s -D rowsPerWI=%d%s",
-                              sdepth == CV_32F ? "float" : "half",
-                              sdepth == CV_32F ? "half" : "float",
-                              rowsPerWI,
-                              sdepth == CV_32F ? " -D FLOAT_TO_HALF " : "");
-    ocl::Kernel k("convertFp16", ocl::core::halfconvert_oclsrc, build_opt);
-    if (k.empty())
-        return false;
-
-    UMat src = _src.getUMat();
-    UMat dst = _dst.getUMat();
-
-    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-    dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
-
-    k.args(srcarg, dstarg);
-
-    size_t globalsize[2] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return (BinaryFunc)cvt32f16f;
 }
+
+BinaryFunc get_cvt16f32f()
+{
+    return (BinaryFunc)cvt16f32f;
+}
+
 #endif
 
-} // cv::
-
-void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
-{
-    CV_INSTRUMENT_REGION();
-
-    if( empty() )
-    {
-        _dst.release();
-        return;
-    }
-
-    bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
-
-    if( _type < 0 )
-        _type = _dst.fixedType() ? _dst.type() : type();
-    else
-        _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), channels());
-
-    int sdepth = depth(), ddepth = CV_MAT_DEPTH(_type);
-    if( sdepth == ddepth && noScale )
-    {
-        copyTo(_dst);
-        return;
-    }
-
-    Mat src = *this;
-    if( dims <= 2 )
-        _dst.create( size(), _type );
-    else
-        _dst.create( dims, size, _type );
-    Mat dst = _dst.getMat();
-
-    BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
-    double scale[] = {alpha, beta};
-    int cn = channels();
-    CV_Assert( func != 0 );
-
-    if( dims <= 2 )
-    {
-        Size sz = getContinuousSize2D(src, dst, cn);
-        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
-    }
-    else
-    {
-        const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2] = {};
-        NAryMatIterator it(arrays, ptrs);
-        Size sz((int)(it.size*cn), 1);
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], 1, 0, 0, ptrs[1], 1, sz, scale);
-    }
-}
-
-//==================================================================================================
-
-void cv::convertFp16( InputArray _src, OutputArray _dst )
-{
-    CV_INSTRUMENT_REGION();
-
-    int sdepth = _src.depth(), ddepth = 0;
-    BinaryFunc func = 0;
-
-    switch( sdepth )
-    {
-    case CV_32F:
-        if(_dst.fixedType())
-        {
-            ddepth = _dst.depth();
-            CV_Assert(ddepth == CV_16S /*|| ddepth == CV_16F*/);
-            CV_Assert(_dst.channels() == _src.channels());
-        }
-        else
-            ddepth =  CV_16S;
-        func = (BinaryFunc)cvt32f16f;
-        break;
-    case CV_16S:
-    //case CV_16F:
-        ddepth = CV_32F;
-        func = (BinaryFunc)cvt16f32f;
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");
-        return;
-    }
-
-    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
-               ocl_convertFp16(_src, _dst, sdepth, ddepth))
-
-    Mat src = _src.getMat();
-
-    int type = CV_MAKETYPE(ddepth, src.channels());
-    _dst.create( src.dims, src.size, type );
-    Mat dst = _dst.getMat();
-    int cn = src.channels();
-
-    CV_Assert( func != 0 );
-
-    if( src.dims <= 2 )
-    {
-        Size sz = getContinuousSize2D(src, dst, cn);
-        func( src.data, src.step, 0, 0, dst.data, dst.step, sz, 0);
-    }
-    else
-    {
-        const Mat* arrays[] = {&src, &dst, 0};
-        uchar* ptrs[2] = {};
-        NAryMatIterator it(arrays, ptrs);
-        Size sz((int)(it.size*cn), 1);
-
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], 0, 0, 0, ptrs[1], 0, sz, 0);
-    }
-}
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+} // namespace
