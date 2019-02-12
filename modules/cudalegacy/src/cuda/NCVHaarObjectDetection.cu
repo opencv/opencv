@@ -59,8 +59,7 @@
 #include <algorithm>
 #include <cstdio>
 
-#include "opencv2/core/cuda/warp.hpp"
-#include "opencv2/core/cuda/warp_shuffle.hpp"
+#include "opencv2/cudev.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -75,92 +74,6 @@
 
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVAlg.hpp"
-
-
-//==============================================================================
-//
-// BlockScan file
-//
-//==============================================================================
-
-
-NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of the loop in warpScanInclusive
-
-
-//Almost the same as naive scan1Inclusive, but doesn't need __syncthreads()
-//assuming size <= WARP_SIZE and size is power of 2
-__device__ Ncv32u warpScanInclusive(Ncv32u idata, volatile Ncv32u *s_Data)
-{
-#if __CUDA_ARCH__ >= 300
-    const unsigned int laneId = cv::cuda::device::Warp::laneId();
-
-    // scan on shuffl functions
-    #pragma unroll
-    for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
-    {
-        const Ncv32u n = cv::cuda::device::shfl_up(idata, i);
-        if (laneId >= i)
-              idata += n;
-    }
-
-    return idata;
-#else
-    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
-    s_Data[pos] = 0;
-    pos += K_WARP_SIZE;
-    s_Data[pos] = idata;
-
-    s_Data[pos] += s_Data[pos - 1];
-    s_Data[pos] += s_Data[pos - 2];
-    s_Data[pos] += s_Data[pos - 4];
-    s_Data[pos] += s_Data[pos - 8];
-    s_Data[pos] += s_Data[pos - 16];
-
-    return s_Data[pos];
-#endif
-}
-
-__device__ __forceinline__ Ncv32u warpScanExclusive(Ncv32u idata, volatile Ncv32u *s_Data)
-{
-    return warpScanInclusive(idata, s_Data) - idata;
-}
-
-template <Ncv32u tiNumScanThreads>
-__device__ Ncv32u scan1Inclusive(Ncv32u idata, volatile Ncv32u *s_Data)
-{
-    if (tiNumScanThreads > K_WARP_SIZE)
-    {
-        //Bottom-level inclusive warp scan
-        Ncv32u warpResult = warpScanInclusive(idata, s_Data);
-
-        //Save top elements of each warp for exclusive warp scan
-        //sync to wait for warp scans to complete (because s_Data is being overwritten)
-        __syncthreads();
-        if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
-        {
-            s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
-        }
-
-        //wait for warp scans to complete
-        __syncthreads();
-
-        if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
-        {
-            //grab top warp elements
-            Ncv32u val = s_Data[threadIdx.x];
-            //calculate exclusive scan and write back to shared memory
-            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
-        }
-
-        //return updated warp scans with exclusive scan results
-        __syncthreads();
-        return warpResult + s_Data[threadIdx.x >> K_LOG2_WARP_SIZE];
-    }
-    else
-    {
-        return warpScanInclusive(idata, s_Data);
-    }
-}
 
 
 //==============================================================================
@@ -260,11 +173,11 @@ __device__ void compactBlockWriteOutAnchorParallel(Ncv32u threadPassFlag, Ncv32u
 {
 #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 110
 
-    __shared__ Ncv32u shmem[NUM_THREADS_ANCHORSPARALLEL * 2];
+    __shared__ Ncv32u shmem[NUM_THREADS_ANCHORSPARALLEL];
     __shared__ Ncv32u numPassed;
     __shared__ Ncv32u outMaskOffset;
 
-    Ncv32u incScan = scan1Inclusive<NUM_THREADS_ANCHORSPARALLEL>(threadPassFlag, shmem);
+    Ncv32u incScan = cv::cudev::blockScanInclusive<NUM_THREADS_ANCHORSPARALLEL>(threadPassFlag, shmem, threadIdx.x);
     __syncthreads();
 
     if (threadIdx.x == NUM_THREADS_ANCHORSPARALLEL-1)
