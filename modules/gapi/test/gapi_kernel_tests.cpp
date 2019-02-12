@@ -24,11 +24,6 @@ namespace
         {
             static GMatDesc outMeta(GMatDesc in) { return in; }
         };
-
-        G_TYPED_KERNEL(Corge, <GMat(GMat)>, "org.opencv.test.Corge")
-        {
-            static GMatDesc outMeta(GMatDesc in) { return in; }
-        };
     }
 
     enum class KernelTags {
@@ -74,9 +69,8 @@ namespace
     namespace ocl {
         GAPI_OCL_KERNEL(GAdd, cv::gapi::core::GAdd)
         {
-            static void run(const cv::UMat& in1, const cv::UMat& in2, int dtype, cv::UMat& out)
+            static void run(const cv::UMat&, const cv::UMat&, int, cv::UMat&)
             {
-                cv::add(in1, in2, out, cv::noArray(), dtype);
                 GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_ADD);
             }
         };
@@ -91,10 +85,9 @@ namespace
 
         GAPI_OCL_KERNEL(BGR2Gray, cv::gapi::imgproc::GBGR2Gray)
         {
-            static void run(const cv::UMat& in, cv::UMat &out)
+            static void run(const cv::UMat&, cv::UMat&)
             {
                 GraphFixture::registerCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY);
-                //cv::cvtColor(in, out, cv::COLOR_BGR2GRAY);
             }
         };
     }
@@ -103,36 +96,25 @@ namespace
     {
         GAPI_OCV_KERNEL(GAdd, cv::gapi::core::GAdd)
         {
-            static void run(const cv::Mat& in1, const cv::Mat& in2, int dtype, cv::Mat& out)
+            static void run(const cv::Mat&, const cv::Mat&, int, cv::Mat&)
             {
-                cv::add(in1, in2, out, cv::noArray(), dtype);
                 GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_ADD);
             }
         };
 
         GAPI_OCV_KERNEL(GClone, I::GClone)
         {
-            static void run(const cv::Mat& in, cv::Mat& out)
+            static void run(const cv::Mat&, cv::Mat&)
             {
-                in.copyTo(out);
                 GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_CLONE);
             }
         };
 
         GAPI_OCV_KERNEL(BGR2Gray, cv::gapi::imgproc::GBGR2Gray)
         {
-            static void run(const cv::Mat& in, cv::Mat& out)
+            static void run(const cv::Mat&, cv::Mat&)
             {
                 GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_BGR2GRAY);
-                cv::cvtColor(in, out, cv::COLOR_BGR2GRAY);
-            }
-        };
-
-        GAPI_OCV_KERNEL(Not, cv::gapi::core::GNot)
-        {
-            static void run(const cv::Mat& in, cv::Mat& out)
-            {
-                cv::bitwise_not(in, out);
             }
         };
     }
@@ -678,7 +660,6 @@ TEST_F(HeteroGraph, Unused_Backend)
 
     EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
             .compile({in_meta, in_meta}, cv::compile_args(pkg, lookup_order)));
-
 }
 
 }// namespace opencv_test

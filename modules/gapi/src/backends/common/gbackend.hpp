@@ -41,11 +41,6 @@ namespace magazine {
             return std::get<ade::util::type_list_index<T, Ts...>::value>(slots);
         }
 
-        ~Class()
-        {
-            cv::UMat& umat = slot<cv::UMat>()[0];
-        }
-
     private:
         std::tuple<MapT<Ts>...> slots;
     };
