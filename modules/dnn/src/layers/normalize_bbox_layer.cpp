@@ -276,23 +276,29 @@ public:
 
             InferenceEngine::Builder::Layer l = ieLayer;
             const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+            InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                        InferenceEngine::Layout::C,
-                                                                        {(size_t)numChannels});
-                weights->allocate();
+                auto onesBlob = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                         InferenceEngine::Layout::C,
+                                                                         {(size_t)numChannels});
+                onesBlob->allocate();
                 std::vector<float> ones(numChannels, 1);
-                weights->set(ones);
-                l.addConstantData("weights", weights);
+                onesBlob->set(ones);
+                weights = onesBlob;
                 l.getParameters()["channel_shared"] = false;
             }
             else
             {
                 CV_Assert(numChannels == blobs[0].total());
-                l.addConstantData("weights", wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C));
+                weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
                 l.getParameters()["channel_shared"] = blobs[0].total() == 1;
             }
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+            l.getParameters()["weights"] = (InferenceEngine::Blob::CPtr)weights;
+#else
+            l.addConstantData("weights", weights);
+#endif
             l.getParameters()["across_spatial"] = acrossSpatial;
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
