@@ -361,9 +361,11 @@ TEST_P(SobelXYTest, AccuracyTest)
     cv::Size sz;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, dtype, order, border_type, border_val, compile_args) = GetParam();
+
+    cv::Mat out_mat_ocv2;
+    cv::Mat out_mat_gapi2;
+
     initMatsRandN(type, sz, dtype);
-    cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
-    cv::Mat out_mat_gapi2 = cv::Mat(sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;

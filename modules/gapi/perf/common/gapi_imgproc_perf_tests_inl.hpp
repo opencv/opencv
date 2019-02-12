@@ -507,8 +507,8 @@ PERF_TEST_P_(SobelXYPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, dtype, order, compile_args) = GetParam();
 
-    cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
-    cv::Mat out_mat_gapi2 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv2;
+    cv::Mat out_mat_gapi2;
 
     initMatsRandN(type, sz, dtype, false);
 
