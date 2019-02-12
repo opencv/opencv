@@ -163,11 +163,11 @@ void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float
             int right = static_cast<int>(frame.cols * outDetections.at<float>(i, 5));
             int bottom = static_cast<int>(frame.rows * outDetections.at<float>(i, 6));
 
-	    Rect box(Point(left, top), Point(right, bottom));
-	    Rect imageBox(0, 0, frame.cols - 1, frame.rows - 1);
-	    box &= imageBox;
+            Rect box(Point(left, top), Point(right, bottom));
+            Rect imageBox(0, 0, frame.cols - 1, frame.rows - 1);
+            box &= imageBox;
 
-	    Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
+            Mat objectMask(outMasks.size[2], outMasks.size[3],CV_32FC1, outMasks.ptr<float>(i,classId));
 
             drawBox(frame, classId, score, box, objectMask, maskThreshold, colors, classes);
         }
