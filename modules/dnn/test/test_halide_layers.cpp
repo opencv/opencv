@@ -694,6 +694,11 @@ TEST_P(Eltwise, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_OPENCL)
+        throw SkipTestException("");
+#endif
+
     Net net;
 
     std::vector<int> convLayerIds(numConv);
