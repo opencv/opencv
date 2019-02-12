@@ -102,9 +102,6 @@ int main(int argc, char** argv)
         return 0;
     }
 
-
-   // namedWindow("Deep learning object detection in OpenCV", WINDOW_NORMAL);
-
     while (waitKey(1) < 0)
     {
         cap >> frame;
@@ -136,7 +133,6 @@ int main(int argc, char** argv)
         Mat detectedFrame;
         frame.convertTo(detectedFrame, CV_8U);
         imshow("Deep learning object detection in OpenCV", frame);
-
     }
 
     cap.release();
