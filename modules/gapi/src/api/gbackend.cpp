@@ -97,8 +97,6 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
 #if !defined(GAPI_STANDALONE)
                 auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
                 mag_umat = to_ocv(util::get<cv::gapi::own::Mat>(arg)).getUMat(ACCESS_READ);
-//FIXME avoid delete memory in umat
-                mag_umat.addref();
 #else
                 util::throw_error(std::logic_error("UMat is not supported in stadnalone build"));
 #endif // !defined(GAPI_STANDALONE)
@@ -166,8 +164,6 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
 #if !defined(GAPI_STANDALONE)
                 auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
                 mag_umat = to_ocv(*(util::get<cv::gapi::own::Mat*>(arg))).getUMat(ACCESS_RW);
-//FIXME avoid delete memory in umat
-                mag_umat.addref();
 #else
                 util::throw_error(std::logic_error("UMat is not supported in standalone build"));
 #endif // !defined(GAPI_STANDALONE)

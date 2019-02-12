@@ -470,7 +470,7 @@ TEST_F(HeteroGraph, User_Kernel_Not_Found)
 
 TEST_F(HeteroGraph, Replace_Default_Another_Backend)
 {
-     //in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+     //in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
      //            ^
      //            |
      //in1 --------`
@@ -481,11 +481,11 @@ TEST_F(HeteroGraph, Replace_Default_Another_Backend)
             ref_mat,
             tmp_mat;
 
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray>();
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
 
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
+    EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Conflict_Customs)
@@ -510,7 +510,7 @@ TEST_F(HeteroGraph, Conflict_Customs)
 
 TEST_F(HeteroGraph, Resolve_Custom_Conflict)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -522,17 +522,17 @@ TEST_F(HeteroGraph, Resolve_Custom_Conflict)
             tmp_mat;
 
     auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
-    cv::gapi::GLookupOrder lookup_order = { cv::gapi::ocl::backend() };
+    cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend() };
 
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg, lookup_order));
 
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
+    EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 {
-    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //             ^
     //             |
     // in1 --------`
@@ -542,7 +542,7 @@ TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
 
     // Lookup order contains only ocl backend
     // CPU backend for GClone and gapi::GAdd pass implicitly
-    cv::gapi::GLookupOrder lookup_order = { cv::gapi::ocl::backend() };
+    cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend() };
 
     EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
                          .compile({in_meta, in_meta}, cv::compile_args(pkg, lookup_order)));
@@ -572,20 +572,20 @@ TEST_F(HeteroGraph, Resolve_Default_Conflict)
 
 TEST_F(HeteroGraph, Not_Resolve_Conflict)
 {
-    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> ocl::BGR2Gray -> out
+    // in0 -> gapi::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray, ocl::BGR2Gray>();
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::cpu::backend() };
 
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out))
                          .compile({in_meta, in_meta}, cv::compile_args(pkg, lookup_order)));
 }
 
-TEST_F(HeteroGraph, Implicit_Pass_To_Lookup)
+TEST_F(HeteroGraph, DISABLED_Implicit_Pass_To_Lookup)
 {
     // in0 -> ocl::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //            ^
@@ -613,7 +613,7 @@ TEST_F(HeteroGraph, Implicit_Pass_To_Lookup)
 
 TEST_F(HeteroGraph, Priority_Backend)
 {
-    // in0 -> ocl::GAdd -> tmp -> fluid::GClone -> ocl::BGR2Gray -> out
+    // in0 -> cpu::GAdd -> tmp -> fluid::GClone -> cpu::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -624,21 +624,21 @@ TEST_F(HeteroGraph, Priority_Backend)
             ref_mat,
             tmp_mat;
 
-    auto pkg = cv::gapi::kernels<ocl::GAdd,
+    auto pkg = cv::gapi::kernels<cpu::GAdd,
                                  fluid::GClone,
                                  ocl::GClone,
                                  cpu::BGR2Gray,
                                  ocl::BGR2Gray>();
 
     // For GClone fluid backend more priority
-    cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend(), cv::gapi::ocl::backend() };
+    cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend(), cv::gapi::cpu::backend() };
 
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg, lookup_order));
 
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_ADD));
+    EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
-    EXPECT_TRUE(checkCallKernel(KernelTags::OCL_CUSTOM_BGR2GRAY));
+    EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_BGR2GRAY));
 }
 
 TEST_F(HeteroGraph, Unused_Backend)
