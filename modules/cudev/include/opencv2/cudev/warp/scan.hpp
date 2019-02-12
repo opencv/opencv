@@ -98,7 +98,7 @@ __device__ T warpScanInclusive(T data, volatile T* smem, uint tid)
     #pragma unroll
     for (int i = 1; i <= (WARP_SIZE / 2); i *= 2)
     {
-        const T val = shfl_up(data, i);
+        const T val = __shfl_up(data, i, WARP_SIZE);
         if (laneId >= i)
               data += val;
     }
