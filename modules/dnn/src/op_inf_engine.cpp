@@ -766,7 +766,7 @@ void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArra
     CV_Error(Error::StsInternal, "Choose Inference Engine as a preferable backend.");
 }
 
-InferenceEngine::TBlob<int16_t>::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
+InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
 {
     auto halfs = InferenceEngine::make_shared_blob<int16_t>(InferenceEngine::Precision::FP16, blob->layout(), blob->dims());
     halfs->allocate();
