@@ -173,7 +173,7 @@ public:
             ieLayer.getParameters()["antialias"] = false;
             if (scaleWidth != scaleHeight)
                 CV_Error(Error::StsNotImplemented, "resample with sw != sh");
-            ieLayer.getParameters()["factor"] = 1.0 / scaleWidth;
+            ieLayer.getParameters()["factor"] = 1.0f / scaleWidth;
         }
         else if (interpolation == "bilinear")
         {

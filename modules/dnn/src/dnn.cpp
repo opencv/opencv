@@ -1637,6 +1637,27 @@ struct Net::Impl
                  preferableTarget == DNN_TARGET_MYRIAD ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+                bool hasWeights = false;
+                for (const std::string& name : {"weights", "biases"})
+                {
+                    auto it = ieNode->layer.getParameters().find(name);
+                    if (it != ieNode->layer.getParameters().end())
+                    {
+                        InferenceEngine::Blob::CPtr bp = it->second.as<InferenceEngine::Blob::CPtr>();
+                        it->second = (InferenceEngine::Blob::CPtr)convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(bp));
+                        hasWeights = true;
+                    }
+                }
+                if (!hasWeights)
+                {
+                    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int16_t>(
+                                                          InferenceEngine::Precision::FP16,
+                                                          InferenceEngine::Layout::C, {1});
+                    blob->allocate();
+                    ieNode->layer.getParameters()["weights"] = (InferenceEngine::Blob::CPtr)blob;
+                }
+#else
                 auto& blobs = ieNode->layer.getConstantData();
                 if (blobs.empty())
                 {
@@ -1653,6 +1674,7 @@ struct Net::Impl
                     for (auto& it : blobs)
                         it.second = convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(it.second));
                 }
+#endif
             }
 
             if (!fused)
@@ -1724,7 +1746,7 @@ struct Net::Impl
 
             if (!ieNode->net->isInitialized())
             {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R4)
                 // For networks which is built in runtime we need to specify a
                 // version of it's hyperparameters.
                 std::string versionTrigger = "<net name=\"TestInput\" version=\"3\" batch=\"1\">"
