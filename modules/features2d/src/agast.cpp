@@ -54,10 +54,10 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 {
 
     cv::Mat img;
-    if(!_img.getMat().isContinuous())
-      img = _img.getMat().clone();
-    else
+    if(_img.getMat().isContinuous())
       img = _img.getMat();
+    else
+      img = _img.getMat().clone();
 
     size_t total = 0;
     int xsize = img.cols;
@@ -816,10 +816,10 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
 {
     cv::Mat img;
-    if(!_img.getMat().isContinuous())
-      img = _img.getMat().clone();
-    else
+    if(_img.getMat().isContinuous())
       img = _img.getMat();
+    else
+      img = _img.getMat().clone();
 
     size_t total = 0;
     int xsize = img.cols;
@@ -3261,10 +3261,10 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
 static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
 {
     cv::Mat img;
-    if(!_img.getMat().isContinuous())
-      img = _img.getMat().clone();
-    else
+    if(_img.getMat().isContinuous())
       img = _img.getMat();
+    else
+      img = _img.getMat().clone();
 
     size_t total = 0;
     int xsize = img.cols;
@@ -5342,10 +5342,10 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
 static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
 {
     cv::Mat img;
-    if(!_img.getMat().isContinuous())
-      img = _img.getMat().clone();
-    else
+    if(_img.getMat().isContinuous())
       img = _img.getMat();
+    else
+      img = _img.getMat().clone();
 
     size_t total = 0;
     int xsize = img.cols;
@@ -7449,10 +7449,10 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, AgastFeatureDetector::DetectorType agasttype)
 {
     cv::Mat img;
-    if(!_img.getMat().isContinuous())
-      img = _img.getMat().clone();
-    else
+    if(_img.getMat().isContinuous())
       img = _img.getMat();
+    else
+      img = _img.getMat().clone();
 
     int agastbase;
     int result;
