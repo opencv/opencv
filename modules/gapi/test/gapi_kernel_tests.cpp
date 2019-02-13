@@ -538,9 +538,9 @@ TEST_F(HeteroGraph, Dont_Pass_Default_To_Lookup)
     // in1 --------`
 
     auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,{3, 3}});
-    auto pkg = cv::gapi::kernels<cpu::GClone, ocl::BGR2Gray, fluid::BGR2Gray>();
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray>();
 
-    // Lookup order contains only ocl backend
+    // Lookup order contains only fluid backend
     // CPU backend for GClone and gapi::GAdd pass implicitly
     cv::gapi::GLookupOrder lookup_order = { cv::gapi::fluid::backend() };
 
@@ -585,6 +585,7 @@ TEST_F(HeteroGraph, Not_Resolve_Conflict)
                          .compile({in_meta, in_meta}, cv::compile_args(pkg, lookup_order)));
 }
 
+//FIXME Impossible to build graph with ocv and ocl kernels together
 TEST_F(HeteroGraph, DISABLED_Implicit_Pass_To_Lookup)
 {
     // in0 -> ocl::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out

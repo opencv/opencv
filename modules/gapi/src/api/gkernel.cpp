@@ -100,9 +100,8 @@ cv::gapi::GKernelPackage::getConflictKernels(const cv::gapi::GLookupOrder& looku
 bool cv::gapi::GKernelPackage::includes(const GBackend& backend, const std::string& id)  const
 {
     const auto set_iter = m_backend_kernels.find(backend);
-    return (set_iter != m_backend_kernels.end())
-        ? (ade::util::contains(set_iter->second, id))
-        : false;
+    return set_iter != m_backend_kernels.end() &&
+           ade::util::contains(set_iter->second, id);
 }
 
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,

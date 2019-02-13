@@ -141,8 +141,8 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
     m_e.addPass("init", "expand_kernels",  std::bind(passes::expandKernels, _1,
-                                                     m_all_kernels,
-                                                     lookup_order)); // NB: package is copied
+                                                     m_all_kernels, // NB: package is copied
+                                                     lookup_order));
 
     m_e.addPass("init", "topo_sort",     ade::passes::TopologicalSort());
     m_e.addPass("init", "init_islands",  passes::initIslands);
