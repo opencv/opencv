@@ -65,9 +65,9 @@ public:
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (pnorm != 2) {
+            if (pnorm != 2)
                 return false;
-            }
+
             return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
         return backendId == DNN_BACKEND_OPENCV;
