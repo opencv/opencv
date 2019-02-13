@@ -306,34 +306,23 @@ template<typename _Tp> struct RGB2XYZ_i
     int coeffs[9];
 };
 
-#if CV_NEON
 
 template <>
 struct RGB2XYZ_i<uchar>
 {
     typedef uchar channel_type;
+    static const int shift = xyz_shift;
 
     RGB2XYZ_i(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
         for( int i = 0; i < 9; i++ )
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[2]);
             std::swap(coeffs[3], coeffs[5]);
             std::swap(coeffs[6], coeffs[8]);
         }
-
-        v_c0 = vdup_n_u16(coeffs[0]);
-        v_c1 = vdup_n_u16(coeffs[1]);
-        v_c2 = vdup_n_u16(coeffs[2]);
-        v_c3 = vdup_n_u16(coeffs[3]);
-        v_c4 = vdup_n_u16(coeffs[4]);
-        v_c5 = vdup_n_u16(coeffs[5]);
-        v_c6 = vdup_n_u16(coeffs[6]);
-        v_c7 = vdup_n_u16(coeffs[7]);
-        v_c8 = vdup_n_u16(coeffs[8]);
-        v_delta = vdupq_n_u32(1 << (xyz_shift - 1));
     }
     void operator()(const uchar * src, uchar * dst, int n) const
     {
@@ -341,99 +330,109 @@ struct RGB2XYZ_i<uchar>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-        n *= 3;
 
-        for ( ; i <= n - 24; i += 24, src += scn * 8)
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        int descaleShift = 1 << (shift-1);
+        v_int16 vdescale = vx_setall_s16(descaleShift);
+        v_int16 cxbg, cxr1, cybg, cyr1, czbg, czr1;
+        v_int16 dummy;
+        v_zip(vx_setall_s16((short)C0), vx_setall_s16((short)C1), cxbg, dummy);
+        v_zip(vx_setall_s16((short)C2), vx_setall_s16(        1), cxr1, dummy);
+        v_zip(vx_setall_s16((short)C3), vx_setall_s16((short)C4), cybg, dummy);
+        v_zip(vx_setall_s16((short)C5), vx_setall_s16(        1), cyr1, dummy);
+        v_zip(vx_setall_s16((short)C6), vx_setall_s16((short)C7), czbg, dummy);
+        v_zip(vx_setall_s16((short)C8), vx_setall_s16(        1), czr1, dummy);
+
+        for( ; i <= n-vsize;
+             i += vsize, src += scn*vsize, dst += 3*vsize)
         {
-            uint8x8x3_t v_dst;
-            uint16x8x3_t v_src16;
-
-            if (scn == 3)
+            v_uint8 b, g, r, a;
+            if(scn == 4)
             {
-                uint8x8x3_t v_src = vld3_u8(src);
-                v_src16.val[0] = vmovl_u8(v_src.val[0]);
-                v_src16.val[1] = vmovl_u8(v_src.val[1]);
-                v_src16.val[2] = vmovl_u8(v_src.val[2]);
+                v_load_deinterleave(src, b, g, r, a);
             }
-            else
+            else // scn == 3
             {
-                uint8x8x4_t v_src = vld4_u8(src);
-                v_src16.val[0] = vmovl_u8(v_src.val[0]);
-                v_src16.val[1] = vmovl_u8(v_src.val[1]);
-                v_src16.val[2] = vmovl_u8(v_src.val[2]);
+                v_load_deinterleave(src, b, g, r);
             }
 
-            uint16x4_t v_s0 = vget_low_u16(v_src16.val[0]),
-                       v_s1 = vget_low_u16(v_src16.val[1]),
-                       v_s2 = vget_low_u16(v_src16.val[2]);
+            v_uint16 b0, b1, g0, g1, r0, r1;
+            v_expand(b, b0, b1);
+            v_expand(g, g0, g1);
+            v_expand(r, r0, r1);
 
-            uint32x4_t v_X0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c0), v_s1, v_c1), v_s2, v_c2);
-            uint32x4_t v_Y0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c3), v_s1, v_c4), v_s2, v_c5);
-            uint32x4_t v_Z0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c6), v_s1, v_c7), v_s2, v_c8);
-            v_X0 = vshrq_n_u32(vaddq_u32(v_X0, v_delta), xyz_shift);
-            v_Y0 = vshrq_n_u32(vaddq_u32(v_Y0, v_delta), xyz_shift);
-            v_Z0 = vshrq_n_u32(vaddq_u32(v_Z0, v_delta), xyz_shift);
+            v_int16 sb0, sb1, sg0, sg1, sr0, sr1;
+            sr0 = v_reinterpret_as_s16(r0); sr1 = v_reinterpret_as_s16(r1);
+            sg0 = v_reinterpret_as_s16(g0); sg1 = v_reinterpret_as_s16(g1);
+            sb0 = v_reinterpret_as_s16(b0); sb1 = v_reinterpret_as_s16(b1);
 
-            v_s0 = vget_high_u16(v_src16.val[0]),
-            v_s1 = vget_high_u16(v_src16.val[1]),
-            v_s2 = vget_high_u16(v_src16.val[2]);
+            v_int16 bg[4], rd[4];
+            v_zip(sb0, sg0, bg[0], bg[1]);
+            v_zip(sb1, sg1, bg[2], bg[3]);
+            v_zip(sr0, vdescale, rd[0], rd[1]);
+            v_zip(sr1, vdescale, rd[2], rd[3]);
 
-            uint32x4_t v_X1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c0), v_s1, v_c1), v_s2, v_c2);
-            uint32x4_t v_Y1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c3), v_s1, v_c4), v_s2, v_c5);
-            uint32x4_t v_Z1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c6), v_s1, v_c7), v_s2, v_c8);
-            v_X1 = vshrq_n_u32(vaddq_u32(v_X1, v_delta), xyz_shift);
-            v_Y1 = vshrq_n_u32(vaddq_u32(v_Y1, v_delta), xyz_shift);
-            v_Z1 = vshrq_n_u32(vaddq_u32(v_Z1, v_delta), xyz_shift);
+            v_uint32 vx[4], vy[4], vz[4];
+            for(int j = 0; j < 4; j++)
+            {
+                vx[j] = v_reinterpret_as_u32(v_dotprod(bg[j], cxbg) + v_dotprod(rd[j], cxr1)) >> shift;
+                vy[j] = v_reinterpret_as_u32(v_dotprod(bg[j], cybg) + v_dotprod(rd[j], cyr1)) >> shift;
+                vz[j] = v_reinterpret_as_u32(v_dotprod(bg[j], czbg) + v_dotprod(rd[j], czr1)) >> shift;
+            }
 
-            v_dst.val[0] = vqmovn_u16(vcombine_u16(vmovn_u32(v_X0), vmovn_u32(v_X1)));
-            v_dst.val[1] = vqmovn_u16(vcombine_u16(vmovn_u32(v_Y0), vmovn_u32(v_Y1)));
-            v_dst.val[2] = vqmovn_u16(vcombine_u16(vmovn_u32(v_Z0), vmovn_u32(v_Z1)));
+            v_uint16 x0, x1, y0, y1, z0, z1;
+            x0 = v_pack(vx[0], vx[1]);
+            x1 = v_pack(vx[2], vx[3]);
+            y0 = v_pack(vy[0], vy[1]);
+            y1 = v_pack(vy[2], vy[3]);
+            z0 = v_pack(vz[0], vz[1]);
+            z1 = v_pack(vz[2], vz[3]);
 
-            vst3_u8(dst + i, v_dst);
+            v_uint8 x, y, z;
+            x = v_pack(x0, x1);
+            y = v_pack(y0, y1);
+            z = v_pack(z0, z1);
+
+            v_store_interleave(dst, x, y, z);
         }
+        vx_cleanup();
+#endif
 
-        for ( ; i < n; i += 3, src += scn)
+        for ( ; i < n; i++, src += scn, dst += 3)
         {
-            int X = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, xyz_shift);
-            int Y = CV_DESCALE(src[0]*C3 + src[1]*C4 + src[2]*C5, xyz_shift);
-            int Z = CV_DESCALE(src[0]*C6 + src[1]*C7 + src[2]*C8, xyz_shift);
-            dst[i] = saturate_cast<uchar>(X);
-            dst[i+1] = saturate_cast<uchar>(Y);
-            dst[i+2] = saturate_cast<uchar>(Z);
+            uchar b = src[0], g = src[1], r = src[2];
+
+            int X = CV_DESCALE(b*C0 + g*C1 + r*C2, shift);
+            int Y = CV_DESCALE(b*C3 + g*C4 + r*C5, shift);
+            int Z = CV_DESCALE(b*C6 + g*C7 + r*C8, shift);
+            dst[0] = saturate_cast<uchar>(X);
+            dst[1] = saturate_cast<uchar>(Y);
+            dst[2] = saturate_cast<uchar>(Z);
         }
     }
 
     int srccn, coeffs[9];
-    uint16x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_c5, v_c6, v_c7, v_c8;
-    uint32x4_t v_delta;
 };
+
 
 template <>
 struct RGB2XYZ_i<ushort>
 {
     typedef ushort channel_type;
+    static const int shift = xyz_shift;
+    static const int fix_shift = (int)(sizeof(short)*8 - shift);
 
     RGB2XYZ_i(int _srccn, int blueIdx, const float* _coeffs) : srccn(_srccn)
     {
         for( int i = 0; i < 9; i++ )
-            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << xyz_shift)) : sRGB2XYZ_D65_i[i];
+            coeffs[i] = _coeffs ? cvRound(_coeffs[i]*(1 << shift)) : sRGB2XYZ_D65_i[i];
         if(blueIdx == 0)
         {
             std::swap(coeffs[0], coeffs[2]);
             std::swap(coeffs[3], coeffs[5]);
             std::swap(coeffs[6], coeffs[8]);
         }
-
-        v_c0 = vdup_n_u16(coeffs[0]);
-        v_c1 = vdup_n_u16(coeffs[1]);
-        v_c2 = vdup_n_u16(coeffs[2]);
-        v_c3 = vdup_n_u16(coeffs[3]);
-        v_c4 = vdup_n_u16(coeffs[4]);
-        v_c5 = vdup_n_u16(coeffs[5]);
-        v_c6 = vdup_n_u16(coeffs[6]);
-        v_c7 = vdup_n_u16(coeffs[7]);
-        v_c8 = vdup_n_u16(coeffs[8]);
-        v_delta = vdupq_n_u32(1 << (xyz_shift - 1));
     }
 
     void operator()(const ushort * src, ushort * dst, int n) const
@@ -442,99 +441,108 @@ struct RGB2XYZ_i<ushort>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-        n *= 3;
+#if CV_SIMD
+        const int vsize = v_uint16::nlanes;
+        const int descaleShift = 1 << (shift-1);
+        v_int16 vdescale = vx_setall_s16(descaleShift);
+        v_int16 vc0 = vx_setall_s16((short)C0), vc1 = vx_setall_s16((short)C1), vc2 = vx_setall_s16((short)C2);
+        v_int16 vc3 = vx_setall_s16((short)C3), vc4 = vx_setall_s16((short)C4), vc5 = vx_setall_s16((short)C5);
+        v_int16 vc6 = vx_setall_s16((short)C6), vc7 = vx_setall_s16((short)C7), vc8 = vx_setall_s16((short)C8);
+        v_int16 zero = vx_setzero_s16(), one = vx_setall_s16(1);
+        v_int16 cxbg, cxr1, cybg, cyr1, czbg, czr1;
+        v_int16 dummy;
+        v_zip(vc0, vc1, cxbg, dummy);
+        v_zip(vc2, one, cxr1, dummy);
+        v_zip(vc3, vc4, cybg, dummy);
+        v_zip(vc5, one, cyr1, dummy);
+        v_zip(vc6, vc7, czbg, dummy);
+        v_zip(vc8, one, czr1, dummy);
 
-        for ( ; i <= n - 24; i += 24, src += scn * 8)
+        for (; i <= n-vsize;
+             i += vsize, src += scn*vsize, dst += 3*vsize)
         {
-            uint16x8x3_t v_src, v_dst;
-
-            if (scn == 3)
-                v_src = vld3q_u16(src);
-            else
+            v_uint16 b, g, r, a;
+            if(scn == 4)
             {
-                uint16x8x4_t v_src4 = vld4q_u16(src);
-                v_src.val[0] = v_src4.val[0];
-                v_src.val[1] = v_src4.val[1];
-                v_src.val[2] = v_src4.val[2];
+                v_load_deinterleave(src, b, g, r, a);
+            }
+            else // scn == 3
+            {
+                v_load_deinterleave(src, b, g, r);
             }
 
-            uint16x4_t v_s0 = vget_low_u16(v_src.val[0]),
-                       v_s1 = vget_low_u16(v_src.val[1]),
-                       v_s2 = vget_low_u16(v_src.val[2]);
+            v_int16 sb, sg, sr;
+            sr = v_reinterpret_as_s16(r);
+            sg = v_reinterpret_as_s16(g);
+            sb = v_reinterpret_as_s16(b);
 
-            uint32x4_t v_X0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c0), v_s1, v_c1), v_s2, v_c2);
-            uint32x4_t v_Y0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c3), v_s1, v_c4), v_s2, v_c5);
-            uint32x4_t v_Z0 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c6), v_s1, v_c7), v_s2, v_c8);
-            v_X0 = vshrq_n_u32(vaddq_u32(v_X0, v_delta), xyz_shift);
-            v_Y0 = vshrq_n_u32(vaddq_u32(v_Y0, v_delta), xyz_shift);
-            v_Z0 = vshrq_n_u32(vaddq_u32(v_Z0, v_delta), xyz_shift);
+            // fixing 16bit signed multiplication
+            v_int16 xmr, xmg, xmb;
+            v_int16 ymr, ymg, ymb;
+            v_int16 zmr, zmg, zmb;
 
-            v_s0 = vget_high_u16(v_src.val[0]),
-            v_s1 = vget_high_u16(v_src.val[1]),
-            v_s2 = vget_high_u16(v_src.val[2]);
+            v_int16 mr = sr < zero, mg = sg < zero, mb = sb < zero;
 
-            uint32x4_t v_X1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c0), v_s1, v_c1), v_s2, v_c2);
-            uint32x4_t v_Y1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c3), v_s1, v_c4), v_s2, v_c5);
-            uint32x4_t v_Z1 = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c6), v_s1, v_c7), v_s2, v_c8);
-            v_X1 = vshrq_n_u32(vaddq_u32(v_X1, v_delta), xyz_shift);
-            v_Y1 = vshrq_n_u32(vaddq_u32(v_Y1, v_delta), xyz_shift);
-            v_Z1 = vshrq_n_u32(vaddq_u32(v_Z1, v_delta), xyz_shift);
+            xmb = mb & vc0;
+            xmg = mg & vc1;
+            xmr = mr & vc2;
+            ymb = mb & vc3;
+            ymg = mg & vc4;
+            ymr = mr & vc5;
+            zmb = mb & vc6;
+            zmg = mg & vc7;
+            zmr = mr & vc8;
 
-            v_dst.val[0] = vcombine_u16(vqmovn_u32(v_X0), vqmovn_u32(v_X1));
-            v_dst.val[1] = vcombine_u16(vqmovn_u32(v_Y0), vqmovn_u32(v_Y1));
-            v_dst.val[2] = vcombine_u16(vqmovn_u32(v_Z0), vqmovn_u32(v_Z1));
+            v_int32 xfix0, xfix1, yfix0, yfix1, zfix0, zfix1;
+            v_expand(xmr + xmg + xmb, xfix0, xfix1);
+            v_expand(ymr + ymg + ymb, yfix0, yfix1);
+            v_expand(zmr + zmg + zmb, zfix0, zfix1);
 
-            vst3q_u16(dst + i, v_dst);
+            xfix0 = xfix0 << 16;
+            xfix1 = xfix1 << 16;
+            yfix0 = yfix0 << 16;
+            yfix1 = yfix1 << 16;
+            zfix0 = zfix0 << 16;
+            zfix1 = zfix1 << 16;
+
+            v_int16 bg0, bg1, rd0, rd1;
+            v_zip(sb, sg, bg0, bg1);
+            v_zip(sr, vdescale, rd0, rd1);
+
+            v_uint32 x0, x1, y0, y1, z0, z1;
+
+            x0 = v_reinterpret_as_u32(v_dotprod(bg0, cxbg) + v_dotprod(rd0, cxr1) + xfix0) >> shift;
+            x1 = v_reinterpret_as_u32(v_dotprod(bg1, cxbg) + v_dotprod(rd1, cxr1) + xfix1) >> shift;
+            y0 = v_reinterpret_as_u32(v_dotprod(bg0, cybg) + v_dotprod(rd0, cyr1) + yfix0) >> shift;
+            y1 = v_reinterpret_as_u32(v_dotprod(bg1, cybg) + v_dotprod(rd1, cyr1) + yfix1) >> shift;
+            z0 = v_reinterpret_as_u32(v_dotprod(bg0, czbg) + v_dotprod(rd0, czr1) + zfix0) >> shift;
+            z1 = v_reinterpret_as_u32(v_dotprod(bg1, czbg) + v_dotprod(rd1, czr1) + zfix1) >> shift;
+
+            v_uint16 x, y, z;
+            x = v_pack(x0, x1);
+            y = v_pack(y0, y1);
+            z = v_pack(z0, z1);
+
+            v_store_interleave(dst, x, y, z);
         }
 
-        for ( ; i <= n - 12; i += 12, src += scn * 4)
+        vx_cleanup();
+#endif
+        for ( ; i < n; i++, src += scn, dst += 3)
         {
-            uint16x4x3_t v_dst;
-            uint16x4_t v_s0, v_s1, v_s2;
-
-            if (scn == 3)
-            {
-                uint16x4x3_t v_src = vld3_u16(src);
-                v_s0 = v_src.val[0];
-                v_s1 = v_src.val[1];
-                v_s2 = v_src.val[2];
-            }
-            else
-            {
-                uint16x4x4_t v_src = vld4_u16(src);
-                v_s0 = v_src.val[0];
-                v_s1 = v_src.val[1];
-                v_s2 = v_src.val[2];
-            }
-
-            uint32x4_t v_X = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c0), v_s1, v_c1), v_s2, v_c2);
-            uint32x4_t v_Y = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c3), v_s1, v_c4), v_s2, v_c5);
-            uint32x4_t v_Z = vmlal_u16(vmlal_u16(vmull_u16(v_s0, v_c6), v_s1, v_c7), v_s2, v_c8);
-
-            v_dst.val[0] = vqmovn_u32(vshrq_n_u32(vaddq_u32(v_X, v_delta), xyz_shift));
-            v_dst.val[1] = vqmovn_u32(vshrq_n_u32(vaddq_u32(v_Y, v_delta), xyz_shift));
-            v_dst.val[2] = vqmovn_u32(vshrq_n_u32(vaddq_u32(v_Z, v_delta), xyz_shift));
-
-            vst3_u16(dst + i, v_dst);
-        }
-
-        for ( ; i < n; i += 3, src += scn)
-        {
-            int X = CV_DESCALE(src[0]*C0 + src[1]*C1 + src[2]*C2, xyz_shift);
-            int Y = CV_DESCALE(src[0]*C3 + src[1]*C4 + src[2]*C5, xyz_shift);
-            int Z = CV_DESCALE(src[0]*C6 + src[1]*C7 + src[2]*C8, xyz_shift);
-            dst[i] = saturate_cast<ushort>(X);
-            dst[i+1] = saturate_cast<ushort>(Y);
-            dst[i+2] = saturate_cast<ushort>(Z);
+            ushort b = src[0], g = src[1], r = src[2];
+            int X = CV_DESCALE(b*C0 + g*C1 + r*C2, shift);
+            int Y = CV_DESCALE(b*C3 + g*C4 + r*C5, shift);
+            int Z = CV_DESCALE(b*C6 + g*C7 + r*C8, shift);
+            dst[0] = saturate_cast<ushort>(X);
+            dst[1] = saturate_cast<ushort>(Y);
+            dst[2] = saturate_cast<ushort>(Z);
         }
     }
 
     int srccn, coeffs[9];
-    uint16x4_t v_c0, v_c1, v_c2, v_c3, v_c4, v_c5, v_c6, v_c7, v_c8;
-    uint32x4_t v_delta;
 };
 
-#endif
 
 template<typename _Tp> struct XYZ2RGB_f
 {
