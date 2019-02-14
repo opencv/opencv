@@ -309,16 +309,40 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 }
 
 
+/** Function that computes enhanced corelation coefficient from Georgios et.al. 2008 [5]
+*   See https://github.com/opencv/opencv/issues/12432
+*/
+double cv::computeECC(const Mat& templateImage, const Mat& inputImage, const Mat& inputMask)
+{
+        Scalar meanTemplate, sdTemplate;
+
+        meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
+        Mat templateImage_zeromean = Mat::zeros(templateImage.rows, templateImage.cols, templateImage.type());
+        subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask);
+        double templateImagenorm = std::sqrt(countNonZero(inputMask)*sdTemplate.val[0]*sdTemplate.val[0]);
+
+        Scalar meanInput, sdInput;
+
+        Mat inputImage_zeromean = Mat::zeros(inputImage.rows, inputImage.cols, inputImage.type());
+        meanStdDev(inputImage, meanInput, sdInput, inputMask);
+        subtract(inputImage, meanInput, inputImage_zeromean, inputMask);
+        double inputImagenorm = std::sqrt(countNonZero(inputMask)*sdInput.val[0]*sdInput.val[0]);
+
+        return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
+}
+
+
 double cv::findTransformECC(InputArray templateImage,
                             InputArray inputImage,
                             InputOutputArray warpMatrix,
                             int motionType,
                             TermCriteria criteria,
-                            InputArray inputMask)
+                            InputArray inputMask,
+                            int gaussFiltSize)
 {
 
 
-    Mat src = templateImage.getMat();//template iamge
+    Mat src = templateImage.getMat();//template image
     Mat dst = inputImage.getMat(); //input image (to be warped)
     Mat map = warpMatrix.getMat(); //warp (transformation)
 
@@ -420,7 +444,7 @@ double cv::findTransformECC(InputArray templateImage,
 
     Mat preMaskFloat;
     preMask.convertTo(preMaskFloat, CV_32F);
-    GaussianBlur(preMaskFloat, preMaskFloat, Size(5, 5), 0, 0);
+    GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
     // Change threshold.
     preMaskFloat *= (0.5/0.95);
     // Rounding conversion.
