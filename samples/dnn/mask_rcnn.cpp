@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 
     Net net = readNet(modelWeights, textGraph,"tensorflow");
 
-    string str, outputFile;
+    string str;
     VideoCapture cap;
     Mat frame, blob;
 
