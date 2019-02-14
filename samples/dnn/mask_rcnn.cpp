@@ -63,9 +63,7 @@ int main(int argc, char** argv)
         colors.push_back( Scalar(rand() % 255,rand() % 255,rand() % 255 ,255.0));
     }
 
-    Net net = readNetFromTensorflow(modelWeights, textGraph);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
+    Net net = readNet(modelWeights, textGraph,"tensorflow");
 
     string str, outputFile;
     VideoCapture cap;
