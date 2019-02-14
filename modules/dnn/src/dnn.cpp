@@ -730,9 +730,9 @@ struct DataLayer : public Layer
         biases->set(biasesVec);
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ScaleShiftLayer ieLayer(name);
-        ieLayer.setWeights(weights);
-        ieLayer.setBiases(biases);
+        InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
+        addConstantData("weights", weights, ieLayer);
+        addConstantData("biases", biases, ieLayer);
 #else
         InferenceEngine::LayerParams lp;
         lp.name = name;
@@ -1638,24 +1638,14 @@ struct Net::Impl
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
-                bool hasWeights = false;
                 for (const std::string& name : {"weights", "biases"})
                 {
                     auto it = ieNode->layer.getParameters().find(name);
                     if (it != ieNode->layer.getParameters().end())
                     {
-                        InferenceEngine::Blob::CPtr bp = it->second.as<InferenceEngine::Blob::CPtr>();
-                        it->second = (InferenceEngine::Blob::CPtr)convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(bp));
-                        hasWeights = true;
+                        InferenceEngine::Blob::Ptr bp = it->second.as<InferenceEngine::Blob::Ptr>();
+                        it->second = convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(bp));
                     }
-                }
-                if (!hasWeights)
-                {
-                    InferenceEngine::Blob::Ptr blob = InferenceEngine::make_shared_blob<int16_t>(
-                                                          InferenceEngine::Precision::FP16,
-                                                          InferenceEngine::Layout::C, {1});
-                    blob->allocate();
-                    ieNode->layer.getParameters()["weights"] = (InferenceEngine::Blob::CPtr)blob;
                 }
 #else
                 auto& blobs = ieNode->layer.getConstantData();

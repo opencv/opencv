@@ -125,7 +125,9 @@ public:
             ieLayer.getParameters()["axis"] = input->dims.size() - 1;
             ieLayer.getParameters()["out_sizes"] = input->dims[0];
         }
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
+        std::vector<size_t> shape(input->dims);
+        std::reverse(shape.begin(), shape.end());
+        ieLayer.setInputPorts({InferenceEngine::Port(shape)});
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #else
