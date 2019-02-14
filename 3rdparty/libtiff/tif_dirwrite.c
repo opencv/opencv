@@ -1,5 +1,3 @@
-/* $Id: tif_dirwrite.c,v 1.89 2017-08-23 13:33:42 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -697,8 +695,11 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
 								}
 								break;
 							default:
-								assert(0);   /* we should never get here */
-								break;
+								TIFFErrorExt(tif->tif_clientdata,module,
+								            "Cannot write tag %d (%s)",
+								            TIFFFieldTag(o),
+                                                                            o->field_name ? o->field_name : "unknown");
+								goto bad;
 						}
 					}
 				}

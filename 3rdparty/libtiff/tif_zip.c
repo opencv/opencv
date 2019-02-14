@@ -1,5 +1,3 @@
-/* $Id: tif_zip.c,v 1.37 2017-05-10 15:21:16 erouault Exp $ */
-
 /*
  * Copyright (c) 1995-1997 Sam Leffler
  * Copyright (c) 1995-1997 Silicon Graphics, Inc.
