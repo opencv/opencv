@@ -295,7 +295,7 @@ public:
                 l.getParameters()["channel_shared"] = blobs[0].total() == 1;
             }
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
-            l.getParameters()["weights"] = (InferenceEngine::Blob::CPtr)weights;
+            l.getParameters()["weights"] = weights;
 #else
             l.addConstantData("weights", weights);
 #endif

@@ -524,12 +524,12 @@ public:
             if (_stepX == _stepY)
             {
                 l.getParameters()["step"] = _stepX;
-                l.getParameters()["step_h"] = 0.0;
-                l.getParameters()["step_w"] = 0.0;
+                l.getParameters()["step_h"] = 0.0f;
+                l.getParameters()["step_w"] = 0.0f;
             }
             else
             {
-                l.getParameters()["step"] = 0.0;
+                l.getParameters()["step"] = 0.0f;
                 l.getParameters()["step_h"] = _stepY;
                 l.getParameters()["step_w"] = _stepX;
             }
