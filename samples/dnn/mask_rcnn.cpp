@@ -21,7 +21,7 @@ string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
-    "{ classes n   | imscoco_labels.names | Path to a text file with names of classes.  }"
+    "{ classes n   | mscoco_labels.names | Path to a text file with names of classes.  }"
     "{ model w     |./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
     "{ config c    |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr        | .5 | Confidence threshold. }"
@@ -58,15 +58,9 @@ int main(int argc, char** argv)
     string line;
     while (getline(ifs, line)) classes.push_back(line);
 
-    string colorsFile = "colors.txt";
-    ifstream colorFptr(colorsFile.c_str());
-    while (getline(colorFptr, line)) {
-        char* pEnd;
-        double r, g, b;
-        r = strtod (line.c_str(), &pEnd);
-        g = strtod (pEnd, NULL);
-        b = strtod (pEnd, NULL);
-        colors.push_back(Scalar(r, g, b, 255.0));
+    for(int _c =0; _c<=10; _c++)
+    {	    
+        colors.push_back( Scalar(rand() % 255,rand() % 255,rand() % 255 ,255.0));
     }
 
     Net net = readNetFromTensorflow(modelWeights, textGraph);
@@ -132,7 +126,7 @@ int main(int argc, char** argv)
 
         Mat detectedFrame;
         frame.convertTo(detectedFrame, CV_8U);
-        imshow("Deep learning object detection in OpenCV", frame);
+        imshow("Mask R-CNN sample", frame);
     }
 
     cap.release();
