@@ -3,6 +3,7 @@
 // Downloads:
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
 // https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt
+// https://raw.githubusercontent.com/spmallick/learnopencv/master/Mask-RCNN/mscoco_labels.names
 
 #include <fstream>
 #include <sstream>
@@ -21,7 +22,7 @@ string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
-    "{ classes n   | mscoco_labels.names | Path to a text file with names of classes.  }"
+    "{ classes n   |./mscoco_labels.names | Path to a text file with names of classes.  }"
     "{ model w     |./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
     "{ config c    |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr        | .5 | Confidence threshold. }"
