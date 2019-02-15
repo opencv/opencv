@@ -4697,7 +4697,7 @@ public:
       init(size, type, 0, CV_ELEM_SIZE(type)*size.width, pt1, pt2, connectivity, leftToRight);
     }
     void init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2, int connectivity = 8, bool leftToRight = false);
-  
+
     /** @brief returns pointer to the current pixel
     */
     uchar* operator *();
