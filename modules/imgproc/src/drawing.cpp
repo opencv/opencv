@@ -244,7 +244,7 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
     }
 
     this->ptr0 = data;
-    this->step = dataStep;
+    this->step = static_cast<int>(dataStep);
     this->elemSize = (int)bt_pix0;
 }
 
