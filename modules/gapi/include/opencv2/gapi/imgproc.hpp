@@ -114,6 +114,34 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL(GNV12toRGB, <GMat(GMat, GMat)>, "org.opencv.imgproc.colorconvert.nv12torgb") {
+        static GMatDesc outMeta(GMatDesc in_y, GMatDesc in_uv) {
+            GAPI_Assert(in_y.chan == 1);
+            GAPI_Assert(in_uv.chan == 2);
+            GAPI_Assert(in_y.depth == CV_8U);
+            GAPI_Assert(in_uv.depth == CV_8U);
+            GAPI_Assert(in_uv.size.width % 2 == 0);
+            GAPI_Assert(in_uv.size.height % 2 == 0);
+            GAPI_Assert(in_y.size.width == 2 * in_uv.size.width);
+            GAPI_Assert(in_y.size.height == 2 * in_uv.size.height);
+            return in_y.withType(CV_8U, 3); // type will be CV_8UC3;
+        }
+    };
+
+    G_TYPED_KERNEL(GNV12toBGR, <GMat(GMat, GMat)>, "org.opencv.imgproc.colorconvert.nv12tobgr") {
+        static GMatDesc outMeta(GMatDesc in_y, GMatDesc in_uv) {
+            GAPI_Assert(in_y.chan == 1);
+            GAPI_Assert(in_uv.chan == 2);
+            GAPI_Assert(in_y.depth == CV_8U);
+            GAPI_Assert(in_uv.depth == CV_8U);
+            GAPI_Assert(in_uv.size.width % 2 == 0);
+            GAPI_Assert(in_uv.size.height % 2 == 0);
+            GAPI_Assert(in_y.size.width == 2 * in_uv.size.width);
+            GAPI_Assert(in_y.size.height == 2 * in_uv.size.height);
+            return in_y.withType(CV_8U, 3); // type will be CV_8UC3;
+        }
+    };
+
     G_TYPED_KERNEL(GRGB2Lab, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.rgb2lab") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
@@ -728,6 +756,36 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2Lab, RGB2YUV
 */
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
+
+/** @brief Converts an image from NV12 (YUV420p) color space to RGB.
+The function converts an input image from NV12 color space to RGB.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12torgb"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2RGB, NV12toBGR
+*/
+GAPI_EXPORTS GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
+
+/** @brief Converts an image from NV12 (YUV420p) color space to BGR.
+The function converts an input image from NV12 color space to RGB.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12tobgr"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2BGR, NV12toRGB
+*/
+GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
 //! @} gapi_colorconvert
 } //namespace gapi
 } //namespace cv
