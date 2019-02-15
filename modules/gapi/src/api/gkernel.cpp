@@ -37,7 +37,13 @@ bool cv::gapi::GKernelPackage::includesAPI(const std::string &id) const
 void cv::gapi::GKernelPackage::removeAPI(const std::string &id)
 {
     for (auto &bk : m_backend_kernels)
-        bk.second.erase(id);
+    {
+        if (ade::util::contains(bk.second, id))
+        {
+            bk.second.erase(id);
+            break;
+        }
+    }
 }
 
 std::size_t cv::gapi::GKernelPackage::size() const
@@ -51,14 +57,10 @@ std::size_t cv::gapi::GKernelPackage::size() const
 }
 
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
-                                           const GKernelPackage  &rhs,
-                                           const cv::unite_policy policy)
+                                           const GKernelPackage  &rhs)
 {
 
-    if (policy == cv::unite_policy::REPLACE)
-    {
-        // REPLACE policy: if there is a collision, prefer RHS
-        // to LHS
+        // If there is a collision, prefer RHS to LHS
         // since RHS package has a precedense, start with its copy
         GKernelPackage result(rhs);
         // now iterate over LHS package and put kernel if and only
@@ -72,21 +74,6 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
             }
         }
         return result;
-    }
-    else if (policy == cv::unite_policy::KEEP)
-    {
-        // KEEP policy: if there is a collision, just keep two versions
-        // of a kernel
-        GKernelPackage result(lhs);
-        for (const auto &p : rhs.m_backend_kernels)
-        {
-            result.m_backend_kernels[p.first].insert(p.second.begin(),
-                                                     p.second.end());
-        }
-        return result;
-    }
-    else GAPI_Assert(false);
-    return GKernelPackage();
 }
 
 std::pair<cv::gapi::GBackend, cv::GKernelImpl>

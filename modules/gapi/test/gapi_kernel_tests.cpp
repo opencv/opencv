@@ -78,23 +78,6 @@ TEST(KernelPackage, Include_Add)
     EXPECT_TRUE(pkg.includes<J::Qux>());
 }
 
-TEST(KernelPackage, Include_KEEP)
-{
-    namespace J = Jupiter;
-    namespace S = Saturn;
-    auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
-    EXPECT_FALSE(pkg.includes<S::Foo>());
-    EXPECT_FALSE(pkg.includes<S::Bar>());
-
-    pkg.include<S::Bar>(); // default (KEEP)
-    EXPECT_TRUE(pkg.includes<J::Bar>());
-    EXPECT_TRUE(pkg.includes<S::Bar>());
-
-    pkg.include<S::Foo>(cv::unite_policy::KEEP); // explicit (KEEP)
-    EXPECT_TRUE(pkg.includes<J::Foo>());
-    EXPECT_TRUE(pkg.includes<S::Foo>());
-}
-
 TEST(KernelPackage, Include_REPLACE)
 {
     namespace J = Jupiter;
@@ -102,7 +85,7 @@ TEST(KernelPackage, Include_REPLACE)
     auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
     EXPECT_FALSE(pkg.includes<S::Bar>());
 
-    pkg.include<S::Bar>(cv::unite_policy::REPLACE);
+    pkg.include<S::Bar>();
     EXPECT_FALSE(pkg.includes<J::Bar>());
     EXPECT_TRUE(pkg.includes<S::Bar>());
 }
@@ -177,7 +160,7 @@ TEST(KernelPackage, Combine_REPLACE_Full)
     namespace S = Saturn;
     auto j_pkg = cv::gapi::kernels<J::Foo, J::Bar, J::Baz>();
     auto s_pkg = cv::gapi::kernels<S::Foo, S::Bar, S::Baz>();
-    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::REPLACE);
+    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg);
 
     EXPECT_EQ(3u, u_pkg.size());
     EXPECT_FALSE(u_pkg.includes<J::Foo>());
@@ -194,7 +177,7 @@ TEST(KernelPackage, Combine_REPLACE_Partial)
     namespace S = Saturn;
     auto j_pkg = cv::gapi::kernels<J::Foo, J::Bar>();
     auto s_pkg = cv::gapi::kernels<S::Bar>();
-    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::REPLACE);
+    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg);
 
     EXPECT_EQ(2u, u_pkg.size());
     EXPECT_TRUE (u_pkg.includes<J::Foo>());
@@ -208,38 +191,7 @@ TEST(KernelPackage, Combine_REPLACE_Append)
     namespace S = Saturn;
     auto j_pkg = cv::gapi::kernels<J::Foo, J::Bar>();
     auto s_pkg = cv::gapi::kernels<S::Qux>();
-    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::REPLACE);
-
-    EXPECT_EQ(3u, u_pkg.size());
-    EXPECT_TRUE(u_pkg.includes<J::Foo>());
-    EXPECT_TRUE(u_pkg.includes<J::Bar>());
-    EXPECT_TRUE(u_pkg.includes<S::Qux>());
-}
-
-TEST(KernelPackage, Combine_KEEP_AllDups)
-{
-    namespace J = Jupiter;
-    namespace S = Saturn;
-    auto j_pkg = cv::gapi::kernels<J::Foo, J::Bar, J::Baz>();
-    auto s_pkg = cv::gapi::kernels<S::Foo, S::Bar, S::Baz>();
-    auto u_pkg = cv::gapi::combine(j_pkg ,s_pkg, cv::unite_policy::KEEP);
-
-    EXPECT_EQ(6u, u_pkg.size());
-    EXPECT_TRUE(u_pkg.includes<J::Foo>());
-    EXPECT_TRUE(u_pkg.includes<J::Bar>());
-    EXPECT_TRUE(u_pkg.includes<J::Baz>());
-    EXPECT_TRUE(u_pkg.includes<S::Foo>());
-    EXPECT_TRUE(u_pkg.includes<S::Bar>());
-    EXPECT_TRUE(u_pkg.includes<S::Baz>());
-}
-
-TEST(KernelPackage, Combine_KEEP_Append_NoDups)
-{
-    namespace J = Jupiter;
-    namespace S = Saturn;
-    auto j_pkg = cv::gapi::kernels<J::Foo, J::Bar>();
-    auto s_pkg = cv::gapi::kernels<S::Qux>();
-    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg, cv::unite_policy::KEEP);
+    auto u_pkg = cv::gapi::combine(j_pkg, s_pkg);
 
     EXPECT_EQ(3u, u_pkg.size());
     EXPECT_TRUE(u_pkg.includes<J::Foo>());
@@ -252,7 +204,7 @@ TEST(KernelPackage, TestWithEmptyLHS)
     namespace J = Jupiter;
     auto lhs = cv::gapi::kernels<>();
     auto rhs = cv::gapi::kernels<J::Foo>();
-    auto pkg = cv::gapi::combine(lhs, rhs, cv::unite_policy::KEEP);
+    auto pkg = cv::gapi::combine(lhs, rhs);
 
     EXPECT_EQ(1u, pkg.size());
     EXPECT_TRUE(pkg.includes<J::Foo>());
@@ -263,7 +215,7 @@ TEST(KernelPackage, TestWithEmptyRHS)
     namespace J = Jupiter;
     auto lhs = cv::gapi::kernels<J::Foo>();
     auto rhs = cv::gapi::kernels<>();
-    auto pkg = cv::gapi::combine(lhs, rhs, cv::unite_policy::KEEP);
+    auto pkg = cv::gapi::combine(lhs, rhs);
 
     EXPECT_EQ(1u, pkg.size());
     EXPECT_TRUE(pkg.includes<J::Foo>());

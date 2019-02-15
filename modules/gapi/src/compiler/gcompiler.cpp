@@ -51,13 +51,12 @@ namespace
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
             combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels(),
-                    cv::unite_policy::KEEP);
+                    cv::gapi::imgproc::cpu::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}), cv::unite_policy::REPLACE);
+        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}));
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)

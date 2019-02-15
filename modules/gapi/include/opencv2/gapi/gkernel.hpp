@@ -243,13 +243,6 @@ public:
 
 namespace cv
 {
-// Declare <unite> in cv:: namespace
-enum class unite_policy
-{
-    REPLACE,
-    KEEP
-};
-
 namespace gapi
 {
     // Prework: model "Device" API before it gets to G-API headers.
@@ -348,9 +341,7 @@ namespace gapi {
      * one since G-API kernel implementations are _types_, not objects.
      *
      * Finally, two kernel packages can be combined into a new one
-     * with function cv::gapi::combine(). There are different rules
-     * apply to this process, see also cv::gapi::unite_policy for
-     * details.
+     * with function cv::gapi::combine()
      */
     class GAPI_EXPORTS GKernelPackage
     {
@@ -456,24 +447,15 @@ namespace gapi {
         // FIXME: No overwrites allowed?
         /**
          * @brief Put a new kernel implementation KImpl into package.
-         *
-         * @param up unite policy to use. If the package has already
-         * implementation for this kernel (probably from another
-         * backend), and cv::unite_policy::KEEP is passed, the
-         * existing implementation remains in package; on
-         * cv::unite_policy::REPLACE all other existing
-         * implementations are first dropped from the package.
          */
         template<typename KImpl>
-        void include(const cv::unite_policy up = cv::unite_policy::KEEP)
+        void include()
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
             auto kernel_impl = GKernelImpl{KImpl::kernel()};
-            if (up == cv::unite_policy::REPLACE) removeAPI(kernel_id);
-            else GAPI_Assert(up == cv::unite_policy::KEEP);
+            removeAPI(kernel_id);
 
-            // Regardless of the policy, store new impl in its storage slot.
             m_backend_kernels[backend][kernel_id] = std::move(kernel_impl);
         }
 
@@ -492,18 +474,10 @@ namespace gapi {
          *
          * @param lhs "Left-hand-side" package in the process
          * @param rhs "Right-hand-side" package in the process
-         * @param policy Unite policy which is used in case of conflicts
-         * -- when the same kernel API is implemented in both packages by
-         * different backends; cv::unite_policy::KEEP keeps both
-         * implementation in the resulting package, while
-         * cv::unite_policy::REPLACE gives precedence two kernels from
-         * "Right-hand-side".
-         *
          * @return a new kernel package.
          */
         friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                                   const GKernelPackage  &rhs,
-                                                   const cv::unite_policy policy);
+                                                   const GKernelPackage  &rhs);
     };
 
     /**
@@ -543,8 +517,7 @@ namespace gapi {
     /** @} */
 
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                        const GKernelPackage  &rhs,
-                                        const cv::unite_policy policy);
+                                        const GKernelPackage  &rhs);
 } // namespace gapi
 
 namespace detail

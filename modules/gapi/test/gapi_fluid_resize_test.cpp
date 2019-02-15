@@ -381,7 +381,7 @@ static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Si
     }break;
     default: CV_Assert(false);
     }
-    return combine(pkg, fluidTestPackage, unite_policy::KEEP);
+    return combine(pkg, fluidTestPackage);
 
 #undef RESIZE_SWITCH
 #undef RESIZE_CASE
