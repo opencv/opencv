@@ -57,17 +57,6 @@ TEST(KernelPackage, IncludesAPI)
     EXPECT_FALSE(pkg.includesAPI<I::Qux>());
 }
 
-TEST(KernelPackage, IncludesAPI_Overlapping)
-{
-    namespace J = Jupiter;
-    namespace S = Saturn;
-    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo, S::Bar>();
-    EXPECT_TRUE (pkg.includesAPI<I::Foo>());
-    EXPECT_TRUE (pkg.includesAPI<I::Bar>());
-    EXPECT_FALSE(pkg.includesAPI<I::Baz>());
-    EXPECT_FALSE(pkg.includesAPI<I::Qux>());
-}
-
 TEST(KernelPackage, Include_Add)
 {
     namespace J = Jupiter;
@@ -94,31 +83,27 @@ TEST(KernelPackage, RemoveBackend)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
-    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo>();
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Baz>();
     EXPECT_TRUE(pkg.includes<J::Foo>());
     EXPECT_TRUE(pkg.includes<J::Bar>());
-    EXPECT_TRUE(pkg.includes<S::Foo>());
 
     pkg.remove(J::backend());
     EXPECT_FALSE(pkg.includes<J::Foo>());
     EXPECT_FALSE(pkg.includes<J::Bar>());
-    EXPECT_TRUE(pkg.includes<S::Foo>());
+    EXPECT_TRUE(pkg.includes<S::Baz>());
 };
 
 TEST(KernelPackage, RemoveAPI)
 {
     namespace J = Jupiter;
     namespace S = Saturn;
-    auto pkg = cv::gapi::kernels<J::Foo, J::Bar, S::Foo, S::Bar>();
+    auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
     EXPECT_TRUE(pkg.includes<J::Foo>());
     EXPECT_TRUE(pkg.includes<J::Bar>());
-    EXPECT_TRUE(pkg.includes<S::Foo>());
 
     pkg.remove<I::Foo>();
     EXPECT_TRUE(pkg.includes<J::Bar>());
-    EXPECT_TRUE(pkg.includes<S::Bar>());
     EXPECT_FALSE(pkg.includes<J::Foo>());
-    EXPECT_FALSE(pkg.includes<S::Foo>());
 };
 
 TEST(KernelPackage, CreateHetero)
@@ -231,6 +216,14 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
 
     EXPECT_NO_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
                         compile({in_meta, in_meta}, cv::compile_args(pkg)));
+}
+
+TEST(KernelPackage, ThrowIfContainsNotUniqueId)
+{
+    namespace J = Jupiter;
+    namespace S = Saturn;
+
+    EXPECT_THROW((cv::gapi::kernels<J::Foo, J::Bar, S::Baz, S::Foo>()), std::logic_error);
 }
 
 } // namespace opencv_test

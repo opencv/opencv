@@ -15,6 +15,7 @@
 #include <unordered_map> // map (for GKernelPackage)
 #include <utility> // tuple
 #include <vector>  // lookup order
+#include <unordered_set>
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
 #include <opencv2/gapi/util/util.hpp> // Seq
@@ -51,6 +52,29 @@ template<typename, typename> class GKernelTypeM;
 
 namespace detail
 {
+    template<typename Type>
+    void setIdTo(std::unordered_multiset<std::string>* kernel_ids)
+    {
+        kernel_ids->insert(Type::API::id());
+    }
+
+    template<typename... Types>
+    void throwIfIdNotUnique()
+    {
+        std::unordered_multiset<std::string> kernel_ids;
+
+        int unused[] = { 0, (setIdTo<Types>(&kernel_ids), 0)... };
+        cv::util::suppress_unused_warning(unused);
+
+        auto not_unique = std::find_if(kernel_ids.begin(), kernel_ids.end(),
+                [&kernel_ids](const std::string& n){ return kernel_ids.count(n) != 1; });
+
+        if (not_unique != kernel_ids.end())
+        {
+            util::throw_error(std::logic_error("Kernel id " + *not_unique + " is not unique "
+                                               "in kernel package"));
+        }
+    }
     ////////////////////////////////////////////////////////////////////////////
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
@@ -509,6 +533,7 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
+        detail::throwIfIdNotUnique<KK...>();
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
