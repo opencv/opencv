@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     while (getline(ifs, line)) classes.push_back(line);
 
     for(int _c =0; _c<=10; _c++)
-    {	    
+    {
         colors.push_back( Scalar(rand() % 255,rand() % 255,rand() % 255 ,255.0));
     }
 
