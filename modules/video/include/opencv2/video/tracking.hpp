@@ -303,6 +303,7 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional mask to indicate valid values of inputImage.
+@param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
 (@cite EP08), that is
