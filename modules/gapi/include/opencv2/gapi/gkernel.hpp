@@ -14,7 +14,7 @@
 #include <type_traits> // false_type, true_type
 #include <unordered_map> // map (for GKernelPackage)
 #include <utility> // tuple
-#include <vector>  // lookup order
+//#include <vector>  // lookup order
 #include <unordered_set>
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
@@ -306,33 +306,6 @@ namespace gapi {
      * @{
      */
 
-    // Lookup order is in fact a vector of Backends to traverse during look-up
-    /**
-     * @brief Priority list of backends to use during kernel
-     *   resolution process.
-     *
-     * Priority is descending -- the first backend in the list has the
-     * top priority, and the last one has the lowest priority.
-     *
-     * If there's multiple implementations available for a kernel at
-     * the moment of graph compilation, a kernel (and thus a backend)
-     * will be selected according to this order (if the parameter is passed).
-     *
-     * Default order is not specified (and by default, only
-     * CPU(OpenCV) backend is involved in graph compilation).
-     */
-    using GLookupOrder = std::vector<GBackend>;
-    /**
-     * @brief Create a backend lookup order -- priority list of
-     * backends to use during graph compilation process.
-     *
-     * @sa GLookupOrder, @ref gapi_std_backends
-     */
-    inline GLookupOrder lookup_order(std::initializer_list<GBackend> &&list)
-    {
-        return GLookupOrder(std::move(list));
-    }
-
     // FIXME: Hide implementation
     /**
      * @brief A container class for heterogeneous kernel
@@ -440,24 +413,23 @@ namespace gapi {
         }
 
         /**
-         * @brief Find a kernel (by its API), given the look-up order.
+         * @brief Find a kernel (by its API)
          *
-         * If order is empty, returns first suitable implementation.
+         * Returns first suitable implementation.
          * Throws if nothing found.
          *
          * @return Backend which hosts matching kernel implementation.
          *
-         * @sa cv::gapi::lookup_order
          */
         template<typename KAPI>
-        GBackend lookup(const GLookupOrder &order = {}) const
+        GBackend lookup() const
         {
-            return lookup(KAPI::id(), order).first;
+            return lookup(KAPI::id()).first;
         }
 
         /// @private
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-        lookup(const std::string &id, const GLookupOrder &order = {}) const;
+        lookup(const std::string &id) const;
 
         // FIXME: No overwrites allowed?
         /**
@@ -541,10 +513,6 @@ namespace detail
     template<> struct CompileArgTag<cv::gapi::GKernelPackage>
     {
         static const char* tag() { return "gapi.kernel_package"; }
-    };
-    template<> struct CompileArgTag<cv::gapi::GLookupOrder>
-    {
-        static const char* tag() { return "gapi.lookup_order"; }
     };
 } // namespace detail
 } // namespace cv

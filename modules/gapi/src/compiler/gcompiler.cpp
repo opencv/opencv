@@ -86,7 +86,6 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 {
     using namespace std::placeholders;
     m_all_kernels       = getKernelPackage(m_args);
-    auto lookup_order   = getCompileArg<gapi::GLookupOrder>(m_args).value_or(gapi::GLookupOrder());
     auto dump_path      = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
@@ -106,8 +105,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 
     m_e.addPassStage("kernels");
     m_e.addPass("kernels", "resolve_kernels", std::bind(passes::resolveKernels, _1,
-                                                     std::ref(m_all_kernels), // NB: and not copied here
-                                                     lookup_order));
+                                              std::ref(m_all_kernels))); // NB: and not copied here
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
     m_e.addPassStage("meta");

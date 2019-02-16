@@ -77,49 +77,18 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
 }
 
 std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-cv::gapi::GKernelPackage::lookup(const std::string &id,
-                                 const GLookupOrder &order) const
+cv::gapi::GKernelPackage::lookup(const std::string &id) const
 {
-    if (order.empty())
+    // If order is empty, return what comes first
+    auto it = std::find_if(m_backend_kernels.begin(),
+            m_backend_kernels.end(),
+            [&id](const M::value_type &p) {
+            return ade::util::contains(p.second, id);
+            });
+    if (it != m_backend_kernels.end())
     {
-        // If order is empty, return what comes first
-        auto it = std::find_if(m_backend_kernels.begin(),
-                               m_backend_kernels.end(),
-                               [&id](const M::value_type &p) {
-                                   return ade::util::contains(p.second, id);
-                               });
-        if (it != m_backend_kernels.end())
-        {
-            // FIXME: Two lookups!
-            return std::make_pair(it->first, it->second.find(id)->second);
-        }
-    }
-    else
-    {
-        // There is order, so:
-        // 1. Limit search scope only to specified backends
-        //    FIXME: Currently it is not configurable if search can fall-back
-        //    to other backends (not listed in order) if kernel hasn't been found
-        //    in the look-up list
-        // 2. Query backends in the specified order
-        for (const auto &selected_backend : order)
-        {
-            const auto kernels_it = m_backend_kernels.find(selected_backend);
-            if (kernels_it == m_backend_kernels.end())
-            {
-                GAPI_LOG_WARNING(NULL,
-                                 "Backend "
-                                  << &selected_backend.priv() // FIXME: name instead
-                                  << " was listed in lookup list but was not found "
-                                     "in the package");
-                continue;
-            }
-            if (ade::util::contains(kernels_it->second, id))
-            {
-                // FIXME: two lookups!
-                return std::make_pair(selected_backend, kernels_it->second.find(id)->second);
-            }
-        }
+        // FIXME: Two lookups!
+        return std::make_pair(it->first, it->second.find(id)->second);
     }
 
     // If reached here, kernel was not found among selected backends.

@@ -44,9 +44,8 @@ void storeResultingMeta(ade::passes::PassContext &ctx);
 void expandKernels(ade::passes::PassContext &ctx,
                    const gapi::GKernelPackage& kernels);
 
-void resolveKernels(ade::passes::PassContext       &ctx,
-                    const gapi::GKernelPackage &kernels,
-                    const gapi::GLookupOrder   &order);
+void resolveKernels(ade::passes::PassContext   &ctx,
+                    const gapi::GKernelPackage &kernels);
 
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);
