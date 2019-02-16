@@ -52,19 +52,10 @@ template<typename, typename> class GKernelTypeM;
 
 namespace detail
 {
-    template<typename Type>
-    void setIdTo(std::unordered_multiset<std::string>* kernel_ids)
-    {
-        kernel_ids->insert(Type::API::id());
-    }
-
     template<typename... Types>
     void throwIfIdNotUnique()
     {
-        std::unordered_multiset<std::string> kernel_ids;
-
-        int unused[] = { 0, (setIdTo<Types>(&kernel_ids), 0)... };
-        cv::util::suppress_unused_warning(unused);
+        std::unordered_multiset<std::string> kernel_ids{ Types::API::id()... };
 
         auto not_unique = std::find_if(kernel_ids.begin(), kernel_ids.end(),
                 [&kernel_ids](const std::string& n){ return kernel_ids.count(n) != 1; });
