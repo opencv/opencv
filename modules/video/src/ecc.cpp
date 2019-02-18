@@ -314,32 +314,27 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 */
 double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask)
 {
-    Mat src = templateImage.getMat();
-    Mat dst = inputImage.getMat();
-    Mat inputMaskMat = inputMask.getMat();
+    CV_Assert(!templateImage.empty());
+    CV_Assert(!inputImage.empty());
 
-    CV_Assert(!src.empty());
-    CV_Assert(!dst.empty());
-
-    if( ! (src.type()==dst.type()))
+    if( ! (templateImage.type()==inputImage.type()))
         CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
-
-    if(inputMask.empty())
-        inputMaskMat = Mat::ones(src.rows, src.cols, CV_8U);
 
     Scalar meanTemplate, sdTemplate;
 
+    int active_pixels = inputMask.empty() ? templateImage.size().area() : countNonZero(inputMask);
+
     meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
-    Mat templateImage_zeromean = Mat::zeros(src.rows, src.cols, src.type());
-    subtract(src, meanTemplate, templateImage_zeromean, inputMask);
-    double templateImagenorm = std::sqrt(countNonZero(inputMask)*sdTemplate.val[0]*sdTemplate.val[0]);
+    Mat templateImage_zeromean = Mat::zeros(templateImage.size(), templateImage.type());
+    subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask);
+    double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
 
     Scalar meanInput, sdInput;
 
-    Mat inputImage_zeromean = Mat::zeros(dst.rows, dst.cols, dst.type());
-    meanStdDev(dst, meanInput, sdInput, inputMask);
-    subtract(dst, meanInput, inputImage_zeromean, inputMask);
-    double inputImagenorm = std::sqrt(countNonZero(inputMask)*sdInput.val[0]*sdInput.val[0]);
+    Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
+    meanStdDev(inputImage, meanInput, sdInput, inputMask);
+    subtract(inputImage, meanInput, inputImage_zeromean, inputMask);
+    double inputImagenorm = std::sqrt(active_pixels*sdInput.val[0]*sdInput.val[0]);
 
     return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
 }
