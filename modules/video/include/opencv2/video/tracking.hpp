@@ -268,8 +268,8 @@ enum
 /** @brief Computes the Enhanced Correlation Coefficient value between two images @cite EP08 .
 
 @param templateImage single-channel template image; CV_8U or CV_32F array.
-@param inputImage single-channel input image which should be warped with the final warpMatrix in
-order to provide an image similar to templateImage, same type as templateImage.
+@param inputImage single-channel input image to be warped to provide an image similar to
+ templateImage, same type as templateImage.
 @param inputMask An optional mask to indicate valid values of inputImage.
 
 @sa
