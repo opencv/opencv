@@ -508,7 +508,7 @@ namespace gapi {
                                         const GKernelPackage  &rhs);
     /**
      * @brief cv::use_only() is a special combinator which hints G-API to use only
-     * kernels specified in ::compile() (and not to extend kernels available by
+     * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
      * default with that package).
      */
 
