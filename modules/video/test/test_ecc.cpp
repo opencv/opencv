@@ -95,45 +95,6 @@ double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2){
     return sqrt(errorMat.dot(errorMat)/(mat1.rows*mat1.cols));
 }
 
-
-class CV_ECC_Test_Compute : public cvtest::BaseTest
-{
-public:
-    CV_ECC_Test_Compute();
-protected:
-    void run(int);
-    bool testCompute(int);
-};
-
-CV_ECC_Test_Compute::CV_ECC_Test_Compute(){
-}
-
-bool CV_ECC_Test_Compute::testCompute(int)
-{
-    Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
-    Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
-    Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
-    double ecc = computeECC(warpedImage, testImg, mask);
-
-    if (ecc + 1/2.0 > 1e-5){
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        ts->printf( ts->LOG, "ecc = %f, expected to be -0.5",
-            ecc);
-        return false;
-    }
-    return true;
-}
-
-void CV_ECC_Test_Compute::run(int from)
-{
-
-    if (!testCompute(from))
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-
 class CV_ECC_Test_Translation : public CV_ECC_BaseTest
 {
 public:
@@ -530,7 +491,16 @@ void CV_ECC_Test_Mask::run(int from)
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-TEST(CV_ECC_Test_Compute, accuracy) { CV_ECC_Test_Compute test; test.safe_run();}
+TEST(Video_ECC_Test_Compute, accuracy)
+{
+    Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
+    Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
+    Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
+    double ecc = computeECC(warpedImage, testImg, mask);
+
+    EXPECT_NEAR(ecc, -0.5f, 1e-5f);
+}
+
 TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}
 TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(); }
 TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }

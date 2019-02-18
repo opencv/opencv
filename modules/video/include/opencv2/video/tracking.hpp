@@ -276,7 +276,7 @@ order to provide an image similar to templateImage, same type as templateImage.
 findTransformECC
  */
 
-CV_EXPORTS_W double computeECC(const Mat& templateImage, const Mat& inputImage, const Mat& inputMask);
+CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
 
 /** @example samples/cpp/image_alignment.cpp
 An example using the image alignment ECC algorithm
@@ -334,9 +334,16 @@ an exception if algorithm does not converges.
 computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
-                                      InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
-                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-                                      InputArray inputMask = noArray(), int gaussFiltSize = 5);
+                                      InputOutputArray warpMatrix, int motionType,
+                                      TermCriteria criteria,
+                                      InputArray inputMask, int gaussFiltSize);
+
+/** @overload */
+CV_EXPORTS
+double findTransformECC(InputArray templateImage, InputArray inputImage,
+    InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
+    TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
+    InputArray inputMask = noArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

@@ -309,26 +309,39 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 }
 
 
-/** Function that computes enhanced corelation coefficient from Georgios et.al. 2008 [5]
+/** Function that computes enhanced corelation coefficient from Georgios et.al. 2008
 *   See https://github.com/opencv/opencv/issues/12432
 */
-double cv::computeECC(const Mat& templateImage, const Mat& inputImage, const Mat& inputMask)
+double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask)
 {
-        Scalar meanTemplate, sdTemplate;
+    Mat src = templateImage.getMat();
+    Mat dst = inputImage.getMat();
+    Mat inputMaskMat = inputMask.getMat();
 
-        meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
-        Mat templateImage_zeromean = Mat::zeros(templateImage.rows, templateImage.cols, templateImage.type());
-        subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask);
-        double templateImagenorm = std::sqrt(countNonZero(inputMask)*sdTemplate.val[0]*sdTemplate.val[0]);
+    CV_Assert(!src.empty());
+    CV_Assert(!dst.empty());
 
-        Scalar meanInput, sdInput;
+    if( ! (src.type()==dst.type()))
+        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
 
-        Mat inputImage_zeromean = Mat::zeros(inputImage.rows, inputImage.cols, inputImage.type());
-        meanStdDev(inputImage, meanInput, sdInput, inputMask);
-        subtract(inputImage, meanInput, inputImage_zeromean, inputMask);
-        double inputImagenorm = std::sqrt(countNonZero(inputMask)*sdInput.val[0]*sdInput.val[0]);
+    if(inputMask.empty())
+        inputMaskMat = Mat::ones(src.rows, src.cols, CV_8U);
 
-        return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
+    Scalar meanTemplate, sdTemplate;
+
+    meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
+    Mat templateImage_zeromean = Mat::zeros(src.rows, src.cols, src.type());
+    subtract(src, meanTemplate, templateImage_zeromean, inputMask);
+    double templateImagenorm = std::sqrt(countNonZero(inputMask)*sdTemplate.val[0]*sdTemplate.val[0]);
+
+    Scalar meanInput, sdInput;
+
+    Mat inputImage_zeromean = Mat::zeros(dst.rows, dst.cols, dst.type());
+    meanStdDev(dst, meanInput, sdInput, inputMask);
+    subtract(dst, meanInput, inputImage_zeromean, inputMask);
+    double inputImagenorm = std::sqrt(countNonZero(inputMask)*sdInput.val[0]*sdInput.val[0]);
+
+    return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
 }
 
 
@@ -440,7 +453,7 @@ double cv::findTransformECC(InputArray templateImage,
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
-    GaussianBlur(templateFloat, templateFloat, Size(5, 5), 0, 0);
+    GaussianBlur(templateFloat, templateFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     Mat preMaskFloat;
     preMask.convertTo(preMaskFloat, CV_32F);
@@ -452,7 +465,7 @@ double cv::findTransformECC(InputArray templateImage,
     preMask.convertTo(preMaskFloat, preMaskFloat.type());
 
     dst.convertTo(imageFloat, imageFloat.type());
-    GaussianBlur(imageFloat, imageFloat, Size(5, 5), 0, 0);
+    GaussianBlur(imageFloat, imageFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     // needed matrices for gradients and warped gradients
     Mat gradientX = Mat::zeros(hd, wd, CV_32FC1);
@@ -581,5 +594,13 @@ double cv::findTransformECC(InputArray templateImage,
     return rho;
 }
 
+double cv::findTransformECC(InputArray templateImage, InputArray inputImage,
+    InputOutputArray warpMatrix, int motionType,
+    TermCriteria criteria,
+    InputArray inputMask)
+{
+    // Use default value of 5 for gaussFiltSize to maintain backward compatibility.
+    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, 5);
+}
 
 /* End of file. */
