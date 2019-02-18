@@ -49,7 +49,8 @@ public:
     enum class Kind
     {
         Filter,
-        Resize
+        Resize,
+        NV12toRGB
     };
 
     // This function is a generic "doWork" callback

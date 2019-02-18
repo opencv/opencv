@@ -519,6 +519,9 @@ void fluid::Buffer::Priv::allocate(BorderOpt border,
     // Init physical buffer
 
     // FIXME? combine line_consumption with skew?
+    // FIXME? This formula serves general case to avoid possible deadlock,
+    // in some cases this value can be smaller:
+    // 2 lines produced, 2 consumed, data_height can be 2, not 3
     auto data_height = std::max(line_consumption, skew) + m_writer_lpi - 1;
 
     m_storage = createStorage(data_height,
