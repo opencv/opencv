@@ -63,32 +63,19 @@ namespace detail
 
     template <typename T1, typename T2>
     struct compare<T1, T2> {
-        //constexpr compare()
-        //{
-            //constexpr const char* str1 = T1::API::id();
-            //constexpr const char* str2 = T2::API::id();
-
-            //constexpr bool flag = is_equal(str1, str2);
-            //static_assert(!flag, "f;lksdj");
-            //static_assert(flag, "f;lks11dj");
-        //}
-
         static constexpr void check()
         {
-            constexpr const char* str1 = T1::API::id();
-            constexpr const char* str2 = T2::API::id();
-
-            constexpr bool flag = is_equal(str1, str2);
-            static_assert(!flag, "f;lksdj");
-            static_assert(flag, "f;lks11dj");
+            static_assert(!is_equal(T1::API::id(), T2::API::id()),
+                          "Kernel package contains kernels with same id");
         }
     };
 
     template <typename T1, typename T2, typename ...Others>
     struct compare {
-        compare() {
+        static constexpr void check()
+        {
             compare<T1, T2>::check();
-            compare<T1, Others...>();
+            compare<T1, Others...>::check();
         };
     };
 
@@ -97,9 +84,10 @@ namespace detail
 
     template <typename T1, typename ...Others>
     struct compare_all {
-        compare_all() {
-            compare<T1, Others...>();
-            compare_all<Others...>();
+        static constexpr void check_all()
+        {
+            compare<T1, Others...>::check();
+            compare_all<Others...>::check_all();
         }
     };
 
@@ -109,20 +97,23 @@ namespace detail
     template <int Size, typename ...Types>
     struct wrapper
     {
-        wrapper() { compare_all<Types...>(); };
+        static constexpr void call_wrapper() { compare_all<Types...>::check_all(); }
     };
 
     template <typename ...Types>
-    struct wrapper<0, Types...> {};
+    struct wrapper<0, Types...>
+    {
+        static constexpr void call_wrapper() {}
+    };
 
     template <typename T1>
-    struct compare_all<T1>{};
+    struct compare_all<T1>
+    {
+        static constexpr void check_all() {}
+    };
 
     template <typename ...Types>
-    void types_are_unique()
-    {
-        wrapper<sizeof...(Types), Types...>();
-    }
+    constexpr void types_are_unique() { wrapper<sizeof...(Types), Types...>::call_wrapper(); }
 
     ////////////////////////////////////////////////////////////////////////////
     // yield() is used in graph construction time as a generic method to obtain
@@ -554,6 +545,7 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
+        detail::types_are_unique<KK...>();
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
