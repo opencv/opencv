@@ -52,20 +52,78 @@ template<typename, typename> class GKernelTypeM;
 
 namespace detail
 {
-    template<typename... Types>
-    void throwIfIdNotUnique()
+
+    constexpr bool is_equal(char const* str1, char const* str2)
     {
-        std::unordered_multiset<std::string> kernel_ids{ Types::API::id()... };
-
-        auto not_unique = std::find_if(kernel_ids.begin(), kernel_ids.end(),
-                [&kernel_ids](const std::string& n){ return kernel_ids.count(n) != 1; });
-
-        if (not_unique != kernel_ids.end())
-        {
-            util::throw_error(std::logic_error("Kernel id " + *not_unique + " is not unique "
-                                               "in kernel package"));
-        }
+        return *str1 == *str2 && (*str1 == '\0' || is_equal(str1 + 1, str2 + 1));
     }
+
+    template <typename T1, typename T2, typename ...Others>
+    struct compare;
+
+    template <typename T1, typename T2>
+    struct compare<T1, T2> {
+        //constexpr compare()
+        //{
+            //constexpr const char* str1 = T1::API::id();
+            //constexpr const char* str2 = T2::API::id();
+
+            //constexpr bool flag = is_equal(str1, str2);
+            //static_assert(!flag, "f;lksdj");
+            //static_assert(flag, "f;lks11dj");
+        //}
+
+        static constexpr void check()
+        {
+            constexpr const char* str1 = T1::API::id();
+            constexpr const char* str2 = T2::API::id();
+
+            constexpr bool flag = is_equal(str1, str2);
+            static_assert(!flag, "f;lksdj");
+            static_assert(flag, "f;lks11dj");
+        }
+    };
+
+    template <typename T1, typename T2, typename ...Others>
+    struct compare {
+        compare() {
+            compare<T1, T2>::check();
+            compare<T1, Others...>();
+        };
+    };
+
+    template <typename T1, typename ...Others>
+    struct compare_all;
+
+    template <typename T1, typename ...Others>
+    struct compare_all {
+        compare_all() {
+            compare<T1, Others...>();
+            compare_all<Others...>();
+        }
+    };
+
+    template <int Size, typename ...Types>
+    struct wrapper;
+
+    template <int Size, typename ...Types>
+    struct wrapper
+    {
+        wrapper() { compare_all<Types...>(); };
+    };
+
+    template <typename ...Types>
+    struct wrapper<0, Types...> {};
+
+    template <typename T1>
+    struct compare_all<T1>{};
+
+    template <typename ...Types>
+    void types_are_unique()
+    {
+        wrapper<sizeof...(Types), Types...>();
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
@@ -496,7 +554,6 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
-        detail::throwIfIdNotUnique<KK...>();
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
