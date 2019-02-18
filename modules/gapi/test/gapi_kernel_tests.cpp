@@ -281,4 +281,19 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
                         compile({in_meta, in_meta}, cv::compile_args(pkg)));
 }
 
+TEST(KernelPackage, More_One_Package_In_Args)
+{
+    cv::GMat in[2];
+    auto out = GClone::on(cv::gapi::add(in[0], in[1]));
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
+
+    auto pkg1 = cv::gapi::kernels<GCloneImpl>();
+    auto pkg2 = cv::gapi::kernels<>();
+
+    cv::Mat in_mat1, in_mat2, out_mat;
+
+    EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(pkg1, pkg2)));
+}
+
 } // namespace opencv_test

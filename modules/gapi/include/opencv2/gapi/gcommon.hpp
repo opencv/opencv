@@ -11,12 +11,14 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
+#include <unordered_set>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
 #include "opencv2/gapi/util/any.hpp"
 #include "opencv2/gapi/own/exports.hpp"
 #include "opencv2/gapi/own/assert.hpp"
+
 
 namespace cv {
 
@@ -121,8 +123,20 @@ using GCompileArgs = std::vector<GCompileArg>;
  * Wraps a list of arguments (a parameter pack) into a vector of
  * compilation arguments (cv::GCompileArg).
  */
+
 template<typename... Ts> GCompileArgs compile_args(Ts&&... args)
 {
+    std::unordered_multiset<std::string> compile_args_set
+    { detail::CompileArgTag<typename std::decay<Ts>::type>::tag()... };
+
+    auto not_unique = std::find_if(compile_args_set.begin(), compile_args_set.end(),
+            [&compile_args_set](const std::string& n){ return compile_args_set.count(n) != 1; });
+
+    if (not_unique != compile_args_set.end())
+    {
+        util::throw_error(std::logic_error(*not_unique + " is already in compile args"));
+    }
+
     return GCompileArgs{ GCompileArg(args)... };
 }
 
