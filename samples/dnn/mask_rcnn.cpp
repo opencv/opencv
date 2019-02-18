@@ -24,6 +24,8 @@ string keys =
     "{ video v     |<none>| Path to input video file.  }"
     "{ classes n   |./mscoco_labels.names | Path to a text file with names of classes.  }"
     "{ model w     |./mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
+    "{ height H     |800|Preprocess input image by resizing to a specific height }"
+    "{ width W     |800|Preprocess input image by resizing to a specific width }"
     "{ config c    |./mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
@@ -46,7 +48,8 @@ int main(int argc, char** argv)
     float maskThreshold;
     vector<string> classes;
     vector<Scalar> colors;
-
+    int height;
+    int width;
 
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
@@ -54,6 +57,10 @@ int main(int argc, char** argv)
     String textGraph = parser.get<string>("config");
     String modelWeights = parser.get<string>("model");
     string classesFile = parser.get<string>("classes");
+
+    height = parser.get<int>("height");
+    width = parser.get<int>("width");
+
 
     ifstream ifs(classesFile.c_str());
     string line;
@@ -64,7 +71,7 @@ int main(int argc, char** argv)
         colors.push_back( Scalar(rand() % 255,rand() % 255,rand() % 255 ,255.0));
     }
 
-    Net net = readNet(modelWeights, textGraph,"tensorflow");
+    Net net = readNet(modelWeights, textGraph);
 
     string str;
     VideoCapture cap;
@@ -105,7 +112,7 @@ int main(int argc, char** argv)
             break;
         }
 
-        blobFromImage(frame, blob, 1.0, Size(frame.cols, frame.rows), Scalar(), true, false);
+        blobFromImage(frame, blob, 1.0, Size(width, height), Scalar(), true, false);
 
         net.setInput(blob);
 
@@ -123,8 +130,6 @@ int main(int argc, char** argv)
         string label = format("OpenCV Mask R-CNN : %0.0f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
-        Mat detectedFrame;
-        frame.convertTo(detectedFrame, CV_8U);
         imshow("Mask R-CNN sample", frame);
     }
 
