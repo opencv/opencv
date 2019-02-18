@@ -3043,16 +3043,15 @@ public:
     SparseMatConstIterator_<_Tp> end() const;
 };
 
-
-//////////////////////////////// Future_Mat /////////////////////////////////
+//////////////////////////////// AsyncMat /////////////////////////////////
 
 /** @brief Class which wraps `std::future<Mat>` in bindings (since C++11).
  */
-class CV_EXPORTS_W_SIMPLE Future_Mat
+class CV_EXPORTS_W_SIMPLE AsyncMat
 {
 public:
     //! default constructor
-    Future_Mat();
+    AsyncMat();
 
     //! Wait for Mat object readiness and return it.
     CV_WRAP Mat get();
@@ -3068,19 +3067,19 @@ public:
 
 #if defined(CV_CXX11) || defined(CV_DOXYGEN)
     //! copy constructor
-    Future_Mat(const Future_Mat& F);
+    AsyncMat(const AsyncMat& F);
 
     //! move constructor
-    Future_Mat(Future_Mat&& F);
+    AsyncMat(AsyncMat&& F);
 
     //! constructor from std::future<Mat>
-    Future_Mat(std::future<Mat>&& other);
+    AsyncMat(std::future<Mat>&& other);
 
     //! copy assignment operator
-    Future_Mat& operator=(const Future_Mat& F);
+    AsyncMat& operator=(const AsyncMat& F);
 
     //! move assignment operator
-    Future_Mat& operator=(Future_Mat&& F);
+    AsyncMat& operator=(AsyncMat&& F);
 
     //! cast to std::future<Mat>
     operator std::future<Mat>&&();

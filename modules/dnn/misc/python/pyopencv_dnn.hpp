@@ -40,6 +40,18 @@ bool pyopencv_to(PyObject *o, std::vector<Mat> &blobs, const char *name) //requi
   return pyopencvVecConverter<Mat>::to(o, blobs, ArgInfo(name, false));
 }
 
+#ifdef CV_CXX11
+// Will be defined later.
+template<> PyObject* pyopencv_from(const cv::AsyncMat&);
+
+template<>
+PyObject* pyopencv_from(const std::future<Mat>& f_)
+{
+    std::future<Mat>& f = const_cast<std::future<Mat>&>(f_);
+    return pyopencv_from(cv::AsyncMat(std::move(f)));
+}
+#endif
+
 template<typename T>
 PyObject* pyopencv_from(const dnn::DictValue &dv)
 {

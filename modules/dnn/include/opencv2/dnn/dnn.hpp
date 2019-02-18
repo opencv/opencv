@@ -43,6 +43,9 @@
 #define OPENCV_DNN_DNN_HPP
 
 #include <vector>
+#ifdef CV_CXX11
+#include <future>
+#endif
 #include <opencv2/core.hpp>
 
 #if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
@@ -63,6 +66,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @{
 
     typedef std::vector<int> MatShape;
+
+#if defined(CV_CXX11) || defined(CV_DOXYGEN)
+    typedef std::future<Mat> FutureMat;
+#else
+    typedef Mat FutureMat;
+#endif
 
     /**
      * @brief Enum of computation backends supported by layers.
@@ -465,13 +474,12 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputName name for layer which output is needed to get
-         *  @return cv::Future_Mat object that can be casted to `std::future<Mat>`
          *  @details By default runs forward pass for the whole network.
          *
          *  This is an asynchronous version of forward(const String&).
          *  dnn::DNN_BACKEND_INFERENCE_ENGINE backend is required.
          */
-        CV_WRAP Future_Mat forwardAsync(const String& outputName = String());
+        CV_WRAP FutureMat forwardAsync(const String& outputName = String());
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputBlobs contains all output blobs for specified layer.
