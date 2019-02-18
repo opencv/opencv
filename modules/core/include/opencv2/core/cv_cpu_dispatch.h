@@ -15,6 +15,7 @@
 #define CV_CPU_OPTIMIZATION_NAMESPACE cpu_baseline
 #define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
 #define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#define CV_CPU_BASELINE_MODE 1
 #endif
 
 
