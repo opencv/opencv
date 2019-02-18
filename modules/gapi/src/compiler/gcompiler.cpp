@@ -55,6 +55,10 @@ namespace
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
+        auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
+        if (has_use_only)
+            return has_use_only.value().getPackage();
+
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
         return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}));
     }

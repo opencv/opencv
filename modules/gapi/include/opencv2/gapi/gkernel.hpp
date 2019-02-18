@@ -506,6 +506,22 @@ namespace gapi {
 
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
                                         const GKernelPackage  &rhs);
+    /**
+     * @brief cv::use_only() is a special combinator which hints G-API to use only
+     * kernels specified in ::compile() (and not to extend kernels available by
+     * default with that package).
+     */
+
+    class GAPI_EXPORTS use_only
+    {
+        public:
+        use_only(const GKernelPackage& pkg) : _pkg(pkg)            {};
+        use_only(GKernelPackage&& pkg)      : _pkg(std::move(pkg)) {};
+        GKernelPackage getPackage() const { return _pkg; }
+
+        GKernelPackage _pkg;
+    };
+
 } // namespace gapi
 
 namespace detail
@@ -513,6 +529,11 @@ namespace detail
     template<> struct CompileArgTag<cv::gapi::GKernelPackage>
     {
         static const char* tag() { return "gapi.kernel_package"; }
+    };
+
+    template<> struct CompileArgTag<cv::gapi::use_only>
+    {
+        static const char* tag() { return "gapi.use_only"; }
     };
 } // namespace detail
 } // namespace cv
