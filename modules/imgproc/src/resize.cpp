@@ -453,6 +453,81 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
     }
 }
 template <>
+void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
+{
+    int i = 0;
+    union {
+        uint64_t q;
+        uint16_t w[4];
+    } srccn;
+    ((ufixedpoint16*)(srccn.w))[0] = src[0];
+    ((ufixedpoint16*)(srccn.w))[1] = src[1];
+    ((ufixedpoint16*)(srccn.w))[2] = src[2];
+    ((ufixedpoint16*)(srccn.w))[3] = 0;
+#if CV_SIMD
+    const int VECSZ = v_uint16::nlanes;
+    v_uint16 v_srccn = v_pack_triplets(v_reinterpret_as_u16(vx_setall_u64(srccn.q)));
+    for (; i <= dst_min - (VECSZ+2)/3; i += VECSZ/4, m += VECSZ/2, dst += 3*VECSZ/4) // Points that fall left from src image so became equal to leftmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+#endif
+    for (; i < dst_min; i++, m += 2)
+    {
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[0];
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[1];
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[2];
+    }
+#if CV_SIMD
+    CV_DECL_ALIGNED(CV_SIMD_WIDTH) int ofst3[VECSZ/2];
+    for (; i <= dst_max - (3*VECSZ/4 + (VECSZ+2)/3); i += VECSZ/2, m += VECSZ, dst += 3*VECSZ/2)
+    {
+        v_store(ofst3, vx_load(ofst + i) * vx_setall_s32(3));
+        v_uint8 v_src01, v_src23;
+        v_uint16 v_src0, v_src1, v_src2, v_src3;
+        v_zip(vx_lut_quads(src, ofst3), vx_lut_quads(src+3, ofst3), v_src01, v_src23);
+        v_expand(v_src01, v_src0, v_src1);
+        v_expand(v_src23, v_src2, v_src3);
+
+        v_uint32 v_mul0, v_mul1, v_mul2, v_mul3, v_tmp;
+        v_mul0 = vx_load((uint32_t*)m);//AaBbCcDd
+        v_zip(v_mul0, v_mul0, v_mul3, v_tmp );//AaAaBbBb CcCcDdDd
+        v_zip(v_mul3, v_mul3, v_mul0, v_mul1);//AaAaAaAa BbBbBbBb
+        v_zip(v_tmp , v_tmp , v_mul2, v_mul3);//CcCcCcCc DdDdDdDd
+
+        v_uint32 v_res0 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src0), v_reinterpret_as_s16(v_mul0)));
+        v_uint32 v_res1 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src1), v_reinterpret_as_s16(v_mul1)));
+        v_uint32 v_res2 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src2), v_reinterpret_as_s16(v_mul2)));
+        v_uint32 v_res3 = v_reinterpret_as_u32(v_dotprod(v_reinterpret_as_s16(v_src3), v_reinterpret_as_s16(v_mul3)));
+        v_store((uint16_t*)dst            , v_pack_triplets(v_pack(v_res0, v_res1)));
+        v_store((uint16_t*)dst + 3*VECSZ/4, v_pack_triplets(v_pack(v_res2, v_res3)));
+    }
+#endif
+    for (; i < dst_max; i += 1, m += 2)
+    {
+        uint8_t* px = src + 3 * ofst[i];
+        *(dst++) = m[0] * px[0] + m[1] * px[3];
+        *(dst++) = m[0] * px[1] + m[1] * px[4];
+        *(dst++) = m[0] * px[2] + m[1] * px[5];
+    }
+    ((ufixedpoint16*)(srccn.w))[0] = (src + 3*ofst[dst_width - 1])[0];
+    ((ufixedpoint16*)(srccn.w))[1] = (src + 3*ofst[dst_width - 1])[1];
+    ((ufixedpoint16*)(srccn.w))[2] = (src + 3*ofst[dst_width - 1])[2];
+#if CV_SIMD
+    v_srccn = v_pack_triplets(v_reinterpret_as_u16(vx_setall_u64(srccn.q)));
+    for (; i <= dst_width - (VECSZ+2)/3; i += VECSZ/4, dst += 3*VECSZ/4) // Points that fall right from src image so became equal to rightmost src point
+    {
+        v_store((uint16_t*)dst, v_srccn);
+    }
+#endif
+    for (; i < dst_width; i++)
+    {
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[0];
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[1];
+        *(dst++) = ((ufixedpoint16*)(srccn.w))[2];
+    }
+}
+template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
 {
     int i = 0;
@@ -472,13 +547,12 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
         v_store((uint16_t*)dst, v_srccn);
     }
 #endif
-    if (i < dst_min) // Points that fall left from src image so became equal to leftmost src point
+    for (; i < dst_min; i++, m += 2)
     {
         *(dst++) = ((ufixedpoint16*)(srccn.w))[0];
         *(dst++) = ((ufixedpoint16*)(srccn.w))[1];
         *(dst++) = ((ufixedpoint16*)(srccn.w))[2];
         *(dst++) = ((ufixedpoint16*)(srccn.w))[3];
-        i++; m += 2;
     }
 #if CV_SIMD
     for (; i <= dst_max - VECSZ/2; i += VECSZ/2, m += VECSZ, dst += 2*VECSZ)
@@ -518,7 +592,7 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
         v_store((uint16_t*)dst, v_srccn);
     }
 #endif
-    if (i < dst_width)
+    for (; i < dst_width; i++)
     {
         *(dst++) = ((ufixedpoint16*)(srccn.w))[0];
         *(dst++) = ((ufixedpoint16*)(srccn.w))[1];
