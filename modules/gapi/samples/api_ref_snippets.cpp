@@ -15,7 +15,7 @@ G_TYPED_KERNEL(IAdd, <cv::GMat(cv::GMat)>, "test.custom.add") {
 G_TYPED_KERNEL(IFilter2D, <cv::GMat(cv::GMat)>, "test.custom.filter2d") {
     static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
 };
-G_TYPED_KERNEL(IRGB2YUV, <cv::GMat(cv::GMat)>, "test.custom.add") {
+G_TYPED_KERNEL(IRGB2YUV, <cv::GMat(cv::GMat)>, "test.custom.rgb2yuv") {
     static cv::GMatDesc outMeta(const cv::GMatDesc &in) { return in; }
 };
 GAPI_OCV_KERNEL(CustomAdd,      IAdd)      { static void run(cv::Mat, cv::Mat &) {} };
