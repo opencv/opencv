@@ -4689,7 +4689,15 @@ public:
     not to depend on the ordering of pt1 and pt2 parameters
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false );
+                  int connectivity = 8, bool leftToRight = false ) {
+      init(img.size(), img.type(), (uchar*)img.ptr(), img.step1()*img.elemSize1(), pt1, pt2, connectivity, leftToRight);
+    }
+    LineIterator( const Size& size, int type, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false ) {
+      init(size, type, 0, CV_ELEM_SIZE(type)*size.width, pt1, pt2, connectivity, leftToRight);
+    }
+    void init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2, int connectivity = 8, bool leftToRight = false);
+
     /** @brief returns pointer to the current pixel
     */
     uchar* operator *();
@@ -4718,7 +4726,7 @@ public:
 inline
 uchar* LineIterator::operator *()
 {
-    return ptr;
+    return !ptr0 ? 0 : ptr;//when no Mat is attached, ptr is just a dummy address and should not be dereferenced
 }
 
 inline
@@ -4744,6 +4752,73 @@ Point LineIterator::pos() const
     Point p;
     p.y = (int)((ptr - ptr0)/step);
     p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
+    return p;
+}
+
+//! @endcond
+
+class CV_EXPORTS LineVirtualIterator
+{
+public:
+    /** @brief initializes the iterator
+
+    creates iterators for the line connecting pt1 and pt2
+    the line will be clipped on the image boundaries
+    the line is 8-connected or 4-connected
+    If leftToRight=true, then the iteration is always done
+    from the left-most point to the right most,
+    not to depend on the ordering of pt1 and pt2 parameters
+    */
+    LineVirtualIterator(const Size& size, Point pt1, Point pt2,
+                        int connectivity = 8, bool leftToRight = false );
+
+    /** @brief alias of pos(), returns coordinates of the current pixel
+    */
+    Point operator *() const {return pos();}
+    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
+    */
+    LineVirtualIterator& operator ++();
+    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
+    */
+    LineVirtualIterator operator ++(int);
+    /** @brief returns coordinates of the current pixel
+    */
+    Point pos() const;
+
+    int offset;
+    int step;
+    int err, count;
+    int minusDelta, plusDelta;
+    int minusStep, plusStep;
+};
+
+//! @cond IGNORED
+
+// === LineVirtualIterator implementation ===
+
+inline
+LineVirtualIterator& LineVirtualIterator::operator ++()
+{
+    int mask = err < 0 ? -1 : 0;
+    err += minusDelta + (plusDelta & mask);
+    offset += minusStep + (plusStep & mask);
+    return *this;
+}
+
+inline
+LineVirtualIterator LineVirtualIterator::operator ++(int)
+{
+    LineVirtualIterator it = *this;
+    ++(*this);
+    return it;
+}
+
+inline
+Point LineVirtualIterator::pos() const
+{
+    Point p;
+    p.y = (int)(offset/step);
+    p.x = (int)(offset - p.y*step);
     return p;
 }
 

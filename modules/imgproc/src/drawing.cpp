@@ -160,21 +160,21 @@ bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
    Initializes line iterator.
    Returns number of points on the line or negative number if error.
 */
-LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
-                           int connectivity, bool left_to_right)
+void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2,
+                        int connectivity, bool left_to_right)
 {
     count = -1;
 
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
-    if( (unsigned)pt1.x >= (unsigned)(img.cols) ||
-        (unsigned)pt2.x >= (unsigned)(img.cols) ||
-        (unsigned)pt1.y >= (unsigned)(img.rows) ||
-        (unsigned)pt2.y >= (unsigned)(img.rows) )
+    if( (unsigned)pt1.x >= (unsigned)(size.width) ||
+        (unsigned)pt2.x >= (unsigned)(size.width) ||
+        (unsigned)pt1.y >= (unsigned)(size.height) ||
+        (unsigned)pt2.y >= (unsigned)(size.height) )
     {
-        if( !clipLine( img.size(), pt1, pt2 ) )
+        if( !clipLine( size, pt1, pt2 ) )
         {
-            ptr = img.data;
+            ptr = data;
             err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
             ptr0 = 0;
             step = 0;
@@ -183,8 +183,8 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         }
     }
 
-    size_t bt_pix0 = img.elemSize(), bt_pix = bt_pix0;
-    size_t istep = img.step;
+    size_t bt_pix0 = CV_ELEM_SIZE(type), bt_pix = bt_pix0;
+    size_t istep = dataStep;
 
     int dx = pt2.x - pt1.x;
     int dy = pt2.y - pt1.y;
@@ -203,7 +203,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         bt_pix = (bt_pix ^ s) - s;
     }
 
-    ptr = (uchar*)(img.data + pt1.y * istep + pt1.x * bt_pix0);
+    ptr = (uchar*)(data + pt1.y * istep + pt1.x * bt_pix0);//when no Mat is attached, ptr is just a dummy address and should not be dereferenced
 
     s = dy < 0 ? -1 : 0;
     dy = (dy ^ s) - s;
@@ -243,9 +243,92 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
         count = dx + dy + 1;
     }
 
-    this->ptr0 = img.ptr();
-    this->step = (int)img.step;
+    this->ptr0 = data;
+    this->step = static_cast<int>(dataStep);
     this->elemSize = (int)bt_pix0;
+}
+
+LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2, int connectivity, bool left_to_right)
+{
+    count = -1;
+
+    CV_Assert( connectivity == 8 || connectivity == 4 );
+
+    if( (unsigned)pt1.x >= (unsigned)(size.width) ||
+        (unsigned)pt2.x >= (unsigned)(size.width) ||
+        (unsigned)pt1.y >= (unsigned)(size.height) ||
+        (unsigned)pt2.y >= (unsigned)(size.height) )
+    {
+        if( !clipLine( size, pt1, pt2 ) )
+        {
+            offset = 0;
+            err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
+            step = 0;
+            return;
+        }
+    }
+
+    size_t bt_pix = 1;
+    size_t istep = size.width;
+
+    int dx = pt2.x - pt1.x;
+    int dy = pt2.y - pt1.y;
+    int s = dx < 0 ? -1 : 0;
+
+    if( left_to_right )
+    {
+        dx = (dx ^ s) - s;
+        dy = (dy ^ s) - s;
+        pt1.x ^= (pt1.x ^ pt2.x) & s;
+        pt1.y ^= (pt1.y ^ pt2.y) & s;
+    }
+    else
+    {
+        dx = (dx ^ s) - s;
+        bt_pix = (bt_pix ^ s) - s;
+    }
+
+    offset = pt1.y * istep + pt1.x;
+
+    s = dy < 0 ? -1 : 0;
+    dy = (dy ^ s) - s;
+    istep = (istep ^ s) - s;
+
+    s = dy > dx ? -1 : 0;
+
+    /* conditional swaps */
+    dx ^= dy & s;
+    dy ^= dx & s;
+    dx ^= dy & s;
+
+    bt_pix ^= istep & s;
+    istep ^= bt_pix & s;
+    bt_pix ^= istep & s;
+
+    if( connectivity == 8 )
+    {
+        assert( dx >= 0 && dy >= 0 );
+
+        err = dx - (dy + dy);
+        plusDelta = dx + dx;
+        minusDelta = -(dy + dy);
+        plusStep = (int)istep;
+        minusStep = (int)bt_pix;
+        count = dx + 1;
+    }
+    else /* connectivity == 4 */
+    {
+        assert( dx >= 0 && dy >= 0 );
+
+        err = 0;
+        plusDelta = (dx + dx) + (dy + dy);
+        minusDelta = -(dy + dy);
+        plusStep = (int)(istep - bt_pix);
+        minusStep = (int)bt_pix;
+        count = dx + dy + 1;
+    }
+
+    step = size.width;
 }
 
 static void
