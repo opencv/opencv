@@ -54,8 +54,8 @@ int main(int argc, char** argv)
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
 
-    String textGraph = parser.get<string>("config");
-    String modelWeights = parser.get<string>("model");
+    string textGraph = parser.get<string>("config");
+    string modelWeights = parser.get<string>("model");
     string classesFile = parser.get<string>("classes");
 
     height = parser.get<int>("height");
