@@ -66,6 +66,7 @@ public:
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
+        CV_Assert(_src.dims() == 2 && _src.type() == CV_32FC3);
         _dst.create(src.size(), CV_32FC3);
         Mat dst = _dst.getMat();
 

@@ -1,5 +1,3 @@
-/* $Id: tif_swab.c,v 1.15 2017-06-08 16:39:50 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

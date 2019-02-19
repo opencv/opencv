@@ -18,6 +18,11 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
+// For networks with input layer which has an empty name, IE generates a name id[some_number].
+// OpenCV lets users use an empty input name and to prevent unexpected naming,
+// we can use some predefined name.
+static std::string kDefaultInpLayerName = "empty_inp_layer_name";
+
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
@@ -90,7 +95,7 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
         it = layers.find(inpName);
         if (it == layers.end())
         {
-            InferenceEngine::Builder::InputLayer inpLayer(inpName);
+            InferenceEngine::Builder::InputLayer inpLayer(!inpName.empty() ? inpName : kDefaultInpLayerName);
 
             std::vector<size_t> shape(inp->blob->dims());
             std::reverse(shape.begin(), shape.end());
@@ -119,6 +124,14 @@ void InfEngineBackendNet::init(int targetId)
         for (int id : unconnectedLayersIds)
         {
             InferenceEngine::Builder::OutputLayer outLayer("myconv1");
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+            // Inference Engine determines network precision by ports.
+            InferenceEngine::Precision p = (targetId == DNN_TARGET_MYRIAD ||
+                                            targetId == DNN_TARGET_OPENCL_FP16) ?
+                                           InferenceEngine::Precision::FP16 :
+                                           InferenceEngine::Precision::FP32;
+            outLayer.setPort(InferenceEngine::Port({}, p));
+#endif
             netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
         }
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
@@ -167,12 +180,56 @@ void InfEngineBackendNet::init(int targetId)
     initPlugin(cnn);
 }
 
-void InfEngineBackendNet::addLayer(const InferenceEngine::Builder::Layer& layer)
+void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
 {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+    // Add weights to network and connect them after input blobs.
+    std::map<std::string, InferenceEngine::Parameter>& params = layer.getParameters();
+    std::vector<int> blobsIds;
+    std::vector<int> portIds;
+    for (const std::string& name : {"weights", "biases"})
+    {
+        bool asInput = false;
+        int portId = 0;
+        for (int i = 0; i < layer.getInputPorts().size(); ++i)
+        {
+            const auto& port = layer.getInputPorts()[i];
+            auto it = port.getParameters().find("type");
+            if (it != port.getParameters().end() && it->second == name)
+            {
+                portId = i;
+                asInput = true;
+                break;
+            }
+        }
+
+        if (!asInput)
+            continue;
+
+        auto it = params.find(name);
+        if (it != params.end())
+        {
+            InferenceEngine::Blob::Ptr blob = it->second.as<InferenceEngine::Blob::Ptr>();
+            params.erase(it);
+            int blobId = netBuilder.addLayer(InferenceEngine::Builder::ConstLayer(name).setData(blob));
+            blobsIds.push_back(blobId);
+            portIds.push_back(portId);
+        }
+    }
+#endif
+
     int id = netBuilder.addLayer(layer);
     const std::string& layerName = layer.getName();
     CV_Assert(layers.insert({layerName, id}).second);
     unconnectedLayersIds.insert(id);
+
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+    // By default, all the weights are connected to last ports ids.
+    for (int i = 0; i < blobsIds.size(); ++i)
+    {
+        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, portIds[i]});
+    }
+#endif
 }
 
 void InfEngineBackendNet::addOutput(const std::string& name)
@@ -705,7 +762,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     {
         std::string name = wrapper->dataPtr->name;
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        name = name.empty() ? "id1" : name;  // TODO: drop the magic input name.
+        name = name.empty() ? kDefaultInpLayerName : name;
 #endif
         allBlobs.insert({name, wrapper->blob});
     }
@@ -775,6 +832,18 @@ InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
     convertFp16(floatsData, halfsData);
     return halfs;
 }
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
+                     InferenceEngine::Builder::Layer& l)
+{
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+    l.getParameters()[name] = data;
+#else
+    l.addConstantData(name, data);
+#endif
+}
+#endif
 
 #endif  // HAVE_INF_ENGINE
 
