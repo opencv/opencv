@@ -288,7 +288,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
         bt_pix = (bt_pix ^ s) - s;
     }
 
-    offset = pt1.y * istep + pt1.x;
+    offset = static_cast<int>(pt1.y * istep + pt1.x);
 
     s = dy < 0 ? -1 : 0;
     dy = (dy ^ s) - s;
