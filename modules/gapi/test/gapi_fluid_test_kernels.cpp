@@ -416,6 +416,76 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
     }
 };
 
+static const int ITUR_BT_601_CY = 1220542;
+static const int ITUR_BT_601_CUB = 2116026;
+static const int ITUR_BT_601_CUG = -409993;
+static const int ITUR_BT_601_CVG = -852492;
+static const int ITUR_BT_601_CVR = 1673527;
+static const int ITUR_BT_601_SHIFT = 20;
+
+static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, int& buv)
+{
+    int uu, vv;
+    uu = int(u) - 128;
+    vv = int(v) - 128;
+
+    ruv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVR * vv;
+    guv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CVG * vv + ITUR_BT_601_CUG * uu;
+    buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * uu;
+}
+
+static inline void yRGBuvToRGB(const uchar vy, const int ruv, const int guv, const int buv,
+                                uchar& r, uchar& g, uchar& b)
+{
+    int y = std::max(0, vy - 16) * ITUR_BT_601_CY;
+    r = saturate_cast<uchar>((y + ruv) >> ITUR_BT_601_SHIFT);
+    g = saturate_cast<uchar>((y + guv) >> ITUR_BT_601_SHIFT);
+    b = saturate_cast<uchar>((y + buv) >> ITUR_BT_601_SHIFT);
+}
+
+GAPI_FLUID_KERNEL(FNV12toRGB, cv::gapi::imgproc::GNV12toRGB, false)
+{
+    static const int Window = 1;
+    static const int LPI    = 2;
+    static const auto Kind = GFluidKernel::Kind::NV12toRGB;
+
+    static void run(const cv::gapi::fluid::View   &in1,
+                    const cv::gapi::fluid::View   &in2,
+                          cv::gapi::fluid::Buffer &out)
+    {
+        const auto w = out.length();
+
+        GAPI_Assert(w % 2 == 0);
+        GAPI_Assert(out.lpi() == 2);
+
+        const uchar* uv_row = in2.InLineB(0);
+        const uchar*   y_rows[] = {in1. InLineB(0), in1. InLineB(1)};
+              uchar* out_rows[] = {out.OutLineB(0), out.OutLineB(1)};
+
+        for (int i = 0; i < w/2; i++)
+        {
+            uchar u = uv_row[2*i];
+            uchar v = uv_row[2*i + 1];
+            int ruv, guv, buv;
+            uvToRGBuv(u, v, ruv, guv, buv);
+
+            for (int y = 0; y < 2; y++)
+            {
+                for (int x = 0; x < 2; x++)
+                {
+                    uchar vy = y_rows[y][2*i + x];
+                    uchar r, g, b;
+                    yRGBuvToRGB(vy, ruv, guv, buv, r, g, b);
+
+                    out_rows[y][3*(2*i + x)]     = r;
+                    out_rows[y][3*(2*i + x) + 1] = g;
+                    out_rows[y][3*(2*i + x) + 2] = b;
+                }
+            }
+        }
+    }
+};
+
 cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         <FAddSimple
         ,FAddCSimple
@@ -428,6 +498,7 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FBlur5x5_2lpi
         ,FIdentity
         ,FId7x7
+        ,FNV12toRGB
         ,FPlusRow0
         ,FSum2MatsAndScalar
         ,FTestSplit3
