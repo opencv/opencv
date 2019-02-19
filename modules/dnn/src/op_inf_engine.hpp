@@ -162,7 +162,7 @@ public:
 
     InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
 
-    void addLayer(const InferenceEngine::Builder::Layer& layer);
+    void addLayer(InferenceEngine::Builder::Layer& layer);
 
     void addOutput(const std::string& name);
 
@@ -254,6 +254,10 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob);
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data, InferenceEngine::Builder::Layer& l);
+#endif
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by

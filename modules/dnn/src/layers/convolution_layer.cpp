@@ -493,11 +493,11 @@ public:
         ieLayer.setGroup((size_t)group);
         ieLayer.setOutDepth((size_t)outCn);
 
-        ieLayer.setWeights(ieWeights);
-        if (ieBiases)
-            ieLayer.setBiases(ieBiases);
-
         InferenceEngine::Builder::Layer l = ieLayer;
+        addConstantData("weights", ieWeights, l);
+        if (ieBiases)
+            addConstantData("biases", ieBiases, l);
+
         if (!padMode.empty())
             l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
 
@@ -1725,12 +1725,11 @@ public:
         ieLayer.setGroup((size_t)group);
         ieLayer.setOutDepth((size_t)numOutput);
 
-        ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW));
+        InferenceEngine::Builder::Layer l = ieLayer;
+        addConstantData("weights", wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW), l);
         if (hasBias())
-        {
-            ieLayer.setBiases(wrapToInfEngineBlob(blobs[1], {(size_t)numOutput}, InferenceEngine::Layout::C));
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+            addConstantData("biases", wrapToInfEngineBlob(blobs[1], {(size_t)numOutput}, InferenceEngine::Layout::C), l);
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
 #else
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
         const int group = numOutput / outGroupCn;

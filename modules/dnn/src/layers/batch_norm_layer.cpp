@@ -350,11 +350,10 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ScaleShiftLayer ieLayer(name);
-
+        InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         const size_t numChannels = weights_.total();
-        ieLayer.setWeights(wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C));
-        ieLayer.setBiases(wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C));
+        addConstantData("weights", wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
+        addConstantData("biases", wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #else
         InferenceEngine::LayerParams lp;
