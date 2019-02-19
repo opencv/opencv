@@ -695,7 +695,8 @@ TEST_P(Eltwise, Accuracy)
     Target targetId = get<1>(get<4>(GetParam()));
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_OPENCL)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+        (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 #endif
 
