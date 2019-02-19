@@ -198,13 +198,13 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ScaleShiftLayer ieLayer(name);
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ScaleShiftLayer(name);
 
         CV_Assert(!blobs.empty());
         const size_t numChannels = blobs[0].total();
         if (hasWeights)
         {
-            ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C));
+            addConstantData("weights", wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C), l);
         }
         else
         {
@@ -214,11 +214,11 @@ public:
 
             std::vector<float> ones(numChannels, 1);
             weights->set(ones);
-            ieLayer.setWeights(weights);
+            addConstantData("weights", weights, l);
         }
         if (hasBias)
-            ieLayer.setBiases(wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+            addConstantData("biases", wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C), l);
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
 #else
         InferenceEngine::LayerParams lp;
         lp.name = name;
