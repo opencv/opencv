@@ -660,6 +660,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstCol = false )
     size.width *= cn;
     Op op;
 
+    AutoBuffer<WT> cumul(cn);
     for( int y = 0; y < size.height; y++ )
     {
         const T* src = srcmat.ptr<T>(y);
@@ -675,7 +676,6 @@ reduceC_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstCol = false )
         }
         else
         {
-            AutoBuffer<WT> cumul(cn);
             for(int k = 0; k < cn ; ++k )
               cumul[k] = applyOpOnFirstCol ? op(0, src[k]) : src[k];
             for(int k = cn ; k < size.width ; k += cn )
