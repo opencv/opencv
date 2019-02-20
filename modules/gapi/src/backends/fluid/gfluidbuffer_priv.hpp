@@ -197,9 +197,6 @@ public:
 
     // Does the view have enough unread lines for next iteration
     bool ready() const;
-
-    // API used (indirectly) by user code
-    virtual const uint8_t* InLineB(int index) const = 0;
 };
 
 class ViewPrivWithoutOwnBorder final : public View::Priv
@@ -212,9 +209,6 @@ public:
     virtual void prepareToRead() override;
 
     inline virtual std::size_t size() const override { return 0; }
-
-    // API used (indirectly) by user code
-    virtual const uint8_t* InLineB(int index) const override;
 };
 
 class ViewPrivWithOwnBorder final : public View::Priv
@@ -228,9 +222,6 @@ public:
     virtual void allocate(int lineConsumption, BorderOpt border) override;
     virtual void prepareToRead() override;
     virtual std::size_t size() const override;
-
-    // API used (indirectly) by user code
-    virtual const uint8_t* InLineB(int index) const override;
 };
 
 void debugBufferPriv(const Buffer& buffer, std::ostream &os);
@@ -290,7 +281,6 @@ public:
     inline int writer_lpi()     const { return m_writer_lpi; }
 
     // API used (indirectly) by user code
-    uint8_t* OutLineB(int index = 0);
     int lpi() const;
 
     inline int readStart()   const { return m_readStart; }

@@ -1,5 +1,3 @@
-/* $Id: tif_print.c,v 1.65 2016-11-20 22:31:22 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -546,7 +544,7 @@ TIFFPrintDirectory(TIFF* tif, FILE* fd, long flags)
 				uint16 i;
 				fprintf(fd, "    %2ld: %5u",
 				    l, td->td_transferfunction[0][l]);
-				for (i = 1; i < td->td_samplesperpixel; i++)
+				for (i = 1; i < td->td_samplesperpixel - td->td_extrasamples && i < 3; i++)
 					fprintf(fd, " %5u",
 					    td->td_transferfunction[i][l]);
 				fputc('\n', fd);
@@ -667,13 +665,13 @@ TIFFPrintDirectory(TIFF* tif, FILE* fd, long flags)
 #if defined(__WIN32__) && (defined(_MSC_VER) || defined(__MINGW32__))
 			fprintf(fd, "    %3lu: [%8I64u, %8I64u]\n",
 			    (unsigned long) s,
-			    (unsigned __int64) td->td_stripoffset[s],
-			    (unsigned __int64) td->td_stripbytecount[s]);
+			    td->td_stripoffset ? (unsigned __int64) td->td_stripoffset[s] : 0,
+			    td->td_stripbytecount ? (unsigned __int64) td->td_stripbytecount[s] : 0);
 #else
 			fprintf(fd, "    %3lu: [%8llu, %8llu]\n",
 			    (unsigned long) s,
-			    (unsigned long long) td->td_stripoffset[s],
-			    (unsigned long long) td->td_stripbytecount[s]);
+			    td->td_stripoffset ? (unsigned long long) td->td_stripoffset[s] : 0,
+			    td->td_stripbytecount ? (unsigned long long) td->td_stripbytecount[s] : 0);
 #endif
 	}
 }

@@ -414,10 +414,11 @@ set(lib_srcs
     tif_tile.c
     tif_version.c
     tif_warning.c
+    tif_webp.c
     tif_write.c
     tif_zip.c
+    tif_zstd.c
     tif_stream.cxx
-    snprintf.c
     t4.h
     tif_dir.h
     tif_fax3.h
@@ -432,6 +433,10 @@ set(lib_srcs
     "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
     )
 
+if(WIN32 AND NOT HAVE_SNPRINTF)
+  list(APPEND lib_srcs snprintf.c libport.h)
+endif()
+
 if(WIN32 AND NOT WINRT)
   list(APPEND lib_srcs tif_win32.c)
 else()
@@ -444,7 +449,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-protot
                                    -Wimplicit-fallthrough
 )
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter -Wmissing-prototypes
     -Wundef  # tiffiop.h: #if __clang_major__ >= 4
 )
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd4706) # vs2005
