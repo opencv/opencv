@@ -32,11 +32,23 @@ import cv2 as cv
 
 # Load an color image in grayscale
 img = cv.imread('messi5.jpg',0)
+if img is None:
+    print("File cannot be read. Check file path")
+    print("ファイルを読み込めません。 ファイルパスを確認する")
+    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
+    print("No se puede leer el archivo. Verifique la ruta del archivo")
+    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
+    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
+    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
+    print("Il file non può essere letto. Controlla il percorso del file")
+    print("文件无法读取。 检查文件路径")
+    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
+    exit()
 @endcode
 
 **warning**
 
-Even if the image path is wrong, it won't throw any error, but `print img` will give you `None`
+Even if the image path is wrong, it won't throw any error, but `print img` will give you `None`. You must check img
 
 ### Display an image
 
@@ -98,6 +110,18 @@ import numpy as np
 import cv2 as cv
 
 img = cv.imread('messi5.jpg',0)
+if img is None:
+    print("File cannot be read. Check file path")
+    print("ファイルを読み込めません。 ファイルパスを確認する")
+    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
+    print("No se puede leer el archivo. Verifique la ruta del archivo")
+    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
+    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
+    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
+    print("Il file non può essere letto. Controlla il percorso del file")
+    print("文件无法读取。 检查文件路径")
+    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
+    exit()
 cv.imshow('image',img)
 k = cv.waitKey(0)
 if k == 27:         # wait for ESC key to exit
@@ -124,6 +148,18 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('messi5.jpg',0)
+if img is None:
+    print("File cannot be read. Check file path")
+    print("ファイルを読み込めません。 ファイルパスを確認する")
+    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
+    print("No se puede leer el archivo. Verifique la ruta del archivo")
+    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
+    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
+    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
+    print("Il file non può essere letto. Controlla il percorso del file")
+    print("文件无法读取。 检查文件路径")
+    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
+    exit()
 plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
 plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
 plt.show()
