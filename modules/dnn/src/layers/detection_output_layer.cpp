@@ -179,7 +179,7 @@ public:
         _backgroundLabelId = getParameter<int>(params, "background_label_id");
         _varianceEncodedInTarget = getParameter<bool>(params, "variance_encoded_in_target", 0, false, false);
         _keepTopK = getParameter<int>(params, "keep_top_k");
-        _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, -FLT_MAX);
+        _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, 0);
         _topK = getParameter<int>(params, "top_k", 0, false, -1);
         _locPredTransposed = getParameter<bool>(params, "loc_pred_transposed", 0, false, false);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
