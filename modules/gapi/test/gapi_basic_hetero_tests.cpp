@@ -179,8 +179,8 @@ GAPIHeteroTest::GAPIHeteroTest()
 
 TEST_F(GAPIHeteroTest, TestOCV)
 {
-    EXPECT_TRUE(cv::gapi::cpu::backend() == m_ocv_kernels.lookup<I::Foo>());
-    EXPECT_TRUE(cv::gapi::cpu::backend() == m_ocv_kernels.lookup<I::Bar>());
+    EXPECT_TRUE(cv::gapi::cpu::backend() == m_ocv_kernels.getBackend<I::Foo>());
+    EXPECT_TRUE(cv::gapi::cpu::backend() == m_ocv_kernels.getBackend<I::Bar>());
 
     cv::Mat ref = ocvBar(ocvFoo(m_in_mat), ocvFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_ocv_kernels)));
@@ -189,8 +189,8 @@ TEST_F(GAPIHeteroTest, TestOCV)
 
 TEST_F(GAPIHeteroTest, TestFluid)
 {
-    EXPECT_TRUE(cv::gapi::fluid::backend() == m_fluid_kernels.lookup<I::Foo>());
-    EXPECT_TRUE(cv::gapi::fluid::backend() == m_fluid_kernels.lookup<I::Bar>());
+    EXPECT_TRUE(cv::gapi::fluid::backend() == m_fluid_kernels.getBackend<I::Foo>());
+    EXPECT_TRUE(cv::gapi::fluid::backend() == m_fluid_kernels.getBackend<I::Bar>());
 
     cv::Mat ref = fluidBar(fluidFoo(m_in_mat), fluidFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_fluid_kernels)));
@@ -199,8 +199,8 @@ TEST_F(GAPIHeteroTest, TestFluid)
 
 TEST_F(GAPIHeteroTest, TestBoth)
 {
-    EXPECT_TRUE(cv::gapi::cpu::backend()   == m_hetero_kernels.lookup<I::Foo>());
-    EXPECT_TRUE(cv::gapi::fluid::backend() == m_hetero_kernels.lookup<I::Bar>());
+    EXPECT_TRUE(cv::gapi::cpu::backend()   == m_hetero_kernels.getBackend<I::Foo>());
+    EXPECT_TRUE(cv::gapi::fluid::backend() == m_hetero_kernels.getBackend<I::Bar>());
 
     cv::Mat ref = fluidBar(ocvFoo(m_in_mat), ocvFoo(m_in_mat));
     EXPECT_NO_THROW(m_comp.apply(m_in_mat, m_out_mat, cv::compile_args(m_hetero_kernels)));
