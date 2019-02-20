@@ -24,7 +24,7 @@ protected:
 };
 
 template<class Type>
-void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim )
+void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, Mat& sum2, int dim )
 {
     assert( src.channels() == 1 );
     if( dim == 0 ) // row
@@ -42,11 +42,13 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
     sum.setTo(Scalar(0));
     max.setTo(Scalar(-DBL_MAX));
     min.setTo(Scalar(DBL_MAX));
+    sum2.setTo(Scalar(0));
 
     const Mat_<Type>& src_ = src;
     Mat_<double>& sum_ = (Mat_<double>&)sum;
     Mat_<double>& min_ = (Mat_<double>&)min;
     Mat_<double>& max_ = (Mat_<double>&)max;
+    Mat_<double>& sum2_ = (Mat_<double>&)sum2;
 
     if( dim == 0 )
     {
@@ -57,6 +59,7 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
                 sum_(0, ci) += src_(ri, ci);
                 max_(0, ci) = std::max( max_(0, ci), (double)src_(ri, ci) );
                 min_(0, ci) = std::min( min_(0, ci), (double)src_(ri, ci) );
+                sum2_(0, ci) += ((double)src_(ri, ci))*((double)src_(ri, ci));
             }
         }
     }
@@ -69,6 +72,7 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim
                 sum_(ri, 0) += src_(ri, ci);
                 max_(ri, 0) = std::max( max_(ri, 0), (double)src_(ri, ci) );
                 min_(ri, 0) = std::min( min_(ri, 0), (double)src_(ri, ci) );
+                sum2_(ri, 0) += ((double)src_(ri, ci))*((double)src_(ri, ci));
             }
         }
     }
@@ -91,7 +95,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 {
     int srcType = src.type();
     bool support = false;
-    if( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
+    if( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG || opType == CV_REDUCE_SUM2 )
     {
         if( srcType == CV_8U && (dstType == CV_32S || dstType == CV_32F || dstType == CV_64F) )
             support = true;
@@ -126,7 +130,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         return cvtest::TS::OK;
 
     double eps = 0.0;
-    if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
+    if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG || opType == CV_REDUCE_SUM2 )
     {
         if ( dstType == CV_32F )
             eps = 1.e-5;
@@ -150,10 +154,13 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     if( check )
     {
         char msg[100];
-        const char* opTypeStr = opType == CV_REDUCE_SUM ? "CV_REDUCE_SUM" :
-        opType == CV_REDUCE_AVG ? "CV_REDUCE_AVG" :
-        opType == CV_REDUCE_MAX ? "CV_REDUCE_MAX" :
-        opType == CV_REDUCE_MIN ? "CV_REDUCE_MIN" : "unknown operation type";
+        const char* opTypeStr =
+          opType == CV_REDUCE_SUM ? "CV_REDUCE_SUM" :
+          opType == CV_REDUCE_AVG ? "CV_REDUCE_AVG" :
+          opType == CV_REDUCE_MAX ? "CV_REDUCE_MAX" :
+          opType == CV_REDUCE_MIN ? "CV_REDUCE_MIN" :
+          opType == CV_REDUCE_SUM2 ? "CV_REDUCE_SUM2" :
+          "unknown operation type";
         string srcTypeStr, dstTypeStr;
         getMatTypeStr( src.type(), srcTypeStr );
         getMatTypeStr( dstType, dstTypeStr );
@@ -170,25 +177,25 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
 {
     int code = cvtest::TS::OK, tempCode;
-    Mat src, sum, avg, max, min;
+    Mat src, sum, avg, max, min, sum2;
 
     src.create( sz, srcType );
     randu( src, Scalar(0), Scalar(100) );
 
     if( srcType == CV_8UC1 )
-        testReduce<uchar>( src, sum, avg, max, min, dim );
+        testReduce<uchar>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_8SC1 )
-        testReduce<char>( src, sum, avg, max, min, dim );
+        testReduce<char>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_16UC1 )
-        testReduce<unsigned short int>( src, sum, avg, max, min, dim );
+        testReduce<unsigned short int>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_16SC1 )
-        testReduce<short int>( src, sum, avg, max, min, dim );
+        testReduce<short int>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_32SC1 )
-        testReduce<int>( src, sum, avg, max, min, dim );
+        testReduce<int>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_32FC1 )
-        testReduce<float>( src, sum, avg, max, min, dim );
+        testReduce<float>( src, sum, avg, max, min, sum2, dim );
     else if( srcType == CV_64FC1 )
-        testReduce<double>( src, sum, avg, max, min, dim );
+        testReduce<double>( src, sum, avg, max, min, sum2, dim );
     else
         assert( 0 );
 
@@ -206,6 +213,10 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
 
     // 4. min
     tempCode = checkOp( src, dstType, CV_REDUCE_MIN, min, dim );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    // 5. sum2
+    tempCode = checkOp( src, dstType, CV_REDUCE_SUM2, sum2, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     return code;
@@ -1561,6 +1572,7 @@ TEST(Reduce, regression_should_fail_bug_4594)
     EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
     EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM2, CV_32S));
 }
 
 TEST(Mat, push_back_vector)

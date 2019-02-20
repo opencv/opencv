@@ -1057,29 +1057,6 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumR64f64f;
         }
-        else if( op == CV_REDUCE_SUM2 )
-        {
-            if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSum2R8u32s);
-            else if(sdepth == CV_8U && ddepth == CV_32F)
-                func = reduceSum2R8u32f;
-            else if(sdepth == CV_8U && ddepth == CV_64F)
-                func = reduceSum2R8u64f;
-            else if(sdepth == CV_16U && ddepth == CV_32F)
-                func = reduceSum2R16u32f;
-            else if(sdepth == CV_16U && ddepth == CV_64F)
-                func = reduceSum2R16u64f;
-            else if(sdepth == CV_16S && ddepth == CV_32F)
-                func = reduceSum2R16s32f;
-            else if(sdepth == CV_16S && ddepth == CV_64F)
-                func = reduceSum2R16s64f;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSum2R32f32f);
-            else if(sdepth == CV_32F && ddepth == CV_64F)
-                func = reduceSum2R32f64f;
-            else if(sdepth == CV_64F && ddepth == CV_64F)
-                func = reduceSum2R64f64f;
-        }
         else if(op == CV_REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
@@ -1105,6 +1082,29 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = GET_OPTIMIZED(reduceMinR32f);
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinR64f;
+        }
+        else if( op == CV_REDUCE_SUM2 )
+        {
+            if(sdepth == CV_8U && ddepth == CV_32S)
+                func = GET_OPTIMIZED(reduceSum2R8u32s);
+            else if(sdepth == CV_8U && ddepth == CV_32F)
+                func = reduceSum2R8u32f;
+            else if(sdepth == CV_8U && ddepth == CV_64F)
+                func = reduceSum2R8u64f;
+            else if(sdepth == CV_16U && ddepth == CV_32F)
+                func = reduceSum2R16u32f;
+            else if(sdepth == CV_16U && ddepth == CV_64F)
+                func = reduceSum2R16u64f;
+            else if(sdepth == CV_16S && ddepth == CV_32F)
+                func = reduceSum2R16s32f;
+            else if(sdepth == CV_16S && ddepth == CV_64F)
+                func = reduceSum2R16s64f;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
+                func = GET_OPTIMIZED(reduceSum2R32f32f);
+            else if(sdepth == CV_32F && ddepth == CV_64F)
+                func = reduceSum2R32f64f;
+            else if(sdepth == CV_64F && ddepth == CV_64F)
+                func = reduceSum2R64f64f;
         }
     }
     else
@@ -1132,29 +1132,6 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumC64f64f;
         }
-        else if(op == CV_REDUCE_SUM2)
-        {
-            if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSum2C8u32s);
-            else if(sdepth == CV_8U && ddepth == CV_32F)
-                func = reduceSum2C8u32f;
-            else if(sdepth == CV_8U && ddepth == CV_64F)
-                func = reduceSum2C8u64f;
-            else if(sdepth == CV_16U && ddepth == CV_32F)
-                func = reduceSum2C16u32f;
-            else if(sdepth == CV_16U && ddepth == CV_64F)
-                func = reduceSum2C16u64f;
-            else if(sdepth == CV_16S && ddepth == CV_32F)
-                func = reduceSum2C16s32f;
-            else if(sdepth == CV_16S && ddepth == CV_64F)
-                func = reduceSum2C16s64f;
-            else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSum2C32f32f);
-            else if(sdepth == CV_32F && ddepth == CV_64F)
-                func = reduceSum2C32f64f;
-            else if(sdepth == CV_64F && ddepth == CV_64F)
-                func = reduceSum2C64f64f;
-        }
         else if(op == CV_REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
@@ -1180,6 +1157,29 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = GET_OPTIMIZED(reduceMinC32f);
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinC64f;
+        }
+        else if(op == CV_REDUCE_SUM2)
+        {
+            if(sdepth == CV_8U && ddepth == CV_32S)
+                func = GET_OPTIMIZED(reduceSum2C8u32s);
+            else if(sdepth == CV_8U && ddepth == CV_32F)
+                func = reduceSum2C8u32f;
+            else if(sdepth == CV_8U && ddepth == CV_64F)
+                func = reduceSum2C8u64f;
+            else if(sdepth == CV_16U && ddepth == CV_32F)
+                func = reduceSum2C16u32f;
+            else if(sdepth == CV_16U && ddepth == CV_64F)
+                func = reduceSum2C16u64f;
+            else if(sdepth == CV_16S && ddepth == CV_32F)
+                func = reduceSum2C16s32f;
+            else if(sdepth == CV_16S && ddepth == CV_64F)
+                func = reduceSum2C16s64f;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
+                func = GET_OPTIMIZED(reduceSum2C32f32f);
+            else if(sdepth == CV_32F && ddepth == CV_64F)
+                func = reduceSum2C32f64f;
+            else if(sdepth == CV_64F && ddepth == CV_64F)
+                func = reduceSum2C64f64f;
         }
     }
 
