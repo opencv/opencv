@@ -7,6 +7,7 @@ ocv_add_dispatched_file(convert SSE2 AVX2)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
 ocv_add_dispatched_file(matmul SSE2 AVX2)
+ocv_add_dispatched_file(mean SSE2 AVX2)
 ocv_add_dispatched_file(sum SSE2 AVX2)
 
 # dispatching for accuracy tests
