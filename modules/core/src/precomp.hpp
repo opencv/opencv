@@ -113,6 +113,14 @@ template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
     T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
 };
 
+template<typename T1, typename T2=T1, typename T3=T1> struct OpAddSqr
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + saturate_cast<T3>(b)*saturate_cast<T3>(b)); }
+};
+
 template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
 {
     typedef T1 type1;

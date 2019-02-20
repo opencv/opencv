@@ -1490,6 +1490,7 @@ CVAPI(void)  cvNormalize( const CvArr* src, CvArr* dst,
 #define CV_REDUCE_AVG 1
 #define CV_REDUCE_MAX 2
 #define CV_REDUCE_MIN 3
+#define CV_REDUCE_SUM2 4
 /** @} */
 
 /** @see @ref core_c_ReduceFlags "flags" */

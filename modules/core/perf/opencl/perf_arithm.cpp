@@ -1145,7 +1145,7 @@ OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
     SANITY_CHECK(dst, eps);
 }
 
-CV_ENUM(ReduceAccOp, CV_REDUCE_SUM, CV_REDUCE_AVG)
+CV_ENUM(ReduceAccOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_SUM2)
 
 typedef tuple<Size, std::pair<MatType, MatType>, int, ReduceAccOp> ReduceAccParams;
 typedef TestBaseWithParam<ReduceAccParams> ReduceAccFixture;
