@@ -584,7 +584,7 @@ void ONNXImporter::populateNet(Net dstNet)
             for (int j = 1; j < node_proto.input_size(); j++) {
                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
-            layerParams.set("num_output", layerParams.blobs[0].size[1]);
+            layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }
         else if (layer_type == "Transpose")
