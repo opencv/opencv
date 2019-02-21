@@ -604,8 +604,8 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
-template<typename T, typename ST, class Op> static void
-reduceR_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstRow = false)
+template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+reduceR_( const Mat& srcmat, Mat& dstmat)
 {
     typedef typename Op::rtype WT;
     Size size = srcmat.size();
@@ -617,13 +617,10 @@ reduceR_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstRow = false)
     size_t srcstep = srcmat.step/sizeof(src[0]);
     int i;
     Op op;
+    OpInit opInit;
 
-    if (applyOpOnFirstRow)
-      for( i = 0; i < size.width; i++ )
-          buf[i] = op(0, (WT)src[i]);
-    else
-      for( i = 0; i < size.width; i++ )
-          buf[i] = src[i];
+    for( i = 0; i < size.width; i++ )
+        buf[i] = opInit(src[i]);
 
     for( ; --size.height; )
     {
@@ -651,14 +648,15 @@ reduceR_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstRow = false)
 }
 
 
-template<typename T, typename ST, class Op> static void
-reduceC_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstCol = false )
+template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+reduceC_( const Mat& srcmat, Mat& dstmat)
 {
     typedef typename Op::rtype WT;
     Size size = srcmat.size();
     int cn = srcmat.channels();
     size.width *= cn;
     Op op;
+    OpInit opInit;
 
     AutoBuffer<WT> cumul(cn);
     for( int y = 0; y < size.height; y++ )
@@ -667,17 +665,13 @@ reduceC_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstCol = false )
         ST* dst = dstmat.ptr<ST>(y);
         if( size.width == cn )
         {
-          if (applyOpOnFirstCol)
-            for( int k = 0; k < cn; k++ )
-                dst[k] = (ST)op(0, (WT)src[k]);
-          else
-            for( int k = 0; k < cn; k++ )
-                dst[k] = src[k];
+          for( int k = 0; k < cn; k++ )
+              dst[k] = (ST)opInit(src[k]);
         }
         else
         {
             for(int k = 0; k < cn ; ++k )
-              cumul[k] = applyOpOnFirstCol ? op(0, src[k]) : src[k];
+              cumul[k] = opInit(src[k]);
             for(int k = cn ; k < size.width ; k += cn )
             {
                 for (int c = 0 ; c < cn ; ++c)
@@ -689,7 +683,7 @@ reduceC_( const Mat& srcmat, Mat& dstmat, bool applyOpOnFirstCol = false )
     }
 }
 
-typedef void (*ReduceFunc)( const Mat& src, Mat& dst, bool );
+typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
@@ -704,16 +698,16 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst, bool );
 #define reduceSumR32f64f reduceR_<float, double,OpAdd<double> >
 #define reduceSumR64f64f reduceR_<double,double,OpAdd<double> >
 
-#define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int> >
-#define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int> >
-#define reduceSum2R8u64f  reduceR_<uchar, double,OpAddSqr<int> >
-#define reduceSum2R16u32f reduceR_<ushort,float, OpAddSqr<float> >
-#define reduceSum2R16u64f reduceR_<ushort,double,OpAddSqr<double> >
-#define reduceSum2R16s32f reduceR_<short, float, OpAddSqr<float> >
-#define reduceSum2R16s64f reduceR_<short, double,OpAddSqr<double> >
-#define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float> >
-#define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double> >
-#define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double> >
+#define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u64f  reduceR_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R16u32f reduceR_<ushort,float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16u64f reduceR_<ushort,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R16s32f reduceR_<short, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16s64f reduceR_<short, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double>,OpSqr<double> >
 
 #define reduceMaxR8u  reduceR_<uchar, uchar, OpMax<uchar> >
 #define reduceMaxR16u reduceR_<ushort,ushort,OpMax<ushort> >
@@ -809,12 +803,12 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
 
-#define reduceSum2C8u32s  reduceC_<uchar, int,   OpAddSqr<int> >
-#define reduceSum2C8u32f  reduceC_<uchar, float, OpAddSqr<int> >
-#define reduceSum2C16u32f reduceC_<ushort,float, OpAddSqr<float> >
-#define reduceSum2C16s32f reduceC_<short, float, OpAddSqr<float> >
-#define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float> >
-#define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double> >
+#define reduceSum2C8u32s  reduceC_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C8u32f  reduceC_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C16u32f reduceC_<ushort,float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C16s32f reduceC_<short, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
 
 #ifdef HAVE_IPP
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
@@ -827,10 +821,10 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
 
-#define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int> >
-#define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double> >
-#define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double> >
-#define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double> >
+#define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
 #endif
 
 #ifdef HAVE_IPP
@@ -903,7 +897,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
-    if (op == CV_REDUCE_AVG)
+    if (op == REDUCE_AVG)
     {
         if (sdepth < CV_32S && ddepth < CV_32S)
             ddepth = CV_32S;
@@ -942,7 +936,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         _dst.create(dsize, dtype);
         UMat dst = _dst.getUMat();
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(ocl::KernelArg::ReadOnly(src),
                       ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
         else
@@ -978,7 +972,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
                 temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
         else
             k.args(srcarg, temparg);
@@ -1005,9 +999,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     int ddepth = CV_MAT_DEPTH(dtype);
 
     CV_Assert( cn == CV_MAT_CN(dtype) );
-    CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
-               op == CV_REDUCE_MIN || op == CV_REDUCE_AVG ||
-               op == CV_REDUCE_SUM2);
+    CV_Assert( op == REDUCE_SUM || op == REDUCE_MAX ||
+               op == REDUCE_MIN || op == REDUCE_AVG ||
+               op == REDUCE_SUM2);
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
@@ -1021,9 +1015,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
 
-    if( op == CV_REDUCE_AVG )
+    if( op == REDUCE_AVG )
     {
-        op = CV_REDUCE_SUM;
+        op = REDUCE_SUM;
         if( sdepth < CV_32S && ddepth < CV_32S )
         {
             temp.create(dst.rows, dst.cols, CV_32SC(cn));
@@ -1034,10 +1028,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     ReduceFunc func = 0;
     if( dim == 0 )
     {
-        if( op == CV_REDUCE_SUM )
+        if( op == REDUCE_SUM )
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSumR8u32s);
+                func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumR8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1051,42 +1045,42 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSumR16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSumR32f32f);
+                func = reduceSumR32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSumR32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumR64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMaxR8u);
+                func = reduceMaxR8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMaxR16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMaxR16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMaxR32f);
+                func = reduceMaxR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxR64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMinR8u);
+                func = reduceMinR8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMinR16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMinR16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMinR32f);
+                func = reduceMinR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinR64f;
         }
-        else if( op == CV_REDUCE_SUM2 )
+        else if( op == REDUCE_SUM2 )
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSum2R8u32s);
+                func = reduceSum2R8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSum2R8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1100,7 +1094,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSum2R16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSum2R32f32f);
+                func = reduceSum2R32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSum2R32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
@@ -1109,10 +1103,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     }
     else
     {
-        if(op == CV_REDUCE_SUM)
+        if(op == REDUCE_SUM)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSumC8u32s);
+                func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumC8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1126,42 +1120,42 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSumC16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSumC32f32f);
+                func = reduceSumC32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSumC32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumC64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMaxC8u);
+                func = reduceMaxC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMaxC16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMaxC16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMaxC32f);
+                func = reduceMaxC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxC64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMinC8u);
+                func = reduceMinC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMinC16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMinC16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMinC32f);
+                func = reduceMinC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinC64f;
         }
-        else if(op == CV_REDUCE_SUM2)
+        else if(op == REDUCE_SUM2)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSum2C8u32s);
+                func = reduceSum2C8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSum2C8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1175,7 +1169,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSum2C16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSum2C32f32f);
+                func = reduceSum2C32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSum2C32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
@@ -1187,9 +1181,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         CV_Error( CV_StsUnsupportedFormat,
                   "Unsupported combination of input and output array formats" );
 
-    func( src, temp, ( op == CV_REDUCE_SUM2 ) );
+    func( src, temp );
 
-    if( op0 == CV_REDUCE_AVG )
+    if( op0 == REDUCE_AVG )
         temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
 }
 

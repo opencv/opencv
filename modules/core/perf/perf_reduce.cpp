@@ -5,7 +5,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-CV_ENUM(ROp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN, CV_REDUCE_SUM2)
+CV_ENUM(ROp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN, REDUCE_SUM2)
 typedef tuple<Size, MatType, ROp> Size_MatType_ROp_t;
 typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 
@@ -23,7 +23,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG || reduceOp == CV_REDUCE_SUM2) )
+    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
@@ -51,7 +51,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG || reduceOp == CV_REDUCE_SUM2) )
+    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
