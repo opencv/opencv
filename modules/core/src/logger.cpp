@@ -49,10 +49,15 @@ static LogLevel parseLogLevelConfiguration()
     return LOG_LEVEL_INFO;
 }
 
+cv::utils::logging::LogTag* getGlobalLogTag()
+{
+    static cv::utils::logging::LogTag g_LogTag { "global", parseLogLevelConfiguration() };
+    return &g_LogTag;
+}
+
 static LogLevel& getLogLevelVariable()
 {
-    static LogLevel g_logLevel = parseLogLevelConfiguration();
-    return g_logLevel;
+    return getGlobalLogTag()->level;
 }
 
 LogLevel setLogLevel(LogLevel logLevel)
@@ -103,6 +108,29 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     (*out) << ss.str();
     if (logLevel <= LOG_LEVEL_WARNING)
         (*out) << std::flush;
+}
+
+void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message)
+{
+    std::ostringstream strm;
+    if (tag)
+    {
+        strm << tag << " ";
+    }
+    if (file)
+    {
+        strm << file << " ";
+    }
+    if (line > 0)
+    {
+        strm << "(" << line << ") ";
+    }
+    if (func)
+    {
+        strm << func << " ";
+    }
+    strm << message;
+    writeLogMessage(logLevel, strm.str().c_str());
 }
 
 } // namespace

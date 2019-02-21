@@ -10,6 +10,7 @@
 #include <limits.h> // INT_MAX
 
 #include "logger.defines.hpp"
+#include "logtag.hpp"
 
 //! @addtogroup core_logging
 // This section describes OpenCV logging utilities.
@@ -20,20 +21,6 @@ namespace cv {
 namespace utils {
 namespace logging {
 
-//! Supported logging levels and their semantic
-enum LogLevel {
-    LOG_LEVEL_SILENT = 0,              //!< for using in setLogVevel() call
-    LOG_LEVEL_FATAL = 1,               //!< Fatal (critical) error (unrecoverable internal error)
-    LOG_LEVEL_ERROR = 2,               //!< Error message
-    LOG_LEVEL_WARNING = 3,             //!< Warning message
-    LOG_LEVEL_INFO = 4,                //!< Info message
-    LOG_LEVEL_DEBUG = 5,               //!< Debug message. Disabled in the "Release" build.
-    LOG_LEVEL_VERBOSE = 6,             //!< Verbose (trace) messages. Requires verbosity level. Disabled in the "Release" build.
-#ifndef CV_DOXYGEN
-    ENUM_LOG_LEVEL_FORCE_INT = INT_MAX
-#endif
-};
-
 /** Set global logging level
 @return previous logging level
 */
@@ -41,15 +28,19 @@ CV_EXPORTS LogLevel setLogLevel(LogLevel logLevel);
 /** Get global logging level */
 CV_EXPORTS LogLevel getLogLevel();
 
+/** Get global log tag */
+CV_EXPORTS cv::utils::logging::LogTag* getGlobalLogTag();
+
 namespace internal {
 /** Write log message */
 CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
+CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message);
 } // namespace
 
 /**
  * \def CV_LOG_STRIP_LEVEL
  *
- * Define CV_LOG_STRIP_LEVEL=CV_LOG_LEVEL_[DEBUG|INFO|WARN|ERROR|FATAL|DISABLED] to compile out anything at that and before that logging level
+ * Define CV_LOG_STRIP_LEVEL=CV_LOG_LEVEL_[DEBUG|INFO|WARN|ERROR|FATAL|SILENT] to compile out anything at that and before that logging level
  */
 #ifndef CV_LOG_STRIP_LEVEL
 # if defined NDEBUG
@@ -59,7 +50,61 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 # endif
 #endif
 
+// CV_LOGTAG_FALLBACK is intended to be re-defined (undef and then define again)
+// by any other compilation units to provide a log tag when the logging statement
+// does not specify one. The macro needs to expand into a C++ expression that can
+// be static_cast into (cv::utils::logging::LogTag*). Null (nullptr) is permitted.
+#define CV_LOGTAG_FALLBACK nullptr
 
+// CV_LOGTAG_GLOBAL is the tag used when a log tag is not specified in the logging
+// statement nor the compilation unit. The macro needs to expand into a C++
+// expression that can be static_cast into (cv::utils::logging::LogTag*). Must be
+// non-null. Do not re-define.
+#define CV_LOGTAG_GLOBAL cv::utils::logging::getGlobalLogTag()
+
+#define CV_LOG_WITH_TAG(tag, msgLevel, ...) \
+    for(;;) { \
+        const auto cv_temp_msglevel = (cv::utils::logging::LogLevel)(msgLevel); \
+        if (cv_temp_msglevel >= (CV_LOG_STRIP_LEVEL)) break; \
+        auto cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(tag); \
+        if (!cv_temp_logtagptr) cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(CV_LOGTAG_FALLBACK); \
+        if (!cv_temp_logtagptr) cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(CV_LOGTAG_GLOBAL); \
+        if (cv_temp_logtagptr && (cv_temp_msglevel > cv_temp_logtagptr->level)) break; \
+        std::stringstream cv_temp_logstream; \
+        cv_temp_logstream << __VA_ARGS__; \
+        cv::utils::logging::internal::writeLogMessageEx( \
+            cv_temp_msglevel, \
+            (cv_temp_logtagptr ? cv_temp_logtagptr->name : nullptr), \
+            __FILE__, \
+            __LINE__, \
+            CV_Func, \
+            cv_temp_logstream.str().c_str()); \
+        break; \
+    }
+
+#define CV_LOG_FATAL(tag, ...)   CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_FATAL, __VA_ARGS__)
+#define CV_LOG_ERROR(tag, ...)   CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_ERROR, __VA_ARGS__)
+#define CV_LOG_WARNING(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_WARNING, __VA_ARGS__)
+#define CV_LOG_INFO(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_INFO, __VA_ARGS__)
+#define CV_LOG_DEBUG(tag, ...) CV_LOG_WITH_TAG(tag, cv::utils::logging::LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define CV_LOG_VERBOSE(tag, v, ...) CV_LOG_WITH_TAG(tag, (cv::utils::logging::LOG_LEVEL_VERBOSE + (int)(v)), __VA_ARGS__)
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
+# undef CV_LOG_INFO
+# define CV_LOG_INFO(tag, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_DEBUG
+# undef CV_LOG_DEBUG
+# define CV_LOG_DEBUG(tag, ...)
+#endif
+
+#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
+# undef CV_LOG_VERBOSE
+# define CV_LOG_VERBOSE(tag, v, ...)
+#endif
+
+#if 0
 #define CV_LOG_FATAL(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_FATAL) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_FATAL, ss.str().c_str()); break; }
 #define CV_LOG_ERROR(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_ERROR) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_ERROR, ss.str().c_str()); break; }
 #define CV_LOG_WARNING(tag, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_WARNING) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_WARNING, ss.str().c_str()); break; }
@@ -78,7 +123,7 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 #else
 #define CV_LOG_VERBOSE(tag, v, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_VERBOSE) break; std::stringstream ss; ss << "[VERB" << v << ":" << cv::utils::getThreadID() << "] " << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_VERBOSE, ss.str().c_str()); break; }
 #endif
-
+#endif
 
 }}} // namespace
 
