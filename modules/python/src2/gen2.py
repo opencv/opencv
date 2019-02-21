@@ -949,10 +949,10 @@ class PythonWrapperGenerator(object):
 
         self.code_ns_reg.write('static ConstDef consts_%s[] = {\n'%wname)
         for name, cname in sorted(ns.consts.items()):
-            self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(name, cname))
+            self.code_ns_reg.write('    {"%s", %s},\n'%(name, cname))
             compat_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", name).upper()
             if name != compat_name:
-                self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(compat_name, cname))
+                self.code_ns_reg.write('    {"%s", %s},\n'%(compat_name, cname))
         self.code_ns_reg.write('    {NULL, 0}\n};\n\n')
 
     def gen_namespaces_reg(self):
