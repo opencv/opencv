@@ -32,12 +32,14 @@ void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, Mat& su
         sum.create( 1, src.cols, CV_64FC1 );
         max.create( 1, src.cols, CV_64FC1 );
         min.create( 1, src.cols, CV_64FC1 );
+        sum2.create( 1, src.cols, CV_64FC1 );
     }
     else
     {
         sum.create( src.rows, 1, CV_64FC1 );
         max.create( src.rows, 1, CV_64FC1 );
         min.create( src.rows, 1, CV_64FC1 );
+        sum2.create( src.rows, 1, CV_64FC1 );
     }
     sum.setTo(Scalar(0));
     max.setTo(Scalar(-DBL_MAX));
