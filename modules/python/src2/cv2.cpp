@@ -1877,7 +1877,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
   }
   for (ConstDef * c = consts; c->name != NULL; ++c)
   {
-    PyDict_SetItemString(d, c->name, PyLong_FromLongLong(c->val));
+    PyDict_SetItemString(d, c->name, PyInt_FromSsize_t(c->val));
   }
 
 }
