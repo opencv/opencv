@@ -162,24 +162,6 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
                Mat(cv::Size(224, 224), CV_32FC3));
 }
 
-PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_coco)
-{
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-    processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt", "",
-               Mat(cv::Size(368, 368), CV_32FC3));
-}
-
-PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi)
-{
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt", "",
-               Mat(cv::Size(368, 368), CV_32FC3));
-}
-
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     if (backend == DNN_BACKEND_HALIDE ||
@@ -219,11 +201,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
-    if (backend == DNN_BACKEND_HALIDE
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-        || (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-#endif
-    )
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
 }
