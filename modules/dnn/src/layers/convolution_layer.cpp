@@ -1161,10 +1161,7 @@ public:
             const int group = numOutput / outGroupCn;
             if (group != 1)
             {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R3)
                 return preferableTarget == DNN_TARGET_CPU;
-#endif
-                return false;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
                 return dilation.width == 1 && dilation.height == 1;
