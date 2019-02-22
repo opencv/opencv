@@ -83,7 +83,17 @@ cv::gapi::GKernelPackage::getKernelById(const std::string &id) const
 
 std::vector<cv::gapi::GBackend> cv::gapi::GKernelPackage::backends() const
 {
+    std::unordered_set<cv::gapi::GBackend> unique_set;
     std::vector<cv::gapi::GBackend> result;
-    for (const auto &p : m_id_kernels) result.emplace_back(p.second.first);
+
+    for (const auto &p : m_id_kernels)
+    {
+        if (!ade::util::contains(unique_set, p.second.first))
+        {
+            result.emplace_back(p.second.first);
+            unique_set.insert(p.second.first);
+        }
+    }
+
     return result;
 }
