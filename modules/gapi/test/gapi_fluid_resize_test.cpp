@@ -743,7 +743,7 @@ TEST_P(NV12PlusResizeTest, Test)
     auto out = cv::gapi::resize(rgb, out_sz, 0, 0, interp);
     cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
 
-    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels(), cv::unite_policy::KEEP);
+    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels());
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
            ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));

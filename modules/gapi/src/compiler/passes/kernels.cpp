@@ -112,7 +112,7 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
             auto &op = gr.metadata(nh).get<Op>();
             cv::gapi::GBackend selected_backend;
             cv::GKernelImpl    selected_impl;
-            std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
+            std::tie(selected_backend, selected_impl) = kernels.getKernelById(op.k.name);
 
             selected_backend.priv().unpackKernel(ctx.graph, nh, selected_impl);
             op.backend = selected_backend;
@@ -140,7 +140,7 @@ void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi:
 
                 cv::gapi::GBackend selected_backend;
                 cv::GKernelImpl    selected_impl;
-                std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
+                std::tie(selected_backend, selected_impl) = kernels.getKernelById(op.k.name);
 
                 if (selected_backend == cv::gapi::compound::backend())
                 {

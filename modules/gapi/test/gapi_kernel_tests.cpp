@@ -303,6 +303,12 @@ TEST(KernelPackage, TestWithEmptyRHS)
     EXPECT_TRUE(pkg.includes<J::Foo>());
 }
 
+TEST(KernelPackage, Return_Unique_Backends)
+{
+    auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray, fluid::GAdd>();
+    EXPECT_EQ(2u, pkg.backends().size());
+}
+
 TEST(KernelPackage, Can_Use_Custom_Kernel)
 {
     cv::GMat in[2];

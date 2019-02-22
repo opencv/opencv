@@ -14,7 +14,6 @@
 #include <type_traits> // false_type, true_type
 #include <unordered_map> // map (for GKernelPackage)
 #include <utility> // tuple
-//#include <vector>  // lookup order
 #include <unordered_set>
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
@@ -388,14 +387,12 @@ namespace gapi {
      */
     class GAPI_EXPORTS GKernelPackage
     {
-        /// @private
-        using S = std::unordered_map<std::string, GKernelImpl>;
 
         /// @private
-        using M = std::unordered_map<GBackend, S>;
+        using M = std::unordered_map<std::string, std::pair<GBackend, GKernelImpl>>;
 
         /// @private
-        M m_backend_kernels;
+        M m_id_kernels;
 
     protected:
         /// @private
@@ -427,10 +424,9 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            const auto set_iter = m_backend_kernels.find(KImpl::backend());
-            return (set_iter != m_backend_kernels.end())
-                ? (set_iter->second.count(KImpl::API::id()) > 0)
-                : false;
+            auto kernel_it = m_id_kernels.find(KImpl::API::id());
+            return kernel_it != m_id_kernels.end() &&
+                   kernel_it->second.first == KImpl::backend();
         }
 
         /**
@@ -477,14 +473,14 @@ namespace gapi {
          *
          */
         template<typename KAPI>
-        GBackend lookup() const
+        GBackend getBackend() const
         {
-            return lookup(KAPI::id()).first;
+            return getKernelById(KAPI::id()).first;
         }
 
         /// @private
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-        lookup(const std::string &id) const;
+        getKernelById(const std::string &id) const;
 
         // FIXME: No overwrites allowed?
         /**
@@ -498,7 +494,7 @@ namespace gapi {
             auto kernel_impl = GKernelImpl{KImpl::kernel()};
             removeAPI(kernel_id);
 
-            m_backend_kernels[backend][kernel_id] = std::move(kernel_impl);
+            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
         }
 
         /**
