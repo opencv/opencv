@@ -63,19 +63,20 @@ namespace detail
 
     template <typename T1, typename T2>
     struct compare<T1, T2> {
-        static constexpr void check()
+        // FIXME void return statement constexpr function doesn't support C++11
+        static constexpr bool check()
         {
             static_assert(!is_equal(T1::API::id(), T2::API::id()),
                           "Kernel package contains kernels with same id");
+            return true;
         }
     };
 
     template <typename T1, typename T2, typename ...Others>
     struct compare {
-        static constexpr void check()
+        static constexpr bool check()
         {
-            compare<T1, T2>::check();
-            compare<T1, Others...>::check();
+            return compare<T1, T2>::check() && compare<T1, Others...>::check();
         };
     };
 
@@ -84,10 +85,9 @@ namespace detail
 
     template <typename T1, typename ...Others>
     struct compare_all {
-        static constexpr void check_all()
+        static constexpr bool check_all()
         {
-            compare<T1, Others...>::check();
-            compare_all<Others...>::check_all();
+            return compare<T1, Others...>::check() && compare_all<Others...>::check_all();
         }
     };
 
@@ -97,23 +97,29 @@ namespace detail
     template <int Size, typename ...Types>
     struct wrapper
     {
-        static constexpr void call_wrapper() { compare_all<Types...>::check_all(); }
+        static constexpr bool call_wrapper()
+        {
+            return compare_all<Types...>::check_all();
+        }
     };
 
     template <typename ...Types>
     struct wrapper<0, Types...>
     {
-        static constexpr void call_wrapper() {}
+        static constexpr bool call_wrapper() { return true; }
     };
 
     template <typename T1>
     struct compare_all<T1>
     {
-        static constexpr void check_all() {}
+        static constexpr bool check_all() { return true; }
     };
 
     template <typename ...Types>
-    constexpr void types_are_unique() { wrapper<sizeof...(Types), Types...>::call_wrapper(); }
+    constexpr bool types_are_unique()
+    {
+         return wrapper<sizeof...(Types), Types...>::call_wrapper();
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // yield() is used in graph construction time as a generic method to obtain
