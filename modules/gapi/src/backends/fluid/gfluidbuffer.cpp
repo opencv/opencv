@@ -402,20 +402,6 @@ fluid::ViewPrivWithoutOwnBorder::ViewPrivWithoutOwnBorder(const Buffer *parent, 
     m_border_size = borderSize;
 }
 
-const uint8_t* fluid::ViewPrivWithoutOwnBorder::InLineB(int index) const
-{
-    GAPI_DbgAssert(m_p);
-
-    const auto &p_priv = m_p->priv();
-
-    GAPI_DbgAssert(index >= -m_border_size
-                && index <  -m_border_size + m_lines_next_iter);
-
-    const int log_idx = m_read_caret + index;
-
-    return p_priv.storage().inLineB(log_idx, m_p->meta().size.height);
-}
-
 void fluid::ViewPrivWithoutOwnBorder::allocate(int lineConsumption, BorderOpt)
 {
     initCache(lineConsumption);
@@ -473,17 +459,6 @@ std::size_t fluid::ViewPrivWithOwnBorder::size() const
 {
     GAPI_DbgAssert(m_p);
     return m_own_storage.size();
-}
-
-const uint8_t* fluid::ViewPrivWithOwnBorder::InLineB(int index) const
-{
-    GAPI_DbgAssert(m_p);
-    GAPI_DbgAssert(index >= -m_border_size
-                && index <  -m_border_size + m_lines_next_iter);
-
-    const int log_idx = m_read_caret + index;
-
-    return m_own_storage.inLineB(log_idx, m_p->meta().size.height);
 }
 
 bool fluid::View::ready() const
@@ -544,6 +519,9 @@ void fluid::Buffer::Priv::allocate(BorderOpt border,
     // Init physical buffer
 
     // FIXME? combine line_consumption with skew?
+    // FIXME? This formula serves general case to avoid possible deadlock,
+    // in some cases this value can be smaller:
+    // 2 lines produced, 2 consumed, data_height can be 2, not 3
     auto data_height = std::max(line_consumption, skew) + m_writer_lpi - 1;
 
     m_storage = createStorage(data_height,
@@ -639,13 +617,6 @@ int fluid::Buffer::Priv::linesReady() const
         const int writes = std::min(m_write_caret - writeStart(), outputLines());
         return writes;
     }
-}
-
-uint8_t* fluid::Buffer::Priv::OutLineB(int index)
-{
-    GAPI_DbgAssert(index >= 0 && index < m_writer_lpi);
-
-    return m_storage->ptr(m_write_caret + index);
 }
 
 int fluid::Buffer::Priv::lpi() const

@@ -717,4 +717,77 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, BlursAfterResizeTest,
                                        std::make_tuple(cv::Size{64,64},
                                                        cv::Size{49,49}, cv::Rect{0,39,49,10}))));
 
+struct NV12PlusResizeTest : public TestWithParam <std::tuple<cv::Size, cv::Size, cv::Rect>> {};
+TEST_P(NV12PlusResizeTest, Test)
+{
+    cv::Size y_sz, out_sz;
+    cv::Rect roi;
+    std::tie(y_sz, out_sz, roi) = GetParam();
+    int interp = cv::INTER_LINEAR;
+
+    cv::Size uv_sz(y_sz.width / 2, y_sz.height / 2);
+    cv::Size in_sz(y_sz.width, y_sz.height*3/2);
+
+    cv::Mat in_mat = cv::Mat(in_sz, CV_8UC1);
+
+    cv::Scalar mean   = cv::Scalar(127.0f);
+    cv::Scalar stddev = cv::Scalar(40.f);
+    cv::randn(in_mat, mean, stddev);
+
+    cv::Mat y_mat  = cv::Mat(y_sz, CV_8UC1, in_mat.data);
+    cv::Mat uv_mat = cv::Mat(uv_sz, CV_8UC2, in_mat.data + in_mat.step1() * y_sz.height);
+    cv::Mat out_mat, out_mat_ocv;
+
+    cv::GMat y, uv;
+    auto rgb = cv::gapi::NV12toRGB(y, uv);
+    auto out = cv::gapi::resize(rgb, out_sz, 0, 0, interp);
+    cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
+
+    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels(), cv::unite_policy::KEEP);
+
+    c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
+           ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
+
+    cv::Mat rgb_mat;
+    cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
+    cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != out_mat_ocv(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(Fluid, NV12PlusResizeTest,
+                        Values(std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 0, 4, 4})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 0, 4, 1})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 1, 4, 2})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 2, 4, 2})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0,  0, 49, 49})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0,  0, 49, 12})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0, 11, 49, 15})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0, 39, 49, 10})
+                              ,std::make_tuple(cv::Size{1920, 1080},
+                                               cv::Size{ 320,  256}, cv::Rect{0, 0, 320, 64})
+                              ,std::make_tuple(cv::Size{1920, 1080},
+                                               cv::Size{ 320,  256}, cv::Rect{0, 64, 320, 64})
+                              ,std::make_tuple(cv::Size{1920, 1080},
+                                               cv::Size{ 320,  256}, cv::Rect{0, 128, 320, 64})
+                              ,std::make_tuple(cv::Size{1920, 1080},
+                                               cv::Size{ 320,  256}, cv::Rect{0, 192, 320, 64})
+                              ,std::make_tuple(cv::Size{256, 400},
+                                               cv::Size{ 32,  64}, cv::Rect{0,  0, 32, 16})
+                              ,std::make_tuple(cv::Size{256, 400},
+                                               cv::Size{ 32,  64}, cv::Rect{0, 16, 32, 16})
+                              ,std::make_tuple(cv::Size{256, 400},
+                                               cv::Size{ 32,  64}, cv::Rect{0, 32, 32, 16})
+                              ,std::make_tuple(cv::Size{256, 400},
+                                               cv::Size{ 32,  64}, cv::Rect{0, 48, 32, 16})
+                               ));
+
 } // namespace opencv_test

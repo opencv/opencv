@@ -328,8 +328,8 @@ class CV_EXPORTS_W Tonemap : public Algorithm
 public:
     /** @brief Tonemaps image
 
-    @param src source image - 32-bit 3-channel Mat
-    @param dst destination image - 32-bit 3-channel Mat with values in [0, 1] range
+    @param src source image - CV_32FC3 Mat (float 32 bits 3 channels)
+    @param dst destination image - CV_32FC3 Mat with values in [0, 1] range
      */
     CV_WRAP virtual void process(InputArray src, OutputArray dst) = 0;
 

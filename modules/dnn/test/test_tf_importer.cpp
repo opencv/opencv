@@ -558,8 +558,6 @@ TEST_P(Test_TensorFlow_layers, split)
 
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     runTensorFlowNet("resize_nearest_neighbor");
     runTensorFlowNet("keras_upsampling2d");
 }

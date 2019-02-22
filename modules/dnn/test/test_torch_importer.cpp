@@ -277,8 +277,6 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
         throw SkipTestException("");
 #endif
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("");
 
     const string model = findDataFile("dnn/openface_nn4.small2.v1.t7", false);
     Net net = readNetFromTorch(model);
