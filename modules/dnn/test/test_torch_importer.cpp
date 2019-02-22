@@ -272,7 +272,7 @@ class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE) && (INF_ENGINE_RELEASE < 2018030000 || INF_ENGINE_RELEASE == 2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 #endif

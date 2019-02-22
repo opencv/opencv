@@ -250,7 +250,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 TEST_P(DNNTestNetwork, OpenFace)
 {
 #if defined(INF_ENGINE_RELEASE)
-#if (INF_ENGINE_RELEASE < 2018030000 || INF_ENGINE_RELEASE == 2018050000)
+#if INF_ENGINE_RELEASE == 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("");
 #elif INF_ENGINE_RELEASE < 2018040000
