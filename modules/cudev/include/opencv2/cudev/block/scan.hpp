@@ -135,6 +135,12 @@ __device__ T blockScanInclusive(T data, volatile T* smem, uint tid)
             }
             else
             {
+                // Read from smem[tid]              (T val = smem[tid])
+                // and write to smem[tid + 1]       (smem[tid + 1] = warpScanInclusive(mask, val))
+                // should be explicitly fenced by "__syncwarp" to get rid of
+                // "cuda-memcheck --tool racecheck" warnings.
+                __syncwarp(mask);
+
                 // calculate inclusive scan and write back to shared memory with offset 1
                 smem[tid + 1] = warpScanInclusive(mask, val);
 
@@ -197,10 +203,18 @@ __device__ T blockScanInclusive(T data, volatile T* smem, uint tid)
 
         int quot = THREADS_NUM / WARP_SIZE;
 
+        T val;
+
         if (tid < quot)
         {
             // grab top warp elements
-            T val = smem[tid];
+            val = smem[tid];
+        }
+
+        __syncthreads();
+
+        if (tid < quot)
+        {
 
             if (0 == (THREADS_NUM & (WARP_SIZE - 1)))
             {
