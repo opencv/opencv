@@ -4,16 +4,16 @@
  * This file was part of the Independent JPEG Group's software:
  * Developed 1997-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, D. R. Commander.
+ * Copyright (C) 2015, 2018, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
  * This file contains probability estimation tables for common use in
  * arithmetic entropy encoding and decoding routines.
  *
- * This data represents Table D.2 in the JPEG spec (ISO/IEC IS 10918-1
- * and CCITT Recommendation ITU-T T.81) and Table 24 in the JBIG spec
- * (ISO/IEC IS 11544 and CCITT Recommendation ITU-T T.82).
+ * This data represents Table D.2 in
+ * Recommendation ITU-T T.81 (1992) | ISO/IEC 10918-1:1994 and Table 24 in
+ * Recommendation ITU-T T.82 (1993) | ISO/IEC 11544:1993.
  */
 
 #define JPEG_INTERNALS
@@ -29,9 +29,10 @@
  * implementation (jbig_tab.c).
  */
 
-#define V(i,a,b,c,d) (((JLONG)a << 16) | ((JLONG)c << 8) | ((JLONG)d << 7) | b)
+#define V(i, a, b, c, d) \
+  (((JLONG)a << 16) | ((JLONG)c << 8) | ((JLONG)d << 7) | b)
 
-const JLONG jpeg_aritab[113+1] = {
+const JLONG jpeg_aritab[113 + 1] = {
 /*
  * Index, Qe_Value, Next_Index_LPS, Next_Index_MPS, Switch_MPS
  */
