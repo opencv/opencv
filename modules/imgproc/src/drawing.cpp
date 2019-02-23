@@ -161,7 +161,7 @@ bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
    Returns number of points on the line or negative number if error.
 */
 void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2,
-                        int connectivity, bool left_to_right)
+                        int connectivity, bool forceLeftToRight)
 {
     count = -1;
 
@@ -190,7 +190,7 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
     int dy = pt2.y - pt1.y;
     int s = dx < 0 ? -1 : 0;
 
-    if( left_to_right )
+    if( forceLeftToRight )
     {
         dx = (dx ^ s) - s;
         dy = (dy ^ s) - s;
@@ -222,7 +222,7 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
 
     if( connectivity == 8 )
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = dx - (dy + dy);
         plusDelta = dx + dx;
@@ -233,7 +233,7 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
     }
     else /* connectivity == 4 */
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
@@ -248,10 +248,8 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
     this->elemSize = (int)bt_pix0;
 }
 
-LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2, int connectivity, bool left_to_right)
+LineVirtualIterator::LineVirtualIterator(const Size& aSize, Point pt1, Point pt2, int connectivity, bool forceLeftToRight):size(aSize),count(-1)
 {
-    count = -1;
-
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
     if( (unsigned)pt1.x >= (unsigned)(size.width) ||
@@ -261,9 +259,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
     {
         if( !clipLine( size, pt1, pt2 ) )
         {
-            offset = 0;
             err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
-            step = 0;
             return;
         }
     }
@@ -275,7 +271,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
     int dy = pt2.y - pt1.y;
     int s = dx < 0 ? -1 : 0;
 
-    if( left_to_right )
+    if( forceLeftToRight )
     {
         dx = (dx ^ s) - s;
         dy = (dy ^ s) - s;
@@ -288,7 +284,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
         bt_pix = (bt_pix ^ s) - s;
     }
 
-    offset = static_cast<int>(pt1.y * istep + pt1.x);
+    currentPos = pt1;
 
     s = dy < 0 ? -1 : 0;
     dy = (dy ^ s) - s;
@@ -307,7 +303,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
 
     if( connectivity == 8 )
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = dx - (dy + dy);
         plusDelta = dx + dx;
@@ -318,7 +314,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
     }
     else /* connectivity == 4 */
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
@@ -327,8 +323,6 @@ LineVirtualIterator::LineVirtualIterator(const Size& size, Point pt1, Point pt2,
         minusStep = (int)bt_pix;
         count = dx + dy + 1;
     }
-
-    step = size.width;
 }
 
 static void

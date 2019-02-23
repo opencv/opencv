@@ -4689,14 +4689,14 @@ public:
     not to depend on the ordering of pt1 and pt2 parameters
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false ) {
-      init(img.size(), img.type(), (uchar*)img.ptr(), img.step1()*img.elemSize1(), pt1, pt2, connectivity, leftToRight);
+                  int connectivity = 8, bool forceLeftToRight = false ) {
+      init(img.size(), img.type(), (uchar*)img.ptr(), img.step1()*img.elemSize1(), pt1, pt2, connectivity, forceLeftToRight);
     }
     LineIterator( const Size& size, int type, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false ) {
-      init(size, type, 0, CV_ELEM_SIZE(type)*size.width, pt1, pt2, connectivity, leftToRight);
+                  int connectivity = 8, bool forceLeftToRight = false ) {
+      init(size, type, 0, CV_ELEM_SIZE(type)*size.width, pt1, pt2, connectivity, forceLeftToRight);
     }
-    void init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2, int connectivity = 8, bool leftToRight = false);
+    void init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2, int connectivity = 8, bool forceLeftToRight = false);
 
     /** @brief returns pointer to the current pixel
     */
@@ -4770,11 +4770,11 @@ public:
     not to depend on the ordering of pt1 and pt2 parameters
     */
     LineVirtualIterator(const Size& size, Point pt1, Point pt2,
-                        int connectivity = 8, bool leftToRight = false );
+                        int connectivity = 8, bool forceLeftToRight = false );
 
     /** @brief alias of pos(), returns coordinates of the current pixel
     */
-    Point operator *() const {return pos();}
+    const Point& operator *() const {return pos();}
     /** @brief prefix increment operator (++it). shifts iterator to the next pixel
     */
     LineVirtualIterator& operator ++();
@@ -4783,10 +4783,10 @@ public:
     LineVirtualIterator operator ++(int);
     /** @brief returns coordinates of the current pixel
     */
-    Point pos() const;
+    const Point& pos() const {return currentPos;}
 
-    int offset;
-    int step;
+    const Size size;
+    Point currentPos;
     int err, count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
@@ -4801,7 +4801,11 @@ LineVirtualIterator& LineVirtualIterator::operator ++()
 {
     int mask = err < 0 ? -1 : 0;
     err += minusDelta + (plusDelta & mask);
-    offset += minusStep + (plusStep & mask);
+    int offset = minusStep + (plusStep & mask);
+    int dx = !size.width ? 0 : (offset%size.width);
+    int dy = !size.width ? 0 : (offset/size.width);
+    currentPos.x += dx;
+    currentPos.y += dy;
     return *this;
 }
 
@@ -4811,15 +4815,6 @@ LineVirtualIterator LineVirtualIterator::operator ++(int)
     LineVirtualIterator it = *this;
     ++(*this);
     return it;
-}
-
-inline
-Point LineVirtualIterator::pos() const
-{
-    Point p;
-    p.y = (int)(offset/step);
-    p.x = (int)(offset - p.y*step);
-    return p;
 }
 
 //! @endcond
