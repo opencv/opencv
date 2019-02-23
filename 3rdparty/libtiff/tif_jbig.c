@@ -1,5 +1,3 @@
-/* $Id: tif_jbig.c,v 1.16 2017-06-26 15:20:00 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -53,17 +51,18 @@ static int JBIGDecode(TIFF* tif, uint8* buffer, tmsize_t size, uint16 s)
 	struct jbg_dec_state decoder;
 	int decodeStatus = 0;
 	unsigned char* pImage = NULL;
-	(void) size, (void) s;
+	unsigned long decodedSize;
+	(void) s;
 
 	if (isFillOrder(tif, tif->tif_dir.td_fillorder))
 	{
-		TIFFReverseBits(tif->tif_rawdata, tif->tif_rawdatasize);
+		TIFFReverseBits(tif->tif_rawcp, tif->tif_rawcc);
 	}
 
 	jbg_dec_init(&decoder);
 
 #if defined(HAVE_JBG_NEWLEN)
-	jbg_newlen(tif->tif_rawdata, (size_t)tif->tif_rawdatasize);
+	jbg_newlen(tif->tif_rawcp, (size_t)tif->tif_rawcc);
 	/*
 	 * I do not check the return status of jbg_newlen because even if this
 	 * function fails it does not necessarily mean that decoding the image
@@ -76,8 +75,8 @@ static int JBIGDecode(TIFF* tif, uint8* buffer, tmsize_t size, uint16 s)
 	 */
 #endif /* HAVE_JBG_NEWLEN */
 
-	decodeStatus = jbg_dec_in(&decoder, (unsigned char*)tif->tif_rawdata,
-				  (size_t)tif->tif_rawdatasize, NULL);
+	decodeStatus = jbg_dec_in(&decoder, (unsigned char*)tif->tif_rawcp,
+				  (size_t)tif->tif_rawcc, NULL);
 	if (JBG_EOK != decodeStatus)
 	{
 		/*
@@ -98,9 +97,28 @@ static int JBIGDecode(TIFF* tif, uint8* buffer, tmsize_t size, uint16 s)
 		return 0;
 	}
 
+	decodedSize = jbg_dec_getsize(&decoder);
+	if( (tmsize_t)decodedSize < size )
+	{
+	    TIFFWarningExt(tif->tif_clientdata, "JBIG",
+	                   "Only decoded %lu bytes, whereas %lu requested",
+	                   decodedSize, (unsigned long)size);
+	}
+	else if( (tmsize_t)decodedSize > size )
+	{
+	    TIFFErrorExt(tif->tif_clientdata, "JBIG",
+	                 "Decoded %lu bytes, whereas %lu were requested",
+	                 decodedSize, (unsigned long)size);
+	    jbg_dec_free(&decoder);
+	    return 0;
+	}
 	pImage = jbg_dec_getimage(&decoder, 0);
-	_TIFFmemcpy(buffer, pImage, jbg_dec_getsize(&decoder));
+	_TIFFmemcpy(buffer, pImage, decodedSize);
 	jbg_dec_free(&decoder);
+
+        tif->tif_rawcp += tif->tif_rawcc;
+        tif->tif_rawcc = 0;
+
 	return 1;
 }
 

@@ -1,7 +1,7 @@
 #include "CsvReader.h"
 
 /** The default constructor of the CSV reader Class */
-CsvReader::CsvReader(const string &path, const char &separator){
+CsvReader::CsvReader(const string &path, char separator){
     _file.open(path.c_str(), ifstream::in);
     _separator = separator;
 }
