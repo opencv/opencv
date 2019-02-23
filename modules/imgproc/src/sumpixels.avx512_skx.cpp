@@ -13,7 +13,6 @@ namespace { // Anonymous namespace to avoid exposing the implementation classes
 // NOTE: Look at the bottom of the file for the entry-point function for external callers
 //
 
-// TODO: Add support for 1 channel input (WIP: currently hitting hardware glassjaw)
 template<size_t num_channels> class IntegralCalculator;
 
 template<size_t num_channels>
@@ -191,50 +190,54 @@ public:
     }
 
 
-    // The calculate_integral function referenced here must be implemented in the templated derivatives
-    // because the algorithm depends heavily on the number of channels in the image
-    // This is the incomplete definition (just the prototype) here.
-    //
     static CV_ALWAYS_INLINE
-    __m512d calculate_integral(__m512i src_longs, const __m512d above_values, __m512i &accumulator);
-
-
-    static CV_ALWAYS_INLINE
-    __m512i read_64_bytes(const __m512i *srcs, __mmask64 data_mask)  {
+    __m512i read_64_bytes(const __m512i *srcs, const __mmask64 data_mask)  {
         return _mm512_maskz_loadu_epi8(data_mask, srcs);
     }
 
 
     static CV_ALWAYS_INLINE
-    __m128i extract_lower_16bytes(__m512i src_64byte_chunk) {
+    __m128i extract_lower_16bytes(const __m512i src_64byte_chunk) {
         return _mm512_extracti64x2_epi64(src_64byte_chunk, 0x0);
     }
 
 
     static CV_ALWAYS_INLINE
-    __m512i convert_lower_8bytes_to_longs(__m128i src_16bytes)  {
+    __m512i convert_lower_8bytes_to_longs(const __m128i src_16bytes)  {
         return _mm512_cvtepu8_epi64(src_16bytes);
     }
 
 
     static CV_ALWAYS_INLINE
-    __m512i square_m512(__m512i src_longs) {
+    __m512i square_m512(const __m512i src_longs) {
         return _mm512_mullo_epi64(src_longs, src_longs);
     }
 
 
     static CV_ALWAYS_INLINE
-    __m128i shift_right_8_bytes(__m128i src_16bytes)  {
+    __m128i shift_right_8_bytes(const __m128i src_16bytes)  {
         return _mm_maskz_compress_epi64(2, src_16bytes);
     }
 
 
-
     static CV_ALWAYS_INLINE
-    __m512i shift_right_16_bytes(__m512i src_64byte_chunk)  {
+    __m512i shift_right_16_bytes(const __m512i src_64byte_chunk)  {
         return _mm512_maskz_compress_epi64(0xFC, src_64byte_chunk);
     }
 
+
+    static CV_ALWAYS_INLINE
+    __m512i  m512_hadd(const __m512i a){
+        return _mm512_add_epi64(_mm512_maskz_compress_epi64(0xAA, a), _mm512_maskz_compress_epi64(0x55, a));
+    }
+
+
+    // The calculate_integral function referenced here must be implemented in the templated derivatives
+    // because the algorithm depends heavily on the number of channels in the image
+    // This is the incomplete definition (just the prototype) here.
+    //
+    static CV_ALWAYS_INLINE
+    __m512d calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator);
 
 };
 
@@ -246,7 +249,7 @@ public:
 //
 // The function prototype that needs to be implemented is:
 //
-//     __m512d calculate_integral(__m512i src_longs, const __m512d above_values, __m512i &accumulator){ ... }
+//     __m512d calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator){ ... }
 //
 // Description of parameters:
 //   INPUTS:
@@ -266,11 +269,71 @@ public:
 //
 
 //========================================
+//   1 Channel Integral Implementation
+//========================================
+template<>
+CV_ALWAYS_INLINE
+__m512d IntegralCalculator < 1 > ::calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator)
+{
+    // One channel support is implemented differently than 2, 3, or 4 channel
+    // One channel support has more horizontal operations that cannot be made vertical without losing performance
+    // The logical operations needed look like:
+    //   Vertical LANES  :   |7|6|5|4|3|2|1|0|
+    //   src_longs       :   |H|G|F|E|D|C|B|A|
+    //   shift_by_1      : + |G|F|E|D|C|B|A| |
+    //   shift_by_2      : + |F|E|D|C|B|A| | |
+    //   shift_by_3      : + |E|D|C|B|A| | | |
+    //   shift_by_4      : + |D|C|B|A| | | | |
+    //   shift_by_5      : + |C|B|A| | | | | |
+    //   shift_by_6      : + |B|A| | | | | | |
+    //   shift_by_7      : + |A| | | | | | | |
+    //   carry_over_idxs : + |7|7|7|7|7|7|7|7|  (index position of result from previous iteration)
+    //                     = integral
+    //
+    // If we do this vertically we end up losing performance because of the number of operations.  We will instead
+    // do a horizontal add tree to create the vertical sections we need as a tree
+    // Vertical Lanes: |   7  |   6  |   5  |   4  |   3  |   2  |   1  |   0  |
+    //      src_longs: |   H  |   G  |   F  |   E  |   D  |   C  |   B  |   A  |
+    //    horiz_sum_1: |      |      |      |      |  G+H |  E+F |  C+D |  A+B |
+    //    horiz_sum_2: |      |      |      |      |      |      | EFGH | ABCD |
+    //
+    const __m512i horiz_sum_1 = m512_hadd(src_longs);   // indexes for the permutes below (3,2,1,0) = (GH, EF, CD, AB)
+    const __m512i horiz_sum_2 = m512_hadd(horiz_sum_1); // indexes for the permutes below (9, 8)    = (EFGH, ABCD)
+
+    // Then we can use the partial sums by looking at the vertical stacks above and realize that, for example
+    // ABCD appears vertically in lanes 7, 6, 5, 4, and 3 so we will permute the values so that all partial products
+    // appear in the right lanes. and sum them up along with the carry over value from the accumulator.  So we setup
+    // the lanes like:
+    // Vertical Lanes: |   7  |   6  |   5  |   4  |   3  |   2  |   1  |   0  |
+    //            s1 : |   0  |   G  |   0  |   E  |   0  |   C  |   0  |   A  |
+    //            s2 : | ABCD | ABCD | ABCD | ABCD | ABCD |  AB  |  AB  |   0  |
+    //            s3 : | EFGH |  EF  |  EF  |   0  |   0  |   0  |   0  |   0  |
+    //                 +------+------+------+------+------+------+------+------+
+    //           sum : | A..H | A..G | A..F | A..E | A..D | A..C | A..B |   A  | Integral :-)
+    //
+    const __m512i s1 = _mm512_maskz_mov_epi64(0x55, src_longs); // 0 G 0 E 0 D 0 C 0 A
+    const __m512i s2 = _mm512_permutex2var_epi64(horiz_sum_1, _mm512_set_epi64(8,8,8,8,8,0,0,4), horiz_sum_2);
+    const __m512i s3 = _mm512_permutex2var_epi64(horiz_sum_1, _mm512_set_epi64(9,2,2,4,4,4,4,4), horiz_sum_2);
+
+    // Now we use the rolling sum from the previous iteration from accumulator and replicate it into carry_over
+    // And sum everything up into the accumulator
+    //
+    const __m512i carry_over  = _mm512_permutex2var_epi64(accumulator, _mm512_set_epi64(7,7,7,7,7,7,7,7), accumulator);
+    accumulator = _mm512_add_epi64(_mm512_add_epi64(s2, s3), _mm512_add_epi64(carry_over, s1));
+
+    // Convert to double precision and store
+    //
+    __m512d integral_pd = _mm512_add_pd(_mm512_cvtepu64_pd(accumulator), above_values);
+    return integral_pd;
+}
+
+
+//========================================
 //   2 Channel Integral Implementation
 //========================================
 template<>
 CV_ALWAYS_INLINE
-__m512d IntegralCalculator < 2 > ::calculate_integral(__m512i src_longs, const __m512d above_values, __m512i &accumulator)
+__m512d IntegralCalculator < 2 > ::calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator)
 {
     __m512i carryover_idxs = _mm512_set_epi64(7, 6, 7, 6, 7, 6, 7, 6);
 
@@ -300,12 +363,13 @@ __m512d IntegralCalculator < 2 > ::calculate_integral(__m512i src_longs, const _
     return integral_pd;
 }
 
+
 //========================================
 //   3 Channel Integral Implementation
 //========================================
 template<>
 CV_ALWAYS_INLINE
-__m512d IntegralCalculator < 3 > ::calculate_integral(__m512i src_longs, const __m512d above_values, __m512i &accumulator)
+__m512d IntegralCalculator < 3 > ::calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator)
 {
     __m512i carryover_idxs = _mm512_set_epi64(6, 5, 7, 6, 5, 7, 6, 5);
 
@@ -338,7 +402,7 @@ __m512d IntegralCalculator < 3 > ::calculate_integral(__m512i src_longs, const _
 //========================================
 template<>
 CV_ALWAYS_INLINE
-__m512d IntegralCalculator < 4 > ::calculate_integral(__m512i src_longs, const __m512d above_values, __m512i &accumulator)
+__m512d IntegralCalculator < 4 > ::calculate_integral(const __m512i src_longs, const __m512d above_values, __m512i &accumulator)
 {
     __m512i carryover_idxs = _mm512_set_epi64(7, 6, 5, 4, 7, 6, 5, 4);
 
@@ -376,18 +440,23 @@ void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
                                int width, int height, int cn)
 {
     switch(cn){
+        case 1: {
+            IntegralCalculator< 1 > calculator;
+            calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
+            break;
+        }
         case 2: {
-            IntegralCalculator<2> calculator;
+            IntegralCalculator< 2 > calculator;
             calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
             break;
         }
         case 3: {
-            IntegralCalculator<3> calculator;
+            IntegralCalculator< 3 > calculator;
             calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
             break;
         }
         case 4: {
-            IntegralCalculator<4> calculator;
+            IntegralCalculator< 4 > calculator;
             calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
         }
     }
