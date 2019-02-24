@@ -4769,8 +4769,14 @@ public:
     from the left-most point to the right most,
     not to depend on the ordering of pt1 and pt2 parameters
     */
-    LineVirtualIterator(const Size& size, Point pt1, Point pt2,
+    LineVirtualIterator(const Size& aSize, const Point& pt1, const Point& pt2,
+                        int connectivity = 8, bool forceLeftToRight = false ) {
+      init(aSize, pt1, pt2, connectivity, forceLeftToRight);
+    }
+    LineVirtualIterator(const Point& pt1, const Point& pt2,
                         int connectivity = 8, bool forceLeftToRight = false );
+    void init(const Size& size, const Point& pt1, const Point& pt2,
+              int connectivity = 8, bool forceLeftToRight = false );
 
     /** @brief alias of pos(), returns coordinates of the current pixel
     */
@@ -4785,8 +4791,9 @@ public:
     */
     const Point& pos() const {return currentPos;}
 
-    const Size size;
+    Size size;
     Point currentPos;
+    Point currentPosOffset;
     int err, count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
@@ -4799,15 +4806,18 @@ public:
 inline
 LineVirtualIterator& LineVirtualIterator::operator ++()
 {
-    int mask = err < 0 ? -1 : 0;
-    err += minusDelta + (plusDelta & mask);
-    int offset = minusStep + (plusStep & mask);
-    int dx = !size.width ? 0 : (offset%size.width);
-    int dy = !size.width ? 0 : (offset/size.width);
-    currentPos.x += dx;
-    currentPos.y += dy;
+    if (size.width)
+    {
+      int mask = err < 0 ? -1 : 0;
+      err += minusDelta + (plusDelta & mask);
+      int offset = minusStep + (plusStep & mask);
+      size_t flattenedCoord = (currentPos.y-currentPosOffset.y)*size.width+(currentPos.x-currentPosOffset.x)+offset;
+      currentPos.y = (flattenedCoord/size.width)+currentPosOffset.y;
+      currentPos.x = (flattenedCoord%size.width)+currentPosOffset.x;
+    }//end if (size.width)
     return *this;
 }
+
 
 inline
 LineVirtualIterator LineVirtualIterator::operator ++(int)

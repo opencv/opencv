@@ -248,16 +248,30 @@ void LineIterator::init(const Size& size, int type, uchar* data, size_t dataStep
     this->elemSize = (int)bt_pix0;
 }
 
-LineVirtualIterator::LineVirtualIterator(const Size& aSize, Point pt1, Point pt2, int connectivity, bool forceLeftToRight):size(aSize),count(-1)
+LineVirtualIterator::LineVirtualIterator(const Point& pt1, const Point& pt2, int connectivity, bool forceLeftToRight)
+{
+  currentPosOffset = Point(std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y));
+  init(Size(std::max(pt1.x, pt2.x)-currentPosOffset.x+1, std::max(pt1.y, pt2.y)-currentPosOffset.y+1),
+       pt1, pt2,
+       connectivity, forceLeftToRight);
+}
+
+void LineVirtualIterator::init(const Size& aSize, const Point& pt1, const Point& pt2, int connectivity, bool forceLeftToRight)
 {
     CV_Assert( connectivity == 8 || connectivity == 4 );
+  
+    size = aSize;
+    count = -1;
+  
+    Point pt1WithoutOffset = pt1-currentPosOffset;
+    Point pt2WithoutOffset = pt2-currentPosOffset;
 
-    if( (unsigned)pt1.x >= (unsigned)(size.width) ||
-        (unsigned)pt2.x >= (unsigned)(size.width) ||
-        (unsigned)pt1.y >= (unsigned)(size.height) ||
-        (unsigned)pt2.y >= (unsigned)(size.height) )
+    if( (unsigned)pt1WithoutOffset.x >= (unsigned)(size.width) ||
+        (unsigned)pt2WithoutOffset.x >= (unsigned)(size.width) ||
+        (unsigned)pt1WithoutOffset.y >= (unsigned)(size.height) ||
+        (unsigned)pt2WithoutOffset.y >= (unsigned)(size.height) )
     {
-        if( !clipLine( size, pt1, pt2 ) )
+        if( !clipLine( size, pt1WithoutOffset, pt2WithoutOffset ) )
         {
             err = plusDelta = minusDelta = plusStep = minusStep = count = 0;
             return;
@@ -267,16 +281,16 @@ LineVirtualIterator::LineVirtualIterator(const Size& aSize, Point pt1, Point pt2
     size_t bt_pix = 1;
     size_t istep = size.width;
 
-    int dx = pt2.x - pt1.x;
-    int dy = pt2.y - pt1.y;
+    int dx = pt2WithoutOffset.x - pt1WithoutOffset.x;
+    int dy = pt2WithoutOffset.y - pt1WithoutOffset.y;
     int s = dx < 0 ? -1 : 0;
 
     if( forceLeftToRight )
     {
         dx = (dx ^ s) - s;
         dy = (dy ^ s) - s;
-        pt1.x ^= (pt1.x ^ pt2.x) & s;
-        pt1.y ^= (pt1.y ^ pt2.y) & s;
+        pt1WithoutOffset.x ^= (pt1WithoutOffset.x ^ pt2WithoutOffset.x) & s;
+        pt1WithoutOffset.y ^= (pt1WithoutOffset.y ^ pt2WithoutOffset.y) & s;
     }
     else
     {
@@ -284,7 +298,7 @@ LineVirtualIterator::LineVirtualIterator(const Size& aSize, Point pt1, Point pt2
         bt_pix = (bt_pix ^ s) - s;
     }
 
-    currentPos = pt1;
+    currentPos = pt1WithoutOffset+currentPosOffset;
 
     s = dy < 0 ? -1 : 0;
     dy = (dy ^ s) - s;
