@@ -262,7 +262,7 @@ void LineVirtualIterator::init(const Size& aSize, const Point& pt1, const Point&
 
     size = aSize;
     count = -1;
-  
+
     Point pt1WithoutOffset = pt1-currentPosOffset;
     Point pt2WithoutOffset = pt2-currentPosOffset;
 
