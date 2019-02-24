@@ -259,7 +259,7 @@ LineVirtualIterator::LineVirtualIterator(const Point& pt1, const Point& pt2, int
 void LineVirtualIterator::init(const Size& aSize, const Point& pt1, const Point& pt2, int connectivity, bool forceLeftToRight)
 {
     CV_Assert( connectivity == 8 || connectivity == 4 );
-  
+
     size = aSize;
     count = -1;
   
