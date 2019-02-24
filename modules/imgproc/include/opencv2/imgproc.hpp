@@ -4812,8 +4812,8 @@ LineVirtualIterator& LineVirtualIterator::operator ++()
       err += minusDelta + (plusDelta & mask);
       int offset = minusStep + (plusStep & mask);
       size_t flattenedCoord = (currentPos.y-currentPosOffset.y)*size.width+(currentPos.x-currentPosOffset.x)+offset;
-      currentPos.y = (flattenedCoord/size.width)+currentPosOffset.y;
-      currentPos.x = (flattenedCoord%size.width)+currentPosOffset.x;
+      currentPos.y = static_cast<int>((flattenedCoord/size.width)+currentPosOffset.y);
+      currentPos.x = static_cast<int>((flattenedCoord%size.width)+currentPosOffset.x);
     }//end if (size.width)
     return *this;
 }
