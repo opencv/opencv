@@ -4769,6 +4769,11 @@ public:
     from the left-most point to the right most,
     not to depend on the ordering of pt1 and pt2 parameters
     */
+    LineVirtualIterator(const Rect& aRect, const Point& pt1, const Point& pt2,
+                        int connectivity = 8, bool forceLeftToRight = false ) {
+      currentPosOffset = Point(aRect.x, aRect.y);
+      init(aRect.size(), pt1, pt2, connectivity, forceLeftToRight);
+    }
     LineVirtualIterator(const Size& aSize, const Point& pt1, const Point& pt2,
                         int connectivity = 8, bool forceLeftToRight = false ) {
       init(aSize, pt1, pt2, connectivity, forceLeftToRight);
