@@ -68,6 +68,8 @@ class OCVRender : public Render
 public:
     void run(cv::Mat&) override;
     void run(cv::Mat&, cv::Mat&) override;
+private:
+    void process(cv::Mat&);
 };
 
 } // namespace cv

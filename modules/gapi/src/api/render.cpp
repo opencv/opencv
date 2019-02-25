@@ -27,6 +27,18 @@ void cv::Render::rectangle(cv::Point2f p1, cv::Point2f p2, cv::Scalar color,
 
 void cv::OCVRender::run(cv::Mat& bgrx_plane)
 {
+    process(bgrx_plane);
+}
+
+void cv::OCVRender::run(cv::Mat& y_plane, cv::Mat& uv_plane)
+{
+    cv::Mat bgrx_plane;
+    cv::cvtColorTwoPlane(y_plane, uv_plane, bgrx_plane, cv::COLOR_YUV2BGR_NV12);
+    process(bgrx_plane);
+}
+
+void cv::OCVRender::process(cv::Mat& bgrx_plane)
+{
     for (const auto& event : events_)
     {
         switch (event.index())
@@ -51,9 +63,4 @@ void cv::OCVRender::run(cv::Mat& bgrx_plane)
             default: util::throw_error(std::logic_error("Unsupported draw event"));
         }
     }
-}
-
-void cv::OCVRender::run(cv::Mat& y_plane, cv::Mat& uv_plane)
-{
-
 }
