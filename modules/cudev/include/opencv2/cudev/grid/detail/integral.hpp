@@ -63,7 +63,8 @@ namespace integral_detail
         __shared__ D smem[NUM_SCAN_THREADS * 2];
         __shared__ D carryElem;
 
-        carryElem = 0;
+        if (threadIdx.x == 0)
+            carryElem = 0;
 
         __syncthreads();
 
@@ -105,7 +106,8 @@ namespace integral_detail
         __shared__ D smem[NUM_SCAN_THREADS * 2];
         __shared__ D carryElem;
 
-        carryElem = 0;
+        if (threadIdx.x == 0)
+            carryElem = 0;
 
         __syncthreads();
 
