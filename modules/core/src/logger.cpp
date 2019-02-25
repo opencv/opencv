@@ -6,6 +6,7 @@
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
+#include "utils/logtagmanager.hpp"
 
 #include <sstream>
 #include <iostream>
@@ -49,27 +50,121 @@ static LogLevel parseLogLevelConfiguration()
     return LOG_LEVEL_INFO;
 }
 
-cv::utils::logging::LogTag* getGlobalLogTag()
+namespace internal
 {
-    static cv::utils::logging::LogTag g_LogTag { "global", parseLogLevelConfiguration() };
-    return &g_LogTag;
+    // Combining several things that require static dynamic initialization in a
+    // well-defined order into a struct.
+    //
+    struct GlobalLoggingInitStruct
+    {
+        LogTagManager logTagManager;
+        LogTag logTag;
+
+        GlobalLoggingInitStruct()
+            : logTagManager()
+            , logTag("global", LOG_LEVEL_VERBOSE)
+        {
+            logTag.level = parseLogLevelConfiguration();
+            logTagManager.assign(logTag.name, &logTag);
+        }
+    };
+
+    // Static dynamic initialization guard function for the combined struct
+    // just defined above
+    //
+    // An initialization guard function guarantees that outside code cannot
+    // accidentally see not-yet-dynamically-initialized data, by routing
+    // all outside access request to this function, so that this function
+    // has a chance to run the initialization code if necessary.
+    //
+    // An initialization guard function only guarantees initialization upon
+    // the first call to this function.
+    //
+    static GlobalLoggingInitStruct& getGlobalLoggingInitStruct()
+    {
+        static GlobalLoggingInitStruct globalLoggingInitInstance;
+        return globalLoggingInitInstance;
+    }
+
+    // To ensure that the combined struct defined above is initialized even
+    // if the initialization guard function wasn't called, a dummy static
+    // instance of a struct is defined below, which will call the
+    // initialization guard function.
+    //
+    struct GlobalLoggingInitCall
+    {
+        GlobalLoggingInitCall()
+        {
+            getGlobalLoggingInitStruct();
+        }
+    };
+
+    static GlobalLoggingInitCall globalLoggingInitCall;
+
+    static LogTagManager& getLogTagManager()
+    {
+        static LogTagManager& logTagManagerInstance = getGlobalLoggingInitStruct().logTagManager;
+        return logTagManagerInstance;
+    }
+
+    static LogLevel& getLogLevelVariable()
+    {
+        static LogLevel& refGlobalLogLevel = getGlobalLoggingInitStruct().logTag.level;
+        return refGlobalLogLevel;
+    }
+
+    LogTag* getGlobalLogTag()
+    {
+        static LogTag& refGlobalLogTag = getGlobalLoggingInitStruct().logTag;
+        return &refGlobalLogTag;
+    }
 }
 
-static LogLevel& getLogLevelVariable()
+void registerLogTag(LogTag* plogtag)
 {
-    return getGlobalLogTag()->level;
+    if (!plogtag || !plogtag->name)
+    {
+        return;
+    }
+    internal::getLogTagManager().assign(plogtag->name, plogtag);
+}
+
+void setLogTagLevel(const char* tag, LogLevel level)
+{
+    if (!tag)
+    {
+        return;
+    }
+    auto func = [level](LogTag* plogtag)
+    {
+        plogtag->level = level;
+    };
+    internal::getLogTagManager().invoke(tag, func);
+}
+
+LogLevel getLogTagLevel(const char* tag)
+{
+    cv::utils::logging::LogLevel level;
+    auto func = [&level](LogTag* plogtag)
+    {
+        level = plogtag->level;
+    };
+    internal::getLogTagManager().invoke(tag, func);
+    return level;
 }
 
 LogLevel setLogLevel(LogLevel logLevel)
 {
-    LogLevel old = getLogLevelVariable();
-    getLogLevelVariable() = logLevel;
+    // note: not thread safe, use sparingly and do not critically depend on outcome
+    LogLevel& refGlobalLevel = internal::getLogLevelVariable();
+    const LogLevel old = refGlobalLevel;
+    refGlobalLevel = logLevel;
     return old;
 }
 
 LogLevel getLogLevel()
 {
-    return getLogLevelVariable();
+    return internal::getLogLevelVariable();
 }
 
 namespace internal {

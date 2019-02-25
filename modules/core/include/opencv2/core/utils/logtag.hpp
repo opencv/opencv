@@ -5,13 +5,14 @@
 #ifndef OPENCV_CORE_LOGTAG_HPP
 #define OPENCV_CORE_LOGTAG_HPP
 
+#include "opencv2/core/cvstd.hpp"
 #include "logger.defines.hpp"
 
 namespace cv {
 namespace utils {
 namespace logging {
 
-struct LogTag
+struct CV_EXPORTS LogTag
 {
     const char* name;
     LogLevel level;

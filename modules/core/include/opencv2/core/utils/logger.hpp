@@ -28,13 +28,23 @@ CV_EXPORTS LogLevel setLogLevel(LogLevel logLevel);
 /** Get global logging level */
 CV_EXPORTS LogLevel getLogLevel();
 
+CV_EXPORTS void registerLogTag(cv::utils::logging::LogTag* plogtag);
+
+CV_EXPORTS void setLogTagLevel(const char* tag, cv::utils::logging::LogLevel level);
+
+CV_EXPORTS cv::utils::logging::LogLevel getLogTagLevel(const char* tag);
+
+namespace internal {
+
 /** Get global log tag */
 CV_EXPORTS cv::utils::logging::LogTag* getGlobalLogTag();
 
-namespace internal {
 /** Write log message */
 CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
+
+/** Write log message */
 CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message);
+
 } // namespace
 
 /**
@@ -60,7 +70,7 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
 // statement nor the compilation unit. The macro needs to expand into a C++
 // expression that can be static_cast into (cv::utils::logging::LogTag*). Must be
 // non-null. Do not re-define.
-#define CV_LOGTAG_GLOBAL cv::utils::logging::getGlobalLogTag()
+#define CV_LOGTAG_GLOBAL cv::utils::logging::internal::getGlobalLogTag()
 
 #define CV_LOG_WITH_TAG(tag, msgLevel, ...) \
     for(;;) { \
