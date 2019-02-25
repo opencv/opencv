@@ -1482,7 +1482,6 @@ struct RGB2Lab_b
               const float* _whitept, bool _srgb)
     : srccn(_srccn), srgb(_srgb)
     {
-        static volatile int _3 = 3;
         initLabTabs();
 
         softdouble whitePt[3];
@@ -1493,7 +1492,7 @@ struct RGB2Lab_b
                 whitePt[i] = D65[i];
 
         static const softdouble lshift(1 << lab_shift);
-        for( int i = 0; i < _3; i++ )
+        for( int i = 0; i < 3; i++ )
         {
             softdouble c[3];
             for(int j = 0; j < 3; j++)
@@ -1553,7 +1552,6 @@ struct RGB2Lab_f
               const float* _whitept, bool _srgb)
     : srccn(_srccn), srgb(_srgb), blueIdx(_blueIdx)
     {
-        volatile int _3 = 3;
         initLabTabs();
 
         useInterpolation = (!_coeffs && !_whitept && srgb && enableRGB2LabInterpolation);
@@ -1569,7 +1567,7 @@ struct RGB2Lab_f
                                softdouble::one(),
                                softdouble::one() / whitePt[2] };
 
-        for( int i = 0; i < _3; i++ )
+        for( int i = 0; i < 3; i++ )
         {
             softfloat c[3];
             for(int k = 0; k < 3; k++)
@@ -2639,17 +2637,16 @@ struct RGB2Luvfloat
                const float* whitept, bool _srgb )
     : srccn(_srccn), srgb(_srgb)
     {
-        volatile int i;
         initLabTabs();
 
         softdouble whitePt[3];
-        for( i = 0; i < 3; i++ )
+        for(int i = 0; i < 3; i++ )
             if(whitept)
                 whitePt[i] = softdouble(whitept[i]);
             else
                 whitePt[i] = D65[i];
 
-        for( i = 0; i < 3; i++ )
+        for(int i = 0; i < 3; i++ )
         {
             for(int j = 0; j < 3; j++)
                 if(_coeffs)
