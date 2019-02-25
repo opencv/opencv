@@ -227,8 +227,6 @@ TEST_P(LRN, Accuracy)
     std::string nrmType = get<4>(GetParam());
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
 
     LayerParams lp;
     lp.set("norm_region", nrmType);
@@ -249,8 +247,8 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, LRN, Combine(
 /*input ch,w,h*/ Values(Vec3i(6, 5, 8), Vec3i(7, 11, 6)),
 /*local size*/   Values(3, 5),
                  Values(Vec3f(0.9f, 1.0f, 1.1f), Vec3f(0.9f, 1.1f, 1.0f),
-/*alpha, beta,*/        Vec3f(1.0f, 0.9f, 1.1f), Vec3f(1.0f, 1.1f, 0.9f),
-/*bias */               Vec3f(1.1f, 0.9f, 1.0f), Vec3f(1.1f, 1.0f, 0.9f)),
+/*alpha, beta, bias*/   Vec3f(1.0f, 0.9f, 1.1f), Vec3f(1.0f, 1.1f, 0.9f),
+                        Vec3f(1.1f, 0.9f, 1.0f), Vec3f(1.1f, 1.0f, 0.9f)),
 /*norm_by_size*/ Bool(),
 /*norm_type*/    Values("ACROSS_CHANNELS", "WITHIN_CHANNEL"),
                  dnnBackendsAndTargetsWithHalide()

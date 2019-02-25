@@ -227,7 +227,7 @@ void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
     // By default, all the weights are connected to last ports ids.
     for (int i = 0; i < blobsIds.size(); ++i)
     {
-        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, portIds[i]});
+        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, (size_t)portIds[i]});
     }
 #endif
 }
