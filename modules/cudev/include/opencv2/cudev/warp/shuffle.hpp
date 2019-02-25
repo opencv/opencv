@@ -250,6 +250,11 @@ __device__ double shfl_up(double val, uint delta, int width = warpSize)
     return __hiloint2double(hi, lo);
 }
 
+__device__ __forceinline__ unsigned long long shfl_up(unsigned long long val, uint delta, int width = warpSize)
+{
+    return __shfl_up(val, delta, width);
+}
+
 #define CV_CUDEV_SHFL_UP_VEC_INST(input_type) \
     __device__ __forceinline__ input_type ## 1 shfl_up(const input_type ## 1 & val, uint delta, int width = warpSize) \
     { \
