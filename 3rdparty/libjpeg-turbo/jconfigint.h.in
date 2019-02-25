@@ -5,7 +5,15 @@
 #undef inline
 
 /* How to obtain function inlining. */
-#define INLINE  @INLINE@
+#ifndef INLINE
+#if defined(__GNUC__)
+#define INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define INLINE __forceinline
+#else
+#define INLINE
+#endif
+#endif
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME  "@CMAKE_PROJECT_NAME@"
@@ -14,7 +22,7 @@
 #define VERSION  "@VERSION@"
 
 /* The size of `size_t', as computed by sizeof. */
-#define SIZEOF_SIZE_T  @SIZE_T@
+#define SIZEOF_SIZE_T  @SIZEOF_SIZE_T@
 
 /* Define if your compiler has __builtin_ctzl() and sizeof(unsigned long) == sizeof(size_t). */
 #cmakedefine HAVE_BUILTIN_CTZL
