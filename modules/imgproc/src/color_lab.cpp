@@ -1518,10 +1518,157 @@ struct RGB2Lab_b
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-        n *= 3;
-
         i = 0;
-        for(; i < n; i += 3, src += scn )
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        const int xyzDescaleShift = 1 << (lab_shift - 1);
+        v_int16 vXYZdescale = vx_setall_s16(xyzDescaleShift);
+        v_int16 cxrg, cxb1, cyrg, cyb1, czrg, czb1;
+        v_int16 dummy;
+        v_zip(vx_setall_s16((short)C0), vx_setall_s16((short)C1), cxrg, dummy);
+        v_zip(vx_setall_s16((short)C2), vx_setall_s16(        1), cxb1, dummy);
+        v_zip(vx_setall_s16((short)C3), vx_setall_s16((short)C4), cyrg, dummy);
+        v_zip(vx_setall_s16((short)C5), vx_setall_s16(        1), cyb1, dummy);
+        v_zip(vx_setall_s16((short)C6), vx_setall_s16((short)C7), czrg, dummy);
+        v_zip(vx_setall_s16((short)C8), vx_setall_s16(        1), czb1, dummy);
+        const int labDescaleShift = 1 << (lab_shift2 - 1);
+
+        for( ; i <= n - vsize;
+             i += vsize , src += scn*vsize, dst += 3*vsize)
+        {
+            v_uint8 R, G, B, A;
+            if(scn == 4)
+            {
+                v_load_deinterleave(src, R, G, B, A);
+            }
+            else // scn == 3
+            {
+                v_load_deinterleave(src, R, G, B);
+            }
+
+            // gamma substitution using tab
+            v_uint16 drgb[6];
+            // [0 1 2 3 4 5 6] => [R0 R1 G0 G1 B0 B1]
+            v_expand(R, drgb[0], drgb[1]);
+            v_expand(G, drgb[2], drgb[3]);
+            v_expand(B, drgb[4], drgb[5]);
+
+            // [0 1 2 3 4 5 6 7 8 9 10 11 12] => [4 per R, 4 per G, 4 per B]
+            v_uint32 qrgb[12];
+            for(int k = 0; k < 6; k++)
+            {
+                v_expand(drgb[k], qrgb[k*2+0], qrgb[k*2+1]);
+            }
+
+            uint32_t CV_DECL_ALIGNED(v_uint8::nlanes) vdrgb[vsize*3];
+            for(int k = 0; k < 12; k++)
+            {
+                v_store_aligned(vdrgb + k*vsize/4, qrgb[k]);
+            }
+
+            v_uint16 trgb[6];
+            for(int k = 0; k < 6; k++)
+            {
+                trgb[k] = vx_lut(tab, (const int*)vdrgb + k*vsize/2);
+            }
+
+            v_int16 rgbs[6];
+            for(int k = 0; k < 6; k++)
+            {
+                rgbs[k] = v_reinterpret_as_s16(trgb[k]);
+            }
+            v_int16 sB0, sB1, sG0, sG1, sR0, sR1;
+            sR0 = rgbs[0]; sR1 = rgbs[1];
+            sG0 = rgbs[2]; sG1 = rgbs[3];
+            sB0 = rgbs[4]; sB1 = rgbs[5];
+
+            v_int16 rg[4], bd[4];
+            v_zip(sR0, sG0, rg[0], rg[1]);
+            v_zip(sR1, sG1, rg[2], rg[3]);
+            v_zip(sB0, vXYZdescale, bd[0], bd[1]);
+            v_zip(sB1, vXYZdescale, bd[2], bd[3]);
+
+            // [X, Y, Z] = CV_DESCALE(R*C_ + G*C_ + B*C_, lab_shift)
+            v_uint32 x[4], y[4], z[4];
+            for(int j = 0; j < 4; j++)
+            {
+                x[j] = v_reinterpret_as_u32(v_dotprod(rg[j], cxrg) + v_dotprod(bd[j], cxb1)) >> lab_shift;
+                y[j] = v_reinterpret_as_u32(v_dotprod(rg[j], cyrg) + v_dotprod(bd[j], cyb1)) >> lab_shift;
+                z[j] = v_reinterpret_as_u32(v_dotprod(rg[j], czrg) + v_dotprod(bd[j], czb1)) >> lab_shift;
+            }
+
+            // [fX, fY, fZ] = LabCbrtTab_b[vx, vy, vz]
+            // [4 per X, 4 per Y, 4 per Z]
+            uint32_t CV_DECL_ALIGNED(v_uint8::nlanes) vxyz[vsize*3];
+            for(int j = 0; j < 4; j++)
+            {
+                v_store_aligned(vxyz + (0*4+j)*vsize/4, x[j]);
+                v_store_aligned(vxyz + (1*4+j)*vsize/4, y[j]);
+                v_store_aligned(vxyz + (2*4+j)*vsize/4, z[j]);
+            }
+            // [X0, X1, Y0, Y1, Z0, Z1]
+            v_uint16 fxyz[2*3];
+            for(int j = 0; j < 2*3; j++)
+            {
+                fxyz[j] = vx_lut(LabCbrtTab_b, (const int*)vxyz + j*vsize/2);
+            }
+
+            v_int16 fX0, fX1, fY0, fY1, fZ0, fZ1;
+            fX0 = v_reinterpret_as_s16(fxyz[0]), fX1 = v_reinterpret_as_s16(fxyz[1]);
+            fY0 = v_reinterpret_as_s16(fxyz[2]), fY1 = v_reinterpret_as_s16(fxyz[3]);
+            fZ0 = v_reinterpret_as_s16(fxyz[4]), fZ1 = v_reinterpret_as_s16(fxyz[5]);
+
+            v_uint16 Ldiff0 = fxyz[2], Ldiff1 = fxyz[3];
+
+            v_uint8 L, a, b;
+
+            // L = (Lscale*Ldiff + (Lshift + labDescaleShift)) >> lab_shift2;
+            v_uint32 vL[4];
+            v_uint16 vLscale = vx_setall_u16(Lscale);
+            v_mul_expand(Ldiff0, vLscale, vL[0], vL[1]);
+            v_mul_expand(Ldiff1, vLscale, vL[2], vL[3]);
+            v_uint32 vLshift = vx_setall_u32(Lshift + labDescaleShift);
+            for(int k = 0; k < 4; k++)
+            {
+                vL[k] = (vL[k] + vLshift) >> lab_shift2;
+            }
+            v_uint16 L0, L1;
+            L0 = v_pack(vL[0], vL[1]);
+            L1 = v_pack(vL[2], vL[3]);
+
+            L = v_pack(L0, L1);
+
+            // a = (500*(fX - fY) + (128*(1 << lab_shift2) + labDescaleShift)) >> lab_shift2;
+            // b = (200*(fY - fZ) + (128*(1 << lab_shift2) + labDescaleShift)) >> lab_shift2;
+            v_int16 adiff0 = fX0 - fY0, adiff1 = fX1 - fY1;
+            v_int16 bdiff0 = fY0 - fZ0, bdiff1 = fY1 - fZ1;
+
+            // [4 for a, 4 for b]
+            v_int32 ab[8];
+            v_int16 v500 = vx_setall_s16(500);
+            v_mul_expand(adiff0, v500, ab[0], ab[1]);
+            v_mul_expand(adiff1, v500, ab[2], ab[3]);
+            v_int16 v200 = vx_setall_s16(200);
+            v_mul_expand(bdiff0, v200, ab[4], ab[5]);
+            v_mul_expand(bdiff1, v200, ab[6], ab[7]);
+            v_int32 abShift = vx_setall_s32(128*(1 << lab_shift2) + labDescaleShift);
+            for(int k = 0; k < 8; k++)
+            {
+                ab[k] = (ab[k] + abShift) >> lab_shift2;
+            }
+            v_int16 a0, a1, b0, b1;
+            a0 = v_pack(ab[0], ab[1]); a1 = v_pack(ab[2], ab[3]);
+            b0 = v_pack(ab[4], ab[5]); b1 = v_pack(ab[6], ab[7]);
+
+            a = v_pack_u(a0, a1);
+            b = v_pack_u(b0, b1);
+
+            v_store_interleave(dst, L, a, b);
+        }
+
+        vx_cleanup();
+#endif
+        for(; i < n; i++, src += scn, dst += 3 )
         {
             int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
             int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];
@@ -1532,9 +1679,9 @@ struct RGB2Lab_b
             int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );
             int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );
 
-            dst[i] = saturate_cast<uchar>(L);
-            dst[i+1] = saturate_cast<uchar>(a);
-            dst[i+2] = saturate_cast<uchar>(b);
+            dst[0] = saturate_cast<uchar>(L);
+            dst[1] = saturate_cast<uchar>(a);
+            dst[2] = saturate_cast<uchar>(b);
         }
     }
 
