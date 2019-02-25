@@ -65,8 +65,8 @@ namespace cv
             void scalarProduct(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
             void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
-            void dst(const Mat& src, Mat& dest, bool invert = false);
-            void solve(const Mat &img, Mat& mod_diff, Mat &result);
+            void dst(const cv::Mat& src, cv::Mat& dest, bool invert = false);
+            void solve(const cv::Mat &img, cv::Mat& mod_diff, cv::Mat &result);
 
             void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
 
