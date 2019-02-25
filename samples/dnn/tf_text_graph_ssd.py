@@ -35,8 +35,9 @@ class SSDAnchorGenerator:
 
             widths += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
             heights += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
-        widths = [w * self.image_width for w in widths]
-        heights = [h * self.image_height for h in heights]
+        min_size = min(self.image_width, self.image_height)
+        widths = [w * min_size for w in widths]
+        heights = [h * min_size for h in heights]
         return widths, heights
 
 
