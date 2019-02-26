@@ -7,6 +7,7 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 #include "utils/logtagmanager.hpp"
+#include "utils/logtagconfigparser.hpp"
 
 #include <sstream>
 #include <iostream>
@@ -20,6 +21,7 @@ namespace cv {
 namespace utils {
 namespace logging {
 
+#if 0
 static LogLevel parseLogLevelConfiguration()
 {
     static cv::String param_log_level = utils::getConfigurationParameterString("OPENCV_LOG_LEVEL",
@@ -49,6 +51,7 @@ static LogLevel parseLogLevelConfiguration()
     std::cerr << "ERROR: Unexpected logging level value: " << param_log_level << std::endl;
     return LOG_LEVEL_INFO;
 }
+#endif
 
 namespace internal
 {
@@ -57,15 +60,136 @@ namespace internal
     //
     struct GlobalLoggingInitStruct
     {
+    public:
+#if defined NDEBUG
+        static constexpr bool m_isDebugBuild = false;
+#else
+        static constexpr bool m_isDebugBuild = true;
+#endif
+
+    public:
+        static constexpr LogLevel m_defaultGlobalLogLevelNoConfig =
+            m_isDebugBuild ? LOG_LEVEL_DEBUG : LOG_LEVEL_WARNING;
+
+    public:
         LogTagManager logTagManager;
-        LogTag logTag;
+        LogTag logTagGlobal;
+        cv::String logTagConfigString;
+        LogTagConfigParser logTagConfigParser;
 
         GlobalLoggingInitStruct()
             : logTagManager()
-            , logTag("global", LOG_LEVEL_VERBOSE)
+            , logTagGlobal("global", m_defaultGlobalLogLevelNoConfig)
+            , logTagConfigString()
+            , logTagConfigParser()
         {
-            logTag.level = parseLogLevelConfiguration();
-            logTagManager.assign(logTag.name, &logTag);
+            logTagManager.assign(logTagGlobal.name, &logTagGlobal);
+            if (loadConfigString())
+            {
+                if (!tryParseConfigString())
+                {
+                    handleMalformed();
+                }
+                // should we still try to apply some of the specs if it is partly
+                // malformed, partly parsable? what are the consequences?
+                // (if it is partly malformed, the remaining "parsable" part
+                // may be nonsensical despite being seemingly parsable)
+                applyConfigString();
+            }
+        }
+
+    private:
+        struct ParsedName
+        {
+            std::string trimmedNamePart;
+            bool isGlobal;
+            bool hasPrefixWildcard;
+            bool hasSuffixWildcard;
+        };
+
+    private:
+        bool loadConfigString()
+        {
+            logTagConfigString = utils::getConfigurationParameterString("OPENCV_LOG_LEVEL", "");
+            return !logTagConfigString.empty();
+        }
+
+        bool tryParseConfigString()
+        {
+            logTagConfigParser.parse(logTagConfigString);
+            return !logTagConfigParser.hasMalformed();
+        }
+
+        void handleMalformed()
+        {
+            // need to print warning for malformed log tag config strings?
+            if (m_isDebugBuild)
+            {
+                auto func = [&](const std::string& malformed)
+                {
+                    std::cout << "Malformed log level config: \"" << malformed << "\"\n";
+                };
+                logTagConfigParser.forEachMalformed(func);
+                std::cout.flush();
+            }
+        }
+
+        void applyConfigString()
+        {
+            auto func = [&](const std::string& name, LogLevel level)
+            {
+                ParsedName parsed = parseName(name);
+                if (parsed.isGlobal)
+                {
+                    logTagGlobal.level = level;
+                    return;
+                }
+                auto applyFunc = [&](LogTag* pLogTag)
+                {
+                    pLogTag->level = level;
+                };
+                if (parsed.hasPrefixWildcard)
+                {
+                    logTagManager.forEach_byAnyPart(parsed.trimmedNamePart, applyFunc);
+                }
+                else if (parsed.hasSuffixWildcard)
+                {
+                    logTagManager.forEach_byFirstPart(parsed.trimmedNamePart, applyFunc);
+                }
+                else
+                {
+                    logTagManager.invoke(parsed.trimmedNamePart, applyFunc);
+                }
+            };
+            logTagConfigParser.forEachParsed(func);
+        }
+
+        ParsedName parseName(const std::string& name)
+        {
+            constexpr size_t npos = std::string::npos;
+            const size_t len = name.length();
+            ParsedName parsed{ "global", true, false, false };
+            if (len == 0u)
+            {
+                return parsed;
+            }
+            const bool hasPrefixWildcard = (name[0u] == '*');
+            if (len == 1u && hasPrefixWildcard)
+            {
+                return parsed;
+            }
+            const size_t first = name.find_first_not_of("*.");
+            if (first == npos && hasPrefixWildcard)
+            {
+                return parsed;
+            }
+            const bool hasSuffixWildcard = (name[len - 1u] == '*');
+            const size_t last = name.find_last_not_of("*.");
+            parsed.trimmedNamePart = name.substr(first, last - first + 1u);
+            parsed.isGlobal = (parsed.trimmedNamePart == "global");
+            parsed.hasPrefixWildcard = hasPrefixWildcard;
+            parsed.hasSuffixWildcard = hasSuffixWildcard;
+            return parsed;
         }
     };
 
@@ -109,13 +233,13 @@ namespace internal
 
     static LogLevel& getLogLevelVariable()
     {
-        static LogLevel& refGlobalLogLevel = getGlobalLoggingInitStruct().logTag.level;
+        static LogLevel& refGlobalLogLevel = getGlobalLoggingInitStruct().logTagGlobal.level;
         return refGlobalLogLevel;
     }
 
     LogTag* getGlobalLogTag()
     {
-        static LogTag& refGlobalLogTag = getGlobalLoggingInitStruct().logTag;
+        static LogTag& refGlobalLogTag = getGlobalLoggingInitStruct().logTagGlobal;
         return &refGlobalLogTag;
     }
 }
