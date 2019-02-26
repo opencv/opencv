@@ -32,18 +32,9 @@ import cv2 as cv
 
 # Load an color image in grayscale
 img = cv.imread('messi5.jpg',0)
-if img is None:
-    print("File cannot be read. Check file path")
-    print("ファイルを読み込めません。 ファイルパスを確認する")
-    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
-    print("No se puede leer el archivo. Verifique la ruta del archivo")
-    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
-    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
-    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
-    print("Il file non può essere letto. Controlla il percorso del file")
-    print("文件无法读取。 检查文件路径")
-    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
-    exit()
+if img is not None:
+    print("Image read successfully.")
+    print("Félicitation l'image est bien lue.")
 @endcode
 
 **warning**
@@ -110,25 +101,16 @@ import numpy as np
 import cv2 as cv
 
 img = cv.imread('messi5.jpg',0)
-if img is None:
-    print("File cannot be read. Check file path")
-    print("ファイルを読み込めません。 ファイルパスを確認する")
-    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
-    print("No se puede leer el archivo. Verifique la ruta del archivo")
-    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
-    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
-    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
-    print("Il file non può essere letto. Controlla il percorso del file")
-    print("文件无法读取。 检查文件路径")
-    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
-    exit()
-cv.imshow('image',img)
-k = cv.waitKey(0)
-if k == 27:         # wait for ESC key to exit
-    cv.destroyAllWindows()
-elif k == ord('s'): # wait for 's' key to save and exit
-    cv.imwrite('messigray.png',img)
-    cv.destroyAllWindows()
+if img is not None:
+    print("Image read successfully.")
+    print("Félicitation l'image est bien lue.")
+    cv.imshow('image',img)
+    k = cv.waitKey(0)
+    if k == 27:         # wait for ESC key to exit
+        cv.destroyAllWindows()
+    elif k == ord('s'): # wait for 's' key to save and exit
+        cv.imwrite('messigray.png',img)
+        cv.destroyAllWindows()
 @endcode
 
 **warning**
@@ -148,21 +130,12 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('messi5.jpg',0)
-if img is None:
-    print("File cannot be read. Check file path")
-    print("ファイルを読み込めません。 ファイルパスを確認する")
-    print("ບໍ່ສາມາດອ່ານໄຟລ໌ໄດ້. ກວດເບິ່ງເສັ້ນທາງໄຟລ໌")
-    print("No se puede leer el archivo. Verifique la ruta del archivo")
-    print("Le fichier image ne peut etre lu. Verifier le chemin du fichier")
-    print("Datei kann nicht gelesen werden. Dateipfad überprüfen")
-    print("Dosja nuk mund të lexohet. Kontrollo rrugën e skedarit")
-    print("Il file non può essere letto. Controlla il percorso del file")
-    print("文件无法读取。 检查文件路径")
-    print("..-. .. .-.. . / -.-. .- -. -. --- - / -... . / .-. . .- -.. .-.-.- / -.-. .... . -.-. -.- / ..-. .. .-.. . / .--. .- - ....")
-    exit()
-plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
-plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-plt.show()
+if img is not None:
+    print("Image read successfully.")
+    print("Félicitation l'image est bien lue.")
+    plt.imshow(img, cmap = 'gray', interpolation = 'bicubic')
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
 @endcode
 A screen-shot of the window will look like this :
 
