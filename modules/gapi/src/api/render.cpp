@@ -25,19 +25,19 @@ void cv::Render::rectangle(cv::Point2f p1, cv::Point2f p2, cv::Scalar color,
 
 /************************************** OCV Render ************************************************/
 
-void cv::OCVRender::run(cv::Mat& bgrx_plane)
+void cv::OCVRender::run(cv::Mat& bgr_plane)
 {
-    process(bgrx_plane);
+    process(bgr_plane);
 }
 
 void cv::OCVRender::run(cv::Mat& y_plane, cv::Mat& uv_plane)
 {
-    cv::Mat bgrx_plane;
-    cv::cvtColorTwoPlane(y_plane, uv_plane, bgrx_plane, cv::COLOR_YUV2BGR_NV12);
-    process(bgrx_plane);
+    cv::Mat bgr_plane;
+    cv::cvtColorTwoPlane(y_plane, uv_plane, bgr_plane, cv::COLOR_YUV2BGR_NV12);
+    process(bgr_plane);
 }
 
-void cv::OCVRender::process(cv::Mat& bgrx_plane)
+void cv::OCVRender::process(cv::Mat& bgr_plane)
 {
     for (const auto& event : events_)
     {
@@ -46,7 +46,7 @@ void cv::OCVRender::process(cv::Mat& bgrx_plane)
             case cv::DrawEvent::index_of<cv::RectangleEvent>():
             {
                 auto rect_event = cv::util::get<RectangleEvent>(event);
-                cv::rectangle(bgrx_plane, rect_event.p1_, rect_event.p2_, rect_event.color_,
+                cv::rectangle(bgr_plane, rect_event.p1_, rect_event.p2_, rect_event.color_,
                               rect_event.thickness_, rect_event.line_type_, rect_event.shift_);
                 break;
             }
@@ -54,7 +54,7 @@ void cv::OCVRender::process(cv::Mat& bgrx_plane)
             case cv::DrawEvent::index_of<cv::PutTextEvent>():
             {
                 auto text_event = cv::util::get<PutTextEvent>(event);
-                cv::putText(bgrx_plane, text_event.text_, text_event.org_, text_event.font_face_,
+                cv::putText(bgr_plane, text_event.text_, text_event.org_, text_event.font_face_,
                             text_event.font_scale_, text_event.color_, text_event.thickness_,
                             text_event.bottom_left_origin_);
                 break;

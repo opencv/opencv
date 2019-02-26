@@ -17,7 +17,7 @@ TEST(Render, DrawRectangle)
     cv::Mat ref_mat;
     out_mat.copyTo(ref_mat);
     cv::Point2f p1(50, 50), p2(75, 75);
-    cv::Scalar color(255, 0, 0);
+    cv::Scalar color(0, 255, 0);
     auto r = cv::Render::create(cv::Render::BackendType::OCV);
 
     cv::rectangle(ref_mat, p1, p2, color);
@@ -35,7 +35,7 @@ TEST(Render, DrawText)
     cv::Mat ref_mat;
     out_mat.copyTo(ref_mat);
     cv::Point2f p1(50, 50);
-    cv::Scalar color(255, 0, 0);
+    cv::Scalar color(0, 255, 0);
     std::string text = "Lorem ipsum";
 
     auto r = cv::Render::create(cv::Render::BackendType::OCV);
