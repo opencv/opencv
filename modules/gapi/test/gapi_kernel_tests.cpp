@@ -303,14 +303,6 @@ TEST(KernelPackage, TestWithEmptyRHS)
     EXPECT_TRUE(pkg.includes<J::Foo>());
 }
 
-TEST(KernelPackage, Not_Unique_Package)
-{
-    namespace J = Jupiter;
-    namespace S = Saturn;
-
-    EXPECT_THROW((cv::gapi::kernels<J::Foo, J::Bar, S::Baz, S::Foo>()), std::logic_error);
-}
-
 TEST(KernelPackage, Return_Unique_Backends)
 {
     auto pkg = cv::gapi::kernels<cpu::GClone, fluid::BGR2Gray, fluid::GAdd>();
@@ -414,7 +406,7 @@ TEST_F(HeteroGraph, Use_Only_Same_Backend)
 
     auto pkg = cv::gapi::kernels<cpu::GAdd, cpu::GClone, cpu::BGR2Gray>();
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only(pkg)));
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only{pkg}));
 
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_CLONE));
@@ -434,7 +426,7 @@ TEST_F(HeteroGraph, Use_Only_Another_Backend)
 
     auto pkg = cv::gapi::kernels<fluid::GAdd, fluid::GClone, fluid::BGR2Gray>();
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only(pkg)));
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only{pkg}));
 
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
@@ -454,7 +446,7 @@ TEST_F(HeteroGraph, Use_Only_Hetero_Backend)
 
     auto pkg = cv::gapi::kernels<cpu::GAdd, fluid::GClone, fluid::BGR2Gray>();
     cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only(pkg)));
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only{pkg}));
 
     EXPECT_TRUE(checkCallKernel(KernelTags::CPU_CUSTOM_ADD));
     EXPECT_TRUE(checkCallKernel(KernelTags::FLUID_CUSTOM_CLONE));
@@ -474,7 +466,7 @@ TEST_F(HeteroGraph, Use_Only_Not_Found_Default)
 
     auto pkg = cv::gapi::kernels<fluid::GClone, fluid::BGR2Gray>();
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only(pkg))));
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only{pkg})));
 }
 
 TEST_F(HeteroGraph, Use_Only_Not_Found_Custom)
@@ -490,7 +482,7 @@ TEST_F(HeteroGraph, Use_Only_Not_Found_Custom)
 
     auto pkg = cv::gapi::kernels<cpu::GAdd, fluid::BGR2Gray>();
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
-        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only(pkg))));
+        apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(cv::gapi::use_only{pkg})));
 }
 
 TEST_F(HeteroGraph, Use_Only_Other_Package_Ignored)
@@ -509,7 +501,7 @@ TEST_F(HeteroGraph, Use_Only_Other_Package_Ignored)
 
     EXPECT_ANY_THROW(cv::GComputation(cv::GIn(in[0], in[1]), cv::GOut(out)).
         apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat),
-              cv::compile_args(clone_pkg, cv::gapi::use_only(pkg))));
+              cv::compile_args(clone_pkg, cv::gapi::use_only{pkg})));
 }
 
 } // namespace opencv_test

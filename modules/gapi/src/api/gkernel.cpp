@@ -83,17 +83,10 @@ cv::gapi::GKernelPackage::getKernelById(const std::string &id) const
 
 std::vector<cv::gapi::GBackend> cv::gapi::GKernelPackage::backends() const
 {
+    using kernel_type = std::pair<std::string, std::pair<cv::gapi::GBackend, cv::GKernelImpl>>;
     std::unordered_set<cv::gapi::GBackend> unique_set;
-    std::vector<cv::gapi::GBackend> result;
+    ade::util::transform(m_id_kernels, std::inserter(unique_set, unique_set.end()),
+                                       [](const kernel_type& k) { return k.second.first; });
 
-    for (const auto &p : m_id_kernels)
-    {
-        if (!ade::util::contains(unique_set, p.second.first))
-        {
-            result.emplace_back(p.second.first);
-            unique_set.insert(p.second.first);
-        }
-    }
-
-    return result;
+    return std::vector<cv::gapi::GBackend>(unique_set.begin(), unique_set.end());
 }

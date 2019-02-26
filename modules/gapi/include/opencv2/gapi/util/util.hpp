@@ -84,6 +84,30 @@ namespace detail
     {
         static constexpr const std::size_t value = S;
     };
+
+    template <typename T, typename... Ts>
+        struct contains : std::false_type {};
+
+    template <typename T1, typename T2>
+        struct contains<T1, T2> : std::is_same<typename T1::API, typename T2::API> {};
+
+    template <typename T1, typename T2, typename... Ts>
+        struct contains<T1, T2, Ts...>
+        : std::integral_constant<bool, std::is_same<typename T1::API, typename T2::API>::value ||
+                                                                      contains<T1, Ts...>::value> {};
+
+    template <typename T1, typename... Ts>
+        struct check_api : std::integral_constant<bool, !contains<T1, Ts...>::value &&
+                       !contains<Ts...>::value> {};
+    template <typename... Ts>
+        struct api_are_unique : std::integral_constant<bool, check_api<Ts...>::value> {};
+
+    template <typename T>
+        struct api_are_unique<T> : std::true_type {};
+
+    template <>
+        struct api_are_unique<> : std::true_type {};
+
 } // namespace detail
 } // namespace cv
 

@@ -306,7 +306,7 @@ G-API to utilize appropriate Fluid functions in our graph.
 
 Kernel packages are combinable -- in the above example, we take "Core"
 and "ImgProc" Fluid kernel packages and combine it into a single
-one. See documentation reference on cv::gapi::combine
+one. See documentation reference on cv::gapi::combine.
 
 If no kernel packages are specified in options, G-API is using
 _default_ package which consists of default OpenCV implementations and

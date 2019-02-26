@@ -24,7 +24,6 @@
 #include <opencv2/gapi/gtype_traits.hpp> // GTypeTraits
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
-
 namespace cv {
 
 using GShapes = std::vector<GShape>;
@@ -51,20 +50,6 @@ template<typename, typename> class GKernelTypeM;
 
 namespace detail
 {
-    template<typename... Types>
-    void throwIfIdNotUnique()
-    {
-        std::unordered_multiset<std::string> kernel_ids{ Types::API::id()... };
-
-        auto not_unique = std::find_if(kernel_ids.begin(), kernel_ids.end(),
-                [&kernel_ids](const std::string& n){ return kernel_ids.count(n) != 1; });
-
-        if (not_unique != kernel_ids.end())
-        {
-            util::throw_error(std::logic_error("Kernel id " + *not_unique + " is not unique "
-                                               "in kernel package"));
-        }
-    }
     ////////////////////////////////////////////////////////////////////////////
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
@@ -328,7 +313,7 @@ namespace gapi {
      * one since G-API kernel implementations are _types_, not objects.
      *
      * Finally, two kernel packages can be combined into a new one
-     * with function cv::gapi::combine()
+     * with function cv::gapi::combine().
      */
     class GAPI_EXPORTS GKernelPackage
     {
@@ -411,7 +396,7 @@ namespace gapi {
         /**
          * @brief Find a kernel (by its API)
          *
-         * Returns first suitable implementation.
+         * Returns implementation corresponding id.
          * Throws if nothing found.
          *
          * @return Backend which hosts matching kernel implementation.
@@ -452,8 +437,7 @@ namespace gapi {
         // TODO: Doxygen bug -- it wants me to place this comment
         // here, not below.
         /**
-         * @brief Create a new package based on `lhs` and `rhs`,
-         * with unity policy defined by `policy`.
+         * @brief Create a new package based on `lhs` and `rhs`.
          *
          * @param lhs "Left-hand-side" package in the process
          * @param rhs "Right-hand-side" package in the process
@@ -492,7 +476,7 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
-        detail::throwIfIdNotUnique<KK...>();
+        static_assert(detail::api_are_unique<KK...>::value, "Kernels API must be unique");
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
@@ -507,15 +491,9 @@ namespace gapi {
      * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
      * default with that package).
      */
-
-    class GAPI_EXPORTS use_only
+    struct GAPI_EXPORTS use_only
     {
-        public:
-        use_only(const GKernelPackage& pkg) : _pkg(pkg)            {};
-        use_only(GKernelPackage&& pkg)      : _pkg(std::move(pkg)) {};
-        GKernelPackage getPackage() const { return _pkg; }
-
-        GKernelPackage _pkg;
+        GKernelPackage pkg;
     };
 
 } // namespace gapi
