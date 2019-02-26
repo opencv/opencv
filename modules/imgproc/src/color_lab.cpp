@@ -1733,17 +1733,17 @@ struct RGB2Lab_f
 
     void operator()(const float* src, float* dst, int n) const
     {
-        int i, scn = srccn, bIdx = blueIdx;
+        int scn = srccn, bIdx = blueIdx;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-        n *= 3;
 
-        i = 0;
         if(useInterpolation)
         {
+            int i = 0;
+            n *= 3;
 
 #if CV_SIMD
             if(enablePackedLab)
@@ -1849,7 +1849,65 @@ struct RGB2Lab_f
         else
         {
             static const float _a = (softfloat(16) / softfloat(116));
-            for (; i < n; i += 3, src += scn )
+            int i = 0;
+#if CV_SIMD
+            const int vsize = v_float32::nlanes;
+            v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
+            v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
+            v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
+            for( ; i <= n - vsize;
+                 i += vsize, src += scn*vsize, dst += 3*vsize)
+            {
+                v_float32 R, G, B, A;
+                if(scn == 4)
+                {
+                    v_load_deinterleave(src, R, G, B, A);
+                }
+                else // scn == 3
+                {
+                    v_load_deinterleave(src, R, G, B);
+                }
+
+                v_float32 one = vx_setall_f32(1.0f), z = vx_setzero_f32();
+                R = v_max(z, v_min(R, one));
+                G = v_max(z, v_min(G, one));
+                B = v_max(z, v_min(B, one));
+
+                if(gammaTab)
+                {
+                    v_float32 vgscale = vx_setall_f32(gscale);
+                    R = splineInterpolate(R*vgscale, gammaTab, GAMMA_TAB_SIZE);
+                    G = splineInterpolate(G*vgscale, gammaTab, GAMMA_TAB_SIZE);
+                    B = splineInterpolate(B*vgscale, gammaTab, GAMMA_TAB_SIZE);
+                }
+
+                v_float32 X, Y, Z;
+                X = v_fma(R, vc0, v_fma(G, vc1, B*vc2));
+                Y = v_fma(R, vc3, v_fma(G, vc4, B*vc5));
+                Z = v_fma(R, vc6, v_fma(G, vc7, B*vc8));
+
+                // use spline interpolation instead of direct calculation
+                v_float32 FX, FY, FZ;
+                v_float32 vTabScale = vx_setall_f32(LabCbrtTabScale);
+                FX = splineInterpolate(X*vTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+                FY = splineInterpolate(Y*vTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+                FZ = splineInterpolate(Z*vTabScale, LabCbrtTab, LAB_CBRT_TAB_SIZE);
+
+                v_float32 L, a, b;
+                // 7.787f = (29/3)^3/(29*4), 0.008856f = (6/29)^3, 903.3 = (29/3)^3
+                v_float32 mask = Y > (vx_setall_f32(0.008856f));
+                v_float32 v116 = vx_setall_f32(116.f), vm16 = vx_setall_f32(-16.f);
+                L = v_select(mask, v_fma(v116, FY, vm16), vx_setall_f32(903.3f)*Y);
+                a = vx_setall_f32(500.f) * (FX - FY);
+                b = vx_setall_f32(200.f) * (FY - FZ);
+
+                v_store_interleave(dst, L, a, b);
+            }
+
+            vx_cleanup();
+#endif
+
+            for (; i < n; i++, src += scn, dst += 3 )
             {
                 float R = clip(src[0]);
                 float G = clip(src[1]);
@@ -1873,9 +1931,9 @@ struct RGB2Lab_f
                 float a = 500.f * (FX - FY);
                 float b = 200.f * (FY - FZ);
 
-                dst[i] = L;
-                dst[i + 1] = a;
-                dst[i + 2] = b;
+                dst[0] = L;
+                dst[1] = a;
+                dst[2] = b;
             }
         }
     }
