@@ -72,65 +72,6 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(cv::v_float
 }
 #endif
 
-#if CV_NEON
-template<typename _Tp> static inline void splineInterpolate(float32x4_t& v_x, const _Tp* tab, int n)
-{
-    int32x4_t v_ix = vcvtq_s32_f32(vminq_f32(vmaxq_f32(v_x, vdupq_n_f32(0)), vdupq_n_f32(n - 1)));
-    v_x = vsubq_f32(v_x, vcvtq_f32_s32(v_ix));
-    v_ix = vshlq_n_s32(v_ix, 2);
-
-    int CV_DECL_ALIGNED(16) ix[4];
-    vst1q_s32(ix, v_ix);
-
-    float32x4_t v_tab0 = vld1q_f32(tab + ix[0]);
-    float32x4_t v_tab1 = vld1q_f32(tab + ix[1]);
-    float32x4_t v_tab2 = vld1q_f32(tab + ix[2]);
-    float32x4_t v_tab3 = vld1q_f32(tab + ix[3]);
-
-    float32x4x2_t v01 = vtrnq_f32(v_tab0, v_tab1);
-    float32x4x2_t v23 = vtrnq_f32(v_tab2, v_tab3);
-
-    v_tab0 = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0]));
-    v_tab1 = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1]));
-    v_tab2 = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0]));
-    v_tab3 = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.val[1]));
-
-    v_x = vmlaq_f32(v_tab0, vmlaq_f32(v_tab1, vmlaq_f32(v_tab2, v_tab3, v_x), v_x), v_x);
-}
-#elif CV_SSE2
-template<typename _Tp> static inline void splineInterpolate(__m128& v_x, const _Tp* tab, int n)
-{
-    __m128i v_ix = _mm_cvttps_epi32(_mm_min_ps(_mm_max_ps(v_x, _mm_setzero_ps()), _mm_set1_ps(float(n - 1))));
-    v_x = _mm_sub_ps(v_x, _mm_cvtepi32_ps(v_ix));
-    v_ix = _mm_slli_epi32(v_ix, 2);
-
-    int CV_DECL_ALIGNED(16) ix[4];
-    _mm_store_si128((__m128i *)ix, v_ix);
-
-    __m128 v_tab0 = _mm_loadu_ps(tab + ix[0]);
-    __m128 v_tab1 = _mm_loadu_ps(tab + ix[1]);
-    __m128 v_tab2 = _mm_loadu_ps(tab + ix[2]);
-    __m128 v_tab3 = _mm_loadu_ps(tab + ix[3]);
-
-    __m128 v_tmp0 = _mm_unpacklo_ps(v_tab0, v_tab1);
-    __m128 v_tmp1 = _mm_unpacklo_ps(v_tab2, v_tab3);
-    __m128 v_tmp2 = _mm_unpackhi_ps(v_tab0, v_tab1);
-    __m128 v_tmp3 = _mm_unpackhi_ps(v_tab2, v_tab3);
-
-    v_tab0 = _mm_shuffle_ps(v_tmp0, v_tmp1, 0x44);
-    v_tab2 = _mm_shuffle_ps(v_tmp2, v_tmp3, 0x44);
-    v_tab1 = _mm_shuffle_ps(v_tmp0, v_tmp1, 0xee);
-    v_tab3 = _mm_shuffle_ps(v_tmp2, v_tmp3, 0xee);
-
-    __m128 v_l = _mm_mul_ps(v_x, v_tab3);
-    v_l = _mm_add_ps(v_l, v_tab2);
-    v_l = _mm_mul_ps(v_l, v_x);
-    v_l = _mm_add_ps(v_l, v_tab1);
-    v_l = _mm_mul_ps(v_l, v_x);
-    v_x = _mm_add_ps(v_l, v_tab0);
-}
-#endif
-
 namespace cv
 {
 
@@ -1903,7 +1844,6 @@ struct RGB2Lab_f
 
                 v_store_interleave(dst, L, a, b);
             }
-
             vx_cleanup();
 #endif
 
@@ -1980,101 +1920,7 @@ struct Lab2RGBfloat
 
         lThresh = softfloat(8); // 0.008856f * 903.3f  = (6/29)^3*(29/3)^3 = 8
         fThresh = softfloat(6)/softfloat(29); // 7.787f * 0.008856f + 16.0f / 116.0f = 6/29
-
-        #if CV_SSE2
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
     }
-
-    #if CV_SSE2
-    void process(__m128& v_li0, __m128& v_li1, __m128& v_ai0,
-                 __m128& v_ai1, __m128& v_bi0, __m128& v_bi1) const
-    {
-        // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
-        __m128 v_y00 = _mm_mul_ps(v_li0, _mm_set1_ps(1.0f/903.3f));
-        __m128 v_y01 = _mm_mul_ps(v_li1, _mm_set1_ps(1.0f/903.3f));
-        __m128 v_fy00 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(7.787f), v_y00), _mm_set1_ps(16.0f/116.0f));
-        __m128 v_fy01 = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(7.787f), v_y01), _mm_set1_ps(16.0f/116.0f));
-
-        __m128 v_fy10 = _mm_mul_ps(_mm_add_ps(v_li0, _mm_set1_ps(16.0f)), _mm_set1_ps(1.0f/116.0f));
-        __m128 v_fy11 = _mm_mul_ps(_mm_add_ps(v_li1, _mm_set1_ps(16.0f)), _mm_set1_ps(1.0f/116.0f));
-        __m128 v_y10 = _mm_mul_ps(_mm_mul_ps(v_fy10, v_fy10), v_fy10);
-        __m128 v_y11 = _mm_mul_ps(_mm_mul_ps(v_fy11, v_fy11), v_fy11);
-
-        __m128 v_cmpli0 = _mm_cmple_ps(v_li0, _mm_set1_ps(lThresh));
-        __m128 v_cmpli1 = _mm_cmple_ps(v_li1, _mm_set1_ps(lThresh));
-        v_y00 = _mm_and_ps(v_cmpli0, v_y00);
-        v_y01 = _mm_and_ps(v_cmpli1, v_y01);
-        v_fy00 = _mm_and_ps(v_cmpli0, v_fy00);
-        v_fy01 = _mm_and_ps(v_cmpli1, v_fy01);
-        v_y10 = _mm_andnot_ps(v_cmpli0, v_y10);
-        v_y11 = _mm_andnot_ps(v_cmpli1, v_y11);
-        v_fy10 = _mm_andnot_ps(v_cmpli0, v_fy10);
-        v_fy11 = _mm_andnot_ps(v_cmpli1, v_fy11);
-        __m128 v_y0 = _mm_or_ps(v_y00, v_y10);
-        __m128 v_y1 = _mm_or_ps(v_y01, v_y11);
-        __m128 v_fy0 = _mm_or_ps(v_fy00, v_fy10);
-        __m128 v_fy1 = _mm_or_ps(v_fy01, v_fy11);
-
-        __m128 v_fxz00 = _mm_add_ps(v_fy0, _mm_mul_ps(v_ai0, _mm_set1_ps(0.002f)));
-        __m128 v_fxz01 = _mm_add_ps(v_fy1, _mm_mul_ps(v_ai1, _mm_set1_ps(0.002f)));
-        __m128 v_fxz10 = _mm_sub_ps(v_fy0, _mm_mul_ps(v_bi0, _mm_set1_ps(0.005f)));
-        __m128 v_fxz11 = _mm_sub_ps(v_fy1, _mm_mul_ps(v_bi1, _mm_set1_ps(0.005f)));
-
-        __m128 v_fxz000 = _mm_mul_ps(_mm_sub_ps(v_fxz00, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
-        __m128 v_fxz001 = _mm_mul_ps(_mm_sub_ps(v_fxz01, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
-        __m128 v_fxz010 = _mm_mul_ps(_mm_sub_ps(v_fxz10, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
-        __m128 v_fxz011 = _mm_mul_ps(_mm_sub_ps(v_fxz11, _mm_set1_ps(16.0f/116.0f)), _mm_set1_ps(1.0f/7.787f));
-
-        __m128 v_fxz100 = _mm_mul_ps(_mm_mul_ps(v_fxz00, v_fxz00), v_fxz00);
-        __m128 v_fxz101 = _mm_mul_ps(_mm_mul_ps(v_fxz01, v_fxz01), v_fxz01);
-        __m128 v_fxz110 = _mm_mul_ps(_mm_mul_ps(v_fxz10, v_fxz10), v_fxz10);
-        __m128 v_fxz111 = _mm_mul_ps(_mm_mul_ps(v_fxz11, v_fxz11), v_fxz11);
-
-        __m128 v_cmpfxz00 = _mm_cmple_ps(v_fxz00, _mm_set1_ps(fThresh));
-        __m128 v_cmpfxz01 = _mm_cmple_ps(v_fxz01, _mm_set1_ps(fThresh));
-        __m128 v_cmpfxz10 = _mm_cmple_ps(v_fxz10, _mm_set1_ps(fThresh));
-        __m128 v_cmpfxz11 = _mm_cmple_ps(v_fxz11, _mm_set1_ps(fThresh));
-        v_fxz000 = _mm_and_ps(v_cmpfxz00, v_fxz000);
-        v_fxz001 = _mm_and_ps(v_cmpfxz01, v_fxz001);
-        v_fxz010 = _mm_and_ps(v_cmpfxz10, v_fxz010);
-        v_fxz011 = _mm_and_ps(v_cmpfxz11, v_fxz011);
-        v_fxz100 = _mm_andnot_ps(v_cmpfxz00, v_fxz100);
-        v_fxz101 = _mm_andnot_ps(v_cmpfxz01, v_fxz101);
-        v_fxz110 = _mm_andnot_ps(v_cmpfxz10, v_fxz110);
-        v_fxz111 = _mm_andnot_ps(v_cmpfxz11, v_fxz111);
-        __m128 v_x0 = _mm_or_ps(v_fxz000, v_fxz100);
-        __m128 v_x1 = _mm_or_ps(v_fxz001, v_fxz101);
-        __m128 v_z0 = _mm_or_ps(v_fxz010, v_fxz110);
-        __m128 v_z1 = _mm_or_ps(v_fxz011, v_fxz111);
-
-        __m128 v_ro0 = _mm_mul_ps(_mm_set1_ps(coeffs[0]), v_x0);
-        __m128 v_ro1 = _mm_mul_ps(_mm_set1_ps(coeffs[0]), v_x1);
-        __m128 v_go0 = _mm_mul_ps(_mm_set1_ps(coeffs[3]), v_x0);
-        __m128 v_go1 = _mm_mul_ps(_mm_set1_ps(coeffs[3]), v_x1);
-        __m128 v_bo0 = _mm_mul_ps(_mm_set1_ps(coeffs[6]), v_x0);
-        __m128 v_bo1 = _mm_mul_ps(_mm_set1_ps(coeffs[6]), v_x1);
-        v_ro0 = _mm_add_ps(v_ro0, _mm_mul_ps(_mm_set1_ps(coeffs[1]), v_y0));
-        v_ro1 = _mm_add_ps(v_ro1, _mm_mul_ps(_mm_set1_ps(coeffs[1]), v_y1));
-        v_go0 = _mm_add_ps(v_go0, _mm_mul_ps(_mm_set1_ps(coeffs[4]), v_y0));
-        v_go1 = _mm_add_ps(v_go1, _mm_mul_ps(_mm_set1_ps(coeffs[4]), v_y1));
-        v_bo0 = _mm_add_ps(v_bo0, _mm_mul_ps(_mm_set1_ps(coeffs[7]), v_y0));
-        v_bo1 = _mm_add_ps(v_bo1, _mm_mul_ps(_mm_set1_ps(coeffs[7]), v_y1));
-        v_ro0 = _mm_add_ps(v_ro0, _mm_mul_ps(_mm_set1_ps(coeffs[2]), v_z0));
-        v_ro1 = _mm_add_ps(v_ro1, _mm_mul_ps(_mm_set1_ps(coeffs[2]), v_z1));
-        v_go0 = _mm_add_ps(v_go0, _mm_mul_ps(_mm_set1_ps(coeffs[5]), v_z0));
-        v_go1 = _mm_add_ps(v_go1, _mm_mul_ps(_mm_set1_ps(coeffs[5]), v_z1));
-        v_bo0 = _mm_add_ps(v_bo0, _mm_mul_ps(_mm_set1_ps(coeffs[8]), v_z0));
-        v_bo1 = _mm_add_ps(v_bo1, _mm_mul_ps(_mm_set1_ps(coeffs[8]), v_z1));
-
-        v_li0 = _mm_min_ps(_mm_max_ps(v_ro0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-        v_li1 = _mm_min_ps(_mm_max_ps(v_ro1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-        v_ai0 = _mm_min_ps(_mm_max_ps(v_go0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-        v_ai1 = _mm_min_ps(_mm_max_ps(v_go1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-        v_bi0 = _mm_min_ps(_mm_max_ps(v_bo0, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-        v_bi1 = _mm_min_ps(_mm_max_ps(v_bo1, _mm_setzero_ps()), _mm_set1_ps(1.0f));
-    }
-    #endif
 
     void operator()(const float* src, float* dst, int n) const
     {
@@ -2085,76 +1931,81 @@ struct Lab2RGBfloat
         C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
         C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         float alpha = ColorChannel<float>::max();
-        n *= 3;
 
-        #if CV_SSE2
-        if (haveSIMD)
+#if CV_SIMD
+        const int vsize = v_float32::nlanes;
+        v_float32 v16_116 = vx_setall_f32(16.0f / 116.0f);
+        v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
+        v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
+        v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
+        for( ; i <= n-vsize;
+             i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
-            for (; i <= n - 24; i += 24, dst += dcn * 8)
+            v_float32 li, ai, bi;
+            v_load_deinterleave(src, li, ai, bi);
+
+            v_float32 x, y, z, fy;
+            v_float32 ylo, yhi, fylo, fyhi;
+            v_float32 limask = li <= vx_setall_f32(lThresh);
+            // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
+            ylo = li * vx_setall_f32(1.f/903.3f);
+            fylo = vx_setall_f32(7.787f) * ylo + v16_116;
+            fyhi = (li + vx_setall_f32(16.0f)) * vx_setall_f32(1.f/116.0f);
+            yhi = fyhi * fyhi * fyhi;
+
+            y  = v_select(limask, ylo,  yhi);
+            fy = v_select(limask, fylo, fyhi);
+
+            v_float32 fxz[2];
+            fxz[0] = v_fma(ai, vx_setall_f32( 1.f/500.0f), fy);
+            fxz[1] = v_fma(bi, vx_setall_f32(-1.f/200.0f), fy);
+
+            v_float32 vfTresh = vx_setall_f32(fThresh);
+            for (int j = 0; j < 2; j++)
             {
-                __m128 v_li0 = _mm_loadu_ps(src + i +  0);
-                __m128 v_li1 = _mm_loadu_ps(src + i +  4);
-                __m128 v_ai0 = _mm_loadu_ps(src + i +  8);
-                __m128 v_ai1 = _mm_loadu_ps(src + i + 12);
-                __m128 v_bi0 = _mm_loadu_ps(src + i + 16);
-                __m128 v_bi1 = _mm_loadu_ps(src + i + 20);
+                v_float32 f = fxz[j];
+                v_float32 fmask = f <= vfTresh;
+                v_float32 flo = (f - v16_116) * vx_setall_f32(1.f/7.787f);
+                v_float32 fhi = f*f*f;
+                fxz[j] = v_select(fmask, flo, fhi);
+            }
 
-                _mm_deinterleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
+            x = fxz[0], z = fxz[1];
 
-                process(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
+            v_float32 ro, bo, go;
+            ro = v_fma(vc0, x, v_fma(vc1, y, vc2 * z));
+            go = v_fma(vc3, x, v_fma(vc4, y, vc5 * z));
+            bo = v_fma(vc6, x, v_fma(vc7, y, vc8 * z));
+            v_float32 one = vx_setall_f32(1.f), zero = vx_setzero_f32();
+            ro = v_max(zero, v_min(ro, one));
+            go = v_max(zero, v_min(go, one));
+            bo = v_max(zero, v_min(bo, one));
 
-                if (gammaTab)
-                {
-                    __m128 v_gscale = _mm_set1_ps(gscale);
-                    v_li0 = _mm_mul_ps(v_li0, v_gscale);
-                    v_li1 = _mm_mul_ps(v_li1, v_gscale);
-                    v_ai0 = _mm_mul_ps(v_ai0, v_gscale);
-                    v_ai1 = _mm_mul_ps(v_ai1, v_gscale);
-                    v_bi0 = _mm_mul_ps(v_bi0, v_gscale);
-                    v_bi1 = _mm_mul_ps(v_bi1, v_gscale);
+            if (gammaTab)
+            {
+                v_float32 vgscale = vx_setall_f32(gscale);
+                ro = splineInterpolate(ro * vgscale, gammaTab, GAMMA_TAB_SIZE);
+                go = splineInterpolate(go * vgscale, gammaTab, GAMMA_TAB_SIZE);
+                bo = splineInterpolate(bo * vgscale, gammaTab, GAMMA_TAB_SIZE);
+            }
 
-                    splineInterpolate(v_li0, gammaTab, GAMMA_TAB_SIZE);
-                    splineInterpolate(v_li1, gammaTab, GAMMA_TAB_SIZE);
-                    splineInterpolate(v_ai0, gammaTab, GAMMA_TAB_SIZE);
-                    splineInterpolate(v_ai1, gammaTab, GAMMA_TAB_SIZE);
-                    splineInterpolate(v_bi0, gammaTab, GAMMA_TAB_SIZE);
-                    splineInterpolate(v_bi1, gammaTab, GAMMA_TAB_SIZE);
-                }
-
-                if( dcn == 4 )
-                {
-                    __m128 v_a0 = _mm_set1_ps(alpha);
-                    __m128 v_a1 = _mm_set1_ps(alpha);
-                    _mm_interleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1, v_a0, v_a1);
-
-                    _mm_storeu_ps(dst +  0, v_li0);
-                    _mm_storeu_ps(dst +  4, v_li1);
-                    _mm_storeu_ps(dst +  8, v_ai0);
-                    _mm_storeu_ps(dst + 12, v_ai1);
-                    _mm_storeu_ps(dst + 16, v_bi0);
-                    _mm_storeu_ps(dst + 20, v_bi1);
-                    _mm_storeu_ps(dst + 24, v_a0);
-                    _mm_storeu_ps(dst + 28, v_a1);
-                }
-                else
-                {
-                    _mm_interleave_ps(v_li0, v_li1, v_ai0, v_ai1, v_bi0, v_bi1);
-
-                    _mm_storeu_ps(dst +  0, v_li0);
-                    _mm_storeu_ps(dst +  4, v_li1);
-                    _mm_storeu_ps(dst +  8, v_ai0);
-                    _mm_storeu_ps(dst + 12, v_ai1);
-                    _mm_storeu_ps(dst + 16, v_bi0);
-                    _mm_storeu_ps(dst + 20, v_bi1);
-                }
+            if(dcn == 4)
+            {
+                v_store_interleave(dst, ro, go, bo, vx_setall_f32(alpha));
+            }
+            else // dcn == 3
+            {
+                v_store_interleave(dst, ro, go, bo);
             }
         }
-        #endif
-        for (; i < n; i += 3, dst += dcn)
+
+        vx_cleanup();
+#endif
+        for (; i < n; i++, src += 3, dst += dcn)
         {
-            float li = src[i];
-            float ai = src[i + 1];
-            float bi = src[i + 2];
+            float li = src[0];
+            float ai = src[1];
+            float bi = src[2];
 
             // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
             float y, fy;
@@ -2203,9 +2054,6 @@ struct Lab2RGBfloat
     bool srgb;
     float lThresh;
     float fThresh;
-    #if CV_SSE2
-    bool haveSIMD;
-    #endif
     int blueIdx;
 };
 
