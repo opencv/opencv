@@ -83,6 +83,14 @@ cv::String join(const cv::String& base, const cv::String& path)
     return result;
 }
 
+CV_EXPORTS cv::String getParent(const cv::String &path)
+{
+    std::string::size_type loc = path.find_last_of("/\\");
+    if (loc == std::string::npos)
+        return std::string();
+    return std::string(path, 0, loc);
+}
+
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 cv::String canonical(const cv::String& path)

@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_DC1394_2
 
@@ -797,13 +798,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
 }
 
 
-CvCapture* cvCreateCameraCapture_DC1394_2(int index)
+cv::Ptr<cv::IVideoCapture> cv::create_DC1394_capture(int index)
 {
     CvCaptureCAM_DC1394_v2_CPP* capture = new CvCaptureCAM_DC1394_v2_CPP;
-
     if (capture->open(index))
-        return capture;
-
+        return cv::makePtr<cv::LegacyCapture>(capture);
     delete capture;
     return 0;
 }

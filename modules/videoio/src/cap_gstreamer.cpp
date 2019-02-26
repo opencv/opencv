@@ -71,7 +71,7 @@ using namespace std;
 #ifdef NDEBUG
 #define CV_WARN(message)
 #else
-#define CV_WARN(message) fprintf(stderr, "OpenCV | GStreamer warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
+#define CV_WARN(message) CV_LOG_WARNING(0, message)
 #endif
 
 #define COLOR_ELEM "videoconvert"
@@ -232,7 +232,7 @@ GStreamerCapture::~GStreamerCapture()
  */
 bool GStreamerCapture::grabFrame()
 {
-    if(!pipeline)
+    if(!GST_IS_ELEMENT(pipeline))
         return false;
 
     // start the pipeline if it was not in playing state yet
@@ -372,6 +372,11 @@ bool GStreamerCapture::determineFrameDims(Size &sz)
  */
 bool GStreamerCapture::isPipelinePlaying()
 {
+    if (!GST_IS_ELEMENT(pipeline))
+    {
+        CV_WARN("GStreamer: pipeline have not been created");
+        return false;
+    }
     GstState current, pending;
     GstClockTime timeout = 5*GST_SECOND;
     GstStateChangeReturn ret = gst_element_get_state(pipeline, &current, &pending, timeout);
@@ -389,8 +394,12 @@ bool GStreamerCapture::isPipelinePlaying()
  */
 void GStreamerCapture::startPipeline()
 {
-    //fprintf(stderr, "relinked, pausing\n");
-    GstStateChangeReturn status = gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+    if (!GST_IS_ELEMENT(pipeline))
+    {
+        CV_WARN("GStreamer: pipeline have not been created");
+        return;
+    }
+    GstStateChangeReturn status = gst_element_set_state(pipeline, GST_STATE_PLAYING);
     if (status == GST_STATE_CHANGE_ASYNC)
     {
         // wait for status update
@@ -408,7 +417,6 @@ void GStreamerCapture::startPipeline()
     if (isPosFramesEmulated)
         emulatedFrameNumber = 0;
 
-    //printf("state now playing\n");
     handleMessage(pipeline);
 }
 
@@ -418,8 +426,12 @@ void GStreamerCapture::startPipeline()
  */
 void GStreamerCapture::stopPipeline()
 {
-    //fprintf(stderr, "restarting pipeline, going to ready\n");
-    if(gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE)
+    if (!GST_IS_ELEMENT(pipeline))
+    {
+        CV_WARN("GStreamer: pipeline have not been created");
+        return;
+    }
+    if(gst_element_set_state(pipeline, GST_STATE_NULL) == GST_STATE_CHANGE_FAILURE)
     {
         CV_WARN("GStreamer: unable to stop pipeline");
         gst_object_unref(pipeline);
@@ -449,7 +461,6 @@ void GStreamerCapture::restartPipeline()
  */
 void GStreamerCapture::setFilter(const char *prop, int type, int v1, int v2)
 {
-    //printf("GStreamer: setFilter \n");
     if(!caps || !( GST_IS_CAPS (caps) ))
     {
         if(type == G_TYPE_INT)
@@ -475,7 +486,6 @@ void GStreamerCapture::setFilter(const char *prop, int type, int v1, int v2)
     caps = gst_caps_fixate(caps);
 
     gst_app_sink_set_caps(GST_APP_SINK(sink), caps);
-    //printf("filtering with %s\n", gst_caps_to_string(caps));
 }
 
 /*!
@@ -511,7 +521,6 @@ void GStreamerCapture::newPad(GstElement *, GstPad *pad, gpointer data)
 
     sinkpad = gst_element_get_static_pad (color, "sink");
     if (!sinkpad){
-        //fprintf(stderr, "Gstreamer: no pad named sink\n");
         return;
     }
 
@@ -622,7 +631,7 @@ bool GStreamerCapture::open(const String &filename_)
             uridecodebin = gst_parse_launch(filename, &err);
             if(!uridecodebin)
             {
-                fprintf(stderr, "GStreamer: Error opening bin: %s\n", err->message);
+                CV_WARN("GStreamer: Error opening bin: " << err->message);
                 return false;
             }
             //stream = true;
@@ -835,11 +844,11 @@ bool GStreamerCapture::open(const String &filename_)
             gboolean status_;
 
             format_ = GST_FORMAT_DEFAULT;
+
             status_ = gst_element_query_position(sink, format_, &value_);
             if (!status_ || value_ != 0 || duration < 0)
             {
-                CV_WARN(cv::format("Cannot query video position: status=%d value=%lld duration=%lld\n",
-                                   (int)status_, (long long int)value_, (long long int)duration).c_str());
+                CV_WARN("Cannot query video position: status=" << status_ << ", value=" << value_ << ", duration=" << duration);
                 isPosFramesSupported = false;
                 isPosFramesEmulated = true;
                 emulatedFrameNumber = 0;
@@ -1099,7 +1108,7 @@ bool GStreamerCapture::setProperty(int propId, double value)
 }
 
 
-Ptr<IVideoCapture> cv::createGStreamerCapture(const String& filename)
+Ptr<IVideoCapture> cv::createGStreamerCapture_file(const String& filename)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
     if (cap && cap->open(filename))
@@ -1107,7 +1116,7 @@ Ptr<IVideoCapture> cv::createGStreamerCapture(const String& filename)
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> cv::createGStreamerCapture(int index)
+Ptr<IVideoCapture> cv::createGStreamerCapture_cam(int index)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
     if (cap && cap->open(index))
@@ -1133,10 +1142,10 @@ public:
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
-    virtual bool open( const char* filename, int fourcc,
-                       double fps, CvSize frameSize, bool isColor );
-    virtual void close();
-    virtual bool writeFrame( const IplImage* image ) CV_OVERRIDE;
+    bool open(const char* filename, int fourcc,
+                       double fps, const Size &frameSize, bool isColor );
+    void close();
+    bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 protected:
     const char* filenameToMimetype(const char* filename);
     GstElement* pipeline;
@@ -1272,7 +1281,7 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  *
  */
 bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
-                                    double fps, CvSize frameSize, bool is_color )
+                                    double fps, const cv::Size &frameSize, bool is_color )
 {
     // check arguments
     assert (filename);
@@ -1532,22 +1541,11 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     return true;
 }
 
-/*!
- * \brief cvCreateVideoWriter_GStreamer
- * \param filename
- * \param fourcc
- * \param fps
- * \param frameSize
- * \param isColor
- * \return
- * Constructor
- */
-CvVideoWriter* cvCreateVideoWriter_GStreamer(const char* filename, int fourcc, double fps,
-                                             CvSize frameSize, int isColor )
+Ptr<IVideoWriter> cv::create_GStreamer_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    if( wrt->open(filename, fourcc, fps,frameSize, isColor))
-        return wrt;
+    if (wrt->open(filename.c_str(), fourcc, fps, frameSize, isColor))
+        return makePtr<LegacyWriter>(wrt);
 
     delete wrt;
     return 0;
@@ -1593,8 +1591,6 @@ void handleMessage(GstElement * pipeline)
     while(gst_bus_have_pending(bus)) {
         msg = gst_bus_pop(bus);
 
-        //printf("\t\tGot %s message\n", GST_MESSAGE_TYPE_NAME(msg));
-
         if(gst_is_missing_plugin_message(msg))
         {
             CV_WARN("your gstreamer installation is missing a required plugin\n");
@@ -1605,30 +1601,19 @@ void handleMessage(GstElement * pipeline)
             case GST_MESSAGE_STATE_CHANGED:
                 GstState oldstate, newstate, pendstate;
                 gst_message_parse_state_changed(msg, &oldstate, &newstate, &pendstate);
-                //fprintf(stderr, "\t\t%s: state changed from %s to %s (pending: %s)\n",
-                //                gst_element_get_name(GST_MESSAGE_SRC (msg)),
-                //                gst_element_state_get_name(oldstate),
-                //                gst_element_state_get_name(newstate), gst_element_state_get_name(pendstate));
                 break;
             case GST_MESSAGE_ERROR:
                 gst_message_parse_error(msg, &err, &debug);
-                //fprintf(stderr, "\t\tGStreamer Plugin: Embedded video playback halted; module %s reported: %s\n",
-                //                gst_element_get_name(GST_MESSAGE_SRC (msg)), err->message);
-
                 g_error_free(err);
                 g_free(debug);
-
                 gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
                 break;
             case GST_MESSAGE_EOS:
-                //fprintf(stderr, "\t\treached the end of the stream.");
                 break;
             case GST_MESSAGE_STREAM_STATUS:
                 gst_message_parse_stream_status(msg,&tp,&elem);
-                //fprintf(stderr, "\t\tstream status: elem %s, %i\n", GST_ELEMENT_NAME(elem), tp);
                 break;
             default:
-                //fprintf(stderr, "\t\tunhandled message %s\n",GST_MESSAGE_TYPE_NAME(msg));
                 break;
             }
         }
@@ -1637,3 +1622,174 @@ void handleMessage(GstElement * pipeline)
 
     gst_object_unref(GST_OBJECT(bus));
 }
+
+//==================================================================================================
+
+#if defined(BUILD_PLUGIN)
+
+#include "plugin_api.hpp"
+
+CV_EXTERN_C int cv_domain()
+{
+    return cv::CAP_GSTREAMER;
+}
+
+CV_EXTERN_C bool cv_open_capture(const char * filename, int camera_index, void * &handle)
+{
+    GStreamerCapture *cap = 0;
+    try
+    {
+        cap = new GStreamerCapture();
+        bool res;
+        if (filename)
+            res = cap->open(string(filename));
+        else
+            res = cap->open(camera_index);
+        if (res)
+        {
+            handle = cap;
+            return true;
+        }
+    }
+    catch (...)
+    {
+    }
+    if (cap)
+        delete cap;
+    return false;
+}
+
+CV_EXTERN_C bool cv_get_cap_prop(void * handle, int prop, double & val)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+        val = instance->getProperty(prop);
+        return true;
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_set_cap_prop(void * handle, int prop, double val)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+        return instance->setProperty(prop, val);
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_grab(void * handle)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+        return instance->grabFrame();
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_retrieve(void * handle, int idx, cv_retrieve_cb_t * callback, void * userdata)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+        Mat img;
+        // TODO: avoid unnecessary copying - implement lower level GStreamerCapture::retrieve
+        if (instance->retrieveFrame(idx, img))
+            return callback(img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+        return false;
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_release_capture(void * handle)
+{
+    if (!handle)
+        return false;
+    GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+    delete instance;
+    return true;
+}
+
+CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, int width, int height, int isColor, void * &handle)
+{
+    CvVideoWriter_GStreamer* wrt = 0;
+    try
+    {
+        wrt = new CvVideoWriter_GStreamer();
+        CvSize sz = { width, height };
+        if(wrt && wrt->open(filename, fourcc, fps, sz, isColor))
+        {
+            handle = wrt;
+            return true;
+        }
+    }
+    catch(...)
+    {
+    }
+    if (wrt)
+        delete wrt;
+    return false;
+}
+
+CV_EXTERN_C bool cv_get_wri_prop(void*, int, double&)
+{
+    return false;
+}
+
+CV_EXTERN_C bool cv_set_wri_prop(void*, int, double)
+{
+    return false;
+}
+
+CV_EXTERN_C bool cv_write(void * handle, const unsigned char * data, int step, int width, int height, int cn)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        CvVideoWriter_GStreamer * instance = static_cast<CvVideoWriter_GStreamer*>(handle);
+        CvSize sz = { width, height };
+        IplImage img;
+        cvInitImageHeader(&img, sz, IPL_DEPTH_8U, cn);
+        cvSetData(&img, const_cast<unsigned char*>(data), step);
+        return instance->writeFrame(&img);
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_release_writer(void * handle)
+{
+    if (!handle)
+        return false;
+    CvVideoWriter_GStreamer * instance = static_cast<CvVideoWriter_GStreamer*>(handle);
+    delete instance;
+    return true;
+}
+
+#endif // BUILD_PLUGIN
