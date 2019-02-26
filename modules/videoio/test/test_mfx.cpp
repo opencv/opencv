@@ -8,7 +8,7 @@
 
 namespace opencv_test { namespace {
 
-TEST(Videoio_MFX, read_invalid)
+TEST(videoio_mfx, read_invalid)
 {
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open("nonexistent-file", CAP_INTEL_MFX));
@@ -18,7 +18,7 @@ TEST(Videoio_MFX, read_invalid)
     ASSERT_TRUE(img.empty());
 }
 
-TEST(Videoio_MFX, write_invalid)
+TEST(videoio_mfx, write_invalid)
 {
     const string filename = cv::tempfile(".264");
     VideoWriter writer;
@@ -80,9 +80,9 @@ inline int fourccByExt(const String &ext)
 //==================================================================================================
 
 typedef tuple<Size, double, const char *> Size_FPS_Ext;
-typedef testing::TestWithParam< Size_FPS_Ext > Videoio_MFX;
+typedef testing::TestWithParam< Size_FPS_Ext > videoio_mfx;
 
-TEST_P(Videoio_MFX, read_write_raw)
+TEST_P(videoio_mfx, read_write_raw)
 {
     const Size FRAME_SIZE = get<0>(GetParam());
     const double FPS = get<1>(GetParam());
@@ -137,7 +137,7 @@ TEST_P(Videoio_MFX, read_write_raw)
     remove(filename.c_str());
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_MFX,
+INSTANTIATE_TEST_CASE_P(videoio, videoio_mfx,
                         testing::Combine(
                             testing::Values(Size(640, 480), Size(638, 478), Size(636, 476), Size(1920, 1080)),
                             testing::Values(1, 30, 100),

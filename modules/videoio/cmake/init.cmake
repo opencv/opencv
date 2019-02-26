@@ -19,6 +19,8 @@ function(ocv_add_external_target name inc link def)
   endif()
 endfunction()
 
+include(FindPkgConfig)
+
 add_backend("ffmpeg" WITH_FFMPEG)
 add_backend("gstreamer" WITH_GSTREAMER)
 add_backend("v4l" WITH_V4L)
