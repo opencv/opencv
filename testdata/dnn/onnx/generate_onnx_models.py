@@ -246,3 +246,20 @@ class DynamicReshapeNet(nn.Module):
 input = Variable(torch.randn(1, 2, 3, 4))
 model = DynamicReshapeNet()
 save_data_and_model("dynamic_reshape", input, model)
+
+input = Variable(torch.randn(1, 2, 3, 4))
+resize = nn.Upsample(scale_factor=2, mode='nearest')
+save_data_and_model("resize_nearest", input, resize)
+
+class Unsqueeze(nn.Module):
+
+    def __init__(self):
+        super(Unsqueeze, self).__init__()
+
+    def forward(self, x):
+        return torch.unsqueeze(x, dim=1)
+
+input = Variable(torch.randn(1, 2, 3))
+model = Unsqueeze()
+model.eval()
+save_data_and_model("unsqueeze", input, model)
