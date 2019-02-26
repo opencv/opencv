@@ -95,7 +95,6 @@ double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2){
     return sqrt(errorMat.dot(errorMat)/(mat1.rows*mat1.cols));
 }
 
-
 class CV_ECC_Test_Translation : public CV_ECC_BaseTest
 {
 public:
@@ -464,6 +463,22 @@ bool CV_ECC_Test_Mask::testMask(int from)
             return false;
         }
 
+        // Test with non-default gaussian blur.
+        findTransformECC(warpedImage, testImg, mapTranslation, 0,
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, 1);
+
+        if (!isMapCorrect(mapTranslation)){
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+            ts->printf( ts->LOG, "RMS = %f",
+                computeRMS(mapTranslation, translationGround));
+            return false;
+        }
+
     }
     return true;
 }
@@ -474,6 +489,16 @@ void CV_ECC_Test_Mask::run(int from)
         return;
 
     ts->set_failed_test_info(cvtest::TS::OK);
+}
+
+TEST(Video_ECC_Test_Compute, accuracy)
+{
+    Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
+    Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
+    Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
+    double ecc = computeECC(warpedImage, testImg, mask);
+
+    EXPECT_NEAR(ecc, -0.5f, 1e-5f);
 }
 
 TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}

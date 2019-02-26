@@ -227,7 +227,7 @@ void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
     // By default, all the weights are connected to last ports ids.
     for (int i = 0; i < blobsIds.size(); ++i)
     {
-        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, portIds[i]});
+        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, (size_t)portIds[i]});
     }
 #endif
 }
@@ -541,7 +541,6 @@ size_t InfEngineBackendNet::getBatchSize() const CV_NOEXCEPT
     return batchSize;
 }
 
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
 InferenceEngine::StatusCode InfEngineBackendNet::AddExtension(const InferenceEngine::IShapeInferExtensionPtr &extension, InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
 {
     CV_Error(Error::StsNotImplemented, "");
@@ -553,7 +552,6 @@ InferenceEngine::StatusCode InfEngineBackendNet::reshape(const InferenceEngine::
     CV_Error(Error::StsNotImplemented, "");
     return InferenceEngine::StatusCode::OK;
 }
-#endif
 
 void InfEngineBackendNet::init(int targetId)
 {

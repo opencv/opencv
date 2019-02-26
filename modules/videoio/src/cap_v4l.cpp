@@ -226,6 +226,7 @@ make & enjoy!
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <limits>
 
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
@@ -538,7 +539,9 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
 
 void CvCaptureCAM_V4L::v4l2_create_frame()
 {
-    CvSize size = {form.fmt.pix.width, form.fmt.pix.height};
+    CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+    CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+    CvSize size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
