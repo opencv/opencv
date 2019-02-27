@@ -4,6 +4,8 @@
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
 // https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt
 // https://raw.githubusercontent.com/spmallick/learnopencv/master/Mask-RCNN/mscoco_labels.names
+// It is based on the OpenCV project. It is subject to the license terms in the LICENSE file found in this distribution and at http://opencv.org/license.html
+//
 
 #include <fstream>
 #include <sstream>
@@ -22,17 +24,18 @@ string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
     "{ video v     |<none>| Path to input video file.  }"
+    "{ cam  C      |0| Path to input video file.  }"
     "{ classes n   |mscoco_labels.names | Path to a text file with names of classes.  }"
     "{ model w     |mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
-    "{ height H    |800|Preprocess input image by resizing to a specific height }"
-    "{ width W     |800|Preprocess input image by resizing to a specific width }"
-    "{ config c    |mask_rcnn_inception_v2_coco_2018_01_28.pbtxt | iThe text graph file that has been tuned by the OpenCV’s DNN support group  }"
+    "{ height H    |800| Preprocess input image by resizing to a specific height }"
+    "{ width W     |800| Preprocess input image by resizing to a specific columns }"
+    "{ config c    |mask_rcnn_inception_v2_coco_2018_01_28.pbtxt |The text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
 
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar> colors, vector<string> classes);
+void static drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar>& colors, vector<string>& classes);
 
-void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar> colors, vector<string> classes);
+void static postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar>& colors, vector<string>& classes);
 
 int main(int argc, char** argv)
 {
@@ -90,11 +93,9 @@ int main(int argc, char** argv)
         else if (parser.has("video"))
         {
             str = parser.get<String>("video");
-            ifstream ifile(str);
-            if (!ifile) throw("error");
             cap.open(str);
         }
-        else cap.open(parser.get<int>("device"));
+        else cap.open(parser.get<int>("cam"));
 
     }
     catch(...) {
@@ -138,7 +139,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar> colors, vector<string> classes )
+void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float maskThreshold, vector<Scalar>& colors, vector<string>& classes )
 {
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
@@ -172,7 +173,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, float confThreshold, float
     }
 }
 
-void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar> colors, vector<string> classes)
+void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, float maskThreshold, vector<Scalar>& colors, vector<string>& classes)
 {
     rectangle(frame, Point(box.x, box.y), Point(box.x + box.width, box.y + box.height), Scalar(255, 178, 50), 3);
     string label = format("%.2f", conf);
