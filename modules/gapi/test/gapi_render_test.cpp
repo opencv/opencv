@@ -18,7 +18,7 @@ TEST(Render, DrawRectangle)
     out_mat.copyTo(ref_mat);
     cv::Point2f p1(50, 50), p2(75, 75);
     cv::Scalar color(0, 255, 0);
-    auto r = cv::Render::create(cv::Render::BackendType::OCV);
+    auto r = cv::RenderCreator::create(cv::RenderCreator::BackendType::OCV);
 
     cv::rectangle(ref_mat, p1, p2, color);
 
@@ -38,7 +38,7 @@ TEST(Render, DrawText)
     cv::Scalar color(0, 255, 0);
     std::string text = "Lorem ipsum";
 
-    auto r = cv::Render::create(cv::Render::BackendType::OCV);
+    auto r = cv::RenderCreator::create(cv::RenderCreator::BackendType::OCV);
 
     cv::putText(ref_mat, text, p1, cv::FONT_HERSHEY_SIMPLEX, 1, color, 2);
 

@@ -1,6 +1,6 @@
 #include <opencv2/gapi/render.hpp>
 
-std::unique_ptr<cv::Render> cv::Render::create(cv::Render::BackendType type)
+std::unique_ptr<cv::Render> cv::RenderCreator::create(cv::RenderCreator::BackendType type)
 {
     switch (type)
     {

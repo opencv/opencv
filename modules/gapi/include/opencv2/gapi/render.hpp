@@ -39,14 +39,6 @@ using DrawEvents = std::vector<DrawEvent>;
 class GAPI_EXPORTS Render
 {
 public:
-    enum class BackendType
-    {
-        MOVIDIOUS,
-        OCV
-    };
-
-    static std::unique_ptr<Render> create(BackendType type);
-
     void putText(const std::string& text, cv::Point org, int font_face, double font_scale,
                  cv::Scalar color, int thickness = 1, int line_type = cv::LINE_8,
                  bool bottom_left_origin = false);
@@ -61,6 +53,18 @@ public:
 
 protected:
     DrawEvents events_;
+};
+
+class GAPI_EXPORTS RenderCreator
+{
+public:
+    enum class BackendType
+    {
+        MOVIDIOUS,
+        OCV
+    };
+
+    static std::unique_ptr<Render> create(BackendType type);
 };
 
 class OCVRender : public Render
