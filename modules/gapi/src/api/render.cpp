@@ -57,6 +57,23 @@ void cv::OCVRender::process(cv::Mat& bgr_plane)
                 cv::putText(bgr_plane, text_event.text_, text_event.org_, text_event.font_face_,
                             text_event.font_scale_, text_event.color_, text_event.thickness_,
                             text_event.bottom_left_origin_);
+
+                auto pts = text2Points(text_event.text_, text_event.org_, text_event.font_face_,
+                                       text_event.font_scale_, text_event.bottom_left_origin_);
+
+                for (int i = 0; i < pts.size(); ++i)
+                {
+                    std::cout << pts[i].size() << std::endl;
+                    for (int j = 0; j < pts[i].size(); ++j)
+                    {
+                        auto p0 = pts[i][j];
+
+                        p0.x = (p0.x + ((1<<16)>>1)) >> 16;
+                        p0.y = (p0.y + ((1<<16)>>1)) >> 16;
+
+                        cv::circle(bgr_plane, p0, 1, cv::Scalar(0, 0, 255), 1);
+                    }
+                }
                 break;
             }
 

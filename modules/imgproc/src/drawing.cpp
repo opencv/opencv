@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -1649,6 +1650,7 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
                 p0.y = (p0.y + (XY_ONE>>1)) >> XY_SHIFT;
                 p1.x = (p1.x + (XY_ONE>>1)) >> XY_SHIFT;
                 p1.y = (p1.y + (XY_ONE>>1)) >> XY_SHIFT;
+
                 Line( img, p0, p1, color, line_type );
             }
             else
@@ -2329,6 +2331,70 @@ void putText( InputOutputArray _img, const String& text, Point org,
         }
         view_x += dx;
     }
+}
+
+std::vector<std::vector<Point2l>> text2Points(const String& text, Point org, int fontFace,
+                                              double fontScale, bool bottomLeftOrigin )
+
+{
+    std::vector<std::vector<Point2l>> points;
+
+    CV_INSTRUMENT_REGION();
+
+    if ( text.empty() )
+    {
+        return points;
+    }
+
+    const int* ascii = getFontData(fontFace);
+
+    int base_line = -(ascii[0] & 15);
+    int hscale = cvRound(fontScale*XY_ONE), vscale = hscale;
+
+    if( bottomLeftOrigin )
+        vscale = -vscale;
+
+    int64 view_x = (int64)org.x << XY_SHIFT;
+    int64 view_y = ((int64)org.y << XY_SHIFT) + base_line*vscale;
+    std::vector<Point2l> pts;
+    pts.reserve(1 << 10);
+    const char **faces = cv::g_HersheyGlyphs;
+
+    for( int i = 0; i < (int)text.size(); i++ )
+    {
+        int c = (uchar)text[i];
+        Point2l p;
+
+        readCheck(c, i, text, fontFace);
+
+        const char* ptr = faces[ascii[(c-' ')+1]];
+        p.x = (uchar)ptr[0] - 'R';
+        p.y = (uchar)ptr[1] - 'R';
+        int64 dx = p.y*hscale;
+        view_x -= p.x*hscale;
+        pts.resize(0);
+
+        for( ptr += 2;; )
+        {
+            if( *ptr == ' ' || !*ptr )
+            {
+                if( pts.size() > 1 )
+                    points.push_back(pts);
+                if( !*ptr++ )
+                    break;
+                pts.resize(0);
+            }
+            else
+            {
+                p.x = (uchar)ptr[0] - 'R';
+                p.y = (uchar)ptr[1] - 'R';
+                ptr += 2;
+                pts.push_back(Point2l(p.x*hscale + view_x, p.y*vscale + view_y));
+            }
+        }
+        view_x += dx;
+    }
+    return points;
 }
 
 Size getTextSize( const String& text, int fontFace, double fontScale, int thickness, int* _base_line)

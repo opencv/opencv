@@ -4581,6 +4581,9 @@ CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
                          int thickness = 1, int lineType = LINE_8,
                          bool bottomLeftOrigin = false );
 
+CV_EXPORTS_W std::vector<std::vector<Point2l>> text2Points(const String& text, Point org,
+        int fontFace, double fontScale, bool bottomLeftOrigin = false );
+
 /** @brief Calculates the width and height of a text string.
 
 The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
