@@ -167,6 +167,13 @@ TEST_P(Deconvolution, Accuracy)
         throw SkipTestException("Test is disabled for OpenVINO 2018R4");
 #endif
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018060000
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+        outChannels == 4 && group == 1 && kernel == Size(3, 1) && pad == Size(0, 1) &&
+        stride == Size(1, 1))
+        throw SkipTestException("Test is disabled for OpenVINO 2018R6");
+#endif
+
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -268,6 +275,11 @@ TEST_P(AvePooling, Accuracy)
     Size stride = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+        kernel == Size(1, 1) && (stride == Size(1, 1) || stride == Size(2, 2)))
+           throw SkipTestException(" ");
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018040000
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
         stride == Size(3, 2) && kernel == Size(3, 3) && outSize != Size(1, 1))
@@ -312,6 +324,16 @@ TEST_P(MaxPooling, Accuracy)
     Size pad = get<4>(GetParam());
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018060000
+    if (targetId == DNN_TARGET_MYRIAD && (stride == Size(1, 1) || stride == Size(2, 2)) &&
+       (pad == Size(0, 1) || pad == Size(1, 1)))
+        throw SkipTestException("Test is disabled for OpenVINO 2018R6");
+
+    if (targetId == DNN_TARGET_MYRIAD && (kernel == Size(2, 2) || kernel == Size(3, 2)) &&
+        (stride == Size(1, 1) && pad == Size(0, 0)))
+        throw SkipTestException("Problems with output dimension in OpenVINO 2018R6");
+#endif
 
     LayerParams lp;
     lp.set("pool", "max");

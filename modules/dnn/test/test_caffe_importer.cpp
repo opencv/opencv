@@ -393,8 +393,8 @@ TEST_P(Test_Caffe_nets, Colorization)
     Mat out = net.forward();
 
     // Reference output values are in range [-29.1, 69.5]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.25 : 4e-4;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
+    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.47 : 4e-4;
+    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 10.6 : 3e-3;
     normAssert(out, ref, "", l1, lInf);
 }
 
@@ -423,7 +423,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
-        l1 = 0.097; lInf = 0.52;
+        l1 = 0.43; lInf = 1.81;
     }
     normAssert(out, ref, "", l1, lInf);
 }
