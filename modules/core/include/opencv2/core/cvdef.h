@@ -415,6 +415,9 @@ Cv64suf;
 
 #define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
+CV_INLINE bool CV_MAT_DEPTH_IS_FLOAT(int type) { int depth = CV_MAT_DEPTH(type); return (depth == CV_64F) || (depth == CV_32F) || (depth == CV_16F); }
+CV_INLINE bool CV_MAT_DEPTH_IS_SIGNED(int type) { int depth = CV_MAT_DEPTH(type); return (depth == CV_8S) || (depth == CV_16S) || (depth == CV_32S) || (depth == CV_64F) || (depth == CV_32F) || (depth == CV_16F); }
+
 #ifndef MIN
 #  define MIN(a,b)  ((a) > (b) ? (b) : (a))
 #endif
