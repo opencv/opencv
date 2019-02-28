@@ -1160,6 +1160,10 @@ inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 }
 inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
 /////// FP16 support ////////
 
 // [TODO] implement these 2 using VSX or universal intrinsics (copy from intrin_sse.cpp and adopt)
