@@ -226,6 +226,7 @@ make & enjoy!
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <limits>
 
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
@@ -538,7 +539,9 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
 
 void CvCaptureCAM_V4L::v4l2_create_frame()
 {
-    CvSize size = {form.fmt.pix.width, form.fmt.pix.height};
+    CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+    CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+    CvSize size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
@@ -1930,28 +1933,28 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     return &frame;
 }
 
-} // end namespace cv
-
-CvCapture* cvCreateCameraCapture_V4L( int index )
+Ptr<IVideoCapture> create_V4L_capture_cam(int index)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open(index))
-        return capture;
+    if (capture->open(index))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
 
-CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open( deviceName ))
-        return capture;
+    if (capture->open(filename.c_str()))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
+
+} // cv::
 
 #endif

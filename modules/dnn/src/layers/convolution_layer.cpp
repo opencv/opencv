@@ -1231,10 +1231,7 @@ public:
             const int group = numOutput / outGroupCn;
             if (group != 1)
             {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R3)
                 return preferableTarget == DNN_TARGET_CPU;
-#endif
-                return false;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
                 return dilation.width == 1 && dilation.height == 1;
@@ -1287,12 +1284,8 @@ public:
         int dims[] = {inputs[0][0], outCn, outH, outW};
         outputs.resize(inputs.size(), shape(dims, 4));
 
-        internals.push_back(MatShape());
         if (!is1x1())
-            internals[0] = computeColRowShape(inputs[0], outputs[0]);
-
-        if (hasBias())
-            internals.push_back(shape(1, outH*outW));
+            internals.push_back(computeColRowShape(inputs[0], outputs[0]));
 
         return false;
     }

@@ -1708,7 +1708,7 @@ static PyMethodDef special_methods[] = {
 struct ConstDef
 {
     const char * name;
-    long val;
+    long long val;
 };
 
 static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
@@ -1747,7 +1747,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
   }
   for (ConstDef * c = consts; c->name != NULL; ++c)
   {
-    PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
+    PyDict_SetItemString(d, c->name, PyLong_FromLongLong(c->val));
   }
 
 }

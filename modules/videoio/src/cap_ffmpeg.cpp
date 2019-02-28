@@ -266,7 +266,7 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const cv::String& filename)
+cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename)
 {
 #if defined(HAVE_FFMPEG_WRAPPER)
     icvInitFFMPEG::Init();
@@ -328,8 +328,7 @@ protected:
 
 } // namespace
 
-cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc,
-                                                           double fps, cv::Size frameSize, int isColor)
+cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
 {
 #if defined(HAVE_FFMPEG_WRAPPER)
     icvInitFFMPEG::Init();
@@ -345,3 +344,169 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const cv::String& fil
 } // namespace
 
 #endif // defined(HAVE_FFMPEG)
+
+//==================================================================================================
+
+#if defined(BUILD_PLUGIN)
+
+#include "plugin_api.hpp"
+
+CV_EXTERN_C int cv_domain()
+{
+    return cv::CAP_FFMPEG;
+}
+
+CV_EXTERN_C bool cv_open_capture(const char * filename, int, void * &handle)
+{
+    if (!filename)
+        return false;
+    cv::CvCapture_FFMPEG_proxy *cap = 0;
+    try
+    {
+        cap = new cv::CvCapture_FFMPEG_proxy(filename);
+        if (cap->isOpened())
+        {
+            handle = cap;
+            return true;
+        }
+    }
+    catch (...)
+    {
+    }
+    if (cap)
+        delete cap;
+    return false;
+}
+
+CV_EXTERN_C bool cv_get_cap_prop(void * handle, int prop, double & val)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
+        val = instance->getProperty(prop);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_set_cap_prop(void * handle, int prop, double val)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
+        return instance->setProperty(prop, val);
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_grab(void * handle)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
+        return instance->grabFrame();
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_retrieve(void * handle, int idx, cv_retrieve_cb_t * callback, void * userdata)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
+        cv::Mat img;
+        // TODO: avoid unnecessary copying
+        if (instance->retrieveFrame(idx, img))
+            return callback(img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+        return false;
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_release_capture(void * handle)
+{
+    if (!handle)
+        return false;
+    cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
+    delete instance;
+    return true;
+}
+
+CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, int width, int height, int isColor, void * &handle)
+{
+    cv::Size sz(width, height);
+    cv::CvVideoWriter_FFMPEG_proxy* wrt = 0;
+    try
+    {
+        wrt = new cv::CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
+        if(wrt && wrt->isOpened())
+        {
+            handle = wrt;
+            return true;
+        }
+    }
+    catch(...)
+    {
+    }
+    if (wrt)
+        delete wrt;
+    return false;
+}
+
+CV_EXTERN_C bool cv_get_wri_prop(void*, int, double&)
+{
+    return false;
+}
+
+CV_EXTERN_C bool cv_set_wri_prop(void*, int, double)
+{
+    return false;
+}
+
+CV_EXTERN_C bool cv_write(void * handle, const unsigned char * data, int step, int width, int height, int cn)
+{
+    if (!handle)
+        return false;
+    try
+    {
+        cv::CvVideoWriter_FFMPEG_proxy * instance = static_cast<cv::CvVideoWriter_FFMPEG_proxy*>(handle);
+        cv::Mat img(cv::Size(width, height), CV_MAKETYPE(CV_8U, cn), const_cast<uchar*>(data), step);
+        instance->write(img);
+        return true;
+    }
+    catch(...)
+    {
+        return false;
+    }
+}
+
+CV_EXTERN_C bool cv_release_writer(void * handle)
+{
+    if (!handle)
+        return false;
+    cv::CvVideoWriter_FFMPEG_proxy * instance = static_cast<cv::CvVideoWriter_FFMPEG_proxy*>(handle);
+    delete instance;
+    return true;
+}
+
+#endif // BUILD_PLUGIN
