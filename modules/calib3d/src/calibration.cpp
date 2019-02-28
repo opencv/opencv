@@ -1582,11 +1582,11 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     }
 
     CvLevMarq solver( nparams, 0, termCrit );
-    
+
     Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
     Mat _Je( maxPoints*2, 6, CV_64FC1 );
-    Mat _err( maxPoints*2, 1, CV_64FC1 );    
-    
+    Mat _err( maxPoints*2, 1, CV_64FC1 );
+
     const bool allocJo = (solver.state == CvLevMarq::CALC_J) || stdDevs;
     Mat _Jo = allocJo ? Mat( maxPoints*2, maxPoints*3, CV_64FC1, Scalar(0) ) : Mat();
 
