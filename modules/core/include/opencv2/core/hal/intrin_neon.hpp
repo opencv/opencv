@@ -1572,6 +1572,162 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
 
 ////////////// Lookup table access ////////////////////
 
+inline v_int8x16 v_lut(const schar* tab, const int* idx)
+{
+    schar CV_DECL_ALIGNED(32) elems[16] =
+    {
+        tab[idx[ 0]],
+        tab[idx[ 1]],
+        tab[idx[ 2]],
+        tab[idx[ 3]],
+        tab[idx[ 4]],
+        tab[idx[ 5]],
+        tab[idx[ 6]],
+        tab[idx[ 7]],
+        tab[idx[ 8]],
+        tab[idx[ 9]],
+        tab[idx[10]],
+        tab[idx[11]],
+        tab[idx[12]],
+        tab[idx[13]],
+        tab[idx[14]],
+        tab[idx[15]]
+    };
+    return v_int8x16(vld1q_s8(elems));
+}
+inline v_int8x16 v_lut_pairs(const schar* tab, const int* idx)
+{
+    short CV_DECL_ALIGNED(32) elems[8] =
+    {
+        *(short*)(tab+idx[0]),
+        *(short*)(tab+idx[1]),
+        *(short*)(tab+idx[2]),
+        *(short*)(tab+idx[3]),
+        *(short*)(tab+idx[4]),
+        *(short*)(tab+idx[5]),
+        *(short*)(tab+idx[6]),
+        *(short*)(tab+idx[7])
+    };
+    return v_int8x16(vreinterpretq_s8_s16(vld1q_s16(elems)));
+}
+inline v_int8x16 v_lut_quads(const schar* tab, const int* idx)
+{
+    int CV_DECL_ALIGNED(32) elems[4] =
+    {
+        *(int*)(tab + idx[0]),
+        *(int*)(tab + idx[1]),
+        *(int*)(tab + idx[2]),
+        *(int*)(tab + idx[3])
+    };
+    return v_int8x16(vreinterpretq_s8_s32(vld1q_s32(elems)));
+}
+inline v_uint8x16 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
+inline v_uint8x16 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
+inline v_uint8x16 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
+
+inline v_int16x8 v_lut(const short* tab, const int* idx)
+{
+    short CV_DECL_ALIGNED(32) elems[8] =
+    {
+        tab[idx[0]],
+        tab[idx[1]],
+        tab[idx[2]],
+        tab[idx[3]],
+        tab[idx[4]],
+        tab[idx[5]],
+        tab[idx[6]],
+        tab[idx[7]]
+    };
+    return v_int16x8(vld1q_s16(elems));
+}
+inline v_int16x8 v_lut_pairs(const short* tab, const int* idx)
+{
+    int CV_DECL_ALIGNED(32) elems[4] =
+    {
+        *(int*)(tab + idx[0]),
+        *(int*)(tab + idx[1]),
+        *(int*)(tab + idx[2]),
+        *(int*)(tab + idx[3])
+    };
+    return v_int16x8(vreinterpretq_s16_s32(vld1q_s32(elems)));
+}
+inline v_int16x8 v_lut_quads(const short* tab, const int* idx)
+{
+    int64 CV_DECL_ALIGNED(32) elems[2] =
+    {
+        *(int64*)(tab + idx[0]),
+        *(int64*)(tab + idx[1])
+    };
+    return v_int16x8(vreinterpretq_s16_s64(vld1q_s64(elems)));
+}
+inline v_uint16x8 v_lut(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut((short*)tab, idx)); }
+inline v_uint16x8 v_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_pairs((short*)tab, idx)); }
+inline v_uint16x8 v_lut_quads(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v_lut_quads((short*)tab, idx)); }
+
+inline v_int32x4 v_lut(const int* tab, const int* idx)
+{
+    int CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[idx[0]],
+        tab[idx[1]],
+        tab[idx[2]],
+        tab[idx[3]]
+    };
+    return v_int32x4(vld1q_s32(elems));
+}
+inline v_int32x4 v_lut_pairs(const int* tab, const int* idx)
+{
+    int64 CV_DECL_ALIGNED(32) elems[2] =
+    {
+        *(int64*)(tab + idx[0]),
+        *(int64*)(tab + idx[1])
+    };
+    return v_int32x4(vreinterpretq_s32_s64(vld1q_s64(elems)));
+}
+inline v_int32x4 v_lut_quads(const int* tab, const int* idx)
+{
+    return v_int32x4(vld1q_s32(tab + idx[0]));
+}
+inline v_uint32x4 v_lut(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v_lut((int*)tab, idx)); }
+inline v_uint32x4 v_lut_pairs(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v_lut_pairs((int*)tab, idx)); }
+inline v_uint32x4 v_lut_quads(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v_lut_quads((int*)tab, idx)); }
+
+inline v_int64x2 v_lut(const int64_t* tab, const int* idx)
+{
+    return v_int64x2(vcombine_s64(vcreate_s64(tab[idx[0]]), vcreate_s64(tab[idx[1]])));
+}
+inline v_int64x2 v_lut_pairs(const int64_t* tab, const int* idx)
+{
+    return v_int64x2(vld1q_s64(tab + idx[0]));
+}
+inline v_uint64x2 v_lut(const uint64_t* tab, const int* idx) { return v_reinterpret_as_u64(v_lut((const int64_t *)tab, idx)); }
+inline v_uint64x2 v_lut_pairs(const uint64_t* tab, const int* idx) { return v_reinterpret_as_u64(v_lut_pairs((const int64_t *)tab, idx)); }
+
+inline v_float32x4 v_lut(const float* tab, const int* idx)
+{
+    float CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[idx[0]],
+        tab[idx[1]],
+        tab[idx[2]],
+        tab[idx[3]]
+    };
+    return v_float32x4(vld1q_f32(elems));
+}
+inline v_float32x4 v_lut_pairs(const float* tab, const int* idx)
+{
+    uint64 CV_DECL_ALIGNED(32) elems[2] =
+    {
+        *(uint64*)(tab + idx[0]),
+        *(uint64*)(tab + idx[1])
+    };
+    return v_float32x4(vreinterpretq_f32_u64(vld1q_u64(elems)));
+}
+inline v_float32x4 v_lut_quads(const float* tab, const int* idx)
+{
+    return v_float32x4(vld1q_f32(tab + idx[0]));
+}
+
 inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
 {
     int CV_DECL_ALIGNED(32) elems[4] =
@@ -1582,6 +1738,18 @@ inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
         tab[vgetq_lane_s32(idxvec.val, 3)]
     };
     return v_int32x4(vld1q_s32(elems));
+}
+
+inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
+{
+    unsigned CV_DECL_ALIGNED(32) elems[4] =
+    {
+        tab[vgetq_lane_s32(idxvec.val, 0)],
+        tab[vgetq_lane_s32(idxvec.val, 1)],
+        tab[vgetq_lane_s32(idxvec.val, 2)],
+        tab[vgetq_lane_s32(idxvec.val, 3)]
+    };
+    return v_uint32x4(vld1q_u32(elems));
 }
 
 inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
@@ -1614,7 +1782,64 @@ inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_floa
     y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
 }
 
+inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
+{
+    return v_int8x16(vcombine_s8(vtbl1_s8(vget_low_s8(vec.val), vcreate_s8(0x0705060403010200)), vtbl1_s8(vget_high_s8(vec.val), vcreate_s8(0x0705060403010200))));
+}
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
+{
+    return v_int8x16(vcombine_s8(vtbl1_s8(vget_low_s8(vec.val), vcreate_s8(0x0703060205010400)), vtbl1_s8(vget_high_s8(vec.val), vcreate_s8(0x0703060205010400))));
+}
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
+
+inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
+{
+    return v_int16x8(vreinterpretq_s16_s8(vcombine_s8(vtbl1_s8(vget_low_s8(vreinterpretq_s8_s16(vec.val)), vcreate_s8(0x0706030205040100)), vtbl1_s8(vget_high_s8(vreinterpretq_s8_s16(vec.val)), vcreate_s8(0x0706030205040100)))));
+}
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
+{
+    return v_int16x8(vreinterpretq_s16_s8(vcombine_s8(vtbl1_s8(vget_low_s8(vreinterpretq_s8_s16(vec.val)), vcreate_s8(0x0b0a030209080100)), vtbl1_s8(vget_high_s8(vreinterpretq_s8_s16(vec.val)), vcreate_s8(0x0b0a030209080100)))));
+}
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
+{
+    int32x2x2_t res = vzip_s32(vget_low_s32(vec.val), vget_high_s32(vec.val));
+    return v_int32x4(vcombine_s32(res.val[0], res.val[1]));
+}
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+
+inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
+{
+    return v_int8x16(vextq_s8(vcombine_s8(vtbl1_s8(vget_low_s8(vec.val), vcreate_s8(0x0605040201000000)), vtbl1_s8(vget_high_s8(vec.val), vcreate_s8(0x0807060504020100))), vdupq_n_s8(0), 2));
+}
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+
+inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
+{
+    return v_int16x8(vreinterpretq_s16_s8(vextq_s8(vcombine_s8(vtbl1_s8(vget_low_s8(vreinterpretq_s8_s16(vec.val)), vcreate_s8(0x0504030201000000)), vget_high_s8(vreinterpretq_s8_s16(vec.val))), vdupq_n_s8(0), 2)));
+}
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+
 #if CV_SIMD128_64F
+inline v_float64x2 v_lut(const double* tab, const int* idx)
+{
+    double CV_DECL_ALIGNED(32) elems[2] =
+    {
+        tab[idx[0]],
+        tab[idx[1]]
+    };
+    return v_float64x2(vld1q_f64(elems));
+}
+
+inline v_float64x2 v_lut_pairs(const double* tab, const int* idx)
+{
+    return v_float64x2(vld1q_f64(tab + idx[0]));
+}
+
 inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
 {
     double CV_DECL_ALIGNED(32) elems[2] =

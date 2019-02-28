@@ -234,7 +234,12 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
     inline vtyp vx_##loadsfx##_low(const typ* ptr) { return prefix##_##loadsfx##_low(ptr); } \
     inline vtyp vx_##loadsfx##_halves(const typ* ptr0, const typ* ptr1) { return prefix##_##loadsfx##_halves(ptr0, ptr1); } \
     inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
-    inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); }
+    inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); } \
+    inline vtyp vx_lut(const typ* ptr, const int* idx) { return prefix##_lut(ptr, idx); } \
+    inline vtyp vx_lut_pairs(const typ* ptr, const int* idx) { return prefix##_lut_pairs(ptr, idx); }
+
+#define CV_INTRIN_DEFINE_WIDE_LUT_QUAD(typ, vtyp, prefix) \
+    inline vtyp vx_lut_quads(const typ* ptr, const int* idx) { return prefix##_lut_quads(ptr, idx); }
 
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
     inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
@@ -244,6 +249,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix, loadsfx) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(typ, vtyp, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND_Q(typ, qtyp, prefix)
 
@@ -251,14 +257,19 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
     CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(uchar, v_uint8, u8, v_uint16, v_uint32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(schar, v_int8, s8, v_int16, v_int32, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(ushort, v_uint16, u16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(ushort, v_uint16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(ushort, v_uint32, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(short, v_int16, s16, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(short, v_int16, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(short, v_int32, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int, v_int32, s32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(int, v_int32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(int, v_int64, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(unsigned, v_uint32, u32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(unsigned, v_uint32, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(unsigned, v_uint64, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(float, v_float32, f32, prefix, load) \
+    CV_INTRIN_DEFINE_WIDE_LUT_QUAD(float, v_float32, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(int64, v_int64, s64, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(uint64, v_uint64, u64, prefix, load) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(float16_t, v_float32, prefix)
@@ -335,11 +346,11 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint64x4   v_uint64;
     typedef v_int64x4    v_int64;
     typedef v_float32x8  v_float32;
+    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
     #if CV_SIMD256_64F
     typedef v_float64x4  v_float64;
-    #endif
-    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v256, load)
+    #endif
     inline void vx_cleanup() { v256_cleanup(); }
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
@@ -358,11 +369,9 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint64x2  v_uint64;
     typedef v_int64x2   v_int64;
     typedef v_float32x4 v_float32;
-    #if CV_SIMD128_64F
-    typedef v_float64x2 v_float64;
-    #endif
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v)
     #if CV_SIMD128_64F
+    typedef v_float64x2 v_float64;
     CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v, load)
     #endif
     inline void vx_cleanup() { v_cleanup(); }

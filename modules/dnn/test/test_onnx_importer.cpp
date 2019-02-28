@@ -72,6 +72,7 @@ TEST_P(Test_ONNX_layers, Deconvolution)
 {
     testONNXModels("deconvolution");
     testONNXModels("two_deconvolution");
+    testONNXModels("deconvolution_group");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)
@@ -140,6 +141,11 @@ TEST_P(Test_ONNX_layers, Padding)
     testONNXModels("padding");
 }
 
+TEST_P(Test_ONNX_layers, Resize)
+{
+    testONNXModels("resize_nearest");
+}
+
 TEST_P(Test_ONNX_layers, MultyInputs)
 {
     const String model =  _tf("models/multy_inputs.onnx");
@@ -167,6 +173,11 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     testONNXModels("dynamic_reshape");
+}
+
+TEST_P(Test_ONNX_layers, Reshape)
+{
+    testONNXModels("unsqueeze");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
