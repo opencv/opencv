@@ -12,6 +12,7 @@
 #endif
 
 #include <opencv2/core/utils/logtag.hpp>
+#include "logtagconfig.hpp"
 
 namespace cv {
 namespace utils {
@@ -20,33 +21,33 @@ namespace logging {
 class LogTagConfigParser
 {
 public:
-	struct NameLevel
-	{
-		std::string name;
-		LogLevel level;
-	};
+    LogTagConfigParser();
+    explicit LogTagConfigParser(const std::string& input);
+    ~LogTagConfigParser();
 
 public:
-	LogTagConfigParser();
-	explicit LogTagConfigParser(const std::string& input);
-	~LogTagConfigParser();
-
-public:
-	bool parse(const std::string& input);
+    bool parse(const std::string& input);
     bool hasMalformed() const;
-    void forEachParsed(std::function<void(const std::string&, LogLevel)> func) const;
-    void forEachMalformed(std::function<void(const std::string&)> func) const;
+    const LogTagConfig& getGlobalConfig() const;
+    const std::vector<LogTagConfig>& getFullNameConfigs() const;
+    const std::vector<LogTagConfig>& getFirstPartConfigs() const;
+    const std::vector<LogTagConfig>& getAnyPartConfigs() const;
+    const std::vector<std::string>& getMalformed() const;
 
 private:
-	void segmentTokens();
-	void parseNameLevel(const std::string& s);
-	static std::pair<LogLevel, bool> parseLogLevel(const std::string& s);
-	static std::string toString(LogLevel level);
+    void segmentTokens();
+    void parseNameAndLevel(const std::string& s);
+    void parseWildcard(const std::string& name, LogLevel level);
+    static std::pair<LogLevel, bool> parseLogLevel(const std::string& s);
+    static std::string toString(LogLevel level);
 
 private:
-	std::string m_input;
-	std::vector<NameLevel> m_parsed;
-	std::vector<std::string> m_malformed;
+    std::string m_input;
+    LogTagConfig m_parsedGlobal;
+    std::vector<LogTagConfig> m_parsedFullName;
+    std::vector<LogTagConfig> m_parsedFirstPart;
+    std::vector<LogTagConfig> m_parsedAnyPart;
+    std::vector<std::string> m_malformed;
 };
 
 }}} //namespace
