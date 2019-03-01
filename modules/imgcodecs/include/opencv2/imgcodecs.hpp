@@ -174,79 +174,21 @@ Currently, the following file formats are supported:
     and thus the image will be rotated accordingly except if the flag @ref IMREAD_IGNORE_ORIENTATION is passed.
 -   Use the IMREAD_UNCHANGED flag to keep the floating point values from PFM image.
 
-@param filename Name of file to be loaded.
+@param filename Name of file to be loaded. The string is UTF-8 encoded.
 @param flags Flag that can take values of cv::ImreadModes
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
-/** @brief Loads an image from a file.
-
-The function imread loads an image from the specified file and returns it. If the image cannot be
-read (because of missing file, improper permissions, unsupported or invalid format), the function
-returns an empty matrix ( Mat::data==NULL ).
-
-Currently, the following file formats are supported:
-
--   Windows bitmaps - \*.bmp, \*.dib (always supported)
--   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Note* section)
--   JPEG 2000 files - \*.jp2 (see the *Note* section)
--   Portable Network Graphics - \*.png (see the *Note* section)
--   WebP - \*.webp (see the *Note* section)
--   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
--   PFM files - \*.pfm (see the *Note* section)
--   Sun rasters - \*.sr, \*.ras (always supported)
--   TIFF files - \*.tiff, \*.tif (see the *Note* section)
--   OpenEXR Image files - \*.exr (see the *Note* section)
--   Radiance HDR - \*.hdr, \*.pic (always supported)
--   Raster and Vector geospatial data supported by GDAL (see the *Note* section)
-
-@note
--   The function determines the type of an image by the content, not by the file extension.
--   In the case of color images, the decoded images will have the channels stored in **B G R** order.
--   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
-    Results may differ to the output of cvtColor()
--   On Microsoft Windows\* OS and MacOSX\*, the codecs shipped with an OpenCV image (libjpeg,
-    libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs,
-    and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware
-    that currently these native image loaders give images with different pixel values because of
-    the color management embedded into MacOSX.
--   On Linux\*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for
-    codecs supplied with an OS image. Install the relevant packages (do not forget the development
-    files, for example, "libjpeg-dev", in Debian\* and Ubuntu\*) to get the codec support or turn
-    on the OPENCV_BUILD_3RDPARTY_LIBS flag in CMake.
--   In the case you set *WITH_GDAL* flag to true in CMake and @ref IMREAD_LOAD_GDAL to load the image,
-    then the [GDAL](http://www.gdal.org) driver will be used in order to decode the image, supporting
-    the following formats: [Raster](http://www.gdal.org/formats_list.html),
-    [Vector](http://www.gdal.org/ogr_formats.html).
--   If EXIF information are embedded in the image file, the EXIF orientation will be taken into account
-    and thus the image will be rotated accordingly except if the flag @ref IMREAD_IGNORE_ORIENTATION is passed.
--   Use the IMREAD_UNCHANGED flag to keep the floating point values from PFM image.
-
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of cv::ImreadModes
-*/
-CV_EXPORTS_W Mat imreadW( const WString& filename, int flags = IMREAD_COLOR );
-
 /** @brief Loads a multi-page image from a file.
 
 The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
-@param filename Name of file to be loaded.
+@param filename Name of file to be loaded. The string is UTF-8 encoded.
 @param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 @param mats A vector of Mat objects holding each page, if more than one.
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Loads a multi-page image from a file.
-
-The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
-@param mats A vector of Mat objects holding each page, if more than one.
-@sa cv::imread
-*/
-CV_EXPORTS_W bool imreadmultiW(const WString& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
-
 /** @brief Saves an image to a specified file.
 
 The function imwrite saves the image to the specified file. The image format is chosen based on the
@@ -269,40 +211,11 @@ functions to save the image to XML or YAML format.
 The sample below shows how to create a BGRA image and save it to a PNG file. It also demonstrates how to set custom
 compression parameters:
 @include snippets/imgcodecs_imwrite.cpp
-@param filename Name of the file.
+@param filename Name of the file. The string is UTF-8 encoded.
 @param img Image to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
 */
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
-              const std::vector<int>& params = std::vector<int>());
-
-/** @brief Saves an image to a specified file.
-
-The function imwrite saves the image to the specified file. The image format is chosen based on the
-filename extension (see cv::imread for the list of extensions). In general, only 8-bit
-single-channel or 3-channel (with 'BGR' channel order) images
-can be saved using this function, with these exceptions:
-
-- 16-bit unsigned (CV_16U) images can be saved in the case of PNG, JPEG 2000, and TIFF formats
-- 32-bit float (CV_32F) images can be saved in PFM, TIFF, OpenEXR, and Radiance HDR formats;
-  3-channel (CV_32FC3) TIFF images will be saved using the LogLuv high dynamic range encoding
-  (4 bytes per pixel)
-- PNG images with an alpha channel can be saved using this function. To do this, create
-8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
-
-If the format, depth or channel order is different, use
-Mat::convertTo and cv::cvtColor to convert it before saving. Or, use the universal FileStorage I/O
-functions to save the image to XML or YAML format.
-
-The sample below shows how to create a BGRA image and save it to a PNG file. It also demonstrates how to set custom
-compression parameters:
-@include snippets/imgcodecs_imwrite.cpp
-@param filename Name of the file.
-@param img Image to be saved.
-@param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
-*/
-CV_EXPORTS_W bool imwriteW( const WString& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
 /** @brief Reads an image from a buffer in memory.
@@ -331,7 +244,7 @@ CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
 result. See cv::imwrite for the list of supported formats and flags description.
 
-@param ext File extension that defines the output format.
+@param ext File extension that defines the output format. The string is UTF-8 encoded.
 @param img Image to be written.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
@@ -340,44 +253,17 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
-/** @brief Encodes an image into a memory buffer.
-
-The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
-result. See cv::imwrite for the list of supported formats and flags description.
-
-@param ext File extension that defines the output format.
-@param img Image to be written.
-@param buf Output buffer resized to fit the compressed image.
-@param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
-*/
-CV_EXPORTS_W bool imencodeW( const WString& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
-                            const std::vector<int>& params = std::vector<int>());
-
-
 /** @brief Returns true if the specified image can be decoded by OpenCV
 
-@param filename File name of the image
+@param filename File name of the image. The string is UTF-8 encoded.
 */
 CV_EXPORTS_W bool haveImageReader( const String& filename );
 
-/** @brief Returns true if the specified image can be decoded by OpenCV
-
-@param filename File name of the image
-*/
-CV_EXPORTS_W bool haveImageReaderW( const WString& filename );
-
 /** @brief Returns true if an image with the specified filename can be encoded by OpenCV
 
- @param filename File name of the image
+ @param filename File name of the image. The string is UTF-8 encoded.
  */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
-
-/** @brief Returns true if an image with the specified filename can be encoded by OpenCV
-
- @param filename File name of the image
- */
-CV_EXPORTS_W bool haveImageWriterW( const WString& filename );
 
 
 //! @} imgcodecs

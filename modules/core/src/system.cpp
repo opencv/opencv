@@ -855,11 +855,9 @@ String toString( const WString& wstr )
     }
 
 #if defined _WIN32
-    UINT code_page = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
-
     //Calculate target buffer size (not including the zero terminator)
     int wstring_size = static_cast<int>(wstr.size());
-    int size = WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstring_size, NULL, 0, NULL, NULL);
+    int size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstring_size, NULL, 0, NULL, NULL);
     if(size == 0)
     {
         //Conversion failed
@@ -868,7 +866,7 @@ String toString( const WString& wstr )
 
     //A string is contiguous with C++11
     String str(size, ' ');
-    WideCharToMultiByte(code_page, WC_NO_BEST_FIT_CHARS, wstr.c_str(), wstring_size, &str[0], size, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstring_size, &str[0], size, NULL, NULL);
 
     return(str);
 #else
@@ -897,11 +895,9 @@ WString toWString( const String& str )
     }
 
 #if defined _WIN32
-    UINT code_page = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
-
     //Calculate target buffer size (not including the zero terminator)
     int string_size = static_cast<int>(str.size());
-    int size = MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), string_size, NULL, 0);
+    int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), string_size, NULL, 0);
     if(size == 0)
     {
         //Conversion failed
@@ -912,7 +908,7 @@ WString toWString( const String& str )
     WString wstr(size, L' ');
 
     //No error checking. We already know, that the conversion will succeed.
-    MultiByteToWideChar(code_page, MB_PRECOMPOSED, str.c_str(), string_size, &wstr[0], size);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), string_size, &wstr[0], size);
 
     return(wstr);
 #else

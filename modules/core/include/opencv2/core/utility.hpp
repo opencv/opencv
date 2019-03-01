@@ -196,10 +196,44 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+/** @brief Converts a WString to a String.
+
+  The function converts a WString to a String.
+
+  \param wstr the WString that should be converted
+
+  \return the converted String
+*/
 CV_EXPORTS String toString( const WString& wstr );
+
+/** @brief Converts a WString to a WString.
+
+  The function converts a String to a WString.
+
+  \param str the String that should be converted
+
+  \return the converted WString
+*/
 CV_EXPORTS WString toWString( const String& str );
 
+/** @brief Returns the path to a temporary file.
+
+  The function returns the path to a temporary file.
+
+  \param suffix the suffix of the temporary file
+
+  \return the path to a temporary file as a String
+*/
 CV_EXPORTS String tempfile( const char* suffix = 0);
+
+/** @brief Returns the path to a temporary file.
+
+  The function returns the path to a temporary file.
+
+  \param suffix the suffix of the temporary file
+
+  \return the path to a temporary file as a WString
+*/
 CV_EXPORTS WString tempfileW( const wchar_t* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 

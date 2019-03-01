@@ -606,7 +606,15 @@ imreadmulti_(const Path& filename, int flags, std::vector<Mat>& mats)
     return !mats.empty();
 }
 
-static Mat imread_( const Path& filename, int flags )
+/**
+ * Read an image
+ *
+ *  This function merely calls the actual implementation above and returns itself.
+ *
+ * @param[in] filename File to load
+ * @param[in] flags Flags you wish to set.
+*/
+Mat imread( const String& filename, int flags )
 {
     CV_TRACE_FUNCTION();
 
@@ -614,45 +622,17 @@ static Mat imread_( const Path& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img );
+    Path name(filename);
+    imread_( name, flags, img );
 
     /// optionally rotate the data if EXIF' orientation flag says so
     if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
-        ApplyExifOrientation(filename, img);
+        ApplyExifOrientation(name, img);
     }
 
     /// return a reference to the data
     return img;
-}
-
-/**
- * Read an image
- *
- *  This function merely calls the actual implementation above and returns itself.
- *
- * @param[in] filename File to load
- * @param[in] flags Flags you wish to set.
-*/
-
-Mat imread( const String& filename, int flags )
-{
-    return imread_(filename, flags);
-}
-
-
-/**
- * Read an image
- *
- *  This function merely calls the actual implementation above and returns itself.
- *
- * @param[in] filename File to load
- * @param[in] flags Flags you wish to set.
-*/
-
-Mat imreadW( const WString& filename, int flags )
-{
-    return imread_(filename, flags);
 }
 
 /**
@@ -666,23 +646,6 @@ Mat imreadW( const WString& filename, int flags )
 *
 */
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
-{
-    CV_TRACE_FUNCTION();
-
-    return imreadmulti_(filename, flags, mats);
-}
-
-/**
-* Read a multi-page image
-*
-*  This function merely calls the actual implementation above and returns itself.
-*
-* @param[in] filename File to load
-* @param[in] mats Reference to C++ vector<Mat> object to hold the images
-* @param[in] flags Flags you wish to set.
-*
-*/
-bool imreadmultiW(const WString& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
@@ -744,7 +707,7 @@ static bool imwrite_( const Path& filename, const std::vector<Mat>& img_vec,
     return code;
 }
 
-static bool imwrite_( const Path& filename, InputArray _img,
+bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
@@ -756,18 +719,6 @@ static bool imwrite_( const Path& filename, InputArray _img,
 
     CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);
-}
-
-bool imwrite( const String& filename, InputArray _img,
-              const std::vector<int>& params )
-{
-    return imwrite_(filename, _img, params);
-}
-
-bool imwriteW( const WString& filename, InputArray _img,
-              const std::vector<int>& params )
-{
-    return imwrite_(filename, _img, params);
 }
 
 static bool
@@ -910,7 +861,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
-static bool imencode_( const Path& ext, InputArray _image,
+bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
@@ -963,48 +914,16 @@ static bool imencode_( const Path& ext, InputArray _image,
     return code;
 }
 
-bool imencode( const String& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
-{
-    return imencode_(ext, _image, buf, params);
-}
-
-bool imencodeW( const WString& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
-{
-    return imencode_(ext, _image, buf, params);
-}
-
-static bool haveImageReader_( const Path& filename )
+bool haveImageReader( const String& filename )
 {
     ImageDecoder decoder = cv::findDecoder(filename);
     return !decoder.empty();
 }
 
-bool haveImageReader( const String& filename )
-{
-    return haveImageReader_(filename);
-}
-
-bool haveImageReaderW( const WString& filename )
-{
-    return haveImageReader_(filename);
-}
-
-static bool haveImageWriter_( const Path& filename )
+bool haveImageWriter( const String& filename )
 {
     cv::ImageEncoder encoder = cv::findEncoder(filename);
     return !encoder.empty();
-}
-
-bool haveImageWriter( const String& filename )
-{
-    return haveImageWriter_(filename);
-}
-
-bool haveImageWriterW( const WString& filename )
-{
-    return haveImageWriter_(filename);
 }
 
 }

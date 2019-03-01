@@ -10,11 +10,6 @@
 #if defined(_MSC_VER) && (_MSC_VER > 1800)
 #pragma warning(pop)
 #endif
-#if defined _WIN32
-#include <windows.h>
-#else
-#include <cstdlib>
-#endif
 
 #include <type_traits>  // std::enable_if
 
@@ -775,34 +770,8 @@ PyObject* pyopencv_from(const String& value)
 template<>
 PyObject* pyopencv_from(const WString& value)
 {
-    String utf8 = "";
-
     //Convert the std::wstring (Unicode) to std::string (UTF-8)
-    //Use function that are compatible with python 2
-    if(!value.empty())
-    {
-#if defined _WIN32
-        //Calculate target buffer size (not including the zero terminator)
-        int wstring_size = static_cast<int>(value.size());
-        int size = WideCharToMultiByte(CP_UTF8, 0, value.c_str(), wstring_size, NULL, 0, NULL, NULL);
-        if(size > 0)
-        {
-            //A string is contiguous with C++11
-            utf8.resize(size, ' ');
-            WideCharToMultiByte(CP_UTF8, 0, value.c_str(), wstring_size, &utf8[0], size, NULL, NULL);
-        }
-#else
-        std::size_t size = std::wcstombs(NULL, value.c_str(), 0);
-        if(size != String::npos)
-        {
-            //A string is contiguous with C++11
-            utf8.resize(size, ' ');
-
-            //Convert to a narrow character string
-            size = std::wcstombs(&utf8[0], value.c_str(), size);
-        }
-#endif
-    }
+    String utf8 = toString(value);
 
     return PyString_FromString(utf8.empty() ? "" : utf8.c_str());
 }
@@ -831,38 +800,7 @@ bool pyopencv_to(PyObject* obj, WString& value, const char* name)
         return false;
 
     //Convert the std::string (UTF-8) to std::wstring (Unicode)
-    //Use function that are compatible with python 2
-    String utf8(str);
-#if defined _WIN32
-    //Calculate target buffer size (not including the zero terminator)
-    int string_size = static_cast<int>(utf8.size());
-    int size = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), string_size, NULL, 0);
-    if(size == 0)
-    {
-        //Conversion failed
-        return false;
-    }
-
-    //A string is contiguous with C++11
-    std::wstring wstr(size, L' ');
-
-    //No error checking. We already know, that the conversion will succeed.
-    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), string_size, &wstr[0], size);
-#else
-    std::size_t size = std::mbstowcs(NULL, utf8.c_str(), 0);
-    if(size == String::npos)
-    {
-        //Conversion failed
-        return false;
-    }
-
-    //A wstring is contiguous with C++11
-    std::wstring wstr(size, L' ');
-
-    //Convert to a multibyte character string
-    size = std::mbstowcs(&wstr[0], utf8.c_str(), size);
-#endif
-    value = wstr;
+    value = toWString(str);
     return true;
 }
 
