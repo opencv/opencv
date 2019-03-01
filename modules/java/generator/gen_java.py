@@ -953,11 +953,19 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
     def gen_class(self, ci):
         logging.info("%s", ci)
         # constants
+        consts_map = {c.name: c for c in ci.private_consts}
+        consts_map.update({c.name: c for c in ci.consts})
+        def const_value(v):
+            if v in consts_map:
+                target = consts_map[v]
+                assert target.value != v
+                return const_value(target.value)
+            return v
         if ci.private_consts:
             logging.info("%s", ci.private_consts)
             ci.j_code.write("""
     private static final int
-            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in ci.private_consts])
+            %s;\n\n""" % (",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in ci.private_consts])
             )
         if ci.consts:
             enumTypes = set(map(lambda c: c.enumType, ci.consts))
@@ -975,19 +983,19 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 #        {1}(int id) {{ this.id = id; }}
 #        {1}({1} _this) {{ this.id = _this.id; }}
 #        public int getValue() {{ return id; }}
-#    }}\n\n""".format((",\n"+" "*8).join(["%s(%s)" % (c.name, c.value) for c in consts]), typeName)
+#    }}\n\n""".format((",\n"+" "*8).join(["%s(%s)" % (c.name, const_value(c.value)) for c in consts]), typeName)
 #                    )
 ################################################################
                     ci.j_code.write("""
     // C++: enum {1}
     public static final int
-            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts]), typeName)
+            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]), typeName)
                     )
                 else:
                     ci.j_code.write("""
     // C++: enum <unnamed>
     public static final int
-            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, c.value) for c in consts]))
+            {0};\n\n""".format((",\n"+" "*12).join(["%s = %s" % (c.name, const_value(c.value)) for c in consts]))
                     )
         # methods
         for fi in ci.getAllMethods():
