@@ -44,6 +44,8 @@
 
 namespace cv {
 
+CV_CONSTEXPR double Stitcher::ORIG_RESOL = -1.0;
+
 Ptr<Stitcher> Stitcher::create(Mode mode)
 {
     Ptr<Stitcher> stitcher = makePtr<Stitcher>();

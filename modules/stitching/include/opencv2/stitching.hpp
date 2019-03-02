@@ -142,7 +142,7 @@ public:
      * When setting a resolution for stitching, this values is a placeholder
      * for preserving the original resolution.
      */
-    static constexpr const double ORIG_RESOL = -1.0;
+    static CV_CONSTEXPR double ORIG_RESOL;
 
     enum Status
     {
