@@ -1152,6 +1152,10 @@ function(ocv_add_perf_tests)
       ocv_target_link_libraries(${the_target} LINK_PRIVATE ${perf_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_PERF_${the_module}_DEPS})
       add_dependencies(opencv_perf_tests ${the_target})
 
+      if(TARGET opencv_videoio_plugins)
+        add_dependencies(${the_target} opencv_videoio_plugins)
+      endif()
+
       if(HAVE_HPX)
         message("Linking HPX to Perf test of module ${name}")
         ocv_target_link_libraries(${the_target} LINK_PRIVATE "${HPX_LIBRARIES}")
@@ -1242,6 +1246,10 @@ function(ocv_add_accuracy_tests)
       ocv_target_link_libraries(${the_target} LINK_PRIVATE ${test_deps} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS} ${OPENCV_TEST_${the_module}_DEPS})
       add_dependencies(opencv_tests ${the_target})
 
+      if(TARGET opencv_videoio_plugins)
+        add_dependencies(${the_target} opencv_videoio_plugins)
+      endif()
+
       if(HAVE_HPX)
         message("Linking HPX to Perf test of module ${name}")
         ocv_target_link_libraries(${the_target} LINK_PRIVATE "${HPX_LIBRARIES}")
@@ -1323,6 +1331,10 @@ function(ocv_add_samples)
           add_dependencies(opencv_samples ${parent_target})
         endif()
         add_dependencies(${parent_target} ${the_target})
+
+        if(TARGET opencv_videoio_plugins)
+          add_dependencies(${the_target} opencv_videoio_plugins)
+        endif()
 
         if(WIN32)
           install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT samples)

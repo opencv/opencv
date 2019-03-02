@@ -3,6 +3,13 @@ set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin suppor
 set(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK "ON" CACHE BOOL "Make sure OpenCV version is the same in plugin and host code")
 mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
 
+string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+# Make virtual opencv_videoio_plugins target
+if(NOT TARGET opencv_videoio_plugins)
+  add_custom_target(opencv_videoio_plugins ALL)
+endif()
+
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
