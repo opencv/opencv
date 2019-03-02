@@ -13,69 +13,6 @@
 #include "videoio_registry.hpp"
 
 //==================================================================================================
-// IBackend implementation
-
-namespace cv {
-
-static bool param_VIDEOIO_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_DEBUG", false);
-static bool param_VIDEOCAPTURE_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOCAPTURE_DEBUG", false);
-static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOWRITER_DEBUG", false);
-
-Ptr<IVideoCapture> IBackend::tryOpenCapture(const std::string & backendName, const std::string & filename, int cameraNum) const
-{
-    try
-    {
-        if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG)
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", backendName.c_str()));
-        Ptr<IVideoCapture> icap = createCapture(filename, cameraNum);
-        if (param_VIDEOIO_DEBUG ||param_VIDEOCAPTURE_DEBUG)
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p isOpened=%d ...\n", backendName.c_str(), icap.empty() ? NULL : icap.get(), icap.empty() ? -1: icap->isOpened()));
-        return icap;
-    }
-    catch(const cv::Exception& e)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", backendName.c_str(), e.what()));
-    }
-    catch (const std::exception& e)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", backendName.c_str(), e.what()));
-    }
-    catch(...)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", backendName.c_str()));
-    }
-    return 0;
-}
-
-Ptr<IVideoWriter> IBackend::tryOpenWriter(const std::string & backendName, const std::string& filename, int _fourcc, double fps, const Size &frameSize, bool isColor) const
-{
-    try
-    {
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): trying ...\n", backendName.c_str()));
-        Ptr<IVideoWriter> iwriter = createWriter(filename, _fourcc, fps, frameSize, isColor);
-        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)
-            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): result=%p  isOpened=%d...\n", backendName.c_str(), iwriter.empty() ? NULL : iwriter.get(), iwriter.empty() ? iwriter->isOpened() : -1));
-        return iwriter;
-    }
-    catch(const cv::Exception& e)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", backendName.c_str(), e.what()));
-    }
-    catch (const std::exception& e)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", backendName.c_str(), e.what()));
-    }
-    catch(...)
-    {
-        CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", backendName.c_str()));
-    }
-    return 0;
-}
-
-} // cv::
-
-//==================================================================================================
 // Dynamic backend implementation
 
 #include "opencv2/core/utils/logger.hpp"
@@ -88,34 +25,52 @@ using namespace std;
 #include <dlfcn.h>
 #endif
 
-inline static void * getSymbol_(void *h, const std::string &symbolName)
+namespace cv { namespace impl {
+
+#if defined(_WIN32)
+typedef HMODULE LibHandle_t;
+#elif defined(__linux__) || defined(__APPLE__)
+typedef void* LibHandle_t;
+#endif
+
+static Mutex& getInitializationMutex()
+{
+    static Mutex initializationMutex;
+    return initializationMutex;
+}
+
+static inline
+void* getSymbol_(LibHandle_t h, const char* symbolName)
 {
 #if defined(_WIN32)
-    return (void*)GetProcAddress(static_cast<HMODULE>(h), symbolName.c_str());
+    return (void*)GetProcAddress(h, symbolName);
 #elif defined(__linux__) || defined(__APPLE__)
-    return dlsym(h, symbolName.c_str());
+    return dlsym(h, symbolName);
 #endif
 }
 
-inline static void * libraryLoad_(const std::string &filename)
+static inline
+LibHandle_t libraryLoad_(const char* filename)
 {
 #if defined(_WIN32)
-    return static_cast<HMODULE>(LoadLibraryA(filename.c_str()));
+    return LoadLibraryA(filename);
 #elif defined(__linux__) || defined(__APPLE__)
-    return dlopen(filename.c_str(), RTLD_LAZY);
+    return dlopen(filename, RTLD_LAZY);
 #endif
 }
 
-inline static void libraryRelease_(void *h)
+static inline
+void libraryRelease_(LibHandle_t h)
 {
 #if defined(_WIN32)
-    FreeLibrary(static_cast<HMODULE>(h));
+    FreeLibrary(h);
 #elif defined(__linux__) || defined(__APPLE__)
     dlclose(h);
 #endif
 }
 
-inline static std::string libraryPrefix()
+static inline
+std::string libraryPrefix()
 {
 #if defined(_WIN32)
     return string();
@@ -123,23 +78,24 @@ inline static std::string libraryPrefix()
     return "lib";
 #endif
 }
-inline static std::string librarySuffix()
+static inline
+std::string librarySuffix()
 {
 #if defined(_WIN32)
-    return "dll";
+    return ".dll";
 #elif defined(__APPLE__)
-    return "dylib";
+    return ".dylib";
 #else
-    return "so";
+    return ".so";
 #endif
 }
 
 //============================
 
-class cv::DynamicBackend::DynamicLib
+class DynamicLib
 {
 private:
-    void * handle;
+    LibHandle_t handle;
     const std::string fname;
 
 public:
@@ -156,7 +112,7 @@ public:
     {
         return handle != NULL;
     }
-    void* getSymbol(const std::string & symbolName) const
+    void* getSymbol(const char* symbolName) const
     {
         if (!handle)
         {
@@ -167,11 +123,11 @@ public:
             CV_LOG_ERROR(NULL, "No symbol '" << symbolName << "' in " << fname);
         return res;
     }
-
+    const std::string& getName() const { return fname; }
 private:
     void libraryLoad(const std::string &filename)
     {
-        handle = libraryLoad_(filename);
+        handle = libraryLoad_(filename.c_str());
         CV_LOG_INFO(NULL, "load " << filename << " => " << (handle ? "OK" : "FAILED"));
     }
     void libraryRelease()
@@ -192,300 +148,346 @@ private:
 
 //============================
 
-// Utility function
-static bool verifyVersion(cv_get_version_t * fun)
-{
-    if (!fun)
-        return false;
-    int major, minor, patch, api, abi;
-    fun(major, minor, patch, api, abi);
-    if (api < API_VERSION || abi != ABI_VERSION)
-    {
-        CV_LOG_ERROR(NULL, "Bad plugin API/ABI (" << api << "/" << abi << "), expected " << API_VERSION << "/" << ABI_VERSION);
-        return false;
-    }
-#ifdef STRICT_PLUGIN_CHECK
-    if (major != CV_MAJOR_VERSION || minor != CV_MINOR_VERSION)
-    {
-        CV_LOG_ERROR(NULL, "Bad plugin version (" << major << "." << minor << "), expected " << CV_MAJOR_VERSION << "/" << CV_MINOR_VERSION);
-        return false;
-    }
-#endif
-    return true;
-}
-
-//============================
-
-class cv::DynamicBackend::CaptureTable
+class PluginBackend: public IBackend
 {
 public:
-    cv_get_version_t *cv_get_version;
-    cv_domain_t *cv_domain;
-    cv_open_capture_t *cv_open_capture;
-    cv_get_cap_prop_t *cv_get_cap_prop;
-    cv_set_cap_prop_t *cv_set_cap_prop;
-    cv_grab_t *cv_grab;
-    cv_retrieve_t *cv_retrieve;
-    cv_release_capture_t *cv_release_capture;
-    bool isComplete;
-public:
-    CaptureTable(const cv::DynamicBackend::DynamicLib & p)
-        : isComplete(true)
+    Ptr<DynamicLib> lib_;
+    const OpenCV_VideoIO_Plugin_API_preview* plugin_api_;
+
+    PluginBackend(const Ptr<DynamicLib>& lib) :
+        lib_(lib), plugin_api_(NULL)
     {
-    #define READ_FUN(name) \
-        name = reinterpret_cast<name##_t*>(p.getSymbol(#name)); \
-        isComplete = isComplete && (name)
-
-        READ_FUN(cv_get_version);
-        READ_FUN(cv_domain);
-        READ_FUN(cv_open_capture);
-        READ_FUN(cv_get_cap_prop);
-        READ_FUN(cv_set_cap_prop);
-        READ_FUN(cv_grab);
-        READ_FUN(cv_retrieve);
-        READ_FUN(cv_release_capture);
-
-    #undef READ_FUN
+        const char* init_name = "opencv_videoio_plugin_init_v0";
+        FN_opencv_videoio_plugin_init_t fn_init = reinterpret_cast<FN_opencv_videoio_plugin_init_t>(lib_->getSymbol(init_name));
+        if (fn_init)
+        {
+            plugin_api_ = fn_init(ABI_VERSION, API_VERSION, NULL);
+            if (!plugin_api_)
+            {
+                CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible: " << lib->getName());
+                return;
+            }
+            // TODO Preview: add compatibility API/ABI checks
+            CV_LOG_INFO(NULL, "Video I/O: loaded plugin '" << plugin_api_->api_header.api_description << "'");
+        }
+        else
+        {
+            CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible, missing init function: '" << init_name << "', file: " << lib->getName());
+        }
     }
+
+    Ptr<IVideoCapture> createCapture(int camera) const CV_OVERRIDE;
+    Ptr<IVideoCapture> createCapture(const std::string &filename) const CV_OVERRIDE;
+    Ptr<IVideoWriter>  createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE;
 };
 
-class cv::DynamicBackend::WriterTable
+class PluginBackendFactory : public IBackendFactory
 {
 public:
-    cv_get_version_t *cv_get_version;
-    cv_domain_t *cv_domain;
-    cv_open_writer_t *cv_open_writer;
-    cv_get_wri_prop_t *cv_get_wri_prop;
-    cv_set_wri_prop_t *cv_set_wri_prop;
-    cv_write_t *cv_write;
-    cv_release_writer_t *cv_release_writer;
-    bool isComplete;
+    VideoCaptureAPIs id_;
+    const char* baseName_;
+    Ptr<PluginBackend> backend;
+    bool initialized;
 public:
-    WriterTable(const cv::DynamicBackend::DynamicLib & p)
-        : isComplete(true)
+    PluginBackendFactory(VideoCaptureAPIs id, const char* baseName) :
+        id_(id), baseName_(baseName),
+        initialized(false)
     {
-    #define READ_FUN(name) \
-        name = reinterpret_cast<name##_t*>(p.getSymbol(#name)); \
-        isComplete = isComplete && (name)
-
-        READ_FUN(cv_get_version);
-        READ_FUN(cv_domain);
-        READ_FUN(cv_open_writer);
-        READ_FUN(cv_get_wri_prop);
-        READ_FUN(cv_set_wri_prop);
-        READ_FUN(cv_write);
-        READ_FUN(cv_release_writer);
-
-    #undef READ_FUN
+        // nothing, plugins are loaded on demand
     }
+
+    Ptr<IBackend> getBackend() const CV_OVERRIDE
+    {
+        if (!initialized)
+        {
+            const_cast<PluginBackendFactory*>(this)->initBackend();
+        }
+        return backend.staticCast<IBackend>();
+    }
+protected:
+    void initBackend()
+    {
+        AutoLock lock(getInitializationMutex());
+        try {
+            if (!initialized)
+                loadPlugin();
+        }
+        catch (...)
+        {
+            CV_LOG_INFO(NULL, "Video I/O: exception during plugin loading: " << baseName_ << ". SKIP");
+        }
+        initialized = true;
+    }
+    void loadPlugin();
 };
 
-//============================
-
-class DynamicCapture;
-class DynamicWriter;
-
-cv::DynamicBackend::DynamicBackend(const std::string &filename)
-    : lib(0), cap_tbl(0), wri_tbl(0)
-{
-    lib = new DynamicLib(filename);
-    if (lib->isLoaded())
-    {
-        cap_tbl = new CaptureTable(*lib);
-        wri_tbl = new WriterTable(*lib);
-    }
-}
-
-cv::DynamicBackend::~DynamicBackend()
-{
-    if (cap_tbl)
-        delete cap_tbl;
-    if (wri_tbl)
-        delete wri_tbl;
-    if (lib)
-        delete lib;
-}
-
-bool cv::DynamicBackend::canCreateCapture(VideoCaptureAPIs api) const
-{
-    return lib && lib->isLoaded() && cap_tbl && cap_tbl->isComplete && verifyVersion(cap_tbl->cv_get_version) && (cap_tbl->cv_domain() == api);
-}
-
-bool cv::DynamicBackend::canCreateWriter(VideoCaptureAPIs api) const
-{
-    return lib && lib->isLoaded() && wri_tbl && wri_tbl->isComplete && verifyVersion(wri_tbl->cv_get_version) && (wri_tbl->cv_domain() == api);
-}
-
-cv::Ptr<cv::IVideoCapture> cv::DynamicBackend::createCapture(const std::string & filename, int camera) const
-{
-    return makePtr<DynamicCapture>(cap_tbl, filename, camera).staticCast<IVideoCapture>();
-}
-
-cv::Ptr<cv::IVideoWriter> cv::DynamicBackend::createWriter(const std::string & filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const
-{
-    return makePtr<DynamicWriter>(wri_tbl, filename, fourcc, fps, sz, isColor).staticCast<IVideoWriter>();
-}
-
-inline static std::vector<string> getPluginCandidates()
+static
+std::vector<string> getPluginCandidates(const std::string& baseName)
 {
     using namespace cv::utils;
     using namespace cv::utils::fs;
-    const vector<string> default_paths = { getParent(getBinLocation()) };
+#ifndef CV_VIDEOIO_PLUGIN_SUBDIRECTORY
+#define CV_VIDEOIO_PLUGIN_SUBDIRECTORY_STR ""
+#else
+#define CV_VIDEOIO_PLUGIN_SUBDIRECTORY_STR CVAUX_STR(CV_VIDEOIO_PLUGIN_SUBDIRECTORY)
+#endif
+    const vector<string> default_paths = { utils::fs::join(getParent(getBinLocation()), CV_VIDEOIO_PLUGIN_SUBDIRECTORY_STR) };
     const vector<string> paths = getConfigurationParameterPaths("OPENCV_VIDEOIO_PLUGIN_PATH", default_paths);
-    const string default_expr = libraryPrefix() + "opencv_videoio_*." + librarySuffix();
-    const string expr = getConfigurationParameterString("OPENCV_VIDEOIO_PLUGIN_NAME", default_expr.c_str());
-    CV_LOG_INFO(NULL, "VideoIO pluigins: glob is '" << expr << "', " << paths.size() << " location(s)");
+    const string baseName_l = toLowerCase(baseName);
+    const string baseName_u = toUpperCase(baseName);
+    const string default_expr = libraryPrefix() + "opencv_videoio_" + baseName_l + "*" + librarySuffix();
+    const string expr = getConfigurationParameterString((std::string("OPENCV_VIDEOIO_PLUGIN_") + baseName_u).c_str(), default_expr.c_str());
+    CV_LOG_INFO(NULL, "VideoIO pluigin (" << baseName << "): glob is '" << expr << "', " << paths.size() << " location(s)");
     vector<string> results;
     for(const string & path : paths)
     {
         if (path.empty())
             continue;
         vector<string> candidates;
-        cv::glob(join(path, expr), candidates);
-        CV_LOG_INFO(NULL, "VideoIO pluigins in " << path << ": " << candidates.size());
+        cv::glob(utils::fs::join(path, expr), candidates);
+        CV_LOG_INFO(NULL, "    - " << path << ": " << candidates.size());
         copy(candidates.begin(), candidates.end(), back_inserter(results));
     }
-    CV_LOG_INFO(NULL, "Found " << results.size() << " plugin(s)");
+    CV_LOG_INFO(NULL, "Found " << results.size() << " plugin(s) for " << baseName);
     return results;
 }
 
-cv::Ptr<cv::DynamicBackend> cv::DynamicBackend::load(cv::VideoCaptureAPIs api, int mode)
+void PluginBackendFactory::loadPlugin()
 {
-    for(const std::string & plugin : getPluginCandidates())
+    for(const std::string & plugin : getPluginCandidates(baseName_))
     {
-        bool res = true;
-        Ptr<DynamicBackend> factory = makePtr<DynamicBackend>(plugin);
-        if (factory)
-            if (mode & cv::MODE_CAPTURE_BY_INDEX || mode & cv::MODE_CAPTURE_BY_FILENAME)
-            {
-                res = res && factory->canCreateCapture(api);
-            }
-        if (mode & cv::MODE_WRITER)
+        Ptr<DynamicLib> lib = makePtr<DynamicLib>(plugin);
+        if (!lib->isLoaded())
+            continue;
+        try
         {
-            res = res && factory->canCreateWriter(api);
+            Ptr<PluginBackend> pluginBackend = makePtr<PluginBackend>(lib);
+            if (pluginBackend && pluginBackend->plugin_api_)
+            {
+                backend = pluginBackend;
+                return;
+            }
         }
-        if (res)
-            return factory;
+        catch (...)
+        {
+            CV_LOG_INFO(NULL, "Video I/O: exception during plugin initialization: " << plugin << ". SKIP");
+        }
     }
-    return 0;
 }
 
-//==================================================================================================
-// DynamicCapture
 
-class DynamicCapture : public cv::IVideoCapture
+//==================================================================================================
+
+class PluginCapture : public cv::IVideoCapture
 {
-    const cv::DynamicBackend::CaptureTable * tbl;
-    void * capture;
+    const OpenCV_VideoIO_Plugin_API_preview* plugin_api_;
+    CvPluginCapture capture_;
+
 public:
-    DynamicCapture(const cv::DynamicBackend::CaptureTable * tbl_, const std::string &filename, int camera)
-        : tbl(tbl_), capture(0)
+    static
+    Ptr<PluginCapture> create(const OpenCV_VideoIO_Plugin_API_preview* plugin_api,
+            const std::string &filename, int camera)
     {
-        CV_Assert(!capture);
-        if (tbl->cv_open_capture)
-            tbl->cv_open_capture(filename.empty() ? 0 : filename.c_str(), camera, capture);
-    }
-    ~DynamicCapture()
-    {
-        if (capture)
+        CV_Assert(plugin_api);
+        CvPluginCapture capture = NULL;
+        if (plugin_api->Capture_open)
         {
-            CV_Assert(tbl->cv_release_capture);
-            tbl->cv_release_capture(capture);
-            capture = 0;
+            CV_Assert(plugin_api->Capture_release);
+            if (CV_ERROR_OK == plugin_api->Capture_open(filename.empty() ? 0 : filename.c_str(), camera, &capture))
+            {
+                CV_Assert(capture);
+                return makePtr<PluginCapture>(plugin_api, capture);
+            }
         }
+        return Ptr<PluginCapture>();
+    }
+
+    PluginCapture(const OpenCV_VideoIO_Plugin_API_preview* plugin_api, CvPluginCapture capture)
+        : plugin_api_(plugin_api), capture_(capture)
+    {
+        CV_Assert(plugin_api_); CV_Assert(capture_);
+    }
+
+    ~PluginCapture()
+    {
+        CV_DbgAssert(plugin_api_->Capture_release);
+        if (CV_ERROR_OK != plugin_api_->Capture_release(capture_))
+            CV_LOG_ERROR(NULL, "Video I/O: Can't release capture by plugin '" << plugin_api_->api_header.api_description << "'");
+        capture_ = NULL;
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
-        CV_Assert(capture);
         double val = -1;
-        tbl->cv_get_cap_prop(capture, prop, val);
+        if (plugin_api_->Capture_getProperty)
+            if (CV_ERROR_OK != plugin_api_->Capture_getProperty(capture_, prop, &val))
+                val = -1;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE
     {
-        CV_Assert(capture);
-        return tbl->cv_set_cap_prop(capture, prop, val);
+        if (plugin_api_->Capture_setProperty)
+            if (CV_ERROR_OK == plugin_api_->Capture_setProperty(capture_, prop, val))
+                return true;
+        return false;
     }
     bool grabFrame() CV_OVERRIDE
     {
-        CV_Assert(capture);
-        return tbl->cv_grab(capture);
+        if (plugin_api_->Capture_grab)
+            if (CV_ERROR_OK == plugin_api_->Capture_grab(capture_))
+                return true;
+        return false;
     }
-    static bool local_retrieve(unsigned char * data, int step, int width, int height, int cn, void * userdata)
+    static CvResult CV_API_CALL retrieve_callback(int stream_idx, const unsigned char* data, int step, int width, int height, int cn, void* userdata)
     {
-        cv::Mat * img = static_cast<cv::Mat*>(userdata);
-        if (!img)
-            return false;
-        cv::Mat(cv::Size(width, height), CV_MAKETYPE(CV_8U, cn), data, step).copyTo(*img);
-        return true;
+        CV_UNUSED(stream_idx);
+        cv::_OutputArray* dst = static_cast<cv::_OutputArray*>(userdata);
+        if (!dst)
+            return CV_ERROR_FAIL;
+        cv::Mat(cv::Size(width, height), CV_MAKETYPE(CV_8U, cn), (void*)data, step).copyTo(*dst);
+        return CV_ERROR_OK;
     }
     bool retrieveFrame(int idx, cv::OutputArray img) CV_OVERRIDE
     {
-        CV_Assert(capture);
-        cv::Mat frame;
-        bool res = tbl->cv_retrieve(capture, idx, &local_retrieve, &frame);
-        if (res)
-            frame.copyTo(img);
+        bool res = false;
+        if (plugin_api_->Capture_retreive)
+            if (CV_ERROR_OK == plugin_api_->Capture_retreive(capture_, idx, retrieve_callback, (cv::_OutputArray*)&img))
+                res = true;
         return res;
     }
     bool isOpened() const CV_OVERRIDE
     {
-        return capture != NULL;
+        return capture_ != NULL;  // TODO always true
     }
     int getCaptureDomain() CV_OVERRIDE
     {
-        return tbl->cv_domain();
+        return plugin_api_->captureAPI;
     }
 };
 
-//==================================================================================================
-// DynamicWriter
 
-class DynamicWriter : public cv::IVideoWriter
+//==================================================================================================
+
+class PluginWriter : public cv::IVideoWriter
 {
-    const cv::DynamicBackend::WriterTable * tbl;
-    void * writer;
+    const OpenCV_VideoIO_Plugin_API_preview* plugin_api_;
+    CvPluginWriter writer_;
+
 public:
-    DynamicWriter(const cv::DynamicBackend::WriterTable * tbl_, const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor)
-        : tbl(tbl_), writer(0)
+    static
+    Ptr<PluginWriter> create(const OpenCV_VideoIO_Plugin_API_preview* plugin_api,
+            const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor)
     {
-        CV_Assert(!writer);
-        if(tbl->cv_open_writer)
-            tbl->cv_open_writer(filename.empty() ? 0 : filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, writer);
-    }
-    ~DynamicWriter()
-    {
-        if (writer)
+        CV_Assert(plugin_api);
+        CvPluginWriter writer = NULL;
+        if (plugin_api->Writer_open)
         {
-            CV_Assert(tbl->cv_release_writer);
-            tbl->cv_release_writer(writer);
-            writer = 0;
+            CV_Assert(plugin_api->Writer_release);
+            if (CV_ERROR_OK == plugin_api->Writer_open(filename.empty() ? 0 : filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
+            {
+                CV_Assert(writer);
+                return makePtr<PluginWriter>(plugin_api, writer);
+            }
         }
+        return Ptr<PluginWriter>();
+    }
+
+    PluginWriter(const OpenCV_VideoIO_Plugin_API_preview* plugin_api, CvPluginWriter writer)
+        : plugin_api_(plugin_api), writer_(writer)
+    {
+        CV_Assert(plugin_api_); CV_Assert(writer_);
+    }
+
+    ~PluginWriter()
+    {
+        CV_DbgAssert(plugin_api_->Writer_release);
+        if (CV_ERROR_OK != plugin_api_->Writer_release(writer_))
+            CV_LOG_ERROR(NULL, "Video I/O: Can't release writer by plugin '" << plugin_api_->api_header.api_description << "'");
+        writer_ = NULL;
     }
     double getProperty(int prop) const CV_OVERRIDE
     {
-        CV_Assert(writer);
         double val = -1;
-        tbl->cv_get_wri_prop(writer, prop, val);
+        if (plugin_api_->Writer_getProperty)
+            if (CV_ERROR_OK != plugin_api_->Writer_getProperty(writer_, prop, &val))
+                val = -1;
         return val;
     }
     bool setProperty(int prop, double val) CV_OVERRIDE
     {
-        CV_Assert(writer);
-        return tbl->cv_set_wri_prop(writer, prop, val);
+        if (plugin_api_->Writer_setProperty)
+            if (CV_ERROR_OK == plugin_api_->Writer_setProperty(writer_, prop, val))
+                return true;
+        return false;
     }
     bool isOpened() const CV_OVERRIDE
     {
-        return writer != NULL;
+        return writer_ != NULL;  // TODO always true
     }
     void write(cv::InputArray arr) CV_OVERRIDE
     {
         cv::Mat img = arr.getMat();
-        CV_Assert(writer);
-        tbl->cv_write(writer, img.data, (int)img.step[0], img.cols, img.rows, img.channels());
+        CV_DbgAssert(writer_);
+        CV_Assert(plugin_api_->Writer_write);
+        if (CV_ERROR_OK != plugin_api_->Writer_write(writer_, img.data, (int)img.step[0], img.cols, img.rows, img.channels()))
+        {
+            CV_LOG_DEBUG(NULL, "Video I/O: Can't write frame by plugin '" << plugin_api_->api_header.api_description << "'");
+        }
+        // TODO return bool result?
     }
     int getCaptureDomain() const CV_OVERRIDE
     {
-        return tbl->cv_domain();
+        return plugin_api_->captureAPI;
     }
 };
+
+
+Ptr<IVideoCapture> PluginBackend::createCapture(int camera) const
+{
+    try
+    {
+        if (plugin_api_)
+            return PluginCapture::create(plugin_api_, std::string(), camera); //.staticCast<IVideoCapture>();
+    }
+    catch (...)
+    {
+        CV_LOG_DEBUG(NULL, "Video I/O: can't create camera capture: " << camera);
+    }
+    return Ptr<IVideoCapture>();
+}
+
+Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) const
+{
+    try
+    {
+        if (plugin_api_)
+            return PluginCapture::create(plugin_api_, filename, 0); //.staticCast<IVideoCapture>();
+    }
+    catch (...)
+    {
+        CV_LOG_DEBUG(NULL, "Video I/O: can't open file capture: " << filename);
+    }
+    return Ptr<IVideoCapture>();
+}
+
+Ptr<IVideoWriter> PluginBackend::createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const
+{
+    try
+    {
+        if (plugin_api_)
+            return PluginWriter::create(plugin_api_, filename, fourcc, fps, sz, isColor); //.staticCast<IVideoWriter>();
+    }
+    catch (...)
+    {
+        CV_LOG_DEBUG(NULL, "Video I/O: can't open writer: " << filename);
+    }
+    return Ptr<IVideoWriter>();
+}
+
+}  // namespace
+
+Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char* baseName)
+{
+    return makePtr<impl::PluginBackendFactory>(id, baseName); //.staticCast<IBackendFactory>();
+}
+
+}  // namespace
