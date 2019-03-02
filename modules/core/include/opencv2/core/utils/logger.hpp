@@ -60,6 +60,30 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
 # endif
 #endif
 
+#define CV_LOGTAG_PTR_CAST(expr) (const cv::utils::logging::LogTag*)(expr)
+
+// CV_LOGTAG_EXPAND_NAME is intended to be re-defined (undef and then define again)
+// to allows logging users to use a shorter name argument when calling
+// CV_LOG_WITH_TAG or its related macros such as CV_LOG_INFO.
+//
+// This macro is intended to modify the tag argument as a string (token), via
+// preprocessor token pasting or metaprogramming techniques. A typical usage
+// is to apply a prefix, such as
+// ...... #define CV_LOGTAG_EXPAND_NAME(tag) cv_logtag_##tag
+//
+// It is permitted to re-define to a hard-coded expression, ignoring the tag.
+// This would work identically like the CV_LOGTAG_FALLBACK macro.
+//
+// Important: When the logging macro is called with tag being NULL, a user-defined
+// CV_LOGTAG_EXPAND_NAME may expand it into cv_logtag_0, cv_logtag_NULL, or
+// cv_logtag_nullptr. Use with care. Also be mindful of C++ symbol redefinitions.
+//
+// If there is significant amount of logging code with tag being NULL, it is
+// recommended to use (re-define) CV_LOGTAG_FALLBACK to inject locally a default
+// tag at the beginning of a compilation unit, to minimize lines of code changes.
+//
+#define CV_LOGTAG_EXPAND_NAME(tag) tag
+
 // CV_LOGTAG_FALLBACK is intended to be re-defined (undef and then define again)
 // by any other compilation units to provide a log tag when the logging statement
 // does not specify one. The macro needs to expand into a C++ expression that can
@@ -76,9 +100,9 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
     for(;;) { \
         const auto cv_temp_msglevel = (cv::utils::logging::LogLevel)(msgLevel); \
         if (cv_temp_msglevel >= (CV_LOG_STRIP_LEVEL)) break; \
-        auto cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(tag); \
-        if (!cv_temp_logtagptr) cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(CV_LOGTAG_FALLBACK); \
-        if (!cv_temp_logtagptr) cv_temp_logtagptr = (const cv::utils::logging::LogTag*)(CV_LOGTAG_GLOBAL); \
+        auto cv_temp_logtagptr = CV_LOGTAG_PTR_CAST(CV_LOGTAG_EXPAND_NAME(tag)); \
+        if (!cv_temp_logtagptr) cv_temp_logtagptr = CV_LOGTAG_PTR_CAST(CV_LOGTAG_FALLBACK); \
+        if (!cv_temp_logtagptr) cv_temp_logtagptr = CV_LOGTAG_PTR_CAST(CV_LOGTAG_GLOBAL); \
         if (cv_temp_logtagptr && (cv_temp_msglevel > cv_temp_logtagptr->level)) break; \
         std::stringstream cv_temp_logstream; \
         cv_temp_logstream << __VA_ARGS__; \
