@@ -44,7 +44,11 @@
 
 namespace cv {
 
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+// Stitcher::ORIG_RESOL is initialized in stitching.hpp.
+#else
 CV_CONSTEXPR double Stitcher::ORIG_RESOL = -1.0;
+#endif
 
 Ptr<Stitcher> Stitcher::create(Mode mode)
 {

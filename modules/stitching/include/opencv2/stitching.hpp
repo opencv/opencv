@@ -142,7 +142,11 @@ public:
      * When setting a resolution for stitching, this values is a placeholder
      * for preserving the original resolution.
      */
-    static CV_CONSTEXPR double ORIG_RESOL;
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+    static CV_CONSTEXPR double ORIG_RESOL = -1.0;
+#else
+    static CV_CONSTEXPR double ORIG_RESOL; // Initialized in stitcher.cpp
+#endif
 
     enum Status
     {
