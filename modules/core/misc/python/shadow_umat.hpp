@@ -54,6 +54,9 @@ public:
 
     // offset of the submatrix (or 0)
     CV_PROP_RW size_t offset;
+    CV_PROP_RW int rows;
+    CV_PROP_RW int cols;
+    CV_PROP_RW int flags;
 };
 
 } // namespace cv
