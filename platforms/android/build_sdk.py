@@ -48,52 +48,15 @@ def check_dir(d, create=False, clean=False):
             os.makedirs(d)
     return d
 
-def which(cmd, mode=os.F_OK | os.X_OK, path=None):
-
-    def _access_check(fn, mode):
-        return os.path.exists(fn) and os.access(fn, mode) and not os.path.isdir(fn)
-
-    # If we're given a path with a directory part, look it up directly
-    # rather than referring to PATH directories. This includes checking
-    # relative to the current directory, e.g. ./script
-    if os.path.dirname(cmd):
-        if _access_check(cmd, mode):
-            return cmd
-
-        return None
-
-    if path is None:
-        path = os.environ.get("PATH", os.defpath)
-    if not path:
-        return None
-
-    path = path.split(os.pathsep)
-
-    if sys.platform == "win32":
-        # The current directory takes precedence on Windows.
-        if os.curdir not in path:
-            path.insert(0, os.curdir)
-
-            # need to consider PATHEXT on Windows.
-            pathext = os.environ.get("PATHEXT", "").split(os.pathsep)
-            if any(cmd.lower().endswith(ext.lower()) for ext in pathext):
-                files = [cmd]
-            else:
-                files = [cmd + ext for ext in pathext]
-    else:
-        files = [cmd]
-
-        seen = set()
-        for dir in path:
-            normdir = os.path.normcase(dir)
-            if normdir not in seen:
-                seen.add(normdir)
-                for thefile in files:
-                    name = os.path.join(dir, thefile)
-                    if _access_check(name, mode):
-                        return name
-
-    return None
+def check_executable(cmd):
+    try:
+        FNULL = open(os.devnull, 'w')
+        retcode = subprocess.call(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
+        if retcode < 0:
+            return False
+        return True
+    except:
+        return False
 
 def determine_opencv_version(version_hpp_path):
     # version in 2.4 - CV_VERSION_EPOCH.CV_VERSION_MAJOR.CV_VERSION_MINOR.CV_VERSION_REVISION
@@ -179,14 +142,13 @@ class Builder:
         self.use_ccache = False if config.no_ccache else True
 
     def get_cmake(self):
-        if not which('cmake') is None:
-            cmake_from_path = which('cmake')
-            log.info("Using cmake located at: %s", cmake_from_path)
-            return cmake_from_path
+        if check_executable(['cmake', '--version']):
+            log.info("Using cmake from PATH")
+            return 'cmake'
         # look to see if Android SDK's cmake is installed
         android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
         if os.path.exists(android_cmake):
-            cmake_subdirs = [f for f in os.listdir(android_cmake) if os.path.exists(os.path.join(android_cmake, f, 'bin', 'cmake'))]
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'cmake'), '--version'])]
             if len(cmake_subdirs) > 0:
                 # there could be more than one - just take the first one
                 cmake_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'cmake')
@@ -195,14 +157,13 @@ class Builder:
         raise Fail("Can't find cmake")
 
     def get_ninja(self):
-        if not which('ninja') is None:
-            ninja_from_path = which('ninja')
-            log.info("Using ninja located at: %s", ninja_from_path)
-            return which('ninja')
+        if check_executable(['ninja', '--version']):
+            log.info("Using ninja from PATH")
+            return 'ninja'
         # Android SDK's cmake includes a copy of ninja - look to see if its there
         android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
         if os.path.exists(android_cmake):
-            cmake_subdirs = [f for f in os.listdir(android_cmake) if os.path.exists(os.path.join(android_cmake, f, 'bin', 'ninja'))]
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'ninja'), '--version'])]
             if len(cmake_subdirs) > 0:
                 # there could be more than one - just take the first one
                 ninja_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'ninja')
@@ -341,7 +302,7 @@ if __name__ == "__main__":
     if not 'ANDROID_NDK' in os.environ:
         raise Fail("NDK location not set. Either pass --ndk_path or set ANDROID_NDK environment variable")
 
-    if which("ccache") is None:
+    if not check_executable(['ccache', '--version']):
         log.info("ccache not found - disabling ccache supprt")
         args.no_ccache = True
 
