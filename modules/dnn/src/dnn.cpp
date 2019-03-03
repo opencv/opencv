@@ -142,7 +142,13 @@ private:
 #else
         cv::dnn::Net net;
         cv::dnn::LayerParams lp;
-        net.addLayerToPrev("testLayer", "Identity", lp);
+        lp.set("kernel_size", 1);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testLayer";
+        lp.blobs.push_back(Mat({1, 2, 1, 1}, CV_32F, Scalar(1)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
         net.setPreferableTarget(target);
         static int inpDims[] = {1, 2, 3, 4};
@@ -724,9 +730,9 @@ struct DataLayer : public Layer
         biases->set(biasesVec);
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ScaleShiftLayer ieLayer(name);
-        ieLayer.setWeights(weights);
-        ieLayer.setBiases(biases);
+        InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
+        addConstantData("weights", weights, ieLayer);
+        addConstantData("biases", biases, ieLayer);
 #else
         InferenceEngine::LayerParams lp;
         lp.name = name;
@@ -1631,6 +1637,17 @@ struct Net::Impl
                  preferableTarget == DNN_TARGET_MYRIAD ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+                for (const std::string& name : {"weights", "biases"})
+                {
+                    auto it = ieNode->layer.getParameters().find(name);
+                    if (it != ieNode->layer.getParameters().end())
+                    {
+                        InferenceEngine::Blob::Ptr bp = it->second.as<InferenceEngine::Blob::Ptr>();
+                        it->second = convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(bp));
+                    }
+                }
+#else
                 auto& blobs = ieNode->layer.getConstantData();
                 if (blobs.empty())
                 {
@@ -1647,6 +1664,7 @@ struct Net::Impl
                     for (auto& it : blobs)
                         it.second = convertFp16(std::const_pointer_cast<InferenceEngine::Blob>(it.second));
                 }
+#endif
             }
 
             if (!fused)
@@ -1718,7 +1736,7 @@ struct Net::Impl
 
             if (!ieNode->net->isInitialized())
             {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R4)
                 // For networks which is built in runtime we need to specify a
                 // version of it's hyperparameters.
                 std::string versionTrigger = "<net name=\"TestInput\" version=\"3\" batch=\"1\">"
@@ -2795,8 +2813,7 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
     {
-        std::vector<LayerPin> lp = impl->getLayerOutPins(outBlobNames[i]);
-        pins.insert(pins.end(), lp.begin(), lp.end());
+        pins.push_back(impl->getPinByAlias(outBlobNames[i]));
     }
 
     impl->setUpNet(pins);
@@ -2809,9 +2826,10 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
     for (int i = 0; i < outBlobNames.size(); i++)
     {
         std::vector<LayerPin> lp = impl->getLayerOutPins(outBlobNames[i]);
-        for (int i = 0; i < lp.size(); i++)
+        outputBlobs[i].resize(lp.size());
+        for (int j = 0; j < lp.size(); j++)
         {
-            outputBlobs[i].push_back(impl->getBlob(lp[i]));
+            outputBlobs[i][j] = impl->getBlob(lp[j]);
         }
     }
 }

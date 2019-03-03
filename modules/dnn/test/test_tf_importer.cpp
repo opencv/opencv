@@ -147,10 +147,6 @@ TEST_P(Test_TensorFlow_layers, eltwise)
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
-#endif
     runTensorFlowNet("pad_and_concat");
 }
 
@@ -185,10 +181,6 @@ TEST_P(Test_TensorFlow_layers, pooling)
 // TODO: fix tests and replace to pooling
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
-#endif
     runTensorFlowNet("ave_pool_same");
 }
 
@@ -241,7 +233,7 @@ TEST_P(Test_TensorFlow_layers, unfused_flatten)
 
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
         throw SkipTestException("");
 #endif
@@ -388,7 +380,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("Unstable test case");
 #endif
@@ -453,11 +445,6 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
     checkBackend();
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
-#endif
-
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
     std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy", false);
@@ -516,17 +503,6 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
     runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
     runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
     runTensorFlowNet("fp16_padding_same", false, l1, lInf);
-}
-
-// TODO: fix pad_and_concat and add this test case to fp16_weights
-TEST_P(Test_TensorFlow_layers, fp16_pad_and_concat)
-{
-    const float l1 = 0.00071;
-    const float lInf = 0.012;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
-#endif
     runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
 }
 
@@ -558,8 +534,6 @@ TEST_P(Test_TensorFlow_layers, split)
 
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     runTensorFlowNet("resize_nearest_neighbor");
     runTensorFlowNet("keras_upsampling2d");
 }

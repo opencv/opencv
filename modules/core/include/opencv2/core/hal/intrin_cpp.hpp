@@ -1799,10 +1799,40 @@ template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
     return c;
 }
 
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i]];
+    return c;
+}
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut_pairs(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i / 2] + i % 2];
+    return c;
+}
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut_quads(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i / 4] + i % 4];
+    return c;
+}
+
 template<int n> inline v_reg<int, n> v_lut(const int* tab, const v_reg<int, n>& idx)
 {
     v_reg<int, n> c;
     for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+
+template<int n> inline v_reg<unsigned, n> v_lut(const unsigned* tab, const v_reg<int, n>& idx)
+{
+    v_reg<int, n> c;
+    for (int i = 0; i < n; i++)
         c.s[i] = tab[idx.s[i]];
     return c;
 }
@@ -1843,6 +1873,48 @@ template<int n> inline void v_lut_deinterleave(const double* tab, const v_reg<in
         x.s[i] = tab[j];
         y.s[i] = tab[j+1];
     }
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_pairs(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/4; i++)
+    {
+        c.s[4*i  ] = vec.s[4*i  ];
+        c.s[4*i+1] = vec.s[4*i+2];
+        c.s[4*i+2] = vec.s[4*i+1];
+        c.s[4*i+3] = vec.s[4*i+3];
+    }
+    return c;
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_quads(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/8; i++)
+    {
+        c.s[8*i  ] = vec.s[8*i  ];
+        c.s[8*i+1] = vec.s[8*i+4];
+        c.s[8*i+2] = vec.s[8*i+1];
+        c.s[8*i+3] = vec.s[8*i+5];
+        c.s[8*i+4] = vec.s[8*i+2];
+        c.s[8*i+5] = vec.s[8*i+6];
+        c.s[8*i+6] = vec.s[8*i+3];
+        c.s[8*i+7] = vec.s[8*i+7];
+    }
+    return c;
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_pack_triplets(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/4; i++)
+    {
+        c.s[3*i  ] = vec.s[4*i  ];
+        c.s[3*i+1] = vec.s[4*i+1];
+        c.s[3*i+2] = vec.s[4*i+2];
+    }
+    return c;
 }
 
 /** @brief Transpose 4x4 matrix
@@ -2266,7 +2338,7 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
                        v.s[0]*m0.s[3] + v.s[1]*m1.s[3] + v.s[2]*m2.s[3] + m3.s[3]);
 }
 
-////// FP16 suport ///////
+////// FP16 support ///////
 
 inline v_reg<float, V_TypeTraits<float>::nlanes128>
 v_load_expand(const float16_t* ptr)

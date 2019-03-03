@@ -167,6 +167,8 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
 
     double rotate_a = cs * cs * mu20 + 2 * cs * sn * mu11 + sn * sn * mu02;
     double rotate_c = sn * sn * mu20 - 2 * cs * sn * mu11 + cs * cs * mu02;
+    rotate_a = std::max(0.0, rotate_a);  // avoid negative result due calculation numeric errors
+    rotate_c = std::max(0.0, rotate_c);  // avoid negative result due calculation numeric errors
     double length = std::sqrt( rotate_a * inv_m00 ) * 4;
     double width = std::sqrt( rotate_c * inv_m00 ) * 4;
 

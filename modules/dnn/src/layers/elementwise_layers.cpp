@@ -1134,10 +1134,10 @@ struct ChannelsPReLUFunctor
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
     InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
     {
-        InferenceEngine::Builder::PReLULayer ieLayer("");
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::PReLULayer("");
         const size_t numChannels = scale.total();
-        ieLayer.setWeights(wrapToInfEngineBlob(scale, {numChannels}, InferenceEngine::Layout::C));
-        return ieLayer;
+        addConstantData("weights", wrapToInfEngineBlob(scale, {numChannels}, InferenceEngine::Layout::C), l);
+        return l;
     }
 #else
     InferenceEngine::CNNLayerPtr initInfEngine(InferenceEngine::LayerParams& lp)

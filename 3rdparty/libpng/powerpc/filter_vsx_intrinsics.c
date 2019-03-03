@@ -1,13 +1,14 @@
 /* filter_vsx_intrinsics.c - PowerPC optimised filter functions
  *
+ * Copyright (c) 2018 Cosmin Truta
  * Copyright (c) 2017 Glenn Randers-Pehrson
  * Written by Vadim Barkov, 2017.
- * Last changed in libpng 1.6.29 [March 16, 2017]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
 #include <stdio.h>
 #include <stdint.h>
 #include "../pngpriv.h"
@@ -173,7 +174,7 @@ static const vector unsigned char VSX_SHORT_TO_CHAR4_3 = {16,16,16,16,16,16,16,1
 void png_read_filter_row_sub4_vsx(png_row_infop row_info, png_bytep row,
                                   png_const_bytep prev_row)
 {
-   const png_byte bpp = 4;
+   png_byte bpp = 4;
 
    vector unsigned char rp_vec;
    vector unsigned char part_vec;
@@ -230,7 +231,7 @@ void png_read_filter_row_sub4_vsx(png_row_infop row_info, png_bytep row,
 void png_read_filter_row_sub3_vsx(png_row_infop row_info, png_bytep row,
                                   png_const_bytep prev_row)
 {
-   const png_byte bpp = 3;
+   png_byte bpp = 3;
 
    vector unsigned char rp_vec;
    vector unsigned char part_vec;
@@ -294,7 +295,7 @@ void png_read_filter_row_sub3_vsx(png_row_infop row_info, png_bytep row,
 void png_read_filter_row_avg4_vsx(png_row_infop row_info, png_bytep row,
                                   png_const_bytep prev_row)
 {
-   const png_byte bpp = 4;
+   png_byte bpp = 4;
 
    vector unsigned char rp_vec;
    vector unsigned char pp_vec;
@@ -381,7 +382,7 @@ void png_read_filter_row_avg4_vsx(png_row_infop row_info, png_bytep row,
 void png_read_filter_row_avg3_vsx(png_row_infop row_info, png_bytep row,
                                   png_const_bytep prev_row)
 {
-  const png_byte bpp = 3;
+  png_byte bpp = 3;
 
   vector unsigned char rp_vec;
   vector unsigned char pp_vec;
@@ -499,7 +500,7 @@ void png_read_filter_row_avg3_vsx(png_row_infop row_info, png_bytep row,
 void png_read_filter_row_paeth4_vsx(png_row_infop row_info, png_bytep row,
    png_const_bytep prev_row)
 {
-   const png_byte bpp = 4;
+   png_byte bpp = 4;
 
    int a, b, c, pa, pb, pc, p;
    vector unsigned char rp_vec;
@@ -619,7 +620,7 @@ void png_read_filter_row_paeth4_vsx(png_row_infop row_info, png_bytep row,
 void png_read_filter_row_paeth3_vsx(png_row_infop row_info, png_bytep row,
    png_const_bytep prev_row)
 {
-  const png_byte bpp = 3;
+  png_byte bpp = 3;
 
   int a, b, c, pa, pb, pc, p;
   vector unsigned char rp_vec;

@@ -392,10 +392,10 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("ceil_mode", isCeilMode(layerParams));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
-        else if (layer_type == "GlobalAveragePool")
+        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool")
         {
             layerParams.type = "Pooling";
-            layerParams.set("pool", "AVE");
+            layerParams.set("pool", layer_type == "GlobalAveragePool" ? "AVE" : "MAX");
             layerParams.set("global_pooling", true);
         }
         else if (layer_type == "Add" || layer_type == "Sum")
@@ -447,6 +447,11 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.blobs.push_back(blob);
                 layerParams.set("bias_term", false);
             }
+        }
+        else if (layer_type == "Neg")
+        {
+            layerParams.type = "Power";
+            layerParams.set("scale", -1);
         }
         else if (layer_type == "Constant")
         {
@@ -584,7 +589,7 @@ void ONNXImporter::populateNet(Net dstNet)
             for (int j = 1; j < node_proto.input_size(); j++) {
                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
-            layerParams.set("num_output", layerParams.blobs[0].size[1]);
+            layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }
         else if (layer_type == "Transpose")
@@ -595,21 +600,35 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Unsqueeze")
         {
             CV_Assert(node_proto.input_size() == 1);
-            Mat input = getBlob(node_proto, constBlobs, 0);
-
             DictValue axes = layerParams.get("axes");
-            std::vector<int> dims;
-            for (int j = 0; j < input.dims; j++) {
-                dims.push_back(input.size[j]);
-            }
-            CV_Assert(axes.getIntValue(axes.size()-1) <= dims.size());
-            for (int j = 0; j < axes.size(); j++) {
-                dims.insert(dims.begin() + axes.getIntValue(j), 1);
+            if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+            {
+                // Constant input.
+                Mat input = getBlob(node_proto, constBlobs, 0);
+
+                std::vector<int> dims;
+                for (int j = 0; j < input.dims; j++) {
+                    dims.push_back(input.size[j]);
+                }
+                CV_Assert(axes.getIntValue(axes.size()-1) <= dims.size());
+                for (int j = 0; j < axes.size(); j++) {
+                    dims.insert(dims.begin() + axes.getIntValue(j), 1);
+                }
+
+                Mat out = input.reshape(0, dims);
+                constBlobs.insert(std::make_pair(layerParams.name, out));
+                continue;
             }
 
-            Mat out = input.reshape(0, dims);
-            constBlobs.insert(std::make_pair(layerParams.name, out));
-            continue;
+            // Variable input.
+            if (axes.size() != 1)
+                CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
+
+            int dims[] = {1, -1};
+            layerParams.type = "Reshape";
+            layerParams.set("axis", axes.getIntValue(0));
+            layerParams.set("num_axes", 1);
+            layerParams.set("dim", DictValue::arrayInt(&dims[0], 2));
         }
         else if (layer_type == "Reshape")
         {
@@ -706,6 +725,25 @@ void ONNXImporter::populateNet(Net dstNet)
                 constBlobs.insert(std::make_pair(layerParams.name, concatenated[0]));
                 continue;
             }
+        }
+        else if (layer_type == "Upsample")
+        {
+            layerParams.type = "Resize";
+            if (layerParams.has("scales"))
+            {
+                // Pytorch layer
+                DictValue scales = layerParams.get("scales");
+                CV_Assert(scales.size() == 4);
+                layerParams.set("zoom_factor_y", scales.getIntValue(2));
+                layerParams.set("zoom_factor_x", scales.getIntValue(3));
+            }
+            else
+            {
+                // Caffe2 layer
+                replaceLayerParam(layerParams, "height_scale", "zoom_factor_y");
+                replaceLayerParam(layerParams, "width_scale", "zoom_factor_x");
+            }
+            replaceLayerParam(layerParams, "mode", "interpolation");
         }
         else
         {

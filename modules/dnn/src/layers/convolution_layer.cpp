@@ -278,7 +278,7 @@ public:
         const int outCn = blobs[0].size[0];
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        Mat wm = blobs[0].reshape(1, outCn).clone();
+        Mat wm = blobs[0].reshape(1, outCn);
         if( wm.step1() % VEC_ALIGN != 0 )
         {
             int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
@@ -371,6 +371,10 @@ public:
 
         if (!w.empty())
         {
+            // Keep origin weights unchanged.
+            if (weightsMat.data == blobs[0].data)
+                weightsMat = weightsMat.clone();
+
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
@@ -481,19 +485,19 @@ public:
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(outCn);
-
-        ieLayer.setWeights(ieWeights);
-        if (ieBiases)
-            ieLayer.setBiases(ieBiases);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)outCn);
 
         InferenceEngine::Builder::Layer l = ieLayer;
+        addConstantData("weights", ieWeights, l);
+        if (ieBiases)
+            addConstantData("biases", ieBiases, l);
+
         if (!padMode.empty())
             l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
 
@@ -1150,17 +1154,14 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (INF_ENGINE_RELEASE == 2018050000 && (adjustPad.height || adjustPad.width))
+            if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
                 return false;
 
             const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
             const int group = numOutput / outGroupCn;
             if (group != 1)
             {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R3)
                 return preferableTarget == DNN_TARGET_CPU;
-#endif
-                return false;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
                 return dilation.width == 1 && dilation.height == 1;
@@ -1213,12 +1214,8 @@ public:
         int dims[] = {inputs[0][0], outCn, outH, outW};
         outputs.resize(inputs.size(), shape(dims, 4));
 
-        internals.push_back(MatShape());
         if (!is1x1())
-            internals[0] = computeColRowShape(inputs[0], outputs[0]);
-
-        if (hasBias())
-            internals.push_back(shape(1, outH*outW));
+            internals.push_back(computeColRowShape(inputs[0], outputs[0]));
 
         return false;
     }
@@ -1713,20 +1710,19 @@ public:
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({kernel.height, kernel.width});
-        ieLayer.setStrides({stride.height, stride.width});
-        ieLayer.setDilation({dilation.height, dilation.width});
-        ieLayer.setPaddingsBegin({pad.height, pad.width});
-        ieLayer.setPaddingsEnd({pad.height, pad.width});
-        ieLayer.setGroup(group);
-        ieLayer.setOutDepth(numOutput);
+        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
+        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
+        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
+        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setGroup((size_t)group);
+        ieLayer.setOutDepth((size_t)numOutput);
 
-        ieLayer.setWeights(wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW));
+        InferenceEngine::Builder::Layer l = ieLayer;
+        addConstantData("weights", wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW), l);
         if (hasBias())
-        {
-            ieLayer.setBiases(wrapToInfEngineBlob(blobs[1], {(size_t)numOutput}, InferenceEngine::Layout::C));
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+            addConstantData("biases", wrapToInfEngineBlob(blobs[1], {(size_t)numOutput}, InferenceEngine::Layout::C), l);
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
 #else
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
         const int group = numOutput / outGroupCn;

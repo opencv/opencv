@@ -1667,12 +1667,11 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2, sum_depth;
-    int cn = cvtest::randInt(rng) % 3 + 1;
+    int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sum_size;
 
     depth = depth == 0 ? CV_8U : CV_32F;
-    cn += cn == 2;
     int b = (cvtest::randInt(rng) & 1) != 0;
     sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
 
@@ -2235,4 +2234,13 @@ TEST(Imgproc_Sobel, s16_regression_13506)
     Sobel(src, dst, CV_16S, 0, 1, 5);
     ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
 }
+
+TEST(Imgproc_Pyrdown, issue_12961)
+{
+    Mat src(9, 9, CV_8UC1, Scalar::all(0));
+    Mat dst;
+    cv::pyrDown(src, dst);
+    ASSERT_EQ(0.0, cv::norm(dst));
+}
+
 }} // namespace
