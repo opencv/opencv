@@ -79,7 +79,7 @@ namespace cv { namespace cuda { namespace device
     #define IMPLEMENT_FILTER2D_TEX_READER(type) \
         struct tex_filter2D_ ## type ## _reader \
         { \
-	    PtrStepSz<type> dat; \
+            PtrStepSz<type> dat; \
             typedef type elem_type; \
             typedef int index_type; \
             const int xoff; \
