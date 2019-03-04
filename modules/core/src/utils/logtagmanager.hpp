@@ -44,6 +44,12 @@ private:
     {
         size_t id;
         LogTag* ptr;
+
+        LogTagAndId()
+            : id(0u)
+            , ptr(nullptr)
+        {
+        }
     };
 
     struct ParsedLevel
@@ -73,6 +79,30 @@ private:
     };
 
     using WildcardPair = std::pair<const std::string, WildcardInfo>;
+
+    struct InfoIndex
+    {
+        std::string fullNamePtr;
+        std::vector<std::string> namePartsPtr;
+        size_t id;
+        FullNameInfo* fullNameInfoPtr;
+        WildcardInfo* firstPartInfoPtr;
+        size_t firstPartMemberIndex;
+        std::vector<WildcardInfo*> anyPartInfoPtrs;
+        std::vector<size_t> anyPartMemberIndex;
+
+        InfoIndex()
+            : fullNamePtr()
+            , namePartsPtr()
+            , id(0u)
+            , fullNameInfoPtr(nullptr)
+            , firstPartInfoPtr(nullptr)
+            , firstPartMemberIndex(0u)
+            , anyPartInfoPtrs()
+            , anyPartMemberIndex()
+        {
+        }
+    };
 
 public:
     LogTagManager(LogLevel defaultUnconfiguredGlobalLevel);
@@ -105,10 +135,13 @@ public:
     void setLevelByAnyPart(const std::string& anyPart, LogLevel level);
 
 private:
-    const FullNamePair& assignFullName(const std::string& fullName, LogTag* ptr);
-    void assignNameParts(const FullNamePair& fullNamePair);
-    void assignWildcardInfo(const FullNamePair& fullNamePair, const std::string& namePart, bool isFirst);
-    LogTagAndId& addOrGetMember(std::vector<LogTagAndId>& members, const LogTagAndId& memberArg);
+    void populateIndex(InfoIndex& index, const std::string& fullName);
+    void populateIndexFullName(InfoIndex& index);
+    void populateIndexFirstPart(InfoIndex& index);
+    void populateIndexAnyPart(InfoIndex& index, size_t namePartIndex);
+    size_t addOrGetMember(InfoIndex& index, WildcardInfo* wildcardInfoPtr);
+    bool updateIndexLogTagPtr(InfoIndex& index, LogTag* ptr);
+    bool findAndApplyLevelToTag(InfoIndex& index);
     void setLevelByWildcard(const std::string& namePart, LogLevel level, bool isFirst);
 
 private:

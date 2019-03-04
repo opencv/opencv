@@ -70,7 +70,13 @@ LogTagConfigParser& LogTagManager::getConfigParser() const
 void LogTagManager::assign(const std::string& name, LogTag* ptr)
 {
     LockType lock(m_mutex);
-    assignFullName(name, ptr);
+    InfoIndex index;
+    populateIndex(index, name);
+    const bool isPtrChanged = updateIndexLogTagPtr(index, ptr);
+    if (ptr && isPtrChanged)
+    {
+        findAndApplyLevelToTag(index);
+    }
 }
 
 void LogTagManager::unassign(const std::string& name)
@@ -92,11 +98,10 @@ LogTag* LogTagManager::get(const std::string& name) const
 
 void LogTagManager::setLevelByFullName(const std::string& fullName, LogLevel level)
 {
+    LockType lock(m_mutex);
+    InfoIndex index;
+    populateIndex(index, fullName);
     auto iter = m_fullNames.find(fullName);
-    if (iter == m_fullNames.end())
-    {
-        iter = m_fullNames.emplace(fullName, FullNameInfo{}).first;
-    }
     auto& info = iter->second;
     // skip additional processing if nothing changes.
     if (info.parsedLevel.valid &&
@@ -116,18 +121,173 @@ void LogTagManager::setLevelByFullName(const std::string& fullName, LogLevel lev
 
 void LogTagManager::setLevelByFirstPart(const std::string& firstPart, LogLevel level)
 {
+    // Lock is inside setLevelByWildcard() method.
     const bool isFirst = true;
     setLevelByWildcard(firstPart, level, isFirst);
 }
 
 void LogTagManager::setLevelByAnyPart(const std::string& anyPart, LogLevel level)
 {
+    // Lock is inside setLevelByWildcard() method.
     const bool isFirst = false;
     setLevelByWildcard(anyPart, level, isFirst);
 }
 
+void LogTagManager::populateIndex(InfoIndex& index, const std::string& fullName)
+{
+    index.fullNamePtr = fullName;
+    index.namePartsPtr = splitNameParts(fullName);
+    const size_t namePartCount = index.namePartsPtr.size();
+    index.id = 0u;
+    index.anyPartInfoPtrs.resize(namePartCount, nullptr);
+    index.anyPartMemberIndex.resize(namePartCount, 0u);
+    populateIndexFullName(index);
+    populateIndexFirstPart(index);
+    for (size_t namePartIndex = 0u; namePartIndex < namePartCount; ++namePartIndex)
+    {
+        populateIndexAnyPart(index, namePartIndex);
+    }
+}
+
+void LogTagManager::populateIndexFullName(InfoIndex& index)
+{
+    const std::string& fullName = index.fullNamePtr;
+    auto iter = m_fullNames.find(fullName);
+    if (iter == m_fullNames.end())
+    {
+        // full name never seen before, neither from tag registration nor from parsed config
+        const size_t newId = (m_nextId++);
+        iter = m_fullNames.emplace(fullName, FullNameInfo{}).first;
+        iter->second.member.id = newId;
+        index.id = newId;
+    }
+    else
+    {
+        index.id = iter->second.member.id;
+    }
+    index.fullNameInfoPtr = std::addressof(iter->second);
+}
+
+void LogTagManager::populateIndexFirstPart(InfoIndex& index)
+{
+    const std::vector<std::string>& nameParts = index.namePartsPtr;
+    if (nameParts.empty())
+    {
+        return;
+    }
+    const std::string& firstNamePart = nameParts[0u];
+    auto firstPartIter = m_firstParts.find(firstNamePart);
+    if (firstPartIter == m_firstParts.end())
+    {
+        firstPartIter = m_firstParts.emplace(firstNamePart, WildcardInfo{}).first;
+    }
+    auto* infoPtr = std::addressof(firstPartIter->second);
+    index.firstPartInfoPtr = infoPtr;
+    index.firstPartMemberIndex = addOrGetMember(index, infoPtr);
+}
+
+void LogTagManager::populateIndexAnyPart(InfoIndex& index, size_t namePartIndex)
+{
+    const std::vector<std::string>& nameParts = index.namePartsPtr;
+    if (namePartIndex >= nameParts.size() ||
+        namePartIndex >= index.anyPartInfoPtrs.size() ||
+        namePartIndex >= index.anyPartMemberIndex.size())
+    {
+        return;
+    }
+    const std::string& namePart = nameParts[namePartIndex];
+    auto anyPartIter = m_anyParts.find(namePart);
+    if (anyPartIter == m_anyParts.end())
+    {
+        anyPartIter = m_anyParts.emplace(namePart, WildcardInfo{}).first;
+    }
+    auto* infoPtr = std::addressof(anyPartIter->second);
+    index.anyPartInfoPtrs[namePartIndex] = infoPtr;
+    index.anyPartMemberIndex[namePartIndex] = addOrGetMember(index, infoPtr);
+}
+
+size_t LogTagManager::addOrGetMember(InfoIndex& index, WildcardInfo* wildcardInfoPtr)
+{
+    std::vector<LogTagAndId>& members = wildcardInfoPtr->members;
+    constexpr const size_t npos = ~(size_t)0u;
+    const size_t id = index.id;
+    const size_t memberCount = members.size();
+    size_t memberIndex = npos;
+    for (size_t k = 0u; k < memberCount; ++k)
+    {
+        auto& member = members.at(k);
+        if (member.id == id)
+        {
+            memberIndex = k;
+            break;
+        }
+    }
+    if (memberIndex == npos)
+    {
+        memberIndex = memberCount;
+        members.emplace_back(LogTagAndId{});
+        members.back().id = id;
+    }
+    return memberIndex;
+}
+
+bool LogTagManager::updateIndexLogTagPtr(InfoIndex& index, LogTag* ptr)
+{
+    const size_t namePartCount = index.namePartsPtr.size();
+    if (index.fullNameInfoPtr->member.ptr == ptr)
+    {
+        return false;
+    }
+    index.fullNameInfoPtr->member.ptr = ptr;
+    index.firstPartInfoPtr->members[index.firstPartMemberIndex].ptr = ptr;
+    for (size_t namePartIndex = 0u; namePartIndex < namePartCount; ++namePartIndex)
+    {
+        size_t anyPartMemberIndex = index.anyPartMemberIndex[namePartIndex];
+        auto* anyPartInfoPtr = index.anyPartInfoPtrs[namePartIndex];
+        anyPartInfoPtr->members[anyPartMemberIndex].ptr = ptr;
+    }
+    return true;
+}
+
+bool LogTagManager::findAndApplyLevelToTag(InfoIndex& index)
+{
+    const size_t namePartCount = index.namePartsPtr.size();
+    FullNameInfo& fullNameInfo = *(index.fullNameInfoPtr);
+    LogTag* ptr = fullNameInfo.member.ptr;
+    if (!ptr)
+    {
+        return false;
+    }
+    if (fullNameInfo.parsedLevel.valid)
+    {
+        ptr->level = fullNameInfo.parsedLevel.level;
+        return true;
+    }
+    // ======
+    // Based on tentative detail in new implementation, anyPart config has
+    // higher precedence than firstPart config.
+    // ======
+    for (size_t namePartIndex = 0u; namePartIndex < namePartCount; ++namePartIndex)
+    {
+        WildcardInfo& anyPartInfo = *(index.anyPartInfoPtrs[namePartIndex]);
+        if (anyPartInfo.parsedLevel.valid)
+        {
+            ptr->level = anyPartInfo.parsedLevel.level;
+            return true;
+        }
+    }
+    WildcardInfo& firstPartInfo = *(index.firstPartInfoPtr);
+    if (firstPartInfo.parsedLevel.valid)
+    {
+        ptr->level = firstPartInfo.parsedLevel.level;
+        return true;
+    }
+    return false;
+}
+
 void LogTagManager::setLevelByWildcard(const std::string& namePart, LogLevel level, bool isFirst)
 {
+    LockType lock(m_mutex);
     auto& wildcardMap = isFirst ? m_firstParts : m_anyParts;
     auto iter = wildcardMap.find(namePart);
     if (iter == wildcardMap.end())
@@ -152,112 +312,6 @@ void LogTagManager::setLevelByWildcard(const std::string& namePart, LogLevel lev
             member.ptr->level = level;
         }
     }
-}
-
-const LogTagManager::FullNamePair& LogTagManager::assignFullName(const std::string& fullName, LogTag* ptr)
-{
-    auto iter = m_fullNames.find(fullName);
-    if (iter == m_fullNames.end())
-    {
-        // full name never seen before, neither from tag registration nor from parsed config
-        const size_t newId = (m_nextId++);
-        iter = m_fullNames.emplace(fullName, FullNameInfo{}).first;
-        auto& info = iter->second;
-        info.member.id = newId;
-        info.member.ptr = ptr;
-        return *iter;
-    }
-    else
-    {
-        // full name has been seen.
-        auto& info = iter->second;
-        // skip additional processing if nothing changes.
-        if (info.member.ptr == ptr)
-        {
-            return *iter;
-        }
-        info.member.ptr = ptr;
-        // if parsed config having exact full name exists, apply.
-        // (Config using exact full name has highest matching priority.)
-        if (info.member.ptr &&
-            info.parsedLevel.valid)
-        {
-            info.member.ptr->level = info.parsedLevel.level;
-            return *iter;
-        }
-        assignNameParts(*iter);
-        return *iter;
-    }
-}
-
-void LogTagManager::assignNameParts(const FullNamePair& fullNamePair)
-{
-    const auto nameParts = splitNameParts(fullNamePair.first);
-    bool isFirstNamePart = true;
-    for (const std::string& namePart : nameParts)
-    {
-        assignWildcardInfo(fullNamePair, namePart, isFirstNamePart);
-        isFirstNamePart = false;
-    }
-}
-
-void LogTagManager::assignWildcardInfo(const FullNamePair& fullNamePair, const std::string& namePart, bool isFirst)
-{
-    const auto memberIdAndPtr = fullNamePair.second.member;
-    LogTag* const ptr = memberIdAndPtr.ptr;
-    auto& wildcardMap = isFirst ? m_firstParts : m_anyParts;
-    auto wildcardIter = wildcardMap.find(namePart);
-    if (wildcardIter == wildcardMap.end())
-    {
-        wildcardIter = wildcardMap.emplace(namePart, WildcardInfo{}).first;
-        auto& members = wildcardIter->second.members;
-        members.emplace_back(memberIdAndPtr);
-    }
-    else
-    {
-        auto& members = wildcardIter->second.members;
-        auto& foundMember = addOrGetMember(members, memberIdAndPtr);
-        // skip additional processing if nothing changes.
-        if (foundMember.ptr == ptr)
-        {
-            return;
-        }
-        foundMember.ptr = ptr;
-        // if there is parsed config for wildcard but not the full name,
-        // it is applied.
-        // (If both exist, the full name config has higher priority)
-        const bool hasParsedFullNameLevel = fullNamePair.second.parsedLevel.valid;
-        const bool hasParsedWildcardLevel = wildcardIter->second.parsedLevel.valid;
-        if (ptr &&
-            !hasParsedFullNameLevel &&
-            hasParsedWildcardLevel)
-        {
-            LogLevel wildcardLevel = wildcardIter->second.parsedLevel.level;
-            ptr->level = wildcardLevel;
-        }
-    }
-}
-
-LogTagManager::LogTagAndId& LogTagManager::addOrGetMember(std::vector<LogTagAndId>& members, const LogTagAndId& memberArg)
-{
-    const size_t npos = ~(size_t)0u;
-    const size_t memberCount = members.size();
-    size_t memberIndex = npos;
-    for (size_t k = 0u; k < memberCount; ++k)
-    {
-        auto& member = members.at(k);
-        if (member.id == memberArg.id)
-        {
-            memberIndex = k;
-            break;
-        }
-    }
-    if (memberIndex == npos)
-    {
-        memberIndex = memberCount;
-        members.emplace_back(memberArg);
-    }
-    return members.at(memberIndex);
 }
 
 std::vector<std::string> LogTagManager::splitNameParts(const std::string& fullName)
