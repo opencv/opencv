@@ -3,12 +3,16 @@
 
 function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
 
+  ocv_debug_message("ocv_create_builtin_videoio_plugin(${ARGV})")
+
   if(NOT TARGET ${target})
     message(FATAL_ERROR "${target} does not exist!")
   endif()
   if(NOT OpenCV_SOURCE_DIR)
     message(FATAL_ERROR "OpenCV_SOURCE_DIR must be set to build the plugin!")
   endif()
+
+  message(STATUS "Video I/O: add builtin plugin '${name}'")
 
   add_library(${name} MODULE
     "${CMAKE_CURRENT_LIST_DIR}/src/${videoio_src_file}"
@@ -27,6 +31,8 @@ function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
     CXX_VISIBILITY_PRESET hidden
   )
   install(TARGETS ${name} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins OPTIONAL)
+
+  add_dependencies(opencv_videoio_plugins ${name})
 
 endfunction()
 
