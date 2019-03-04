@@ -5,6 +5,8 @@
 #ifndef __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
 #define __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
 
+#include "backend.hpp"
+
 namespace cv
 {
 
@@ -24,6 +26,7 @@ struct VideoBackendInfo {
                       // 0 - disabled (OPENCV_VIDEOIO_PRIORITY_<name> = 0)
                       // >10000 - prioritized list (OPENCV_VIDEOIO_PRIORITY_LIST)
     const char* name;
+    Ptr<IBackendFactory> backendFactory;
 };
 
 namespace videoio_registry {
@@ -33,11 +36,6 @@ std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename();
 std::vector<VideoBackendInfo> getAvailableBackends_Writer();
 
 } // namespace
-
-void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, int index);
-void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, const cv::String& filename);
-void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, VideoCaptureAPIs api,
-        const String& filename, int fourcc, double fps, const Size& frameSize, bool isColor);
 
 } // namespace
 #endif // __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
