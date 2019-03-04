@@ -1728,13 +1728,13 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
             if( calcJ )
             {
-		        CvMat _dpdr = cvMat(_Je.colRange(0, 3));
-				CvMat _dpdt = cvMat(_Je.colRange(3, 6));
-				CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
-				CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
-				CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
-				CvMat _dpdo = _Jo.empty() ? CvMat() : cvMat(_Jo.colRange(0, ni * 3));
-				
+                CvMat _dpdr = cvMat(_Je.colRange(0, 3));
+                CvMat _dpdt = cvMat(_Je.colRange(3, 6));
+                CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
+                CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
+                CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
+                CvMat _dpdo = _Jo.empty() ? CvMat() : cvMat(_Jo.colRange(0, ni * 3));
+
                 cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
                                   (flags & CALIB_FIX_FOCAL_LENGTH) ? nullptr : &_dpdf,
                                   (flags & CALIB_FIX_PRINCIPAL_POINT) ? nullptr : &_dpdc, &_dpdk,
