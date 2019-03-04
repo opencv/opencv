@@ -62,6 +62,97 @@ endfunction()
 
 # ======================
 
+function(download_ie)
+  set(ie_src_dir "${OpenCV_BINARY_DIR}/3rdparty/dldt")
+  set(ie_subdir "dldt-2019_R2")
+  ocv_download(FILENAME "2019_R2.zip"
+               HASH "c486380deb75503adca5d7e88763e4a5"
+               URL
+                 "${OPENCV_IE_URL}"
+                 "$ENV{OPENCV_IE_URL}"
+                 "https://github.com/opencv/dldt/archive/"
+               DESTINATION_DIR ${ie_src_dir}
+               ID IE
+               STATUS res
+               UNPACK RELATIVE_URL)
+
+  if (NOT res)
+      return()
+  endif()
+
+  # This is a minor patch to IE's cmake files.
+  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/cmake/dependencies.cmake" filedata)
+  string(REPLACE "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR" filedata "${filedata}")
+  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/cmake/dependencies.cmake" ${filedata})
+
+  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/src/inference_engine/CMakeLists.txt" filedata)
+  string(REPLACE "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR" filedata "${filedata}")
+  string(REPLACE "PRIVATE ade)" "PRIVATE ade PUBLIC pugixml)" filedata "${filedata}")
+  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/src/inference_engine/CMakeLists.txt" ${filedata})
+
+  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/CMakeLists.txt" filedata)
+  string(REPLACE "add_subdirectory(tests)" "" filedata "${filedata}")  # Disable tests
+  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/CMakeLists.txt" ${filedata})
+
+  # Enable extensions library
+  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/src/CMakeLists.txt" filedata)
+  string(REPLACE "add_subdirectory(extension EXCLUDE_FROM_ALL)" "add_subdirectory(extension)" filedata "${filedata}")
+  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/src/CMakeLists.txt" ${filedata})
+
+  # Download ADE
+  set(ade_src_dir "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/ade")
+  set(ade_filename "v0.1.1d.zip")
+  set(ade_subdir "ade-0.1.1d")
+  set(ade_md5 "37479d90e3a5d47f132f512b22cbe206")
+  ocv_download(FILENAME ${ade_filename}
+               HASH ${ade_md5}
+               URL
+                 "${OPENCV_ADE_URL}"
+                 "$ENV{OPENCV_ADE_URL}"
+                 "https://github.com/opencv/ade/archive/"
+               DESTINATION_DIR ${ade_src_dir}
+               ID ADE
+               STATUS res
+  UNPACK RELATIVE_URL)
+
+  if (NOT res)
+      return()
+  endif()
+
+  if(EXISTS "${ade_src_dir}/${ade_subdir}")
+    file(RENAME "${ade_src_dir}/${ade_subdir}" "${ade_src_dir}_tmp")
+    file(RENAME "${ade_src_dir}_tmp" "${ade_src_dir}")
+  endif()
+
+  set(ENABLE_GNA OFF)
+  set(ENABLE_PROFILING_ITT OFF)
+  set(ENABLE_SAMPLES_CORE OFF)
+  set(ENABLE_SEGMENTATION_TESTS OFF)
+  set(ENABLE_OBJECT_DETECTION_TESTS OFF)
+  set(ENABLE_OPENCV OFF)
+  set(BUILD_TESTS OFF)
+  set(BUILD_SHARED_LIBS OFF)  # pugixml
+
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
+                                       -Wunused-parameter -Wsign-compare -Wstrict-prototypes -Wnon-virtual-dtor
+                                       -Wundef -Wstrict-aliasing -Wsign-promo -Wreorder -Wunused-variable
+                                       -Wunknown-pragmas -Wstrict-overflow -Wextra -Wunused-local-typedefs
+                                       -Wunused-function -Wsequence-point -Wunused-but-set-variable -Wparentheses
+                                       -Wsuggest-override)
+  ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes)
+
+  add_subdirectory(${OpenCV_BINARY_DIR}/3rdparty/dldt/${ie_subdir}/inference-engine
+                   ${OpenCV_BINARY_DIR}/3rdparty/dldt)
+  set_target_properties(MKLDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  set_target_properties(clDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  set_target_properties(ie_cpu_extension PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+
+  set(INF_ENGINE_TARGET inference_engine_s PARENT_SCOPE)
+  set(INF_ENGINE_RELEASE "2018050000" PARENT_SCOPE)
+endfunction()
+
+# ======================
+
 find_package(InferenceEngine QUIET)
 if(InferenceEngine_FOUND)
   set(INF_ENGINE_TARGET ${InferenceEngine_LIBRARIES})
@@ -93,6 +184,10 @@ if(NOT INF_ENGINE_TARGET AND _loc)
   find_library(ie_custom_env_lib_rel "inference_engine" PATHS "${_loc}/deployment_tools/inference_engine/lib/intel64/Release" NO_DEFAULT_PATH)
   find_library(ie_custom_env_lib_dbg "inference_engine" PATHS "${_loc}/deployment_tools/inference_engine/lib/intel64/Debug" NO_DEFAULT_PATH)
   add_custom_ie_build("${ie_custom_env_inc}" "${ie_custom_env_lib}" "${ie_custom_env_lib_rel}" "${ie_custom_env_lib_dbg}" "OpenVINO (${_loc})")
+endif()
+
+if(NOT INF_ENGINE_TARGET)
+  download_ie()
 endif()
 
 # Add more features to the target

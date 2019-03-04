@@ -28,7 +28,7 @@ if(MSVC)
   )
 else()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
-                                       -Wunused-parameter -Wsign-compare
+                                       -Wunused-parameter -Wsign-compare -Wnon-virtual-dtor
   )
 endif()
 if(HAVE_CUDA)

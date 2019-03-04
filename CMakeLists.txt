@@ -276,7 +276,7 @@ OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OP
 OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_HALIDE)
-OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
+OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" ON  # Just for test
   VISIBLE_IF TRUE
   VERIFY INF_ENGINE_TARGET)
 OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
