@@ -54,22 +54,19 @@ public:
         net.setInput(inp);
         Mat out = net.forward("");
 
-        if (useSoftmax) {
-            Net netSoftmax;
+        if (useSoftmax)
+        {
             LayerParams lp;
-            netSoftmax.addLayerToPrev("softmaxLayer", "Softmax", lp);
+            Net netSoftmax;
+            netSoftmax.addLayerToPrev("softmaxLayer", "SoftMax", lp);
+            netSoftmax.setPreferableBackend(DNN_BACKEND_OPENCV);
 
             netSoftmax.setInput(out);
-            netSoftmax.setPreferableBackend(backend);
-            netSoftmax.setPreferableTarget(target);
             out = netSoftmax.forward();
 
             netSoftmax.setInput(ref);
-            netSoftmax.setPreferableBackend(DNN_BACKEND_OPENCV);
-            netSoftmax.setPreferableTarget(DNN_TARGET_CPU);
             ref = netSoftmax.forward();
         }
-
         normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
@@ -265,6 +262,7 @@ TEST_P(Test_ONNX_nets, DISABLED_VGG16)  // memory usage >2Gb
 TEST_P(Test_ONNX_nets, VGG16)
 #endif
 {
+    // output range: [-69; 72], after Softmax [0; 0.96]
     testONNXModels("vgg16", pb, default_l1, default_lInf, true);
 }
 
@@ -274,6 +272,7 @@ TEST_P(Test_ONNX_nets, DISABLED_VGG16_bn)  // memory usage >2Gb
 TEST_P(Test_ONNX_nets, VGG16_bn)
 #endif
 {
+    // output range: [-16; 27], after Softmax [0; 0.67]
     const double lInf = (target == DNN_TARGET_MYRIAD) ? 0.038 : default_lInf;
     testONNXModels("vgg16-bn", pb, default_l1, lInf, true);
 }
@@ -336,11 +335,13 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
 {
+    // output range: [-1952; 6574], after Softmax [0; 1]
     testONNXModels("cnn_mnist", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, MobileNet_v2)
 {
+    // output range: [-166; 317], after Softmax [0; 1]
     testONNXModels("mobilenetv2", pb, default_l1, default_lInf, true);
 }
 
@@ -397,6 +398,7 @@ TEST_P(Test_ONNX_nets, Inception_v2)
 
 TEST_P(Test_ONNX_nets, DenseNet121)
 {
+    // output range: [-87; 138], after Softmax [0; 1]
     testONNXModels("densenet121", pb, default_l1, default_lInf, true);
 }
 
