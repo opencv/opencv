@@ -485,7 +485,7 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *o
         v_store(ofst3, vx_load(ofst + i) * vx_setall_s32(3));
         v_uint8 v_src01, v_src23;
         v_uint16 v_src0, v_src1, v_src2, v_src3;
-        v_zip(vx_lut_quads(src, ofst3), vx_lut_quads(src+3, ofst3), v_src01, v_src23);
+        v_zip(vx_lut_quads(src, ofst3), v_reinterpret_as_u8(v_reinterpret_as_u32(vx_lut_quads(src+2, ofst3)) >> 8), v_src01, v_src23);
         v_expand(v_src01, v_src0, v_src1);
         v_expand(v_src23, v_src2, v_src3);
 
