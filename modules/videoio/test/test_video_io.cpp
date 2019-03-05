@@ -82,7 +82,7 @@ protected:
 public:
     void doTest()
     {
-        if (!videoio_registry::hasBackend(apiPref, videoio_registry::Read))
+        if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         writeVideo();
         VideoCapture cap;
@@ -168,7 +168,7 @@ public:
     }
     void doFrameCountTest()
     {
-        if (!videoio_registry::hasBackend(apiPref, videoio_registry::Read))
+        if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));

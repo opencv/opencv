@@ -21,7 +21,8 @@ set(videoio_srcs
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_decoder.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/src/backend.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_static.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/container_avi.cpp")
 
 file(GLOB videoio_ext_hdrs
