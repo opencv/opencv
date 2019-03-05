@@ -1287,17 +1287,12 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
-        if( allowTransposed )
+        if (allowTransposed && !m.empty() &&
+            d == 2 && m.dims == 2 &&
+            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
+            m.isContinuous())
         {
-            if( !m.isContinuous() )
-            {
-                CV_Assert(!fixedType() && !fixedSize());
-                m.release();
-            }
-
-            if( d == 2 && m.dims == 2 && m.data &&
-                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
-                return;
+            return;
         }
 
         if(fixedType())
@@ -1305,13 +1300,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == d);
+            CV_CheckEQ(m.dims, d, "");
             for(int j = 0; j < d; ++j)
-                CV_Assert(m.size[j] == sizes[j]);
+                CV_CheckEQ(m.size[j], sizes[j], "");
         }
         m.create(d, sizes, mtype);
         return;
@@ -1321,17 +1316,12 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         UMat& m = *(UMat*)obj;
-        if( allowTransposed )
+        if (allowTransposed && !m.empty() &&
+            d == 2 && m.dims == 2 &&
+            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
+            m.isContinuous())
         {
-            if( !m.isContinuous() )
-            {
-                CV_Assert(!fixedType() && !fixedSize());
-                m.release();
-            }
-
-            if( d == 2 && m.dims == 2 && !m.empty() &&
-                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
-                return;
+            return;
         }
 
         if(fixedType())
@@ -1339,13 +1329,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == d);
+            CV_CheckEQ(m.dims, d, "");
             for(int j = 0; j < d; ++j)
-                CV_Assert(m.size[j] == sizes[j]);
+                CV_CheckEQ(m.size[j], sizes[j], "");
         }
         m.create(d, sizes, mtype);
         return;
