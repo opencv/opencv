@@ -1908,7 +1908,6 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_quads(const v_re
 template<typename _Tp, int n> inline v_reg<_Tp, n> v_pack_triplets(const v_reg<_Tp, n>& vec)
 {
     v_reg<float, n> c;
-    int j = 0;
     for (int i = 0; i < n/4; i++)
     {
         c.s[3*i  ] = vec.s[4*i  ];
