@@ -1610,6 +1610,16 @@ inline v_int16x16 v_pack_triplets(const v_int16x16& vec)
 }
 inline v_uint16x16 v_pack_triplets(const v_uint16x16& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
+inline v_int32x8 v_pack_triplets(const v_int32x8& vec)
+{
+    return v_int32x8(_mm256_permutevar8x32_epi32(vec.val, _mm256_set_epi64x(0x0000000700000007, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000)));
+}
+inline v_uint32x8 v_pack_triplets(const v_uint32x8& vec) { return v_reinterpret_as_u32(v_pack_triplets(v_reinterpret_as_s32(vec))); }
+inline v_float32x8 v_pack_triplets(const v_float32x8& vec)
+{
+    return v_float32x8(_mm256_permutevar8x32_ps(vec.val, _mm256_set_epi64x(0x0000000700000007, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000)));
+}
+
 ////////// Matrix operations /////////
 
 inline v_int32x8 v_dotprod(const v_int16x16& a, const v_int16x16& b)
