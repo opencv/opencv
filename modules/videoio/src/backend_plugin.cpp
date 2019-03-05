@@ -167,6 +167,14 @@ public:
                 CV_LOG_INFO(NULL, "Video I/O: plugin is incompatible: " << lib->getName());
                 return;
             }
+            if (plugin_api_->api_header.opencv_version_major != CV_VERSION_MAJOR ||
+                plugin_api_->api_header.opencv_version_minor != CV_VERSION_MINOR)
+            {
+                CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV version used by plugin '" << plugin_api_->api_header.api_description << "': " <<
+                    cv::format("%d.%d, OpenCV version is '" CV_VERSION "'", plugin_api_->api_header.opencv_version_major, plugin_api_->api_header.opencv_version_minor))
+                plugin_api_ = NULL;
+                return;
+            }
             // TODO Preview: add compatibility API/ABI checks
             CV_LOG_INFO(NULL, "Video I/O: loaded plugin '" << plugin_api_->api_header.api_description << "'");
         }
@@ -264,8 +272,17 @@ void PluginBackendFactory::loadPlugin()
             Ptr<PluginBackend> pluginBackend = makePtr<PluginBackend>(lib);
             if (pluginBackend && pluginBackend->plugin_api_)
             {
-                backend = pluginBackend;
-                return;
+                if (pluginBackend->plugin_api_->captureAPI != id_)
+                {
+                    CV_LOG_ERROR(NULL, "Video I/O: plugin '" << pluginBackend->plugin_api_->api_header.api_description <<
+                                       "': unexpected backend ID: " <<
+                                       pluginBackend->plugin_api_->captureAPI << " vs " << (int)id_ << " (expected)");
+                }
+                else
+                {
+                    backend = pluginBackend;
+                    return;
+                }
             }
         }
         catch (...)
