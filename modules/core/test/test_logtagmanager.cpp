@@ -442,4 +442,204 @@ TEST_P(LogTagManagerSubstrNonConfusionFixture, ParameterizedTestFunc)
     EXPECT_NE(tagSoursop.level, constTestLevelAltChanged) << "Should not be changed unless confusion bug exists";
 }
 
+// LogTagManagerNamePartNonConfusionFixture are non-confusion tests that assumes
+// no substring confusions are happening, and proceed to test matching by name parts.
+// In particular, setLevelByFirstPart() and setLevelByAnyPart() are the focus of these tests.
+class LogTagManagerNamePartNonConfusionFixture
+    : public LogTagManagerTestFixture
+    , public ::testing::WithParamInterface<std::tuple<int, ByWhat, int, Timing, Timing>>
+{
+public:
+    struct MyTestParam
+    {
+        // Config tag name can only specify either full name or exactly one name part.
+        // When specifying exactly one name part, there is a choice of matching the
+        // first name part of a tag, or matching any name part that appears in a tag
+        // name regardless of its position.
+        const int configTagIndex;
+        const ByWhat configMatchBy;
+        const int targetTagIndex;
+        const Timing whenToAssignTargetTag;
+        const Timing whenToAssignConfigTag;
+        MyTestParam(const std::tuple<int, ByWhat, int, Timing, Timing>& args)
+            : configTagIndex(std::get<0u>(args))
+            , configMatchBy(std::get<1u>(args))
+            , targetTagIndex(std::get<2u>(args))
+            , whenToAssignTargetTag(std::get<3u>(args))
+            , whenToAssignConfigTag(std::get<4u>(args))
+        {
+        }
+    };
+
+protected:
+    LogTag m_apple;
+    LogTag m_banana;
+    LogTag m_coconut;
+    LogTag m_orange;
+    LogTag m_pineapple;
+    LogTag m_bananaDotOrange;
+    LogTag m_bananaDotPineapple;
+    LogTag m_coconutDotPineapple;
+
+protected:
+    static constexpr const char* strApple = "apple";
+    static constexpr const char* strBanana = "banana";
+    static constexpr const char* strCoconut = "coconut";
+    static constexpr const char* strOrange = "orange";
+    static constexpr const char* strPineapple = "pineapple";
+    static constexpr const char* strBananaDotOrange = "banana.orange";
+    static constexpr const char* strBananaDotPineapple = "banana.pineapple";
+    static constexpr const char* strCoconutDotPineapple = "coconut.pineapple";
+
+public:
+    LogTagManagerNamePartNonConfusionFixture()
+        : LogTagManagerTestFixture(constTestLevelAltBegin)
+        , m_apple(strApple, constTestLevelBegin)
+        , m_banana(strBanana, constTestLevelBegin)
+        , m_coconut(strCoconut, constTestLevelBegin)
+        , m_orange(strOrange, constTestLevelBegin)
+        , m_pineapple(strPineapple, constTestLevelBegin)
+        , m_bananaDotOrange(strBananaDotOrange, constTestLevelBegin)
+        , m_bananaDotPineapple(strBananaDotPineapple, constTestLevelBegin)
+        , m_coconutDotPineapple(strCoconutDotPineapple, constTestLevelBegin)
+    {
+    }
+
+protected:
+    LogTag* getLogTagByIndex(int index)
+    {
+        switch (index)
+        {
+        case 0:
+            return &m_apple;
+        case 1:
+            return &m_banana;
+        case 2:
+            return &m_coconut;
+        case 3:
+            return &m_orange;
+        case 4:
+            return &m_pineapple;
+        case 5:
+            return &m_bananaDotOrange;
+        case 6:
+            return &m_bananaDotPineapple;
+        case 7:
+            return &m_coconutDotPineapple;
+        default:
+            ADD_FAILURE() << "Invalid parameterized test value, check test case. "
+                << "Function LogTagManagerNamePartNonConfusionFixture::getLogTagByIndex.";
+            return nullptr;
+        }
+    }
+
+    // findTabulatedExpectedResult returns the hard-coded expected results for parameterized
+    // test cases. The tables need updated if the index, name, or ordering of test tags are
+    // changed.
+    bool findTabulatedExpectedResult(const MyTestParam& myTestParam) const
+    {
+        // expectedResultUsingFirstPart:
+        // Each row ("config") specifies the tag name specifier used to call setLevelByFirstPart().
+        // Each column ("target") specifies whether an actual tag with the "target"
+        // name would have its log level changed because of the call to setLevelByFirstPart().
+        static constexpr const bool expectedResultUsingFirstPart[5][8] =
+        {
+            /*byFirstPart(apple)*/ { true, false, false, false, false, false, false, false },
+            /*byFirstPart(banana)*/ { false, true, false, false, false, true, true, false },
+            /*byFirstPart(coconut)*/ { false, false, true, false, false, false, false, true },
+            /*byFirstPart(orange)*/ { false, false, false, true, false, false, false, false },
+            /*byFirstPart(pineapple)*/ { false, false, false, false, true, false, false, false },
+        };
+
+        // expectedResultUsingAnyPart:
+        // Each row ("config") specifies the tag name specifier used to call setLevelByAnyPart().
+        // Each column ("target") specifies whether an actual tag with the "target"
+        // name would have its log level changed because of the call to setLevelByAnyPart().
+        static constexpr const bool expectedResultUsingAnyPart[5][8] =
+        {
+            /*byAnyPart(apple)*/ { true, false, false, false, false, false, false, false },
+            /*byAnyPart(banana)*/ { false, true, false, false, false, true, true, false },
+            /*byAnyPart(coconut)*/ { false, false, true, false, false, false, false, true },
+            /*byAnyPart(orange)*/ { false, false, false, true, false, true, false, false },
+            /*byAnyPart(pineapple)*/ { false, false, false, false, true, false, true, true },
+        };
+
+        switch (myTestParam.configMatchBy)
+        {
+        case ByWhat::ByFirstPart:
+            return expectedResultUsingFirstPart[myTestParam.configTagIndex][myTestParam.targetTagIndex];
+        case ByWhat::ByAnyPart:
+            return expectedResultUsingAnyPart[myTestParam.configTagIndex][myTestParam.targetTagIndex];
+        default:
+            ADD_FAILURE() << "Invalid parameterized test value, check test case. "
+                << "Function LogTagManagerNamePartNonConfusionFixture::getLogTagByIndex.";
+            return false;
+        }
+    }
+};
+
+INSTANTIATE_TEST_CASE_P(
+    LogTagManagerNamePartNonConfusionTest,
+    LogTagManagerNamePartNonConfusionFixture,
+    ::testing::Combine(
+        ::testing::Values(0, 1, 2, 3, 4),
+        ::testing::Values(ByWhat::ByFirstPart, ByWhat::ByAnyPart),
+        ::testing::Values(0, 1, 2, 3, 4, 5, 6, 7),
+        ::testing::Values(Timing::Before, Timing::After),
+        ::testing::Values(Timing::Before, Timing::After, Timing::Never)
+    )
+);
+
+TEST_P(LogTagManagerNamePartNonConfusionFixture, NamePartTestFunc)
+{
+    const auto myTestParam = MyTestParam(GetParam());
+    LogTag* configTag = getLogTagByIndex(myTestParam.configTagIndex);
+    LogTag* targetTag = getLogTagByIndex(myTestParam.targetTagIndex);
+    ASSERT_NE(configTag, nullptr) << "Invalid parameterized test value, check value of myTestParam.configTagIndex.";
+    ASSERT_NE(targetTag, nullptr) << "Invalid parameterized test value, check value of myTestParam.targetTagIndex.";
+    if (myTestParam.whenToAssignConfigTag == Timing::Before)
+    {
+        m_logTagManager.assign(configTag->name, configTag);
+    }
+    if (myTestParam.whenToAssignTargetTag == Timing::Before)
+    {
+        m_logTagManager.assign(targetTag->name, targetTag);
+    }
+    switch (myTestParam.configMatchBy)
+    {
+    case ByWhat::ByFirstPart:
+        m_logTagManager.setLevelByFirstPart(configTag->name, constTestLevelChanged);
+        break;
+    case ByWhat::ByAnyPart:
+        m_logTagManager.setLevelByAnyPart(configTag->name, constTestLevelChanged);
+        break;
+    default:
+        FAIL() << "Invalid parameterized test value, check test case. "
+            << "Fixture LogTagManagerNamePartNonConfusionFixture, Case NamePartTestFunc.";
+    }
+    if (myTestParam.whenToAssignConfigTag == Timing::After)
+    {
+        m_logTagManager.assign(configTag->name, configTag);
+    }
+    if (myTestParam.whenToAssignTargetTag == Timing::After)
+    {
+        m_logTagManager.assign(targetTag->name, targetTag);
+    }
+    // Verifies the registration of the log tag pointer. If fail, cannot proceed
+    // because it is not certain whether the returned pointer is valid to dereference
+    ASSERT_EQ(m_logTagManager.get(targetTag->name), targetTag);
+    // Verifies the log level of target tag
+    const bool isChangeExpected = findTabulatedExpectedResult(myTestParam);
+    if (isChangeExpected)
+    {
+        EXPECT_EQ(targetTag->level, constTestLevelChanged);
+        EXPECT_NE(targetTag->level, constTestLevelBegin);
+    }
+    else
+    {
+        EXPECT_EQ(targetTag->level, constTestLevelBegin);
+        EXPECT_NE(targetTag->level, constTestLevelChanged);
+    }
+}
+
 }} // namespace
