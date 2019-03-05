@@ -48,6 +48,16 @@ def check_dir(d, create=False, clean=False):
             os.makedirs(d)
     return d
 
+def check_executable(cmd):
+    try:
+        log.debug("Executing: %s" % cmd)
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        log.debug("Result: %s" % (result+'\n').split('\n')[0])
+        return True
+    except Exception as e:
+        log.debug('Failed: %s' % e)
+        return False
+
 def determine_engine_version(manifest_path):
     with open(manifest_path, "rt") as f:
         return re.search(r'android:versionName="(\d+\.\d+)"', f.read(), re.MULTILINE).group(1)
@@ -135,6 +145,38 @@ class Builder:
         self.opencv_version = determine_opencv_version(os.path.join(self.opencvdir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
         self.engine_version = determine_engine_version(os.path.join(self.opencvdir, "platforms", "android", "service", "engine", "AndroidManifest.xml"))
         self.use_ccache = False if config.no_ccache else True
+        self.cmake_path = self.get_cmake()
+        self.ninja_path = self.get_ninja()
+
+    def get_cmake(self):
+        if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
+            log.info("Using cmake from PATH")
+            return 'cmake'
+        # look to see if Android SDK's cmake is installed
+        android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
+        if os.path.exists(android_cmake):
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'cmake'), '--version'])]
+            if len(cmake_subdirs) > 0:
+                # there could be more than one - just take the first one
+                cmake_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'cmake')
+                log.info("Using cmake from Android SDK: %s", cmake_from_sdk)
+                return cmake_from_sdk
+        raise Fail("Can't find cmake")
+
+    def get_ninja(self):
+        if not self.config.use_android_buildtools and check_executable(['ninja', '--version']):
+            log.info("Using ninja from PATH")
+            return 'ninja'
+        # Android SDK's cmake includes a copy of ninja - look to see if its there
+        android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
+        if os.path.exists(android_cmake):
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'ninja'), '--version'])]
+            if len(cmake_subdirs) > 0:
+                # there could be more than one - just take the first one
+                ninja_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'ninja')
+                log.info("Using ninja from Android SDK: %s", ninja_from_sdk)
+                return ninja_from_sdk
+        raise Fail("Can't find ninja")
 
     def get_toolchain_file(self):
         if not self.config.force_opencv_toolchain:
@@ -160,9 +202,10 @@ class Builder:
             rm_one(d)
 
     def build_library(self, abi, do_install):
-        cmd = ["cmake", "-GNinja"]
+        cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
+            INSTALL_CREATE_DISTRIB="ON",
             WITH_OPENCL="OFF",
             WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
             WITH_TBB="ON",
@@ -173,6 +216,8 @@ class Builder:
             BUILD_ANDROID_EXAMPLES="ON",
             INSTALL_ANDROID_EXAMPLES="ON",
         )
+        if self.ninja_path != 'ninja':
+            cmake_vars['CMAKE_MAKE_PROGRAM'] = self.ninja_path
 
         if self.config.extra_modules_path is not None:
             cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
@@ -187,20 +232,22 @@ class Builder:
         cmd.append(self.opencvdir)
         execute(cmd)
         if do_install:
-            execute(["ninja"])
+            execute([self.ninja_path])
             for c in ["libs", "dev", "java", "samples"]:
-                execute(["cmake", "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
+                execute([self.cmake_path, "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
         else:
-            execute(["ninja", "install/strip"])
+            execute([self.ninja_path, "install/strip"])
 
     def build_engine(self, abi, engdest):
-        cmd = ["cmake", "-GNinja"]
+        cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             WITH_OPENCL="OFF",
             WITH_IPP="OFF",
             BUILD_ANDROID_SERVICE = 'ON'
         )
+        if self.ninja_path != 'ninja':
+            cmake_vars['CMAKE_MAKE_PROGRAM'] = self.ninja_path
         cmake_vars.update(abi.cmake_vars)
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
@@ -227,7 +274,7 @@ class Builder:
                 log.info("Generating XML config: %s", xmlname)
                 ET.ElementTree(r).write(xmlname, encoding="utf-8")
 
-        execute(["ninja", "opencv_engine"])
+        execute([self.ninja_path, "opencv_engine"])
         execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"],
             shell=(sys.platform == 'win32'))
         # TODO: Sign apk
@@ -299,6 +346,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', default='ndk-10.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
+    parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')
     parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
     parser.add_argument('--sign_with', help="Certificate to sign the Manager apk")
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")
@@ -315,6 +363,23 @@ if __name__ == "__main__":
         os.environ["ANDROID_NDK"] = args.ndk_path
     if args.sdk_path is not None:
         os.environ["ANDROID_SDK"] = args.sdk_path
+
+    if not 'ANDROID_HOME' in os.environ and 'ANDROID_SDK' in os.environ:
+        os.environ['ANDROID_HOME'] = os.environ["ANDROID_SDK"]
+
+    if not 'ANDROID_SDK' in os.environ:
+        raise Fail("SDK location not set. Either pass --sdk_path or set ANDROID_SDK environment variable")
+
+    # look for an NDK installed with the Android SDK
+    if not 'ANDROID_NDK' in os.environ and 'ANDROID_SDK' in os.environ and os.path.exists(os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')):
+        os.environ['ANDROID_NDK'] = os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')
+
+    if not 'ANDROID_NDK' in os.environ:
+        raise Fail("NDK location not set. Either pass --ndk_path or set ANDROID_NDK environment variable")
+
+    if not check_executable(['ccache', '--version']):
+        log.info("ccache not found - disabling ccache support")
+        args.no_ccache = True
 
     if os.path.realpath(args.work_dir) == os.path.realpath(SCRIPT_DIR):
         raise Fail("Specify workdir (building from script directory is not supported)")
