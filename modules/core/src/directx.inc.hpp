@@ -48,6 +48,7 @@
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
 #include <CL/cl_d3d11.h>
+#include <CL/cl_d3d11_ext.h>
 #include <CL/cl_d3d10.h>
 #include <CL/cl_dx9_media_sharing.h>
 #endif // HAVE_OPENCL

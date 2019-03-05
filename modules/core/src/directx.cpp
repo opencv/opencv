@@ -168,7 +168,7 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
     //case DXGI_FORMAT_BC7_TYPELESS:
     //case DXGI_FORMAT_BC7_UNORM:
     //case DXGI_FORMAT_BC7_UNORM_SRGB:
-#ifdef HAVE_DIRECTX_NV12
+#ifdef HAVE_DIRECTX_NV12 //D3DX11 should support DXGI_FORMAT_NV12.
     case DXGI_FORMAT_NV12: return CV_8UC3;
 #endif
     default: break;
@@ -248,25 +248,108 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    cl_uint numPlatforms;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
-    if (numPlatforms == 0)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
+  CV_UNUSED(pD3D11Device);
+	cl_uint numPlatforms;
+	cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+	if (status != CL_SUCCESS)
+		CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+	if (numPlatforms == 0)
+		CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
-    std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+	std::vector<cl_platform_id> platforms(numPlatforms);
+	status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+	if (status != CL_SUCCESS)
+		CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
-    // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
+	// TODO Filter platforms by name from OPENCV_OPENCL_DEVICE.
 
-    int found = -1;
-    cl_device_id device = NULL;
-    cl_uint numDevices = 0;
-    cl_context context = NULL;
+	int found = -1;
+	cl_device_id device = NULL;
+	cl_uint numDevices = 0;
+	cl_context context = NULL;
 
+#ifdef HAVE_CUDA
+	// try with CL_PREFERRED_DEVICES_FOR_D3D11_NV
+	for (int i = 0; i < (int)numPlatforms; i++)
+	{
+		clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
+			clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+		if (!clGetDeviceIDsFromD3D11NV)
+			continue;
+
+		device = NULL;
+		numDevices = 0;
+		status = clGetDeviceIDsFromD3D11NV(
+			platforms[i], 
+			CL_D3D11_DEVICE_NV, 
+			pD3D11Device,
+			CL_PREFERRED_DEVICES_FOR_D3D11_NV, //CL_PREFERRED_DEVICES_FOR_D3D11_NV
+			1, 
+			&device, 
+			&numDevices);
+		if (status != CL_SUCCESS)
+			continue;
+		if (numDevices > 0)
+		{
+			cl_context_properties properties[] = {
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+				CL_CONTEXT_D3D11_DEVICE_NV, (cl_context_properties)(pD3D11Device),
+				//CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+				0
+			};
+
+			context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+			if (status != CL_SUCCESS)
+			{
+				clReleaseDevice(device);
+			}
+			else
+			{
+				found = i;
+				break;
+			}
+		}
+	}
+	if (found < 0)
+	{
+		// try with CL_ALL_DEVICES_FOR_D3D11_NV
+		for (int i = 0; i < (int)numPlatforms; i++)
+		{
+			clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
+				clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+			if (!clGetDeviceIDsFromD3D11NV)
+				continue;
+
+			device = NULL;
+			numDevices = 0;
+			status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
+				CL_ALL_DEVICES_FOR_D3D11_NV, 1, &device, &numDevices);//CL_ALL_DEVICES_FOR_D3D11_NV
+			if (status != CL_SUCCESS)
+				continue;
+			if (numDevices > 0)
+			{
+				cl_context_properties properties[] = {
+					CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+					CL_CONTEXT_D3D11_DEVICE_NV, (cl_context_properties)(pD3D11Device),
+					//CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+					0
+				};
+				context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+				if (status != CL_SUCCESS)
+				{
+					clReleaseDevice(device);
+				}
+				else
+				{
+					found = i;
+					break;
+				}
+			}
+		}
+		if (found < 0)
+			CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
+	}
+#else //KHR
     // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
     for (int i = 0; i < (int)numPlatforms; i++)
     {
@@ -340,7 +423,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         if (found < 0)
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
-
+#endif
 
     Context& ctx = Context::getDefault(false);
     initializeContextFromHandle(ctx, platforms[found], context, device);
@@ -678,32 +761,56 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
 
 } // namespace cv::ocl
 
-#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+#if defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
+
+#ifdef HAVE_CUDA
+clCreateFromD3D11Texture2DNV_fn clCreateFromD3D11Texture2DNV = NULL;
+clEnqueueAcquireD3D11ObjectsNV_fn clEnqueueAcquireD3D11ObjectsNV = NULL;
+clEnqueueReleaseD3D11ObjectsNV_fn clEnqueueReleaseD3D11ObjectsNV = NULL;
+#else
 clCreateFromD3D11Texture2DKHR_fn clCreateFromD3D11Texture2DKHR = NULL;
 clEnqueueAcquireD3D11ObjectsKHR_fn clEnqueueAcquireD3D11ObjectsKHR = NULL;
 clEnqueueReleaseD3D11ObjectsKHR_fn clEnqueueReleaseD3D11ObjectsKHR = NULL;
+#endif //HAVE_CUDA
 
 static void __OpenCLinitializeD3D11()
 {
-    using namespace cv::ocl;
-    static cl_platform_id initializedPlatform = NULL;
-    cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
-    if (initializedPlatform != platform)
-    {
-        clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
-        clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
-        clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
-        initializedPlatform = platform;
-    }
-    if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
-    {
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
-    }
+	using namespace cv::ocl;
+	static cl_platform_id initializedPlatform = NULL;
+	cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
+#ifdef HAVE_CUDA
+	if (initializedPlatform != platform)
+	{
+		clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
+		clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
+		clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
+		initializedPlatform = platform;
+	}
+	if (!clCreateFromD3D11Texture2DNV || !clEnqueueAcquireD3D11ObjectsNV || !clEnqueueReleaseD3D11ObjectsNV)
+	{
+		CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
+	}
+#else 
+	if (initializedPlatform != platform)
+	{
+		clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
+		clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
+		clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
+			clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
+		initializedPlatform = platform;
+	}
+	if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
+	{
+		CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
+	}
+#endif// HAVE_CUDA
 }
-#endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+#endif//defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
 
 } // namespace directx
 
@@ -798,12 +905,48 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     cl_mem clImageUV = 0;
 #endif
 
-    clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
+#ifdef HAVE_CUDA
+
+ clImage = clCreateFromD3D11Texture2DNV(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DNV failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if (DXGI_FORMAT_NV12 == desc.Format)
+    {
+        clImageUV = clCreateFromD3D11Texture2DNV(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 1, &status);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DNV failed");
+    }
+#endif
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        status = clEnqueueAcquireD3D11ObjectsNV(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsNV failed");
+        
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clEnqueueAcquireD3D11ObjectsNV(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsNV failed");
+
+        if(!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImage, clImageUV))
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
+
+        status = clEnqueueReleaseD3D11ObjectsNV(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsNV failed");
+    }
+    else
+#endif
+#else
+ clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
 
 #ifdef HAVE_DIRECTX_NV12
-    if(DXGI_FORMAT_NV12 == desc.Format)
+    if (DXGI_FORMAT_NV12 == desc.Format)
     {
         clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 1, &status);
         if (status != CL_SUCCESS)
@@ -812,8 +955,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 #endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-
-    status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
 
@@ -833,6 +975,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     }
     else
 #endif
+#endif
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
@@ -843,10 +986,15 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
     }
 
+#ifdef HAVE_CUDA
+    status = clEnqueueReleaseD3D11ObjectsNV(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsNV failed");
+#else
     status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
-
+#endif
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
@@ -902,6 +1050,45 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     cl_int status = 0;
     cl_mem clImage = 0;
 
+#ifdef HAVE_CUDA
+	clImage = clCreateFromD3D11Texture2DNV(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
+	if (status != CL_SUCCESS)
+		CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DNV failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    cl_mem clImageUV = 0;
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        clImageUV = clCreateFromD3D11Texture2DNV(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
+		if (status != CL_SUCCESS)
+			CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DNV failed");
+    }
+#endif
+
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+    status = clEnqueueAcquireD3D11ObjectsNV(q, 1, &clImage, 0, NULL, NULL);
+	if (status != CL_SUCCESS)
+		CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsNV failed");
+
+#ifdef HAVE_DIRECTX_NV12
+	if (DXGI_FORMAT::DXGI_FORMAT_NV12 == desc.Format)
+	{
+		status = clEnqueueAcquireD3D11ObjectsNV(q, 1, &clImageUV, 0, NULL, NULL);
+		if (status != CL_SUCCESS)
+			CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsNV failed");
+
+		if (!ocl::ocl_convert_nv12_to_bgr(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
+			CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
+
+		status = clEnqueueReleaseD3D11ObjectsNV(q, 1, &clImageUV, 0, NULL, NULL);
+		if (status != CL_SUCCESS)
+			CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsNV failed");
+	}
+	else
+#endif
+
+#else //!HAVE_CUDA
+
     clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
@@ -910,14 +1097,13 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     cl_mem clImageUV = 0;
     if(DXGI_FORMAT_NV12 == desc.Format)
     {
-        clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
+         clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
 #endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
@@ -938,6 +1124,8 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     }
     else
 #endif
+
+#endif
     {
         size_t offset = 0; // TODO
         size_t origin[3] = { 0, 0, 0 };
@@ -948,9 +1136,15 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
     }
 
+#ifdef HAVE_CUDA
+	status = clEnqueueReleaseD3D11ObjectsNV(q, 1, &clImage, 0, NULL, NULL);
+	if (status != CL_SUCCESS)
+		CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsNV failed");
+#else
     status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
+#endif
 
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
@@ -972,7 +1166,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #else
     // TODO memcpy
     NO_OPENCL_SUPPORT_ERROR;
-#endif
+#endif 
 }
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
