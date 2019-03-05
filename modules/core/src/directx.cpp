@@ -248,7 +248,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-  CV_UNUSED(pD3D11Device);
+    CV_UNUSED(pD3D11Device);
 	cl_uint numPlatforms;
 	cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
 	if (status != CL_SUCCESS)
@@ -262,7 +262,6 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 		CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
 	// TODO Filter platforms by name from OPENCV_OPENCL_DEVICE.
-
 	int found = -1;
 	cl_device_id device = NULL;
 	cl_uint numDevices = 0;
@@ -810,7 +809,7 @@ static void __OpenCLinitializeD3D11()
 	}
 #endif// HAVE_CUDA
 }
-#endif//defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
+#endif// defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
 
 } // namespace directx
 
@@ -865,7 +864,6 @@ bool ocl_convert_bgr_to_nv12(
 #endif // HAVE_DIRECTX && HAVE_OPENCL
 
 } // namespace ocl
-
 
 namespace directx {
 
@@ -1017,7 +1015,6 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     NO_OPENCL_SUPPORT_ERROR;
 #endif
 }
-
 
 void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
