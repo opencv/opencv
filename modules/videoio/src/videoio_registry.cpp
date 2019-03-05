@@ -3,13 +3,10 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
-#include <map>
 
 #include "videoio_registry.hpp"
 
 #include "opencv2/videoio/registry.hpp"
-
-#include <iostream>
 
 #include "cap_librealsense.hpp"
 #include "cap_dshow.hpp"
@@ -33,20 +30,20 @@
 #pragma warning(disable: 4748)
 #endif
 
-//=================================================================
-// Private interface
-//=================================================================
+using namespace cv;
 
-namespace cv
-{
+namespace cv {
+
+namespace {
+
 #define DECLARE_DYNAMIC_BACKEND(cap, name, mode) \
 { \
-    cap, (BackendMode)(mode | MODE_DYNAMIC), 1000, name "_DYNAMIC", 0 \
+    cap, (BackendMode)(mode), 1000, name, createPluginBackendFactory(cap, name) \
 }
 
-#define DECLARE_STATIC_BACKEND(cap, name, mode, f1, f2, f3) \
+#define DECLARE_STATIC_BACKEND(cap, name, mode, createCaptureFile, createCaptureCamera, createWriter) \
 { \
-    cap, (BackendMode)(mode), 1000, name, Ptr<StaticBackend>(new StaticBackend(f1, f2, f3)) \
+    cap, (BackendMode)(mode), 1000, name, createBackendFactory(createCaptureFile, createCaptureCamera, createWriter) \
 }
 
 /** Ordering guidelines:
@@ -133,147 +130,177 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_XINE
     DECLARE_STATIC_BACKEND(CAP_XINE, "XINE", MODE_CAPTURE_BY_FILENAME, createXINECapture, 0, 0),
 #endif
+
     // dropped backends: MIL, TYZX, Android
 };
 
-inline static bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
+bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
 {
     return lhs.priority > rhs.priority;
 }
 
-inline static std::vector<std::string> tokenize_string(const std::string& input, char token = ',')
+/** @brief Manages list of enabled backends
+ */
+class VideoBackendRegistry
 {
-    std::vector<std::string> result;
-    std::string::size_type prev_pos = 0, pos = 0;
-    while((pos = input.find(token, pos)) != std::string::npos)
+protected:
+    std::vector<VideoBackendInfo> enabledBackends;
+    VideoBackendRegistry()
     {
-        result.push_back(input.substr(prev_pos, pos-prev_pos));
-        prev_pos = ++pos;
-    }
-    result.push_back(input.substr(prev_pos));
-    return result;
-}
-
-VideoBackendRegistry::VideoBackendRegistry()
-{
-    typedef std::vector<std::string> PriorityVec;
-    using namespace cv::utils;
-    const std::string backendOrder_str = getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
-    const PriorityVec backendOrder = tokenize_string(backendOrder_str);
-    if (!backendOrder.empty())
-    {
-        CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << backendOrder_str);
-    }
-
-    const int N = sizeof(builtin_backends)/sizeof(builtin_backends[0]);
-    for (int i = 0; i < N; ++i)
-    {
-        VideoBackendInfo be = builtin_backends[i];
-
-        // Check if backend needs plugin
-        if (be.mode & MODE_DYNAMIC)
+        const int N = sizeof(builtin_backends)/sizeof(builtin_backends[0]);
+        enabledBackends.assign(builtin_backends, builtin_backends + N);
+        for (int i = 0; i < N; i++)
         {
-            Ptr<DynamicBackend> plugin = DynamicBackend::load(be.id, (int)be.mode);
-            if (!plugin)
+            VideoBackendInfo& info = enabledBackends[i];
+            info.priority = 1000 - i * 10;
+        }
+        CV_LOG_DEBUG(NULL, "VIDEOIO: Builtin backends(" << N << "): " << dumpBackends());
+        if (readPrioritySettings())
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO: Updated backends priorities: " << dumpBackends());
+        }
+        int enabled = 0;
+        for (int i = 0; i < N; i++)
+        {
+            VideoBackendInfo& info = enabledBackends[enabled];
+            if (enabled != i)
+                info = enabledBackends[i];
+            size_t param_priority = utils::getConfigurationParameterSizeT(cv::format("OPENCV_VIDEOIO_PRIORITY_%s", info.name).c_str(), (size_t)info.priority);
+            CV_Assert(param_priority == (size_t)(int)param_priority); // overflow check
+            if (param_priority > 0)
             {
-                CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << be.name << " (no plugin)");
-                continue;
+                info.priority = (int)param_priority;
+                enabled++;
             }
             else
             {
-                be.backendFactory = plugin;
+                CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << info.name);
             }
         }
-
-        // initial priority (e.g. for 4 elems: 1000, 990, 980, 970)
-        be.priority = 1000 - i * 10;
-        CV_LOG_INFO(NULL, "VIDEOIO: Init backend priority: " << be.name << " -> " << be.priority);
-
-        // priority from environment list (e.g. for 4 elems: 13000, 12000, 11000, 10000)
-        PriorityVec::const_iterator backendPos = std::find(backendOrder.begin(), backendOrder.end(), be.name);
-        if (backendPos != backendOrder.end())
-        {
-            const int env_priority2 = static_cast<int>(backendOrder.end() - backendPos - 1);
-            be.priority = 10000 + 1000 * env_priority2;
-            CV_LOG_INFO(NULL, "VIDEOIO: Update backend priority: " << be.name << " -> " << be.priority);
-        }
-
-        // priority from environment variable
-        const std::string priority_var = std::string("OPENCV_VIDEOIO_PRIORITY_") + be.name;
-        const size_t env_priority2 = getConfigurationParameterSizeT(priority_var.c_str(), (size_t)be.priority);
-        CV_Assert(env_priority2 == (size_t)(int)env_priority2); // overflow check
-        if (env_priority2 == 0)
-        {
-            CV_LOG_INFO(NULL, "VIDEOIO: Disable backend: " << be.name << " (user)");
-            continue;
-        }
-        else if (be.priority != (int)env_priority2)
-        {
-            be.priority = (int)env_priority2;
-            CV_LOG_INFO(NULL, "VIDEOIO: Update backend priority: " << be.name << " -> " << be.priority);
-        }
-
-        enabledBackends.push_back(be);
+        enabledBackends.resize(enabled);
+        CV_LOG_DEBUG(NULL, "VIDEOIO: Available backends(" << enabled << "): " << dumpBackends());
+        std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
+        CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
     }
-    std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
-    CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends: " << dumpBackends());
-}
 
-std::string VideoBackendRegistry::dumpBackends() const
-{
-    std::ostringstream os;
-    for (size_t i = 0; i < enabledBackends.size(); i++)
+    static std::vector<std::string> tokenize_string(const std::string& input, char token)
     {
-        if (i > 0) os << "; ";
-        const VideoBackendInfo& info = enabledBackends[i];
-        os << info.name << '(' << info.priority << ')';
+        std::vector<std::string> result;
+        std::string::size_type prev_pos = 0, pos = 0;
+        while((pos = input.find(token, pos)) != std::string::npos)
+        {
+            result.push_back(input.substr(prev_pos, pos-prev_pos));
+            prev_pos = ++pos;
+        }
+        result.push_back(input.substr(prev_pos));
+        return result;
     }
-    return os.str();
-}
-
-VideoBackendRegistry &VideoBackendRegistry::getInstance()
-{
-    static VideoBackendRegistry g_instance;
-    return g_instance;
-}
-
-Ptr<IBackend> VideoBackendRegistry::getBackend(VideoCaptureAPIs api) const
-{
-    BackendsVec result;
-    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
-        if (api == i->id)
-            return i->backendFactory;
-    return Ptr<IBackend>(0);
-}
-
-VideoBackendRegistry::BackendsVec VideoBackendRegistry::getBackends(int capabilityMask, VideoCaptureAPIs filter) const
-{
-    BackendsVec result;
-    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
+    bool readPrioritySettings()
     {
-        if (filter != CAP_ANY && filter != i->id)
-            continue;
-        if (i->mode & capabilityMask)
-            result.push_back(*i);
+        bool hasChanges = false;
+        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
+        if (prioritized_backends.empty())
+            return hasChanges;
+        CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << prioritized_backends);
+        const std::vector<std::string> names = tokenize_string(prioritized_backends, ',');
+        for (size_t i = 0; i < names.size(); i++)
+        {
+            const std::string& name = names[i];
+            bool found = false;
+            for (size_t k = 0; k < enabledBackends.size(); k++)
+            {
+                VideoBackendInfo& info = enabledBackends[k];
+                if (name == info.name)
+                {
+                    info.priority = (int)(100000 + (names.size() - i) * 1000);
+                    CV_LOG_DEBUG(NULL, "VIDEOIO: New backend priority: '" << name << "' => " << info.priority);
+                    found = true;
+                    hasChanges = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                CV_LOG_WARNING(NULL, "VIDEOIO: Can't prioritize unknown/unavailable backend: '" << name << "'");
+            }
+        }
+        return hasChanges;
     }
+public:
+    std::string dumpBackends() const
+    {
+        std::ostringstream os;
+        for (size_t i = 0; i < enabledBackends.size(); i++)
+        {
+            if (i > 0) os << "; ";
+            const VideoBackendInfo& info = enabledBackends[i];
+            os << info.name << '(' << info.priority << ')';
+        }
+        return os.str();
+    }
+
+    static VideoBackendRegistry& getInstance()
+    {
+        static VideoBackendRegistry g_instance;
+        return g_instance;
+    }
+
+    inline std::vector<VideoBackendInfo> getEnabledBackends() const { return enabledBackends; }
+
+    inline std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex() const
+    {
+        std::vector<VideoBackendInfo> result;
+        for (size_t i = 0; i < enabledBackends.size(); i++)
+        {
+            const VideoBackendInfo& info = enabledBackends[i];
+            if (info.mode & MODE_CAPTURE_BY_INDEX)
+                result.push_back(info);
+        }
+        return result;
+    }
+    inline std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename() const
+    {
+        std::vector<VideoBackendInfo> result;
+        for (size_t i = 0; i < enabledBackends.size(); i++)
+        {
+            const VideoBackendInfo& info = enabledBackends[i];
+            if (info.mode & MODE_CAPTURE_BY_FILENAME)
+                result.push_back(info);
+        }
+        return result;
+    }
+    inline std::vector<VideoBackendInfo> getAvailableBackends_Writer() const
+    {
+        std::vector<VideoBackendInfo> result;
+        for (size_t i = 0; i < enabledBackends.size(); i++)
+        {
+            const VideoBackendInfo& info = enabledBackends[i];
+            if (info.mode & MODE_WRITER)
+                result.push_back(info);
+        }
+        return result;
+    }
+};
+
+} // namespace
+
+namespace videoio_registry {
+
+std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex()
+{
+    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
     return result;
 }
-
-bool VideoBackendRegistry::hasBackend(int mask, VideoCaptureAPIs api) const
+std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename()
 {
-    for (BackendsVec::const_iterator i = enabledBackends.begin(); i != enabledBackends.end(); i++)
-        if (api == i->id && mask & i->mode)
-            return true;
-    return false;
+    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
+    return result;
 }
-
-} // cv::
-
-//=================================================================
-// Public interface
-//=================================================================
-
-namespace cv {  namespace videoio_registry {
+std::vector<VideoBackendInfo> getAvailableBackends_Writer()
+{
+    const std::vector<VideoBackendInfo> result = VideoBackendRegistry::getInstance().getAvailableBackends_Writer();
+    return result;
+}
 
 cv::String getBackendName(VideoCaptureAPIs api)
 {
@@ -289,42 +316,59 @@ cv::String getBackendName(VideoCaptureAPIs api)
     return cv::format("UnknownVideoAPI(%d)", (int)api);
 }
 
-bool hasBackend(VideoCaptureAPIs api, Capability cap)
+std::vector<VideoCaptureAPIs> getBackends()
 {
-    int mask = 0;
-    if (cap == Read || cap == ReadWrite)
-        mask |= MODE_CAPTURE_ALL;
-    if (cap == Write || cap == ReadWrite)
-        mask |= MODE_WRITER;
-    return VideoBackendRegistry::getInstance().hasBackend(mask, api);
-}
-
-inline static std::vector<VideoCaptureAPIs> toIDs(const std::vector<VideoBackendInfo> &backends)
-{
+    std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getEnabledBackends();
     std::vector<VideoCaptureAPIs> result;
     for (size_t i = 0; i < backends.size(); i++)
         result.push_back((VideoCaptureAPIs)backends[i].id);
     return result;
 }
 
-std::vector<VideoCaptureAPIs> getBackends()
-{
-    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_ALL + MODE_WRITER));
-}
-
 std::vector<VideoCaptureAPIs> getCameraBackends()
 {
-    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_BY_INDEX));
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
+    std::vector<VideoCaptureAPIs> result;
+    for (size_t i = 0; i < backends.size(); i++)
+        result.push_back((VideoCaptureAPIs)backends[i].id);
+    return result;
+
 }
 
 std::vector<VideoCaptureAPIs> getStreamBackends()
 {
-    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_CAPTURE_BY_FILENAME));
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
+    std::vector<VideoCaptureAPIs> result;
+    for (size_t i = 0; i < backends.size(); i++)
+        result.push_back((VideoCaptureAPIs)backends[i].id);
+    return result;
+
 }
 
 std::vector<VideoCaptureAPIs> getWriterBackends()
 {
-    return toIDs(VideoBackendRegistry::getInstance().getBackends(MODE_WRITER));
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_Writer();
+    std::vector<VideoCaptureAPIs> result;
+    for (size_t i = 0; i < backends.size(); i++)
+        result.push_back((VideoCaptureAPIs)backends[i].id);
+    return result;
 }
 
-}} // cv::videoio_registry::
+bool hasBackend(VideoCaptureAPIs api)
+{
+    std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getEnabledBackends();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            return !info.backendFactory->getBackend().empty();
+        }
+    }
+    return false;
+}
+
+} // namespace registry
+
+} // namespace

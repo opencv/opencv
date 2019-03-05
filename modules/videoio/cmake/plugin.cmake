@@ -16,7 +16,7 @@ function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
 
   add_library(${name} MODULE
     "${CMAKE_CURRENT_LIST_DIR}/src/${videoio_src_file}"
-    "${CMAKE_CURRENT_LIST_DIR}/src/plugin_api.cpp")
+  )
   target_include_directories(${name} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
   target_compile_definitions(${name} PRIVATE BUILD_PLUGIN)
   target_link_libraries(${name} PRIVATE ${target})
@@ -66,7 +66,7 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
   set(imgproc_ROOT "${modules_ROOT}/imgproc")
   set(imgcodecs_ROOT "${modules_ROOT}/imgcodecs")
 
-  add_library(${OPENCV_PLUGIN_NAME} MODULE "${videoio_ROOT}/src/${videoio_src_file}" "${videoio_ROOT}/src/plugin_api.cpp")
+  add_library(${OPENCV_PLUGIN_NAME} MODULE "${videoio_ROOT}/src/${videoio_src_file}")
   target_include_directories(${OPENCV_PLUGIN_NAME} PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${videoio_ROOT}/src"
