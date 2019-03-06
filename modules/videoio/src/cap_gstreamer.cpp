@@ -1811,6 +1811,10 @@ void handleMessage(GstElement * pipeline)
 
     while(gst_bus_have_pending(bus)) {
         msg = gst_bus_pop(bus);
+        if (!msg || !GST_IS_MESSAGE(msg))
+        {
+            continue;
+        }
 
         //printf("\t\tGot %s message\n", GST_MESSAGE_TYPE_NAME(msg));
 
