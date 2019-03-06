@@ -55,7 +55,6 @@
 
 #ifdef CV_CXX11
 #include <type_traits>
-#include <future>
 #endif
 
 namespace cv
@@ -3043,51 +3042,7 @@ public:
     SparseMatConstIterator_<_Tp> end() const;
 };
 
-//////////////////////////////// AsyncMat /////////////////////////////////
 
-/** @brief Class which wraps `std::future<Mat>` in bindings (since C++11).
- */
-class CV_EXPORTS_W_SIMPLE AsyncMat
-{
-public:
-    //! default constructor
-    AsyncMat();
-
-    //! Wait for Mat object readiness and return it.
-    CV_WRAP Mat get();
-
-    //! Wait for Mat object readiness.
-    CV_WRAP void wait() const;
-
-    /** @brief Wait for Mat object readiness specific amount of time.
-     *  @param timeout Timeout in milliseconds
-     *  @returns [std::future_status](https://en.cppreference.com/w/cpp/thread/future_status)
-     */
-    CV_WRAP int wait(size_t timeout) const;
-
-#if defined(CV_CXX11) || defined(CV_DOXYGEN)
-    //! copy constructor
-    AsyncMat(const AsyncMat& F);
-
-    //! move constructor
-    AsyncMat(AsyncMat&& F);
-
-    //! constructor from std::future<Mat>
-    AsyncMat(std::future<Mat>&& other);
-
-    //! copy assignment operator
-    AsyncMat& operator=(const AsyncMat& F);
-
-    //! move assignment operator
-    AsyncMat& operator=(AsyncMat&& F);
-
-    //! cast to std::future<Mat>
-    operator std::future<Mat>&&();
-
-private:
-    std::future<Mat> f;
-#endif  // CV_CXX11
-};
 
 ////////////////////////////////// MatConstIterator //////////////////////////////////
 

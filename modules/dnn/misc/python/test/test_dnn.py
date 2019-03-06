@@ -209,7 +209,7 @@ class dnn_test(NewOpenCVTests):
                 outs.insert(0, netAsync.forwardAsync())
 
             for i in reversed(range(numInputs)):
-                if outs[i].wait(timeout) == 1:
+                if outs[i].wait_for(timeout) == 1:
                     self.fail("Timeout")
                 normAssert(self, refs[i], outs[i].get(), 'Index: %d' % i, 1e-10)
 

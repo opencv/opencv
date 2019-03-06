@@ -2714,10 +2714,10 @@ Mat Net::forward(const String& outputName)
     return impl->getBlob(layerName);
 }
 
-#ifdef CV_CXX11
-std::future<Mat> Net::forwardAsync(const String& outputName)
+AsyncMat Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
+#ifdef CV_CXX11
     if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
         CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
 
@@ -2734,8 +2734,10 @@ std::future<Mat> Net::forwardAsync(const String& outputName)
     impl->isAsync = false;
 
     return impl->getBlobAsync(layerName);
-}
+#else
+    CV_Error(Error::StsNotImplemented, "Asynchronous forward without C++11");
 #endif  // CV_CXX11
+}
 
 void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {

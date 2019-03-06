@@ -2650,59 +2650,7 @@ SparseMatConstIterator_<_Tp> SparseMat_<_Tp>::end() const
     return it;
 }
 
-////////////////////////////// AsyncMat /////////////////////////////////////////
-#ifdef CV_CXX11
-inline AsyncMat::AsyncMat() {}
 
-inline AsyncMat::AsyncMat(const AsyncMat& F)
-{
-    f = std::move(const_cast<AsyncMat&>(F).f);
-}
-
-inline AsyncMat& AsyncMat::operator=(const AsyncMat& F)
-{
-    f = std::move(const_cast<AsyncMat&>(F).f);
-    return *this;
-}
-
-inline AsyncMat::AsyncMat(std::future<Mat>&& other) : f(std::move(other)) {}
-
-inline AsyncMat::AsyncMat(AsyncMat&& F) : f(std::move(F.f)) {}
-
-inline AsyncMat::operator std::future<Mat>&&()
-{
-    return std::move(f);
-}
-
-inline AsyncMat& AsyncMat::operator=(AsyncMat&& F)
-{
-    f = std::move(F.f);
-    return *this;
-}
-
-inline Mat AsyncMat::get()
-{
-    return f.get();
-}
-
-inline void AsyncMat::wait() const
-{
-    f.wait();
-}
-
-inline int AsyncMat::wait(size_t timeout) const
-{
-    return (int)f.wait_for(std::chrono::milliseconds(timeout));
-}
-
-#else
-
-inline AsyncMat::AsyncMat() { CV_Error(Error::StsNotImplemented, "C++11 is required"); }
-inline Mat AsyncMat::get() { CV_Error(Error::StsNotImplemented, "C++11 is required"); return Mat(); }
-inline void AsyncMat::wait() const { CV_Error(Error::StsNotImplemented, "C++11 is required"); }
-inline int AsyncMat::wait(size_t) const { CV_Error(Error::StsNotImplemented, "C++11 is required"); return -1; }
-
-#endif  // CV_CXX11
 
 ////////////////////////// MatConstIterator /////////////////////////
 

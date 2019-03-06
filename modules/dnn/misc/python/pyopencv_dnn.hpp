@@ -2,7 +2,13 @@
 typedef dnn::DictValue LayerId;
 typedef std::vector<dnn::MatShape> vector_MatShape;
 typedef std::vector<std::vector<dnn::MatShape> > vector_vector_MatShape;
-
+#ifdef CV_CXX11
+typedef std::chrono::milliseconds chrono_milliseconds;
+typedef std::future_status AsyncMatStatus;
+#else
+typedef size_t chrono_milliseconds;
+typedef size_t AsyncMatStatus;
+#endif
 
 template<>
 bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
@@ -41,16 +47,44 @@ bool pyopencv_to(PyObject *o, std::vector<Mat> &blobs, const char *name) //requi
 }
 
 #ifdef CV_CXX11
-// Will be defined later.
-template<> PyObject* pyopencv_from(const cv::AsyncMat&);
 
 template<>
 PyObject* pyopencv_from(const std::future<Mat>& f_)
 {
     std::future<Mat>& f = const_cast<std::future<Mat>&>(f_);
-    return pyopencv_from(cv::AsyncMat(std::move(f)));
+    Ptr<cv::dnn::AsyncMat> p(new std::future<Mat>(std::move(f)));
+    return pyopencv_from(p);
 }
-#endif
+
+template<>
+PyObject* pyopencv_from(const std::future_status& status)
+{
+    return pyopencv_from((int)status);
+}
+
+template<>
+bool pyopencv_to(PyObject* src, std::chrono::milliseconds& dst, const char* name)
+{
+    size_t millis = 0;
+    if (pyopencv_to(src, millis, name))
+    {
+        dst = std::chrono::milliseconds(millis);
+        return true;
+    }
+    else
+        return false;
+}
+
+#else
+
+template<>
+PyObject* pyopencv_from(const cv::dnn::AsyncMat&)
+{
+    CV_Error(Error::StsNotImplemented, "C++11 is required.");
+    return 0;
+}
+
+#endif  // CV_CXX11
 
 template<typename T>
 PyObject* pyopencv_from(const dnn::DictValue &dv)

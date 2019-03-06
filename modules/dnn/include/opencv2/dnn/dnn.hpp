@@ -43,15 +43,15 @@
 #define OPENCV_DNN_DNN_HPP
 
 #include <vector>
+#include <opencv2/core.hpp>
 #ifdef CV_CXX11
 #include <future>
 #endif
-#include <opencv2/core.hpp>
 
-#if !defined CV_DOXYGEN && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v13 {
+#if !defined CV_DOXYGEN && !defined CV_STATIC_ANALYSIS && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v12 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v13 { } using namespace experimental_dnn_34_v13; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v12 { } using namespace experimental_dnn_34_v12; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -68,9 +68,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     typedef std::vector<int> MatShape;
 
 #if defined(CV_CXX11) || defined(CV_DOXYGEN)
-    typedef std::future<Mat> FutureMat;
+    typedef std::future<Mat> AsyncMat;
 #else
-    typedef Mat FutureMat;
+    // Just a workaround for bindings.
+    struct AsyncMat
+    {
+        Mat get() { return Mat(); }
+        void wait() const {}
+        size_t wait_for(size_t milliseconds) const { CV_UNUSED(milliseconds); return -1; }
+    };
 #endif
 
     /**
@@ -84,7 +90,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
-        //! Intel's Inference Engine computational backend.
+        //!< Intel's Inference Engine computational backend.
         DNN_BACKEND_INFERENCE_ENGINE,
         DNN_BACKEND_OPENCV
     };
@@ -99,7 +105,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
-        //! FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
         DNN_TARGET_FPGA
     };
 
@@ -479,7 +485,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  This is an asynchronous version of forward(const String&).
          *  dnn::DNN_BACKEND_INFERENCE_ENGINE backend is required.
          */
-        CV_WRAP FutureMat forwardAsync(const String& outputName = String());
+        CV_WRAP AsyncMat forwardAsync(const String& outputName = String());
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputBlobs contains all output blobs for specified layer.
