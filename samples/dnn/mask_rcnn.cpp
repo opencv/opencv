@@ -86,7 +86,7 @@ int main(int argc, char** argv)
             str = parser.get<String>("image");
             frame = imread(str);
         }
-	else if (input.find_first_not_of("0123456789") == std::string::npos)
+        else if (input.find_first_not_of("0123456789") == std::string::npos)
             cap.open(atoi(input.c_str()));
         else
             cap.open(input);
@@ -126,8 +126,8 @@ int main(int argc, char** argv)
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         imshow("Mask R-CNN sample", frame);
-	if (parser.has("image"))
-	    frame.release();
+        if (parser.has("image"))
+            frame.release();
     }
 
     cap.release();
