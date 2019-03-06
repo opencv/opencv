@@ -23,9 +23,8 @@ using namespace std;
 string keys =
     "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
     "{ image m     |<none>| Path to input image file.  }"
-    "{ video v     |<none>| Path to input video file.  }"
-    "{ cam  C      |0| Path to input video file.  }"
-    "{ classes n   |mscoco_labels.names | Path to a text file with names of classes.  }"
+    "{ input i     | 0 | Path to input image file or video or camera id.  }"
+    "{ classes n   |object_detection_classes_coco.txt| Path to a text file with names of classes.  }"
     "{ model w     |mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
     "{ height H    |800| Preprocess input image by resizing to a specific height }"
     "{ width W     |800| Preprocess input image by resizing to a specific columns }"
@@ -57,6 +56,7 @@ int main(int argc, char** argv)
     confThreshold = parser.get<float>("cthr");
     maskThreshold = parser.get<float>("mthr");
 
+    string input = parser.get<string>("input");
     string textGraph = parser.get<string>("config");
     string modelWeights = parser.get<string>("model");
     string classesFile = parser.get<string>("classes");
@@ -81,22 +81,15 @@ int main(int argc, char** argv)
     Mat frame, blob;
 
     try {
-
         if (parser.has("image"))
         {
             str = parser.get<String>("image");
-            cout << "Image file input : " << str << endl;
-            ifstream ifile(str);
-            if (!ifile) throw("error");
-            cap.open(str);
+            frame = imread(str);
         }
-        else if (parser.has("video"))
-        {
-            str = parser.get<String>("video");
-            cap.open(str);
-        }
-        else cap.open(parser.get<int>("cam"));
-
+	else if (input.find_first_not_of("0123456789") == std::string::npos)
+            cap.open(atoi(input.c_str()));
+        else
+            cap.open(input);
     }
     catch(...) {
         cout << "Could not open the input image/video stream" << endl;
@@ -105,7 +98,8 @@ int main(int argc, char** argv)
 
     while (waitKey(1) < 0)
     {
-        cap >> frame;
+        if (!parser.has("image"))
+            cap >> frame;
 
         if (frame.empty()) {
             cout << "Done processing !!!" << endl;
@@ -132,6 +126,8 @@ int main(int argc, char** argv)
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
 
         imshow("Mask R-CNN sample", frame);
+	if (parser.has("image"))
+	    frame.release();
     }
 
     cap.release();
