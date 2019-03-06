@@ -25,7 +25,8 @@ namespace
         };
     }
 
-    enum class KernelTags {
+    enum class KernelTags
+    {
         CPU_CUSTOM_BGR2GRAY,
         CPU_CUSTOM_CLONE,
         CPU_CUSTOM_ADD,
@@ -34,34 +35,38 @@ namespace
         FLUID_CUSTOM_ADD
     };
 
-    struct KernelTagsHash
+    class HeteroGraph: public ::testing::Test
     {
-        std::size_t operator() (KernelTags t) const { return std::hash<int>()(static_cast<int>(t)); }
-    };
-
-    struct GraphFixture
-    {
-        cv::GMat in[2], out;
-
-        using HashMap = std::unordered_map<std::string,
-                        std::unordered_map<KernelTags, bool, KernelTagsHash>>;
-        static HashMap log;
-
-        GraphFixture()
+    public:
+        HeteroGraph()
         {
             auto tmp = I::GClone::on(cv::gapi::add(in[0], in[1]));
             out = cv::gapi::imgproc::GBGR2Gray::on(tmp);
         }
 
         static void registerCallKernel(KernelTags kernel_tag) {
-            std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-            log[test_name][kernel_tag] = true;
+            kernel_calls.insert(kernel_tag);
         }
 
         bool checkCallKernel(KernelTags kernel_tag) {
-            std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-            return log[test_name][kernel_tag];
+            return ade::util::contains(kernel_calls, kernel_tag);
         }
+
+    protected:
+        void SetUp() override
+        {
+            if (!kernel_calls.empty())
+                cv::util::throw_error(std::logic_error("Kernel call log has not been cleared!!!"));
+        }
+
+        void TearDown() override
+        {
+            kernel_calls.clear();
+        }
+
+    protected:
+        cv::GMat in[2], out;
+        static std::set<KernelTags> kernel_calls;
     };
 
     namespace cpu
@@ -70,7 +75,7 @@ namespace
         {
             static void run(const cv::Mat&, cv::Mat)
             {
-                GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_CLONE);
+                HeteroGraph::registerCallKernel(KernelTags::CPU_CUSTOM_CLONE);
             }
         };
 
@@ -78,7 +83,7 @@ namespace
         {
             static void run(const cv::Mat&, cv::Mat&)
             {
-                GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_BGR2GRAY);
+                HeteroGraph::registerCallKernel(KernelTags::CPU_CUSTOM_BGR2GRAY);
             }
         };
 
@@ -86,7 +91,7 @@ namespace
         {
             static void run(const cv::Mat&, const cv::Mat&, int, cv::Mat&)
             {
-                GraphFixture::registerCallKernel(KernelTags::CPU_CUSTOM_ADD);
+                HeteroGraph::registerCallKernel(KernelTags::CPU_CUSTOM_ADD);
             }
         };
     }
@@ -98,7 +103,7 @@ namespace
             static const int Window = 1;
             static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer)
             {
-                GraphFixture::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
+                HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
             }
         };
 
@@ -107,7 +112,7 @@ namespace
             static const int Window = 1;
             static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
-                GraphFixture::registerCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY);
+                HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_BGR2GRAY);
             }
         };
 
@@ -117,13 +122,12 @@ namespace
             static void run(const cv::gapi::fluid::View&, const cv::gapi::fluid::View&,
                             int, cv::gapi::fluid::Buffer&)
             {
-                GraphFixture::registerCallKernel(KernelTags::FLUID_CUSTOM_ADD);
+                HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_ADD);
             }
         };
     }
 
-    GraphFixture::HashMap GraphFixture::log;
-    struct HeteroGraph: public ::testing::Test, public GraphFixture {};
+    std::set<KernelTags> HeteroGraph::kernel_calls;
 } // anonymous namespace
 
 TEST(KernelPackage, Create)
@@ -323,7 +327,7 @@ TEST(KernelPackage, Can_Use_Custom_Kernel)
 
 TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 {
-    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> cv::gapi::BGR2Gray -> out
+    // in0 -> GCPUAdd -> tmp -> cpu::GClone -> GCPUBGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -341,7 +345,7 @@ TEST_F(HeteroGraph, Call_Custom_Kernel_Default_Backend)
 
 TEST_F(HeteroGraph, Call_Custom_Kernel_Not_Default_Backend)
 {
-    // in0 -> cv::gapi::GAdd -> tmp -> fluid::GClone -> cv::gapi::BGR2Gray -> out
+    // in0 -> GCPUAdd -> tmp -> fluid::GClone -> GCPUBGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -359,7 +363,7 @@ TEST_F(HeteroGraph, Call_Custom_Kernel_Not_Default_Backend)
 
 TEST_F(HeteroGraph, Replace_Default_To_Same_Backend)
 {
-    // in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> cpu::BGR2Gray -> out
+    // in0 -> GCPUAdd -> tmp -> cpu::GClone -> cpu::BGR2Gray -> out
     //            ^
     //            |
     // in1 -------`
@@ -377,7 +381,7 @@ TEST_F(HeteroGraph, Replace_Default_To_Same_Backend)
 
 TEST_F(HeteroGraph, Replace_Default_To_Another_Backend)
 {
-    //in0 -> cv::gapi::GAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
+    //in0 -> GCPUAdd -> tmp -> cpu::GClone -> fluid::BGR2Gray -> out
     //            ^
     //            |
     //in1 --------`
@@ -455,7 +459,7 @@ TEST_F(HeteroGraph, Use_Only_Hetero_Backend)
 
 TEST_F(HeteroGraph, Use_Only_Not_Found_Default)
 {
-    //in0 -> cv::gapi::GAdd -> tmp -> fluid::GClone -> fluid::BGR2Gray -> out
+    //in0 -> GCPUAdd -> tmp -> fluid::GClone -> fluid::BGR2Gray -> out
     //            ^
     //            |
     //in1 --------`

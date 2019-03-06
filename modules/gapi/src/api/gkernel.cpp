@@ -70,7 +70,7 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
 }
 
 std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-cv::gapi::GKernelPackage::getKernelById(const std::string &id) const
+cv::gapi::GKernelPackage::lookup(const std::string &id) const
 {
     auto kernel_it = m_id_kernels.find(id);
     if (kernel_it != m_id_kernels.end())

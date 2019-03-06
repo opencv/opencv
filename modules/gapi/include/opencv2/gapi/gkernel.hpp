@@ -14,7 +14,6 @@
 #include <type_traits> // false_type, true_type
 #include <unordered_map> // map (for GKernelPackage)
 #include <utility> // tuple
-#include <unordered_set>
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
 #include <opencv2/gapi/util/util.hpp> // Seq
@@ -402,14 +401,14 @@ namespace gapi {
          *
          */
         template<typename KAPI>
-        GBackend getBackend() const
+        GBackend lookup() const
         {
-            return getKernelById(KAPI::id()).first;
+            return lookup(KAPI::id()).first;
         }
 
         /// @private
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-        getKernelById(const std::string &id) const;
+        lookup(const std::string &id) const;
 
         // FIXME: No overwrites allowed?
         /**
@@ -475,8 +474,7 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
-        static_assert(detail::all_unique<typename KK::API...>::value,
-                                                  "Kernels API must be unique");
+        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
