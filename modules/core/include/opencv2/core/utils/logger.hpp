@@ -47,6 +47,19 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
 
 } // namespace
 
+struct CV_EXPORTS LogTagAuto
+    : public LogTag
+{
+    const char* name;
+    LogLevel level;
+
+    LogTagAuto(const char* _name, LogLevel _level)
+        : LogTag(_name, _level)
+    {
+        registerLogTag(this);
+    }
+};
+
 /**
  * \def CV_LOG_STRIP_LEVEL
  *
@@ -60,7 +73,7 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
 # endif
 #endif
 
-#define CV_LOGTAG_PTR_CAST(expr) (const cv::utils::logging::LogTag*)(expr)
+#define CV_LOGTAG_PTR_CAST(expr) static_cast<const cv::utils::logging::LogTag*>(expr)
 
 // CV_LOGTAG_EXPAND_NAME is intended to be re-defined (undef and then define again)
 // to allows logging users to use a shorter name argument when calling
