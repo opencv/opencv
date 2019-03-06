@@ -56,7 +56,6 @@ namespace detail
     //
     namespace
     {
-
         template<typename T> struct Yield;
         template<> struct Yield<cv::GMat>
         {
@@ -476,7 +475,8 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
-        static_assert(detail::api_are_unique<KK...>::value, "Kernels API must be unique");
+        static_assert(detail::all_unique<typename KK::API...>::value,
+                                                  "Kernels API must be unique");
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
