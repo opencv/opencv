@@ -10,6 +10,7 @@
 #include <iostream>                              // cout
 #include <sstream>                               // stringstream
 #include <fstream>                               // ofstream
+#include <map>
 
 #include <ade/passes/check_cycles.hpp>
 

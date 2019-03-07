@@ -20,6 +20,7 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gmodelbuilder.hpp"
 #include "logger.hpp"    // GAPI_LOG
+#include "api/gproto_priv.hpp" // is_dynamic, rewrap
 
 namespace
 {
