@@ -53,8 +53,8 @@ using Mag = magazine::Class<cv::gapi::own::Mat, cv::gapi::own::Scalar, cv::detai
 
 namespace magazine
 {
-    void         bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, bool is_umat = false);
-    void         bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat = false);
+    void         GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, bool is_umat = false);
+    void         GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat = false);
 
     void         resetInternalData(Mag& mag, const Data &d);
     cv::GRunArg  getArg    (const Mag& mag, const RcDesc &ref);
