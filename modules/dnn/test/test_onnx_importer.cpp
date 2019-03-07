@@ -82,9 +82,7 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("convolution");
 
     // Reference output values are in range [-0.855, 0.611]
-    double l1 = (target == DNN_TARGET_MYRIAD) ? 0.4 : 0.0;
-    float lInf = (target == DNN_TARGET_MYRIAD) ? 1.36 : 0.0;
-    testONNXModels("two_convolution", npy, l1, lInf);
+    testONNXModels("two_convolution");
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution)
@@ -285,26 +283,18 @@ TEST_P(Test_ONNX_nets, ZFNet)
 TEST_P(Test_ONNX_nets, ResNet18v1)
 {
     // output range: [-16; 22]
+    // on Myriad problem layer: resnetv15_pool0_fwd - does not use pads_begin
     double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.022 : default_l1;
     double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.12 : default_lInf;
-    if (target == DNN_TARGET_MYRIAD) {
-        // problem layer: resnetv15_pool0_fwd - does not use pads_begin
-        l1 = 1.26;
-        lInf = 4.85;
-    }
     testONNXModels("resnet18v1", pb, l1, lInf);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
     // output range: [-67; 75]
+    // on Myriad problem layer: resnetv17_pool0_fwd - does not use pads_begin
     double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.6 : 1.25e-5;
     double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.51 : 1.2e-4;
-    if (target == DNN_TARGET_MYRIAD) {
-        // problem layer: resnetv17_pool0_fwd - does not use pads_begin
-        l1 = 1.1;
-        lInf = 5.1;
-    }
     testONNXModels("resnet50v1", pb, l1, lInf);
 }
 
@@ -326,10 +316,6 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     // output range: [-11; 8]
     double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.017 : default_l1;
     double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.14 : default_lInf;
-    if (target == DNN_TARGET_MYRIAD) {
-        l1 = 1.93;
-        lInf = 9.7;
-    }
     testONNXModels("tiny_yolo2", pb, l1, lInf);
 }
 
@@ -380,10 +366,6 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_CPU || target == DNN_TARGET_OPENCL)) {
         l1 = 2.4e-4;
         lInf = 6e-4;
-    }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD) {
-        l1 = 0.06;
-        lInf = 0.16;
     }
     testONNXModels("emotion_ferplus", pb, l1, lInf);
 }

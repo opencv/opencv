@@ -170,11 +170,10 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
-    float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.051 : 0.0;
-    float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.123  : 0.0;
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.294  : 0.0;
-      processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
-                inp, "detection_out", "", diffScores, diffSquares, detectionConfThresh);
+    float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.029 : 0.0;
+    float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09  : 0.0;
+    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
+                inp, "detection_out", "", diffScores, diffSquares);
 
 }
 
@@ -197,8 +196,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.173 : 0.0;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.23 : 0.0;
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);
 }
@@ -291,11 +290,12 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
         throw SkipTestException("");
     Mat sample = imread(findDataFile("dnn/street.png", false));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
-    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.19 : 0.0;
-    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.85 : 0.0;
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.29 : 0.2;
+    // on Myriad problem layers: FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool,
+    // FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool - don't use pads_begin
+    float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.015 : 0.0;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0731 : 0.0;
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
-               inp, "detection_out", "", l1, lInf, detectionConfThresh);
+               inp, "detection_out", "", l1, lInf);
 }
 
 TEST_P(DNNTestNetwork, DenseNet_121)
@@ -308,9 +308,10 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     {
         l1 = 9e-3; lInf = 5e-2;
     }
+    // on Myriad problem layer: pool1 - does not use pads_begin
     else if (target == DNN_TARGET_MYRIAD)
     {
-        l1 = 0.28; lInf = 1.23;
+        l1 = 6e-2; lInf = 0.27;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
 }

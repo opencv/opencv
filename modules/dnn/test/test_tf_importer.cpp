@@ -136,11 +136,12 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("padding_valid");
     runTensorFlowNet("spatial_padding");
     runTensorFlowNet("keras_pad_concat");
+}
 
+TEST_P(Test_TensorFlow_layers, padding_same)
+{
     // Reference output values are in range [0.0006, 2.798]
-    double l1 = (target == DNN_TARGET_MYRIAD) ? 1.22 : 0.0;
-    double lInf = (target == DNN_TARGET_MYRIAD) ? 5.6 : 0.0;
-    runTensorFlowNet("padding_same", l1, lInf);
+    runTensorFlowNet("padding_same");
 }
 
 TEST_P(Test_TensorFlow_layers, eltwise)
@@ -186,9 +187,7 @@ TEST_P(Test_TensorFlow_layers, pooling)
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
     // Reference output values are in range [-0.519531, 0.112976]
-    double l1 = (target == DNN_TARGET_MYRIAD) ? 0.074 : 0.0;
-    double lInf = (target == DNN_TARGET_MYRIAD) ? 0.35 : 0.0;
-    runTensorFlowNet("ave_pool_same", l1, lInf);
+    runTensorFlowNet("ave_pool_same");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
@@ -334,8 +333,10 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.075 : default_l1;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.4 : default_lInf;
+    // on Myriad problem layers: FeatureExtractor/InceptionV2/InceptionV2/MaxPool_3a_3x3/MaxPool,
+    // FeatureExtractor/InceptionV2/InceptionV2/Mixed_5a/Branch_2/MaxPool_1a_3x3/MaxPool - don't use pads_begin
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0097 : default_l1;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
 }
 
@@ -357,9 +358,9 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
-    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.061 : 1.5e-5;
-    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.12 : 1e-3;
-    normAssertDetections(ref, out, "", 0.36, scoreDiff, iouDiff);
+    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1.5e-5;
+    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 1e-3;
+    normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
 }
 
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
@@ -514,6 +515,8 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
     runTensorFlowNet("fp16_eltwise_add_mul", false, l1, lInf);
     runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
     runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
+    // Reference output values are in range [0.0889, 1.651]
+    runTensorFlowNet("fp16_max_pool_even", false, (target == DNN_TARGET_MYRIAD) ? 0.003 : l1, lInf);
     if (target == DNN_TARGET_MYRIAD) {
         l1 = 0.0041;
         lInf = 0.024;
@@ -522,14 +525,12 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
     runTensorFlowNet("fp16_deconvolution", false, l1, lInf);
     // Reference output values are in range [0.418, 2.297]
     runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
-    // Reference output values are in range [0.0889, 1.651]
-    runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
-    if (target == DNN_TARGET_MYRIAD) {
-        l1 = 1.28;
-        lInf = 7.01;
-    }
+}
+
+TEST_P(Test_TensorFlow_layers, fp16_padding_same)
+{
     // Reference output values are in range [-3.504, -0.002]
-    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
+    runTensorFlowNet("fp16_padding_same");
 }
 
 TEST_P(Test_TensorFlow_layers, defun)

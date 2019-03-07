@@ -325,13 +325,23 @@ TEST_P(MaxPooling, Accuracy)
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
+    if (targetId == DNN_TARGET_MYRIAD && inSize == Size(7, 6) && kernel == Size(3, 2) &&
+        (stride == Size(1, 1) || stride == Size(2, 2)) && (pad == Size(0, 1) || pad == Size(1, 1)))
+        throw SkipTestException("Test is enabled starts from OpenVINO 2018R6");
+
+    if (targetId == DNN_TARGET_MYRIAD && (kernel == Size(2, 2) || kernel == Size(3, 2)) &&
+        stride == Size(1, 1) && (pad == Size(0, 0) || pad == Size(0, 1)))
+        throw SkipTestException("Problems with output dimension in OpenVINO 2018R5");
+#endif
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018060000
     if (targetId == DNN_TARGET_MYRIAD && (stride == Size(1, 1) || stride == Size(2, 2)) &&
        (pad == Size(0, 1) || pad == Size(1, 1)))
         throw SkipTestException("Test is disabled for OpenVINO 2018R6");
 
     if (targetId == DNN_TARGET_MYRIAD && (kernel == Size(2, 2) || kernel == Size(3, 2)) &&
-        (stride == Size(1, 1) && pad == Size(0, 0)))
+        stride == Size(1, 1) && pad == Size(0, 0))
         throw SkipTestException("Problems with output dimension in OpenVINO 2018R6");
 #endif
 
@@ -643,6 +653,12 @@ TEST_P(Concat, Accuracy)
     Backend backendId = get<0>(get<2>(GetParam()));
     Target targetId = get<1>(get<2>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+        inSize == Vec3i(1, 4, 5) && numChannels == Vec3i(1, 6, 2))
+        throw SkipTestException("");
+#endif
+
     Net net;
 
     std::vector<int> convLayerIds;
@@ -710,6 +726,12 @@ TEST_P(Eltwise, Accuracy)
     bool weighted = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
+        inSize == Vec3i(1, 4, 5))
+        throw SkipTestException("");
+#endif
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE &&

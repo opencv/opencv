@@ -295,11 +295,10 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     net.setInput(inputBlob);
     Mat out = net.forward();
 
-    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
     // Reference output values are in range [-0.17212, 0.263492]
-    double l1 = (target == DNN_TARGET_MYRIAD) ? 0.04 : default_l1;
-    double lInf = (target == DNN_TARGET_MYRIAD) ? 0.17 : default_lInf;
-    normAssert(out, outRef, "", l1, lInf);
+    // on Myriad problem layer: l4_Pooling - does not use pads_begin
+    Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
+    normAssert(out, outRef);
 }
 
 static Mat getSegmMask(const Mat& scores)
