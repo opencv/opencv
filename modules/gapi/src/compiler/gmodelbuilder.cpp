@@ -21,7 +21,7 @@
 
 #include <ade/util/zip_range.hpp>   // util::indexed
 
-#include "api/gapi_priv.hpp"    // GOrigin
+#include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"  // descriptor_of and other GProtoArg-related
 #include "api/gcall_priv.hpp"
 #include "api/gnode_priv.hpp"

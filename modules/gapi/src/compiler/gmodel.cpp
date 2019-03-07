@@ -18,6 +18,7 @@
 #include "api/gnode_priv.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
+#include "api/gorigin.hpp"
 #include "compiler/gmodel_priv.hpp"
 
 namespace cv { namespace gimpl {

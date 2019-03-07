@@ -10,7 +10,7 @@
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
 
 #include "opencv2/gapi/gmat.hpp"
-#include "api/gapi_priv.hpp" // GOrigin
+#include "api/gorigin.hpp"
 
 // cv::GMat public implementation //////////////////////////////////////////////
 cv::GMat::GMat()
