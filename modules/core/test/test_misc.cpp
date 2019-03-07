@@ -177,6 +177,13 @@ TEST(Core_OutputArray, FixedType)
     EXPECT_EQ(2, num_defaultResult);
 }
 
+TEST(Core_OutputArrayCreate, _13772)
+{
+    cv::Mat1d mat;
+    cv::OutputArray o(mat);
+    ASSERT_NO_THROW(o.create(3, 5, CV_64F, -1, true));
+}
+
 
 
 TEST(Core_String, find_last_of__with__empty_string)
