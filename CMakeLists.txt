@@ -410,6 +410,9 @@ OCV_OPTION(WITH_IMGCODEC_PFM "Include PFM formats support" ON
 OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_QUIRC)
+OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)" ON
+  VISIBLE_IF ANDROID
+  VERIFY HAVE_ANDROID_MEDIANDK)
 
 # OpenCV build components
 # ===================================================
