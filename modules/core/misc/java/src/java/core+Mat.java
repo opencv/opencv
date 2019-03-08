@@ -68,6 +68,19 @@ public class Mat {
     }
 
     //
+    // C++: Mat::Mat(int ndims, const int* sizes, int type)
+    //
+
+    // javadoc: Mat::Mat(sizes, type)
+    public Mat(int[] sizes, int type)
+    {
+
+        nativeObj = n_Mat(sizes.length, sizes, type);
+
+        return;
+    }
+
+    //
     // C++: Mat::Mat(int rows, int cols, int type, Scalar s)
     //
 
@@ -94,6 +107,19 @@ public class Mat {
     }
 
     //
+    // C++: Mat::Mat(int ndims, const int* sizes, int type, Scalar s)
+    //
+
+    // javadoc: Mat::Mat(sizes, type, s)
+    public Mat(int[] sizes, int type, Scalar s)
+    {
+
+        nativeObj = n_Mat(sizes.length, sizes, type, s.val[0], s.val[1], s.val[2], s.val[3]);
+
+        return;
+    }
+
+    //
     // C++: Mat::Mat(Mat m, Range rowRange, Range colRange = Range::all())
     //
 
@@ -111,6 +137,19 @@ public class Mat {
     {
 
         nativeObj = n_Mat(m.nativeObj, rowRange.start, rowRange.end);
+
+        return;
+    }
+
+    //
+    // C++: Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
+    //
+
+    // javadoc: Mat::Mat(m, ranges)
+    public Mat(Mat m, Range[] ranges)
+    {
+
+        nativeObj = n_Mat(m.nativeObj, ranges);
 
         return;
     }
@@ -366,6 +405,31 @@ public class Mat {
     {
 
         n_create(nativeObj, size.width, size.height, type);
+
+        return;
+    }
+
+    //
+    // C++: void Mat::create(int ndims, const int* sizes, int type)
+    //
+
+    // javadoc: Mat::create(sizes, type)
+    public void create(int[] sizes, int type)
+    {
+
+        n_create(nativeObj, sizes.length, sizes, type);
+
+        return;
+    }
+
+    //
+    // C++: void Mat::copySize(const Mat& m);
+    //
+
+    // javadoc: Mat::copySize(m)
+    public void copySize(Mat m)
+    {
+        n_copySize(nativeObj, m.nativeObj);
 
         return;
     }
@@ -634,6 +698,19 @@ public class Mat {
     }
 
     //
+    // C++: static Mat Mat::ones(int ndims, const int* sizes, int type)
+    //
+
+    // javadoc: Mat::ones(sizes, type)
+    public static Mat ones(int[] sizes, int type)
+    {
+
+        Mat retVal = new Mat(n_ones(sizes.length, sizes, type));
+
+        return retVal;
+    }
+
+    //
     // C++: void Mat::push_back(Mat m)
     //
 
@@ -868,6 +945,19 @@ public class Mat {
     }
 
     //
+    // C++: Mat Mat::operator()(const std::vector<Range>& ranges)
+    //
+
+    // javadoc: Mat::operator()(ranges[])
+    public Mat submat(Range[] ranges)
+    {
+
+        Mat retVal = new Mat(n_submat_ranges(nativeObj, ranges));
+
+        return retVal;
+    }
+
+    //
     // C++: Mat Mat::operator()(Rect roi)
     //
 
@@ -945,6 +1035,19 @@ public class Mat {
         return retVal;
     }
 
+    //
+    // C++: static Mat Mat::zeros(int ndims, const int* sizes, int type)
+    //
+
+    // javadoc: Mat::zeros(sizes, type)
+    public static Mat zeros(int[] sizes, int type)
+    {
+
+        Mat retVal = new Mat(n_zeros(sizes.length, sizes, type));
+
+        return retVal;
+    }
+
     @Override
     protected void finalize() throws Throwable {
         n_delete(nativeObj);
@@ -979,6 +1082,20 @@ public class Mat {
         return nPutD(nativeObj, row, col, data.length, data);
     }
 
+    // javadoc:Mat::put(idx,data)
+    public int put(int[] idx, double... data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        return nPutDIdx(nativeObj, idx, data.length, data);
+    }
+
     // javadoc:Mat::put(row,col,data)
     public int put(int row, int col, float[] data) {
         int t = type();
@@ -990,6 +1107,23 @@ public class Mat {
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_32F) {
             return nPutF(nativeObj, row, col, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
+    // javadoc:Mat::put(idx,data)
+    public int put(int[] idx, float[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_32F) {
+            return nPutFIdx(nativeObj, idx, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1009,6 +1143,23 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::put(idx,data)
+    public int put(int[] idx, int[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_32S) {
+            return nPutIIdx(nativeObj, idx, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::put(row,col,data)
     public int put(int row, int col, short[] data) {
         int t = type();
@@ -1020,6 +1171,23 @@ public class Mat {
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
             return nPutS(nativeObj, row, col, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
+    // javadoc:Mat::put(idx,data)
+    public int put(int[] idx, short[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
+            return nPutSIdx(nativeObj, idx, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1039,6 +1207,23 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::put(idx,data)
+    public int put(int[] idx, byte[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
+            return nPutBIdx(nativeObj, idx, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::put(row,col,data,offset,length)
     public int put(int row, int col, byte[] data, int offset, int length) {
         int t = type();
@@ -1050,6 +1235,23 @@ public class Mat {
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
             return nPutBwOffset(nativeObj, row, col, length, offset, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
+    // javadoc:Mat::put(idx,data,offset,length)
+    public int put(int[] idx, byte[] data, int offset, int length) {
+        int t = type();
+        if (data == null || length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
+            return nPutBwIdxOffset(nativeObj, idx, length, offset, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1069,6 +1271,23 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::get(idx,data)
+    public int get(int[] idx, byte[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_8U || CvType.depth(t) == CvType.CV_8S) {
+            return nGetBIdx(nativeObj, idx, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::get(row,col,data)
     public int get(int row, int col, short[] data) {
         int t = type();
@@ -1080,6 +1299,23 @@ public class Mat {
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
             return nGetS(nativeObj, row, col, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
+    // javadoc:Mat::get(idx,data)
+    public int get(int[] idx, short[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_16U || CvType.depth(t) == CvType.CV_16S) {
+            return nGetSIdx(nativeObj, idx, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1099,6 +1335,23 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::get(idx,data)
+    public int get(int[] idx, int[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_32S) {
+            return nGetIIdx(nativeObj, idx, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::get(row,col,data)
     public int get(int row, int col, float[] data) {
         int t = type();
@@ -1110,6 +1363,23 @@ public class Mat {
                             CvType.channels(t) + ")");
         if (CvType.depth(t) == CvType.CV_32F) {
             return nGetF(nativeObj, row, col, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
+    // javadoc:Mat::get(idx,data)
+    public int get(int[] idx, float[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_32F) {
+            return nGetFIdx(nativeObj, idx, data.length, data);
         }
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
@@ -1129,9 +1399,33 @@ public class Mat {
         throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
     }
 
+    // javadoc:Mat::get(idx,data)
+    public int get(int[] idx, double[] data) {
+        int t = type();
+        if (data == null || data.length % CvType.channels(t) != 0)
+            throw new java.lang.UnsupportedOperationException(
+                    "Provided data element number (" +
+                            (data == null ? 0 : data.length) +
+                            ") should be multiple of the Mat channels count (" +
+                            CvType.channels(t) + ")");
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        if (CvType.depth(t) == CvType.CV_64F) {
+            return nGetDIdx(nativeObj, idx, data.length, data);
+        }
+        throw new java.lang.UnsupportedOperationException("Mat data type is not compatible: " + t);
+    }
+
     // javadoc:Mat::get(row,col)
     public double[] get(int row, int col) {
         return nGet(nativeObj, row, col);
+    }
+
+    // javadoc:Mat::get(idx)
+    public double[] get(int[] idx) {
+        if (idx.length != dims())
+            throw new IllegalArgumentException("Incorrect number of indices");
+        return nGetIdx(nativeObj, idx);
     }
 
     // javadoc:Mat::height()
@@ -1155,6 +1449,9 @@ public class Mat {
     // C++: Mat::Mat(int rows, int cols, int type)
     private static native long n_Mat(int rows, int cols, int type);
 
+    // C++: Mat::Mat(int ndims, const int* sizes, int type)
+    private static native long n_Mat(int ndims, int[] sizes, int type);
+
     // C++: Mat::Mat(int rows, int cols, int type, void* data)
     private static native long n_Mat(int rows, int cols, int type, ByteBuffer data);
 
@@ -1167,10 +1464,16 @@ public class Mat {
     // C++: Mat::Mat(Size size, int type, Scalar s)
     private static native long n_Mat(double size_width, double size_height, int type, double s_val0, double s_val1, double s_val2, double s_val3);
 
+    // C++: Mat::Mat(int ndims, const int* sizes, int type, Scalar s)
+    private static native long n_Mat(int ndims, int[] sizes, int type, double s_val0, double s_val1, double s_val2, double s_val3);
+
     // C++: Mat::Mat(Mat m, Range rowRange, Range colRange = Range::all())
     private static native long n_Mat(long m_nativeObj, int rowRange_start, int rowRange_end, int colRange_start, int colRange_end);
 
     private static native long n_Mat(long m_nativeObj, int rowRange_start, int rowRange_end);
+
+    // C++: Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
+    private static native long n_Mat(long m_nativeObj, Range[] ranges);
 
     // C++: Mat Mat::adjustROI(int dtop, int dbottom, int dleft, int dright)
     private static native long n_adjustROI(long nativeObj, int dtop, int dbottom, int dleft, int dright);
@@ -1225,6 +1528,12 @@ public class Mat {
 
     // C++: void Mat::create(Size size, int type)
     private static native void n_create(long nativeObj, double size_width, double size_height, int type);
+
+    // C++: void Mat::create(int ndims, const int* sizes, int type)
+    private static native void n_create(long nativeObj, int ndims, int[] sizes, int type);
+
+    // C++: void Mat::copySize(const Mat& m)
+    private static native void n_copySize(long nativeObj, long m_nativeObj);
 
     // C++: Mat Mat::cross(Mat m)
     private static native long n_cross(long nativeObj, long m_nativeObj);
@@ -1284,6 +1593,9 @@ public class Mat {
     // C++: static Mat Mat::ones(Size size, int type)
     private static native long n_ones(double size_width, double size_height, int type);
 
+    // C++: static Mat Mat::ones(int ndims, const int* sizes, int type)
+    private static native long n_ones(int ndims, int[] sizes, int type);
+
     // C++: void Mat::push_back(Mat m)
     private static native void n_push_back(long nativeObj, long m_nativeObj);
 
@@ -1332,6 +1644,9 @@ public class Mat {
     // C++: Mat Mat::operator()(Range rowRange, Range colRange)
     private static native long n_submat_rr(long nativeObj, int rowRange_start, int rowRange_end, int colRange_start, int colRange_end);
 
+    // C++: Mat Mat::operator()(const std::vector<Range>& ranges)
+    private static native long n_submat_ranges(long nativeObj, Range[] ranges);
+
     // C++: Mat Mat::operator()(Rect roi)
     private static native long n_submat(long nativeObj, int roi_x, int roi_y, int roi_width, int roi_height);
 
@@ -1350,32 +1665,59 @@ public class Mat {
     // C++: static Mat Mat::zeros(Size size, int type)
     private static native long n_zeros(double size_width, double size_height, int type);
 
+    // C++: static Mat Mat::zeros(int ndims, const int* sizes, int type)
+    private static native long n_zeros(int ndims, int[] sizes, int type);
+
     // native support for java finalize()
     private static native void n_delete(long nativeObj);
 
     private static native int nPutD(long self, int row, int col, int count, double[] data);
 
+    private static native int nPutDIdx(long self, int[] idx, int count, double[] data);
+
     private static native int nPutF(long self, int row, int col, int count, float[] data);
+
+    private static native int nPutFIdx(long self, int[] idx, int count, float[] data);
 
     private static native int nPutI(long self, int row, int col, int count, int[] data);
 
+    private static native int nPutIIdx(long self, int[] idx, int count, int[] data);
+
     private static native int nPutS(long self, int row, int col, int count, short[] data);
+
+    private static native int nPutSIdx(long self, int[] idx, int count, short[] data);
 
     private static native int nPutB(long self, int row, int col, int count, byte[] data);
 
+    private static native int nPutBIdx(long self, int[] idx, int count, byte[] data);
+
     private static native int nPutBwOffset(long self, int row, int col, int count, int offset, byte[] data);
+
+    private static native int nPutBwIdxOffset(long self, int[] idx, int count, int offset, byte[] data);
 
     private static native int nGetB(long self, int row, int col, int count, byte[] vals);
 
+    private static native int nGetBIdx(long self, int[] idx, int count, byte[] vals);
+
     private static native int nGetS(long self, int row, int col, int count, short[] vals);
+
+    private static native int nGetSIdx(long self, int[] idx, int count, short[] vals);
 
     private static native int nGetI(long self, int row, int col, int count, int[] vals);
 
+    private static native int nGetIIdx(long self, int[] idx, int count, int[] vals);
+
     private static native int nGetF(long self, int row, int col, int count, float[] vals);
+
+    private static native int nGetFIdx(long self, int[] idx, int count, float[] vals);
 
     private static native int nGetD(long self, int row, int col, int count, double[] vals);
 
+    private static native int nGetDIdx(long self, int[] idx, int count, double[] vals);
+
     private static native double[] nGet(long self, int row, int col);
+
+    private static native double[] nGetIdx(long self, int[] idx);
 
     private static native String nDump(long self);
 }
