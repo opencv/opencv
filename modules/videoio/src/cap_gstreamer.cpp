@@ -1629,13 +1629,16 @@ void handleMessage(GstElement * pipeline)
 
 #include "plugin_api.hpp"
 
-CV_EXTERN_C int cv_domain()
-{
-    return cv::CAP_GSTREAMER;
-}
+namespace cv {
 
-CV_EXTERN_C bool cv_open_capture(const char * filename, int camera_index, void * &handle)
+static
+CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
 {
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    if (!filename)
+        return CV_ERROR_FAIL;
     GStreamerCapture *cap = 0;
     try
     {
@@ -1647,8 +1650,8 @@ CV_EXTERN_C bool cv_open_capture(const char * filename, int camera_index, void *
             res = cap->open(camera_index);
         if (res)
         {
-            handle = cap;
-            return true;
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
         }
     }
     catch (...)
@@ -1656,84 +1659,94 @@ CV_EXTERN_C bool cv_open_capture(const char * filename, int camera_index, void *
     }
     if (cap)
         delete cap;
-    return false;
+    return CV_ERROR_FAIL;
 }
 
-CV_EXTERN_C bool cv_get_cap_prop(void * handle, int prop, double & val)
+static
+CvResult CV_API_CALL cv_capture_release(CvPluginCapture handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
+    GStreamerCapture* instance = (GStreamerCapture*)handle;
+    delete instance;
+    return CV_ERROR_OK;
+}
+
+
+static
+CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OUT double* val)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
     try
     {
-        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
-        val = instance->getProperty(prop);
-        return true;
+        GStreamerCapture* instance = (GStreamerCapture*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
+}
+
+static
+CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, double val)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        GStreamerCapture* instance = (GStreamerCapture*)handle;
+        return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_set_cap_prop(void * handle, int prop, double val)
+static
+CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
     try
     {
-        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
-        return instance->setProperty(prop, val);
+        GStreamerCapture* instance = (GStreamerCapture*)handle;
+        return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_grab(void * handle)
+static
+CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
     try
     {
-        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
-        return instance->grabFrame();
-    }
-    catch(...)
-    {
-        return false;
-    }
-}
-
-CV_EXTERN_C bool cv_retrieve(void * handle, int idx, cv_retrieve_cb_t * callback, void * userdata)
-{
-    if (!handle)
-        return false;
-    try
-    {
-        GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
+        GStreamerCapture* instance = (GStreamerCapture*)handle;
         Mat img;
         // TODO: avoid unnecessary copying - implement lower level GStreamerCapture::retrieve
-        if (instance->retrieveFrame(idx, img))
-            return callback(img.data, img.step, img.cols, img.rows, img.channels(), userdata);
-        return false;
+        if (instance->retrieveFrame(stream_idx, img))
+            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+        return CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_release_capture(void * handle)
-{
-    if (!handle)
-        return false;
-    GStreamerCapture * instance = static_cast<GStreamerCapture*>(handle);
-    delete instance;
-    return true;
-}
-
-CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, int width, int height, int isColor, void * &handle)
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+                                    CV_OUT CvPluginWriter* handle)
 {
     CvVideoWriter_GStreamer* wrt = 0;
     try
@@ -1742,8 +1755,8 @@ CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, i
         CvSize sz = { width, height };
         if(wrt && wrt->open(filename, fourcc, fps, sz, isColor))
         {
-            handle = wrt;
-            return true;
+            *handle = (CvPluginWriter)wrt;
+            return CV_ERROR_OK;
         }
     }
     catch(...)
@@ -1751,45 +1764,81 @@ CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, i
     }
     if (wrt)
         delete wrt;
-    return false;
+    return CV_ERROR_FAIL;
 }
 
-CV_EXTERN_C bool cv_get_wri_prop(void*, int, double&)
-{
-    return false;
-}
-
-CV_EXTERN_C bool cv_set_wri_prop(void*, int, double)
-{
-    return false;
-}
-
-CV_EXTERN_C bool cv_write(void * handle, const unsigned char * data, int step, int width, int height, int cn)
+static
+CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
+    CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
+    delete instance;
+    return CV_ERROR_OK;
+}
+
+static
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+{
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)
+{
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
     try
     {
-        CvVideoWriter_GStreamer * instance = static_cast<CvVideoWriter_GStreamer*>(handle);
+        CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
         CvSize sz = { width, height };
         IplImage img;
         cvInitImageHeader(&img, sz, IPL_DEPTH_8U, cn);
         cvSetData(&img, const_cast<unsigned char*>(data), step);
-        return instance->writeFrame(&img);
+        return instance->writeFrame(&img) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_release_writer(void * handle)
+static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
-    if (!handle)
-        return false;
-    CvVideoWriter_GStreamer * instance = static_cast<CvVideoWriter_GStreamer*>(handle);
-    delete instance;
-    return true;
+    {
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "GStreamer OpenCV Video I/O plugin"
+    },
+    /*  1*/CAP_GSTREAMER,
+    /*  2*/cv_capture_open,
+    /*  3*/cv_capture_release,
+    /*  4*/cv_capture_get_prop,
+    /*  5*/cv_capture_set_prop,
+    /*  6*/cv_capture_grab,
+    /*  7*/cv_capture_retrieve,
+    /*  8*/cv_writer_open,
+    /*  9*/cv_writer_release,
+    /* 10*/cv_writer_get_prop,
+    /* 11*/cv_writer_set_prop,
+    /* 12*/cv_writer_write
+};
+
+} // namespace
+
+const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version != 0)
+        return NULL;
+    if (requested_api_version != 0)
+        return NULL;
+    return &cv::plugin_api_v0;
 }
 
 #endif // BUILD_PLUGIN
