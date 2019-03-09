@@ -56,6 +56,8 @@ namespace cv
                           InputArray _kernelX, InputArray _kernelY, Point anchor,
                           double delta, int borderType );
 #endif
+
+    void preprocess2DKernel(const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs);
 }
 
 #endif
