@@ -1507,7 +1507,6 @@ struct RowVec_32f
 {
     RowVec_32f()
     {
-        haveAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
 #if defined USE_IPP_SEP_FILTERS
         bufsz = -1;
 #endif
@@ -1516,7 +1515,6 @@ struct RowVec_32f
     RowVec_32f( const Mat& _kernel )
     {
         kernel = _kernel;
-        haveAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
 #if defined USE_IPP_SEP_FILTERS
         bufsz = -1;
 #endif
@@ -1543,9 +1541,24 @@ struct RowVec_32f
         int i = 0, k;
         width *= cn;
 
-#if CV_TRY_AVX2
-        if (haveAVX2)
-            return RowVec_32f_AVX(src0, _kx, dst, width, cn, _ksize);
+#if CV_AVX
+        for (; i <= width - 8; i += 8)
+        {
+            const float* src = src0 + i;
+            __m256 f, x0;
+            __m256 s0 = _mm256_set1_ps(0.0f);
+            for (k = 0; k < _ksize; k++, src += cn)
+            {
+                f = _mm256_set1_ps(_kx[k]);
+                x0 = _mm256_loadu_ps(src);
+#if CV_FMA3
+                s0 = _mm256_fmadd_ps(x0, f, s0);
+#else
+                s0 = _mm256_add_ps(s0, _mm256_mul_ps(x0, f));
+#endif
+            }
+            _mm256_storeu_ps(dst + i, s0);
+        }
 #endif
         v_float32 k0 = vx_setall_f32(_kx[0]);
         for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
@@ -1599,7 +1612,6 @@ struct RowVec_32f
     }
 
     Mat kernel;
-    bool haveAVX2;
 #if defined USE_IPP_SEP_FILTERS
 private:
     mutable int bufsz;
@@ -1754,7 +1766,6 @@ struct SymmColumnVec_32f
 {
     SymmColumnVec_32f() {
         symmetryType=0;
-        haveAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
         delta = 0;
     }
     SymmColumnVec_32f(const Mat& _kernel, int _symmetryType, int, double _delta)
@@ -1762,7 +1773,6 @@ struct SymmColumnVec_32f
         symmetryType = _symmetryType;
         kernel = _kernel;
         delta = (float)_delta;
-        haveAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
@@ -1780,9 +1790,53 @@ struct SymmColumnVec_32f
         if( symmetrical )
         {
 
-#if CV_TRY_AVX2
-            if (haveAVX2)
-                return SymmColumnVec_32f_Symm_AVX(src, ky, dst, delta, width, ksize2);
+#if CV_AVX
+            {
+                const float *S, *S2;
+                const __m256 d8 = _mm256_set1_ps(delta);
+
+                for( ; i <= width - 16; i += 16 )
+                {
+                    __m256 f = _mm256_set1_ps(ky[0]);
+                    __m256 s0, s1;
+                    __m256 x0;
+                    S = src[0] + i;
+                    s0 = _mm256_loadu_ps(S);
+#if CV_FMA3
+                    s0 = _mm256_fmadd_ps(s0, f, d8);
+#else
+                    s0 = _mm256_add_ps(_mm256_mul_ps(s0, f), d8);
+#endif
+                    s1 = _mm256_loadu_ps(S+8);
+#if CV_FMA3
+                    s1 = _mm256_fmadd_ps(s1, f, d8);
+#else
+                    s1 = _mm256_add_ps(_mm256_mul_ps(s1, f), d8);
+#endif
+
+                    for( k = 1; k <= ksize2; k++ )
+                    {
+                        S = src[k] + i;
+                        S2 = src[-k] + i;
+                        f = _mm256_set1_ps(ky[k]);
+                        x0 = _mm256_add_ps(_mm256_loadu_ps(S), _mm256_loadu_ps(S2));
+#if CV_FMA3
+                        s0 = _mm256_fmadd_ps(x0, f, s0);
+#else
+                        s0 = _mm256_add_ps(s0, _mm256_mul_ps(x0, f));
+#endif
+                        x0 = _mm256_add_ps(_mm256_loadu_ps(S+8), _mm256_loadu_ps(S2+8));
+#if CV_FMA3
+                        s1 = _mm256_fmadd_ps(x0, f, s1);
+#else
+                        s1 = _mm256_add_ps(s1, _mm256_mul_ps(x0, f));
+#endif
+                    }
+
+                    _mm256_storeu_ps(dst + i, s0);
+                    _mm256_storeu_ps(dst + i + 8, s1);
+                }
+            }
 #endif
             const v_float32 d4 = vx_setall_f32(delta);
             const v_float32 k0 = vx_setall_f32(ky[0]);
@@ -1830,11 +1884,41 @@ struct SymmColumnVec_32f
         }
         else
         {
-#if CV_TRY_AVX2
-            if (haveAVX2)
-                return SymmColumnVec_32f_Unsymm_AVX(src, ky, dst, delta, width, ksize2);
-#endif
             CV_DbgAssert(ksize2 > 0);
+#if CV_AVX
+            {
+                const float *S2;
+                const __m256 d8 = _mm256_set1_ps(delta);
+
+                for (; i <= width - 16; i += 16)
+                {
+                    __m256 f, s0 = d8, s1 = d8;
+                    __m256 x0;
+
+                    for (k = 1; k <= ksize2; k++)
+                    {
+                        const float *S = src[k] + i;
+                        S2 = src[-k] + i;
+                        f = _mm256_set1_ps(ky[k]);
+                        x0 = _mm256_sub_ps(_mm256_loadu_ps(S), _mm256_loadu_ps(S2));
+#if CV_FMA3
+                        s0 = _mm256_fmadd_ps(x0, f, s0);
+#else
+                        s0 = _mm256_add_ps(s0, _mm256_mul_ps(x0, f));
+#endif
+                        x0 = _mm256_sub_ps(_mm256_loadu_ps(S + 8), _mm256_loadu_ps(S2 + 8));
+#if CV_FMA3
+                        s1 = _mm256_fmadd_ps(x0, f, s1);
+#else
+                        s1 = _mm256_add_ps(s1, _mm256_mul_ps(x0, f));
+#endif
+                    }
+
+                    _mm256_storeu_ps(dst + i, s0);
+                    _mm256_storeu_ps(dst + i + 8, s1);
+                }
+            }
+#endif
             const v_float32 d4 = vx_setall_f32(delta);
             const v_float32 k1 = vx_setall_f32(ky[1]);
             for( ; i <= width - 4*v_float32::nlanes; i += 4*v_float32::nlanes )
@@ -1885,7 +1969,6 @@ struct SymmColumnVec_32f
     int symmetryType;
     float delta;
     Mat kernel;
-    bool haveAVX2;
 };
 
 
