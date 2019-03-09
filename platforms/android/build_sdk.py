@@ -142,6 +142,7 @@ class Builder:
         self.use_ccache = False if config.no_ccache else True
         self.cmake_path = self.get_cmake()
         self.ninja_path = self.get_ninja()
+        self.debug = True if config.debug else False
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -214,6 +215,10 @@ class Builder:
         if self.ninja_path != 'ninja':
             cmake_vars['CMAKE_MAKE_PROGRAM'] = self.ninja_path
 
+        if self.debug:
+            cmake_vars['CMAKE_BUILD_TYPE'] = "Debug"
+            cmake_vars['BUILD_WITH_DEBUG_INFO'] = "ON"
+
         if self.config.extra_modules_path is not None:
             cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
 
@@ -226,7 +231,7 @@ class Builder:
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
-        execute([self.ninja_path, "install/strip"])
+        execute([self.ninja_path, "install" if self.debug else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -283,6 +288,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
     parser.add_argument('--force_opencv_toolchain', action="store_true", help="Do not use toolchain from Android NDK")
+    parser.add_argument('--debug', action="store_true", help="Build for debug")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
