@@ -192,8 +192,8 @@ void drawBox(Mat& frame, int classId, float conf, Rect box, Mat& objectMask, flo
     roi = roi * 0.7 + color * 0.3;
     roi.convertTo(roi, CV_8UC3);
 
-    vector<Mat> contours;
     Mat hierarchy;
-    findContours(mask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-    drawContours(roi, contours, -1, color, 5, LINE_8, hierarchy, 100);
+    vector<vector<Point>> contours;
+    findContours(mask, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    polylines(roi, contours, true, color, 2, LINE_8);
 }
