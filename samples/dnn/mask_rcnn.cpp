@@ -1,5 +1,4 @@
 // Deep learning based Object Detection and Instance Segmentation using Mask R-CNN
-// VIDEO 360 DEMO: https://www.youtube.com/watch?v=0tU8991QgE8
 // Downloads:
 // http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
 // https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt
