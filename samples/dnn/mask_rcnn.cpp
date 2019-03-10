@@ -20,13 +20,13 @@ using namespace dnn;
 using namespace std;
 
 string keys =
-    "{ help  h     | | Print help message. \nUsage \n\t\t./mask_rcnn --image=logo.jpg \n\t\t ./mask_rcnn --video=teste.mp4}"
+    "{ help  h     | | Print help message. }"
     "{ image m     |<none>| Path to input image file.  }"
     "{ input i     | 0 | Path to input image file or video or camera id.  }"
-    "{ classes n   |object_detection_classes_coco.txt| Path to a text file with names of classes.  }"
-    "{ model w     |mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
-    "{ height H    |800| Preprocess input image by resizing to a specific height }"
-    "{ width W     |800| Preprocess input image by resizing to a specific columns }"
+    "{ classes     |mscoco_labels.names| Path to a text file with names of classes. }"
+    "{ model       |mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb | The pre-trained weights.  }"
+    "{ height      |800| Preprocess input image by resizing to a specific height }"
+    "{ width       |800| Preprocess input image by resizing to a specific columns }"
     "{ config c    |mask_rcnn_inception_v2_coco_2018_01_28.pbtxt |The text graph file that has been tuned by the OpenCV’s DNN support group  }"
     "{ cthr        | .5 | Confidence threshold. }"
     "{ mthr        | .4 | Mask threshold. }";
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
     parser.about("This sample demonstrates instance segmentation network called Mask-RCNN.");
-    if (argc == 1 || parser.has("help"))
+    if (parser.has("help"))
     {
         parser.printMessage();
         return 0;
