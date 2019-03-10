@@ -20,7 +20,7 @@ using namespace dnn;
 using namespace std;
 
 string keys =
-    "{ help  h     | | Print help message. }"
+    "{ help        | | Print help message. }"
     "{ image       |<none>| Path to input image file.  }"
     "{ input i     | 0 | Path to input image file or video or camera id.  }"
     "{ classes     |mscoco_labels.names| Path to a text file with names of classes. }"
