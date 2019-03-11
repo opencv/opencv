@@ -10,6 +10,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            packagingOptions{
+                doNotStrip '*.so'
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
