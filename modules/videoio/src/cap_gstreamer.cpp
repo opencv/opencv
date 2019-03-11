@@ -1590,6 +1590,10 @@ void handleMessage(GstElement * pipeline)
 
     while(gst_bus_have_pending(bus)) {
         msg = gst_bus_pop(bus);
+        if (!msg || !GST_IS_MESSAGE(msg))
+        {
+            continue;
+        }
 
         if(gst_is_missing_plugin_message(msg))
         {
