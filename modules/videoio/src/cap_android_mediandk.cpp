@@ -28,69 +28,71 @@ using namespace cv;
 #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
+
+static inline void deleter_AMediExtractor(AMediaExtractor *extractor) {
+    AMediaExtractor_delete(extractor);
+}
+
+static inline void deleter_AMediaCodec(AMediaCodec *codec) {
+    AMediaCodec_stop(codec);
+    AMediaCodec_delete(codec);
+}
+
+static inline void deleter_AMediaFormat(AMediaFormat *format) {
+    AMediaFormat_delete(format);
+}
+
 class AndroidMediaNdkCapture : public IVideoCapture
 {
 
 public:
     AndroidMediaNdkCapture():
-        mediaExtractor(NULL), mediaCodec(NULL), sawInputEOS(false), sawOutputEOS(false),
-        frameWidth(0), frameHeight(0), colorFormat(0), buffer(NULL), bufferSize(0) {}
-    AMediaExtractor* mediaExtractor;
-    AMediaCodec *mediaCodec;
+        sawInputEOS(false), sawOutputEOS(false),
+        frameWidth(0), frameHeight(0), colorFormat(0) {}
+    std::shared_ptr<AMediaExtractor> mediaExtractor;
+    std::shared_ptr<AMediaCodec> mediaCodec;
     bool sawInputEOS;
     bool sawOutputEOS;
     int32_t frameWidth;
     int32_t frameHeight;
     int32_t colorFormat;
-    uint8_t* buffer;
-    size_t bufferSize;
+    std::vector<uint8_t> buffer;
 
     ~AndroidMediaNdkCapture() { cleanUp(); }
-
-    void allocateBuffer(size_t bufSize) {
-        buffer = (uint8_t*)malloc(bufSize);
-        bufferSize = bufSize;
-    }
 
     bool decodeFrame() {
         while (!sawInputEOS || !sawOutputEOS) {
             if (!sawInputEOS) {
-                auto bufferIndex = AMediaCodec_dequeueInputBuffer(mediaCodec, INPUT_TIMEOUT_MS);
+                auto bufferIndex = AMediaCodec_dequeueInputBuffer(mediaCodec.get(), INPUT_TIMEOUT_MS);
                 LOGV("input buffer %zd", bufferIndex);
                 if (bufferIndex >= 0) {
-                    size_t bufsize;
-                    auto buf = AMediaCodec_getInputBuffer(mediaCodec, bufferIndex, &bufsize);
-                    auto sampleSize = AMediaExtractor_readSampleData(mediaExtractor, buf, bufsize);
+                    size_t bufferSize;
+                    auto inputBuffer = AMediaCodec_getInputBuffer(mediaCodec.get(), bufferIndex, &bufferSize);
+                    auto sampleSize = AMediaExtractor_readSampleData(mediaExtractor.get(), inputBuffer, bufferSize);
                     if (sampleSize < 0) {
                         sampleSize = 0;
                         sawInputEOS = true;
                         LOGV("EOS");
                     }
-                    auto presentationTimeUs = AMediaExtractor_getSampleTime(mediaExtractor);
+                    auto presentationTimeUs = AMediaExtractor_getSampleTime(mediaExtractor.get());
 
-                    AMediaCodec_queueInputBuffer(mediaCodec, bufferIndex, 0, sampleSize,
+                    AMediaCodec_queueInputBuffer(mediaCodec.get(), bufferIndex, 0, sampleSize,
                         presentationTimeUs, sawInputEOS ? AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM : 0);
-                    AMediaExtractor_advance(mediaExtractor);
+                    AMediaExtractor_advance(mediaExtractor.get());
                 }
             }
 
             if (!sawOutputEOS) {
                 AMediaCodecBufferInfo info;
-                auto bufferIndex = AMediaCodec_dequeueOutputBuffer(mediaCodec, &info, 0);
+                auto bufferIndex = AMediaCodec_dequeueOutputBuffer(mediaCodec.get(), &info, 0);
                 if (bufferIndex >= 0) {
-                    size_t bufSize = 0;
-                    AMediaFormat* mediaFormat = AMediaCodec_getOutputFormat(mediaCodec);
-                    AMediaFormat_getInt32(mediaFormat, AMEDIAFORMAT_KEY_WIDTH, &frameWidth);
-                    AMediaFormat_getInt32(mediaFormat, AMEDIAFORMAT_KEY_HEIGHT, &frameHeight);
-                    AMediaFormat_getInt32(mediaFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, &colorFormat);
-                    uint8_t* codecBuffer = AMediaCodec_getOutputBuffer(mediaCodec, bufferIndex, &bufSize);
-                    if (buffer == NULL) {
-                        allocateBuffer(bufSize);
-                    } else if (bufferSize < bufSize) {
-                        free(buffer);
-                        allocateBuffer(bufSize);
-                    }
-                    memcpy(buffer, codecBuffer, bufferSize);
+                    size_t bufferSize = 0;
+                    auto mediaFormat = std::shared_ptr<AMediaFormat>(AMediaCodec_getOutputFormat(mediaCodec.get()), deleter_AMediaFormat);
+                    AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_WIDTH, &frameWidth);
+                    AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_HEIGHT, &frameHeight);
+                    AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_COLOR_FORMAT, &colorFormat);
+                    uint8_t* codecBuffer = AMediaCodec_getOutputBuffer(mediaCodec.get(), bufferIndex, &bufferSize);
+                    buffer = std::vector<uint8_t>(codecBuffer + info.offset, codecBuffer + bufferSize);
                     LOGV("colorFormat: %d", colorFormat);
                     LOGV("buffer size: %zu", bufferSize);
                     LOGV("width (frame): %d", frameWidth);
@@ -99,12 +101,12 @@ public:
                         LOGV("output EOS");
                         sawOutputEOS = true;
                     }
-                    AMediaCodec_releaseOutputBuffer(mediaCodec, bufferIndex, info.size != 0);
+                    AMediaCodec_releaseOutputBuffer(mediaCodec.get(), bufferIndex, info.size != 0);
                     return true;
                 } else if (bufferIndex == AMEDIACODEC_INFO_OUTPUT_BUFFERS_CHANGED) {
                     LOGV("output buffers changed");
                 } else if (bufferIndex == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
-                    auto format = AMediaCodec_getOutputFormat(mediaCodec);
+                    auto format = AMediaCodec_getOutputFormat(mediaCodec.get());
                     LOGV("format changed to: %s", AMediaFormat_toString(format));
                     AMediaFormat_delete(format);
                 } else if (bufferIndex == AMEDIACODEC_INFO_TRY_AGAIN_LATER) {
@@ -117,24 +119,23 @@ public:
         return false;
     }
 
-    bool isOpened() const CV_OVERRIDE { return mediaCodec != NULL; }
+    bool isOpened() const CV_OVERRIDE { return mediaCodec.get() != nullptr; }
 
     int getCaptureDomain() CV_OVERRIDE { return CAP_ANDROID; }
 
     bool grabFrame() CV_OVERRIDE
     {
         // clear the previous frame
-        buffer = NULL;
-        bufferSize = 0;
+        buffer.clear();
         return decodeFrame();
     }
 
     bool retrieveFrame(int, OutputArray out) CV_OVERRIDE
     {
-        if (buffer == NULL) {
+        if (buffer.empty()) {
             return false;
         }
-        Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer);
+        Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
         if (colorFormat == COLOR_FormatYUV420Planar) {
             cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
@@ -176,59 +177,59 @@ public:
             return false;
         }
 
-        AMediaExtractor *extractor = AMediaExtractor_new();
-        media_status_t err = AMediaExtractor_setDataSourceFd(extractor, fd, 0, statBuffer.st_size);
+        mediaExtractor = std::shared_ptr<AMediaExtractor>(AMediaExtractor_new(), deleter_AMediExtractor);
+        if (!mediaExtractor) {
+            return false;
+        }
+        media_status_t err = AMediaExtractor_setDataSourceFd(mediaExtractor.get(), fd, 0, statBuffer.st_size);
         close(fd);
         if (err != AMEDIA_OK) {
             LOGV("setDataSource error: %d", err);
             return false;
         }
 
-        int numtracks = AMediaExtractor_getTrackCount(extractor);
-
-        AMediaCodec *codec = NULL;
+        int numtracks = AMediaExtractor_getTrackCount(mediaExtractor.get());
 
         LOGV("input has %d tracks", numtracks);
         for (int i = 0; i < numtracks; i++) {
-            AMediaFormat *format = AMediaExtractor_getTrackFormat(extractor, i);
-            const char *s = AMediaFormat_toString(format);
+            auto format = std::shared_ptr<AMediaFormat>(AMediaExtractor_getTrackFormat(mediaExtractor.get(), i), deleter_AMediaFormat);
+            if (!format) {
+                continue;
+            }
+            const char *s = AMediaFormat_toString(format.get());
             LOGV("track %d format: %s", i, s);
             const char *mime;
-            if (!AMediaFormat_getString(format, AMEDIAFORMAT_KEY_MIME, &mime)) {
+            if (!AMediaFormat_getString(format.get(), AMEDIAFORMAT_KEY_MIME, &mime)) {
                 LOGV("no mime type");
-                return false;
             } else if (!strncmp(mime, "video/", 6)) {
                 int32_t trackWidth, trackHeight;
-                AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_WIDTH, &trackWidth);
-                AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_HEIGHT, &trackHeight);
+                AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_WIDTH, &trackWidth);
+                AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_HEIGHT, &trackHeight);
                 LOGV("width (track): %d", trackWidth);
                 LOGV("height (track): %d", trackHeight);
-                AMediaExtractor_selectTrack(extractor, i);
-                codec = AMediaCodec_createDecoderByType(mime);
-                AMediaCodec_configure(codec, format, NULL, NULL, 0);
-                this->mediaExtractor = extractor;
-                this->mediaCodec = codec;
-                this->sawInputEOS = false;
-                this->sawOutputEOS = false;
-                AMediaCodec_start(codec);
+                if (AMediaExtractor_selectTrack(mediaExtractor.get(), i) != AMEDIA_OK) {
+                    continue;
+                }
+                mediaCodec = std::shared_ptr<AMediaCodec>(AMediaCodec_createDecoderByType(mime), deleter_AMediaCodec);
+                if (!mediaCodec) {
+                    continue;
+                }
+                if (AMediaCodec_configure(mediaCodec.get(), format.get(), NULL, NULL, 0) != AMEDIA_OK) {
+                    continue;
+                }
+                sawInputEOS = false;
+                sawOutputEOS = false;
+                if (AMediaCodec_start(mediaCodec.get()) != AMEDIA_OK) {
+                    continue;
+                }
+                return true;
             }
-            AMediaFormat_delete(format);
         }
-        return true;
+
+        return false;
     }
 
     void cleanUp() {
-        if (mediaCodec != NULL) {
-            AMediaCodec_stop(mediaCodec);
-            AMediaCodec_delete(mediaCodec);
-            mediaCodec = NULL;
-        }
-        if (mediaExtractor != NULL) {
-            AMediaExtractor_delete(mediaExtractor);
-            mediaExtractor = NULL;
-        }
-        buffer = NULL;
-        bufferSize = 0;
         sawInputEOS = true;
         sawOutputEOS = true;
         frameWidth = 0;
