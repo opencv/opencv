@@ -19,6 +19,8 @@ from __future__ import print_function
 
 import cv2 as cv
 
+print(__doc__)
+
 def decode_fourcc(v):
     v = int(v)
     return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
