@@ -29,7 +29,8 @@ if __name__ == '__main__':
     import sys
     import getopt
     from glob import glob
-
+    
+    print(__doc__)
     args, img_mask = getopt.getopt(sys.argv[1:], '', ['debug=', 'square_size=', 'threads='])
     args = dict(args)
     args.setdefault('--debug', './output/')
