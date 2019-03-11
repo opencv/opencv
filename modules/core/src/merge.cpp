@@ -226,7 +226,7 @@ static MergeFunc getMergeFunc(int depth)
 #ifdef HAVE_IPP
 
 namespace cv {
-static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
+static bool ipp_merge(const Mat* mv, Mat& dst, int channels, int cn)
 {
 #ifdef HAVE_IPP_IW_LL
     CV_INSTRUMENT_REGION_IPP();
@@ -246,7 +246,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
                 return false;
         }
 
-        return CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, srcPtrs, (int)srcStep, dst.ptr(), (int)dst.step, size, (int)mv[0].elemSize1(), channels, 0) >= 0;
+        return CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, srcPtrs, (int)srcStep, dst.ptr(), (int)dst.step, size, (int)mv[0].elemSize1(), cn, 0) >= 0;
     }
     else
     {
@@ -264,7 +264,7 @@ static bool ipp_merge(const Mat* mv, Mat& dst, int channels)
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
-            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, (const void**)&ptrs[1], 0, ptrs[0], 0, size, (int)mv[0].elemSize1(), channels, 0) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMerge, (const void**)&ptrs[1], 0, ptrs[0], 0, size, (int)mv[0].elemSize1(), cn, 0) < 0)
                 return false;
         }
         return true;
@@ -305,7 +305,7 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
         return;
     }
 
-    CV_IPP_RUN_FAST(ipp_merge(mv, dst, (int)n));
+    CV_IPP_RUN_FAST(ipp_merge(mv, dst, (int)n, cn));
 
     if( !allch1 )
     {
