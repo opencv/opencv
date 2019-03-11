@@ -750,12 +750,11 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     }
 
     //Settings that matter to all images
-    // defaults for now, maybe base them on params in the future
     int compression = COMPRESSION_LZW;
     int predictor = PREDICTOR_HORIZONTAL;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
-    readParam(params, TIFFTAG_COMPRESSION, compression);
+    readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
     readParam(params, TIFFTAG_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
