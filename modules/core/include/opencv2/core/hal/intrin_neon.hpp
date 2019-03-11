@@ -1202,14 +1202,16 @@ OPENCV_HAL_IMPL_NEON_EXPAND(v_int32x4, v_int64x2, int, s32)
 
 inline v_uint32x4 v_load_expand_q(const uchar* ptr)
 {
-    uint8x8_t v0 = vcreate_u8(*(unsigned*)ptr);
+    typedef unsigned int CV_DECL_ALIGNED(1) unaligned_uint;
+    uint8x8_t v0 = vcreate_u8(*(unaligned_uint*)ptr);
     uint16x4_t v1 = vget_low_u16(vmovl_u8(v0));
     return v_uint32x4(vmovl_u16(v1));
 }
 
 inline v_int32x4 v_load_expand_q(const schar* ptr)
 {
-    int8x8_t v0 = vcreate_s8(*(unsigned*)ptr);
+    typedef unsigned int CV_DECL_ALIGNED(1) unaligned_uint;
+    int8x8_t v0 = vcreate_s8(*(unaligned_uint*)ptr);
     int16x4_t v1 = vget_low_s16(vmovl_s8(v0));
     return v_int32x4(vmovl_s16(v1));
 }
