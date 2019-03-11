@@ -64,6 +64,7 @@ import cv2 as cv
 import sys
 import argparse
 
+print(__doc__)
 parser = argparse.ArgumentParser(description='stitching_detailed')
 parser.add_argument('img_names', nargs='+',help='files to stitch',type=str)
 parser.add_argument('--preview',help='Run stitching in the preview mode. Works faster than usual mode but output image will have lower resolution.',type=bool,dest = 'preview' )
