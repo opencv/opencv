@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2010, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,6 +41,50 @@
 //
 //M*/
 
+/********************************* COPYRIGHT NOTICE *******************************\
+  Original code for Bayer->BGR/RGB conversion is provided by Dirk Schaefer
+  from MD-Mathematische Dienste GmbH. Below is the copyright notice:
+
+    IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+    By downloading, copying, installing or using the software you agree
+    to this license. If you do not agree to this license, do not download,
+    install, copy or use the software.
+
+    Contributors License Agreement:
+
+      Copyright (c) 2002,
+      MD-Mathematische Dienste GmbH
+      Im Defdahl 5-10
+      44141 Dortmund
+      Germany
+      www.md-it.de
+
+    Redistribution and use in source and binary forms,
+    with or without modification, are permitted provided
+    that the following conditions are met:
+
+    Redistributions of source code must retain
+    the above copyright notice, this list of conditions and the following disclaimer.
+    Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+    The name of Contributor may not be used to endorse or promote products
+    derived from this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+    PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+    STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+    THE POSSIBILITY OF SUCH DAMAGE.
+\**********************************************************************************/
+
+
 #include "precomp.hpp"
 
 #include <limits>
@@ -62,6 +107,11 @@ public:
     }
 
     int bayer2RGB(const T*, int, T*, int, int) const
+    {
+        return 0;
+    }
+
+    int bayer2RGBA(const T*, int, T*, int, int) const
     {
         return 0;
     }
@@ -218,6 +268,11 @@ public:
         return (int)(bayer - (bayer_end - width));
     }
 
+    int bayer2RGBA(const uchar*, int, uchar*, int, int) const
+    {
+        return 0;
+    }
+
     int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
     {
         if (!use_simd)
@@ -323,6 +378,166 @@ public:
 
     bool use_simd;
 };
+#elif CV_NEON
+class SIMDBayerInterpolator_8u
+{
+public:
+    SIMDBayerInterpolator_8u()
+    {
+    }
+
+    int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
+                   int width, int bcoeff, int gcoeff, int rcoeff) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+
+        uint16x8_t masklo = vdupq_n_u16(255);
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1_ = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t b1 = vextq_u16(b1_, b1_, 1);
+            uint16x8_t b0 = vaddq_u16(b1_, b1);
+            // b0 = b0 b2 b4 ...
+            // b1 = b1 b3 b5 ...
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            uint16x8_t rot = vextq_u16(g1, g1, 1);
+            g1 = vshlq_n_u16(rot, 2);
+            // g0 = b0 b2 b4 ...
+            // g1 = b1 b3 b5 ...
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            r0 = vshlq_n_u16(r0, 2);
+            // r0 = r0 r2 r4 ...
+            // r1 = r1 r3 r5 ...
+
+            b0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(b0), (short)(rcoeff*2)));
+            b1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(b1), (short)(rcoeff*4)));
+
+            g0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(g0), (short)(gcoeff*2)));
+            g1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(g1), (short)(gcoeff*2)));
+
+            r0 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(r0), (short)(bcoeff*2)));
+            r1 = vreinterpretq_u16_s16(vqdmulhq_n_s16(vreinterpretq_s16_u16(r1), (short)(bcoeff*4)));
+
+            g0 = vaddq_u16(vaddq_u16(g0, b0), r0);
+            g1 = vaddq_u16(vaddq_u16(g1, b1), r1);
+
+            uint8x8x2_t p = vzip_u8(vrshrn_n_u16(g0, 2), vrshrn_n_u16(g1, 2));
+            vst1_u8(dst, p.val[0]);
+            vst1_u8(dst + 8, p.val[1]);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+        uint16x8_t masklo = vdupq_n_u16(255);
+        uint8x16x3_t pix;
+        const uchar* bayer_end = bayer + width;
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1 = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t nextb1 = vextq_u16(b1, b1, 1);
+            uint16x8_t b0 = vaddq_u16(b1, nextb1);
+            // b0 b1 b2 ...
+            uint8x8x2_t bb = vzip_u8(vrshrn_n_u16(b0, 2), vrshrn_n_u16(nextb1, 1));
+            pix.val[1-blue] = vcombine_u8(bb.val[0], bb.val[1]);
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            g1 = vextq_u16(g1, g1, 1);
+            // g0 g1 g2 ...
+            uint8x8x2_t gg = vzip_u8(vrshrn_n_u16(g0, 2), vmovn_u16(g1));
+            pix.val[1] = vcombine_u8(gg.val[0], gg.val[1]);
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            // r0 r1 r2 ...
+            uint8x8x2_t rr = vzip_u8(vmovn_u16(r0), vrshrn_n_u16(r1, 1));
+            pix.val[1+blue] = vcombine_u8(rr.val[0], rr.val[1]);
+
+            vst3q_u8(dst-1, pix);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGBA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        /*
+         B G B G | B G B G | B G B G | B G B G
+         G R G R | G R G R | G R G R | G R G R
+         B G B G | B G B G | B G B G | B G B G
+         */
+        uint16x8_t masklo = vdupq_n_u16(255);
+        uint8x16x4_t pix;
+        const uchar* bayer_end = bayer + width;
+        pix.val[3] = vdupq_n_u8(255);
+
+        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 56 )
+        {
+            uint16x8_t r0 = vld1q_u16((const ushort*)bayer);
+            uint16x8_t r1 = vld1q_u16((const ushort*)(bayer + bayer_step));
+            uint16x8_t r2 = vld1q_u16((const ushort*)(bayer + bayer_step*2));
+
+            uint16x8_t b1 = vaddq_u16(vandq_u16(r0, masklo), vandq_u16(r2, masklo));
+            uint16x8_t nextb1 = vextq_u16(b1, b1, 1);
+            uint16x8_t b0 = vaddq_u16(b1, nextb1);
+            // b0 b1 b2 ...
+            uint8x8x2_t bb = vzip_u8(vrshrn_n_u16(b0, 2), vrshrn_n_u16(nextb1, 1));
+            pix.val[1-blue] = vcombine_u8(bb.val[0], bb.val[1]);
+
+            uint16x8_t g0 = vaddq_u16(vshrq_n_u16(r0, 8), vshrq_n_u16(r2, 8));
+            uint16x8_t g1 = vandq_u16(r1, masklo);
+            g0 = vaddq_u16(g0, vaddq_u16(g1, vextq_u16(g1, g1, 1)));
+            g1 = vextq_u16(g1, g1, 1);
+            // g0 g1 g2 ...
+            uint8x8x2_t gg = vzip_u8(vrshrn_n_u16(g0, 2), vmovn_u16(g1));
+            pix.val[1] = vcombine_u8(gg.val[0], gg.val[1]);
+
+            r0 = vshrq_n_u16(r1, 8);
+            r1 = vaddq_u16(r0, vextq_u16(r0, r0, 1));
+            // r0 r1 r2 ...
+            uint8x8x2_t rr = vzip_u8(vmovn_u16(r0), vrshrn_n_u16(r1, 1));
+            pix.val[1+blue] = vcombine_u8(rr.val[0], rr.val[1]);
+
+            vst4q_u8(dst-1, pix);
+        }
+
+        return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB_EA(const uchar*, int, uchar*, int, int) const
+    {
+        return 0;
+    }
+};
 #else
 typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
 #endif
@@ -340,13 +555,13 @@ public:
     {
     }
 
-    virtual void operator ()(const Range& range) const
+    virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         const int G2Y = 9617;
         const int SHIFT = 14;
 
-        const T* bayer0 = (const T*)srcmat.data;
+        const T* bayer0 = srcmat.ptr<T>();
         int bayer_step = (int)(srcmat.step/sizeof(T));
         T* dst0 = (T*)dstmat.data;
         int dst_step = (int)(dstmat.step/sizeof(T));
@@ -443,10 +658,10 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
 
     Size size = srcmat.size();
     int bcoeff = B2Y, rcoeff = R2Y;
-    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
+    int start_with_green = code == COLOR_BayerGB2GRAY || code == COLOR_BayerGR2GRAY;
     bool brow = true;
 
-    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
+    if( code != COLOR_BayerBG2GRAY && code != COLOR_BayerGB2GRAY )
     {
         brow = false;
         std::swap(bcoeff, rcoeff);
@@ -463,7 +678,7 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
     }
 
     size = dstmat.size();
-    T* dst0 = (T*)dstmat.data;
+    T* dst0 = dstmat.ptr<T>();
     int dst_step = (int)(dstmat.step/sizeof(T));
     if( size.height > 2 )
         for( int i = 0; i < size.width; i++ )
@@ -499,7 +714,7 @@ public:
     {
     }
 
-    virtual void operator() (const Range& range) const
+    virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
         T alpha = Alpha<T>::value();
@@ -507,7 +722,7 @@ public:
         int dcn2 = dcn << 1;
 
         int bayer_step = (int)(srcmat.step/sizeof(T));
-        const T* bayer0 = reinterpret_cast<const T*>(srcmat.data) + bayer_step * range.start;
+        const T* bayer0 = srcmat.ptr<T>() + bayer_step * range.start;
 
         int dst_step = (int)(dstmat.step/sizeof(T));
         T* dst0 = reinterpret_cast<T*>(dstmat.data) + (range.start + 1) * dst_step + dcn + 1;
@@ -559,7 +774,9 @@ public:
             }
 
             // simd optimization only for dcn == 3
-            int delta = dcn == 4 ? 0 : vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
+            int delta = dcn == 4 ?
+                vecOp.bayer2RGBA(bayer, bayer_step, dst, size.width, blue) :
+                vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
             bayer += delta;
             dst += delta*dcn;
 
@@ -706,8 +923,10 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 {
     int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+    int blue = (code == COLOR_BayerBG2BGR || code == COLOR_BayerGB2BGR ||
+                code == COLOR_BayerBG2BGRA || code == COLOR_BayerGB2BGRA ) ? -1 : 1;
+    int start_with_green = (code == COLOR_BayerGB2BGR || code == COLOR_BayerGR2BGR ||
+                            code == COLOR_BayerGB2BGRA || code == COLOR_BayerGR2BGRA);
 
     int dcn = dstmat.channels();
     size.height -= 2;
@@ -722,7 +941,7 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
     // filling the first and the last rows
     size = dstmat.size();
-    T* dst0 = (T*)dstmat.data;
+    T* dst0 = dstmat.ptr<T>();
     if( size.height > 2 )
         for( int i = 0; i < size.width*dcn; i++ )
         {
@@ -739,14 +958,14 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
 static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 {
-    const uchar* bayer = srcmat.data;
+    const uchar* bayer = srcmat.ptr();
     int bstep = (int)srcmat.step;
-    uchar* dst = dstmat.data;
+    uchar* dst = dstmat.ptr();
     int dststep = (int)dstmat.step;
     Size size = srcmat.size();
 
-    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
-    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
+    int blueIdx = code == COLOR_BayerBG2BGR_VNG || code == COLOR_BayerGB2BGR_VNG ? 0 : 2;
+    bool greenCell0 = code != COLOR_BayerBG2BGR_VNG && code != COLOR_BayerRG2BGR_VNG;
 
     // for too small images use the simple interpolation algorithm
     if( MIN(size.width, size.height) < 8 )
@@ -759,7 +978,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
     int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
     int i, bufstep = N7*bcn;
     cv::AutoBuffer<ushort> _buf(bufstep*brows);
-    ushort* buf = (ushort*)_buf;
+    ushort* buf = _buf.data();
 
     bayer += bstep*2;
 
@@ -1303,7 +1522,7 @@ public:
     {
     }
 
-    virtual void operator()(const Range& range) const
+    virtual void operator()(const Range& range) const CV_OVERRIDE
     {
         int dcn = dst.channels();
         int dcn2 = dcn<<1;
@@ -1311,7 +1530,7 @@ public:
         int sstep = int(src.step / src.elemSize1()), dstep = int(dst.step / dst.elemSize1());
         SIMDInterpolator vecOp;
 
-        const T* S = reinterpret_cast<const T*>(src.data + (range.start + 1) * src.step) + 1;
+        const T* S = src.ptr<T>(range.start + 1) + 1;
         T* D = reinterpret_cast<T*>(dst.data + (range.start + 1) * dst.step) + dcn;
 
         if (range.start % 2)
@@ -1406,8 +1625,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     size.width -= 2;
     size.height -= 2;
 
-    int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
-    int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
+    int start_with_green = code == COLOR_BayerGB2BGR_EA || code == COLOR_BayerGR2BGR_EA ? 1 : 0;
+    int blue = code == COLOR_BayerGB2BGR_EA || code == COLOR_BayerBG2BGR_EA ? 1 : 0;
 
     if (size.height > 0)
     {
@@ -1418,8 +1637,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     size = dst.size();
     size.width *= dst.channels();
     size_t dstep = dst.step / dst.elemSize1();
-    T* firstRow = reinterpret_cast<T*>(dst.data);
-    T* lastRow = reinterpret_cast<T*>(dst.data) + (size.height-1) * dstep;
+    T* firstRow = dst.ptr<T>();
+    T* lastRow = dst.ptr<T>() + (size.height-1) * dstep;
 
     if (size.height > 2)
     {
@@ -1442,6 +1661,8 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 
 void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 {
+    CV_INSTRUMENT_REGION();
+
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
     int scn = src.channels(), depth = src.depth();
@@ -1451,7 +1672,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
 
     switch (code)
     {
-    case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
+    case COLOR_BayerBG2GRAY: case COLOR_BayerGB2GRAY: case COLOR_BayerRG2GRAY: case COLOR_BayerGR2GRAY:
         if (dcn <= 0)
             dcn = 1;
         CV_Assert( scn == 1 && dcn == 1 );
@@ -1467,8 +1688,12 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
         break;
 
-    case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
-    case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
+    case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
+        if (dcn <= 0)
+          dcn = 4;
+        /* fallthrough */
+    case COLOR_BayerBG2BGR: case COLOR_BayerGB2BGR: case COLOR_BayerRG2BGR: case COLOR_BayerGR2BGR:
+    case COLOR_BayerBG2BGR_VNG: case COLOR_BayerGB2BGR_VNG: case COLOR_BayerRG2BGR_VNG: case COLOR_BayerGR2BGR_VNG:
         {
             if (dcn <= 0)
                 dcn = 3;
@@ -1477,8 +1702,10 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
             _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
             Mat dst_ = _dst.getMat();
 
-            if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
+            if( code == COLOR_BayerBG2BGR || code == COLOR_BayerBG2BGRA ||
+                code == COLOR_BayerGB2BGR || code == COLOR_BayerGB2BGRA ||
+                code == COLOR_BayerRG2BGR || code == COLOR_BayerRG2BGRA ||
+                code == COLOR_BayerGR2BGR || code == COLOR_BayerGR2BGRA )
             {
                 if( depth == CV_8U )
                     Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
@@ -1495,7 +1722,7 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         }
         break;
 
-    case CV_BayerBG2BGR_EA: case CV_BayerGB2BGR_EA: case CV_BayerRG2BGR_EA: case CV_BayerGR2BGR_EA:
+    case COLOR_BayerBG2BGR_EA: case COLOR_BayerGB2BGR_EA: case COLOR_BayerRG2BGR_EA: case COLOR_BayerGR2BGR_EA:
         if (dcn <= 0)
             dcn = 3;
 

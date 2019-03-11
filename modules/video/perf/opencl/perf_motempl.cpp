@@ -5,12 +5,12 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-#ifdef HAVE_OPENCL
+#if 0 //def HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// UpdateMotionHistory ////////////////////////
@@ -31,6 +31,6 @@ OCL_PERF_TEST_P(UpdateMotionHistoryFixture, UpdateMotionHistory, OCL_TEST_SIZES)
     SANITY_CHECK(mhi);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

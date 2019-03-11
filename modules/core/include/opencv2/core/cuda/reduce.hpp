@@ -40,12 +40,22 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_REDUCE_HPP__
-#define __OPENCV_CUDA_REDUCE_HPP__
+#ifndef OPENCV_CUDA_REDUCE_HPP
+#define OPENCV_CUDA_REDUCE_HPP
+
+#ifndef THRUST_DEBUG // eliminate -Wundef warning
+#define THRUST_DEBUG 0
+#endif
 
 #include <thrust/tuple.h>
 #include "detail/reduce.hpp"
 #include "detail/reduce_key_val.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -194,4 +204,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_CUDA_UTILITY_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_REDUCE_HPP

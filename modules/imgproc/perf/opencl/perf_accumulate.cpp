@@ -43,12 +43,12 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////// Accumulate ///////////////////////////////////
@@ -135,6 +135,6 @@ OCL_PERF_TEST_P(AccumulateWeightedFixture, AccumulateWeighted,
     SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

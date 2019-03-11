@@ -42,10 +42,15 @@
 #include "precomp.hpp"
 #include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
-#if defined WIN32 || defined _WIN32
+#if defined _WIN32
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#endif
+
+#if (_WIN32_IE < 0x0500)
+#pragma message("WARNING: Win32 UI needs to be compiled with _WIN32_IE >= 0x0500 (_WIN32_IE_IE50)")
+#define _WIN32_IE 0x0500
 #endif
 
 #include <commctrl.h>
@@ -60,7 +65,8 @@
 #include <vector>
 #include <functional>
 #include "opencv2/highgui.hpp"
-#include <GL\gl.h>
+#include <GL/gl.h>
+#include "opencv2/core/opengl.hpp"
 #endif
 
 static const char* trackbar_text =
@@ -92,6 +98,19 @@ static const char* trackbar_text =
 
 #ifndef WM_MOUSEHWHEEL
     #define WM_MOUSEHWHEEL 0x020E
+#endif
+
+#if defined(__MINGW32__) || defined(__MINGW64__)
+static inline void mingw_strcpy_s(char *dest, size_t destsz, const char *src){
+    strcpy(dest, src);
+}
+
+static inline void mingw_strcat_s(char *dest, size_t destsz, const char *src){
+    strcat(dest, src);
+}
+
+#define strcpy_s mingw_strcpy_s
+#define strcat_s mingw_strcat_s
 #endif
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
@@ -133,6 +152,7 @@ typedef struct CvTrackbar
     int* data;
     int pos;
     int maxval;
+    int minval;
     void (*notify)(int);
     void (*notify2)(int, void*);
     void* userdata;
@@ -255,6 +275,8 @@ CV_IMPL int cvInitSystem( int, char** )
         wasInitialized = 1;
     }
 
+    setlocale(LC_NUMERIC,"C");
+
     return 0;
 }
 
@@ -299,8 +321,8 @@ icvLoadWindowPos( const char* name, CvRect& rect )
 {
     HKEY hkey;
     char szKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
@@ -316,15 +338,34 @@ icvLoadWindowPos( const char* name, CvRect& rect )
         RegQueryValueEx(hkey, "Width", NULL, &dwType, (BYTE*)&rect.width, &dwSize);
         RegQueryValueEx(hkey, "Height", NULL, &dwType, (BYTE*)&rect.height, &dwSize);
 
-        if( rect.x != (int)CW_USEDEFAULT && (rect.x < -200 || rect.x > 3000) )
-            rect.x = 100;
-        if( rect.y != (int)CW_USEDEFAULT && (rect.y < -200 || rect.y > 3000) )
-            rect.y = 100;
+        // Snap rect into closest monitor in case it falls outside it. // Adi Shavit
+        // set WIN32 RECT to be the loaded size
+        POINT tl_w32 = { rect.x, rect.y };
+        POINT tr_w32 = { rect.x + rect.width, rect.y };
 
-        if( rect.width != (int)CW_USEDEFAULT && (rect.width < 0 || rect.width > 3000) )
-            rect.width = 100;
-        if( rect.height != (int)CW_USEDEFAULT && (rect.height < 0 || rect.height > 3000) )
-            rect.height = 100;
+        // find monitor containing top-left and top-right corners, or NULL
+        HMONITOR hMonitor_l = MonitorFromPoint(tl_w32, MONITOR_DEFAULTTONULL);
+        HMONITOR hMonitor_r = MonitorFromPoint(tr_w32, MONITOR_DEFAULTTONULL);
+
+        // if neither are contained - the move window to origin of closest.
+        if (NULL == hMonitor_l && NULL == hMonitor_r)
+        {
+           // find monitor nearest to top-left corner
+           HMONITOR hMonitor_closest = MonitorFromPoint(tl_w32, MONITOR_DEFAULTTONEAREST);
+
+           // get coordinates of nearest monitor
+           MONITORINFO mi;
+           mi.cbSize = sizeof(mi);
+           GetMonitorInfo(hMonitor_closest, &mi);
+
+           rect.x = mi.rcWork.left;
+           rect.y = mi.rcWork.top;
+        }
+
+        if (rect.width != (int)CW_USEDEFAULT && (rect.width < 0 || rect.width > 3000))
+           rect.width = 100;
+        if (rect.height != (int)CW_USEDEFAULT && (rect.height < 0 || rect.height > 3000))
+           rect.height = 100;
 
         RegCloseKey(hkey);
     }
@@ -341,8 +382,8 @@ icvSaveWindowPos( const char* name, CvRect rect )
     HKEY hkey;
     char szKey[1024];
     char rootKey[1024];
-    strcpy( szKey, icvWindowPosRootKey );
-    strcat( szKey, name );
+    strcpy_s( szKey, 1024, icvWindowPosRootKey );
+    strcat_s( szKey, 1024, name );
 
     if( RegOpenKeyEx( HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS )
     {
@@ -352,7 +393,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
         char oldestKey[1024];
         char currentKey[1024];
 
-        strcpy( rootKey, icvWindowPosRootKey );
+        strcpy_s( rootKey, 1024, icvWindowPosRootKey );
         rootKey[strlen(rootKey)-1] = '\0';
         if( RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS )
             //RegOpenKeyEx( HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS )
@@ -371,7 +412,7 @@ icvSaveWindowPos( const char* name, CvRect rect )
                 oldestTime.dwLowDateTime > accesstime.dwLowDateTime) )
             {
                 oldestTime = accesstime;
-                strcpy( oldestKey, currentKey );
+                strcpy_s( oldestKey, 1024, currentKey );
             }
         }
 
@@ -394,6 +435,33 @@ icvSaveWindowPos( const char* name, CvRect rect )
     RegSetValueEx(hkey, "Width", 0, REG_DWORD, (BYTE*)&rect.width, sizeof(rect.width));
     RegSetValueEx(hkey, "Height", 0, REG_DWORD, (BYTE*)&rect.height, sizeof(rect.height));
     RegCloseKey(hkey);
+}
+
+CvRect cvGetWindowRect_W32(const char* name)
+{
+    CvRect result = cvRect(-1, -1, -1, -1);
+
+    CV_FUNCNAME( "cvGetWindowRect_W32" );
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+    window = icvFindWindowByName( name );
+    if (!window)
+        EXIT; // keep silence here
+
+    RECT rect;
+    GetClientRect(window->hwnd, &rect);
+    {
+    POINT pt = {rect.left, rect.top};
+    ClientToScreen(window->hwnd, &pt);
+    result = cvRect(pt.x, pt.y, rect.right - rect.left, rect.bottom - rect.top);
+    }
+    __END__;
+    return result;
 }
 
 double cvGetModeWindow_W32(const char* name)//YV
@@ -483,6 +551,23 @@ void cvSetModeWindow_W32( const char* name, double prop_value)//Yannick Verdie
     __END__;
 }
 
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CvWindow* window = icvFindWindowByName(winname.c_str());
+
+    if (!window)
+    {
+        namedWindow(winname);
+        window = icvFindWindowByName(winname.c_str());
+    }
+
+    if (!window)
+        CV_Error(Error::StsNullPtr, "NULL window");
+
+    if (!SetWindowText(window->frame, title.c_str()))
+        CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", winname.c_str(), title.c_str()));
+}
+
 double cvGetPropWindowAutoSize_W32(const char* name)
 {
     double result = -1;
@@ -553,7 +638,25 @@ double cvGetOpenGlProp_W32(const char* name)
 
     __END__;
 #endif
-    (void)name;
+    CV_UNUSED(name);
+
+    return result;
+}
+
+double cvGetPropVisible_W32(const char* name)
+{
+    double result = -1;
+
+    CV_FUNCNAME( "cvGetPropVisible_W32" );
+
+    __BEGIN__;
+
+    if (!name)
+        CV_ERROR( CV_StsNullPtr, "NULL name string" );
+
+    result = (icvFindWindowByName( name ) != NULL);
+
+    __END__;
 
     return result;
 }
@@ -714,6 +817,11 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     if( !(flags & CV_WINDOW_AUTOSIZE))//YV add border in order to resize the window
        defStyle |= WS_SIZEBOX;
+
+#ifdef HAVE_OPENGL
+    if (flags & CV_WINDOW_OPENGL)
+        defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+#endif
 
     icvLoadWindowPos( name, rect );
 
@@ -1037,20 +1145,20 @@ static void icvUpdateWindowPos( CvWindow* window )
         {
             RECT rmw, rw = icvCalcWindowRect(window );
             MoveWindow(window->hwnd, rw.left, rw.top,
-                rw.right - rw.left + 1, rw.bottom - rw.top + 1, FALSE);
+                rw.right - rw.left, rw.bottom - rw.top, FALSE);
             GetClientRect(window->hwnd, &rw);
             GetWindowRect(window->frame, &rmw);
             // Resize the mainhWnd window in order to make the bitmap fit into the child window
             MoveWindow(window->frame, rmw.left, rmw.top,
-                rmw.right - rmw.left + size.cx - rw.right + rw.left,
-                rmw.bottom  - rmw.top + size.cy - rw.bottom + rw.top, TRUE );
+                size.cx + (rmw.right - rmw.left) - (rw.right - rw.left),
+                size.cy + (rmw.bottom - rmw.top) - (rw.bottom - rw.top), TRUE );
         }
     }
 
     rect = icvCalcWindowRect(window);
     MoveWindow(window->hwnd, rect.left, rect.top,
-               rect.right - rect.left + 1,
-               rect.bottom - rect.top + 1, TRUE );
+               rect.right - rect.left,
+               rect.bottom - rect.top, TRUE );
 }
 
 CV_IMPL void
@@ -1065,8 +1173,7 @@ cvShowImage( const char* name, const CvArr* arr )
     int channels = 0;
     void* dst_ptr = 0;
     const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
+    CvMat stub, *image;
     bool changed_size = false; // philipg
 
     if( !name )
@@ -1081,9 +1188,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     if( !window || !arr )
         EXIT; // keep silence here.
-
-    if( CV_IS_IMAGE_HDR( arr ))
-        origin = ((IplImage*)arr)->origin;
 
     CV_CALL( image = cvGetMat( arr, &stub ));
 
@@ -1120,99 +1224,22 @@ cvShowImage( const char* name, const CvArr* arr )
                                       DIB_RGB_COLORS, &dst_ptr, 0, 0));
     }
 
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3,
-                     dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
+    {
+        cv::Mat dst(size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4);
+        convertToShow(cv::cvarrToMat(image), dst, false);
+        CV_Assert(dst.data == (uchar*)dst_ptr);
+        cv::flip(dst, dst, 0);
+    }
 
     // ony resize window if needed
     if (changed_size)
         icvUpdateWindowPos(window);
     InvalidateRect(window->hwnd, 0, 0);
     // philipg: this is not needed and just slows things down
-//    UpdateWindow(window->hwnd);
+    //    UpdateWindow(window->hwnd);
 
     __END__;
 }
-
-#if 0
-CV_IMPL void
-cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
-{
-    CV_FUNCNAME( "cvShowImageHWND" );
-
-    __BEGIN__;
-
-    SIZE size = { 0, 0 };
-    int channels = 0;
-    void* dst_ptr = 0;
-    const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
-    bool changed_size = false;
-    BITMAPINFO tempbinfo;
-    HDC hdc = NULL;
-
-    if( !arr )
-        EXIT;
-    if( !w_hWnd )
-        EXIT;
-
-    hdc = GetDC(w_hWnd);
-
-    if( CV_IS_IMAGE_HDR( arr ) )
-        origin = ((IplImage*)arr)->origin;
-
-    CV_CALL( image = cvGetMat( arr, &stub ) );
-
-    if ( hdc )
-    {
-            //GetBitmapData
-            BITMAP bmp;
-            GdiFlush();
-            HGDIOBJ h = GetCurrentObject( hdc, OBJ_BITMAP );
-
-            if (h == NULL)
-            EXIT;
-            if (GetObject(h, sizeof(bmp), &bmp) == 0) //GetObject(): returns size of object, 0 if error
-            EXIT;
-
-            channels = bmp.bmBitsPixel/8;
-            dst_ptr = bmp.bmBits;
-     }
-
-    if( size.cx != image->width || size.cy != image->height || channels != channels0 )
-    {
-        changed_size = true;
-
-        uchar buffer[sizeof(BITMAPINFO) + 255*sizeof(RGBQUAD)];
-        BITMAPINFO* binfo = (BITMAPINFO*)buffer;
-
-        BOOL bDeleteObj = DeleteObject(GetCurrentObject(hdc, OBJ_BITMAP));
-                CV_Assert( FALSE != bDeleteObj );
-
-        size.cx = image->width;
-        size.cy = image->height;
-        channels = channels0;
-
-        FillBitmapInfo( binfo, size.cx, size.cy, channels*8, 1 );
-
-        SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
-    }
-
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
-
-    // Image stretching to fit the window
-    RECT rect;
-    GetClientRect(w_hWnd, &rect);
-    StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
-
-    // ony resize window if needed
-    InvalidateRect(w_hWnd, 0, 0);
-
-    __END__;
-}
-#endif
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
@@ -1237,18 +1264,18 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height )
     {
         rw = icvCalcWindowRect(window);
         MoveWindow(window->hwnd, rw.left, rw.top,
-            rw.right - rw.left + 1, rw.bottom - rw.top + 1, FALSE);
+            rw.right - rw.left, rw.bottom - rw.top, FALSE);
         GetClientRect(window->hwnd, &rw);
         GetWindowRect(window->frame, &rmw);
         // Resize the mainhWnd window in order to make the bitmap fit into the child window
         MoveWindow(window->frame, rmw.left, rmw.top,
-            rmw.right - rmw.left + width - rw.right + rw.left,
-            rmw.bottom  - rmw.top + height - rw.bottom + rw.top, TRUE);
+            width  + (rmw.right - rmw.left) - (rw.right - rw.left),
+            height + (rmw.bottom - rmw.top) - (rw.bottom - rw.top), TRUE);
     }
 
     rect = icvCalcWindowRect(window);
     MoveWindow(window->hwnd, rect.left, rect.top,
-        rect.right - rect.left + 1, rect.bottom - rect.top + 1, TRUE);
+        rect.right - rect.left, rect.bottom - rect.top, TRUE);
 
     __END__;
 }
@@ -1286,6 +1313,10 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
     switch(uMsg)
     {
+    case WM_COPY:
+        ::SendMessage(window->hwnd, uMsg, wParam, lParam);
+        break;
+
     case WM_DESTROY:
 
         icvRemoveWindow(window);
@@ -1391,7 +1422,20 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
           GetClientRect( window->hwnd, &rect );
 
           SIZE size = {0,0};
-          icvGetBitmapData( window, &size, 0, 0 );
+#ifdef HAVE_OPENGL
+          if (window->useGl)
+          {
+              cv::ogl::Texture2D* texObj = static_cast<cv::ogl::Texture2D*>(window->glDrawData);
+              size.cx = texObj->cols();
+              size.cy = texObj->rows();
+          }
+          else
+          {
+              icvGetBitmapData(window, &size, 0, 0);
+          }
+#else
+          icvGetBitmapData(window, &size, 0, 0);
+#endif
 
           window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
                                    pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
@@ -1420,6 +1464,8 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             rgn = CreateRectRgn(0, 0, wrc.right, wrc.bottom);
             rgn1 = CreateRectRgn(cr.left, cr.top, cr.right, cr.bottom);
             rgn2 = CreateRectRgn(tr.left, tr.top, tr.right, tr.bottom);
+            CV_Assert_N(rgn != 0, rgn1 != 0, rgn2 != 0);
+
             ret = CombineRgn(rgn, rgn, rgn1, RGN_DIFF);
             ret = CombineRgn(rgn, rgn, rgn2, RGN_DIFF);
 
@@ -1448,14 +1494,89 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     // Process the message
     switch(uMsg)
     {
+    case WM_COPY:
+        {
+            if (!::OpenClipboard(hwnd) )
+                break;
+
+            HDC hDC       = 0;
+            HDC memDC     = 0;
+            HBITMAP memBM = 0;
+
+            // We'll use a do-while(0){} scope as a single-run breakable scope
+            // Upon any error we can jump out of the single-time while scope to clean up the resources.
+            do
+            {
+                if (!::EmptyClipboard())
+                    break;
+
+                if(!window->image)
+                    break;
+
+                // Get window device context
+                if (0 == (hDC = ::GetDC(hwnd)))
+                    break;
+
+                // Create another DC compatible with hDC
+                if (0 == (memDC = ::CreateCompatibleDC( hDC )))
+                    break;
+
+                // Determine the bitmap's dimensions
+                int nchannels = 3;
+                SIZE size = {0,0};
+                icvGetBitmapData( window, &size, &nchannels, 0 );
+
+                // Create bitmap to draw on and it in the new DC
+                if (0 == (memBM = ::CreateCompatibleBitmap ( hDC, size.cx, size.cy)))
+                    break;
+
+                if (!::SelectObject( memDC, memBM ))
+                    break;
+
+                // Begin drawing to DC
+                if (!::SetStretchBltMode(memDC, COLORONCOLOR))
+                    break;
+
+                RGBQUAD table[256];
+                if( 1 == nchannels )
+                {
+                    for(int i = 0; i < 256; ++i)
+                    {
+                        table[i].rgbBlue = (unsigned char)i;
+                        table[i].rgbGreen = (unsigned char)i;
+                        table[i].rgbRed = (unsigned char)i;
+                    }
+                    if (!::SetDIBColorTable(window->dc, 0, 255, table))
+                        break;
+                }
+
+                // The image copied to the clipboard will be in its original size, regardless if the window itself was resized.
+
+                // Render the image to the dc/bitmap (at original size).
+                if (!::BitBlt( memDC, 0, 0, size.cx, size.cy, window->dc, 0, 0, SRCCOPY ))
+                    break;
+
+                // Finally, set bitmap to clipboard
+                ::SetClipboardData(CF_BITMAP, memBM);
+            } while (0,0); // (0,0) instead of (0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
+
+            //////////////////////////////////////////////////////////////////////////
+            // if handle is allocated (i.e. != 0) then clean-up.
+            if (memBM) ::DeleteObject(memBM);
+            if (memDC) ::DeleteDC(memDC);
+            if (hDC)   ::ReleaseDC(hwnd, hDC);
+            ::CloseClipboard();
+            break;
+        }
+
     case WM_WINDOWPOSCHANGING:
         {
             LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
             RECT rect = icvCalcWindowRect(window);
             pos->x = rect.left;
             pos->y = rect.top;
-            pos->cx = rect.right - rect.left + 1;
-            pos->cy = rect.bottom - rect.top + 1;
+            pos->cx = rect.right - rect.left;
+            pos->cy = rect.bottom - rect.top;
         }
         break;
 
@@ -1472,8 +1593,6 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         if( window->on_mouse )
         {
             POINT pt;
-            RECT rect;
-            SIZE size = {0,0};
 
             int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
                         (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
@@ -1499,12 +1618,37 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             pt.x = GET_X_LPARAM( lParam );
             pt.y = GET_Y_LPARAM( lParam );
 
-            GetClientRect( window->hwnd, &rect );
-            icvGetBitmapData( window, &size, 0, 0 );
+            if (window->flags & CV_WINDOW_AUTOSIZE)
+            {
+                // As user can't change window size, do not scale window coordinates. Underlying windowing system
+                // may prevent full window from being displayed and in this case coordinates should not be scaled.
+                window->on_mouse( event, pt.x, pt.y, flags, window->on_mouse_param );
+            } else {
+                // Full window is displayed using different size. Scale coordinates to match underlying positions.
+                RECT rect;
+                SIZE size = {0, 0};
 
-            window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
-                                     pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
-                                     window->on_mouse_param );
+                GetClientRect( window->hwnd, &rect );
+
+#ifdef HAVE_OPENGL
+                if (window->useGl)
+                {
+                    cv::ogl::Texture2D* texObj = static_cast<cv::ogl::Texture2D*>(window->glDrawData);
+                    size.cx = texObj->cols();
+                    size.cy = texObj->rows();
+                }
+                else
+                {
+                    icvGetBitmapData(window, &size, 0, 0);
+                }
+#else
+                icvGetBitmapData( window, &size, 0, 0 );
+#endif
+
+                window->on_mouse( event, pt.x*size.cx/MAX(rect.right - rect.left,1),
+                                         pt.y*size.cy/MAX(rect.bottom - rect.top,1), flags,
+                                         window->on_mouse_param );
+            }
         }
         break;
 
@@ -1733,11 +1877,76 @@ cvDestroyAllWindows(void)
     }
 }
 
+static void showSaveDialog(CvWindow* window)
+{
+    if (!window || !window->image)
+        return;
+
+    SIZE sz;
+    int channels;
+    void* data;
+    if (icvGetBitmapData(window, &sz, &channels, &data))
+        return; // nothing to save
+
+    char szFileName[MAX_PATH] = "";
+    // try to use window title as file name
+    GetWindowText(window->frame, szFileName, MAX_PATH);
+
+    OPENFILENAME ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+#ifdef OPENFILENAME_SIZE_VERSION_400
+    // we are not going to use new fields any way
+    ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
+#else
+    ofn.lStructSize = sizeof(ofn);
+#endif
+    ofn.hwndOwner = window->hwnd;
+    ofn.lpstrFilter =
+#ifdef HAVE_PNG
+                      "Portable Network Graphics files (*.png)\0*.png\0"
+#endif
+                      "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
+#ifdef HAVE_JPEG
+                      "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
+#endif
+#ifdef HAVE_TIFF
+                      "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
+#endif
+#ifdef HAVE_JASPER
+                      "JPEG-2000 files (*.jp2)\0*.jp2\0"
+#endif
+#ifdef HAVE_WEBP
+                      "WebP files (*.webp)\0*.webp\0"
+#endif
+                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)\0*.pbm;*.pgm;*.ppm;*.pxm;*.pnm\0"
+#ifdef HAVE_OPENEXR
+                      "OpenEXR Image files (*.exr)\0*.exr\0"
+#endif
+                      "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
+                      "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
+                      "All Files (*.*)\0*.*\0";
+    ofn.lpstrFile = szFileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN | OFN_NOCHANGEDIR;
+#ifdef HAVE_PNG
+    ofn.lpstrDefExt = "png";
+#else
+    ofn.lpstrDefExt = "bmp";
+#endif
+
+    if (GetSaveFileName(&ofn))
+    {
+        cv::Mat tmp;
+        cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
+        cv::imwrite(szFileName, tmp);
+    }
+}
 
 CV_IMPL int
 cvWaitKey( int delay )
 {
-    int time0 = GetTickCount();
+    int64 time0 = cv::getTickCount();
+    int64 timeEnd = time0 + (int64)(delay * 0.001f * cv::getTickFrequency());
 
     for(;;)
     {
@@ -1745,13 +1954,13 @@ cvWaitKey( int delay )
         MSG message;
         int is_processed = 0;
 
-        if( (delay > 0 && abs((int)(GetTickCount() - time0)) >= delay) || hg_windows == 0 )
-            return -1;
-
-        if( delay <= 0 )
+        if( (delay <= 0) && hg_windows)
             GetMessage(&message, 0, 0, 0);
         else if( PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE )
         {
+            int64 t = cv::getTickCount();
+            if (t - timeEnd >= 0)
+                return -1;  // no messages and no more time
             Sleep(1);
             continue;
         }
@@ -1778,17 +1987,26 @@ cvWaitKey( int delay )
 
                 case WM_KEYDOWN:
                     TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24) ||
-                        message.wParam == VK_HOME || message.wParam == VK_END ||
-                        message.wParam == VK_UP || message.wParam == VK_DOWN ||
-                        message.wParam == VK_LEFT || message.wParam == VK_RIGHT ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
-                        message.wParam == VK_PRIOR || message.wParam == VK_NEXT )
+                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
+                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
+                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
+                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
+                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
+                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
                     {
                         DispatchMessage(&message);
                         is_processed = 1;
                         return (int)(message.wParam << 16);
                     }
+
+                    // Intercept Ctrl+C for copy to clipboard
+                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                    // Intercept Ctrl+S for "save as" dialog
+                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
+                        showSaveDialog(window);
+
                 default:
                     DispatchMessage(&message);
                     is_processed = 1;
@@ -1818,22 +2036,6 @@ icvFindTrackbarByName( const CvWindow* window, const char* name )
 }
 
 
-typedef struct
-{
-    UINT cbSize;
-    DWORD dwMask;
-    int idCommand;
-    int iImage;
-    BYTE fsState;
-    BYTE fsStyle;
-    WORD cx;
-    DWORD lParam;
-    LPSTR pszText;
-    int cchText;
-}
-ButtonInfo;
-
-
 static int
 icvCreateTrackbar( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback on_notify,
@@ -1853,7 +2055,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     if( !window_name || !trackbar_name )
         CV_ERROR( CV_StsNullPtr, "NULL window or trackbar name" );
 
-    if( count <= 0 )
+    if( count < 0 )
         CV_ERROR( CV_StsOutOfRange, "Bad trackbar maximal value" );
 
     window = icvFindWindowByName(window_name);
@@ -1863,8 +2065,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar = icvFindTrackbarByName(window,trackbar_name);
     if( !trackbar )
     {
-        TBBUTTON tbs;
-        ButtonInfo tbis;
+        TBBUTTON tbs = {};
+        TBBUTTONINFO tbis = {};
         RECT rect;
         int bcount;
         int len = (int)strlen( trackbar_name );
@@ -1874,9 +2076,14 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         {
             const int default_height = 30;
 
-            window->toolbar.toolbar = CreateToolbarEx(
-                    window->frame, WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE,
-                    1, 0, 0, 0, 0, 0, 16, 20, 16, 16, sizeof(TBBUTTON));
+            // CreateToolbarEx is deprecated and forces linking against Comctl32.lib.
+            window->toolbar.toolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+                                        WS_CHILD | CCS_TOP | TBSTYLE_WRAPABLE | BTNS_AUTOSIZE | BTNS_BUTTON,
+                                        0, 0, 0, 0,
+                                        window->frame, NULL, GetModuleHandle(NULL), NULL);
+            // CreateToolbarEx automatically sends this but CreateWindowEx doesn't.
+            SendMessage(window->toolbar.toolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+
             GetClientRect(window->frame, &rect);
             MoveWindow( window->toolbar.toolbar, 0, 0,
                         rect.right - rect.left, default_height, TRUE);
@@ -2124,6 +2331,70 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 }
 
 
+CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+{
+    CV_FUNCNAME( "cvSetTrackbarMax" );
+
+    __BEGIN__;
+
+    if (maxval >= 0)
+    {
+        CvWindow* window = 0;
+        CvTrackbar* trackbar = 0;
+        if (trackbar_name == 0 || window_name == 0)
+        {
+            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        }
+
+        window = icvFindWindowByName(window_name);
+        if (window)
+        {
+            trackbar = icvFindTrackbarByName(window, trackbar_name);
+            if (trackbar)
+            {
+                // The position will be min(pos, maxval).
+                trackbar->maxval = (trackbar->minval>maxval)?trackbar->minval:maxval;
+                SendMessage(trackbar->hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)maxval);
+            }
+        }
+    }
+
+    __END__;
+}
+
+
+CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+{
+    CV_FUNCNAME( "cvSetTrackbarMin" );
+
+    __BEGIN__;
+
+    if (minval >= 0)
+    {
+        CvWindow* window = 0;
+        CvTrackbar* trackbar = 0;
+        if (trackbar_name == 0 || window_name == 0)
+        {
+            CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
+        }
+
+        window = icvFindWindowByName(window_name);
+        if (window)
+        {
+            trackbar = icvFindTrackbarByName(window, trackbar_name);
+            if (trackbar)
+            {
+                // The position will be min(pos, maxval).
+                trackbar->minval = (minval<trackbar->maxval)?minval:trackbar->maxval;
+                SendMessage(trackbar->hwnd, TBM_SETRANGEMIN, (WPARAM)TRUE, (LPARAM)minval);
+            }
+        }
+    }
+
+    __END__;
+}
+
+
 CV_IMPL void* cvGetWindowHandle( const char* window_name )
 {
     void* hwnd = 0;
@@ -2182,4 +2453,4 @@ cvSetPostprocessFuncWin32_(const void* callback)
     hg_on_postprocess = (CvWin32WindowCallback)callback;
 }
 
-#endif //WIN32
+#endif //_WIN32

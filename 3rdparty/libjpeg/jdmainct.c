@@ -142,15 +142,15 @@ typedef my_main_controller * my_main_ptr;
 
 /* Forward declarations */
 METHODDEF(void) process_data_simple_main
-        JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
-             JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
+	JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+	     JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
 METHODDEF(void) process_data_context_main
-        JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
-             JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
+	JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+	     JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
 #ifdef QUANT_2PASS_SUPPORTED
 METHODDEF(void) process_data_crank_post
-        JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
-             JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
+	JPP((j_decompress_ptr cinfo, JSAMPARRAY output_buf,
+	     JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail));
 #endif
 
 
@@ -171,7 +171,7 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
    */
   mainp->xbuffer[0] = (JSAMPIMAGE)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
+				cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
   mainp->xbuffer[1] = mainp->xbuffer[0] + cinfo->num_components;
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
@@ -183,7 +183,7 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
      */
     xbuf = (JSAMPARRAY)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                  2 * (rgroup * (M + 4)) * SIZEOF(JSAMPROW));
+				  2 * (rgroup * (M + 4)) * SIZEOF(JSAMPROW));
     xbuf += rgroup;		/* want one row group at negative offsets */
     mainp->xbuffer[0][ci] = xbuf;
     xbuf += rgroup * (M + 4);
@@ -344,8 +344,8 @@ start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
 
 METHODDEF(void)
 process_data_simple_main (j_decompress_ptr cinfo,
-                          JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-                          JDIMENSION out_rows_avail)
+			  JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+			  JDIMENSION out_rows_avail)
 {
   my_main_ptr mainp = (my_main_ptr) cinfo->main;
   JDIMENSION rowgroups_avail;
@@ -366,8 +366,8 @@ process_data_simple_main (j_decompress_ptr cinfo,
 
   /* Feed the postprocessor */
   (*cinfo->post->post_process_data) (cinfo, mainp->buffer,
-                                     &mainp->rowgroup_ctr, rowgroups_avail,
-                                     output_buf, out_row_ctr, out_rows_avail);
+				     &mainp->rowgroup_ctr, rowgroups_avail,
+				     output_buf, out_row_ctr, out_rows_avail);
 
   /* Has postprocessor consumed all the data yet? If so, mark buffer empty */
   if (mainp->rowgroup_ctr >= rowgroups_avail) {
@@ -384,15 +384,15 @@ process_data_simple_main (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 process_data_context_main (j_decompress_ptr cinfo,
-                           JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-                           JDIMENSION out_rows_avail)
+			   JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+			   JDIMENSION out_rows_avail)
 {
   my_main_ptr mainp = (my_main_ptr) cinfo->main;
 
   /* Read input data if we haven't filled the main buffer yet */
   if (! mainp->buffer_full) {
     if (! (*cinfo->coef->decompress_data) (cinfo,
-                                           mainp->xbuffer[mainp->whichptr]))
+					   mainp->xbuffer[mainp->whichptr]))
       return;			/* suspension forced, can do nothing more */
     mainp->buffer_full = TRUE;	/* OK, we have an iMCU row to work with */
     mainp->iMCU_row_ctr++;	/* count rows received */
@@ -407,8 +407,8 @@ process_data_context_main (j_decompress_ptr cinfo,
   case CTX_POSTPONED_ROW:
     /* Call postprocessor using previously set pointers for postponed row */
     (*cinfo->post->post_process_data) (cinfo, mainp->xbuffer[mainp->whichptr],
-                        &mainp->rowgroup_ctr, mainp->rowgroups_avail,
-                        output_buf, out_row_ctr, out_rows_avail);
+			&mainp->rowgroup_ctr, mainp->rowgroups_avail,
+			output_buf, out_row_ctr, out_rows_avail);
     if (mainp->rowgroup_ctr < mainp->rowgroups_avail)
       return;			/* Need to suspend */
     mainp->context_state = CTX_PREPARE_FOR_IMCU;
@@ -429,8 +429,8 @@ process_data_context_main (j_decompress_ptr cinfo,
   case CTX_PROCESS_IMCU:
     /* Call postprocessor using previously set pointers */
     (*cinfo->post->post_process_data) (cinfo, mainp->xbuffer[mainp->whichptr],
-                        &mainp->rowgroup_ctr, mainp->rowgroups_avail,
-                        output_buf, out_row_ctr, out_rows_avail);
+			&mainp->rowgroup_ctr, mainp->rowgroups_avail,
+			output_buf, out_row_ctr, out_rows_avail);
     if (mainp->rowgroup_ctr < mainp->rowgroups_avail)
       return;			/* Need to suspend */
     /* After the first iMCU, change wraparound pointers to normal state */
@@ -458,12 +458,12 @@ process_data_context_main (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 process_data_crank_post (j_decompress_ptr cinfo,
-                         JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-                         JDIMENSION out_rows_avail)
+			 JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+			 JDIMENSION out_rows_avail)
 {
   (*cinfo->post->post_process_data) (cinfo, (JSAMPIMAGE) NULL,
-                                     (JDIMENSION *) NULL, (JDIMENSION) 0,
-                                     output_buf, out_row_ctr, out_rows_avail);
+				     (JDIMENSION *) NULL, (JDIMENSION) 0,
+				     output_buf, out_row_ctr, out_rows_avail);
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */
@@ -482,7 +482,7 @@ jinit_d_main_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 
   mainp = (my_main_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                                SIZEOF(my_main_controller));
+				SIZEOF(my_main_controller));
   cinfo->main = &mainp->pub;
   mainp->pub.start_pass = start_pass_main;
 

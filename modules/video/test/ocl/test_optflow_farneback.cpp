@@ -41,12 +41,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +115,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlow,
                            );
 
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

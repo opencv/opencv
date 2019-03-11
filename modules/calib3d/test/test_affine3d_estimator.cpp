@@ -42,16 +42,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <functional>
-#include <iterator>
-#include <limits>
-#include <numeric>
+namespace opencv_test { namespace {
 
 class CV_Affine3D_EstTest : public cvtest::BaseTest
 {
@@ -80,9 +71,9 @@ struct WrapAff
     WrapAff(const Mat& aff) : F(aff.ptr<double>()) {}
     Point3f operator()(const Point3f& p)
     {
-        return Point3d( p.x * F[0] + p.y * F[1] + p.z *  F[2] +  F[3],
-                        p.x * F[4] + p.y * F[5] + p.z *  F[6] +  F[7],
-                        p.x * F[8] + p.y * F[9] + p.z * F[10] + F[11]  );
+        return Point3f( (float)(p.x * F[0] + p.y * F[1] + p.z *  F[2] +  F[3]),
+                        (float)(p.x * F[4] + p.y * F[5] + p.z *  F[6] +  F[7]),
+                        (float)(p.x * F[8] + p.y * F[9] + p.z * F[10] + F[11])  );
     }
 };
 
@@ -101,7 +92,7 @@ bool CV_Affine3D_EstTest::test4Points()
     fpts.ptr<Point3f>()[2] = Point3f( rngIn(1,2), rngIn(3,4), rngIn(5, 6) );
     fpts.ptr<Point3f>()[3] = Point3f( rngIn(3,4), rngIn(1,2), rngIn(5, 6) );
 
-    transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(), WrapAff(aff));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + 4, tpts.ptr<Point3f>(), WrapAff(aff));
 
     Mat aff_est;
     vector<uchar> outliers;
@@ -144,11 +135,11 @@ bool CV_Affine3D_EstTest::testNPoints()
     Mat tpts(1, n, CV_32FC3);
 
     randu(fpts, Scalar::all(0), Scalar::all(100));
-    transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapAff(aff));
+    std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapAff(aff));
 
     /* adding noise*/
-    transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, bind2nd(plus<Point3f>(), shift_outl));
-    transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, Noise(noise_level));
+    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m,
+        [=] (const Point3f& pt) -> Point3f { return Noise(noise_level)(pt + shift_outl); });
 
     Mat aff_est;
     vector<uchar> outl;
@@ -194,4 +185,6 @@ void CV_Affine3D_EstTest::run( int /* start_from */)
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-TEST(Calib3d_EstimateAffineTransform, accuracy) { CV_Affine3D_EstTest test; test.safe_run(); }
+TEST(Calib3d_EstimateAffine3D, accuracy) { CV_Affine3D_EstTest test; test.safe_run(); }
+
+}} // namespace

@@ -1,0 +1,2 @@
+# doxygen citelist build workaround
+citelist : .*Unexpected new line character.*

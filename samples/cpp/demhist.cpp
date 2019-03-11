@@ -1,5 +1,6 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <iostream>
@@ -63,18 +64,21 @@ static void help()
 
 const char* keys =
 {
-    "{@image|baboon.jpg|input image file}"
+    "{help h||}{@image|baboon.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )
 {
-    help();
-
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string inputImage = parser.get<string>(0);
 
     // Load the source image. HighGUI use.
-    image = imread( inputImage, 0 );
+    image = imread(samples::findFile(inputImage), IMREAD_GRAYSCALE);
     if(image.empty())
     {
         std::cerr << "Cannot read image file: " << inputImage << std::endl;

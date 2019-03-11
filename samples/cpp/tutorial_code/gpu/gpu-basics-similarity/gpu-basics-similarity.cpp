@@ -4,7 +4,7 @@
 #include <opencv2/core.hpp>      // Basic OpenCV structures
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>// Image processing methods for the CPU
-#include <opencv2/highgui.hpp>// Read images
+#include <opencv2/imgcodecs.hpp>// Read images
 
 // CUDA structures and methods
 #include <opencv2/cudaarithm.hpp>
@@ -19,14 +19,17 @@ Scalar getMSSIM( const Mat& I1, const Mat& I2);
 double getPSNR_CUDA(const Mat& I1, const Mat& I2);  // Basic CUDA versions
 Scalar getMSSIM_CUDA( const Mat& I1, const Mat& I2);
 
+//! [psnr]
 struct BufferPSNR                                     // Optimized CUDA versions
 {   // Data allocations are very expensive on CUDA. Use a buffer to solve: allocate once reuse later.
     cuda::GpuMat gI1, gI2, gs, t1,t2;
 
     cuda::GpuMat buf;
 };
+//! [psnr]
 double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b);
 
+//! [ssim]
 struct BufferMSSIM                                     // Optimized CUDA versions
 {   // Data allocations are very expensive on CUDA. Use a buffer to solve: allocate once reuse later.
     cuda::GpuMat gI1, gI2, gs, t1,t2;
@@ -44,6 +47,7 @@ struct BufferMSSIM                                     // Optimized CUDA version
 
     cuda::GpuMat buf;
 };
+//! [ssim]
 Scalar getMSSIM_CUDA_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b);
 
 static void help()
@@ -165,7 +169,7 @@ int main(int, char *argv[])
     return 0;
 }
 
-
+//! [getpsnr]
 double getPSNR(const Mat& I1, const Mat& I2)
 {
     Mat s1;
@@ -186,9 +190,9 @@ double getPSNR(const Mat& I1, const Mat& I2)
         return psnr;
     }
 }
+//! [getpsnr]
 
-
-
+//! [getpsnropt]
 double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
 {
     b.gI1.upload(I1);
@@ -211,7 +215,9 @@ double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
         return psnr;
     }
 }
+//! [getpsnropt]
 
+//! [getpsnrcuda]
 double getPSNR_CUDA(const Mat& I1, const Mat& I2)
 {
     cuda::GpuMat gI1, gI2, gs, t1,t2;
@@ -237,7 +243,9 @@ double getPSNR_CUDA(const Mat& I1, const Mat& I2)
         return psnr;
     }
 }
+//! [getpsnrcuda]
 
+//! [getssim]
 Scalar getMSSIM( const Mat& i1, const Mat& i2)
 {
     const double C1 = 6.5025, C2 = 58.5225;
@@ -290,7 +298,9 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
     Scalar mssim = mean( ssim_map ); // mssim = average of ssim map
     return mssim;
 }
+//! [getssim]
 
+//! [getssimcuda]
 Scalar getMSSIM_CUDA( const Mat& i1, const Mat& i2)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
@@ -359,7 +369,9 @@ Scalar getMSSIM_CUDA( const Mat& i1, const Mat& i2)
     }
     return mssim;
 }
+//! [getssimcuda]
 
+//! [getssimopt]
 Scalar getMSSIM_CUDA_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
@@ -430,3 +442,4 @@ Scalar getMSSIM_CUDA_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
     }
     return mssim;
 }
+//! [getssimopt]

@@ -1,6 +1,56 @@
 CHANGE LOG for Independent JPEG Group's JPEG software
 
 
+Version 9b  17-Jan-2016
+-----------------------
+
+Improvements and optimizations in DCT and color calculations.
+Normalize range limit array composition and access pattern.
+Thank to Sia Furler and Maddie Ziegler for inspiration.
+
+Use merged upsample with scaled DCT sizes larger than 8.
+Thank to Taylor Hatala for inspiration.
+
+Check for excessive comment lengths in argument parsing in wrjpgcom.c.
+Thank to Julian Cohen for hint.
+
+Add makefile.b32 for use with Borland C++ 32-bit (bcc32).
+Thank to Joe Slater for contribution.
+
+Document 'f' specifier for jpegtran -crop specification.
+Thank to Michele Martone for suggestion.
+
+Use defined value from header instead of hardwired number in rdswitch.c.
+Thank to Robert Sprowson for hint.
+
+
+Version 9a  19-Jan-2014
+-----------------------
+
+Add support for wide gamut color spaces (JFIF version 2).
+Improve clarity and accuracy in color conversion modules.
+Note: Requires rebuild of test images.
+
+Extend the bit depth support to all values from 8 to 12
+(BITS_IN_JSAMPLE configuration option in jmorecfg.h).
+jpegtran now supports N bits sample data precision with all N from 8 to 12
+in a single instance.  Thank to Roland Fassauer for inspiration.
+
+Try to resolve issues with new boolean type definition.
+Thank also to v4hn for suggestion.
+
+Enable option to use default Huffman tables for lossless compression
+(for hardware solution), and in this case improve lossless RGB compression
+with reversible color transform.  Thank to Benny Alexandar for hint.
+
+Extend the entropy decoding structure, so that extraneous bytes between
+compressed scan data and following marker can be reported correctly.
+Thank to Nigel Tao for hint.
+
+Add jpegtran -wipe option and extension for -crop.
+Thank to Andrew Senior, David Clunie, and Josef Schmid for suggestion.
+
+
 Version 9  13-Jan-2013
 ----------------------
 

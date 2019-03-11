@@ -44,12 +44,10 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// equalizeHist ////////////////////////
@@ -231,7 +229,24 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
 
     OCL_TEST_CYCLE() cv::integral(src, dst, ddepth);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(dst, 2e-6, ERROR_RELATIVE);
+}
+
+OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
+{
+    const IntegralParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int ddepth = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
+
+    UMat src(srcSize, CV_8UC1), sum(srcSize + Size(1, 1), ddepth), sqsum(srcSize + Size(1, 1), CV_32F);
+    declare.in(src, WARMUP_RNG).out(sum, sqsum);
+
+    OCL_TEST_CYCLE() cv::integral(src, sum, sqsum, ddepth, CV_32F);
+
+    SANITY_CHECK(sum, 2e-4, ERROR_RELATIVE);
+    SANITY_CHECK(sqsum, 5e-5, ERROR_RELATIVE);
 }
 
 ///////////// Threshold ////////////////////////
@@ -282,33 +297,30 @@ OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
 
 ///////////// Canny ////////////////////////
 
-typedef tuple<int, bool> CannyParams;
+typedef tuple<Size, int, bool> CannyParams;
 typedef TestBaseWithParam<CannyParams> CannyFixture;
 
-OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_PERF_ENUM(3, 5), Bool()))
+OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(3, 5), Bool()))
 {
-    const CannyParams params = GetParam();
-    int apertureSize = get<0>(params);
-    bool L2Grad = get<1>(params);
+    const CannyParams& params = GetParam();
+    cv::Size imgSize = get<0>(params);
+    int apertureSize = get<1>(params);
+    bool L2Grad = get<2>(params);
 
     Mat _img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_TRUE(!_img.empty()) << "can't open aloe-L.png";
 
     UMat img;
-    _img.copyTo(img);
+    cv::resize(_img, img, imgSize, 0, 0, INTER_LINEAR_EXACT);
     UMat edges(img.size(), CV_8UC1);
 
-    declare.in(img, WARMUP_RNG).out(edges);
+    declare.in(img).out(edges);
 
-    OCL_TEST_CYCLE() cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_BEGIN();
+        cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+    PERF_SAMPLE_END();
 
-    if (apertureSize == 3)
-        SANITY_CHECK(edges);
-    else
-        SANITY_CHECK_NOTHING();
+    SANITY_CHECK_NOTHING();
 }
 
-
-} } // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace opencv_test::ocl

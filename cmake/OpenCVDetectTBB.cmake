@@ -1,92 +1,109 @@
+# Search TBB library (4.1 - 4.4, 2017)
+#
+# Own TBB (3rdparty/tbb):
+# - set cmake option BUILD_TBB to ON
+#
+# External TBB (from system):
+# - Fedora: install 'tbb-devel' package
+# - Ubuntu: install 'libtbb-dev' package
+#
+# External TBB (from official site):
+# - Linux/OSX:
+#   - in tbbvars.sh replace 'SUBSTITUTE_INSTALL_DIR_HERE' with absolute path to TBB dir
+#   - in terminal run 'source tbbvars.sh intel64 linux' ('source tbbvars.sh' in OSX)
+# - Windows:
+#   - in terminal run 'tbbvars.bat intel64 vs2015'
+#
+# Return:
+#   - HAVE_TBB set to TRUE
+#   - "tbb" target exists and added to OPENCV_LINKER_LIBS
+
+function(ocv_tbb_cmake_guess _found)
+    find_package(TBB QUIET COMPONENTS tbb PATHS "$ENV{TBBROOT}/cmake")
+    if(TBB_FOUND)
+      if(NOT TARGET TBB::tbb)
+        message(WARNING "No TBB::tbb target found!")
+        return()
+      endif()
+      get_target_property(_lib TBB::tbb IMPORTED_LOCATION_RELEASE)
+      message(STATUS "Found TBB (cmake): ${_lib}")
+      get_target_property(_inc TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
+      ocv_tbb_read_version("${_inc}")
+      add_library(tbb INTERFACE)
+      target_link_libraries(tbb INTERFACE TBB::tbb)
+      set(${_found} TRUE PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(ocv_tbb_env_verify)
+  if (NOT "$ENV{TBBROOT}" STREQUAL "")
+    # check that library and include dir are inside TBBROOT location
+    get_filename_component(_root "$ENV{TBBROOT}" ABSOLUTE)
+    get_filename_component(_lib "${TBB_ENV_LIB}" ABSOLUTE)
+    get_filename_component(_inc "${TBB_ENV_INCLUDE}" ABSOLUTE)
+    string(FIND "${_lib}" "${_root}" _lib_pos)
+    string(FIND "${_inc}" "${_root}" _inc_pos)
+    if (NOT (_lib_pos EQUAL 0 AND _inc_pos EQUAL 0))
+      message(SEND_ERROR
+        "Possible issue with TBB detection - TBBROOT is set, "
+        "but library/include path is not inside it:\n "
+        "TBBROOT: $ENV{TBBROOT}\n "
+        "(absolute): ${_root}\n "
+        "INCLUDE: ${_inc}\n "
+        "LIBRARY: ${_lib}\n")
+    endif()
+  endif()
+endfunction()
+
+function(ocv_tbb_env_guess _found)
+  find_path(TBB_ENV_INCLUDE NAMES "tbb/tbb.h" PATHS ENV CPATH NO_DEFAULT_PATH)
+  find_path(TBB_ENV_INCLUDE NAMES "tbb/tbb.h")
+  find_library(TBB_ENV_LIB NAMES "tbb" PATHS ENV LIBRARY_PATH NO_DEFAULT_PATH)
+  find_library(TBB_ENV_LIB NAMES "tbb")
+  find_library(TBB_ENV_LIB_DEBUG NAMES "tbb_debug" PATHS ENV LIBRARY_PATH NO_DEFAULT_PATH)
+  find_library(TBB_ENV_LIB_DEBUG NAMES "tbb_debug")
+  if (TBB_ENV_INCLUDE AND (TBB_ENV_LIB OR TBB_ENV_LIB_DEBUG))
+    ocv_tbb_env_verify()
+    ocv_tbb_read_version("${TBB_ENV_INCLUDE}")
+    add_library(tbb UNKNOWN IMPORTED)
+    set_target_properties(tbb PROPERTIES
+      IMPORTED_LOCATION "${TBB_ENV_LIB}"
+      IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
+      INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
+    )
+    # workaround: system TBB library is used for linking instead of provided
+    if(CV_GCC)
+      get_filename_component(_dir "${TBB_ENV_LIB}" DIRECTORY)
+      set_target_properties(tbb PROPERTIES INTERFACE_LINK_LIBRARIES "-L${_dir}")
+    endif()
+    message(STATUS "Found TBB (env): ${TBB_ENV_LIB}")
+    set(${_found} TRUE PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(ocv_tbb_read_version _path)
+  find_file(TBB_VER_FILE tbb/tbb_stddef.h "${_path}" NO_DEFAULT_PATH CMAKE_FIND_ROOT_PATH_BOTH)
+  ocv_parse_header("${TBB_VER_FILE}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION CACHE)
+endfunction()
+
+#=====================================================================
+
 if(BUILD_TBB)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/tbb")
-  include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
-  add_definitions(-DTBB_USE_GCC_BUILTINS=1 -D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
-  if(tbb_need_GENERIC_DWORD_LOAD_STORE)
-    add_definitions(-D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
+  if(NOT TARGET tbb)
+    return()
   endif()
-  set(HAVE_TBB 1)
-elseif(UNIX AND NOT APPLE)
-  PKG_CHECK_MODULES(TBB tbb)
-
-  if(TBB_FOUND)
-    set(HAVE_TBB 1)
-    if(NOT ${TBB_INCLUDE_DIRS} STREQUAL "")
-      ocv_include_directories(${TBB_INCLUDE_DIRS})
-    endif()
-    link_directories(${TBB_LIBRARY_DIRS})
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${TBB_LIBRARIES})
-  endif()
+  set(HAVE_TBB TRUE)
 endif()
 
 if(NOT HAVE_TBB)
-  set(TBB_DEFAULT_INCLUDE_DIRS
-    "/opt/intel/tbb/include" "/usr/local/include" "/usr/include"
-    "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB"
-    "C:/Program Files (x86)/tbb/include"
-    "C:/Program Files (x86)/tbb/include"
-    "${CMAKE_INSTALL_PREFIX}/include")
-
-  find_path(TBB_INCLUDE_DIRS "tbb/tbb.h" PATHS ${TBB_INCLUDE_DIR} ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
-  if(TBB_INCLUDE_DIRS)
-    if(UNIX)
-      set(TBB_LIB_DIR "${TBB_INCLUDE_DIRS}/../lib" CACHE PATH "Full path of TBB library directory")
-      link_directories("${TBB_LIB_DIR}")
-    endif()
-    if(APPLE)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} libtbb.dylib)
-    elseif(ANDROID)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS}  tbb)
-      add_definitions(-DTBB_USE_GCC_BUILTINS)
-    elseif (UNIX)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
-    elseif (WIN32)
-      if(CMAKE_COMPILER_IS_GNUCXX)
-        set(TBB_LIB_DIR "${TBB_INCLUDE_DIRS}/../lib" CACHE PATH "Full path of TBB library directory")
-        link_directories("${TBB_LIB_DIR}")
-        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
-      else()
-        get_filename_component(_TBB_LIB_PATH "${TBB_INCLUDE_DIRS}/../lib" ABSOLUTE)
-
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES amd64*|x86_64* OR MSVC64)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/intel64")
-        else()
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/ia32")
-        endif()
-
-        if(MSVC80)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc8")
-        elseif(MSVC90)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc9")
-        elseif(MSVC10)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc10")
-        elseif(MSVC11)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc11")
-        elseif(MSVC12)
-          set(_TBB_LIB_PATH "${_TBB_LIB_PATH}/vc12")
-        endif()
-        set(TBB_LIB_DIR "${_TBB_LIB_PATH}" CACHE PATH "Full path of TBB library directory")
-        link_directories("${TBB_LIB_DIR}")
-      endif()
-    endif()
-
-    set(HAVE_TBB 1)
-    if(NOT "${TBB_INCLUDE_DIRS}" STREQUAL "")
-      ocv_include_directories("${TBB_INCLUDE_DIRS}")
-    endif()
-  endif(TBB_INCLUDE_DIRS)
-endif(NOT HAVE_TBB)
-
-# get TBB version
-if(HAVE_TBB)
-  find_file(TBB_STDDEF_PATH tbb/tbb_stddef.h "${TBB_INCLUDE_DIRS}")
-  mark_as_advanced(TBB _STDDEF_PATH)
+  ocv_tbb_cmake_guess(HAVE_TBB)
 endif()
-if(HAVE_TBB AND TBB_STDDEF_PATH)
-  ocv_parse_header("${TBB_STDDEF_PATH}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION)
-else()
-  unset(TBB_VERSION_MAJOR)
-  unset(TBB_VERSION_MINOR)
-  unset(TBB_INTERFACE_VERSION)
+
+if(NOT HAVE_TBB)
+  ocv_tbb_env_guess(HAVE_TBB)
+endif()
+
+if(TBB_INTERFACE_VERSION LESS 6000) # drop support of versions < 4.0
+  set(HAVE_TBB FALSE)
 endif()

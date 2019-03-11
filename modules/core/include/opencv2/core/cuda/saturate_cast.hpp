@@ -40,10 +40,16 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_SATURATE_CAST_HPP__
-#define __OPENCV_CUDA_SATURATE_CAST_HPP__
+#ifndef OPENCV_CUDA_SATURATE_CAST_HPP
+#define OPENCV_CUDA_SATURATE_CAST_HPP
 
 #include "common.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -95,7 +101,7 @@ namespace cv { namespace cuda { namespace device
     }
     template<> __device__ __forceinline__ uchar saturate_cast<uchar>(double v)
     {
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         uint res = 0;
         asm("cvt.rni.sat.u8.f64 %0, %1;" : "=r"(res) : "d"(v));
         return res;
@@ -143,7 +149,7 @@ namespace cv { namespace cuda { namespace device
     }
     template<> __device__ __forceinline__ schar saturate_cast<schar>(double v)
     {
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         uint res = 0;
         asm("cvt.rni.sat.s8.f64 %0, %1;" : "=r"(res) : "d"(v));
         return res;
@@ -185,7 +191,7 @@ namespace cv { namespace cuda { namespace device
     }
     template<> __device__ __forceinline__ ushort saturate_cast<ushort>(double v)
     {
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         ushort res = 0;
         asm("cvt.rni.sat.u16.f64 %0, %1;" : "=h"(res) : "d"(v));
         return res;
@@ -220,7 +226,7 @@ namespace cv { namespace cuda { namespace device
     }
     template<> __device__ __forceinline__ short saturate_cast<short>(double v)
     {
-    #if __CUDA_ARCH__ >= 130
+    #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 130
         short res = 0;
         asm("cvt.rni.sat.s16.f64 %0, %1;" : "=h"(res) : "d"(v));
         return res;
@@ -281,4 +287,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */
+//! @endcond
+
+#endif /* OPENCV_CUDA_SATURATE_CAST_HPP */

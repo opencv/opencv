@@ -40,10 +40,16 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
-#define __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_
+#ifndef OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP
+#define OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP
 
 #include <cstdio>
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -68,4 +74,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}} // namespace cv { namespace cuda { namespace cudev
 
-#endif  /* __OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP_ */
+//! @endcond
+
+#endif  /* OPENCV_CUDA_DEVICE_FUNCATTRIB_HPP */

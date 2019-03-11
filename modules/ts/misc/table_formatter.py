@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
-from color import getColorizer
+from color import getColorizer, dummyColorizer
 
 class tblCell(object):
     def __init__(self, text, value = None, props = None):
@@ -34,7 +35,9 @@ class table(object):
     def_italic = False
     def_text="-"
 
-    def __init__(self, caption = None):
+    def __init__(self, caption = None, format=None):
+        self.format = format
+        self.is_markdown = self.format == 'markdown'
         self.columns = {}
         self.rows = []
         self.ridx = -1;
@@ -45,7 +48,7 @@ class table(object):
         if len(self.rows) - 1 == self.ridx:
             self.rows.append(tblRow(len(self.columns), properties))
         else:
-            self.rows[ridx + 1].props = properties
+            self.rows[self.ridx + 1].props = properties
         self.ridx += 1
         return self.rows[self.ridx]
 
@@ -95,7 +98,7 @@ class table(object):
 
     def layoutTable(self):
         columns = self.columns.values()
-        columns.sort(key=lambda c: c.index)
+        columns = sorted(columns, key=lambda c: c.index)
 
         colspanned = []
         rowspanned = []
@@ -203,6 +206,8 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
+        if sys.version_info >= (2,7):
+            unicode = str
         if isinstance(value, str):
             vstr = value
         elif isinstance(value, unicode):
@@ -248,7 +253,7 @@ class table(object):
 
     def consolePrintTable(self, out):
         columns = self.layoutTable()
-        colrizer = getColorizer(out)
+        colrizer = getColorizer(out) if not self.is_markdown else dummyColorizer(out)
 
         if self.caption:
             out.write("%s%s%s" % ( os.linesep,  os.linesep.join(self.reformatTextValue(self.caption)), os.linesep * 2))
@@ -288,19 +293,40 @@ class table(object):
             i += colspan
 
         #print content
-        for ln in range(row.minheight):
-            i = 0
-            while i < len(row.cells):
-                if i > 0:
-                    out.write(" ")
-                cell = row.cells[i]
-                column = columns[i]
-                if cell is None:
-                    out.write(" " * column.minwidth)
-                    i += 1
+        if self.is_markdown:
+            out.write("|")
+            for c in row.cells:
+                text = ' '.join(self.getValue('text', c) or [])
+                out.write(text + "|")
+            out.write(os.linesep)
+        else:
+            for ln in range(row.minheight):
+                i = 0
+                while i < len(row.cells):
+                    if i > 0:
+                        out.write(" ")
+                    cell = row.cells[i]
+                    column = columns[i]
+                    if cell is None:
+                        out.write(" " * column.minwidth)
+                        i += 1
+                    else:
+                        self.consolePrintLine(cell, row, column, out)
+                        i += self.getValue("colspan", cell)
+                    if self.is_markdown:
+                        out.write("|")
+                out.write(os.linesep)
+
+        if self.is_markdown and row.props.get('header', False):
+            out.write("|")
+            for th in row.cells:
+                align = self.getValue("align", th)
+                if align == 'center':
+                    out.write(":-:|")
+                elif align == 'right':
+                    out.write("--:|")
                 else:
-                    self.consolePrintLine(cell, row, column, out)
-                    i += self.getValue("colspan", cell)
+                    out.write("---|")
             out.write(os.linesep)
 
     def consolePrintLine(self, cell, row, column, out):
@@ -314,7 +340,7 @@ class table(object):
         if align == "right":
             pattern = "%" + str(width) + "s"
         elif align == "center":
-            pattern = "%" + str((width - len(line)) / 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) / 2)
+            pattern = "%" + str((width - len(line)) // 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) // 2)
         else:
             pattern = "%-" + str(width) + "s"
 
@@ -328,7 +354,7 @@ class table(object):
         if valign == "bottom":
             return height - space
         if valign == "middle":
-            return (height - space + 1) / 2
+            return (height - space + 1) // 2
         return 0
 
     def htmlPrintTable(self, out, embeedcss = False):
@@ -588,7 +614,7 @@ def getStdoutFilename():
         return ""
 
 def detectHtmlOutputType(requestedType):
-    if requestedType == "txt":
+    if requestedType in ['txt', 'markdown']:
         return False
     elif requestedType in ["html", "moinwiki"]:
         return True
@@ -693,17 +719,20 @@ def formatValue(val, metric, units = None):
         if val > 0:
             return "slower"
         #return "%.4f" % val
-    return "%.3f %s" % (val, units)
+    if units:
+        return "%.3f %s" % (val, units)
+    else:
+        return "%.3f" % val
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml")
         exit(0)
 
     parser = OptionParser()
-    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
+    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -750,7 +779,7 @@ if __name__ == "__main__":
 
     for arg in args:
         tests = testlog_parser.parseLogFile(arg)
-        tbl = table(arg)
+        tbl = table(arg, format=options.format)
         tbl.newColumn("name", "Name of Test", align = "left")
         tbl.newColumn("value", metrix_table[options.metric][0], align = "center", bold = "true")
 

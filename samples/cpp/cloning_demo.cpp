@@ -15,18 +15,17 @@
 * 6- Texture Flattening
 
 * The program takes as input a source and a destination image (for 1-3 methods)
-* and ouputs the cloned image.
+* and outputs the cloned image.
 *
-* Download test images from opencv_extra folder @github.
-*
+* Download test images from opencv_extra repository.
 */
 
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
-#include <stdlib.h>
 
 using namespace std;
 using namespace cv;
@@ -34,6 +33,7 @@ using namespace cv;
 int main()
 {
     cout << endl;
+    cout << "Note: specify OPENCV_SAMPLES_DATA_PATH_HINT=<opencv_extra>/testdata/cv" << endl << endl;
     cout << "Cloning Module" << endl;
     cout << "---------------" << endl;
     cout << "Options: " << endl;
@@ -53,9 +53,9 @@ int main()
     if(num == 1)
     {
         string folder =  "cloning/Normal_Cloning/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "destination1.png";
-        string original_path3 = folder + "mask.png";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "destination1.png");
+        string original_path3 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -85,14 +85,14 @@ int main()
         seamlessClone(source, destination, mask, p, result, 1);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
     }
     else if(num == 2)
     {
         string folder = "cloning/Mixed_Cloning/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "destination1.png";
-        string original_path3 = folder + "mask.png";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "destination1.png");
+        string original_path3 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -122,14 +122,14 @@ int main()
         seamlessClone(source, destination, mask, p, result, 2);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
     }
     else if(num == 3)
     {
         string folder = "cloning/Monochrome_Transfer/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "destination1.png";
-        string original_path3 = folder + "mask.png";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "destination1.png");
+        string original_path3 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat destination = imread(original_path2, IMREAD_COLOR);
@@ -159,13 +159,13 @@ int main()
         seamlessClone(source, destination, mask, p, result, 3);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
     }
     else if(num == 4)
     {
-        string folder = "cloning/Color_Change/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "mask.png";
+        string folder = "cloning/color_change/";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -186,13 +186,13 @@ int main()
         colorChange(source, mask, result, 1.5, .5, .5);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
     }
     else if(num == 5)
     {
         string folder = "cloning/Illumination_Change/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "mask.png";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -213,13 +213,13 @@ int main()
         illuminationChange(source, mask, result, 0.2f, 0.4f);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
     }
     else if(num == 6)
     {
         string folder = "cloning/Texture_Flattening/";
-        string original_path1 = folder + "source1.png";
-        string original_path2 = folder + "mask.png";
+        string original_path1 = samples::findFile(folder + "source1.png");
+        string original_path2 = samples::findFile(folder + "mask.png");
 
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat mask = imread(original_path2, IMREAD_COLOR);
@@ -240,7 +240,12 @@ int main()
         textureFlattening(source, mask, result, 30, 45, 3);
 
         imshow("Output",result);
-        imwrite(folder + "cloned.png", result);
+        imwrite("cloned.png", result);
+    }
+    else
+    {
+        cerr << "Invalid selection: " << num << endl;
+        exit(1);
     }
     waitKey(0);
 }

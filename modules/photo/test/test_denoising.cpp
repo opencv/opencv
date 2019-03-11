@@ -41,11 +41,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/photo.hpp"
-#include <string>
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 //#define DUMP_RESULTS
 
@@ -156,3 +153,16 @@ TEST(Photo_White, issue_2646)
 
     ASSERT_EQ(0, nonWhitePixelsCount);
 }
+
+TEST(Photo_Denoising, speed)
+{
+    string imgname = string(cvtest::TS::ptr()->get_data_path()) + "shared/5MP.png";
+    Mat src = imread(imgname, 0), dst;
+
+    double t = (double)getTickCount();
+    fastNlMeansDenoising(src, dst, 5, 7, 21);
+    t = (double)getTickCount() - t;
+    printf("execution time: %gms\n", t*1000./getTickFrequency());
+}
+
+}} // namespace

@@ -41,14 +41,14 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #include <sstream>
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////// GoodFeaturesToTrack //////////////////////////
@@ -77,11 +77,11 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
     declare.in(src, WARMUP_READ).out(dst);
 
     OCL_TEST_CYCLE() cv::goodFeaturesToTrack(src, dst, maxCorners, qualityLevel,
-                                             minDistance, noArray(), 3, harrisDetector, 0.04);
+                                             minDistance, noArray(), 3, 3, harrisDetector, 0.04);
 
     SANITY_CHECK(dst);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

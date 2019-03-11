@@ -5,12 +5,12 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// SetTo ////////////////////////
@@ -122,6 +122,30 @@ OCL_PERF_TEST_P(CopyToFixture, CopyToWithMask,
     SANITY_CHECK(dst);
 }
 
-} } // namespace cvtest::ocl
+OCL_PERF_TEST_P(CopyToFixture, CopyToWithMaskUninit,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst, mask(srcSize, CV_8UC1);
+    declare.in(src, mask, WARMUP_RNG);
+
+    for ( ;  next(); )
+    {
+        dst.release();
+        startTimer();
+        src.copyTo(dst, mask);
+        cvtest::ocl::perf::safeFinish();
+        stopTimer();
+    }
+
+    SANITY_CHECK(dst);
+}
+
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

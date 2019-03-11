@@ -1,9 +1,7 @@
 
 #include "test_precomp.hpp"
 
-#include <string>
-#include <fstream>
-#include <iostream>
+#if 0
 
 using namespace std;
 
@@ -284,3 +282,5 @@ void CV_GBTreesTest::run(int)
 /////////////////////////////////////////////////////////////////////////////
 
 TEST(ML_GBTrees, regression) { CV_GBTreesTest test; test.safe_run(); }
+
+#endif

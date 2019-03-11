@@ -100,9 +100,14 @@ void CvHaarEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
     CV_DbgAssert( !sum.empty() && !tilted.empty() && !normfactor.empty() );
     CvFeatureEvaluator::setImage( img, clsLabel, idx);
     Mat innSum(winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>((int)idx));
-    Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
     Mat innSqSum;
-    integral(img, innSum, innSqSum, innTilted);
+    if (((const CvHaarFeatureParams*)featureParams)->mode == CvHaarFeatureParams::ALL)
+    {
+        Mat innTilted(winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>((int)idx));
+        integral(img, innSum, innSqSum, innTilted);
+    }
+    else
+        integral(img, innSum, innSqSum);
     normfactor.ptr<float>(0)[idx] = calcNormFactor( innSum, innSqSum );
 }
 

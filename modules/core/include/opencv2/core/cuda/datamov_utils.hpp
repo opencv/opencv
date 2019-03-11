@@ -40,10 +40,16 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DATAMOV_UTILS_HPP__
-#define __OPENCV_CUDA_DATAMOV_UTILS_HPP__
+#ifndef OPENCV_CUDA_DATAMOV_UTILS_HPP
+#define OPENCV_CUDA_DATAMOV_UTILS_HPP
 
 #include "common.hpp"
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -102,4 +108,6 @@ namespace cv { namespace cuda { namespace device
     #endif // __CUDA_ARCH__ >= 200
 }}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_CUDA_DATAMOV_UTILS_HPP__
+//! @endcond
+
+#endif // OPENCV_CUDA_DATAMOV_UTILS_HPP

@@ -40,12 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_UTIL_INL_HPP__
-#define __OPENCV_STITCHING_UTIL_INL_HPP__
+#ifndef OPENCV_STITCHING_UTIL_INL_HPP
+#define OPENCV_STITCHING_UTIL_INL_HPP
 
 #include <queue>
 #include "opencv2/core.hpp"
 #include "util.hpp" // Make your IDE see declarations
+
+//! @cond IGNORED
 
 namespace cv {
 namespace detail {
@@ -124,4 +126,6 @@ static inline double sqr(double x) { return x * x; }
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_UTIL_INL_HPP__
+//! @endcond
+
+#endif // OPENCV_STITCHING_UTIL_INL_HPP

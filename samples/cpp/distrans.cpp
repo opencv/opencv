@@ -1,5 +1,6 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <stdio.h>
@@ -106,15 +107,17 @@ static void help()
 
 const char* keys =
 {
-    "{@image |stuff.jpg|input image file}"
+    "{help h||}{@image |stuff.jpg|input image file}"
 };
 
 int main( int argc, const char** argv )
 {
-    help();
     CommandLineParser parser(argc, argv, keys);
+    help();
+    if (parser.has("help"))
+        return 0;
     string filename = parser.get<string>(0);
-    gray = imread(filename.c_str(), 0);
+    gray = imread(samples::findFile(filename), 0);
     if(gray.empty())
     {
         printf("Cannot read image file: %s\n", filename.c_str());
@@ -130,7 +133,7 @@ int main( int argc, const char** argv )
         // Call to update the view
         onTrackbar(0, 0);
 
-        int c = waitKey(0) & 255;
+        char c = (char)waitKey(0);
 
         if( c == 27 )
             break;

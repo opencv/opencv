@@ -137,6 +137,21 @@ Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes
     return Rect(tl, br);
 }
 
+Rect resultRoiIntersection(const std::vector<Point> &corners, const std::vector<Size> &sizes)
+{
+    CV_Assert(sizes.size() == corners.size());
+    Point tl(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
+    Point br(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
+    for (size_t i = 0; i < corners.size(); ++i)
+    {
+        tl.x = std::max(tl.x, corners[i].x);
+        tl.y = std::max(tl.y, corners[i].y);
+        br.x = std::min(br.x, corners[i].x + sizes[i].width);
+        br.y = std::min(br.y, corners[i].y + sizes[i].height);
+    }
+    return Rect(tl, br);
+}
+
 
 Point resultTl(const std::vector<Point> &corners)
 {

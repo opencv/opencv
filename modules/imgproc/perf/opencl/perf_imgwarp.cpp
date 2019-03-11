@@ -44,17 +44,17 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// WarpAffine ////////////////////////
 
-CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
+CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
 
 typedef tuple<Size, MatType, InterType> WarpAffineParams;
 typedef TestBaseWithParam<WarpAffineParams> WarpAffineFixture;
@@ -72,7 +72,7 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
     const WarpAffineParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : interpolation == INTER_CUBIC ? 2e-3 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -90,7 +90,8 @@ typedef WarpAffineParams WarpPerspectiveParams;
 typedef TestBaseWithParam<WarpPerspectiveParams> WarpPerspectiveFixture;
 
 OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                                   OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR))))
 {
     static const double coeffs[3][3] =
     {
@@ -122,7 +123,8 @@ typedef TestBaseWithParam<ResizeParams> ResizeFixture;
 
 OCL_PERF_TEST_P(ResizeFixture, Resize,
             ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
-                               InterType::all(), ::testing::Values(0.5, 2.0)))
+                               OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR)),
+                               ::testing::Values(0.5, 2.0)))
 {
     const ResizeParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -166,18 +168,43 @@ OCL_PERF_TEST_P(ResizeAreaFixture, Resize,
     SANITY_CHECK(dst, eps);
 }
 
+typedef ResizeAreaParams ResizeLinearExactParams;
+typedef TestBaseWithParam<ResizeLinearExactParams> ResizeLinearExactFixture;
+
+OCL_PERF_TEST_P(ResizeLinearExactFixture, Resize,
+            ::testing::Combine(OCL_TEST_SIZES, ::testing::Values(CV_8UC1, CV_8UC3, CV_8UC4), ::testing::Values(0.5, 2.0)))
+{
+    const ResizeAreaParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    double scale = get<2>(params);
+    const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
+    const double eps = 1e-4;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
+
+    UMat src(srcSize, type), dst(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, cv::INTER_LINEAR_EXACT);
+
+    SANITY_CHECK(dst, eps);
+}
+
 ///////////// Remap ////////////////////////
 
 typedef tuple<Size, MatType, InterType> RemapParams;
 typedef TestBaseWithParam<RemapParams> RemapFixture;
 
 OCL_PERF_TEST_P(RemapFixture, Remap,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                               OCL_PERF_ENUM(InterType(INTER_NEAREST), InterType(INTER_LINEAR))))
 {
     const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params), borderMode = BORDER_CONSTANT;
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
+    //const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -202,9 +229,9 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
 
     OCL_TEST_CYCLE() cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
 
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

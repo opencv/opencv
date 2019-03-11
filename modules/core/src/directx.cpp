@@ -44,23 +44,24 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/directx.hpp"
+#include "opencl_kernels_core.hpp"
 
 #ifdef HAVE_DIRECTX
 #include <vector>
 # include "directx.inc.hpp"
 #else // HAVE_DIRECTX
-#define NO_DIRECTX_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
+#define NO_DIRECTX_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
 #endif
 
 #ifndef HAVE_OPENCL
-# define NO_OPENCL_SUPPORT_ERROR CV_ErrorNoReturn(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
+# define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
 namespace cv { namespace directx {
 
 int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
 {
-    (void)iDXGI_FORMAT;
+    CV_UNUSED(iDXGI_FORMAT);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #else
@@ -167,6 +168,9 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
     //case DXGI_FORMAT_BC7_TYPELESS:
     //case DXGI_FORMAT_BC7_UNORM:
     //case DXGI_FORMAT_BC7_UNORM_SRGB:
+#ifdef HAVE_DIRECTX_NV12
+    case DXGI_FORMAT_NV12: return CV_8UC3;
+#endif
     default: break;
     }
     return errorType;
@@ -175,7 +179,7 @@ int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
 
 int getTypeFromD3DFORMAT(const int iD3DFORMAT)
 {
-    (void)iD3DFORMAT;
+    CV_UNUSED(iD3DFORMAT);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #else
@@ -238,7 +242,7 @@ static bool g_isDirect3DDevice9Ex = false; // Direct3DDevice9Ex or Direct3DDevic
 
 Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 {
-    (void)pD3D11Device;
+    CV_UNUSED(pD3D11Device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -346,7 +350,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 
 Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 {
-    (void)pD3D10Device;
+    CV_UNUSED(pD3D10Device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -454,7 +458,7 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 
 Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex)
 {
-    (void)pDirect3DDevice9Ex;
+    CV_UNUSED(pDirect3DDevice9Ex);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -564,7 +568,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
 
 Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9)
 {
-    (void)pDirect3DDevice9;
+    CV_UNUSED(pDirect3DDevice9);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -701,9 +705,66 @@ static void __OpenCLinitializeD3D11()
 }
 #endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 
+} // namespace directx
+
+
+namespace ocl {
+
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+#ifdef HAVE_DIRECTX_NV12
+
+static
+bool ocl_convert_nv12_to_bgr(
+    cl_mem clImageY,
+    cl_mem clImageUV,
+    cl_mem clBuffer,
+    int step,
+    int cols,
+    int rows)
+{
+    ocl::Kernel k;
+    k.create("YUV2BGR_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
+    if (k.empty())
+        return false;
+
+    k.args(clImageY, clImageUV, clBuffer, step, cols, rows);
+
+    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    return k.run(2, globalsize, 0, false);
+}
+
+
+static
+bool ocl_convert_bgr_to_nv12(
+    cl_mem clBuffer,
+    int step,
+    int cols,
+    int rows,
+    cl_mem clImageY,
+    cl_mem clImageUV)
+{
+    ocl::Kernel k;
+    k.create("BGR2YUV_NV12_8u", cv::ocl::core::cvtclr_dx_oclsrc, "");
+    if (k.empty())
+        return false;
+
+    k.args(clBuffer, step, cols, rows, clImageY, clImageUV);
+
+    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    return k.run(2, globalsize, 0, false);
+}
+
+#endif // HAVE_DIRECTX_NV12
+#endif // HAVE_DIRECTX && HAVE_OPENCL
+
+} // namespace ocl
+
+
+namespace directx {
+
 void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
-    (void)src; (void)pD3D11Texture2D;
+    CV_UNUSED(src); CV_UNUSED(pD3D11Texture2D);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -719,33 +780,69 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
-    using namespace cv::ocl;
-    Context& ctx = Context::getDefault();
-    cl_context context = (cl_context)ctx.ptr();
-
     UMat u = src.getUMat();
 
     // TODO Add support for roi
     CV_Assert(u.offset == 0);
     CV_Assert(u.isContinuous());
 
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+
     cl_int status = 0;
-    cl_mem clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
+    cl_mem clImage = 0;
+#ifdef HAVE_DIRECTX_NV12
+    cl_mem clImageUV = 0;
+#endif
+
+    clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
 
-    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 1, &status);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
+    }
+#endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
-    size_t offset = 0; // TODO
-    size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
-    status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
+
+        if(!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImage, clImageUV))
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
+
+        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
+    }
+    else
+#endif
+    {
+        size_t offset = 0; // TODO
+        size_t origin[3] = { 0, 0, 0 };
+        size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
+
+        status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, origin, region, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
+    }
+
     status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
@@ -757,14 +854,26 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     status = clReleaseMemObject(clImage); // TODO RAII
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clReleaseMemObject(clImageUV);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
+    }
+#endif
+
 #else
     // TODO memcpy
     NO_OPENCL_SUPPORT_ERROR;
 #endif
 }
+
+
 void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
-    (void)pD3D11Texture2D; (void)dst;
+    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -776,10 +885,6 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     int textureType = getTypeFromDXGI_FORMAT(desc.Format);
     CV_Assert(textureType >= 0);
 
-    using namespace cv::ocl;
-    Context& ctx = Context::getDefault();
-    cl_context context = (cl_context)ctx.ptr();
-
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(Size(desc.Width, desc.Height), textureType);
     UMat u = dst.getUMat();
@@ -788,23 +893,61 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     CV_Assert(u.offset == 0);
     CV_Assert(u.isContinuous());
 
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    using namespace cv::ocl;
+    Context& ctx = Context::getDefault();
+    cl_context context = (cl_context)ctx.ptr();
+
     cl_int status = 0;
-    cl_mem clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
+    cl_mem clImage = 0;
+
+    clImage = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
 
-    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+#ifdef HAVE_DIRECTX_NV12
+    cl_mem clImageUV = 0;
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        clImageUV = clCreateFromD3D11Texture2DKHR(context, CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
+    }
+#endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
-    size_t offset = 0; // TODO
-    size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
-    status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
+
+        if(!ocl::ocl_convert_nv12_to_bgr(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
+
+        status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
+    }
+    else
+#endif
+    {
+        size_t offset = 0; // TODO
+        size_t origin[3] = { 0, 0, 0 };
+        size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
+
+        status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, origin, region, offset, 0, NULL, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
+    }
+
     status = clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
@@ -816,6 +959,16 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     status = clReleaseMemObject(clImage); // TODO RAII
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clReleaseMemObject(clImageUV);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
+    }
+#endif
+
 #else
     // TODO memcpy
     NO_OPENCL_SUPPORT_ERROR;
@@ -851,7 +1004,7 @@ static void __OpenCLinitializeD3D10()
 
 void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 {
-    (void)src; (void)pD3D10Texture2D;
+    CV_UNUSED(src); CV_UNUSED(pD3D10Texture2D);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -890,7 +1043,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -912,7 +1065,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 }
 void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst)
 {
-    (void)pD3D10Texture2D; (void)dst;
+    CV_UNUSED(pD3D10Texture2D); CV_UNUSED(dst);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -949,7 +1102,7 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
@@ -999,7 +1152,7 @@ static void __OpenCLinitializeD3D9()
 
 void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurface9, void* surfaceSharedHandle)
 {
-    (void)src; (void)pDirect3DSurface9; (void)surfaceSharedHandle;
+    CV_UNUSED(src); CV_UNUSED(pDirect3DSurface9); CV_UNUSED(surfaceSharedHandle);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1044,7 +1197,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -1067,7 +1220,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 
 void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArray dst, void* surfaceSharedHandle)
 {
-    (void)pDirect3DSurface9; (void)dst; (void)surfaceSharedHandle;
+    CV_UNUSED(pDirect3DSurface9); CV_UNUSED(dst); CV_UNUSED(surfaceSharedHandle);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
@@ -1110,7 +1263,7 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = {(size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");

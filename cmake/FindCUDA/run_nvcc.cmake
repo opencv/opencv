@@ -62,7 +62,7 @@ set(cmake_dependency_file "@cmake_dependency_file@") # path
 set(CUDA_make2cmake "@CUDA_make2cmake@") # path
 set(CUDA_parse_cubin "@CUDA_parse_cubin@") # path
 set(build_cubin @build_cubin@) # bool
-set(CUDA_HOST_COMPILER "@CUDA_HOST_COMPILER@") # bool
+set(CUDA_HOST_COMPILER "@CUDA_HOST_COMPILER@") # path
 # We won't actually use these variables for now, but we need to set this, in
 # order to force this file to be run again if it changes.
 set(generated_file_path "@generated_file_path@") # path
@@ -72,7 +72,7 @@ set(generated_cubin_file_internal "@generated_cubin_file@") # path
 set(CUDA_NVCC_EXECUTABLE "@CUDA_NVCC_EXECUTABLE@") # path
 set(CUDA_NVCC_FLAGS @CUDA_NVCC_FLAGS@ ;; @CUDA_WRAP_OPTION_NVCC_FLAGS@) # list
 @CUDA_NVCC_FLAGS_CONFIG@
-set(nvcc_flags @nvcc_flags@) # list
+set(nvcc_flags "@nvcc_flags@") # list
 set(CUDA_NVCC_INCLUDE_ARGS "@CUDA_NVCC_INCLUDE_ARGS@") # list (needs to be in quotes to handle spaces properly).
 set(format_flag "@format_flag@") # string
 
@@ -106,8 +106,8 @@ list(APPEND CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS_${build_configuration}})
 # Any -ccbin existing in CUDA_NVCC_FLAGS gets highest priority
 list( FIND CUDA_NVCC_FLAGS "-ccbin" ccbin_found0 )
 list( FIND CUDA_NVCC_FLAGS "--compiler-bindir" ccbin_found1 )
-if( ccbin_found0 LESS 0 AND ccbin_found1 LESS 0 )
-  if (CUDA_HOST_COMPILER STREQUAL "$(VCInstallDir)bin" AND DEFINED CCBIN)
+if( ccbin_found0 LESS 0 AND ccbin_found1 LESS 0 AND CUDA_HOST_COMPILER )
+  if (CUDA_HOST_COMPILER STREQUAL "@_CUDA_MSVC_HOST_COMPILER@" AND DEFINED CCBIN)
     set(CCBIN -ccbin "${CCBIN}")
   else()
     set(CCBIN -ccbin "${CUDA_HOST_COMPILER}")
@@ -126,7 +126,7 @@ endif()
 # and other return variables are present after executing the process.
 macro(cuda_execute_process status command)
   set(_command ${command})
-  if(NOT _command STREQUAL "COMMAND")
+  if(NOT "x${_command}" STREQUAL "xCOMMAND")
     message(FATAL_ERROR "Malformed call to cuda_execute_process.  Missing COMMAND as second argument. (command = ${command})")
   endif()
   if(verbose)
@@ -167,14 +167,14 @@ if(CUDA_VERSION VERSION_LESS "3.0")
   # CMake policy 0007 NEW states that empty list elements are not
   # ignored.  I'm just setting it to avoid the warning that's printed.
   cmake_policy(SET CMP0007 NEW)
-  # Note that this will remove all occurances of -G.
+  # Note that this will remove all occurrences of -G.
   list(REMOVE_ITEM depends_CUDA_NVCC_FLAGS "-G")
   cmake_policy(POP)
 endif()
 
 # nvcc doesn't define __CUDACC__ for some reason when generating dependency files.  This
 # can cause incorrect dependencies when #including files based on this macro which is
-# defined in the generating passes of nvcc invokation.  We will go ahead and manually
+# defined in the generating passes of nvcc invocation.  We will go ahead and manually
 # define this for now until a future version fixes this bug.
 set(CUDACC_DEFINE -D__CUDACC__)
 

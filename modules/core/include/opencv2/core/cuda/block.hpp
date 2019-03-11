@@ -40,8 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_DEVICE_BLOCK_HPP__
-#define __OPENCV_CUDA_DEVICE_BLOCK_HPP__
+#ifndef OPENCV_CUDA_DEVICE_BLOCK_HPP
+#define OPENCV_CUDA_DEVICE_BLOCK_HPP
+
+/** @file
+ * @deprecated Use @ref cudev instead.
+ */
+
+//! @cond IGNORED
 
 namespace cv { namespace cuda { namespace device
 {
@@ -100,7 +106,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template<typename InIt, typename OutIt, class UnOp>
-        static __device__ __forceinline__ void transfrom(InIt beg, InIt end, OutIt out, UnOp op)
+        static __device__ __forceinline__ void transform(InIt beg, InIt end, OutIt out, UnOp op)
         {
             int STRIDE = stride();
             InIt  t = beg + flattenedThreadId();
@@ -111,7 +117,7 @@ namespace cv { namespace cuda { namespace device
         }
 
         template<typename InIt1, typename InIt2, typename OutIt, class BinOp>
-        static __device__ __forceinline__ void transfrom(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, BinOp op)
+        static __device__ __forceinline__ void transform(InIt1 beg1, InIt1 end1, InIt2 beg2, OutIt out, BinOp op)
         {
             int STRIDE = stride();
             InIt1 t1 = beg1 + flattenedThreadId();
@@ -200,4 +206,6 @@ namespace cv { namespace cuda { namespace device
     };
 }}}
 
-#endif /* __OPENCV_CUDA_DEVICE_BLOCK_HPP__ */
+//! @endcond
+
+#endif /* OPENCV_CUDA_DEVICE_BLOCK_HPP */

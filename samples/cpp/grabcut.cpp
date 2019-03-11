@@ -1,5 +1,6 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <iostream>
 
@@ -21,10 +22,10 @@ static void help()
         "\tleft mouse button - set rectangle\n"
         "\n"
         "\tCTRL+left mouse button - set GC_BGD pixels\n"
-        "\tSHIFT+left mouse button - set CG_FGD pixels\n"
+        "\tSHIFT+left mouse button - set GC_FGD pixels\n"
         "\n"
         "\tCTRL+right mouse button - set GC_PR_BGD pixels\n"
-        "\tSHIFT+right mouse button - set CG_PR_FGD pixels\n" << endl;
+        "\tSHIFT+right mouse button - set GC_PR_FGD pixels\n" << endl;
 }
 
 const Scalar RED = Scalar(0,0,255);
@@ -275,25 +276,21 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    if( argc!=2 )
-    {
-        help();
-        return 1;
-    }
-    string filename = argv[1];
+    cv::CommandLineParser parser(argc, argv, "{@input| messi5.jpg |}");
+    help();
+
+    string filename = parser.get<string>("@input");
     if( filename.empty() )
     {
-        cout << "\nDurn, couldn't read in " << argv[1] << endl;
+        cout << "\nDurn, empty filename" << endl;
         return 1;
     }
-    Mat image = imread( filename, 1 );
+    Mat image = imread(samples::findFile(filename), IMREAD_COLOR);
     if( image.empty() )
     {
         cout << "\n Durn, couldn't read image filename " << filename << endl;
         return 1;
     }
-
-    help();
 
     const string winName = "image";
     namedWindow( winName, WINDOW_AUTOSIZE );
@@ -304,8 +301,8 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
-        switch( (char) c )
+        char c = (char)waitKey(0);
+        switch( c )
         {
         case '\x1b':
             cout << "Exiting ..." << endl;

@@ -44,12 +44,12 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// PyrDown //////////////////////
@@ -95,7 +95,7 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
     UMat src(srcSize, type), dst(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
+    OCL_TEST_CYCLE() cv::pyrUp(src, dst);
 
     SANITY_CHECK(dst, eps);
 }
@@ -129,6 +129,6 @@ OCL_PERF_TEST_P(BuildPyramidFixture, BuildPyramid,
     SANITY_CHECK(dst4, eps);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

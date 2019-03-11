@@ -11,6 +11,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -46,7 +47,8 @@
 // */
 
 #include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "opencl_kernels_core.hpp"
+
 
 namespace cv
 {
@@ -81,32 +83,28 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
 template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP
-    if (ippiCopy_8u_C1MR(_src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
-        return;
-    setIppErrorStatus();
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1MR, _src, (int)sstep, _dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const uchar* src = (const uchar*)_src;
         uchar* dst = (uchar*)_dst;
         int x = 0;
-        #if CV_SSE4_2
-        if(USE_SSE4_2)//
+        #if CV_SIMD
         {
-            __m128i zero = _mm_setzero_si128 ();
+            v_uint8 v_zero = vx_setzero_u8();
 
-             for( ; x <= size.width - 16; x += 16 )
-             {
-                 const __m128i rSrc = _mm_lddqu_si128((const __m128i*)(src+x));
-                 __m128i _mask = _mm_lddqu_si128((const __m128i*)(mask+x));
-                 __m128i rDst = _mm_lddqu_si128((__m128i*)(dst+x));
-                 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
-                 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask);
-                 _mm_storeu_si128((__m128i*)(dst + x), rDst);
-             }
+            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
+            {
+                v_uint8 v_src   = vx_load(src  + x),
+                        v_dst   = vx_load(dst  + x),
+                        v_nmask = vx_load(mask + x) == v_zero;
+
+                v_dst = v_select(v_nmask, v_dst, v_src);
+                v_store(dst + x, v_dst);
+            }
         }
+        vx_cleanup();
         #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
@@ -117,32 +115,33 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
-#if defined HAVE_IPP
-    if (ippiCopy_16u_C1MR((const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
-        return;
-    setIppErrorStatus();
-#endif
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_16u_C1MR, (const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
 
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
     {
         const ushort* src = (const ushort*)_src;
         ushort* dst = (ushort*)_dst;
         int x = 0;
-        #if CV_SSE4_2
-        if(USE_SSE4_2)//
+        #if CV_SIMD
         {
-            __m128i zero = _mm_setzero_si128 ();
-            for( ; x <= size.width - 8; x += 8 )
+            v_uint8 v_zero = vx_setzero_u8();
+
+            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
             {
-                 const __m128i rSrc =_mm_lddqu_si128((const __m128i*)(src+x));
-                 __m128i _mask = _mm_loadl_epi64((const __m128i*)(mask+x));
-                 _mask = _mm_unpacklo_epi8(_mask, _mask);
-                 __m128i rDst = _mm_lddqu_si128((const __m128i*)(dst+x));
-                 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
-                 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask);
-                 _mm_storeu_si128((__m128i*)(dst + x), rDst);
-             }
+                v_uint16 v_src1 = vx_load(src + x), v_src2 = vx_load(src + x + v_uint16::nlanes),
+                         v_dst1 = vx_load(dst + x), v_dst2 = vx_load(dst + x + v_uint16::nlanes);
+
+                v_uint8 v_nmask1, v_nmask2;
+                v_uint8 v_nmask = vx_load(mask + x) == v_zero;
+                v_zip(v_nmask, v_nmask, v_nmask1, v_nmask2);
+
+                v_dst1 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst1, v_src1);
+                v_dst2 = v_select(v_reinterpret_as_u16(v_nmask2), v_dst2, v_src2);
+                v_store(dst + x, v_dst1);
+                v_store(dst + x + v_uint16::nlanes, v_dst2);
+            }
         }
+        vx_cleanup();
         #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
@@ -182,9 +181,7 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, size_t mstep, \
                              uchar* dst, size_t dstep, Size size, void*) \
 { \
-    if (ippiCopy_##ippfavor((const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0) \
-        return; \
-    setIppErrorStatus(); \
+    CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_##ippfavor, (const ipptype *)src, (int)sstep, (ipptype *)dst, (int)dstep, ippiSize(size), (const Ipp8u *)mask, (int)mstep) >= 0)\
     copyMask_<type>(src, sstep, mask, mstep, dst, dstep, size); \
 }
 #else
@@ -196,14 +193,18 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 }
 #endif
 
-
+#if IPP_VERSION_X100 == 901 // bug in IPP 9.0.1
+DEF_COPY_MASK(32sC3, Vec3i)
+DEF_COPY_MASK(8uC3, Vec3b)
+#else
+DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
+DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
+#endif
 DEF_COPY_MASK(8u, uchar)
 DEF_COPY_MASK(16u, ushort)
-DEF_COPY_MASK_F(8uC3, Vec3b, 8u_C3MR, Ipp8u)
 DEF_COPY_MASK_F(32s, int, 32s_C1MR, Ipp32s)
 DEF_COPY_MASK_F(16uC3, Vec3s, 16u_C3MR, Ipp16u)
 DEF_COPY_MASK(32sC2, Vec2i)
-DEF_COPY_MASK_F(32sC3, Vec3i, 32s_C3MR, Ipp32s)
 DEF_COPY_MASK_F(32sC4, Vec4i, 32s_C4MR, Ipp32s)
 DEF_COPY_MASK(32sC6, Vec6i)
 DEF_COPY_MASK(32sC8, Vec8i)
@@ -237,6 +238,16 @@ BinaryFunc getCopyMaskFunc(size_t esz)
 /* dst = src */
 void Mat::copyTo( OutputArray _dst ) const
 {
+    CV_INSTRUMENT_REGION();
+
+#ifdef HAVE_CUDA
+    if (_dst.isGpuMat())
+    {
+        _dst.getGpuMat().upload(*this);
+        return;
+    }
+#endif
+
     int dtype = _dst.type();
     if( _dst.fixedType() && dtype != type() )
     {
@@ -255,8 +266,9 @@ void Mat::copyTo( OutputArray _dst ) const
     {
         _dst.create( dims, size.p, type() );
         UMat dst = _dst.getUMat();
-
-        size_t i, sz[CV_MAX_DIM], dstofs[CV_MAX_DIM], esz = elemSize();
+        CV_Assert(dst.u != NULL);
+        size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
+        CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
         sz[dims-1] *= esz;
@@ -275,20 +287,19 @@ void Mat::copyTo( OutputArray _dst ) const
 
         if( rows > 0 && cols > 0 )
         {
-            const uchar* sptr = data;
+            Mat src = *this;
+            Size sz = getContinuousSize2D(src, dst, (int)elemSize());
+            CV_CheckGE(sz.width, 0, "");
+
+            const uchar* sptr = src.data;
             uchar* dptr = dst.data;
 
-            Size sz = getContinuousSize(*this, dst);
-            size_t len = sz.width*elemSize();
-
-#if defined HAVE_IPP
-            if (ippiCopy_8u_C1R(sptr, (int)step, dptr, (int)dst.step, ippiSize((int)len, sz.height)) >= 0)
-                return;
-            setIppErrorStatus();
+#if IPP_VERSION_X100 >= 201700
+            CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_8u_C1R_L, sptr, (int)src.step, dptr, (int)dst.step, ippiSizeL(sz.width, sz.height)) >= 0)
 #endif
 
-            for( ; sz.height--; sptr += step, dptr += dst.step )
-                memcpy( dptr, sptr, len );
+            for (; sz.height--; sptr += src.step, dptr += dst.step)
+                memcpy(dptr, sptr, sz.width);
         }
         return;
     }
@@ -301,7 +312,7 @@ void Mat::copyTo( OutputArray _dst ) const
     if( total() != 0 )
     {
         const Mat* arrays[] = { this, &dst };
-        uchar* ptrs[2];
+        uchar* ptrs[2] = {};
         NAryMatIterator it(arrays, ptrs, 2);
         size_t sz = it.size*elemSize();
 
@@ -310,8 +321,46 @@ void Mat::copyTo( OutputArray _dst ) const
     }
 }
 
+#ifdef HAVE_IPP
+static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
+{
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
+
+    if(mask.channels() > 1 || mask.depth() != CV_8U)
+        return false;
+
+    if (src.dims <= 2)
+    {
+        IppiSize size = ippiSize(src.size());
+        return CV_INSTRUMENT_FUN_IPP(llwiCopyMask, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, size, (int)src.elemSize1(), src.channels(), mask.ptr(), (int)mask.step) >= 0;
+    }
+    else
+    {
+        const Mat      *arrays[] = {&src, &dst, &mask, NULL};
+        uchar          *ptrs[3]  = {NULL};
+        NAryMatIterator it(arrays, ptrs);
+
+        IppiSize size = ippiSize(it.size, 1);
+
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            if(CV_INSTRUMENT_FUN_IPP(llwiCopyMask, ptrs[0], 0, ptrs[1], 0, size, (int)src.elemSize1(), src.channels(), ptrs[2], 0) < 0)
+                return false;
+        }
+        return true;
+    }
+#else
+    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(mask);
+    return false;
+#endif
+}
+#endif
+
 void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
+    CV_INSTRUMENT_REGION();
+
     Mat mask = _mask.getMat();
     if( !mask.data )
     {
@@ -322,27 +371,42 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     int cn = channels(), mcn = mask.channels();
     CV_Assert( mask.depth() == CV_8U && (mcn == 1 || mcn == cn) );
     bool colorMask = mcn > 1;
+    if( dims <= 2 )
+    {
+        CV_Assert( size() == mask.size() );
+    }
+
+    Mat dst;
+    {
+        Mat dst0 = _dst.getMat();
+        _dst.create(dims, size, type()); // TODO Prohibit 'dst' re-creation, user should pass it explicitly with correct size/type or empty
+        dst = _dst.getMat();
+
+        if (dst.data != dst0.data) // re-allocation happened
+        {
+#ifdef OPENCV_FUTURE
+            CV_Assert(dst0.empty() &&
+                "copyTo(): dst size/type mismatch (looks like a bug) - use dst.release() before copyTo() call to suppress this message");
+#endif
+            dst = Scalar(0); // do not leave dst uninitialized
+        }
+    }
+
+    CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
 
     size_t esz = colorMask ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
-    uchar* data0 = _dst.getMat().data;
-    _dst.create( dims, size, type() );
-    Mat dst = _dst.getMat();
-
-    if( dst.data != data0 ) // do not leave dst uninitialized
-        dst = Scalar(0);
-
     if( dims <= 2 )
     {
-        CV_Assert( size() == mask.size() );
-        Size sz = getContinuousSize(*this, dst, mask, mcn);
-        copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
+        Mat src = *this;
+        Size sz = getContinuousSize2D(src, dst, mask, mcn);
+        copymask(src.data, src.step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
     }
 
     const Mat* arrays[] = { this, &dst, &mask, 0 };
-    uchar* ptrs[3];
+    uchar* ptrs[3] = {};
     NAryMatIterator it(arrays, ptrs);
     Size sz((int)(it.size*mcn), 1);
 
@@ -352,6 +416,11 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
 Mat& Mat::operator = (const Scalar& s)
 {
+    CV_INSTRUMENT_REGION();
+
+    if (this->empty())
+        return *this;
+
     const Mat* arrays[] = { this };
     uchar* dptr;
     NAryMatIterator it(arrays, &dptr, 1);
@@ -360,27 +429,6 @@ Mat& Mat::operator = (const Scalar& s)
 
     if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
-#if defined HAVE_IPP && !defined HAVE_IPP_ICV_ONLY && 0
-        if (dims <= 2 || isContinuous())
-        {
-            IppiSize roisize = { cols, rows };
-            if (isContinuous())
-            {
-                roisize.width = (int)total();
-                roisize.height = 1;
-
-                if (ippsZero_8u(data, static_cast<int>(roisize.width * elemSize())) >= 0)
-                    return *this;
-                setIppErrorStatus();
-            }
-            roisize.width *= (int)elemSize();
-
-            if (ippiSet_8u_C1R(0, data, (int)step, roisize) >= 0)
-                return *this;
-            setIppErrorStatus();
-        }
-#endif
-
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             memset( dptr, 0, elsize );
     }
@@ -395,6 +443,7 @@ Mat& Mat::operator = (const Scalar& s)
             for( size_t j = 0; j < elsize; j += blockSize )
             {
                 size_t sz = MIN(blockSize, elsize - j);
+                CV_Assert(sz <= sizeof(scalar));
                 memcpy( dptr + j, scalar, sz );
             }
         }
@@ -408,102 +457,92 @@ Mat& Mat::operator = (const Scalar& s)
     return *this;
 }
 
+#ifdef HAVE_IPP
+static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
+{
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
+
+    if(mask.empty())
+        return false;
+
+    if(mask.depth() != CV_8U || mask.channels() > 1)
+        return false;
+
+    if(dst.channels() > 4)
+        return false;
+
+    if (dst.depth() == CV_32F)
+    {
+        for (int i = 0; i < (int)(_val.total()); i++)
+        {
+            float v = (float)(_val.at<double>(i));  // cast to float
+            if (cvIsNaN(v) || cvIsInf(v))  // accept finite numbers only
+                return false;
+        }
+    }
+
+    if(dst.dims <= 2)
+    {
+        IppiSize            size     = ippiSize(dst.size());
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
+        convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
+
+        return CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, dst.ptr(), (int)dst.step, size, dataType, dst.channels(), mask.ptr(), (int)mask.step) >= 0;
+    }
+    else
+    {
+        const Mat      *arrays[] = {&dst, mask.empty()?NULL:&mask, NULL};
+        uchar          *ptrs[2]  = {NULL};
+        NAryMatIterator it(arrays, ptrs);
+
+        IppiSize            size     = {(int)it.size, 1};
+        IppDataType         dataType = ippiGetDataType(dst.depth());
+        ::ipp::IwValueFloat s;
+        convertAndUnrollScalar(_val, CV_MAKETYPE(CV_64F, dst.channels()), (uchar*)((Ipp64f*)s), 1);
+
+        for( size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            if(CV_INSTRUMENT_FUN_IPP(llwiSetMask, s, ptrs[0], 0, size, dataType, dst.channels(), ptrs[1], 0) < 0)
+                return false;
+        }
+        return true;
+    }
+#else
+    CV_UNUSED(dst); CV_UNUSED(_val); CV_UNUSED(mask);
+    return false;
+#endif
+}
+#endif
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
+    CV_INSTRUMENT_REGION();
+
     if( empty() )
         return *this;
 
     Mat value = _value.getMat(), mask = _mask.getMat();
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
-    CV_Assert( mask.empty() || (mask.type() == CV_8U && size == mask.size) );
+    int cn = channels(), mcn = mask.channels();
+    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
-#if defined HAVE_IPP
-    int cn = channels(), depth0 = depth();
+    CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
-    if (!mask.empty() && (dims <= 2 || (isContinuous() && mask.isContinuous())) &&
-            (/*depth0 == CV_8U ||*/ depth0 == CV_16U || depth0 == CV_16S || depth0 == CV_32S || depth0 == CV_32F) &&
-            (cn == 1 || cn == 3 || cn == 4))
-    {
-        uchar _buf[32];
-        void * buf = _buf;
-        convertAndUnrollScalar( value, type(), _buf, 1 );
-
-        IppStatus status = (IppStatus)-1;
-        IppiSize roisize = { cols, rows };
-        int mstep = (int)mask.step, dstep = (int)step;
-
-        if (isContinuous() && mask.isContinuous())
-        {
-            roisize.width = (int)total();
-            roisize.height = 1;
-        }
-
-        if (cn == 1)
-        {
-            /*if (depth0 == CV_8U)
-                status = ippiSet_8u_C1MR(*(Ipp8u *)buf, (Ipp8u *)data, dstep, roisize, mask.data, mstep);
-            else*/ if (depth0 == CV_16U)
-                status = ippiSet_16u_C1MR(*(Ipp16u *)buf, (Ipp16u *)data, dstep, roisize, mask.data, mstep);
-            else if (depth0 == CV_16S)
-                status = ippiSet_16s_C1MR(*(Ipp16s *)buf, (Ipp16s *)data, dstep, roisize, mask.data, mstep);
-            else if (depth0 == CV_32S)
-                status = ippiSet_32s_C1MR(*(Ipp32s *)buf, (Ipp32s *)data, dstep, roisize, mask.data, mstep);
-            else if (depth0 == CV_32F)
-                status = ippiSet_32f_C1MR(*(Ipp32f *)buf, (Ipp32f *)data, dstep, roisize, mask.data, mstep);
-        }
-        else if (cn == 3 || cn == 4)
-        {
-#define IPP_SET(ippfavor, ippcn) \
-    do \
-    { \
-        typedef Ipp##ippfavor ipptype; \
-        ipptype ippvalue[4] = { ((ipptype *)buf)[0], ((ipptype *)buf)[1], ((ipptype *)buf)[2], ((ipptype *)buf)[3] }; \
-        status = ippiSet_##ippfavor##_C##ippcn##MR(ippvalue, (ipptype *)data, dstep, roisize, mask.data, mstep); \
-    } while ((void)0, 0)
-
-#define IPP_SET_CN(ippcn) \
-    do \
-    { \
-        if (cn == ippcn) \
-        { \
-            /*if (depth0 == CV_8U) \
-                IPP_SET(8u, ippcn); \
-            else*/ if (depth0 == CV_16U) \
-                IPP_SET(16u, ippcn); \
-            else if (depth0 == CV_16S) \
-                IPP_SET(16s, ippcn); \
-            else if (depth0 == CV_32S) \
-                IPP_SET(32s, ippcn); \
-            else if (depth0 == CV_32F) \
-                IPP_SET(32f, ippcn); \
-        } \
-    } while ((void)0, 0)
-
-            IPP_SET_CN(3);
-            IPP_SET_CN(4);
-
-#undef IPP_SET_CN
-#undef IPP_SET
-        }
-
-        if (status >= 0)
-            return *this;
-        setIppErrorStatus();
-    }
-#endif
-
-    size_t esz = elemSize();
+    size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
     const Mat* arrays[] = { this, !mask.empty() ? &mask : 0, 0 };
     uchar* ptrs[2]={0,0};
     NAryMatIterator it(arrays, ptrs);
-    int totalsz = (int)it.size, blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    int totalsz = (int)it.size*mcn;
+    int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
+    blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
     AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
-    uchar* scbuf = alignPtr((uchar*)_scbuf, (int)sizeof(double));
-    convertAndUnrollScalar( value, type(), scbuf, blockSize0 );
+    uchar* scbuf = alignPtr((uchar*)_scbuf.data(), (int)sizeof(double));
+    convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
@@ -530,7 +569,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 {
     int i, j, limit = (int)(((size.width + 1)/2)*esz);
     AutoBuffer<int> _tab(size.width*esz);
-    int* tab = _tab;
+    int* tab = _tab.data();
 
     for( i = 0; i < size.width; i++ )
         for( size_t k = 0; k < esz; k++ )
@@ -614,8 +653,15 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
-    CV_Assert(flipCode >= - 1 && flipCode <= 1);
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), flipType;
+    CV_Assert(flipCode >= -1 && flipCode <= 1);
+
+    const ocl::Device & dev = ocl::Device::getDefault();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            flipType, kercn = std::min(ocl::predictOptimalVectorWidth(_src, _dst), 4);
+
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    if (!doubleSupport && depth == CV_64F)
+        kercn = cn;
 
     if (cn > 4)
         return false;
@@ -628,9 +674,13 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
 
+    int pxPerWIy = (dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU)) ? 4 : 1;
+    kercn = (cn!=3 || flipType == FLIP_ROWS) ? std::max(kercn, cn) : cn;
+
     ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
-        format( "-D T=%s -D T1=%s -D cn=%d", ocl::memopTypeToStr(type),
-                ocl::memopTypeToStr(depth), cn));
+        format( "-D T=%s -D T1=%s -D cn=%d -D PIX_PER_WI_Y=%d -D kercn=%d",
+                kercn != cn ? ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)) : ocl::vecopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                kercn != cn ? ocl::typeToStr(depth) : ocl::vecopTypeToStr(depth), cn, pxPerWIy, kercn));
     if (k.empty())
         return false;
 
@@ -638,23 +688,62 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
 
-    int cols = size.width, rows = size.height;
+    int cols = size.width * cn / kercn, rows = size.height;
     cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
     rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src),
-           ocl::KernelArg::WriteOnly(dst), rows, cols);
+           ocl::KernelArg::WriteOnly(dst, cn, kercn), rows, cols);
 
-    size_t maxWorkGroupSize = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t maxWorkGroupSize = dev.maxWorkGroupSize();
     CV_Assert(maxWorkGroupSize % 4 == 0);
-    size_t globalsize[2] = { cols, rows }, localsize[2] = { maxWorkGroupSize / 4, 4 };
-    return k.run(2, globalsize, flipType == FLIP_COLS ? localsize : NULL, false);
+
+    size_t globalsize[2] = { (size_t)cols, ((size_t)rows + pxPerWIy - 1) / pxPerWIy },
+            localsize[2] = { maxWorkGroupSize / 4, 4 };
+    return k.run(2, globalsize, (flipType == FLIP_COLS) && !dev.isIntel() ? localsize : NULL, false);
 }
 
 #endif
 
+#if defined HAVE_IPP
+static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
+{
+#ifdef HAVE_IPP_IW
+    CV_INSTRUMENT_REGION_IPP();
+
+    IppiAxis ippMode;
+    if(flip_mode < 0)
+        ippMode = ippAxsBoth;
+    else if(flip_mode == 0)
+        ippMode = ippAxsHorizontal;
+    else
+        ippMode = ippAxsVertical;
+
+    try
+    {
+        ::ipp::IwiImage iwSrc = ippiGetImage(src);
+        ::ipp::IwiImage iwDst = ippiGetImage(dst);
+
+        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
+    }
+    catch(const ::ipp::IwException &)
+    {
+        return false;
+    }
+
+    return true;
+#else
+    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(flip_mode);
+    return false;
+#endif
+}
+#endif
+
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert( _src.dims() <= 2 );
     Size size = _src.size();
 
@@ -679,109 +768,113 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     int type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
+
+    CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
+
     size_t esz = CV_ELEM_SIZE(type);
 
-#if defined HAVE_IPP
-    typedef IppStatus (CV_STDCALL * ippiMirror)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize, IppiAxis flip);
-    typedef IppStatus (CV_STDCALL * ippiMirrorI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize, IppiAxis flip);
-    ippiMirror ippFunc = 0;
-    ippiMirrorI ippFuncI = 0;
-
-    if (src.data == dst.data)
-    {
-        CV_SUPPRESS_DEPRECATED_START
-        ippFuncI =
-            type == CV_8UC1 ? (ippiMirrorI)ippiMirror_8u_C1IR :
-            type == CV_8UC3 ? (ippiMirrorI)ippiMirror_8u_C3IR :
-            type == CV_8UC4 ? (ippiMirrorI)ippiMirror_8u_C4IR :
-            type == CV_16UC1 ? (ippiMirrorI)ippiMirror_16u_C1IR :
-            type == CV_16UC3 ? (ippiMirrorI)ippiMirror_16u_C3IR :
-            type == CV_16UC4 ? (ippiMirrorI)ippiMirror_16u_C4IR :
-            type == CV_16SC1 ? (ippiMirrorI)ippiMirror_16s_C1IR :
-            type == CV_16SC3 ? (ippiMirrorI)ippiMirror_16s_C3IR :
-            type == CV_16SC4 ? (ippiMirrorI)ippiMirror_16s_C4IR :
-            type == CV_32SC1 ? (ippiMirrorI)ippiMirror_32s_C1IR :
-            type == CV_32SC3 ? (ippiMirrorI)ippiMirror_32s_C3IR :
-            type == CV_32SC4 ? (ippiMirrorI)ippiMirror_32s_C4IR :
-            type == CV_32FC1 ? (ippiMirrorI)ippiMirror_32f_C1IR :
-            type == CV_32FC3 ? (ippiMirrorI)ippiMirror_32f_C3IR :
-            type == CV_32FC4 ? (ippiMirrorI)ippiMirror_32f_C4IR : 0;
-        CV_SUPPRESS_DEPRECATED_END
-    }
-    else
-    {
-        ippFunc =
-            type == CV_8UC1 ? (ippiMirror)ippiMirror_8u_C1R :
-            type == CV_8UC3 ? (ippiMirror)ippiMirror_8u_C3R :
-            type == CV_8UC4 ? (ippiMirror)ippiMirror_8u_C4R :
-            type == CV_16UC1 ? (ippiMirror)ippiMirror_16u_C1R :
-            type == CV_16UC3 ? (ippiMirror)ippiMirror_16u_C3R :
-            type == CV_16UC4 ? (ippiMirror)ippiMirror_16u_C4R :
-            type == CV_16SC1 ? (ippiMirror)ippiMirror_16s_C1R :
-            type == CV_16SC3 ? (ippiMirror)ippiMirror_16s_C3R :
-            type == CV_16SC4 ? (ippiMirror)ippiMirror_16s_C4R :
-            type == CV_32SC1 ? (ippiMirror)ippiMirror_32s_C1R :
-            type == CV_32SC3 ? (ippiMirror)ippiMirror_32s_C3R :
-            type == CV_32SC4 ? (ippiMirror)ippiMirror_32s_C4R :
-            type == CV_32FC1 ? (ippiMirror)ippiMirror_32f_C1R :
-            type == CV_32FC3 ? (ippiMirror)ippiMirror_32f_C3R :
-            type == CV_32FC4 ? (ippiMirror)ippiMirror_32f_C4R : 0;
-    }
-    IppiAxis axis = flip_mode == 0 ? ippAxsHorizontal :
-        flip_mode > 0 ? ippAxsVertical : ippAxsBoth;
-    IppiSize roisize = { dst.cols, dst.rows };
-
-    if (ippFunc != 0)
-    {
-        if (ippFunc(src.data, (int)src.step, dst.data, (int)dst.step, ippiSize(src.cols, src.rows), axis) >= 0)
-            return;
-        setIppErrorStatus();
-    }
-    else if (ippFuncI != 0)
-    {
-        if (ippFuncI(dst.data, (int)dst.step, roisize, axis) >= 0)
-            return;
-        setIppErrorStatus();
-    }
-#endif
-
     if( flip_mode <= 0 )
-        flipVert( src.data, src.step, dst.data, dst.step, src.size(), esz );
+        flipVert( src.ptr(), src.step, dst.ptr(), dst.step, src.size(), esz );
     else
-        flipHoriz( src.data, src.step, dst.data, dst.step, src.size(), esz );
+        flipHoriz( src.ptr(), src.step, dst.ptr(), dst.step, src.size(), esz );
 
     if( flip_mode < 0 )
-        flipHoriz( dst.data, dst.step, dst.data, dst.step, dst.size(), esz );
+        flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
 #ifdef HAVE_OPENCL
 
+static bool ocl_rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 0);
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+#endif
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+
+    CV_OCL_RUN(_dst.isUMat(), ocl_rotate(_src, _dst, rotateMode))
+
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 1);
+        break;
+    case ROTATE_180:
+        flip(_src, _dst, -1);
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        transpose(_src, _dst);
+        flip(_dst, _dst, 0);
+        break;
+    default:
+        break;
+    }
+}
+
+#if defined HAVE_OPENCL && !defined __APPLE__
+
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    if (ny == 1 && nx == 1)
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
-    for (int y = 0; y < ny; ++y)
-        for (int x = 0; x < nx; ++x)
-        {
-            Rect roi(x * src.cols, y * src.rows, src.cols, src.rows);
-            UMat hdr(dst, roi);
-            src.copyTo(hdr);
-        }
-    return true;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1,
+            kercn = ocl::predictOptimalVectorWidth(_src, _dst);
+
+    ocl::Kernel k("repeat", ocl::core::repeat_oclsrc,
+                  format("-D T=%s -D nx=%d -D ny=%d -D rowsPerWI=%d -D cn=%d",
+                         ocl::memopTypeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         nx, ny, rowsPerWI, kercn));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    k.args(ocl::KernelArg::ReadOnly(src, cn, kercn), ocl::KernelArg::WriteOnlyNoSize(dst));
+
+    size_t globalsize[] = { (size_t)src.cols * cn / kercn, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
 }
 
 #endif
 
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(_src.getObj() != _dst.getObj());
     CV_Assert( _src.dims() <= 2 );
     CV_Assert( ny > 0 && nx > 0 );
 
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
+#if !defined __APPLE__
     CV_OCL_RUN(_dst.isUMat(),
                ocl_repeat(_src, ny, nx, _dst))
+#endif
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
@@ -792,11 +885,11 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     for( y = 0; y < ssize.height; y++ )
     {
         for( x = 0; x < dsize.width; x += ssize.width )
-            memcpy( dst.data + y*dst.step + x, src.data + y*src.step, ssize.width );
+            memcpy( dst.ptr(y) + x, src.ptr(y), ssize.width );
     }
 
     for( ; y < dsize.height; y++ )
-        memcpy( dst.data + y*dst.step, dst.data + (y - ssize.height)*dst.step, dsize.width );
+        memcpy( dst.ptr(y), dst.ptr(y - ssize.height), dsize.width );
 }
 
 Mat repeat(const Mat& src, int ny, int nx)
@@ -823,6 +916,8 @@ Mat repeat(const Mat& src, int ny, int nx)
  */
 int cv::borderInterpolate( int p, int len, int borderType )
 {
+    CV_TRACE_FUNCTION_VERBOSE();
+
     if( (unsigned)p < (unsigned)len )
         ;
     else if( borderType == BORDER_REPLICATE )
@@ -875,7 +970,7 @@ void copyMakeBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
     }
 
     cv::AutoBuffer<int> _tab((dstroi.width - srcroi.width)*cn);
-    int* tab = _tab;
+    int* tab = _tab.data();
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
 
@@ -946,7 +1041,7 @@ void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
 {
     int i, j;
     cv::AutoBuffer<uchar> _constBuf(dstroi.width*cn);
-    uchar* constBuf = _constBuf;
+    uchar* constBuf = _constBuf.data();
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
 
@@ -989,7 +1084,8 @@ namespace cv {
 static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                                 int left, int right, int borderType, const Scalar& value )
 {
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
+            rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~cv::BORDER_ISOLATED;
 
@@ -1001,12 +1097,10 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
     int scalarcn = cn == 3 ? 4 : cn;
     int sctype = CV_MAKETYPE(depth, scalarcn);
-    String buildOptions = format(
-            "-D T=%s -D %s "
-            "-D T1=%s -D cn=%d -D ST=%s",
-            ocl::memopTypeToStr(type), borderMap[borderType],
-            ocl::memopTypeToStr(depth), cn, ocl::memopTypeToStr(sctype)
-    );
+    String buildOptions = format("-D T=%s -D %s -D T1=%s -D cn=%d -D ST=%s -D rowsPerWI=%d",
+                                 ocl::memopTypeToStr(type), borderMap[borderType],
+                                 ocl::memopTypeToStr(depth), cn,
+                                 ocl::memopTypeToStr(sctype), rowsPerWI);
 
     ocl::Kernel k("copyMakeBorder", ocl::core::copymakeborder_oclsrc, buildOptions);
     if (k.empty())
@@ -1042,20 +1136,56 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
            top, left, ocl::KernelArg::Constant(Mat(1, 1, sctype, value)));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
 }
+#endif
 
+#ifdef HAVE_IPP
+namespace cv {
+
+static bool ipp_copyMakeBorder( Mat &_src, Mat &_dst, int top, int bottom,
+                                int left, int right, int _borderType, const Scalar& value )
+{
+#if defined HAVE_IPP_IW_LL && !IPP_DISABLE_PERF_COPYMAKE
+    CV_INSTRUMENT_REGION_IPP();
+
+    ::ipp::IwiBorderSize borderSize(left, top, right, bottom);
+    ::ipp::IwiSize       size(_src.cols, _src.rows);
+    IppDataType          dataType   = ippiGetDataType(_src.depth());
+    IppiBorderType       borderType = ippiGetBorderType(_borderType);
+    if((int)borderType == -1)
+        return false;
+
+    if(_src.dims > 2)
+        return false;
+
+    Rect dstRect(borderSize.left, borderSize.top,
+        _dst.cols - borderSize.right - borderSize.left,
+        _dst.rows - borderSize.bottom - borderSize.top);
+    Mat  subDst = Mat(_dst, dstRect);
+    Mat *pSrc   = &_src;
+
+    return CV_INSTRUMENT_FUN_IPP(llwiCopyMakeBorder, pSrc->ptr(), pSrc->step, subDst.ptr(), subDst.step, size, dataType, _src.channels(), borderSize, borderType, &value[0]) >= 0;
+#else
+    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(top); CV_UNUSED(bottom); CV_UNUSED(left); CV_UNUSED(right);
+    CV_UNUSED(_borderType); CV_UNUSED(value);
+    return false;
+#endif
+}
+}
 #endif
 
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
-    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
+    CV_INSTRUMENT_REGION();
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && _src.dims() <= 2);
+
+    CV_OCL_RUN(_dst.isUMat(),
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
     Mat src = _src.getMat();
@@ -1089,118 +1219,11 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     borderType &= ~BORDER_ISOLATED;
 
-#if defined HAVE_IPP && 0
-    typedef IppStatus (CV_STDCALL * ippiCopyMakeBorder)(const void * pSrc, int srcStep, IppiSize srcRoiSize, void * pDst,
-                                                        int dstStep, IppiSize dstRoiSize, int topBorderHeight, int leftBorderWidth);
-    typedef IppStatus (CV_STDCALL * ippiCopyMakeBorderI)(const void * pSrc, int srcDstStep, IppiSize srcRoiSize, IppiSize dstRoiSize,
-                                                         int topBorderHeight, int leftborderwidth);
-    typedef IppStatus (CV_STDCALL * ippiCopyConstBorder)(const void * pSrc, int srcStep, IppiSize srcRoiSize, void * pDst, int dstStep,
-                                                         IppiSize dstRoiSize, int topBorderHeight, int leftBorderWidth, void * value);
-
-    IppiSize srcRoiSize = { src.cols, src.rows }, dstRoiSize = { dst.cols, dst.rows };
-    ippiCopyMakeBorder ippFunc = 0;
-    ippiCopyMakeBorderI ippFuncI = 0;
-    ippiCopyConstBorder ippFuncConst = 0;
-    bool inplace = dst.datastart == src.datastart;
-
-    if (borderType == BORDER_CONSTANT)
-    {
-         ippFuncConst =
-//             type == CV_8UC1 ? (ippiCopyConstBorder)ippiCopyConstBorder_8u_C1R : bug in IPP 8.1
-             type == CV_16UC1 ? (ippiCopyConstBorder)ippiCopyConstBorder_16u_C1R :
-//             type == CV_16SC1 ? (ippiCopyConstBorder)ippiCopyConstBorder_16s_C1R : bug in IPP 8.1
-//             type == CV_32SC1 ? (ippiCopyConstBorder)ippiCopyConstBorder_32s_C1R : bug in IPP 8.1
-//             type == CV_32FC1 ? (ippiCopyConstBorder)ippiCopyConstBorder_32f_C1R : bug in IPP 8.1
-             type == CV_8UC3 ? (ippiCopyConstBorder)ippiCopyConstBorder_8u_C3R :
-             type == CV_16UC3 ? (ippiCopyConstBorder)ippiCopyConstBorder_16u_C3R :
-             type == CV_16SC3 ? (ippiCopyConstBorder)ippiCopyConstBorder_16s_C3R :
-             type == CV_32SC3 ? (ippiCopyConstBorder)ippiCopyConstBorder_32s_C3R :
-             type == CV_32FC3 ? (ippiCopyConstBorder)ippiCopyConstBorder_32f_C3R :
-             type == CV_8UC4 ? (ippiCopyConstBorder)ippiCopyConstBorder_8u_C4R :
-             type == CV_16UC4 ? (ippiCopyConstBorder)ippiCopyConstBorder_16u_C4R :
-             type == CV_16SC4 ? (ippiCopyConstBorder)ippiCopyConstBorder_16s_C4R :
-             type == CV_32SC4 ? (ippiCopyConstBorder)ippiCopyConstBorder_32s_C4R :
-             type == CV_32FC4 ? (ippiCopyConstBorder)ippiCopyConstBorder_32f_C4R : 0;
-    }
-    else if (borderType == BORDER_WRAP)
-    {
-        if (inplace)
-        {
-            CV_SUPPRESS_DEPRECATED_START
-            ippFuncI =
-                type == CV_32SC1 ? (ippiCopyMakeBorderI)ippiCopyWrapBorder_32s_C1IR :
-                type == CV_32FC1 ? (ippiCopyMakeBorderI)ippiCopyWrapBorder_32s_C1IR : 0;
-            CV_SUPPRESS_DEPRECATED_END
-        }
-        else
-        {
-            ippFunc =
-                type == CV_32SC1 ? (ippiCopyMakeBorder)ippiCopyWrapBorder_32s_C1R :
-                type == CV_32FC1 ? (ippiCopyMakeBorder)ippiCopyWrapBorder_32s_C1R : 0;
-        }
-    }
-    else if (borderType == BORDER_REPLICATE)
-    {
-        if (inplace)
-        {
-            CV_SUPPRESS_DEPRECATED_START
-            ippFuncI =
-                type == CV_8UC1 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_8u_C1IR :
-                type == CV_16UC1 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16u_C1IR :
-                type == CV_16SC1 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16s_C1IR :
-                type == CV_32SC1 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32s_C1IR :
-                type == CV_32FC1 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32f_C1IR :
-                type == CV_8UC3 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_8u_C3IR :
-                type == CV_16UC3 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16u_C3IR :
-                type == CV_16SC3 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16s_C3IR :
-                type == CV_32SC3 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32s_C3IR :
-                type == CV_32FC3 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32f_C3IR :
-                type == CV_8UC4 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_8u_C4IR :
-                type == CV_16UC4 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16u_C4IR :
-                type == CV_16SC4 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_16s_C4IR :
-                type == CV_32SC4 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32s_C4IR :
-                type == CV_32FC4 ? (ippiCopyMakeBorderI)ippiCopyReplicateBorder_32f_C4IR : 0;
-            CV_SUPPRESS_DEPRECATED_END
-        }
-        else
-        {
-             ippFunc =
-                 type == CV_8UC1 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_8u_C1R :
-                 type == CV_16UC1 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16u_C1R :
-                 type == CV_16SC1 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16s_C1R :
-                 type == CV_32SC1 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32s_C1R :
-                 type == CV_32FC1 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32f_C1R :
-                 type == CV_8UC3 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_8u_C3R :
-                 type == CV_16UC3 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16u_C3R :
-                 type == CV_16SC3 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16s_C3R :
-                 type == CV_32SC3 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32s_C3R :
-                 type == CV_32FC3 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32f_C3R :
-                 type == CV_8UC4 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_8u_C4R :
-                 type == CV_16UC4 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16u_C4R :
-                 type == CV_16SC4 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_16s_C4R :
-                 type == CV_32SC4 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32s_C4R :
-                 type == CV_32FC4 ? (ippiCopyMakeBorder)ippiCopyReplicateBorder_32f_C4R : 0;
-        }
-    }
-
-    if (ippFunc || ippFuncI || ippFuncConst)
-    {
-        uchar scbuf[32];
-        scalarToRawData(value, scbuf, type);
-
-        if ( (ippFunc && ippFunc(src.data, (int)src.step, srcRoiSize, dst.data, (int)dst.step, dstRoiSize, top, left) >= 0) ||
-             (ippFuncI && ippFuncI(src.data, (int)src.step, srcRoiSize, dstRoiSize, top, left) >= 0) ||
-             (ippFuncConst && ippFuncConst(src.data, (int)src.step, srcRoiSize, dst.data, (int)dst.step,
-                                           dstRoiSize, top, left, scbuf) >= 0))
-            return;
-
-        setIppErrorStatus();
-    }
-#endif
+    CV_IPP_RUN_FAST(ipp_copyMakeBorder(src, dst, top, bottom, left, right, borderType, value))
 
     if( borderType != BORDER_CONSTANT )
-        copyMakeBorder_8u( src.data, src.step, src.size(),
-                           dst.data, dst.step, dst.size(),
+        copyMakeBorder_8u( src.ptr(), src.step, src.size(),
+                           dst.ptr(), dst.step, dst.size(),
                            top, left, (int)src.elemSize(), borderType );
     else
     {
@@ -1211,10 +1234,10 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
             CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
             cn1 = 1;
         }
-        scalarToRawData(value, buf, CV_MAKETYPE(src.depth(), cn1), cn);
-        copyMakeConstBorder_8u( src.data, src.step, src.size(),
-                                dst.data, dst.step, dst.size(),
-                                top, left, (int)src.elemSize(), (uchar*)(double*)buf );
+        scalarToRawData(value, buf.data(), CV_MAKETYPE(src.depth(), cn1), cn);
+        copyMakeConstBorder_8u( src.ptr(), src.step, src.size(),
+                                dst.ptr(), dst.step, dst.size(),
+                                top, left, (int)src.elemSize(), (uchar*)buf.data() );
     }
 }
 

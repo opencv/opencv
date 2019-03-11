@@ -1,9 +1,0 @@
-#define __TBB_VERSION_STRINGS \
-"TBB: BUILD_HOST	Unknown" ENDL \
-"TBB: BUILD_OS		Android" ENDL \
-"TBB: BUILD_KERNEL	Unknown" ENDL \
-"TBB: BUILD_GCC		gcc version 4.4.3" ENDL \
-"TBB: BUILD_GLIBC	Unknown" ENDL \
-"TBB: BUILD_LD		Unknown" ENDL \
-"TBB: BUILD_TARGET	Unknown" ENDL \
-"TBB: BUILD_COMMAND	use cv::getBuildInformation() for details" ENDL

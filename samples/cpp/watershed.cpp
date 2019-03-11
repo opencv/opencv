@@ -1,5 +1,6 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <cstdio>
@@ -47,12 +48,18 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
+    cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | fruits.jpg | }");
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
+    string filename = samples::findFile(parser.get<string>("@input"));
     Mat img0 = imread(filename, 1), imgGray;
 
     if( img0.empty() )
     {
-        cout << "Couldn'g open image " << filename << ". Usage: watershed <image_name>\n";
+        cout << "Couldn't open image " << filename << ". Usage: watershed <image_name>\n";
         return 0;
     }
     help();
@@ -67,19 +74,19 @@ int main( int argc, char** argv )
 
     for(;;)
     {
-        int c = waitKey(0);
+        char c = (char)waitKey(0);
 
-        if( (char)c == 27 )
+        if( c == 27 )
             break;
 
-        if( (char)c == 'r' )
+        if( c == 'r' )
         {
             markerMask = Scalar::all(0);
             img0.copyTo(img);
             imshow( "image", img );
         }
 
-        if( (char)c == 'w' || (char)c == ' ' )
+        if( c == 'w' || c == ' ' )
         {
             int i, j, compCount = 0;
             vector<vector<Point> > contours;

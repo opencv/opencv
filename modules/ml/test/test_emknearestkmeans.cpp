@@ -41,12 +41,15 @@
 
 #include "test_precomp.hpp"
 
-using namespace std;
-using namespace cv;
+namespace opencv_test { namespace {
 
-static
+using cv::ml::TrainData;
+using cv::ml::EM;
+using cv::ml::KNearest;
+
 void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 {
+    CV_TRACE_FUNCTION();
     float mp0[] = {0.0f, 0.0f}, cp0[] = {0.67f, 0.0f, 0.0f, 0.67f};
     float mp1[] = {5.0f, 0.0f}, cp1[] = {1.0f, 0.0f, 0.0f, 1.0f};
     float mp2[] = {1.0f, 5.0f}, cp2[] = {1.0f, 0.0f, 0.0f, 1.0f};
@@ -70,9 +73,9 @@ void defaultDistribs( Mat& means, vector<Mat>& covs, int type=CV_32FC1 )
 }
 
 // generate points sets by normal distributions
-static
 void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& _means, const vector<Mat>& covs, int dataType, int labelType )
 {
+    CV_TRACE_FUNCTION();
     vector<int>::const_iterator sit = sizes.begin();
     int total = 0;
     for( ; sit != sizes.end(); ++sit )
@@ -112,7 +115,6 @@ void generateData( Mat& data, Mat& labels, const vector<int>& sizes, const Mat& 
     }
 }
 
-static
 int maxIdx( const vector<int>& count )
 {
     int idx = -1;
@@ -130,7 +132,6 @@ int maxIdx( const vector<int>& count )
     return idx;
 }
 
-static
 bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& labelsMap, bool checkClusterUniq=true )
 {
     size_t total = 0, nclusters = sizes.size();
@@ -177,7 +178,6 @@ bool getLabelsMap( const Mat& labels, const vector<int>& sizes, vector<int>& lab
     return true;
 }
 
-static
 bool calcErr( const Mat& labels, const Mat& origLabels, const vector<int>& sizes, float& err, bool labelsEquivalent = true, bool checkClusterUniq=true )
 {
     err = 0;
@@ -223,6 +223,7 @@ protected:
 
 void CV_KMeansTest::run( int /*start_from*/ )
 {
+    CV_TRACE_FUNCTION();
     const int iters = 100;
     int sizesArr[] = { 5000, 7000, 8000 };
     int pointsCount = sizesArr[0]+ sizesArr[1] + sizesArr[2];
@@ -309,9 +310,11 @@ void CV_KNearestTest::run( int /*start_from*/ )
     generateData( testData, testLabels, sizes, means, covs, CV_32FC1, CV_32FC1 );
 
     int code = cvtest::TS::OK;
-    KNearest knearest;
-    knearest.train( trainData, trainLabels );
-    knearest.find_nearest( testData, 4, &bestLabels );
+
+    // KNearest default implementation
+    Ptr<KNearest> knearest = KNearest::create();
+    knearest->train(trainData, ml::ROW_SAMPLE, trainLabels);
+    knearest->findNearest(testData, 4, bestLabels);
     float err;
     if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
     {
@@ -323,6 +326,23 @@ void CV_KNearestTest::run( int /*start_from*/ )
         ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
     }
+
+    // KNearest KDTree implementation
+    Ptr<KNearest> knearestKdt = KNearest::create();
+    knearestKdt->setAlgorithmType(KNearest::KDTREE);
+    knearestKdt->train(trainData, ml::ROW_SAMPLE, trainLabels);
+    knearestKdt->findNearest(testData, 4, bestLabels);
+    if( !calcErr( bestLabels, testLabels, sizes, err, true ) )
+    {
+        ts->printf( cvtest::TS::LOG, "Bad output labels.\n" );
+        code = cvtest::TS::FAIL_INVALID_OUTPUT;
+    }
+    else if( err > 0.01f )
+    {
+        ts->printf( cvtest::TS::LOG, "Bad accuracy (%f) on test data.\n", err );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+    }
+
     ts->set_failed_test_info( code );
 }
 
@@ -373,13 +393,18 @@ int CV_EMTest::runCase( int caseIndex, const EM_Params& params,
     cv::Mat labels;
     float err;
 
-    cv::EM em(params.nclusters, params.covMatType, params.termCrit);
+    Ptr<EM> em = EM::create();
+    em->setClustersNumber(params.nclusters);
+    em->setCovarianceMatrixType(params.covMatType);
+    em->setTermCriteria(params.termCrit);
     if( params.startStep == EM::START_AUTO_STEP )
-        em.train( trainData, noArray(), labels );
+        em->trainEM( trainData, noArray(), labels, noArray() );
     else if( params.startStep == EM::START_E_STEP )
-        em.trainE( trainData, *params.means, *params.covs, *params.weights, noArray(), labels );
+        em->trainE( trainData, *params.means, *params.covs,
+                    *params.weights, noArray(), labels, noArray() );
     else if( params.startStep == EM::START_M_STEP )
-        em.trainM( trainData, *params.probs, noArray(), labels );
+        em->trainM( trainData, *params.probs,
+                    noArray(), labels, noArray() );
 
     // check train error
     if( !calcErr( labels, trainLabels, sizes, err , false, false ) )
@@ -399,7 +424,7 @@ int CV_EMTest::runCase( int caseIndex, const EM_Params& params,
     {
         Mat sample = testData.row(i);
         Mat probs;
-        labels.at<int>(i) = static_cast<int>(em.predict( sample, probs )[1]);
+        labels.at<int>(i) = static_cast<int>(em->predict2( sample, probs )[1]);
     }
     if( !calcErr( labels, testLabels, sizes, err, false, false ) )
     {
@@ -446,56 +471,56 @@ void CV_EMTest::run( int /*start_from*/ )
     int code = cvtest::TS::OK;
     int caseIndex = 0;
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.startStep = EM::START_AUTO_STEP;
+        params.covMatType = EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.startStep = EM::START_AUTO_STEP;
+        params.covMatType = EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_AUTO_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.startStep = EM::START_AUTO_STEP;
+        params.covMatType = EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.startStep = EM::START_M_STEP;
+        params.covMatType = EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.startStep = EM::START_M_STEP;
+        params.covMatType = EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_M_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.startStep = EM::START_M_STEP;
+        params.covMatType = EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_GENERIC;
+        params.startStep = EM::START_E_STEP;
+        params.covMatType = EM::COV_MAT_GENERIC;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_DIAGONAL;
+        params.startStep = EM::START_E_STEP;
+        params.covMatType = EM::COV_MAT_DIAGONAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
     {
-        params.startStep = cv::EM::START_E_STEP;
-        params.covMatType = cv::EM::COV_MAT_SPHERICAL;
+        params.startStep = EM::START_E_STEP;
+        params.covMatType = EM::COV_MAT_SPHERICAL;
         int currCode = runCase(caseIndex++, params, trainData, trainLabels, testData, testLabels, sizes);
         code = currCode == cvtest::TS::OK ? code : currCode;
     }
@@ -511,7 +536,6 @@ protected:
     {
         int code = cvtest::TS::OK;
         const int nclusters = 2;
-        cv::EM em(nclusters);
 
         Mat samples = Mat(3,1,CV_64FC1);
         samples.at<double>(0,0) = 1;
@@ -520,11 +544,13 @@ protected:
 
         Mat labels;
 
-        em.train(samples, labels);
+        Ptr<EM> em = EM::create();
+        em->setClustersNumber(nclusters);
+        em->trainEM(samples, noArray(), labels, noArray());
 
         Mat firstResult(samples.rows, 1, CV_32SC1);
         for( int i = 0; i < samples.rows; i++)
-            firstResult.at<int>(i) = static_cast<int>(em.predict(samples.row(i))[1]);
+            firstResult.at<int>(i) = static_cast<int>(em->predict2(samples.row(i), noArray())[1]);
 
         // Write out
         string filename = cv::tempfile(".xml");
@@ -533,7 +559,7 @@ protected:
             try
             {
                 fs << "em" << "{";
-                em.write(fs);
+                em->write(fs);
                 fs << "}";
             }
             catch(...)
@@ -543,33 +569,28 @@ protected:
             }
         }
 
-        em.clear();
+        em.release();
 
         // Read in
+        try
         {
-            FileStorage fs = FileStorage(filename, FileStorage::READ);
-            CV_Assert(fs.isOpened());
-            FileNode fn = fs["em"];
-            try
-            {
-                em.read(fn);
-            }
-            catch(...)
-            {
-                ts->printf( cvtest::TS::LOG, "Crash in read method.\n" );
-                ts->set_failed_test_info( cvtest::TS::FAIL_EXCEPTION );
-            }
+            em = Algorithm::load<EM>(filename);
+        }
+        catch(...)
+        {
+            ts->printf( cvtest::TS::LOG, "Crash in read method.\n" );
+            ts->set_failed_test_info( cvtest::TS::FAIL_EXCEPTION );
         }
 
         remove( filename.c_str() );
 
         int errCaseCount = 0;
         for( int i = 0; i < samples.rows; i++)
-            errCaseCount = std::abs(em.predict(samples.row(i))[1] - firstResult.at<int>(i)) < FLT_EPSILON ? 0 : 1;
+            errCaseCount = std::abs(em->predict2(samples.row(i), noArray())[1] - firstResult.at<int>(i)) < FLT_EPSILON ? 0 : 1;
 
         if( errCaseCount > 0 )
         {
-            ts->printf( cvtest::TS::LOG, "Different prediction results before writeing and after reading (errCaseCount=%d).\n", errCaseCount );
+            ts->printf( cvtest::TS::LOG, "Different prediction results before writing and after reading (errCaseCount=%d).\n", errCaseCount );
             code = cvtest::TS::FAIL_BAD_ACCURACY;
         }
 
@@ -588,21 +609,19 @@ protected:
         // 1. estimates distributions of "spam" / "not spam"
         // 2. predict classID using Bayes classifier for estimated distributions.
 
-        CvMLData data;
         string dataFilename = string(ts->get_data_path()) + "spambase.data";
+        Ptr<TrainData> data = TrainData::loadFromCSV(dataFilename, 0);
 
-        if(data.read_csv(dataFilename.c_str()) != 0)
+        if( data.empty() )
         {
             ts->printf(cvtest::TS::LOG, "File with spambase dataset cann't be read.\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
         }
 
-        Mat values = cv::cvarrToMat(data.get_values());
-        CV_Assert(values.cols == 58);
-        int responseIndex = 57;
-
-        Mat samples = values.colRange(0, responseIndex);
-        Mat responses = values.col(responseIndex);
+        Mat samples = data->getSamples();
+        CV_Assert(samples.cols == 57);
+        Mat responses = data->getResponses();
 
         vector<int> trainSamplesMask(samples.rows, 0);
         int trainSamplesCount = (int)(0.5f * samples.rows);
@@ -616,7 +635,6 @@ protected:
             std::swap(trainSamplesMask[i1], trainSamplesMask[i2]);
         }
 
-        EM model0(3), model1(3);
         Mat samples0, samples1;
         for(int i = 0; i < samples.rows; i++)
         {
@@ -630,8 +648,13 @@ protected:
                     samples1.push_back(sample);
             }
         }
-        model0.train(samples0);
-        model1.train(samples1);
+        Ptr<EM> model0 = EM::create();
+        model0->setClustersNumber(3);
+        model0->trainEM(samples0, noArray(), noArray(), noArray());
+
+        Ptr<EM> model1 = EM::create();
+        model1->setClustersNumber(3);
+        model1->trainEM(samples1, noArray(), noArray(), noArray());
 
         Mat trainConfusionMat(2, 2, CV_32SC1, Scalar(0)),
             testConfusionMat(2, 2, CV_32SC1, Scalar(0));
@@ -639,8 +662,8 @@ protected:
         for(int i = 0; i < samples.rows; i++)
         {
             Mat sample = samples.row(i);
-            double sampleLogLikelihoods0 = model0.predict(sample)[0];
-            double sampleLogLikelihoods1 = model1.predict(sample)[0];
+            double sampleLogLikelihoods0 = model0->predict2(sample, noArray())[0];
+            double sampleLogLikelihoods1 = model1->predict2(sample, noArray())[0];
 
             int classID = sampleLogLikelihoods0 >= lambda * sampleLogLikelihoods1 ? 0 : 1;
 
@@ -678,3 +701,27 @@ TEST(ML_KNearest, accuracy) { CV_KNearestTest test; test.safe_run(); }
 TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
 TEST(ML_EM, save_load) { CV_EMTest_SaveLoad test; test.safe_run(); }
 TEST(ML_EM, classification) { CV_EMTest_Classification test; test.safe_run(); }
+
+TEST(ML_KNearest, regression_12347)
+{
+    Mat xTrainData = (Mat_<float>(5,2) << 1, 1.1, 1.1, 1, 2, 2, 2.1, 2, 2.1, 2.1);
+    Mat yTrainLabels = (Mat_<float>(5,1) << 1, 1, 2, 2, 2);
+    Ptr<KNearest> knn = KNearest::create();
+    knn->train(xTrainData, ml::ROW_SAMPLE, yTrainLabels);
+
+    Mat xTestData = (Mat_<float>(2,2) << 1.1, 1.1, 2, 2.2);
+    Mat zBestLabels, neighbours, dist;
+    // check output shapes:
+    int K = 16, Kexp = std::min(K, xTrainData.rows);
+    knn->findNearest(xTestData, K, zBestLabels, neighbours, dist);
+    EXPECT_EQ(xTestData.rows, zBestLabels.rows);
+    EXPECT_EQ(neighbours.cols, Kexp);
+    EXPECT_EQ(dist.cols, Kexp);
+    // see if the result is still correct:
+    K = 2;
+    knn->findNearest(xTestData, K, zBestLabels, neighbours, dist);
+    EXPECT_EQ(1, zBestLabels.at<float>(0,0));
+    EXPECT_EQ(2, zBestLabels.at<float>(1,0));
+}
+
+}} // namespace

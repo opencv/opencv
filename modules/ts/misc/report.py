@@ -7,7 +7,7 @@ from optparse import OptionParser
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
-    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
+    parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-c", "--columns", dest="columns", help="comma-separated list of columns to show", metavar="COLS", default="")
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
@@ -66,7 +66,7 @@ if __name__ == "__main__":
             tbl.newColumn(m, metrix_table[m][0], align = "center")
 
     needNewRow = True
-    for case in sorted(tests):
+    for case in sorted(tests, key=lambda x: str(x)):
         if needNewRow:
             tbl.newRow()
             if not options.showall:

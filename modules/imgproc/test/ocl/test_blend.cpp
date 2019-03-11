@@ -43,13 +43,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
-#include "cvconfig.h"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
@@ -117,12 +116,12 @@ OCL_TEST_P(BlendLinear, Accuracy)
         OCL_OFF(cv::blendLinear(src1_roi, src2_roi, weights1_roi, weights2_roi, dst_roi));
         OCL_ON(cv::blendLinear(usrc1_roi, usrc2_roi, uweights1_roi, uweights2_roi, udst_roi));
 
-        Near(depth <= CV_32S ? 1.0 : 0.2);
+        Near(depth <= CV_32S ? 1.0 : 0.5);
     }
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, BlendLinear, Combine(testing::Values(CV_8U, CV_32F), OCL_ALL_CHANNELS, Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif

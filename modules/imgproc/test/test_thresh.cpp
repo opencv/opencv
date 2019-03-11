@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_ThreshTest : public cvtest::ArrayTest
 {
@@ -56,8 +55,8 @@ protected:
     void prepare_to_validation( int );
 
     int thresh_type;
-    float thresh_val;
-    float max_val;
+    double thresh_val;
+    double max_val;
 };
 
 
@@ -75,33 +74,42 @@ void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
                                                 vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 3, cn = cvtest::randInt(rng) % 4 + 1;
+    int depth = cvtest::randInt(rng) % 5, cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : CV_32F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : depth == 2 ? CV_16U : depth == 3 ? CV_32F : CV_64F;
 
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth,cn);
     thresh_type = cvtest::randInt(rng) % 5;
 
     if( depth == CV_8U )
     {
-        thresh_val = (float)(cvtest::randReal(rng)*350. - 50.);
-        max_val = (float)(cvtest::randReal(rng)*350. - 50.);
+        thresh_val = (cvtest::randReal(rng)*350. - 50.);
+        max_val = (cvtest::randReal(rng)*350. - 50.);
         if( cvtest::randInt(rng)%4 == 0 )
             max_val = 255.f;
     }
     else if( depth == CV_16S )
     {
-        float min_val = SHRT_MIN-100.f;
+        double min_val = SHRT_MIN-100.f;
         max_val = SHRT_MAX+100.f;
-        thresh_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
-        max_val = (float)(cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        thresh_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        max_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
         if( cvtest::randInt(rng)%4 == 0 )
-            max_val = (float)SHRT_MAX;
+            max_val = (double)SHRT_MAX;
+    }
+    else if( depth == CV_16U )
+    {
+        double min_val = -100.f;
+        max_val = USHRT_MAX+100.f;
+        thresh_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        max_val = (cvtest::randReal(rng)*(max_val - min_val) + min_val);
+        if( cvtest::randInt(rng)%4 == 0 )
+            max_val = (double)USHRT_MAX;
     }
     else
     {
-        thresh_val = (float)(cvtest::randReal(rng)*1000. - 500.);
-        max_val = (float)(cvtest::randReal(rng)*1000. - 500.);
+        thresh_val = (cvtest::randReal(rng)*1000. - 500.);
+        max_val = (cvtest::randReal(rng)*1000. - 500.);
     }
 }
 
@@ -120,7 +128,7 @@ void CV_ThreshTest::run_func()
 
 
 static void test_threshold( const Mat& _src, Mat& _dst,
-                            float thresh, float maxval, int thresh_type )
+                            double thresh, double maxval, int thresh_type )
 {
     int i, j;
     int depth = _src.depth(), cn = _src.channels();
@@ -138,13 +146,18 @@ static void test_threshold( const Mat& _src, Mat& _dst,
         ithresh2 = saturate_cast<short>(ithresh);
         imaxval = saturate_cast<short>(maxval);
     }
+    else if( depth == CV_16U )
+    {
+        ithresh2 = saturate_cast<ushort>(ithresh);
+        imaxval = saturate_cast<ushort>(maxval);
+    }
     else
     {
         ithresh2 = cvRound(ithresh);
         imaxval = cvRound(maxval);
     }
 
-    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
+    assert( depth == CV_8U || depth == CV_16S || depth == CV_16U || depth == CV_32F || depth == CV_64F );
 
     switch( thresh_type )
     {
@@ -165,12 +178,26 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 for( j = 0; j < width_n; j++ )
                     dst[j] = (short)(src[j] > ithresh ? imaxval : 0);
             }
-            else
+            else if( depth == CV_16U )
+            {
+                const ushort* src = _src.ptr<ushort>(i);
+                ushort* dst = _dst.ptr<ushort>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (ushort)(src[j] > ithresh ? imaxval : 0);
+            }
+            else if( depth == CV_32F )
             {
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
                 for( j = 0; j < width_n; j++ )
-                    dst[j] = src[j] > thresh ? maxval : 0.f;
+                    dst[j] = (float)(src[j] > thresh ? maxval : 0.f);
+            }
+            else
+            {
+                const double* src = _src.ptr<double>(i);
+                double* dst = _dst.ptr<double>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = src[j] > thresh ? maxval : 0.0;
             }
         }
         break;
@@ -191,12 +218,26 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 for( j = 0; j < width_n; j++ )
                     dst[j] = (short)(src[j] > ithresh ? 0 : imaxval);
             }
-            else
+            else if( depth == CV_16U )
+            {
+                const ushort* src = _src.ptr<ushort>(i);
+                ushort* dst = _dst.ptr<ushort>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = (ushort)(src[j] > ithresh ? 0 : imaxval);
+            }
+            else if( depth == CV_32F )
             {
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
                 for( j = 0; j < width_n; j++ )
-                    dst[j] = src[j] > thresh ? 0.f : maxval;
+                    dst[j] = (float)(src[j] > thresh ? 0.f : maxval);
+            }
+            else
+            {
+                const double* src = _src.ptr<double>(i);
+                double* dst = _dst.ptr<double>(i);
+                for( j = 0; j < width_n; j++ )
+                    dst[j] = src[j] > thresh ? 0.0 : maxval;
             }
         }
         break;
@@ -223,13 +264,33 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                     dst[j] = (short)(s > ithresh ? ithresh2 : s);
                 }
             }
-            else
+            else if( depth == CV_16U )
+            {
+                const ushort* src = _src.ptr<ushort>(i);
+                ushort* dst = _dst.ptr<ushort>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (ushort)(s > ithresh ? ithresh2 : s);
+                }
+            }
+            else if( depth == CV_32F )
             {
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
                 for( j = 0; j < width_n; j++ )
                 {
                     float s = src[j];
+                    dst[j] = (float)(s > thresh ? thresh : s);
+                }
+            }
+            else
+            {
+                const double* src = _src.ptr<double>(i);
+                double* dst = _dst.ptr<double>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    double s = src[j];
                     dst[j] = s > thresh ? thresh : s;
                 }
             }
@@ -258,7 +319,17 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                     dst[j] = (short)(s > ithresh ? s : 0);
                 }
             }
-            else
+            else if( depth == CV_16U )
+            {
+                const ushort* src = _src.ptr<ushort>(i);
+                ushort* dst = _dst.ptr<ushort>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (ushort)(s > ithresh ? s : 0);
+                }
+            }
+            else if( depth == CV_32F )
             {
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
@@ -266,6 +337,16 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 {
                     float s = src[j];
                     dst[j] = s > thresh ? s : 0.f;
+                }
+            }
+            else
+            {
+                const double* src = _src.ptr<double>(i);
+                double* dst = _dst.ptr<double>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    double s = src[j];
+                    dst[j] = s > thresh ? s : 0.0;
                 }
             }
         }
@@ -293,7 +374,17 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                     dst[j] = (short)(s > ithresh ? 0 : s);
                 }
             }
-            else
+            else if( depth == CV_16U )
+            {
+                const ushort* src = _src.ptr<ushort>(i);
+                ushort* dst = _dst.ptr<ushort>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    int s = src[j];
+                    dst[j] = (ushort)(s > ithresh ? 0 : s);
+                }
+            }
+            else if (depth == CV_32F)
             {
                 const float* src = _src.ptr<float>(i);
                 float* dst = _dst.ptr<float>(i);
@@ -301,6 +392,16 @@ static void test_threshold( const Mat& _src, Mat& _dst,
                 {
                     float s = src[j];
                     dst[j] = s > thresh ? 0.f : s;
+                }
+            }
+            else
+            {
+                const double* src = _src.ptr<double>(i);
+                double* dst = _dst.ptr<double>(i);
+                for( j = 0; j < width_n; j++ )
+                {
+                    double s = src[j];
+                    dst[j] = s > thresh ? 0.0 : s;
                 }
             }
         }
@@ -318,3 +419,19 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
+
+BIGDATA_TEST(Imgproc_Threshold, huge)
+{
+    Mat m(65000, 40000, CV_8U);
+    ASSERT_FALSE(m.isContinuous());
+
+    uint64 i, n = (uint64)m.rows*m.cols;
+    for( i = 0; i < n; i++ )
+        m.data[i] = (uchar)(i & 255);
+
+    cv::threshold(m, m, 127, 255, cv::THRESH_BINARY);
+    int nz = cv::countNonZero(m);  // FIXIT 'int' is not enough here (overflow is possible with other inputs)
+    ASSERT_EQ((uint64)nz, n / 2);
+}
+
+}} // namespace

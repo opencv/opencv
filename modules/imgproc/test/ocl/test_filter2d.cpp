@@ -41,12 +41,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, int, int, BorderType, bool, bool)
     static const int kernelMaxSize = 10;
 
     int type;
-    Size dsize;
+    Size size;
     Point anchor;
     int borderType;
     int widthMultiple;
@@ -81,17 +81,16 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, int, int, BorderType, bool, bool)
 
     void random_roi()
     {
-        dsize = randomSize(1, MAX_VALUE);
+        size = randomSize(1, MAX_VALUE);
         // Make sure the width is a multiple of the requested value, and no more.
-        dsize.width &= ~((widthMultiple * 2) - 1);
-        dsize.width += widthMultiple;
+        size.width &= ~((widthMultiple * 2) - 1);
+        size.width += widthMultiple;
 
-        Size roiSize = randomSize(kernel.size[0], MAX_VALUE, kernel.size[1], MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(src, src_roi, size, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(dst, dst_roi, size, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
         anchor.x = randomInt(-1, kernel.size[0]);
         anchor.y = randomInt(-1, kernel.size[1]);
@@ -126,8 +125,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_32F),
                                 OCL_ALL_CHANNELS,
-                                Values(3, 5, 9),  // Kernel size
-                                Values(1, 4, 8),   // Width mutiple
+                                Values(3, 5, 7),  // Kernel size
+                                Values(1, 4, 8),   // Width multiple
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
@@ -138,6 +137,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                            );
 
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

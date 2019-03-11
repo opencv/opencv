@@ -44,19 +44,19 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////// BlendLinear ////////////////////////
 
 typedef Size_MatType BlendLinearFixture;
 
-OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
+OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -77,6 +77,6 @@ OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZ
     SANITY_CHECK(dst, eps);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

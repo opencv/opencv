@@ -1,33 +1,31 @@
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
-
+namespace opencv_test {
 namespace ocl {
 
 CV_ENUM(MethodType, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 
-typedef std::tr1::tuple<Size, Size, MethodType> ImgSize_TmplSize_Method_t;
-typedef TestBaseWithParam<ImgSize_TmplSize_Method_t> ImgSize_TmplSize_Method;
+typedef tuple<Size, Size, MethodType, MatType> ImgSize_TmplSize_Method_MatType_t;
+typedef TestBaseWithParam<ImgSize_TmplSize_Method_MatType_t> ImgSize_TmplSize_Method_MatType;
 
-OCL_PERF_TEST_P(ImgSize_TmplSize_Method, MatchTemplate,
+OCL_PERF_TEST_P(ImgSize_TmplSize_Method_MatType, MatchTemplate,
         ::testing::Combine(
-            testing::Values(szSmall128, cv::Size(320, 240),
-                            cv::Size(640, 480), cv::Size(800, 600),
-                            cv::Size(1024, 768), cv::Size(1280, 1024)),
-            testing::Values(cv::Size(12, 12), cv::Size(28, 9),
-                            cv::Size(8, 30), cv::Size(16, 16)),
-            MethodType::all()
+            testing::Values(cv::Size(640, 480), cv::Size(1280, 1024)),
+            testing::Values(cv::Size(11, 11), cv::Size(16, 16), cv::Size(41, 41)),
+            MethodType::all(),
+            testing::Values(CV_8UC1, CV_8UC3, CV_32FC1, CV_32FC3)
             )
         )
 {
-    const ImgSize_TmplSize_Method_t params = GetParam();
+    const ImgSize_TmplSize_Method_MatType_t params = GetParam();
     const Size imgSz = get<0>(params), tmplSz = get<1>(params);
     const int method = get<2>(params);
+    int type = get<3>(GetParam());
 
-    UMat img(imgSz, CV_8UC1), tmpl(tmplSz, CV_8UC1);
+    UMat img(imgSz, type), tmpl(tmplSz, type);
     UMat result(imgSz - tmplSz + Size(1, 1), CV_32F);
 
     declare.in(img, tmpl, WARMUP_RNG).out(result);
@@ -41,12 +39,8 @@ OCL_PERF_TEST_P(ImgSize_TmplSize_Method, MatchTemplate,
     double eps = isNormed ? 3e-2
         : 255 * 255 * tmpl.total() * 1e-4;
 
-    if (isNormed)
-        SANITY_CHECK(result, eps, ERROR_RELATIVE);
-    else
-        SANITY_CHECK(result, eps);
+    SANITY_CHECK(result, eps, ERROR_RELATIVE);
 }
-
 
 /////////// matchTemplate (performance tests from 2.4) ////////////////////////
 
@@ -89,6 +83,6 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
     SANITY_CHECK(dst, 3e-2);
 }
 
-} }
+} } // namespace
 
 #endif // HAVE_OPENCL

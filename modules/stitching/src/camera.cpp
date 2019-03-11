@@ -50,7 +50,7 @@ CameraParams::CameraParams() : focal(1), aspect(1), ppx(0), ppy(0),
 
 CameraParams::CameraParams(const CameraParams &other) { *this = other; }
 
-const CameraParams& CameraParams::operator =(const CameraParams &other)
+CameraParams& CameraParams::operator =(const CameraParams &other)
 {
     focal = other.focal;
     ppx = other.ppx;
@@ -66,7 +66,7 @@ Mat CameraParams::K() const
     Mat_<double> k = Mat::eye(3, 3, CV_64F);
     k(0,0) = focal; k(0,2) = ppx;
     k(1,1) = focal * aspect; k(1,2) = ppy;
-    return k;
+    return std::move(k);
 }
 
 } // namespace detail

@@ -41,13 +41,12 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 class CV_CannyTest : public cvtest::ArrayTest
 {
 public:
-    CV_CannyTest();
+    CV_CannyTest(bool custom_deriv = false);
 
 protected:
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -61,10 +60,13 @@ protected:
     bool use_true_gradient;
     double threshold1, threshold2;
     bool test_cpp;
+    bool test_custom_deriv;
+
+    Mat img;
 };
 
 
-CV_CannyTest::CV_CannyTest()
+CV_CannyTest::CV_CannyTest(bool custom_deriv)
 {
     test_array[INPUT].push_back(NULL);
     test_array[OUTPUT].push_back(NULL);
@@ -75,6 +77,10 @@ CV_CannyTest::CV_CannyTest()
     threshold1 = threshold2 = 0;
 
     test_cpp = false;
+    test_custom_deriv = custom_deriv;
+
+    const char imgPath[] = "shared/fruits.png";
+    img = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
 }
 
 
@@ -99,6 +105,9 @@ void CV_CannyTest::get_test_array_types_and_sizes( int test_case_idx,
 
     use_true_gradient = cvtest::randInt(rng) % 2 != 0;
     test_cpp = (cvtest::randInt(rng) & 256) == 0;
+
+    ts->printf(cvtest::TS::LOG, "Canny(size = %d x %d, aperture_size = %d, threshold1 = %g, threshold2 = %g, L2 = %s) test_cpp = %s (test case #%d)\n",
+        sizes[0][0].width, sizes[0][0].height, aperture_size, threshold1, threshold2, use_true_gradient ? "TRUE" : "FALSE", test_cpp ? "TRUE" : "FALSE", test_case_idx);
 }
 
 
@@ -107,8 +116,21 @@ int CV_CannyTest::prepare_test_case( int test_case_idx )
     int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
     if( code > 0 )
     {
+        RNG& rng = ts->get_rng();
         Mat& src = test_mat[INPUT][0];
-        GaussianBlur(src, src, Size(11, 11), 5, 5);
+        //GaussianBlur(src, src, Size(11, 11), 5, 5);
+        if(src.cols > img.cols || src.rows > img.rows)
+            resize(img, src, src.size(), 0, 0, INTER_LINEAR_EXACT);
+        else
+            img(
+                Rect(
+                    cvtest::randInt(rng) % (img.cols-src.cols),
+                    cvtest::randInt(rng) % (img.rows-src.rows),
+                    src.cols,
+                    src.rows
+                )
+            ).copyTo(src);
+        GaussianBlur(src, src, Size(5, 5), 0);
     }
 
     return code;
@@ -123,9 +145,24 @@ double CV_CannyTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, 
 
 void CV_CannyTest::run_func()
 {
-    if(!test_cpp)
+    if (test_custom_deriv)
+    {
+        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
+        cv::Mat src = cv::cvarrToMat(test_array[INPUT][0]);
+        cv::Mat dx, dy;
+        int m = aperture_size;
+        Point anchor(m/2, m/2);
+        Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
+        Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
+        cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
+        cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+        cv::Canny(dx, dy, _out, threshold1, threshold2, use_true_gradient);
+    }
+    else if(!test_cpp)
+    {
         cvCanny( test_array[INPUT][0], test_array[OUTPUT][0], threshold1, threshold2,
                 aperture_size + (use_true_gradient ? CV_CANNY_L2_GRADIENT : 0));
+    }
     else
     {
         cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
@@ -173,15 +210,15 @@ test_Canny( const Mat& src, Mat& dst,
     Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
     Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
     Mat dx, dy, mag(height, width, CV_32F);
-    cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
-    cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
+    cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
 
     // calc gradient magnitude
     for( y = 0; y < height; y++ )
     {
         for( x = 0; x < width; x++ )
         {
-            int dxval = dx.at<short>(y, x), dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x), dyval = dy.at<int>(y, x);
             mag.at<float>(y, x) = use_true_gradient ?
                 (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
                 (float)(fabs((double)dxval) + fabs((double)dyval));
@@ -200,8 +237,8 @@ test_Canny( const Mat& src, Mat& dst,
             if( a <= lowThreshold )
                 continue;
 
-            int dxval = dx.at<short>(y, x);
-            int dyval = dy.at<short>(y, x);
+            int dxval = dx.at<int>(y, x);
+            int dyval = dy.at<int>(y, x);
 
             double tg = dxval ? (double)dyval/dxval : DBL_MAX*CV_SIGN(dyval);
 
@@ -283,5 +320,110 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
 }
 
 TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
+TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
 
+
+/*
+ * Comparing OpenVX based implementation with the main one
+*/
+
+#ifndef IMPLEMENT_PARAM_CLASS
+#define IMPLEMENT_PARAM_CLASS(name, type) \
+    class name \
+    { \
+    public: \
+        name ( type arg = type ()) : val_(arg) {} \
+        operator type () const {return val_;} \
+    private: \
+        type val_; \
+    }; \
+    inline void PrintTo( name param, std::ostream* os) \
+    { \
+        *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+    }
+#endif // IMPLEMENT_PARAM_CLASS
+
+IMPLEMENT_PARAM_CLASS(ImagePath, string)
+IMPLEMENT_PARAM_CLASS(ApertureSize, int)
+IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+
+PARAM_TEST_CASE(CannyVX, ImagePath, ApertureSize, L2gradient)
+{
+    string imgPath;
+    int kSize;
+    bool useL2;
+    Mat src, dst;
+
+    virtual void SetUp()
+    {
+        imgPath = GET_PARAM(0);
+        kSize = GET_PARAM(1);
+        useL2 = GET_PARAM(2);
+    }
+
+    void loadImage()
+    {
+        src = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(src.empty()) << "cann't load image: " << imgPath;
+    }
+};
+
+TEST_P(CannyVX, Accuracy)
+{
+    if(haveOpenVX())
+    {
+        loadImage();
+
+        setUseOpenVX(false);
+        Mat canny;
+        cv::Canny(src, canny, 100, 150, 3);
+
+        setUseOpenVX(true);
+        Mat cannyVX;
+        cv::Canny(src, cannyVX, 100, 150, 3);
+
+        // 'smart' diff check (excluding isolated pixels)
+        Mat diff, diff1;
+        absdiff(canny, cannyVX, diff);
+        boxFilter(diff, diff1, -1, Size(3,3));
+        const int minPixelsAroud = 3; // empirical number
+        diff1 = diff1 > 255/9 * minPixelsAroud;
+        erode(diff1, diff1, Mat());
+        double error = cv::norm(diff1, NORM_L1) / 255;
+        const int maxError = std::min(10, diff.size().area()/100); // empirical number
+        if(error > maxError)
+        {
+            string outPath =
+                    string("CannyVX-diff-") +
+                    imgPath + '-' +
+                    'k' + char(kSize+'0') + '-' +
+                    (useL2 ? "l2" : "l1");
+            std::replace(outPath.begin(), outPath.end(), '/', '_');
+            std::replace(outPath.begin(), outPath.end(), '\\', '_');
+            std::replace(outPath.begin(), outPath.end(), '.', '_');
+            imwrite(outPath+".png", diff);
+        }
+        ASSERT_LE(error, maxError);
+
+    }
+}
+
+    INSTANTIATE_TEST_CASE_P(
+                ImgProc, CannyVX,
+                testing::Combine(
+                    testing::Values(
+                        string("shared/baboon.png"),
+                        string("shared/fruits.png"),
+                        string("shared/lena.png"),
+                        string("shared/pic1.png"),
+                        string("shared/pic3.png"),
+                        string("shared/pic5.png"),
+                        string("shared/pic6.png")
+                    ),
+                    testing::Values(ApertureSize(3), ApertureSize(5)),
+                    testing::Values(L2gradient(false), L2gradient(true))
+                )
+    );
+
+}} // namespace
 /* End of file. */

@@ -1,7 +1,7 @@
 #include <jni.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/features2d.hpp>
 #include <vector>
 
 using namespace std;
@@ -16,8 +16,8 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial2_Tutorial2Activity_FindF
     Mat& mRgb = *(Mat*)addrRgba;
     vector<KeyPoint> v;
 
-    FastFeatureDetector detector(50);
-    detector.detect(mGr, v);
+    Ptr<FeatureDetector> detector = FastFeatureDetector::create(50);
+    detector->detect(mGr, v);
     for( unsigned int i = 0; i < v.size(); i++ )
     {
         const KeyPoint& kp = v[i];

@@ -1,6 +1,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
 #include <stdio.h>
@@ -18,16 +19,20 @@ static void help()
 
 const char* keys =
 {
-    "{@image|lena.jpg|input image file}"
+    "{help h||}{@image|lena.jpg|input image file}"
 };
 
 int main(int argc, const char ** argv)
 {
     help();
     CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help"))
+    {
+        help();
+        return 0;
+    }
     string filename = parser.get<string>(0);
-
-    Mat img = imread(filename.c_str(), IMREAD_GRAYSCALE);
+    Mat img = imread(samples::findFile(filename), IMREAD_GRAYSCALE);
     if( img.empty() )
     {
         help();

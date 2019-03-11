@@ -59,8 +59,9 @@ void checkImageDimensions(const std::vector<Mat>& images)
     }
 }
 
-Mat tringleWeights()
+Mat triangleWeights()
 {
+    // hat function
     Mat w(LDR_SIZE, 1, CV_32F);
     int half = LDR_SIZE / 2;
     for(int i = 0; i < LDR_SIZE; i++) {
@@ -73,9 +74,13 @@ Mat RobertsonWeights()
 {
     Mat weight(LDR_SIZE, 1, CV_32FC3);
     float q = (LDR_SIZE - 1) / 4.0f;
+    float e4 = exp(4.f);
+    float scale = e4/(e4 - 1.f);
+    float shift = 1 / (1.f - e4);
+
     for(int i = 0; i < LDR_SIZE; i++) {
         float value = i / q - 2.0f;
-        value = exp(-value * value);
+        value = scale*exp(-value * value) + shift;
         weight.at<Vec3f>(i) = Vec3f::all(value);
     }
     return weight;

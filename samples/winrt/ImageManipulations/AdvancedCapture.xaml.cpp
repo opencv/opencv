@@ -295,7 +295,7 @@ void AdvancedCapture::AddEffectToImageStream()
         Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::Photo);
         if(props->Type->Equals("Image"))
         {
-            //Switch to a video media type instead since we cant add an effect to a image media type
+            //Switch to a video media type instead since we can't add an effect to an image media type
             Windows::Foundation::Collections::IVectorView<Windows::Media::MediaProperties::IMediaEncodingProperties^>^ supportedPropsList = mediaCapture->VideoDeviceController->GetAvailableMediaStreamProperties(Windows::Media::Capture::MediaStreamType::Photo);
             {
                 unsigned int i = 0;
@@ -565,7 +565,7 @@ void SDKSample::MediaCapture::AdvancedCapture::Button_Click(Platform::Object^ se
                     {
                         Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::VideoRecord);
                         Windows::Media::MediaProperties::VideoEncodingProperties ^videoEncodingProperties  = static_cast<Windows::Media::MediaProperties::VideoEncodingProperties ^>(props);
-                        if(!videoEncodingProperties->Subtype->Equals("H264")) //Cant add an effect to an H264 stream
+                        if(!videoEncodingProperties->Subtype->Equals("H264")) //Can't add an effect to an H264 stream
                         {
                             task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoRecord,"OcvTransform.OcvImageManipulations", nullptr)).then([this](task<void> effectTask2)
                             {

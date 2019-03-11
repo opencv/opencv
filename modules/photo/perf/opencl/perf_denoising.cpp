@@ -5,12 +5,12 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 OCL_PERF_TEST(Photo, DenoisingGrayscale)
@@ -92,6 +92,6 @@ OCL_PERF_TEST(Photo, DISABLED_DenoisingColoredMulti)
     SANITY_CHECK(result);
 }
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

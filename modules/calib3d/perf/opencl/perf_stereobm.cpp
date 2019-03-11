@@ -40,15 +40,15 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
-typedef std::tr1::tuple<int, int> StereoBMFixture_t;
+typedef tuple<int, int> StereoBMFixture_t;
 typedef TestBaseWithParam<StereoBMFixture_t> StereoBMFixture;
 
 OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 64, 128), OCL_PERF_ENUM(11,21) ) )
@@ -63,7 +63,7 @@ OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 
 
     declare.in(left, right);
 
-    Ptr<StereoBM> bm = createStereoBM( n_disp, winSize );
+    Ptr<StereoBM> bm = StereoBM::create( n_disp, winSize );
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
     bm->setTextureThreshold(0);
 

@@ -40,13 +40,13 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "cvconfig.h"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 PARAM_TEST_CASE(StereoBMFixture, int, int)
@@ -79,7 +79,7 @@ PARAM_TEST_CASE(StereoBMFixture, int, int)
 
 OCL_TEST_P(StereoBMFixture, StereoBM)
 {
-    Ptr<StereoBM> bm = createStereoBM( n_disp, winSize);
+    Ptr<StereoBM> bm = StereoBM::create( n_disp, winSize);
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
     bm->setTextureThreshold(0);
 

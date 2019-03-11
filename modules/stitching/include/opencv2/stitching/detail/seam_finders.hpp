@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_STITCHING_SEAM_FINDERS_HPP__
-#define __OPENCV_STITCHING_SEAM_FINDERS_HPP__
+#ifndef OPENCV_STITCHING_SEAM_FINDERS_HPP
+#define OPENCV_STITCHING_SEAM_FINDERS_HPP
 
 #include <set>
 #include "opencv2/core.hpp"
@@ -50,30 +50,51 @@
 namespace cv {
 namespace detail {
 
-class CV_EXPORTS SeamFinder
+//! @addtogroup stitching_seam
+//! @{
+
+/** @brief Base class for a seam estimator.
+ */
+class CV_EXPORTS_W SeamFinder
 {
 public:
-    virtual ~SeamFinder() {}
-    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks) = 0;
+    CV_WRAP  virtual ~SeamFinder() {}
+    enum { NO, VORONOI_SEAM, DP_SEAM };
+    /** @brief Estimates seams.
+
+    @param src Source images
+    @param corners Source image top-left corners
+    @param masks Source image masks to update
+     */
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) = 0;
+    CV_WRAP static Ptr<SeamFinder> createDefault(int type);
 };
 
-
-class CV_EXPORTS NoSeamFinder : public SeamFinder
+/** @brief Stub seam estimator which does nothing.
+ */
+class CV_EXPORTS_W NoSeamFinder : public SeamFinder
 {
 public:
-    void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) {}
+    CV_WRAP void find(const std::vector<UMat>&, const std::vector<Point>&, CV_IN_OUT std::vector<UMat>&) CV_OVERRIDE {}
 };
 
-
-class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
+/** @brief Base class for all pairwise seam estimators.
+ */
+class CV_EXPORTS_W PairwiseSeamFinder : public SeamFinder
 {
 public:
-    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks);
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
 
 protected:
     void run();
+    /** @brief Resolves masks intersection of two specified images in the given ROI.
+
+    @param first First image index
+    @param second Second image index
+    @param roi Region of interest
+     */
     virtual void findInPair(size_t first, size_t second, Rect roi) = 0;
 
     std::vector<UMat> images_;
@@ -82,29 +103,34 @@ protected:
     std::vector<UMat> masks_;
 };
 
-
-class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
+/** @brief Voronoi diagram-based seam estimator.
+ */
+class CV_EXPORTS_W VoronoiSeamFinder : public PairwiseSeamFinder
 {
 public:
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
     virtual void find(const std::vector<Size> &size, const std::vector<Point> &corners,
                       std::vector<UMat> &masks);
 private:
-    void findInPair(size_t first, size_t second, Rect roi);
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 };
 
 
-class CV_EXPORTS DpSeamFinder : public SeamFinder
+class CV_EXPORTS_W DpSeamFinder : public SeamFinder
 {
 public:
     enum CostFunction { COLOR, COLOR_GRAD };
 
     DpSeamFinder(CostFunction costFunc = COLOR);
+    CV_WRAP DpSeamFinder(String costFunc );
 
     CostFunction costFunction() const { return costFunc_; }
     void setCostFunction(CostFunction val) { costFunc_ = val; }
+    CV_WRAP void setCostFunction(String val);
 
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks);
+                      std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     enum ComponentState
@@ -201,24 +227,28 @@ private:
     std::set<std::pair<int, int> > edges_;
 };
 
-
+/** @brief Base class for all minimum graph-cut-based seam estimators.
+ */
 class CV_EXPORTS GraphCutSeamFinderBase
 {
 public:
     enum CostType { COST_COLOR, COST_COLOR_GRAD };
 };
 
-
-class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
+/** @brief Minimum graph cut-based seam estimator. See details in @cite V03 .
+ */
+class CV_EXPORTS_W GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {
 public:
     GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
+    CV_WRAP GraphCutSeamFinder(String cost_type,float terminal_cost = 10000.f,
+        float bad_region_penalty = 1000.f);
 
     ~GraphCutSeamFinder();
 
-    void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-              std::vector<UMat> &masks);
+    CV_WRAP void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+              std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     // To avoid GCGraph dependency
@@ -227,7 +257,7 @@ private:
 };
 
 
-#ifdef HAVE_OPENCV_CUDA
+#ifdef HAVE_OPENCV_CUDALEGACY
 class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
 {
 public:
@@ -237,8 +267,8 @@ public:
                             bad_region_penalty_(bad_region_penalty) {}
 
     void find(const std::vector<cv::UMat> &src, const std::vector<cv::Point> &corners,
-              std::vector<cv::UMat> &masks);
-    void findInPair(size_t first, size_t second, Rect roi);
+              std::vector<cv::UMat> &masks) CV_OVERRIDE;
+    void findInPair(size_t first, size_t second, Rect roi) CV_OVERRIDE;
 
 private:
     void setGraphWeightsColor(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &mask1, const cv::Mat &mask2,
@@ -253,7 +283,9 @@ private:
 };
 #endif
 
+//! @}
+
 } // namespace detail
 } // namespace cv
 
-#endif // __OPENCV_STITCHING_SEAM_FINDERS_HPP__
+#endif // OPENCV_STITCHING_SEAM_FINDERS_HPP

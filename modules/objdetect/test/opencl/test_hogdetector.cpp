@@ -50,12 +50,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 ///////////////////// HOG /////////////////////////////
@@ -117,5 +117,5 @@ INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(Size(64, 128), Size(48, 96)),
                             testing::Values( MatType(CV_8UC1) ) ) );
 
-}}
+}} // namespace
 #endif

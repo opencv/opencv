@@ -2,7 +2,7 @@
  * filestorage_sample demonstrate the usage of the opencv serialization functionality
  */
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include <iostream>
 #include <string>
 
@@ -18,8 +18,8 @@ static void help(char** av)
   cout << "\nfilestorage_sample demonstrate the usage of the opencv serialization functionality.\n"
       << "usage:\n"
       <<  av[0] << " outputfile.yml.gz\n"
-      << "\n   outputfile above can have many different extenstions, see below."
-      << "\nThis program demonstrates the use of FileStorage for serialization, that is use << and >>  in OpenCV\n"
+      << "\n   outputfile above can have many different extensions, see below."
+      << "\nThis program demonstrates the use of FileStorage for serialization, that is in use << and >>  in OpenCV\n"
       << "For example, how to create a class and have it serialize, but also how to use it to read and write matrices.\n"
       << "FileStorage allows you to serialize to various formats specified by the file end type."
           << "\nYou should try using different file extensions.(e.g. yaml yml xml xml.gz yaml.gz etc...)\n" << endl;
@@ -70,13 +70,20 @@ static ostream& operator<<(ostream& out, const MyData& m){
 }
 int main(int ac, char** av)
 {
-  if (ac != 2)
+  cv::CommandLineParser parser(ac, av,
+    "{@input||}{help h ||}"
+  );
+  if (parser.has("help"))
+  {
+    help(av);
+    return 0;
+  }
+  string filename = parser.get<string>("@input");
+  if (filename.empty())
   {
     help(av);
     return 1;
   }
-
-  string filename = av[1];
 
   //write
   {

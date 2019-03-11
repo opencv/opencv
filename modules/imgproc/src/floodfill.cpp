@@ -131,7 +131,7 @@ floodFill_CnIR( Mat& image, Point seed,
                _Tp newVal, ConnectedComp* region, int flags,
                std::vector<FFillSegment>* buffer )
 {
-    _Tp* img = (_Tp*)(image.data + image.step * seed.y);
+    _Tp* img = image.ptr<_Tp>(seed.y);
     Size roi = image.size();
     int i, L, R;
     int area = 0;
@@ -180,12 +180,13 @@ floodFill_CnIR( Mat& image, Point seed,
         for( k = 0; k < 3; k++ )
         {
             dir = data[k][0];
-            img = (_Tp*)(image.data + (YC + dir) * image.step);
-            int left = data[k][1];
-            int right = data[k][2];
 
             if( (unsigned)(YC + dir) >= (unsigned)roi.height )
                 continue;
+
+            img = image.ptr<_Tp>(YC + dir);
+            int left = data[k][1];
+            int right = data[k][2];
 
             for( i = left; i <= right; i++ )
             {
@@ -283,9 +284,9 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
                    std::vector<FFillSegment>* buffer )
 {
     int step = (int)image.step, maskStep = (int)msk.step;
-    uchar* pImage = image.data;
+    uchar* pImage = image.ptr();
     _Tp* img = (_Tp*)(pImage + step*seed.y);
-    uchar* pMask = msk.data + maskStep + sizeof(_MTp);
+    uchar* pMask = msk.ptr() + maskStep + sizeof(_MTp);
     _MTp* mask = (_MTp*)(pMask + maskStep*seed.y);
     int i, L, R;
     int area = 0;
@@ -458,13 +459,15 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                   Point seedPoint, Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION();
+
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
 
     if( rect )
         *rect = Rect();
 
-    int i, connectivity = flags & 255;
+    int i;
     union {
         uchar b[4];
         int i[4];
@@ -483,9 +486,13 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     int depth = img.depth();
     int cn = img.channels();
 
-    if( connectivity == 0 )
-        connectivity = 4;
-    else if( connectivity != 4 && connectivity != 8 )
+    if ( (cn != 1) && (cn != 3) )
+    {
+        CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
+    }
+
+    const int connectivity = flags & 255;
+    if( connectivity != 0 && connectivity != 4 && connectivity != 8 )
         CV_Error( CV_StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
 
     bool is_simple = mask.empty() && (flags & FLOODFILL_MASK_ONLY) == 0;
@@ -508,7 +515,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     if( is_simple )
     {
         size_t elem_size = img.elemSize();
-        const uchar* seed_ptr = img.data + img.step*seedPoint.y + elem_size*seedPoint.x;
+        const uchar* seed_ptr = img.ptr(seedPoint.y) + elem_size*seedPoint.x;
 
         size_t k = 0;
         for(; k < elem_size; k++)
@@ -549,8 +556,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
         CV_Assert( mask.type() == CV_8U );
     }
 
-    memset( mask.data, 1, mask.cols );
-    memset( mask.data + mask.step*(mask.rows-1), 1, mask.cols );
+    memset( mask.ptr(), 1, mask.cols );
+    memset( mask.ptr(mask.rows-1), 1, mask.cols );
 
     for( i = 1; i <= size.height; i++ )
     {
@@ -578,7 +585,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    uchar newMaskVal = (uchar)((flags & ~0xff) == 0 ? 1 : ((flags >> 8) & 255));
+    uchar newMaskVal = (uchar)((flags & 0xff00) == 0 ? 1 : ((flags >> 8) & 255));
 
     if( type == CV_8UC1 )
         floodFillGrad_CnIR<uchar, uchar, int, Diff8uC1>(
@@ -623,6 +630,8 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
                   Scalar newVal, Rect* rect,
                   Scalar loDiff, Scalar upDiff, int flags )
 {
+    CV_INSTRUMENT_REGION();
+
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
 

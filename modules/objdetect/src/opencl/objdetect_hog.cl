@@ -48,7 +48,7 @@
 #define CELLS_PER_BLOCK_X 2
 #define CELLS_PER_BLOCK_Y 2
 #define NTHREADS 256
-#define CV_PI_F 3.1415926535897932384626433832795f
+#define CV_PI_F M_PI_F
 
 #ifdef INTEL_DEVICE
 #define QANGLE_TYPE     int
@@ -606,23 +606,23 @@ __kernel void compute_gradients_8UC4_kernel(
     barrier(CLK_LOCAL_MEM_FENCE);
     if (x < width)
     {
-        float3 a = (float3) (sh_row[tid], sh_row[tid + (NTHREADS + 2)],
-            sh_row[tid + 2 * (NTHREADS + 2)]);
-        float3 b = (float3) (sh_row[tid + 2], sh_row[tid + 2 + (NTHREADS + 2)],
-            sh_row[tid + 2 + 2 * (NTHREADS + 2)]);
+        float4 a = (float4) (sh_row[tid], sh_row[tid + (NTHREADS + 2)],
+            sh_row[tid + 2 * (NTHREADS + 2)], 0);
+        float4 b = (float4) (sh_row[tid + 2], sh_row[tid + 2 + (NTHREADS + 2)],
+            sh_row[tid + 2 + 2 * (NTHREADS + 2)], 0);
 
-        float3 dx;
+        float4 dx;
         if (correct_gamma == 1)
             dx = sqrt(b) - sqrt(a);
         else
             dx = b - a;
 
-        float3 dy = (float3) 0.f;
+        float4 dy = (float4) 0.f;
 
         if (gidY > 0 && gidY < height - 1)
         {
-            a = convert_float3(img[(gidY - 1) * img_step + x].xyz);
-            b = convert_float3(img[(gidY + 1) * img_step + x].xyz);
+            a = convert_float4(img[(gidY - 1) * img_step + x].xyzw);
+            b = convert_float4(img[(gidY + 1) * img_step + x].xyzw);
 
             if (correct_gamma == 1)
                 dy = sqrt(b) - sqrt(a);
@@ -630,27 +630,24 @@ __kernel void compute_gradients_8UC4_kernel(
                 dy = b - a;
         }
 
+        float4 mag = hypot(dx, dy);
         float best_dx = dx.x;
         float best_dy = dy.x;
 
-        float mag0 = dx.x * dx.x + dy.x * dy.x;
-        float mag1 = dx.y * dx.y + dy.y * dy.y;
-        if (mag0 < mag1)
+        float mag0 = mag.x;
+        if (mag0 < mag.y)
         {
             best_dx = dx.y;
             best_dy = dy.y;
-            mag0 = mag1;
+            mag0 = mag.y;
         }
 
-        mag1 = dx.z * dx.z + dy.z * dy.z;
-        if (mag0 < mag1)
+        if (mag0 < mag.z)
         {
             best_dx = dx.z;
             best_dy = dy.z;
-            mag0 = mag1;
+            mag0 = mag.z;
         }
-
-        mag0 = sqrt(mag0);
 
         float ang = (atan2(best_dy, best_dx) + CV_PI_F) * angle_scale - 0.5f;
         int hidx = (int)floor(ang);
@@ -710,7 +707,7 @@ __kernel void compute_gradients_8UC1_kernel(
             else
                 dy = a - b;
         }
-        float mag = sqrt(dx * dx + dy * dy);
+        float mag = hypot(dx, dy);
 
         float ang = (atan2(dy, dx) + CV_PI_F) * angle_scale - 0.5f;
         int hidx = (int)floor(ang);

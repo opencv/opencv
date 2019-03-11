@@ -43,11 +43,11 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
-#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+#if defined _WIN32 && defined(_M_ARM)
 # include <Intrin.h>
 #endif
 
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) && !defined(__CUDACC__)
 # include "arm_neon.h"
 #endif
 
@@ -425,7 +425,7 @@ struct Hamming
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
         ResultType result = 0;
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) && !defined(__CUDACC__)
         {
             uint32x4_t bits = vmovq_n_u32(0);
             for (size_t i = 0; i < size; i += 16) {
@@ -462,10 +462,9 @@ struct Hamming
             }
         }
 #else // NO NEON and NOT GNUC
-        typedef unsigned long long pop_t;
         HammingLUT lut;
         result = lut(reinterpret_cast<const unsigned char*> (a),
-                     reinterpret_cast<const unsigned char*> (b), size * sizeof(pop_t));
+                     reinterpret_cast<const unsigned char*> (b), size);
 #endif
         return result;
     }
@@ -595,7 +594,7 @@ struct HellingerDistance
     typedef typename Accumulator<T>::Type ResultType;
 
     /**
-     *  Compute the histogram intersection distance
+     *  Compute the Hellinger distance
      */
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
@@ -628,7 +627,8 @@ struct HellingerDistance
     template <typename U, typename V>
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
-        return sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
+        ResultType diff = sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
+        return diff * diff;
     }
 };
 
@@ -697,7 +697,7 @@ struct KL_Divergence
     typedef typename Accumulator<T>::Type ResultType;
 
     /**
-     *  Compute the Kullback–Leibler divergence
+     *  Compute the Kullback-Leibler divergence
      */
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
@@ -729,9 +729,11 @@ struct KL_Divergence
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         ResultType result = ResultType();
-        ResultType ratio = (ResultType)(a / b);
-        if (ratio>0) {
-            result = a * log(ratio);
+        if( *b != 0 ) {
+            ResultType ratio = (ResultType)(a / b);
+            if (ratio>0) {
+                result = a * log(ratio);
+            }
         }
         return result;
     }
@@ -834,6 +836,66 @@ typename Distance::ResultType ensureSquareDistance( typename Distance::ResultTyp
     typedef typename Distance::ElementType ElementType;
 
     squareDistance<Distance, ElementType> dummy;
+    return dummy( dist );
+}
+
+
+/*
+ * ...and a template to ensure the user that he will process the normal distance,
+ * and not squared distance, without losing processing time calling sqrt(ensureSquareDistance)
+ * that will result in doing actually sqrt(dist*dist) for L1 distance for instance.
+ */
+template <typename Distance, typename ElementType>
+struct simpleDistance
+{
+    typedef typename Distance::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+
+template <typename ElementType>
+struct simpleDistance<L2_Simple<ElementType>, ElementType>
+{
+    typedef typename L2_Simple<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return sqrt(dist); }
+};
+
+template <typename ElementType>
+struct simpleDistance<L2<ElementType>, ElementType>
+{
+    typedef typename L2<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return sqrt(dist); }
+};
+
+
+template <typename ElementType>
+struct simpleDistance<MinkowskiDistance<ElementType>, ElementType>
+{
+    typedef typename MinkowskiDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return sqrt(dist); }
+};
+
+template <typename ElementType>
+struct simpleDistance<HellingerDistance<ElementType>, ElementType>
+{
+    typedef typename HellingerDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return sqrt(dist); }
+};
+
+template <typename ElementType>
+struct simpleDistance<ChiSquareDistance<ElementType>, ElementType>
+{
+    typedef typename ChiSquareDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return sqrt(dist); }
+};
+
+
+template <typename Distance>
+typename Distance::ResultType ensureSimpleDistance( typename Distance::ResultType dist )
+{
+    typedef typename Distance::ElementType ElementType;
+
+    simpleDistance<Distance, ElementType> dummy;
     return dummy( dist );
 }
 

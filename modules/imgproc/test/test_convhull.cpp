@@ -41,8 +41,7 @@
 
 #include "test_precomp.hpp"
 
-using namespace cv;
-using namespace std;
+namespace opencv_test { namespace {
 
 /*static int
 cvTsPointConvexPolygon( CvPoint2D32f pt, CvPoint2D32f* v, int n )
@@ -78,6 +77,13 @@ cvTsDist( CvPoint2D32f a, CvPoint2D32f b )
     double dy = a.y - b.y;
     return sqrt(dx*dx + dy*dy);
 }
+CV_INLINE double
+cvTsDist( const Point2f& a, const Point2f& b )
+{
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return sqrt(dx*dx + dy*dy);
+}
 
 CV_INLINE double
 cvTsPtLineDist( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b )
@@ -96,7 +102,7 @@ static double
 cvTsPointPolygonTest( CvPoint2D32f pt, const CvPoint2D32f* vv, int n, int* _idx=0, int* _on_edge=0 )
 {
     int i;
-    CvPoint2D32f v = vv[n-1], v0;
+    Point2f v = vv[n-1], v0;
     double min_dist_num = FLT_MAX, min_dist_denom = 1;
     int min_dist_idx = -1, min_on_edge = 0;
     int counter = 0;
@@ -170,9 +176,9 @@ cvTsMiddlePoint(const cv::Point2f &a, const cv::Point2f &b)
 static bool
 cvTsIsPointOnLineSegment(const cv::Point2f &x, const cv::Point2f &a, const cv::Point2f &b)
 {
-    double d1 = cvTsDist(CvPoint2D32f(x.x, x.y), CvPoint2D32f(a.x, a.y));
-    double d2 = cvTsDist(CvPoint2D32f(x.x, x.y), CvPoint2D32f(b.x, b.y));
-    double d3 = cvTsDist(CvPoint2D32f(a.x, a.y), CvPoint2D32f(b.x, b.y));
+    double d1 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(a.x, a.y));
+    double d2 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(b.x, b.y));
+    double d3 = cvTsDist(cvPoint2D32f(a.x, a.y), cvPoint2D32f(b.x, b.y));
 
     return (abs(d1 + d2 - d3) <= (1E-5));
 }
@@ -190,7 +196,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
@@ -208,7 +214,7 @@ protected:
     void* points;
     void* result;
     double low_high_range;
-    CvScalar low, high;
+    Scalar low, high;
 
     bool test_cpp;
 };
@@ -248,15 +254,15 @@ void CV_BaseShapeDescrTest::clear()
 }
 
 
-int CV_BaseShapeDescrTest::read_params( CvFileStorage* fs )
+int CV_BaseShapeDescrTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    test_case_count = cvReadInt( find_param( fs, "struct_count" ), test_case_count );
-    min_log_size = cvReadInt( find_param( fs, "min_log_size" ), min_log_size );
-    max_log_size = cvReadInt( find_param( fs, "max_log_size" ), max_log_size );
+    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
+    read( find_param( fs, "min_log_size" ), min_log_size, min_log_size );
+    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
 
     min_log_size = cvtest::clipInt( min_log_size, 0, 8 );
     max_log_size = cvtest::clipInt( max_log_size, 0, 10 );
@@ -695,7 +701,7 @@ void CV_MinAreaRectTest::run_func()
     else
     {
         cv::RotatedRect r = cv::minAreaRect(cv::cvarrToMat(points));
-        box = (CvBox2D)r;
+        box = cvBox2D(r);
         r.points((cv::Point2f*)box_pt);
     }
 }
@@ -939,7 +945,7 @@ protected:
     void run_func(void);
     int validate_test_results( int test_case_idx );
 
-    CvPoint2D32f center;
+    Point2f center;
     float radius;
 };
 
@@ -952,7 +958,11 @@ CV_MinCircleTest::CV_MinCircleTest()
 void CV_MinCircleTest::run_func()
 {
     if(!test_cpp)
-        cvMinEnclosingCircle( points, &center, &radius );
+    {
+        CvPoint2D32f c_center = cvPoint2D32f(center);
+        cvMinEnclosingCircle( points, &c_center, &radius );
+        center = c_center;
+    }
     else
     {
         cv::Point2f tmpcenter;
@@ -967,8 +977,8 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     double eps = 1.03;
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
     int i, j = 0, point_count = points2->rows + points2->cols - 1;
-    CvPoint2D32f *p = (CvPoint2D32f*)(points2->data.ptr);
-    CvPoint2D32f v[3];
+    Point2f *p = (Point2f*)(points2->data.ptr);
+    Point2f v[3];
 
 #if 0
     {
@@ -990,7 +1000,7 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     // remember at most 3 points that are close to the boundary
     for( i = 0; i < point_count; i++ )
     {
-        double d = cvTsDist( p[i], center );
+        double d = cvTsDist(p[i], center);
         if( d > radius )
         {
             ts->printf( cvtest::TS::LOG, "The point #%d is outside of the circle\n", i );
@@ -1017,6 +1027,62 @@ _exit_:
     return code;
 }
 
+/****************************************************************************************\
+*                                 MinEnclosingCircle Test 2                              *
+\****************************************************************************************/
+
+class CV_MinCircleTest2 : public CV_BaseShapeDescrTest
+{
+public:
+    CV_MinCircleTest2();
+protected:
+    RNG rng;
+    void run_func(void);
+    int validate_test_results( int test_case_idx );
+    float delta;
+};
+
+
+CV_MinCircleTest2::CV_MinCircleTest2()
+{
+    rng = ts->get_rng();
+}
+
+
+void CV_MinCircleTest2::run_func()
+{
+    Point2f center = Point2f(rng.uniform(0.0f, 1000.0f), rng.uniform(0.0f, 1000.0f));;
+    float radius = rng.uniform(0.0f, 500.0f);
+    float angle = (float)rng.uniform(0.0f, (float)(CV_2PI));
+    vector<Point2f> pts;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    angle += (float)CV_PI;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    float radius2 = radius * radius;
+    float x = rng.uniform(center.x - radius, center.x + radius);
+    float deltaX = x - center.x;
+    float upperBoundY = sqrt(radius2 - deltaX * deltaX);
+    float y = rng.uniform(center.y - upperBoundY, center.y + upperBoundY);
+    pts.push_back(Point2f(x, y));
+    // Find the minimum area enclosing circle
+    Point2f calcCenter;
+    float calcRadius;
+    minEnclosingCircle(pts, calcCenter, calcRadius);
+    delta = (float)cv::norm(calcCenter - center) + abs(calcRadius - radius);
+}
+
+int CV_MinCircleTest2::validate_test_results( int test_case_idx )
+{
+    float eps = 1.0F;
+    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
+    if (delta > eps)
+    {
+        ts->printf( cvtest::TS::LOG, "Delta center and calcCenter > %f\n", eps );
+        code = cvtest::TS::FAIL_BAD_ACCURACY;
+        ts->set_failed_test_info( code );
+    }
+    return code;
+}
 
 /****************************************************************************************\
 *                                   Perimeter Test                                     *
@@ -1090,7 +1156,8 @@ int CV_PerimeterTest::validate_test_results( int test_case_idx )
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
     int i, len = slice.end_index - slice.start_index, total = points2->cols + points2->rows - 1;
     double result0 = 0;
-    CvPoint2D32f prev_pt, pt, *ptr;
+    Point2f prev_pt, pt;
+    CvPoint2D32f *ptr;
 
     if( len < 0 )
         len += total;
@@ -1140,7 +1207,7 @@ protected:
     void generate_point_set( void* points );
     void run_func(void);
     int validate_test_results( int test_case_idx );
-    CvBox2D box0, box;
+    RotatedRect box0, box;
     double min_ellipse_size, max_noise;
 };
 
@@ -1193,12 +1260,12 @@ void CV_FitEllipseTest::generate_point_set( void* pointsSet )
         data = ptm->data.ptr;
     }
 
-    assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
+    CV_Assert(point_type == CV_32SC2 || point_type == CV_32FC2);
 
     for( i = 0; i < total; i++ )
     {
         CvPoint* pp;
-        CvPoint2D32f p;
+        CvPoint2D32f p = {0, 0};
         double angle = cvtest::randReal(rng)*CV_PI*2;
         double x = box0.size.height*0.5*(cos(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
         double y = box0.size.width*0.5*(sin(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
@@ -1236,9 +1303,8 @@ void CV_FitEllipseTest::run_func()
     if(!test_cpp)
         box = cvFitEllipse2( points );
     else
-        box = (CvBox2D)cv::fitEllipse(cv::cvarrToMat(points));
+        box = cv::fitEllipse(cv::cvarrToMat(points));
 }
-
 
 int CV_FitEllipseTest::validate_test_results( int test_case_idx )
 {
@@ -1354,6 +1420,64 @@ protected:
     }
 };
 
+
+// Regression test for incorrect fitEllipse result reported in Bug #3989
+// Check edge cases for rotation angles of ellipse ([-180, 90, 0, 90, 180] degrees)
+class CV_FitEllipseParallelTest : public CV_FitEllipseTest
+{
+public:
+    CV_FitEllipseParallelTest();
+    ~CV_FitEllipseParallelTest();
+protected:
+    void generate_point_set( void* points );
+    void run_func(void);
+    Mat pointsMat;
+};
+
+CV_FitEllipseParallelTest::CV_FitEllipseParallelTest()
+{
+    min_ellipse_size = 5;
+}
+
+void CV_FitEllipseParallelTest::generate_point_set( void* )
+{
+    RNG& rng = ts->get_rng();
+    int height = (int)(MAX(high.val[0] - low.val[0], min_ellipse_size));
+    int width = (int)(MAX(high.val[1] - low.val[1], min_ellipse_size));
+    const int angle = ( (cvtest::randInt(rng) % 5) - 2 ) * 90;
+    const int dim = max(height, width);
+    const Point center = Point(dim*2, dim*2);
+
+    if( width > height )
+    {
+        int t;
+        CV_SWAP( width, height, t );
+    }
+
+    Mat image = Mat::zeros(dim*4, dim*4, CV_8UC1);
+    ellipse(image, center, Size(height, width), angle,
+            0, 360, Scalar(255, 0, 0), 1, 8);
+
+    box0.center.x = (float)center.x;
+    box0.center.y = (float)center.y;
+    box0.size.width = (float)width*2;
+    box0.size.height = (float)height*2;
+    box0.angle = (float)angle;
+
+    vector<vector<Point> > contours;
+    findContours(image, contours,  RETR_EXTERNAL,  CHAIN_APPROX_NONE);
+    Mat(contours[0]).convertTo(pointsMat, CV_32F);
+}
+
+void CV_FitEllipseParallelTest::run_func()
+{
+    box = cv::fitEllipse(pointsMat);
+}
+
+CV_FitEllipseParallelTest::~CV_FitEllipseParallelTest(){
+    pointsMat.release();
+}
+
 /****************************************************************************************\
 *                                   FitLine Test                                         *
 \****************************************************************************************/
@@ -1369,7 +1493,7 @@ protected:
     void run_func(void);
     int validate_test_results( int test_case_idx );
     double max_noise;
-    float line[6], line0[6];
+    AutoBuffer<float> line, line0;
     int dist_type;
     double reps, aeps;
 };
@@ -1377,15 +1501,10 @@ protected:
 
 CV_FitLineTest::CV_FitLineTest()
 {
-    min_log_size = 5; // for robust ellipse fitting a dozen of points is needed at least
+    min_log_size = 5; // for robust line fitting a dozen of points is needed at least
     max_log_size = 10;
     max_noise = 0.05;
 }
-
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
 
 void CV_FitLineTest::generate_point_set( void* pointsSet )
 {
@@ -1458,14 +1577,12 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
     }
 }
 
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic pop
-#endif
-
 int CV_FitLineTest::prepare_test_case( int test_case_idx )
 {
     RNG& rng = ts->get_rng();
     dims = cvtest::randInt(rng) % 2 + 2;
+    line.allocate(dims * 2);
+    line0.allocate(dims * 2);
     min_log_size = MAX(min_log_size,5);
     max_log_size = MAX(min_log_size,max_log_size);
     int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
@@ -1479,17 +1596,12 @@ int CV_FitLineTest::prepare_test_case( int test_case_idx )
 void CV_FitLineTest::run_func()
 {
     if(!test_cpp)
-        cvFitLine( points, dist_type, 0, reps, aeps, line );
+        cvFitLine( points, dist_type, 0, reps, aeps, line.data());
     else if(dims == 2)
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec4f&)line[0], dist_type, 0, reps, aeps);
     else
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec6f&)line[0], dist_type, 0, reps, aeps);
 }
-
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
 
 int CV_FitLineTest::validate_test_results( int test_case_idx )
 {
@@ -1569,10 +1681,6 @@ _exit_:
     return code;
 }
 
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
-# pragma GCC diagnostic pop
-#endif
-
 /****************************************************************************************\
 *                                   ContourMoments Test                                  *
 \****************************************************************************************/
@@ -1608,7 +1716,7 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
     for( i = 0; i < total; i++ )
     {
         CvPoint* pp;
-        CvPoint2D32f p;
+        Point2f p;
 
         double phi0 = 2*CV_PI*i/total;
         double phi = CV_PI*angle/180.;
@@ -1634,7 +1742,7 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
             pp->y = cvRound(p.y);
         }
         else
-            *(CvPoint2D32f*)pp = p;
+            *(CvPoint2D32f*)pp = cvPoint2D32f(p);
     }
 }
 
@@ -1651,11 +1759,11 @@ protected:
     int validate_test_results( int test_case_idx );
     CvMoments moments0, moments;
     double area0, area;
-    CvSize2D32f axes;
-    CvPoint2D32f center;
+    Size2f axes;
+    Point2f center;
     int max_max_r_scale;
     double max_r_scale, angle;
-    CvSize img_size;
+    Size img_size;
 };
 
 
@@ -1689,7 +1797,7 @@ void CV_ContourMomentsTest::generate_point_set( void* pointsSet )
     max_r_scale = cvtest::randReal(rng)*max_max_r_scale*0.01;
     angle = cvtest::randReal(rng)*360;
 
-    cvTsGenerateTousledBlob( center, axes, max_r_scale, angle, pointsSet, rng );
+    cvTsGenerateTousledBlob( cvPoint2D32f(center), cvSize2D32f(axes), max_r_scale, angle, pointsSet, rng );
 
     if( points1 )
         points1->flags = CV_SEQ_MAGIC_VAL + CV_SEQ_POLYGON;
@@ -1715,7 +1823,7 @@ void CV_ContourMomentsTest::run_func()
     }
     else
     {
-        moments = (CvMoments)cv::moments(cv::cvarrToMat(points));
+        moments = cvMoments(cv::moments(cv::cvarrToMat(points)));
         area = cv::contourArea(cv::cvarrToMat(points));
     }
 }
@@ -1808,13 +1916,13 @@ void CV_PerimeterAreaSliceTest::run( int )
         cvClearMemStorage(storage);
         CvSeq* contour = cvCreateSeq(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(CvPoint), storage);
         double dphi = CV_PI*2/n;
-        CvPoint center;
+        Point center;
         center.x = rng.uniform(cvCeil(max_r), cvFloor(640-max_r));
         center.y = rng.uniform(cvCeil(max_r), cvFloor(480-max_r));
 
         for( int j = 0; j < n; j++ )
         {
-            CvPoint pt;
+            CvPoint pt = CV_STRUCT_INITIALIZER;
             double r = rng.uniform(min_r, max_r);
             double phi = j*dphi;
             pt.x = cvRound(center.x + r*cos(phi));
@@ -1822,7 +1930,7 @@ void CV_PerimeterAreaSliceTest::run( int )
             cvSeqPush(contour, &pt);
         }
 
-        CvSlice slice;
+        CvSlice slice = {0, 0};
         for(;;)
         {
             slice.start_index = rng.uniform(-n/2, 3*n/2);
@@ -1864,11 +1972,71 @@ TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
 TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
 TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
+TEST(Imgproc_MinCircle2, accuracy) { CV_MinCircleTest2 test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
+TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }
 TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
 TEST(Imgproc_ContourMoments, accuracy) { CV_ContourMomentsTest test; test.safe_run(); }
 TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
+
+
+PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
+{
+public:
+    int start_index;
+    bool clockwise;
+
+    Mat contour;
+
+    virtual void SetUp()
+    {
+        clockwise = GET_PARAM(0);
+        start_index = GET_PARAM(1);
+
+        const int N = 11;
+        const Point2i points[N] = {
+            Point2i(154, 408),
+            Point2i(45, 223),
+            Point2i(115, 275), // inner
+            Point2i(104, 166),
+            Point2i(154, 256), // inner
+            Point2i(169, 144),
+            Point2i(185, 256), // inner
+            Point2i(235, 170),
+            Point2i(240, 320), // inner
+            Point2i(330, 287),
+            Point2i(224, 390)
+        };
+
+        contour = Mat(N, 1, CV_32SC2);
+        for (int i = 0; i < N; i++)
+        {
+            contour.at<Point2i>(i) = (!clockwise) // image and convexHull coordinate systems are different
+                    ? points[(start_index + i) % N]
+                    : points[N - 1 - ((start_index + i) % N)];
+        }
+    }
+};
+
+TEST_P(ConvexityDefects_regression_5908, simple)
+{
+    std::vector<int> hull;
+    cv::convexHull(contour, hull, clockwise, false);
+
+    std::vector<Vec4i> result;
+    cv::convexityDefects(contour, hull, result);
+
+    EXPECT_EQ(4, (int)result.size());
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
+        testing::Combine(
+                testing::Bool(),
+                testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+        ));
+
+}} // namespace
 /* End of file. */

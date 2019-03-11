@@ -44,12 +44,12 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-namespace cvtest {
+namespace opencv_test {
 namespace ocl {
 
 //////////////////////////////////////// Merge ///////////////////////////////////////////////
@@ -105,6 +105,7 @@ PARAM_TEST_CASE(Merge, MatDepth, int, bool)
         UMAT_UPLOAD_INPUT_PARAMETER(src3);
         UMAT_UPLOAD_INPUT_PARAMETER(src4);
 
+        src_roi.clear(); usrc_roi.clear(); // for test_loop_times > 1
         src_roi.push_back(src1_roi), usrc_roi.push_back(usrc1_roi);
         if (nsrc >= 2)
             src_roi.push_back(src2_roi), usrc_roi.push_back(usrc2_roi);
@@ -463,6 +464,6 @@ OCL_INSTANTIATE_TEST_CASE_P(Channels, MixChannels, Combine(OCL_ALL_DEPTHS, Bool(
 OCL_INSTANTIATE_TEST_CASE_P(Channels, InsertChannel, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Channels, ExtractChannel, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
-} } // namespace cvtest::ocl
+} } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL

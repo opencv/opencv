@@ -1,6 +1,7 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/photo/photo.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/photo.hpp"
 
 #include <iostream>
 
@@ -46,23 +47,24 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    char* filename = argc >= 2 ? argv[1] : (char*)"fruits.jpg";
-    Mat img0 = imread(filename, -1);
+    cv::CommandLineParser parser(argc, argv, "{@image|fruits.jpg|}");
+    help();
+
+    string filename = samples::findFile(parser.get<string>("@image"));
+    Mat img0 = imread(filename, IMREAD_COLOR);
     if(img0.empty())
     {
         cout << "Couldn't open the image " << filename << ". Usage: inpaint <image_name>\n" << endl;
         return 0;
     }
 
-    help();
-
-    namedWindow( "image", 1 );
+    namedWindow("image", WINDOW_AUTOSIZE);
 
     img = img0.clone();
     inpaintMask = Mat::zeros(img.size(), CV_8U);
 
     imshow("image", img);
-    setMouseCallback( "image", onMouse, 0 );
+    setMouseCallback( "image", onMouse, NULL);
 
     for(;;)
     {

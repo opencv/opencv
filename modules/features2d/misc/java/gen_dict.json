@@ -1,0 +1,15 @@
+{
+    "class_ignore_list" : [
+        "SimpleBlobDetector"
+    ],
+    "type_dict" : {
+        "Feature2D": {
+            "j_type": "Feature2D",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "Feature2D %(n)s",
+            "suffix": "J",
+            "j_import": "org.opencv.features2d.Feature2D"
+        }
+    }
+}
