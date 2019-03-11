@@ -10,6 +10,7 @@
     the yellow segment should be shorter than the red one).
    Pressing any key (except ESC) will reset the tracking with a different speed.
    Pressing ESC will stop the program.
+   
 """
 # Python 2/3 compatibility
 import sys
@@ -23,7 +24,8 @@ from math import cos, sin, sqrt
 import numpy as np
 
 if __name__ == "__main__":
-
+    
+    print(__doc__)
     img_height = 500
     img_width = 500
     kalman = cv.KalmanFilter(2, 1, 0)
