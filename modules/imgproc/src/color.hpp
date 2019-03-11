@@ -3,63 +3,17 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "opencv2/imgproc.hpp"
-#include "opencv2/core/utility.hpp"
-#include <limits>
-#include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
-#include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/core/softfloat.hpp"
 
-#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
-
-namespace cv
-{
-
-//constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
-const float B2YF = 0.114f;
-const float G2YF = 0.587f;
-const float R2YF = 0.299f;
-
-enum
-{
-    gray_shift = 15,
-    yuv_shift = 14,
-    xyz_shift = 12,
-    R2Y = 4899, // == R2YF*16384
-    G2Y = 9617, // == G2YF*16384
-    B2Y = 1868, // == B2YF*16384
-    RY15 =  9798, // == R2YF*32768 + 0.5
-    GY15 = 19235, // == G2YF*32768 + 0.5
-    BY15 =  3735, // == B2YF*32768 + 0.5
-    BLOCK_SIZE = 256
-};
-
-template<typename _Tp> struct ColorChannel
-{
-    typedef float worktype_f;
-    static _Tp max() { return std::numeric_limits<_Tp>::max(); }
-    static _Tp half() { return (_Tp)(max()/2 + 1); }
-};
-
-template<> struct ColorChannel<float>
-{
-    typedef float worktype_f;
-    static float max() { return 1.f; }
-    static float half() { return 0.5f; }
-};
-
-/*template<> struct ColorChannel<double>
-{
-    typedef double worktype_f;
-    static double max() { return 1.; }
-    static double half() { return 0.5; }
-};*/
+namespace cv {
 
 //
 // Helper functions
 //
 
-namespace {
+namespace impl {
+
+#include "color.simd_helpers.hpp"
 
 inline bool isHSV(int code)
 {
@@ -213,40 +167,9 @@ inline int uIndex(int code)
 }
 
 } // namespace::
+using namespace impl;
 
-template<int i0, int i1 = -1, int i2 = -1>
-struct Set
-{
-    static bool contains(int i)
-    {
-        return (i == i0 || i == i1 || i == i2);
-    }
-};
-
-template<int i0, int i1>
-struct Set<i0, i1, -1>
-{
-    static bool contains(int i)
-    {
-        return (i == i0 || i == i1);
-    }
-};
-
-template<int i0>
-struct Set<i0, -1, -1>
-{
-    static bool contains(int i)
-    {
-        return (i == i0);
-    }
-};
-
-enum SizePolicy
-{
-    TO_YUV, FROM_YUV, NONE
-};
-
-template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
+/*template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
 struct CvtHelper
 {
     CvtHelper(InputArray _src, OutputArray _dst, int dcn)
@@ -286,7 +209,7 @@ struct CvtHelper
     Mat src, dst;
     int depth, scn;
     Size dstSz;
-};
+};*/
 
 #ifdef HAVE_OPENCL
 
@@ -384,49 +307,7 @@ struct OclHelper
 
 #endif
 
-///////////////////////////// Top-level template function ////////////////////////////////
 
-template <typename Cvt>
-class CvtColorLoop_Invoker : public ParallelLoopBody
-{
-    typedef typename Cvt::channel_type _Tp;
-public:
-
-    CvtColorLoop_Invoker(const uchar * src_data_, size_t src_step_, uchar * dst_data_, size_t dst_step_, int width_, const Cvt& _cvt) :
-        ParallelLoopBody(), src_data(src_data_), src_step(src_step_), dst_data(dst_data_), dst_step(dst_step_),
-        width(width_), cvt(_cvt)
-    {
-    }
-
-    virtual void operator()(const Range& range) const CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-
-        const uchar* yS = src_data + static_cast<size_t>(range.start) * src_step;
-        uchar* yD = dst_data + static_cast<size_t>(range.start) * dst_step;
-
-        for( int i = range.start; i < range.end; ++i, yS += src_step, yD += dst_step )
-            cvt(reinterpret_cast<const _Tp*>(yS), reinterpret_cast<_Tp*>(yD), width);
-    }
-
-private:
-    const uchar * src_data;
-    const size_t src_step;
-    uchar * dst_data;
-    const size_t dst_step;
-    const int width;
-    const Cvt& cvt;
-
-    const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
-};
-
-template <typename Cvt>
-void CvtColorLoop(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, const Cvt& cvt)
-{
-    parallel_for_(Range(0, height),
-                  CvtColorLoop_Invoker<Cvt>(src_data, src_step, dst_data, dst_step, width, cvt),
-                  (width * height) / static_cast<double>(1<<16));
-}
 
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
 #  define NEED_IPP 1

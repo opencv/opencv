@@ -62,6 +62,8 @@ namespace dnn
 class BaseConvolutionLayerImpl : public ConvolutionLayer
 {
 public:
+    bool newWeightAndBias;
+    std::vector<double> weightsMultipliers;
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
@@ -85,6 +87,8 @@ public:
         CV_Assert(numOutput % ngroups == 0);
         CV_Assert(adjustPad.width < stride.width &&
                   adjustPad.height < stride.height);
+
+        newWeightAndBias = false;
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -134,6 +138,20 @@ public:
         (stride.height == 1 && stride.width == 1) &&
         (dilation.height == 1 && dilation.width == 1);
     }
+
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    {
+        Mat w, b;
+        top->getScaleShift(w, b);
+        if (!w.empty() || !b.empty())
+        {
+            fuseWeights(w, b);
+            return true;
+        }
+        return false;
+    }
+
+    virtual void fuseWeights(const Mat& w_, const Mat& b_) = 0;
 
     virtual void applyHalideScheduler(Ptr<BackendNode>& node,
                                       const std::vector<Mat*> &inputs,
@@ -185,11 +203,9 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
     Mat weightsMat;
-    std::vector<double> weightsMultipliers;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
-    bool newWeightAndBias;
     bool fusedBias;
 
 #ifdef HAVE_OPENCL
@@ -201,7 +217,6 @@ public:
 #endif
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
-        newWeightAndBias = false;
         fusedBias = false;
 #ifdef HAVE_OPENCL
         newActiv = false;
@@ -349,19 +364,7 @@ public:
         return !activ.empty();
     }
 
-    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
-    {
-        Mat w, b;
-        top->getScaleShift(w, b);
-        if (!w.empty() || !b.empty())
-        {
-            fuseWeights(w, b);
-            return true;
-        }
-        return false;
-    }
-
-    void fuseWeights(const Mat& w_, const Mat& b_)
+    void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
     {
         // Convolution weights have OIHW data layout. Parameters fusion in case of
         // (conv(I) + b1 ) * w + b2
@@ -1308,6 +1311,45 @@ public:
 
         pad.width = pad_l;
         pad.height = pad_t;
+
+        weightsMultipliers.assign(numOutput, 1.0);
+        if (weightsMat.empty())
+        {
+            transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
+            biasesMat = hasBias() ? blobs[1].reshape(1, numOutput)
+                                  : Mat::zeros(numOutput, 1, CV_32F);
+        }
+    }
+
+    void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
+    {
+        Mat w = w_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(w_.at<float>(0))) : w_;
+        Mat b = b_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(b_.at<float>(0))) : b_;
+
+        CV_Assert_N(!weightsMat.empty(),
+                     w.empty() || numOutput == w.total(),
+                     b.empty() || numOutput == b.total());
+
+        if (!w.empty())
+        {
+            transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
+            weightsMat = weightsMat.reshape(1, numOutput);
+            for (int i = 0; i < numOutput; ++i)
+            {
+                double wi = w.at<float>(i);
+                weightsMultipliers[i] *= wi;
+                cv::multiply(weightsMat.row(i), weightsMultipliers[i], weightsMat.row(i));
+                biasesMat.at<float>(i) *= wi;
+            }
+            weightsMat = weightsMat.reshape(1, weightsMat.total() / blobs[0].size[0]);
+        }
+
+        if (!b.empty())
+        {
+            cv::add(biasesMat, b.reshape(1, numOutput), biasesMat);
+        }
+
+        newWeightAndBias = !w.empty() || !b.empty();
     }
 
     class MatMulInvoker : public ParallelLoopBody
@@ -1575,11 +1617,19 @@ public:
 
         if (umat_weights.empty())
         {
-            transpose(blobs[0].reshape(1, inpCn), umat_weights);
-            if (hasBias())
-                blobs[1].reshape(1, outCn).copyTo(umat_biases);
+            if (newWeightAndBias)
+            {
+                weightsMat.copyTo(umat_weights);
+                biasesMat.copyTo(umat_biases);
+            }
             else
-                umat_biases = UMat::zeros(outCn, 1, CV_32F);
+            {
+                transpose(blobs[0].reshape(1, inpCn), umat_weights);
+                if (hasBias())
+                    blobs[1].reshape(1, outCn).copyTo(umat_biases);
+                else
+                    umat_biases = UMat::zeros(outCn, 1, CV_32F);
+            }
         }
 
         String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
