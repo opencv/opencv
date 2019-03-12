@@ -11,6 +11,52 @@ namespace opencv_test
 typedef tuple< string, Size, Size, int > Param;
 typedef testing::TestWithParam< Param > Videoio_Gstreamer_Test;
 
+TEST(Videoio_Gstreamer, 16_bit_convert)
+{
+
+    Size frame_size = Size(640,480);
+    int count_frames = 10;
+    string format = "video/x-raw, format=GRAY16_LE";
+
+    // 16-bit capture pipeline
+    std::ostringstream pipeline;
+    pipeline << "videotestsrc pattern=ball num-buffers=" << count_frames << " ! " << format;
+    pipeline << ", width=" << frame_size.width << ", height=" << frame_size.height << " ! appsink";
+
+    VideoCapture cap;
+
+    ASSERT_NO_THROW(cap.open(pipeline.str(), CAP_GSTREAMER));
+    ASSERT_TRUE(cap.isOpened());
+    ASSERT_TRUE(cap.get(CAP_PROP_CONVERT_RGB));
+
+    // Check initial result is 8-bit
+    Mat frame;
+    cap >> frame;
+    EXPECT_EQ(frame.size(), frame_size);
+    EXPECT_EQ(frame.depth(), CV_8U);
+    EXPECT_EQ(frame.channels(), 3);
+
+    // Check result is 16-bit
+    cap.set(CAP_PROP_CONVERT_RGB, false);
+
+    Mat frame_16;
+    cap >> frame_16;
+    EXPECT_EQ(frame_16.size(), frame_size);
+    EXPECT_EQ(frame_16.depth(), CV_16U);
+    EXPECT_EQ(frame_16.channels(), 1);
+
+    // Test enabling RGB conversion again
+    cap.set(CAP_PROP_CONVERT_RGB, true);
+    cap >> frame;
+    EXPECT_EQ(frame.size(), frame_size);
+    EXPECT_EQ(frame.depth(), CV_8U);
+    EXPECT_EQ(frame.channels(), 3);
+
+    cap.release();
+    ASSERT_FALSE(cap.isOpened());
+
+}
+
 TEST_P(Videoio_Gstreamer_Test, test_object_structure)
 {
     string format    = get<0>(GetParam());
@@ -58,6 +104,7 @@ TEST_P(Videoio_Gstreamer_Test, test_object_structure)
 Param test_data[] = {
     make_tuple("video/x-raw, format=BGR"  , Size(640, 480), Size(640, 480), COLOR_BGR2RGB),
     make_tuple("video/x-raw, format=GRAY8", Size(640, 480), Size(640, 480), COLOR_GRAY2RGB),
+    make_tuple("video/x-raw, format=GRAY16_LE", Size(640, 480), Size(640, 480), COLOR_BGR2RGB),
     make_tuple("video/x-raw, format=UYVY" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_UYVY),
     make_tuple("video/x-raw, format=YUY2" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_YUY2),
     make_tuple("video/x-raw, format=YVYU" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_YVYU),

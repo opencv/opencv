@@ -180,6 +180,8 @@ private:
     bool          isPosFramesEmulated;
     gint64        emulatedFrameNumber;
     bool          isOutputByteBuffer;
+    bool          shouldConvertRGB;
+    int           depth;
 
 public:
     GStreamerCapture();
@@ -218,7 +220,9 @@ GStreamerCapture::GStreamerCapture() :
     isPosFramesSupported(false),
     isPosFramesEmulated(false),
     emulatedFrameNumber(-1),
-    isOutputByteBuffer(false)
+    isOutputByteBuffer(false),
+    shouldConvertRGB(true),
+    depth(8)
 {
 }
 
@@ -313,10 +317,38 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
 
     {
         Mat src;
-        if (isOutputByteBuffer)
+        if (isOutputByteBuffer){
             src = Mat(Size(info.size, 1), CV_8UC1, info.data);
-        else
+        }else if(depth == 16){
+
+            if(shouldConvertRGB){
+                src = Mat(sz, CV_MAKETYPE(CV_8U, 3));
+
+                unsigned char *src_ptr = src.data;
+                unsigned short *src_ptr_16 = reinterpret_cast<unsigned short*>(info.data);
+
+                for (int i = 0; i < width*height; i++) {
+
+                    // Crush to 8-bit
+                    unsigned char pixel_8 = static_cast<unsigned char>(src_ptr_16[i] >> 8);
+
+                    *src_ptr = pixel_8;
+                    src_ptr++;
+
+                    *src_ptr = pixel_8;
+                    src_ptr++;
+
+                    *src_ptr = pixel_8;
+                    src_ptr++;
+
+                }
+            }else{
+                // Raw frame
+                src = Mat(sz, CV_16UC1, info.data);
+            }
+        }else{
             src = Mat(sz, CV_MAKETYPE(CV_8U, channels), info.data);
+        }
         CV_Assert(src.isContinuous());
         src.copyTo(dst);
     }
@@ -341,8 +373,10 @@ bool GStreamerCapture::determineFrameDims(Size &sz)
 
     // bail out if width or height are 0
     if (!gst_structure_get_int(structure, "width", &width)
-        || !gst_structure_get_int(structure, "height", &height))
+        || !gst_structure_get_int(structure, "height", &height)){
+        CV_WARN("Failed to get image width/height");
         return false;
+    }
 
     sz = Size(width, height);
 
@@ -352,7 +386,7 @@ bool GStreamerCapture::determineFrameDims(Size &sz)
     if (!name)
         return false;
 
-    // we support 11 types of data:
+    // we support 12 types of data:
     //     video/x-raw, format=BGR   -> 8bit, 3 channels
     //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
     //     video/x-raw, format=UYVY  -> 8bit, 2 channel
@@ -362,15 +396,18 @@ bool GStreamerCapture::determineFrameDims(Size &sz)
     //     video/x-raw, format=NV21  -> 8bit, 1 channel (height is 1.5x larger than true height)
     //     video/x-raw, format=YV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
     //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
+    //     video/x-raw, format=Y16/GRAY16_LE -> 16bit, 1 channel
     //     video/x-bayer             -> 8bit, 1 channel
     //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
     // bayer data is never decoded, the user is responsible for that
-    // everything is 8 bit, so we just test the caps for bit depth
     if (strcasecmp(name, "video/x-raw") == 0)
     {
         const gchar* format = gst_structure_get_string(structure, "format");
-        if (!format)
+        if (!format){
+            CV_WARN("No image format.");
             return false;
+        }
+
         if (strcasecmp(format, "BGR") == 0)
         {
             channels = 3;
@@ -387,6 +424,11 @@ bool GStreamerCapture::determineFrameDims(Size &sz)
         else if(strcasecmp(format, "GRAY8") == 0)
         {
             channels = 1;
+        }
+        else if(strcasecmp(format, "GRAY16_LE") == 0)
+        {
+            channels = 1;
+            depth = 16;
         }
     }
     else if (strcasecmp(name, "video/x-bayer") == 0)
@@ -613,8 +655,11 @@ bool GStreamerCapture::open(int id)
 {
     gst_initializer::init();
 
-    if (!is_gst_element_exists("v4l2src"))
+    if (!is_gst_element_exists("v4l2src")){
+        CV_WARN("No v4l2src element found.")
         return false;
+    }
+
     std::ostringstream desc;
     desc << "v4l2src device=/dev/video" << id
              << " ! " << COLOR_ELEM
@@ -836,14 +881,14 @@ bool GStreamerCapture::open(const String &filename_)
                                NULL);
 #else
 
-    caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
+    caps = gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8, GRAY16_LE}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg");
 
     if(manualpipeline){
         GstPad* sink_pad = gst_element_get_static_pad(sink, "sink");
         GstCaps* peer_caps = gst_pad_peer_query_caps(sink_pad,NULL);
         if (!gst_caps_can_intersect(caps, peer_caps)) {
             gst_caps_unref(caps);
-            caps = gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}");
+            caps = gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420,GRAY16_LE}");
         }
         gst_object_unref(sink_pad);
         gst_caps_unref(peer_caps);
@@ -1014,6 +1059,8 @@ double GStreamerCapture::getProperty(int propId) const
         return fps;
     case CV_CAP_PROP_FRAME_COUNT:
         return duration;
+    case CV_CAP_PROP_CONVERT_RGB:
+        return (double) shouldConvertRGB;
     case CV_CAP_PROP_BRIGHTNESS:
     case CV_CAP_PROP_CONTRAST:
     case CV_CAP_PROP_SATURATION:
@@ -1177,7 +1224,15 @@ bool GStreamerCapture::setProperty(int propId, double value)
         return false;
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
-        break;
+        if(value == 1)
+        {
+            shouldConvertRGB = true;
+        }
+        else
+        {
+            shouldConvertRGB = false;
+        }
+        return true;
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
     {
         if(!sink)
