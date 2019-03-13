@@ -48,6 +48,8 @@
 
 #else
 
+#include "../lut.hpp"
+
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudev.hpp"
 #include "opencv2/core/private.cuda.hpp"
@@ -56,23 +58,9 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudev;
 
-namespace
-{
+namespace cv { namespace cuda {
+
     texture<uchar, cudaTextureType1D, cudaReadModeElementType> texLutTable;
-
-    class LookUpTableImpl : public LookUpTable
-    {
-    public:
-        LookUpTableImpl(InputArray lut);
-        ~LookUpTableImpl();
-
-        void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) CV_OVERRIDE;
-
-    private:
-        GpuMat d_lut;
-        cudaTextureObject_t texLutTableObj;
-        bool cc30;
-    };
 
     LookUpTableImpl::LookUpTableImpl(InputArray _lut)
     {
@@ -200,11 +188,7 @@ namespace
 
         syncOutput(dst, _dst, stream);
     }
-}
 
-Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
-{
-    return makePtr<LookUpTableImpl>(lut);
-}
+} }
 
 #endif
