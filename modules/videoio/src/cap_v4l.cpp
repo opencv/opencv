@@ -1803,9 +1803,11 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         if (bool(value)) {
             convert_rgb = convertableToRgb();
             return convert_rgb;
+        }else{
+            convert_rgb = false;
+            releaseFrame();
+            return true;
         }
-        convert_rgb = false;
-        return true;
     case cv::CAP_PROP_FOURCC:
     {
         if (palette == static_cast<__u32>(value))
