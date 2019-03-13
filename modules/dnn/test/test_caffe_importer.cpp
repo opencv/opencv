@@ -423,7 +423,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
-        l1 = 0.097; lInf = 0.52;
+        l1 = 0.098; lInf = 0.48;
     }
     normAssert(out, ref, "", l1, lInf);
 }

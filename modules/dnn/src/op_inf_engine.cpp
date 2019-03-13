@@ -683,6 +683,80 @@ static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEngineP
     return sharedPlugins;
 }
 
+bool wrapperIsMyriadX() {
+    std::vector<float> inp(1, 1);
+    std::vector<float> out(1, 1);
+    InferenceEngine::Builder::Network netBuilder("");
+    InferenceEngine::idx_t inpId;
+    {
+        InferenceEngine::Builder::InputLayer inpLayer("input");
+        inpLayer.setPort(InferenceEngine::Port({1, 1, 1, 1}));
+        inpId = netBuilder.addLayer(inpLayer);
+    }
+    InferenceEngine::idx_t clampId;
+    {
+        InferenceEngine::Builder::ClampLayer ieLayer("clamp");
+        ieLayer.setMinValue(0);
+        ieLayer.setMaxValue(6);
+        clampId = netBuilder.addLayer({inpId}, ieLayer);
+    }
+    {
+        InferenceEngine::Builder::OutputLayer outLayer("output");
+        outLayer.setPort(InferenceEngine::Port({}, InferenceEngine::Precision::FP16));
+        netBuilder.addLayer({clampId}, outLayer);
+    }
+
+    auto cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
+
+    for (const auto& it : cnn.getInputsInfo()) {
+        it.second->setPrecision(InferenceEngine::Precision::FP32);
+    }
+    for (const auto& it : cnn.getOutputsInfo()) {
+        it.second->setPrecision(InferenceEngine::Precision::FP32);
+    }
+
+    InferenceEngine::BlobMap inputBlobs;
+    InferenceEngine::BlobMap outputBlobs;
+
+    inputBlobs["input"] = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                   InferenceEngine::Layout::NCHW,
+                                                                   {1, 1, 1, 1}, inp.data());
+
+    outputBlobs["clamp"] = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                    InferenceEngine::Layout::NCHW,
+                                                                    {1, 1, 1, 1}, out.data());
+
+    InferenceEngine::TargetDevice device = InferenceEngine::TargetDevice::eMYRIAD;
+    auto& sharedPlugins = getSharedPlugins();
+    auto pluginIt = sharedPlugins.find(device);
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    if (pluginIt != sharedPlugins.end()) {
+        enginePtr = pluginIt->second;
+    } else {
+        auto dispatcher = InferenceEngine::PluginDispatcher({""});
+        enginePtr = dispatcher.getSuitablePlugin(device);
+        sharedPlugins[device] = enginePtr;
+    }
+    auto plugin = InferenceEngine::InferencePlugin(enginePtr);
+    try
+    {
+        auto netExec = plugin.LoadNetwork(cnn, {{InferenceEngine::VPUConfigParams::KEY_VPU_PLATFORM,
+                                                 InferenceEngine::VPUConfigParams::VPU_2480}});
+        auto infRequest = netExec.CreateInferRequest();
+        infRequest.SetInput(inputBlobs);
+        infRequest.SetOutput(outputBlobs);
+        infRequest.Infer();
+    } catch(...) {
+        return false;
+    }
+    return true;
+}
+
+bool isMyriadX() {
+     static bool myriadX = wrapperIsMyriadX();
+     return myriadX;
+}
+
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());

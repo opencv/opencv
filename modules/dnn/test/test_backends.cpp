@@ -269,8 +269,8 @@ TEST_P(DNNTestNetwork, OpenFace)
 #endif
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.037 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.146 : 0.0;
+    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0024 : 0.0;
+    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.0071 : 0.0;
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "", l1, lInf);
 }
 
@@ -302,16 +302,15 @@ TEST_P(DNNTestNetwork, DenseNet_121)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    float l1 = 0.0, lInf = 0.0;
     // Reference output values are in range [-3.807, 4.605]
+    float l1 = 0.0, lInf = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 9e-3; lInf = 5e-2;
     }
-    // on Myriad problem layer: pool1 - does not use pads_begin
     else if (target == DNN_TARGET_MYRIAD)
     {
-        l1 = 6e-2; lInf = 0.27;
+        l1 = 9.4e-2; lInf = 0.55;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
 }

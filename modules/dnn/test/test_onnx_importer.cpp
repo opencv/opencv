@@ -9,7 +9,6 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -282,20 +281,14 @@ TEST_P(Test_ONNX_nets, ZFNet)
 
 TEST_P(Test_ONNX_nets, ResNet18v1)
 {
-    // output range: [-16; 22]
-    // on Myriad problem layer: resnetv15_pool0_fwd - does not use pads_begin
-    double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.022 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.12 : default_lInf;
-    testONNXModels("resnet18v1", pb, l1, lInf);
+    // output range: [-16; 22], after Softmax [0, 0.51]
+    testONNXModels("resnet18v1", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
-    // output range: [-67; 75]
-    // on Myriad problem layer: resnetv17_pool0_fwd - does not use pads_begin
-    double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.6 : 1.25e-5;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.51 : 1.2e-4;
-    testONNXModels("resnet50v1", pb, l1, lInf);
+    // output range: [-67; 75], after Softmax [0, 0.98]
+    testONNXModels("resnet50v1", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
@@ -310,7 +303,8 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
     if (cvtest::skipUnstableTests ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))) {
+        (backend == DNN_BACKEND_INFERENCE_ENGINE &&
+        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))) {
         throw SkipTestException("");
     }
     // output range: [-11; 8]

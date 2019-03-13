@@ -18,6 +18,7 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 #include <inference_engine.hpp>
+#include <vpu/vpu_plugin_config.hpp>
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
 #endif
@@ -278,6 +279,8 @@ public:
 private:
     InferenceEngine::CNNNetwork t_net;
 };
+
+bool isMyriadX();
 
 #endif  // HAVE_INF_ENGINE
 

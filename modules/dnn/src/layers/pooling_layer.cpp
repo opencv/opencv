@@ -148,7 +148,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (preferableTarget == DNN_TARGET_MYRIAD)
-                return type == MAX || type == AVE;
+                return (type == MAX && (!(pad_l || pad_t) || !isMyriadX())) || type == AVE;
             else
                 return type != STOCHASTIC;
         }
