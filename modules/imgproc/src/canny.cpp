@@ -360,6 +360,8 @@ public:
     {
         CV_TRACE_FUNCTION();
 
+        CV_DbgAssert(cn > 0);
+
         Mat dx, dy;
         AutoBuffer<short> dxMax(0), dyMax(0);
         std::deque<uchar*> stack, borderPeaksLocal;
