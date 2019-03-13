@@ -20,7 +20,7 @@ TEST(videoio_dynamic, basic_write)
     const Size FRAME_SIZE(640, 480);
     const double FPS = 100;
     const String filename = cv::tempfile(".avi");
-    const int fourcc = VideoWriter::fourcc('H', '2', '6', '4');
+    const int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
 
     bool fileExists = false;
     {

@@ -3,6 +3,8 @@
 
 function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
 
+  ocv_debug_message("ocv_create_builtin_videoio_plugin(${ARGV})")
+
   if(NOT TARGET ${target})
     message(FATAL_ERROR "${target} does not exist!")
   endif()
@@ -10,9 +12,11 @@ function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
     message(FATAL_ERROR "OpenCV_SOURCE_DIR must be set to build the plugin!")
   endif()
 
+  message(STATUS "Video I/O: add builtin plugin '${name}'")
+
   add_library(${name} MODULE
     "${CMAKE_CURRENT_LIST_DIR}/src/${videoio_src_file}"
-    "${CMAKE_CURRENT_LIST_DIR}/src/plugin_api.cpp")
+  )
   target_include_directories(${name} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
   target_compile_definitions(${name} PRIVATE BUILD_PLUGIN)
   target_link_libraries(${name} PRIVATE ${target})
@@ -27,6 +31,8 @@ function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
     CXX_VISIBILITY_PRESET hidden
   )
   install(TARGETS ${name} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins OPTIONAL)
+
+  add_dependencies(opencv_videoio_plugins ${name})
 
 endfunction()
 
@@ -60,7 +66,7 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
   set(imgproc_ROOT "${modules_ROOT}/imgproc")
   set(imgcodecs_ROOT "${modules_ROOT}/imgcodecs")
 
-  add_library(${OPENCV_PLUGIN_NAME} MODULE "${videoio_ROOT}/src/${videoio_src_file}" "${videoio_ROOT}/src/plugin_api.cpp")
+  add_library(${OPENCV_PLUGIN_NAME} MODULE "${videoio_ROOT}/src/${videoio_src_file}")
   target_include_directories(${OPENCV_PLUGIN_NAME} PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${videoio_ROOT}/src"

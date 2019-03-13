@@ -48,7 +48,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 #endif
 }
 
-PERF_TEST_P(TestWarpAffine, WarpAffine_ovx,
+PERF_TEST_P(TestWarpAffine, DISABLED_WarpAffine_ovx,
     Combine(
         Values(szVGA, sz720p, sz1080p),
         InterType::all(),
@@ -116,7 +116,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 #endif
 }
 
-PERF_TEST_P(TestWarpPerspective, WarpPerspective_ovx,
+PERF_TEST_P(TestWarpPerspective, DISABLED_WarpPerspective_ovx,
     Combine(
         Values(szVGA, sz720p, sz1080p),
         InterType::all(),
