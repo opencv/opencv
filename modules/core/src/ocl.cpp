@@ -4430,6 +4430,7 @@ public:
         : size_(size), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr);
         if (((size_t)ptr_ & (alignment - 1)) != 0)
         {
             allocatedPtr_ = new uchar[size_ + alignment - 1];
@@ -4483,6 +4484,7 @@ public:
         : size_(rows*step), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL), rows_(rows), cols_(cols), step_(step)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr != NULL);
         if (ptr == 0 || ((size_t)ptr_ & (alignment - 1)) != 0)
         {
             allocatedPtr_ = new uchar[size_ + extrabytes + alignment - 1];
