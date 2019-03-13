@@ -4689,14 +4689,7 @@ public:
     not to depend on the ordering of pt1 and pt2 parameters
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool forceLeftToRight = false ) {
-      init(img.size(), img.type(), (uchar*)img.ptr(), img.step1()*img.elemSize1(), pt1, pt2, connectivity, forceLeftToRight);
-    }
-    LineIterator( const Size& size, int type, Point pt1, Point pt2,
-                  int connectivity = 8, bool forceLeftToRight = false ) {
-      init(size, type, 0, CV_ELEM_SIZE(type)*size.width, pt1, pt2, connectivity, forceLeftToRight);
-    }
-    void init(const Size& size, int type, uchar* data, size_t dataStep, Point pt1, Point pt2, int connectivity = 8, bool forceLeftToRight = false);
+                  int connectivity = 8, bool forceLeftToRight = false );
 
     /** @brief returns pointer to the current pixel
     */
