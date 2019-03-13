@@ -4690,7 +4690,6 @@ public:
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool forceLeftToRight = false );
-
     /** @brief returns pointer to the current pixel
     */
     uchar* operator *();
@@ -4719,7 +4718,7 @@ public:
 inline
 uchar* LineIterator::operator *()
 {
-    return !ptr0 ? 0 : ptr;//when no Mat is attached, ptr is just a dummy address and should not be dereferenced
+    return ptr;
 }
 
 inline
