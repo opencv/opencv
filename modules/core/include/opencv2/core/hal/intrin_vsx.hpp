@@ -258,8 +258,16 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a)                          \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a)                         \
 { vec_st_h8(a.val, ptr); }
 
-#define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
-OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+// working around gcc bug for aligned ld/st
+// if runtime check for vec_ld/st fail we failback to unaligned ld/st
+// https://github.com/opencv/opencv/issues/13211
+#ifdef CV_COMPILER_VSX_BROKEN_ALIGNED
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vsx_ld, vsx_st, vsx_st)
+#else
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+#endif
 
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint8x16,  uchar)
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int8x16,   schar)
