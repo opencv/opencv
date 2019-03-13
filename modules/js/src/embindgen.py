@@ -70,7 +70,6 @@
 from __future__ import print_function
 import sys, re, os
 from templates import *
-from sets import Set
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -120,7 +119,7 @@ objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
 
-video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
+video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', \
              'findTransformECC', 'meanShift'],
          'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
          'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
@@ -200,7 +199,7 @@ class ClassInfo(object):
         self.consts = {}
         customname = False
         self.jsfuncs = {}
-        self.constructor_arg_num = Set()
+        self.constructor_arg_num = set()
 
         self.has_smart_ptr = False
 
@@ -385,20 +384,35 @@ class JSWrapperGenerator(object):
         return namespace, classes, chunks[-1]
 
     def add_enum(self, decl):
-        name = decl[1]
+        name = decl[0].rsplit(" ", 1)[1]
         namespace, classes, val = self.split_decl_name(name)
         namespace = '.'.join(namespace)
-        val = '_'.join(classes + [name])
-        cname = name.replace('.', '::')
         ns = self.namespaces.setdefault(namespace, Namespace())
+        if len(name) == 0: name = "<unnamed>"
+        if name.endswith("<unnamed>"):
+            i = 0
+            while True:
+                i += 1
+                candidate_name = name.replace("<unnamed>", "unnamed_%u" % i)
+                if candidate_name not in ns.enums:
+                    name = candidate_name
+                    break;
+        cname = name.replace('.', '::')
+        type_dict[normalize_class_name(name)] = cname
         if name in ns.enums:
-            print("Generator warning: constant %s (cname=%s) already exists" \
+            print("Generator warning: enum %s (cname=%s) already exists" \
                   % (name, cname))
             # sys.exit(-1)
         else:
             ns.enums[name] = []
         for item in decl[3]:
             ns.enums[name].append(item)
+
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_const(self, name, decl):
         cname = name.replace('.','::')
@@ -819,7 +833,7 @@ class JSWrapperGenerator(object):
                 continue
 
             # Generate bindings for methods
-            for method_name, method in class_info.methods.iteritems():
+            for method_name, method in class_info.methods.items():
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
@@ -828,7 +842,8 @@ class JSWrapperGenerator(object):
                     for variant in method.variants:
                         args = []
                         for arg in variant.args:
-                            args.append(arg.tp)
+                            arg_type = type_dict[arg.tp] if arg.tp in type_dict else arg.tp
+                            args.append(arg_type)
                         # print('Constructor: ', class_info.name, len(variant.args))
                         args_num = len(variant.args)
                         if args_num in class_info.constructor_arg_num:
@@ -849,7 +864,7 @@ class JSWrapperGenerator(object):
                 class_bindings.append(smart_ptr_reg_template.substitute(cname=class_info.cname, name=class_info.name))
 
             # Attach external constructors
-            # for method_name, method in class_info.ext_constructors.iteritems():
+            # for method_name, method in class_info.ext_constructors.items():
                 # print("ext constructor", method_name)
             #if class_info.ext_constructors:
 
@@ -857,7 +872,8 @@ class JSWrapperGenerator(object):
 
             # Generate bindings for properties
             for property in class_info.props:
-                class_bindings.append(class_property_template.substitute(js_name=property.name, cpp_name='::'.join(
+                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
+                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
                     [class_info.cname, property.name])))
 
             dv = ''
