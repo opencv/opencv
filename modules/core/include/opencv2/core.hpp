@@ -92,6 +92,7 @@
         @{
             @defgroup core_hal_intrin_impl Private implementation helpers
         @}
+        @defgroup core_lowlevel_api Low-level API for external libraries / plugins
     @}
 @}
  */
