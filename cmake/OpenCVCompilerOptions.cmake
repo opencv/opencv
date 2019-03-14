@@ -279,6 +279,15 @@ if((CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
 endif()
 
+# workaround gcc bug for aligned ld/st
+# https://github.com/opencv/opencv/issues/13211
+if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
+  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" "OPENCV_CHECK_VSX_ALIGNED" "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
+  if(NOT OPENCV_CHECK_VSX_ALIGNED)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+  endif()
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
