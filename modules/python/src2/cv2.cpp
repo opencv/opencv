@@ -201,6 +201,7 @@ typedef std::vector<Size> vector_Size;
 typedef std::vector<Vec2f> vector_Vec2f;
 typedef std::vector<Vec3f> vector_Vec3f;
 typedef std::vector<Vec4f> vector_Vec4f;
+typedef std::vector<Vec5f> vector_Vec5f;
 typedef std::vector<Vec6f> vector_Vec6f;
 typedef std::vector<Vec4i> vector_Vec4i;
 typedef std::vector<Rect> vector_Rect;
@@ -1005,6 +1006,19 @@ bool pyopencv_to(PyObject* obj, Vec4f& v, const char* name)
     return pyopencv_to(obj, v, ArgInfo(name, 0));
 }
 
+static bool pyopencv_to(PyObject* obj, Vec5f& v, ArgInfo info)
+{
+    CV_UNUSED(info);
+    if (!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "fffff", &v[0], &v[1], &v[2], &v[3], &v[4]) > 0;
+}
+template<>
+bool pyopencv_to(PyObject* obj, Vec5f& v, const char* name)
+{
+    return pyopencv_to(obj, v, ArgInfo(name, 0));
+}
+
 static bool pyopencv_to(PyObject* obj, Vec4i& v, ArgInfo info)
 {
     CV_UNUSED(info);
@@ -1106,6 +1120,12 @@ template<>
 PyObject* pyopencv_from(const Vec4f& v)
 {
     return Py_BuildValue("(ffff)", v[0], v[1], v[2], v[3]);
+}
+
+template<>
+PyObject* pyopencv_from(const Vec5f& v)
+{
+    return Py_BuildValue("(fffff)", v[0], v[1], v[2], v[3], v[4]);
 }
 
 template<>
