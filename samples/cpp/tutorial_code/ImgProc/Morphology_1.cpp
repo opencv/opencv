@@ -31,7 +31,7 @@ void Dilation( int, void* );
 int main( int argc, char** argv )
 {
   /// Load an image
-  CommandLineParser parser( argc, argv, "{@input | ../data/chicky_512.png | input image}" );
+  CommandLineParser parser( argc, argv, "{@input | ../data/LinuxLogo.jpg | input image}" );
   src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
   if( src.empty() )
   {

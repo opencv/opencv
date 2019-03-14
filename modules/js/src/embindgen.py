@@ -70,7 +70,6 @@
 from __future__ import print_function
 import sys, re, os
 from templates import *
-from sets import Set
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -120,13 +119,56 @@ objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale']}
 
-video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', 'estimateRigidTransform',\
+video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', \
              'findTransformECC', 'meanShift'],
          'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
          'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
 
 dnn = {'dnn_Net': ['setInput', 'forward'],
-       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet', 'blobFromImage']}
+       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
+            'readNetFromONNX', 'readNet', 'blobFromImage']}
+
+features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
+              'BRISK': ['create', 'getDefaultName'],
+              'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],
+              'MSER': ['create', 'detectRegions', 'setDelta', 'getDelta', 'setMinArea', 'getMinArea', 'setMaxArea', 'getMaxArea', 'setPass2Only', 'getPass2Only', 'getDefaultName'],
+              'FastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
+              'AgastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
+              'GFTTDetector': ['create', 'setMaxFeatures', 'getMaxFeatures', 'setQualityLevel', 'getQualityLevel', 'setMinDistance', 'getMinDistance', 'setBlockSize', 'getBlockSize', 'setHarrisDetector', 'getHarrisDetector', 'setK', 'getK', 'getDefaultName'],
+              # 'SimpleBlobDetector': ['create'],
+              'KAZE': ['create', 'setExtended', 'getExtended', 'setUpright', 'getUpright', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
+              'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
+              'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
+              'BFMatcher': ['isMaskSupported', 'create'],
+              '': ['drawKeypoints', 'drawMatches']}
+
+photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard'],
+        'CalibrateCRF': ['process'],
+        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+        'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
+        'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+        'MergeExposures' : ['process'],
+        'MergeDebevec' : ['process'],
+        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+        'MergeRobertson' : ['process'],
+        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
+        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
+        'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
+        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+                             'getColorAdaptation', 'setColorAdaptation']
+        }
+
+aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+        'aruco_Dictionary': ['get', 'drawMarker'],
+        'aruco_Board': ['create'],
+        'aruco_GridBoard': ['create', 'draw'],
+        'aruco_CharucoBoard': ['create', 'draw'],
+        }
 
 def makeWhiteList(module_list):
     wl = {}
@@ -138,7 +180,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco])
 
 # Features to be exported
 export_enums = False
@@ -185,7 +227,7 @@ class ClassInfo(object):
         self.consts = {}
         customname = False
         self.jsfuncs = {}
-        self.constructor_arg_num = Set()
+        self.constructor_arg_num = set()
 
         self.has_smart_ptr = False
 
@@ -219,7 +261,8 @@ def handle_ptr(tp):
 
 def handle_vector(tp):
     if tp.startswith('vector_'):
-        tp = 'std::vector<' + "::".join(tp.split('_')[1:]) + '>'
+        tp = handle_vector(tp[tp.find('_') + 1:])
+        tp = 'std::vector<' + "::".join(tp.split('_')) + '>'
     return tp
 
 
@@ -369,20 +412,35 @@ class JSWrapperGenerator(object):
         return namespace, classes, chunks[-1]
 
     def add_enum(self, decl):
-        name = decl[1]
+        name = decl[0].rsplit(" ", 1)[1]
         namespace, classes, val = self.split_decl_name(name)
         namespace = '.'.join(namespace)
-        val = '_'.join(classes + [name])
-        cname = name.replace('.', '::')
         ns = self.namespaces.setdefault(namespace, Namespace())
+        if len(name) == 0: name = "<unnamed>"
+        if name.endswith("<unnamed>"):
+            i = 0
+            while True:
+                i += 1
+                candidate_name = name.replace("<unnamed>", "unnamed_%u" % i)
+                if candidate_name not in ns.enums:
+                    name = candidate_name
+                    break;
+        cname = name.replace('.', '::')
+        type_dict[normalize_class_name(name)] = cname
         if name in ns.enums:
-            print("Generator warning: constant %s (cname=%s) already exists" \
+            print("Generator warning: enum %s (cname=%s) already exists" \
                   % (name, cname))
             # sys.exit(-1)
         else:
             ns.enums[name] = []
         for item in decl[3]:
             ns.enums[name].append(item)
+
+        const_decls = decl[3]
+
+        for decl in const_decls:
+            name = decl[0]
+            self.add_const(name.replace("const ", "").strip(), decl)
 
     def add_const(self, name, decl):
         cname = name.replace('.','::')
@@ -733,12 +791,14 @@ class JSWrapperGenerator(object):
 
     def gen(self, dst_file, src_files, core_bindings):
         # step 1: scan the headers and extract classes, enums and functions
+        headers = []
         for hdr in src_files:
             decls = self.parser.parse(hdr)
             # print(hdr);
             # self.print_decls(decls);
             if len(decls) == 0:
                 continue
+            headers.append(hdr[hdr.rindex('opencv2/'):])
             for decl in decls:
                 name = decl[0]
                 type = name[:name.find(" ")]
@@ -801,7 +861,7 @@ class JSWrapperGenerator(object):
                 continue
 
             # Generate bindings for methods
-            for method_name, method in class_info.methods.iteritems():
+            for method_name, method in class_info.methods.items():
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
@@ -810,7 +870,8 @@ class JSWrapperGenerator(object):
                     for variant in method.variants:
                         args = []
                         for arg in variant.args:
-                            args.append(arg.tp)
+                            arg_type = type_dict[arg.tp] if arg.tp in type_dict else arg.tp
+                            args.append(arg_type)
                         # print('Constructor: ', class_info.name, len(variant.args))
                         args_num = len(variant.args)
                         if args_num in class_info.constructor_arg_num:
@@ -831,7 +892,7 @@ class JSWrapperGenerator(object):
                 class_bindings.append(smart_ptr_reg_template.substitute(cname=class_info.cname, name=class_info.name))
 
             # Attach external constructors
-            # for method_name, method in class_info.ext_constructors.iteritems():
+            # for method_name, method in class_info.ext_constructors.items():
                 # print("ext constructor", method_name)
             #if class_info.ext_constructors:
 
@@ -839,17 +900,17 @@ class JSWrapperGenerator(object):
 
             # Generate bindings for properties
             for property in class_info.props:
-                class_bindings.append(class_property_template.substitute(js_name=property.name, cpp_name='::'.join(
+                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
+                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
                     [class_info.cname, property.name])))
 
             dv = ''
-            base = Template("""base<$base$isPoly>""")
+            base = Template("""base<$base>""")
 
             assert len(class_info.bases) <= 1 , "multiple inheritance not supported"
 
             if len(class_info.bases) == 1:
-                dv = "," + base.substitute(base=', '.join(class_info.bases),
-                                           isPoly = " ,true" if class_info.name=="Feature2D" else "")
+                dv = "," + base.substitute(base=', '.join(class_info.bases))
 
             self.bindings.append(class_template.substitute(cpp_name=class_info.cname,
                                                            js_name=name,
@@ -889,6 +950,9 @@ class JSWrapperGenerator(object):
 
         with open(core_bindings) as f:
             ret = f.read()
+
+        header_includes = '\n'.join(['#include "{}"'.format(hdr) for hdr in headers])
+        ret = ret.replace('@INCLUDES@', header_includes)
 
         defis = '\n'.join(self.wrapper_funcs)
         ret += wrapper_codes_template.substitute(ns=wrapper_namespace, defs=defis)

@@ -184,7 +184,7 @@ Mat LDA::subspaceProject(InputArray _W, InputArray _mean, InputArray _src) {
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) d)) {
-        String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %d.", d, mean.total());
+        String error_message = format("Wrong mean shape for the given data matrix. Expected %d, but was %zu.", d, mean.total());
         CV_Error(Error::StsBadArg, error_message);
     }
     // create temporary matrices
@@ -222,7 +222,7 @@ Mat LDA::subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
     }
     // make sure mean is correct if not empty
     if(!mean.empty() && (mean.total() != (size_t) W.rows)) {
-        String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
+        String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %zu.", W.cols, mean.total());
         CV_Error(Error::StsBadArg, error_message);
     }
     // initialize temporary matrices
@@ -866,7 +866,7 @@ private:
         d = alloc_1d<double> (n);
         e = alloc_1d<double> (n);
         ort = alloc_1d<double> (n);
-        CV_TRY {
+        try {
             // Reduce to Hessenberg form.
             orthes();
             // Reduce Hessenberg to real Schur form.
@@ -884,10 +884,10 @@ private:
             // Deallocate the memory by releasing all internal working data.
             release();
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             release();
-            CV_RETHROW();
+            throw;
         }
     }
 
@@ -906,7 +906,7 @@ public:
     // National Institute of Standards and Technology (NIST).
     void compute(InputArray src, bool fallbackSymmetric)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         if(fallbackSymmetric && isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
@@ -944,7 +944,7 @@ public:
 
 void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     int type = src.type();
@@ -996,9 +996,9 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
 // Linear Discriminant Analysis implementation
 //------------------------------------------------------------------------------
 
-LDA::LDA(int num_components) : _dataAsRow(true), _num_components(num_components) { }
+LDA::LDA(int num_components) : _num_components(num_components) { }
 
-LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _dataAsRow(true),  _num_components(num_components)
+LDA::LDA(InputArrayOfArrays src, InputArray labels, int num_components) : _num_components(num_components)
 {
     this->compute(src, labels); //! compute eigenvectors and eigenvalues
 }
@@ -1076,7 +1076,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     }
     // throw error if less labels, than samples
     if (labels.size() != static_cast<size_t>(N)) {
-        String error_message = format("The number of samples must equal the number of labels. Given %d labels, %d samples. ", labels.size(), N);
+        String error_message = format("The number of samples must equal the number of labels. Given %zu labels, %d samples. ", labels.size(), N);
         CV_Error(Error::StsBadArg, error_message);
     }
     // warn if within-classes scatter matrix becomes singular

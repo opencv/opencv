@@ -126,9 +126,9 @@ Result looks like below:
 Additional Resources
 --------------------
 
--#  Video Lecture on [Face Detection and Tracking](http://www.youtube.com/watch?v=WfdYYNamHZ8)
-2.  An interesting interview regarding Face Detection by [Adam
-    Harvey](http://www.makematics.com/research/viola-jones/)
+-#  Video Lecture on [Face Detection and Tracking](https://www.youtube.com/watch?v=WfdYYNamHZ8)
+-#  An interesting interview regarding Face Detection by [Adam
+    Harvey](https://web.archive.org/web/20171204220159/http://www.makematics.com/research/viola-jones/)
 
 Exercises
 ---------

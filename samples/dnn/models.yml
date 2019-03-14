@@ -1,0 +1,129 @@
+%YAML:1.0
+
+################################################################################
+# Object detection models.
+################################################################################
+
+# OpenCV's face detection network
+opencv_fd:
+  model: "opencv_face_detector.caffemodel"
+  config: "opencv_face_detector.prototxt"
+  mean: [104, 177, 123]
+  scale: 1.0
+  width: 300
+  height: 300
+  rgb: false
+  sample: "object_detection"
+
+# YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
+# Might be used for all YOLOv2, TinyYolov2 and YOLOv3
+yolo:
+  model: "yolov3.weights"
+  config: "yolov3.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolov3.txt"
+  sample: "object_detection"
+
+tiny-yolo-voc:
+  model: "tiny-yolo-voc.weights"
+  config: "tiny-yolo-voc.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_pascal_voc.txt"
+  sample: "object_detection"
+
+# Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
+ssd_caffe:
+  model: "MobileNetSSD_deploy.caffemodel"
+  config: "MobileNetSSD_deploy.prototxt"
+  mean: [127.5, 127.5, 127.5]
+  scale: 0.007843
+  width: 300
+  height: 300
+  rgb: false
+  classes: "object_detection_classes_pascal_voc.txt"
+  sample: "object_detection"
+
+# TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
+ssd_tf:
+  model: "ssd_mobilenet_v1_coco_2017_11_17.pb"
+  config: "ssd_mobilenet_v1_coco_2017_11_17.pbtxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 300
+  height: 300
+  rgb: true
+  classes: "object_detection_classes_coco.txt"
+  sample: "object_detection"
+
+# TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
+faster_rcnn_tf:
+  model: "faster_rcnn_inception_v2_coco_2018_01_28.pb"
+  config: "faster_rcnn_inception_v2_coco_2018_01_28.pbtxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 800
+  height: 600
+  rgb: true
+  sample: "object_detection"
+
+################################################################################
+# Image classification models.
+################################################################################
+
+# SqueezeNet v1.1 from https://github.com/DeepScale/SqueezeNet
+squeezenet:
+  model: "squeezenet_v1.1.caffemodel"
+  config: "squeezenet_v1.1.prototxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 227
+  height: 227
+  rgb: false
+  classes: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
+# Googlenet from https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
+googlenet:
+  model: "bvlc_googlenet.caffemodel"
+  config: "bvlc_googlenet.prototxt"
+  mean: [104, 117, 123]
+  scale: 1.0
+  width: 224
+  height: 224
+  rgb: false
+  classes: "classification_classes_ILSVRC2012.txt"
+  sample: "classification"
+
+################################################################################
+# Semantic segmentation models.
+################################################################################
+
+# ENet road scene segmentation network from https://github.com/e-lab/ENet-training
+# Works fine for different input sizes.
+enet:
+  model: "Enet-model-best.net"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 512
+  height: 256
+  rgb: true
+  classes: "enet-classes.txt"
+  sample: "segmentation"
+
+fcn8s:
+  model: "fcn8s-heavy-pascal.caffemodel"
+  config: "fcn8s-heavy-pascal.prototxt"
+  mean: [0, 0, 0]
+  scale: 1.0
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"

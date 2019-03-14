@@ -253,24 +253,29 @@ bool TiffDecoder::readHeader()
             int wanted_channels = normalizeChannelsNumber(ncn);
             switch(bpp)
             {
+                case 1:
+                    m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
+                    break;
                 case 8:
                     m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
                     break;
                 case 16:
                     m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? wanted_channels : 1);
+                    result = true;
                     break;
-
                 case 32:
                     m_type = CV_MAKETYPE(CV_32F, photometric > 1 ? 3 : 1);
+                    result = true;
                     break;
                 case 64:
                     m_type = CV_MAKETYPE(CV_64F, photometric > 1 ? 3 : 1);
+                    result = true;
                     break;
-
-                default:
-                    result = false;
+            default:
+                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
             }
-            result = true;
         }
     }
 
@@ -355,7 +360,7 @@ bool  TiffDecoder::readData( Mat& img )
             }
             const size_t buffer_size = (bpp/bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer( buffer_size );
-            uchar* buffer = _buffer;
+            uchar* buffer = _buffer.data();
             ushort* buffer16 = (ushort*)buffer;
             float* buffer32 = (float*)buffer;
             double* buffer64 = (double*)buffer;
@@ -403,19 +408,19 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_BGRA2RGBA_8u_C4R( bstart + i*tile_width0*4, 0,
                                                              data + x*4 + img.step*(tile_height - i - 1), 0,
-                                                             cvSize(tile_width,1) );
+                                                             Size(tile_width,1) );
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2BGR_8u_C4C3R( bstart + i*tile_width0*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
-                                                             cvSize(tile_width,1), 2 );
+                                                             Size(tile_width,1), 2 );
                                     }
                                 }
                                 else
                                     icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
-                                                              cvSize(tile_width,1), 2 );
+                                                              Size(tile_width,1), 2 );
                             break;
                         }
 
@@ -440,13 +445,13 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                   (ushort*)(data + img.step*i) + x*3, 0,
-                                                                  cvSize(tile_width,1) );
+                                                                  Size(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
                                         icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
-                                                               cvSize(tile_width,1) );
+                                                               Size(tile_width,1) );
                                     }
                                     else if (ncn == 4)
                                     {
@@ -454,20 +459,20 @@ bool  TiffDecoder::readData( Mat& img )
                                         {
                                             icvCvt_BGRA2RGBA_16u_C4R(buffer16 + i*tile_width0*ncn, 0,
                                                 (ushort*)(data + img.step*i) + x * 4, 0,
-                                                cvSize(tile_width, 1));
+                                                Size(tile_width, 1));
                                         }
                                         else
                                         {
                                             icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                 (ushort*)(data + img.step*i) + x * 3, 0,
-                                                cvSize(tile_width, 1), 2);
+                                                Size(tile_width, 1), 2);
                                         }
                                     }
                                     else
                                     {
                                         icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
-                                                               cvSize(tile_width,1), 2 );
+                                                               Size(tile_width,1), 2 );
                                     }
                                 }
                                 else
@@ -482,7 +487,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x, 0,
-                                                               cvSize(tile_width,1), ncn, 2 );
+                                                               Size(tile_width,1), ncn, 2 );
                                     }
                                 }
                             }
@@ -745,12 +750,11 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     }
 
     //Settings that matter to all images
-    // defaults for now, maybe base them on params in the future
     int compression = COMPRESSION_LZW;
     int predictor = PREDICTOR_HORIZONTAL;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
-    readParam(params, TIFFTAG_COMPRESSION, compression);
+    readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
     readParam(params, TIFFTAG_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
@@ -834,7 +838,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         // row buffer, because TIFFWriteScanline modifies the original data!
         size_t scanlineSize = TIFFScanlineSize(pTiffHandle);
         AutoBuffer<uchar> _buffer(scanlineSize + 32);
-        uchar* buffer = _buffer;
+        uchar* buffer = _buffer.data();
         if (!buffer)
         {
             TIFFClose(pTiffHandle);
@@ -854,18 +858,18 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 case 3:
                 {
                     if (depth == CV_8U)
-                        icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                        icvCvt_BGR2RGB_8u_C3R( img.ptr(y), 0, buffer, 0, Size(width, 1));
                     else
-                        icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                        icvCvt_BGR2RGB_16u_C3R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, Size(width, 1));
                     break;
                 }
 
                 case 4:
                 {
                     if (depth == CV_8U)
-                        icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, cvSize(width, 1));
+                        icvCvt_BGRA2RGBA_8u_C4R( img.ptr(y), 0, buffer, 0, Size(width, 1));
                     else
-                        icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, cvSize(width, 1));
+                        icvCvt_BGRA2RGBA_16u_C4R( img.ptr<ushort>(y), 0, (ushort*)buffer, 0, Size(width, 1));
                     break;
                 }
 

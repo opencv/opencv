@@ -94,7 +94,7 @@ static MixChannelsFunc getMixchFunc(int depth)
 
 void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, const int* fromTo, size_t npairs )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( npairs == 0 )
         return;
@@ -104,7 +104,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     int depth = dst[0].depth();
 
     AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
-    const Mat** arrays = (const Mat**)(uchar*)buf;
+    const Mat** arrays = (const Mat**)(uchar*)buf.data();
     uchar** ptrs = (uchar**)(arrays + nsrcs + ndsts);
     const uchar** srcs = (const uchar**)(ptrs + nsrcs + ndsts + 1);
     uchar** dsts = (uchar**)(srcs + npairs);
@@ -237,11 +237,11 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
         dstargs[i] = dst[dst_idx];
         dstargs[i].offset += dst_cnidx * esz;
 
-        declsrc += format("DECLARE_INPUT_MAT(%d)", i);
-        decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
-        indexdecl += format("DECLARE_INDEX(%d)", i);
-        declproc += format("PROCESS_ELEM(%d)", i);
-        declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
+        declsrc += format("DECLARE_INPUT_MAT(%zu)", i);
+        decldst += format("DECLARE_OUTPUT_MAT(%zu)", i);
+        indexdecl += format("DECLARE_INDEX(%zu)", i);
+        declproc += format("PROCESS_ELEM(%zu)", i);
+        declcn += format(" -D scn%zu=%d -D dcn%zu=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
     }
 
     ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,
@@ -272,7 +272,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (npairs == 0 || fromTo == NULL)
         return;
@@ -294,7 +294,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
     CV_Assert(nsrc > 0 && ndst > 0);
     cv::AutoBuffer<Mat> _buf(nsrc + ndst);
-    Mat* buf = _buf;
+    Mat* buf = _buf.data();
     for( i = 0; i < nsrc; i++ )
         buf[i] = src.getMat(src_is_mat ? -1 : i);
     for( i = 0; i < ndst; i++ )
@@ -305,7 +305,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if (fromTo.empty())
         return;
@@ -327,7 +327,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
     CV_Assert(fromTo.size()%2 == 0 && nsrc > 0 && ndst > 0);
     cv::AutoBuffer<Mat> _buf(nsrc + ndst);
-    Mat* buf = _buf;
+    Mat* buf = _buf.data();
     for( i = 0; i < nsrc; i++ )
         buf[i] = src.getMat(src_is_mat ? -1 : i);
     for( i = 0; i < ndst; i++ )
@@ -341,8 +341,8 @@ namespace cv
 {
 static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();
@@ -379,8 +379,8 @@ static bool ipp_extractChannel(const Mat &src, Mat &dst, int channel)
 
 static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 {
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+#ifdef HAVE_IPP_IW_LL
+    CV_INSTRUMENT_REGION_IPP();
 
     int srcChannels = src.channels();
     int dstChannels = dst.channels();
@@ -419,7 +419,7 @@ static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( 0 <= coi && coi < cn );
@@ -447,7 +447,7 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);

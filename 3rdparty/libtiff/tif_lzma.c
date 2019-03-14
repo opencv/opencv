@@ -1,5 +1,3 @@
-/* $Id: tif_lzma.c,v 1.6 2016-09-17 09:18:59 erouault Exp $ */
-
 /*
  * Copyright (c) 2010, Andrey Kiselev <dron@ak4719.spb.edu>
  *
@@ -249,6 +247,7 @@ LZMAPreEncode(TIFF* tif, uint16 s)
 {
 	static const char module[] = "LZMAPreEncode";
 	LZMAState *sp = EncoderState(tif);
+	lzma_ret ret;
 
 	(void) s;
 	assert(sp != NULL);
@@ -262,7 +261,13 @@ LZMAPreEncode(TIFF* tif, uint16 s)
 			     "Liblzma cannot deal with buffers this size");
 		return 0;
 	}
-	return (lzma_stream_encoder(&sp->stream, sp->filters, sp->check) == LZMA_OK);
+	ret = lzma_stream_encoder(&sp->stream, sp->filters, sp->check);
+	if (ret != LZMA_OK) {
+		TIFFErrorExt(tif->tif_clientdata, module,
+			"Error in lzma_stream_encoder(): %s", LZMAStrerror(ret));
+		return 0;
+	}
+	return 1;
 }
 
 /*

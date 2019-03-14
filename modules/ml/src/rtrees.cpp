@@ -170,6 +170,7 @@ public:
                 double val = std::abs(w->ord_responses[w->sidx[i]]);
                 max_response = std::max(max_response, val);
             }
+            CV_Assert(fabs(max_response) > 0);
         }
 
         if( rparams.calcVarImportance )

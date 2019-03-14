@@ -58,7 +58,7 @@ namespace cv
 static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst, float low,  float high, bool L2gradient, int aperture_size)
 {
 #ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_DISABLE_PERF_CANNY_MT
     if(cv::getNumThreads()>1)
@@ -93,7 +93,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
 
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
         }
-        catch (::ipp::IwException ex)
+        catch (const ::ipp::IwException &)
         {
             return false;
         }
@@ -119,7 +119,7 @@ static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst,
 
             CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, iwSrc, iwDst, low, high, ::ipp::IwiFilterCannyParams(ippFilterSobel, kernel, norm), ippBorderRepl);
         }
-        catch (::ipp::IwException)
+        catch (const ::ipp::IwException &)
         {
             return false;
         }
@@ -139,7 +139,7 @@ template <bool useCustomDeriv>
 static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
-    CV_INSTRUMENT_REGION_OPENCL()
+    CV_INSTRUMENT_REGION_OPENCL();
 
     UMat map;
 
@@ -390,21 +390,21 @@ public:
         {
             dxMax.allocate(2 * dx.cols);
             dyMax.allocate(2 * dy.cols);
-            _dx_a = (short*)dxMax;
+            _dx_a = dxMax.data();
             _dx_n = _dx_a + dx.cols;
-            _dy_a = (short*)dyMax;
+            _dy_a = dyMax.data();
             _dy_n = _dy_a + dy.cols;
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
 #if CV_SIMD128
         AutoBuffer<int> buffer(3 * (mapstep * cn + CV_MALLOC_SIMD128));
-        _mag_p = alignPtr((int*)buffer + 1, CV_MALLOC_SIMD128);
+        _mag_p = alignPtr(buffer.data() + 1, CV_MALLOC_SIMD128);
         _mag_a = alignPtr(_mag_p + mapstep * cn, CV_MALLOC_SIMD128);
         _mag_n = alignPtr(_mag_a + mapstep * cn, CV_MALLOC_SIMD128);
 #else
         AutoBuffer<int> buffer(3 * (mapstep * cn));
-        _mag_p = (int*)buffer + 1;
+        _mag_p = buffer.data() + 1;
         _mag_a = _mag_p + mapstep * cn;
         _mag_n = _mag_a + mapstep * cn;
 #endif
@@ -942,7 +942,7 @@ void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.depth() == CV_8U );
 
@@ -1051,7 +1051,7 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 bool L2gradient )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_dx.dims() == 2);
     CV_Assert(_dx.type() == CV_16SC1 || _dx.type() == CV_16SC3);

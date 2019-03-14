@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
@@ -661,7 +662,7 @@ public:
 
     virtual void operator() (const Range & range) const CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION_IPP()
+        CV_INSTRUMENT_REGION_IPP();
 
         if(!m_ok)
             return;
@@ -793,11 +794,11 @@ namespace cv
             img.swapHandle();
 #endif
         }
-        catch (ivx::RuntimeError & e)
+        catch (const ivx::RuntimeError & e)
         {
             VX_DbgThrow(e.what());
         }
-        catch (ivx::WrapperError & e)
+        catch (const ivx::WrapperError & e)
         {
             VX_DbgThrow(e.what());
         }
@@ -813,13 +814,17 @@ namespace cv
 {
 static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float** ranges, bool uniform, bool accumulate)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
 #if IPP_VERSION_X100 < 201801
     // No SSE42 optimization for uniform 32f
     if(uniform && image.depth() == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
         return false;
 #endif
+
+    // IPP_DISABLE_HISTOGRAM - https://github.com/opencv/opencv/issues/11544
+    if (uniform && (ranges[0][1] - ranges[0][0]) != histSize)
+        return false;
 
     Mat ihist = hist;
     if(accumulate)
@@ -858,7 +863,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                    InputArray _mask, OutputArray _hist, int dims, const int* histSize,
                    const float** ranges, bool uniform, bool accumulate )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OVX_RUN(
         images && histSize &&
@@ -1119,7 +1124,7 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%zu -D kercn=%d -D T=%s%s",
                           BINS, compunits, wgs, kercn,
                           kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
                           _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
@@ -1168,7 +1173,7 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                InputArray _mask, SparseMat& hist, int dims, const int* histSize,
                const float** ranges, bool uniform, bool accumulate )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat mask = _mask.getMat();
     calcHist( images, nimages, channels, mask, hist, dims, histSize,
@@ -1182,7 +1187,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
                    const std::vector<float>& ranges,
                    bool accumulate )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
                channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
@@ -1515,7 +1520,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           InputArray _hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat hist = _hist.getMat();
     std::vector<uchar*> ptrs;
@@ -1684,7 +1689,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const SparseMat& hist, OutputArray _backProject,
                           const float** ranges, double scale, bool uniform )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;
@@ -1864,7 +1869,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
                           const std::vector<float>& ranges,
                           double scale )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     if (hist.dims() <= 2)
     {
 #ifdef HAVE_OPENCL
@@ -1919,14 +1924,14 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
 
 double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat H1 = _H1.getMat(), H2 = _H2.getMat();
     const Mat* arrays[] = {&H1, &H2, 0};
     Mat planes[2];
     NAryMatIterator it(arrays, planes);
     double result = 0;
-    int j, len = (int)it.size;
+    int j;
 
     CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
@@ -1934,15 +1939,11 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 
     CV_Assert( it.planes[0].isContinuous() && it.planes[1].isContinuous() );
 
-#if CV_SSE2
-    bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-#endif
-
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         const float* h1 = it.planes[0].ptr<float>();
         const float* h2 = it.planes[1].ptr<float>();
-        len = it.planes[0].rows*it.planes[0].cols*H1.channels();
+        const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
         j = 0;
 
         if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT))
@@ -1957,50 +1958,63 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_CORREL )
         {
-            #if CV_SSE2
-            if (haveSIMD)
+#if CV_SIMD_64F
+            v_float64 v_s1 = vx_setzero_f64();
+            v_float64 v_s2 = vx_setzero_f64();
+            v_float64 v_s11 = vx_setzero_f64();
+            v_float64 v_s12 = vx_setzero_f64();
+            v_float64 v_s22 = vx_setzero_f64();
+            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
             {
-                __m128d v_s1 = _mm_setzero_pd(), v_s2 = v_s1;
-                __m128d v_s11 = v_s1, v_s22 = v_s1, v_s12 = v_s1;
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
 
-                for ( ; j <= len - 4; j += 4)
-                {
-                    __m128 v_a = _mm_loadu_ps(h1 + j);
-                    __m128 v_b = _mm_loadu_ps(h2 + j);
+                // 0-1
+                v_float64 v_ad = v_cvt_f64(v_a);
+                v_float64 v_bd = v_cvt_f64(v_b);
+                v_s12 = v_muladd(v_ad, v_bd, v_s12);
+                v_s11 = v_muladd(v_ad, v_ad, v_s11);
+                v_s22 = v_muladd(v_bd, v_bd, v_s22);
+                v_s1 += v_ad;
+                v_s2 += v_bd;
 
-                    // 0-1
-                    __m128d v_ad = _mm_cvtps_pd(v_a);
-                    __m128d v_bd = _mm_cvtps_pd(v_b);
-                    v_s12 = _mm_add_pd(v_s12, _mm_mul_pd(v_ad, v_bd));
-                    v_s11 = _mm_add_pd(v_s11, _mm_mul_pd(v_ad, v_ad));
-                    v_s22 = _mm_add_pd(v_s22, _mm_mul_pd(v_bd, v_bd));
-                    v_s1 = _mm_add_pd(v_s1, v_ad);
-                    v_s2 = _mm_add_pd(v_s2, v_bd);
-
-                    // 2-3
-                    v_ad = _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_a), 8)));
-                    v_bd = _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_b), 8)));
-                    v_s12 = _mm_add_pd(v_s12, _mm_mul_pd(v_ad, v_bd));
-                    v_s11 = _mm_add_pd(v_s11, _mm_mul_pd(v_ad, v_ad));
-                    v_s22 = _mm_add_pd(v_s22, _mm_mul_pd(v_bd, v_bd));
-                    v_s1 = _mm_add_pd(v_s1, v_ad);
-                    v_s2 = _mm_add_pd(v_s2, v_bd);
-                }
-
-                double CV_DECL_ALIGNED(16) ar[10];
-                _mm_store_pd(ar, v_s12);
-                _mm_store_pd(ar + 2, v_s11);
-                _mm_store_pd(ar + 4, v_s22);
-                _mm_store_pd(ar + 6, v_s1);
-                _mm_store_pd(ar + 8, v_s2);
-
-                s12 += ar[0] + ar[1];
-                s11 += ar[2] + ar[3];
-                s22 += ar[4] + ar[5];
-                s1 += ar[6] + ar[7];
-                s2 += ar[8] + ar[9];
+                // 2-3
+                v_ad = v_cvt_f64_high(v_a);
+                v_bd = v_cvt_f64_high(v_b);
+                v_s12 = v_muladd(v_ad, v_bd, v_s12);
+                v_s11 = v_muladd(v_ad, v_ad, v_s11);
+                v_s22 = v_muladd(v_bd, v_bd, v_s22);
+                v_s1 += v_ad;
+                v_s2 += v_bd;
             }
-            #endif
+            s12 += v_reduce_sum(v_s12);
+            s11 += v_reduce_sum(v_s11);
+            s22 += v_reduce_sum(v_s22);
+            s1 += v_reduce_sum(v_s1);
+            s2 += v_reduce_sum(v_s2);
+#elif CV_SIMD && 0 //Disable vectorization for CV_COMP_CORREL if f64 is unsupported due to low precision
+            v_float32 v_s1 = vx_setzero_f32();
+            v_float32 v_s2 = vx_setzero_f32();
+            v_float32 v_s11 = vx_setzero_f32();
+            v_float32 v_s12 = vx_setzero_f32();
+            v_float32 v_s22 = vx_setzero_f32();
+            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            {
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
+
+                v_s12 = v_muladd(v_a, v_b, v_s12);
+                v_s11 = v_muladd(v_a, v_a, v_s11);
+                v_s22 = v_muladd(v_b, v_b, v_s22);
+                v_s1 += v_a;
+                v_s2 += v_b;
+            }
+            s12 += v_reduce_sum(v_s12);
+            s11 += v_reduce_sum(v_s11);
+            s22 += v_reduce_sum(v_s22);
+            s1 += v_reduce_sum(v_s1);
+            s2 += v_reduce_sum(v_s2);
+#endif
             for( ; j < len; j++ )
             {
                 double a = h1[j];
@@ -2015,67 +2029,68 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         }
         else if( method == CV_COMP_INTERSECT )
         {
-            #if CV_NEON
-            float32x4_t v_result = vdupq_n_f32(0.0f);
-            for( ; j <= len - 4; j += 4 )
-                v_result = vaddq_f32(v_result, vminq_f32(vld1q_f32(h1 + j), vld1q_f32(h2 + j)));
-            float CV_DECL_ALIGNED(16) ar[4];
-            vst1q_f32(ar, v_result);
-            result += ar[0] + ar[1] + ar[2] + ar[3];
-            #elif CV_SSE2
-            if (haveSIMD)
+#if CV_SIMD_64F
+            v_float64 v_result = vx_setzero_f64();
+            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
             {
-                __m128d v_result = _mm_setzero_pd();
-                for ( ; j <= len - 4; j += 4)
-                {
-                    __m128 v_src = _mm_min_ps(_mm_loadu_ps(h1 + j),
-                                              _mm_loadu_ps(h2 + j));
-                    v_result = _mm_add_pd(v_result, _mm_cvtps_pd(v_src));
-                    v_src = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_src), 8));
-                    v_result = _mm_add_pd(v_result, _mm_cvtps_pd(v_src));
-                }
-
-                double CV_DECL_ALIGNED(16) ar[2];
-                _mm_store_pd(ar, v_result);
-                result += ar[0] + ar[1];
+                v_float32 v_src = v_min(vx_load(h1 + j), vx_load(h2 + j));
+                v_result += v_cvt_f64(v_src) + v_cvt_f64_high(v_src);
             }
-            #endif
+            result += v_reduce_sum(v_result);
+#elif CV_SIMD
+            v_float32 v_result = vx_setzero_f32();
+            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            {
+                v_float32 v_src = v_min(vx_load(h1 + j), vx_load(h2 + j));
+                v_result += v_src;
+            }
+            result += v_reduce_sum(v_result);
+#endif
             for( ; j < len; j++ )
                 result += std::min(h1[j], h2[j]);
         }
         else if( method == CV_COMP_BHATTACHARYYA )
         {
-            #if CV_SSE2
-            if (haveSIMD)
+#if CV_SIMD_64F
+            v_float64 v_s1 = vx_setzero_f64();
+            v_float64 v_s2 = vx_setzero_f64();
+            v_float64 v_result = vx_setzero_f64();
+            for ( ; j <= len - v_float32::nlanes; j += v_float32::nlanes)
             {
-                __m128d v_s1 = _mm_setzero_pd(), v_s2 = v_s1, v_result = v_s1;
-                for ( ; j <= len - 4; j += 4)
-                {
-                    __m128 v_a = _mm_loadu_ps(h1 + j);
-                    __m128 v_b = _mm_loadu_ps(h2 + j);
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
 
-                    __m128d v_ad = _mm_cvtps_pd(v_a);
-                    __m128d v_bd = _mm_cvtps_pd(v_b);
-                    v_s1 = _mm_add_pd(v_s1, v_ad);
-                    v_s2 = _mm_add_pd(v_s2, v_bd);
-                    v_result = _mm_add_pd(v_result, _mm_sqrt_pd(_mm_mul_pd(v_ad, v_bd)));
+                v_float64 v_ad = v_cvt_f64(v_a);
+                v_float64 v_bd = v_cvt_f64(v_b);
+                v_s1 += v_ad;
+                v_s2 += v_bd;
+                v_result += v_sqrt(v_ad * v_bd);
 
-                    v_ad = _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_a), 8)));
-                    v_bd = _mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_b), 8)));
-                    v_s1 = _mm_add_pd(v_s1, v_ad);
-                    v_s2 = _mm_add_pd(v_s2, v_bd);
-                    v_result = _mm_add_pd(v_result, _mm_sqrt_pd(_mm_mul_pd(v_ad, v_bd)));
-                }
-
-                double CV_DECL_ALIGNED(16) ar[6];
-                _mm_store_pd(ar, v_s1);
-                _mm_store_pd(ar + 2, v_s2);
-                _mm_store_pd(ar + 4, v_result);
-                s1 += ar[0] + ar[1];
-                s2 += ar[2] + ar[3];
-                result += ar[4] + ar[5];
+                v_ad = v_cvt_f64_high(v_a);
+                v_bd = v_cvt_f64_high(v_b);
+                v_s1 += v_ad;
+                v_s2 += v_bd;
+                v_result += v_sqrt(v_ad * v_bd);
             }
-            #endif
+            s1 += v_reduce_sum(v_s1);
+            s2 += v_reduce_sum(v_s2);
+            result += v_reduce_sum(v_result);
+#elif CV_SIMD && 0 //Disable vectorization for CV_COMP_BHATTACHARYYA if f64 is unsupported due to low precision
+            v_float32 v_s1 = vx_setzero_f32();
+            v_float32 v_s2 = vx_setzero_f32();
+            v_float32 v_result = vx_setzero_f32();
+            for (; j <= len - v_float32::nlanes; j += v_float32::nlanes)
+            {
+                v_float32 v_a = vx_load(h1 + j);
+                v_float32 v_b = vx_load(h2 + j);
+                v_s1 += v_a;
+                v_s2 += v_b;
+                v_result += v_sqrt(v_a * v_b);
+            }
+            s1 += v_reduce_sum(v_s1);
+            s2 += v_reduce_sum(v_s2);
+            result += v_reduce_sum(v_result);
+#endif
             for( ; j < len; j++ )
             {
                 double a = h1[j];
@@ -2127,7 +2142,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 
 double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double result = 0;
     int i, dims = H1.dims();
@@ -2441,7 +2456,7 @@ cvGetMinMaxHistValue( const CvHistogram* hist,
     if( !CV_IS_SPARSE_HIST(hist) )
     {
         CvMat mat;
-        CvPoint minPt, maxPt;
+        CvPoint minPt = {0, 0}, maxPt = {0, 0};
 
         cvGetMat( hist->bins, &mat, 0, 1 );
         cvMinMaxLoc( &mat, &minVal, &maxVal, &minPt, &maxPt );
@@ -2965,7 +2980,7 @@ cvCalcArrBackProjectPatch( CvArr** arr, CvArr* dst, CvSize patch_size, CvHistogr
     CvMat dststub, *dstmat;
     int i, dims;
     int x, y;
-    CvSize size;
+    cv::Size size;
 
     if( !CV_IS_HIST(hist))
         CV_Error( CV_StsBadArg, "Bad histogram pointer" );
@@ -3249,7 +3264,7 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
     int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%zu -D kercn=%d -D T=%s%s",
                           BINS, compunits, wgs, kercn,
                           kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
                           _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
@@ -3309,11 +3324,11 @@ static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
         srcImage.swapHandle(); dstImage.swapHandle();
 #endif
     }
-    catch (RuntimeError & e)
+    catch (const RuntimeError & e)
     {
         VX_DbgThrow(e.what());
     }
-    catch (WrapperError & e)
+    catch (const WrapperError & e)
     {
         VX_DbgThrow(e.what());
     }
@@ -3325,7 +3340,7 @@ static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
 
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.type() == CV_8UC1 );
 
@@ -3382,6 +3397,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
         lutBody(heightRange);
 }
 
+#if 0
 // ----------------------------------------------------------------------
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
@@ -3533,5 +3549,6 @@ static void icvWriteHist( CvFileStorage* fs, const char* name,
 
 CvType hist_type( CV_TYPE_NAME_HIST, icvIsHist, (CvReleaseFunc)cvReleaseHist,
                   icvReadHist, icvWriteHist, (CvCloneFunc)icvCloneHist );
+#endif
 
 /* End of file. */

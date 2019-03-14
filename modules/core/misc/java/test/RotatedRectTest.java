@@ -1,10 +1,15 @@
 package org.opencv.test.core;
 
+import org.opencv.core.CvType;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
+import org.opencv.core.MatOfRotatedRect;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class RotatedRectTest extends OpenCVTestCase {
 
@@ -188,4 +193,21 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertEquals(expected, actual);
     }
 
+    public void testMatOfRotatedRect() {
+        RotatedRect a = new RotatedRect(new Point(1,2),new Size(3,4),5.678);
+        RotatedRect b = new RotatedRect(new Point(9,8),new Size(7,6),5.432);
+        MatOfRotatedRect m = new MatOfRotatedRect(a,b,a,b,a,b,a,b);
+        assertEquals(m.rows(), 8);
+        assertEquals(m.cols(), 1);
+        assertEquals(m.type(), CvType.CV_32FC(5));
+        RotatedRect[] arr = m.toArray();
+        assertEquals(arr[2].angle, a.angle, EPS);
+        assertEquals(arr[3].center.x, b.center.x);
+        assertEquals(arr[3].size.width, b.size.width);
+        List<RotatedRect> li = m.toList();
+        assertEquals(li.size(), 8);
+        RotatedRect rr = li.get(7);
+        assertEquals(rr.angle, b.angle, EPS);
+        assertEquals(rr.center.y, b.center.y);
+    }
 }

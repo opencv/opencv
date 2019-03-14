@@ -8,6 +8,11 @@
 #include "opencl_kernels_core.hpp"
 #include "precomp.hpp"
 
+#undef HAVE_IPP
+#undef CV_IPP_RUN_FAST
+#define CV_IPP_RUN_FAST(f, ...)
+#undef CV_IPP_RUN
+#define CV_IPP_RUN(c, f, ...)
 
 /*************************************************************************************************\
                                         Matrix Operations
@@ -47,7 +52,7 @@ void cv::swap( Mat& a, Mat& b )
 
 void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if( nsrc == 0 || !src )
     {
@@ -75,7 +80,7 @@ void cv::hconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src[] = {src1.getMat(), src2.getMat()};
     hconcat(src, 2, dst);
@@ -83,7 +88,7 @@ void cv::hconcat(InputArray src1, InputArray src2, OutputArray dst)
 
 void cv::hconcat(InputArray _src, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     std::vector<Mat> src;
     _src.getMatVector(src);
@@ -120,7 +125,7 @@ void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
 
 void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src[] = {src1.getMat(), src2.getMat()};
     vconcat(src, 2, dst);
@@ -128,7 +133,7 @@ void cv::vconcat(InputArray src1, InputArray src2, OutputArray dst)
 
 void cv::vconcat(InputArray _src, OutputArray dst)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     std::vector<Mat> src;
     _src.getMatVector(src);
@@ -179,7 +184,7 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _m.dims() <= 2 );
 
@@ -226,7 +231,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
 cv::Scalar cv::trace( InputArray _m )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = _m.getMat();
     CV_Assert( m.dims <= 2 );
@@ -423,7 +428,7 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 #ifdef HAVE_IPP
 static bool ipp_transpose( Mat &src, Mat &dst )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     int type = src.type();
     typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
@@ -492,7 +497,7 @@ static bool ipp_transpose( Mat &src, Mat &dst )
 
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
@@ -540,7 +545,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
 
 void cv::completeSymm( InputOutputArray _m, bool LtoR )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = _m.getMat();
     size_t step = m.step, esz = m.elemSize();
@@ -606,7 +611,7 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
     Size size = srcmat.size();
     size.width *= srcmat.channels();
     AutoBuffer<WT> buffer(size.width);
-    WT* buf = buffer;
+    WT* buf = buffer.data();
     ST* dst = dstmat.ptr<ST>();
     const T* src = srcmat.ptr<T>();
     size_t srcstep = srcmat.step/sizeof(src[0]);
@@ -892,7 +897,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             tileHeight = min(tileHeight, defDev.localMemSize() / buf_cols / CV_ELEM_SIZE(CV_MAKETYPE(wdepth, cn)) / maxItemInGroupCount);
         }
         char cvt[3][40];
-        cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%d -D %s -D dim=1"
+        cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%zu -D %s -D dim=1"
                                             " -D cn=%d -D ddepth=%d"
                                             " -D srcT=%s -D bufT=%s -D dstT=%s"
                                             " -D convertToWT=%s -D convertToBufT=%s -D convertToDT=%s%s",
@@ -964,7 +969,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.dims() <= 2 );
     int op0 = op;
@@ -1125,7 +1130,6 @@ namespace cv
 template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
-    T* bptr;
     int n, len;
     bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
@@ -1138,7 +1142,7 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
         n = src.cols, len = src.rows;
         buf.allocate(len);
     }
-    bptr = (T*)buf;
+    T* bptr = buf.data();
 
     for( int i = 0; i < n; i++ )
     {
@@ -1197,7 +1201,7 @@ static IppSortFunc getSortFunc(int depth, bool sortDescending)
 
 static bool ipp_sort(const Mat& src, Mat& dst, int flags)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
     bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
@@ -1223,7 +1227,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
 
         for(int i = 0; i < dst.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)dst.ptr(i), dst.cols, buffer.data()) < 0)
                 return false;
         }
     }
@@ -1248,7 +1252,7 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
             dstSub = Mat(dst, subRect);
             srcSub.copyTo(row);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadix_I, (void*)row.ptr(), dst.rows, buffer.data()) < 0)
                 return false;
 
             row = row.reshape(1, dstSub.rows);
@@ -1286,8 +1290,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
         buf.allocate(len);
         ibuf.allocate(len);
     }
-    T* bptr = (T*)buf;
-    int* _iptr = (int*)ibuf;
+    T* bptr = buf.data();
+    int* _iptr = ibuf.data();
 
     for( int i = 0; i < n; i++ )
     {
@@ -1343,7 +1347,7 @@ static IppSortIndexFunc getSortIndexFunc(int depth, bool sortDescending)
 
 static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
     bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
@@ -1365,7 +1369,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
 
         for(int i = 0; i < src.rows; i++)
         {
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(i), (Ipp32s)src.step[1], (Ipp32s*)dst.ptr(i), src.cols, buffer.data()) < 0)
                 return false;
         }
     }
@@ -1388,7 +1392,7 @@ static bool ipp_sortIdx( const Mat& src, Mat& dst, int flags )
             subRect.x = i;
             dstSub = Mat(dst, subRect);
 
-            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer) < 0)
+            if(CV_INSTRUMENT_FUN_IPP(ippsSortRadixIndex, (const void*)src.ptr(0, i), srcStep, (Ipp32s*)dstRow.ptr(), src.rows, buffer.data()) < 0)
                 return false;
 
             dstRow = dstRow.reshape(1, dstSub.rows);
@@ -1405,7 +1409,7 @@ typedef void (*SortFunc)(const Mat& src, Mat& dst, int flags);
 
 void cv::sort( InputArray _src, OutputArray _dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
@@ -1426,7 +1430,7 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
 
 void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 && src.channels() == 1 );

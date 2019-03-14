@@ -3,27 +3,26 @@ Introduction {#intro}
 
 OpenCV (Open Source Computer Vision Library: <http://opencv.org>) is an open-source BSD-licensed
 library that includes several hundreds of computer vision algorithms. The document describes the
-so-called OpenCV 2.x API, which is essentially a C++ API, as opposite to the C-based OpenCV 1.x API.
-The latter is described in opencv1x.pdf.
+so-called OpenCV 2.x API, which is essentially a C++ API, as opposed to the C-based OpenCV 1.x API
+(C API is deprecated and not tested with "C" compiler since OpenCV 2.4 releases)
 
 OpenCV has a modular structure, which means that the package includes several shared or static
 libraries. The following modules are available:
 
--   @ref core - a compact module defining basic data structures, including the dense
+-   @ref core (**core**) - a compact module defining basic data structures, including the dense
     multi-dimensional array Mat and basic functions used by all other modules.
--   @ref imgproc - an image processing module that includes linear and non-linear image filtering,
+-   @ref imgproc (**imgproc**) - an image processing module that includes linear and non-linear image filtering,
     geometrical image transformations (resize, affine and perspective warping, generic table-based
     remapping), color space conversion, histograms, and so on.
--   **video** - a video analysis module that includes motion estimation, background subtraction,
+-   @ref video (**video**) - a video analysis module that includes motion estimation, background subtraction,
     and object tracking algorithms.
--   **calib3d** - basic multiple-view geometry algorithms, single and stereo camera calibration,
+-   @ref calib3d (**calib3d**) - basic multiple-view geometry algorithms, single and stereo camera calibration,
     object pose estimation, stereo correspondence algorithms, and elements of 3D reconstruction.
--   **features2d** - salient feature detectors, descriptors, and descriptor matchers.
--   **objdetect** - detection of objects and instances of the predefined classes (for example,
+-   @ref features2d (**features2d**) - salient feature detectors, descriptors, and descriptor matchers.
+-   @ref objdetect (**objdetect**) - detection of objects and instances of the predefined classes (for example,
     faces, eyes, mugs, people, cars, and so on).
--   **highgui** - an easy-to-use interface to simple UI capabilities.
--   @ref videoio - an easy-to-use interface to video capturing and video codecs.
--   **gpu** - GPU-accelerated algorithms from different OpenCV modules.
+-   @ref highgui (**highgui**) - an easy-to-use interface to simple UI capabilities.
+-   @ref videoio (**videoio**) - an easy-to-use interface to video capturing and video codecs.
 -   ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and
     others.
 
@@ -35,36 +34,37 @@ API Concepts
 
 ### cv Namespace
 
-All the OpenCV classes and functions are placed into the cv namespace. Therefore, to access this
-functionality from your code, use the cv:: specifier or using namespace cv; directive:
-@code
+All the OpenCV classes and functions are placed into the `cv` namespace. Therefore, to access this
+functionality from your code, use the `cv::` specifier or `using namespace cv;` directive:
+
+```.cpp
 #include "opencv2/core.hpp"
 ...
-cv::Mat H = cv::findHomography(points1, points2, CV_RANSAC, 5);
+cv::Mat H = cv::findHomography(points1, points2, cv::RANSAC, 5);
 ...
-@endcode
+```
 or :
-~~~
+```.cpp
     #include "opencv2/core.hpp"
     using namespace cv;
     ...
-    Mat H = findHomography(points1, points2, CV_RANSAC, 5 );
+    Mat H = findHomography(points1, points2, RANSAC, 5 );
     ...
-~~~
+```
 Some of the current or future OpenCV external names may conflict with STL or other libraries. In
 this case, use explicit namespace specifiers to resolve the name conflicts:
-@code
+```.cpp
     Mat a(100, 100, CV_32F);
     randu(a, Scalar::all(1), Scalar::all(std::rand()));
     cv::log(a, a);
     a /= std::log(2.);
-@endcode
+```
 
 ### Automatic Memory Management
 
 OpenCV handles all the memory automatically.
 
-First of all, std::vector, Mat, and other data structures used by the functions and methods have
+First of all, std::vector, cv::Mat, and other data structures used by the functions and methods have
 destructors that deallocate the underlying memory buffers when needed. This means that the
 destructors do not always deallocate the buffers as in case of Mat. They take into account possible
 data sharing. A destructor decrements the reference counter associated with the matrix data buffer.
@@ -73,7 +73,7 @@ structures refer to the same buffer. Similarly, when a Mat instance is copied, n
 really copied. Instead, the reference counter is incremented to memorize that there is another owner
 of the same data. There is also the Mat::clone method that creates a full copy of the matrix data.
 See the example below:
-@code
+```.cpp
     // create a big 8Mb matrix
     Mat A(1000, 1000, CV_64F);
 
@@ -98,24 +98,24 @@ See the example below:
     // finally, make a full copy of C. As a result, the big modified
     // matrix will be deallocated, since it is not referenced by anyone
     C = C.clone();
-@endcode
+```
 You see that the use of Mat and other basic structures is simple. But what about high-level classes
 or even user data types created without taking automatic memory management into account? For them,
-OpenCV offers the Ptr template class that is similar to std::shared\_ptr from C++11. So, instead of
+OpenCV offers the cv::Ptr template class that is similar to std::shared_ptr from C++11. So, instead of
 using plain pointers:
-@code
+```.cpp
     T* ptr = new T(...);
-@endcode
+```
 you can use:
-@code
+```.cpp
     Ptr<T> ptr(new T(...));
-@endcode
+```
 or:
-@code
+```.cpp
     Ptr<T> ptr = makePtr<T>(...);
-@endcode
-Ptr\<T\> encapsulates a pointer to a T instance and a reference counter associated with the pointer.
-See the Ptr description for details.
+```
+`Ptr<T>` encapsulates a pointer to a T instance and a reference counter associated with the pointer.
+See the cv::Ptr description for details.
 
 ### Automatic Allocation of the Output Data
 
@@ -126,7 +126,7 @@ size and type of the output arrays are determined from the size and type of inpu
 the functions take extra parameters that help to figure out the output array properties.
 
 Example:
-@code
+```.cpp
     #include "opencv2/imgproc.hpp"
     #include "opencv2/highgui.hpp"
 
@@ -138,7 +138,7 @@ Example:
         if(!cap.isOpened()) return -1;
 
         Mat frame, edges;
-        namedWindow("edges",1);
+        namedWindow("edges", WINDOW_AUTOSIZE);
         for(;;)
         {
             cap >> frame;
@@ -150,11 +150,11 @@ Example:
         }
         return 0;
     }
-@endcode
-The array frame is automatically allocated by the \>\> operator since the video frame resolution and
+```
+The array frame is automatically allocated by the `>>` operator since the video frame resolution and
 the bit-depth is known to the video capturing module. The array edges is automatically allocated by
 the cvtColor function. It has the same size and the bit-depth as the input array. The number of
-channels is 1 because the color conversion code COLOR\_BGR2GRAY is passed, which means a color to
+channels is 1 because the color conversion code cv::COLOR_BGR2GRAY is passed, which means a color to
 grayscale conversion. Note that frame and edges are allocated only once during the first execution
 of the loop body since all the next video frames have the same resolution. If you somehow change the
 video resolution, the arrays are automatically reallocated.
@@ -184,11 +184,11 @@ within the 0..255 range:
 \f[I(x,y)= \min ( \max (\textrm{round}(r), 0), 255)\f]
 
 Similar rules are applied to 8-bit signed, 16-bit signed and unsigned types. This semantics is used
-everywhere in the library. In C++ code, it is done using the saturate\_cast\<\> functions that
+everywhere in the library. In C++ code, it is done using the `cv::saturate_cast<>` functions that
 resemble standard C++ cast operations. See below the implementation of the formula provided above:
-@code
+```.cpp
     I.at<uchar>(y, x) = saturate_cast<uchar>(r);
-@endcode
+```
 where cv::uchar is an OpenCV 8-bit unsigned integer type. In the optimized SIMD code, such SSE2
 instructions as paddusb, packuswb, and so on are used. They help achieve exactly the same behavior
 as in C++ code.
@@ -206,7 +206,7 @@ Because of this and also to simplify development of bindings for other languages
 Matlab that do not have templates at all or have limited template capabilities, the current OpenCV
 implementation is based on polymorphism and runtime dispatching over templates. In those places
 where runtime dispatching would be too slow (like pixel access operators), impossible (generic
-Ptr\<\> implementation), or just very inconvenient (saturate\_cast\<\>()) the current implementation
+`cv::Ptr<>` implementation), or just very inconvenient (`cv::saturate_cast<>()`) the current implementation
 introduces small template classes, methods, and functions. Anywhere else in the current OpenCV
 version the use of templates is limited.
 
@@ -223,25 +223,25 @@ is, array elements should have one of the following types:
 -   a tuple of several elements where all elements have the same type (one of the above). An array
     whose elements are such tuples, are called multi-channel arrays, as opposite to the
     single-channel arrays, whose elements are scalar values. The maximum possible number of
-    channels is defined by the CV\_CN\_MAX constant, which is currently set to 512.
+    channels is defined by the #CV_CN_MAX constant, which is currently set to 512.
 
 For these basic types, the following enumeration is applied:
-@code
+```.cpp
     enum { CV_8U=0, CV_8S=1, CV_16U=2, CV_16S=3, CV_32S=4, CV_32F=5, CV_64F=6 };
-@endcode
+```
 Multi-channel (n-channel) types can be specified using the following options:
 
--   CV_8UC1 ... CV_64FC4 constants (for a number of channels from 1 to 4)
+-   #CV_8UC1 ... #CV_64FC4 constants (for a number of channels from 1 to 4)
 -   CV_8UC(n) ... CV_64FC(n) or CV_MAKETYPE(CV_8U, n) ... CV_MAKETYPE(CV_64F, n) macros when
     the number of channels is more than 4 or unknown at the compilation time.
 
-@note `CV_32FC1 == CV_32F, CV_32FC2 == CV_32FC(2) == CV_MAKETYPE(CV_32F, 2)`, and
-`CV_MAKETYPE(depth, n) == ((depth&7) + ((n-1)<<3)``. This means that the constant type is formed from the
+@note `#CV_32FC1 == #CV_32F, #CV_32FC2 == #CV_32FC(2) == #CV_MAKETYPE(CV_32F, 2)`, and
+`#CV_MAKETYPE(depth, n) == ((depth&7) + ((n-1)<<3)`. This means that the constant type is formed from the
 depth, taking the lowest 3 bits, and the number of channels minus 1, taking the next
-`log2(CV_CN_MAX)`` bits.
+`log2(CV_CN_MAX)` bits.
 
 Examples:
-@code
+```.cpp
     Mat mtx(3, 3, CV_32F); // make a 3x3 floating-point matrix
     Mat cmtx(10, 1, CV_64FC2); // make a 10x1 2-channel floating-point
                                // matrix (10-element complex vector)
@@ -250,7 +250,7 @@ Examples:
     Mat grayscale(image.size(), CV_MAKETYPE(image.depth(), 1)); // make a 1-channel image of
                                                                 // the same size and same
                                                                 // channel type as img
-@endcode
+```
 Arrays with more complex elements cannot be constructed or processed using OpenCV. Furthermore, each
 function or method can handle only a subset of all possible array types. Usually, the more complex
 the algorithm is, the smaller the supported subset of formats is. See below typical examples of such
@@ -270,13 +270,13 @@ extended in future based on user requests.
 
 Many OpenCV functions process dense 2-dimensional or multi-dimensional numerical arrays. Usually,
 such functions take cppMat as parameters, but in some cases it's more convenient to use
-std::vector\<\> (for a point set, for example) or Matx\<\> (for 3x3 homography matrix and such). To
+`std::vector<>` (for a point set, for example) or `cv::Matx<>` (for 3x3 homography matrix and such). To
 avoid many duplicates in the API, special "proxy" classes have been introduced. The base "proxy"
-class is InputArray. It is used for passing read-only arrays on a function input. The derived from
-InputArray class OutputArray is used to specify an output array for a function. Normally, you should
+class is cv::InputArray. It is used for passing read-only arrays on a function input. The derived from
+InputArray class cv::OutputArray is used to specify an output array for a function. Normally, you should
 not care of those intermediate types (and you should not declare variables of those types
 explicitly) - it will all just work automatically. You can assume that instead of
-InputArray/OutputArray you can always use Mat, std::vector\<\>, Matx\<\>, Vec\<\> or Scalar. When a
+InputArray/OutputArray you can always use `Mat`, `std::vector<>`, `cv::Matx<>`, `cv::Vec<>` or `cv::Scalar`. When a
 function has an optional input or output array, and you do not have or do not want one, pass
 cv::noArray().
 
@@ -291,28 +291,29 @@ The exceptions can be instances of the cv::Exception class or its derivatives. I
 cv::Exception is a derivative of std::exception. So it can be gracefully handled in the code using
 other standard C++ library components.
 
-The exception is typically thrown either using the CV\_Error(errcode, description) macro, or its
-printf-like CV\_Error\_(errcode, printf-spec, (printf-args)) variant, or using the
-CV\_Assert(condition) macro that checks the condition and throws an exception when it is not
-satisfied. For performance-critical code, there is CV\_DbgAssert(condition) that is only retained in
+The exception is typically thrown either using the `#CV_Error(errcode, description)` macro, or its
+printf-like `#CV_Error_(errcode, (printf-spec, printf-args))` variant, or using the
+#CV_Assert(condition) macro that checks the condition and throws an exception when it is not
+satisfied. For performance-critical code, there is #CV_DbgAssert(condition) that is only retained in
 the Debug configuration. Due to the automatic memory management, all the intermediate buffers are
 automatically deallocated in case of a sudden error. You only need to add a try statement to catch
 exceptions, if needed: :
-@code
+```.cpp
     try
     {
         ... // call OpenCV
     }
-    catch( cv::Exception& e )
+    catch (const cv::Exception& e)
     {
         const char* err_msg = e.what();
         std::cout << "exception caught: " << err_msg << std::endl;
     }
-@endcode
+```
 
 ### Multi-threading and Re-enterability
 
-The current OpenCV implementation is fully re-enterable. That is, the same function, the same
-*constant* method of a class instance, or the same *non-constant* method of different class
-instances can be called from different threads. Also, the same cv::Mat can be used in different
-threads because the reference-counting operations use the architecture-specific atomic instructions.
+The current OpenCV implementation is fully re-enterable.
+That is, the same function or the same methods of different class instances
+can be called from different threads.
+Also, the same Mat can be used in different threads
+because the reference-counting operations use the architecture-specific atomic instructions.

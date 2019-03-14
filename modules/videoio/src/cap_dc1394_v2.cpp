@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_DC1394_2
 
@@ -161,15 +162,6 @@ static dc1394error_t dc1394_deinterlace_stereo_frames_fixed(dc1394video_frame_t 
         return DC1394_FUNCTION_NOT_SUPPORTED;
 }
 
-static uint32_t getControlRegister(dc1394camera_t *camera, uint64_t offset)
-{
-    uint32_t value = 0;
-    dc1394error_t err = dc1394_get_control_register(camera, offset, &value);
-
-    assert(err == DC1394_SUCCESS);
-    return err == DC1394_SUCCESS ? value : 0xffffffff;
-}
-
 struct CvDC1394
 {
     CvDC1394();
@@ -192,7 +184,11 @@ CvDC1394::~CvDC1394()
     dc = 0;
 }
 
-static CvDC1394 dc1394;
+static CvDC1394& getDC1394()
+{
+    static CvDC1394 dc1394;
+    return dc1394;
+}
 
 class CvCaptureCAM_DC1394_v2_CPP : public CvCapture
 {
@@ -211,13 +207,11 @@ public:
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_DC1394; }
 
 
 protected:
     virtual bool startCapture();
-    virtual bool getVidereCalibrationInfo( char* buf, int bufSize );
-    virtual bool initVidereRectifyMaps( const char* info, IplImage* ml[2], IplImage* mr[2] );
 
     uint64_t guid;
     dc1394camera_t* dcCam;
@@ -241,9 +235,6 @@ protected:
     dc1394video_frame_t* frameC;
     int nimages;
 
-    bool rectify;
-    bool init_rectify;
-    IplImage *maps[NIMG][2];
     dc1394featureset_t feature_set;
 };
 //mapping CV_CAP_PROP_ to DC1394_FEATUREs
@@ -289,10 +280,9 @@ CvCaptureCAM_DC1394_v2_CPP::CvCaptureCAM_DC1394_v2_CPP()
     frameHeight = 480;
 
     for (int i = 0; i < NIMG; i++)
-        img[i] = maps[i][0] = maps[i][1] = 0;
+        img[i] = 0;
     frameC = 0;
     nimages = 1;
-    rectify = false;
     userMode = -1;
 }
 
@@ -451,18 +441,8 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
     code = dc1394_capture_setup(dcCam, nDMABufs, DC1394_CAPTURE_FLAGS_DEFAULT);
     if (code >= 0)
     {
-        FD_SET(dc1394_capture_get_fileno(dcCam), &dc1394.camFds);
+        FD_SET(dc1394_capture_get_fileno(dcCam), &getDC1394().camFds);
         dc1394_video_set_transmission(dcCam, DC1394_ON);
-        if (cameraId == VIDERE)
-        {
-            enum { PROC_MODE_OFF, PROC_MODE_NONE, PROC_MODE_TEST, PROC_MODE_RECTIFIED, PROC_MODE_DISPARITY, PROC_MODE_DISPARITY_RAW };
-            int procMode = PROC_MODE_RECTIFIED;
-            usleep(100000);
-            uint32_t qval1 = 0x08000000 | (0x90 << 16) | ((procMode & 0x7) << 16);
-            uint32_t qval2 = 0x08000000 | (0x9C << 16);
-            dc1394_set_control_register(dcCam, 0xFF000, qval1);
-            dc1394_set_control_register(dcCam, 0xFF000, qval2);
-        }
         started = true;
     }
 
@@ -477,15 +457,15 @@ bool CvCaptureCAM_DC1394_v2_CPP::open(int index)
 
     close();
 
-    if (!dc1394.dc)
+    if (!getDC1394().dc)
         goto _exit_;
 
-    err = dc1394_camera_enumerate(dc1394.dc, &cameraList);
+    err = dc1394_camera_enumerate(getDC1394().dc, &cameraList);
     if (err < 0 || !cameraList || (unsigned)index >= (unsigned)cameraList->num)
         goto _exit_;
 
     guid = cameraList->ids[index].guid;
-    dcCam = dc1394_camera_new(dc1394.dc, guid);
+    dcCam = dc1394_camera_new(getDC1394().dc, guid);
     if (!dcCam)
         goto _exit_;
 
@@ -510,8 +490,8 @@ void CvCaptureCAM_DC1394_v2_CPP::close()
         // check for fileno valid before using
         int fileno=dc1394_capture_get_fileno(dcCam);
 
-        if (fileno>=0 && FD_ISSET(fileno, &dc1394.camFds))
-            FD_CLR(fileno, &dc1394.camFds);
+        if (fileno>=0 && FD_ISSET(fileno, &getDC1394().camFds))
+            FD_CLR(fileno, &getDC1394().camFds);
         dc1394_video_set_transmission(dcCam, DC1394_OFF);
         dc1394_capture_stop(dcCam);
         dc1394_camera_free(dcCam);
@@ -522,8 +502,6 @@ void CvCaptureCAM_DC1394_v2_CPP::close()
     for (int i = 0; i < NIMG; i++)
     {
         cvReleaseImage(&img[i]);
-        cvReleaseImage(&maps[i][0]);
-        cvReleaseImage(&maps[i][1]);
     }
     if (frameC)
     {
@@ -605,32 +583,12 @@ bool CvCaptureCAM_DC1394_v2_CPP::grabFrame()
 
         // Swap R&B channels:
         if (nch==3)
-            cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
-
-        if( rectify && cameraId == VIDERE && nimages == 2 )
         {
-            if( !maps[0][0] || maps[0][0]->width != img[i]->width || maps[0][0]->height != img[i]->height )
-            {
-                CvSize size = cvGetSize(img[i]);
-                cvReleaseImage(&maps[0][0]);
-                cvReleaseImage(&maps[0][1]);
-                cvReleaseImage(&maps[1][0]);
-                cvReleaseImage(&maps[1][1]);
-                maps[0][0] = cvCreateImage(size, IPL_DEPTH_16S, 2);
-                maps[0][1] = cvCreateImage(size, IPL_DEPTH_16S, 1);
-                maps[1][0] = cvCreateImage(size, IPL_DEPTH_16S, 2);
-                maps[1][1] = cvCreateImage(size, IPL_DEPTH_16S, 1);
-                char buf[4*4096];
-                if( getVidereCalibrationInfo( buf, (int)sizeof(buf) ) &&
-                    initVidereRectifyMaps( buf, maps[0], maps[1] ))
-                    ;
-                else
-                    rectify = false;
-            }
-            cvRemap(&fhdr, img[i], maps[i][0], maps[i][1]);
+            cv::Mat tmp = cv::cvarrToMat(&fhdr);
+            cv::cvtColor(tmp, tmp, cv::COLOR_RGB2BGR, tmp.channels());
         }
-        else
-            cvCopy(&fhdr, img[i]);
+
+        cvCopy(&fhdr, img[i]);
     }
 
     code = true;
@@ -667,7 +625,8 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId) const
     case CV_CAP_PROP_FPS:
         return fps;
     case CV_CAP_PROP_RECTIFICATION:
-        return rectify ? 1 : 0;
+        CV_LOG_WARNING(NULL, "cap_dc1394: rectification support has been removed from videoio module");
+        return 0;
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
         if (dc1394_feature_whitebalance_get_value(dcCam,
                                                   &fs.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].BU_value,
@@ -724,10 +683,8 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
         fps = value;
         break;
     case CV_CAP_PROP_RECTIFICATION:
-        if( cameraId != VIDERE )
-            return false;
-        rectify = fabs(value) > FLT_EPSILON;
-        break;
+        CV_LOG_WARNING(NULL, "cap_dc1394: rectification support has been removed from videoio module");
+        return false;
     case CV_CAP_PROP_MODE:
         if(started)
           return false;
@@ -841,101 +798,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
 }
 
 
-bool CvCaptureCAM_DC1394_v2_CPP::getVidereCalibrationInfo( char* buf, int bufSize )
-{
-    int pos;
-
-    for( pos = 0; pos < bufSize - 4; pos += 4 )
-    {
-        uint32_t quad = getControlRegister(dcCam, 0xF0800 + pos);
-        if( quad == 0 || quad == 0xffffffff )
-            break;
-        buf[pos] = (uchar)(quad >> 24);
-        buf[pos+1] = (uchar)(quad >> 16);
-        buf[pos+2] = (uchar)(quad >> 8);
-        buf[pos+3] = (uchar)(quad);
-    }
-
-    if( pos == 0 )
-        return false;
-
-    buf[pos] = '\0';
-    return true;
-}
-
-
-bool CvCaptureCAM_DC1394_v2_CPP::initVidereRectifyMaps( const char* info,
-    IplImage* ml[2], IplImage* mr[2] )
-{
-    float identity_data[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    CvMat l_rect = cvMat(3, 3, CV_32F, identity_data), r_rect = l_rect;
-    float l_intrinsic_data[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    float r_intrinsic_data[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    CvMat l_intrinsic = cvMat(3, 3, CV_32F, l_intrinsic_data);
-    CvMat r_intrinsic = cvMat(3, 3, CV_32F, r_intrinsic_data);
-    float l_distortion_data[] = {0,0,0,0,0}, r_distortion_data[] = {0,0,0,0,0};
-    CvMat l_distortion = cvMat(1, 5, CV_32F, l_distortion_data);
-    CvMat r_distortion = cvMat(1, 5, CV_32F, r_distortion_data);
-    IplImage* mx = cvCreateImage(cvGetSize(ml[0]), IPL_DEPTH_32F, 1);
-    IplImage* my = cvCreateImage(cvGetSize(ml[0]), IPL_DEPTH_32F, 1);
-    int k, j;
-
-    for( k = 0; k < 2; k++ )
-    {
-        const char* section_name = k == 0 ? "[left_camera]" : "[right_camera]";
-        static const char* param_names[] = { "f ", "fy", "Cx", "Cy" "kappa1", "kappa2", "tau1", "tau2", "kappa3", 0 };
-        const char* section_start = strstr( info, section_name );
-        CvMat* intrinsic = k == 0 ? &l_intrinsic : &r_intrinsic;
-        CvMat* distortion = k == 0 ? &l_distortion : &r_distortion;
-        CvMat* rectification = k == 0 ? &l_rect : &r_rect;
-        IplImage** dst = k == 0 ? ml : mr;
-        if( !section_start )
-            break;
-        section_start += strlen(section_name);
-        for( j = 0; param_names[j] != 0; j++ )
-        {
-            const char* param_value_start = strstr(section_start, param_names[j]);
-            float val=0;
-            if(!param_value_start)
-                break;
-            sscanf(param_value_start + strlen(param_names[j]), "%f", &val);
-            if( j < 4 )
-                intrinsic->data.fl[j == 0 ? 0 : j == 1 ? 4 : j == 2 ? 2 : 5] = val;
-            else
-                distortion->data.fl[j - 4] = val;
-        }
-        if( param_names[j] != 0 )
-            break;
-
-        // some sanity check for the principal point
-        if( fabs(mx->width*0.5 - intrinsic->data.fl[2]) > mx->width*0.1 ||
-            fabs(my->height*0.5 - intrinsic->data.fl[5]) > my->height*0.1 )
-        {
-            cvScale( &intrinsic, &intrinsic, 0.5 ); // try the corrected intrinsic matrix for 2x lower resolution
-            if( fabs(mx->width*0.5 - intrinsic->data.fl[2]) > mx->width*0.05 ||
-                fabs(my->height*0.5 - intrinsic->data.fl[5]) > my->height*0.05 )
-                cvScale( &intrinsic, &intrinsic, 2 ); // revert it back if the new variant is not much better
-            intrinsic->data.fl[8] = 1;
-        }
-
-        cvInitUndistortRectifyMap( intrinsic, distortion,
-                    rectification, intrinsic, mx, my );
-        cvConvertMaps( mx, my, dst[0], dst[1] );
-    }
-
-    cvReleaseImage( &mx );
-    cvReleaseImage( &my );
-    return k >= 2;
-}
-
-
-CvCapture* cvCreateCameraCapture_DC1394_2(int index)
+cv::Ptr<cv::IVideoCapture> cv::create_DC1394_capture(int index)
 {
     CvCaptureCAM_DC1394_v2_CPP* capture = new CvCaptureCAM_DC1394_v2_CPP;
-
     if (capture->open(index))
-        return capture;
-
+        return cv::makePtr<cv::LegacyCapture>(capture);
     delete capture;
     return 0;
 }

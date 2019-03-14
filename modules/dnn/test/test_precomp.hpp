@@ -49,26 +49,4 @@
 #include "opencv2/dnn.hpp"
 #include "test_common.hpp"
 
-namespace opencv_test {
-using namespace cv::dnn;
-
-CV_ENUM(DNNBackend, DNN_BACKEND_DEFAULT, DNN_BACKEND_HALIDE, DNN_BACKEND_INFERENCE_ENGINE)
-CV_ENUM(DNNTarget, DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)
-
-static testing::internal::ParamGenerator<DNNTarget> availableDnnTargets()
-{
-    static std::vector<DNNTarget> targets;
-    if (targets.empty())
-    {
-        targets.push_back(DNN_TARGET_CPU);
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            targets.push_back(DNN_TARGET_OPENCL);
-#endif
-    }
-    return testing::ValuesIn(targets);
-}
-
-}
-
 #endif

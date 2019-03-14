@@ -258,7 +258,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
 {
     CvSize imgSize = cvSize(600, 400);
     _img.create( imgSize, CV_8UC3 );
-    CvMat img = _img;
+    CvMat img = cvMat(_img);
 
     vector<CvPoint> polyline(4);
     polyline[0] = cvPoint(0, 0);
@@ -282,7 +282,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
     if( cvClipLine(imgSize, &p1, &p2) )
         cvCircle( &img, cvPoint(390,100), 10, cvScalar(0,0,255), 3 ); // not draw
 
-    p1 = Point(imgSize.width-1,1), p2 = Point(imgSize.width,3);
+    p1 = cvPoint(imgSize.width-1,1), p2 = cvPoint(imgSize.width,3);
     if( cvClipLine(imgSize, &p1, &p2) )
         cvEllipse( &img, cvPoint(390,100), cvSize(20,30), 60, 0, 220.0, cvScalar(0,200,0), 4 ); //draw
 
@@ -292,7 +292,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
     box.size.width = 200;
     box.size.height = 100;
     box.angle = 160;
-    cvEllipseBox( &img, box, Scalar(200,200,255), 5 );
+    cvEllipseBox( &img, box, cvScalar(200,200,255), 5 );
 
     polyline.resize(9);
     pts = &polyline[0];
@@ -311,7 +311,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
     n = (int)polyline.size();
     actualSize = cvEllipse2Poly( cvPoint(500,300), cvSize(50,80), 0, 0, 180, &polyline[0], 10 );
     CV_Assert(actualSize == n);
-    cvPolyLine( &img, &pts, &n, 1, true, Scalar(100,200,100), 20 );
+    cvPolyLine( &img, &pts, &n, 1, true, cvScalar(100,200,100), 20 );
     cvFillConvexPoly( &img, pts, n, cvScalar(0, 80, 0) );
 
     polyline.resize(8);
@@ -335,7 +335,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
     CvFont font;
     cvInitFont( &font, FONT_HERSHEY_SCRIPT_SIMPLEX, 2, 2, 0, 3 );
     int baseline = 0;
-    CvSize textSize;
+    CvSize textSize = {0, 0};
     cvGetTextSize( text1.c_str(), &font, &textSize, &baseline );
     baseline += font.thickness;
     CvPoint textOrg = cvPoint((imgSize.width - textSize.width)/2, (imgSize.height + textSize.height)/2);
@@ -398,7 +398,7 @@ void CV_DrawingTest_C::draw( Mat& _img )
 int CV_DrawingTest_C::checkLineIterator( Mat& _img )
 {
     CvLineIterator it;
-    CvMat img = _img;
+    CvMat img = cvMat(_img);
     int count = cvInitLineIterator( &img, cvPoint(0,300), cvPoint(1000, 300), &it );
     for(int i = 0; i < count; i++ )
     {

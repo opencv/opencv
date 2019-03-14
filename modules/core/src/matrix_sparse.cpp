@@ -228,7 +228,7 @@ void SparseMat::create(int d, const int* _sizes, int _type)
         }
     }
     int _sizes_backup[CV_MAX_DIM]; // #5991
-    if (_sizes == hdr->size)
+    if (hdr && _sizes == hdr->size)
     {
         for(int i = 0; i < d; i++ )
             _sizes_backup[i] = _sizes[i];
@@ -615,7 +615,7 @@ void SparseMat::removeNode(size_t hidx, size_t nidx, size_t previdx)
 //
 double norm( const SparseMat& src, int normType )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SparseMatConstIterator it = src.begin();
 
@@ -680,7 +680,7 @@ double norm( const SparseMat& src, int normType )
 
 void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _minidx, int* _maxidx )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     SparseMatConstIterator it = src.begin();
     size_t i, N = src.nzcount(), d = src.hdr ? src.hdr->dims : 0;
@@ -747,7 +747,7 @@ void minMaxLoc( const SparseMat& src, double* _minval, double* _maxval, int* _mi
 
 void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     double scale = 1;
     if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )

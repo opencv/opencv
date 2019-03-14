@@ -9,6 +9,10 @@
 \**********************************************************************************/
 
 #include "precomp.hpp"
+#include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/softfloat.hpp"
+
 #include "color.hpp"
 
 using cv::softfloat;
@@ -1398,7 +1402,7 @@ static LABLUVLUT_s16_t initLUTforLABLUVs16(const softfloat & un, const softfloat
                 for (int p_ = 0; p_ < 2; ++p_)
                     for (int q_ = 0; q_ < 2; ++q_)
                         for (int r_ = 0; r_ < 2; ++r_)
-                            fill_one(RGB2LabLUT_s16, RGB2Labprev, RGB2LuvLUT_s16, RGB2Luvprev, p, q, r, p_, q_, r_);
+                            fill_one(RGB2LabLUT_s16, RGB2Labprev.data(), RGB2LuvLUT_s16, RGB2Luvprev.data(), p, q, r, p_, q_, r_);
     LABLUVLUT_s16_t res;
     res.RGB2LabLUT_s16 = RGB2LabLUT_s16;
     res.RGB2LuvLUT_s16 = RGB2LuvLUT_s16;
@@ -4094,7 +4098,7 @@ void cvtBGRtoXYZ(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoXYZ, cv_hal_cvtBGRtoXYZ, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue);
 
@@ -4145,7 +4149,7 @@ void cvtXYZtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtXYZtoBGR, cv_hal_cvtXYZtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue);
 
@@ -4197,7 +4201,7 @@ void cvtBGRtoLab(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int scn, bool swapBlue, bool isLab, bool srgb)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtBGRtoLab, cv_hal_cvtBGRtoLab, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isLab, srgb);
 
@@ -4294,7 +4298,7 @@ void cvtLabtoBGR(const uchar * src_data, size_t src_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CALL_HAL(cvtLabtoBGR, cv_hal_cvtLabtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isLab, srgb);
 

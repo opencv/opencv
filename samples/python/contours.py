@@ -54,7 +54,7 @@ if __name__ == '__main__':
     img = make_image()
     h, w = img.shape[:2]
 
-    _, contours0, hierarchy = cv.findContours( img.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours0, hierarchy = cv.findContours( img.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours = [cv.approxPolyDP(cnt, 3, True) for cnt in contours0]
 
     def update(levels):

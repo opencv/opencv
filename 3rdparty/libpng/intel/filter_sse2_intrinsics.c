@@ -1,11 +1,10 @@
 
 /* filter_sse2_intrinsics.c - SSE2 optimized filter functions
  *
+ * Copyright (c) 2018 Cosmin Truta
  * Copyright (c) 2016-2017 Glenn Randers-Pehrson
  * Written by Mike Klein and Matt Sarett
  * Derived from arm/filter_neon_intrinsics.c
- *
- * Last changed in libpng 1.6.31 [July 27, 2017]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -29,39 +28,25 @@
  */
 
 static __m128i load4(const void* p) {
-   return _mm_cvtsi32_si128(*(const int*)p);
+   int tmp;
+   memcpy(&tmp, p, sizeof(tmp));
+   return _mm_cvtsi32_si128(tmp);
 }
 
 static void store4(void* p, __m128i v) {
-   *(int*)p = _mm_cvtsi128_si32(v);
+   int tmp = _mm_cvtsi128_si32(v);
+   memcpy(p, &tmp, sizeof(int));
 }
 
 static __m128i load3(const void* p) {
-   /* We'll load 2 bytes, then 1 byte,
-    * then mask them together, and finally load into SSE.
-    */
-   const png_uint_16* p01 = (png_const_uint_16p)p;
-   const png_byte*    p2  = (const png_byte*)(p01+1);
-
-   png_uint_32 v012 = (png_uint_32)(*p01)
-                    | (png_uint_32)(*p2) << 16;
-   return load4(&v012);
+   png_uint_32 tmp = 0;
+   memcpy(&tmp, p, 3);
+   return _mm_cvtsi32_si128(tmp);
 }
 
 static void store3(void* p, __m128i v) {
-   /* We'll pull from SSE as a 32-bit int, then write
-    * its bottom two bytes, then its third byte.
-    */
-   png_uint_32 v012;
-   png_uint_16* p01;
-   png_byte*    p2;
-
-   store4(&v012, v);
-
-   p01 = (png_uint_16p)p;
-   p2  = (png_byte*)(p01+1);
-   *p01 = (png_uint_16)v012;
-   *p2  = (png_byte)(v012 >> 16);
+   int tmp = _mm_cvtsi128_si32(v);
+   memcpy(p, &tmp, 3);
 }
 
 void png_read_filter_row_sub3_sse2(png_row_infop row_info, png_bytep row,
@@ -71,7 +56,7 @@ void png_read_filter_row_sub3_sse2(png_row_infop row_info, png_bytep row,
     * There is no pixel to the left of the first pixel.  It's encoded directly.
     * That works with our main loop if we just say that left pixel was zero.
     */
-   png_size_t rb;
+   size_t rb;
 
    __m128i a, d = _mm_setzero_si128();
 
@@ -104,7 +89,7 @@ void png_read_filter_row_sub4_sse2(png_row_infop row_info, png_bytep row,
     * There is no pixel to the left of the first pixel.  It's encoded directly.
     * That works with our main loop if we just say that left pixel was zero.
     */
-   png_size_t rb;
+   size_t rb;
 
    __m128i a, d = _mm_setzero_si128();
 
@@ -131,7 +116,7 @@ void png_read_filter_row_avg3_sse2(png_row_infop row_info, png_bytep row,
     * perfectly with our loop if we make sure a starts at zero.
     */
 
-   png_size_t rb;
+   size_t rb;
 
    const __m128i zero = _mm_setzero_si128();
 
@@ -185,7 +170,7 @@ void png_read_filter_row_avg4_sse2(png_row_infop row_info, png_bytep row,
     * predicted to be half of the pixel above it.  So again, this works
     * perfectly with our loop if we make sure a starts at zero.
     */
-   png_size_t rb;
+   size_t rb;
    const __m128i zero = _mm_setzero_si128();
    __m128i    b;
    __m128i a, d = zero;
@@ -257,7 +242,7 @@ void png_read_filter_row_paeth3_sse2(png_row_infop row_info, png_bytep row,
     * Here we zero b and d, which become c and a respectively at the start of
     * the loop.
     */
-   png_size_t rb;
+   size_t rb;
    const __m128i zero = _mm_setzero_si128();
    __m128i c, b = zero,
            a, d = zero;
@@ -356,7 +341,7 @@ void png_read_filter_row_paeth4_sse2(png_row_infop row_info, png_bytep row,
     * Here we zero b and d, which become c and a respectively at the start of
     * the loop.
     */
-   png_size_t rb;
+   size_t rb;
    const __m128i zero = _mm_setzero_si128();
    __m128i pa,pb,pc,smallest,nearest;
    __m128i c, b = zero,

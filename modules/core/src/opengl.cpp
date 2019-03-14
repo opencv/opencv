@@ -54,6 +54,10 @@
 using namespace cv;
 using namespace cv::cuda;
 
+#if defined(_MSC_VER)
+#pragma warning(disable : 4702)  // unreachable code
+#endif
+
 namespace
 {
 #ifndef HAVE_OPENGL
@@ -104,11 +108,11 @@ namespace
 void cv::cuda::setGlDevice(int device)
 {
 #ifndef HAVE_OPENGL
-    (void) device;
+    CV_UNUSED(device);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) device;
+        CV_UNUSED(device);
         throw_no_cuda();
     #else
         cudaSafeCall( cudaGLSetGLDevice(device) );
@@ -214,7 +218,7 @@ namespace
         CV_DbgAssert( resource_ != 0 );
 
         GraphicsMapHolder h(&resource_, stream);
-        (void) h;
+        CV_UNUSED(h);
 
         void* dst;
         size_t size;
@@ -233,7 +237,7 @@ namespace
         CV_DbgAssert( resource_ != 0 );
 
         GraphicsMapHolder h(&resource_, stream);
-        (void) h;
+        CV_UNUSED(h);
 
         void* src;
         size_t size;
@@ -456,11 +460,11 @@ cv::ogl::Buffer::Buffer() : rows_(0), cols_(0), type_(0)
 cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) atype;
-    (void) abufId;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(atype);
+    CV_UNUSED(abufId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(abufId, autoRelease));
@@ -473,10 +477,10 @@ cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bo
 cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) asize;
-    (void) atype;
-    (void) abufId;
-    (void) autoRelease;
+    CV_UNUSED(asize);
+    CV_UNUSED(atype);
+    CV_UNUSED(abufId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(abufId, autoRelease));
@@ -489,9 +493,9 @@ cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRel
 cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -521,11 +525,11 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
 void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) atype;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(atype);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     if (rows_ != arows || cols_ != acols || type_ != atype)
@@ -554,7 +558,7 @@ void cv::ogl::Buffer::release()
 void cv::ogl::Buffer::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
-    (void) flag;
+    CV_UNUSED(flag);
     throw_no_ogl();
 #else
     impl_->setAutoRelease(flag);
@@ -564,9 +568,9 @@ void cv::ogl::Buffer::setAutoRelease(bool flag)
 void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -609,17 +613,17 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) stream;
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) arr;
-        (void) stream;
-        (void) target;
-        (void) autoRelease;
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
+        CV_UNUSED(target);
+        CV_UNUSED(autoRelease);
         throw_no_cuda();
     #else
         GpuMat dmat = arr.getGpuMat();
@@ -634,7 +638,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target targ
 void cv::ogl::Buffer::copyTo(OutputArray arr) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
+    CV_UNUSED(arr);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -674,13 +678,13 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
 void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) stream;
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) arr;
-        (void) stream;
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         arr.create(rows_, cols_, type_);
@@ -693,8 +697,8 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
-    (void) target;
-    (void) autoRelease;
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     ogl::Buffer buf;
@@ -706,7 +710,7 @@ cv::ogl::Buffer cv::ogl::Buffer::clone(Target target, bool autoRelease) const
 void cv::ogl::Buffer::bind(Target target) const
 {
 #ifndef HAVE_OPENGL
-    (void) target;
+    CV_UNUSED(target);
     throw_no_ogl();
 #else
     impl_->bind(target);
@@ -716,7 +720,7 @@ void cv::ogl::Buffer::bind(Target target) const
 void cv::ogl::Buffer::unbind(Target target)
 {
 #ifndef HAVE_OPENGL
-    (void) target;
+    CV_UNUSED(target);
     throw_no_ogl();
 #else
     gl::BindBuffer(target, 0);
@@ -727,7 +731,7 @@ void cv::ogl::Buffer::unbind(Target target)
 Mat cv::ogl::Buffer::mapHost(Access access)
 {
 #ifndef HAVE_OPENGL
-    (void) access;
+    CV_UNUSED(access);
     throw_no_ogl();
 #else
     return Mat(rows_, cols_, type_, impl_->mapHost(access));
@@ -772,11 +776,11 @@ void cv::ogl::Buffer::unmapDevice()
 cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
-    (void) stream;
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) stream;
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
@@ -787,11 +791,11 @@ cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
-    (void) stream;
+    CV_UNUSED(stream);
     throw_no_ogl();
 #else
     #ifndef HAVE_CUDA
-        (void) stream;
+        CV_UNUSED(stream);
         throw_no_cuda();
     #else
         impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
@@ -933,11 +937,11 @@ cv::ogl::Texture2D::Texture2D() : rows_(0), cols_(0), format_(NONE)
 cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) aformat;
-    (void) atexId;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(aformat);
+    CV_UNUSED(atexId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(atexId, autoRelease));
@@ -950,10 +954,10 @@ cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int
 cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) asize;
-    (void) aformat;
-    (void) atexId;
-    (void) autoRelease;
+    CV_UNUSED(asize);
+    CV_UNUSED(aformat);
+    CV_UNUSED(atexId);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     impl_.reset(new Impl(atexId, autoRelease));
@@ -966,8 +970,8 @@ cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, b
 cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1036,10 +1040,10 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
 void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arows;
-    (void) acols;
-    (void) aformat;
-    (void) autoRelease;
+    CV_UNUSED(arows);
+    CV_UNUSED(acols);
+    CV_UNUSED(aformat);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     if (rows_ != arows || cols_ != acols || format_ != aformat)
@@ -1068,7 +1072,7 @@ void cv::ogl::Texture2D::release()
 void cv::ogl::Texture2D::setAutoRelease(bool flag)
 {
 #ifndef HAVE_OPENGL
-    (void) flag;
+    CV_UNUSED(flag);
     throw_no_ogl();
 #else
     impl_->setAutoRelease(flag);
@@ -1078,8 +1082,8 @@ void cv::ogl::Texture2D::setAutoRelease(bool flag)
 void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1145,9 +1149,9 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
 void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) ddepth;
-    (void) autoRelease;
+    CV_UNUSED(arr);
+    CV_UNUSED(ddepth);
+    CV_UNUSED(autoRelease);
     throw_no_ogl();
 #else
     const int kind = arr.kind();
@@ -1400,9 +1404,9 @@ void cv::ogl::Arrays::bind() const
 void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<double> texRect)
 {
 #ifndef HAVE_OPENGL
-    (void) tex;
-    (void) wndRect;
-    (void) texRect;
+    CV_UNUSED(tex);
+    CV_UNUSED(wndRect);
+    CV_UNUSED(texRect);
     throw_no_ogl();
 #else
     if (!tex.empty())
@@ -1430,14 +1434,14 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR);
         CV_CheckGlError();
 
-        const float vertex[] =
+        const double vertex[] =
         {
-            wndRect.x, wndRect.y, 0.0f,
-            wndRect.x, (wndRect.y + wndRect.height), 0.0f,
-            wndRect.x + wndRect.width, (wndRect.y + wndRect.height), 0.0f,
-            wndRect.x + wndRect.width, wndRect.y, 0.0f
+            wndRect.x, wndRect.y, 0.0,
+            wndRect.x, (wndRect.y + wndRect.height), 0.0,
+            wndRect.x + wndRect.width, (wndRect.y + wndRect.height), 0.0,
+            wndRect.x + wndRect.width, wndRect.y, 0.0
         };
-        const float texCoords[] =
+        const double texCoords[] =
         {
             texRect.x, texRect.y,
             texRect.x, texRect.y + texRect.height,
@@ -1450,7 +1454,7 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
         gl::EnableClientState(gl::TEXTURE_COORD_ARRAY);
         CV_CheckGlError();
 
-        gl::TexCoordPointer(2, gl::FLOAT, 0, texCoords);
+        gl::TexCoordPointer(2, gl::DOUBLE, 0, texCoords);
         CV_CheckGlError();
 
         gl::DisableClientState(gl::NORMAL_ARRAY);
@@ -1460,7 +1464,7 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
         gl::EnableClientState(gl::VERTEX_ARRAY);
         CV_CheckGlError();
 
-        gl::VertexPointer(3, gl::FLOAT, 0, vertex);
+        gl::VertexPointer(3, gl::DOUBLE, 0, vertex);
         CV_CheckGlError();
 
         gl::DrawArrays(gl::QUADS, 0, 4);
@@ -1472,9 +1476,9 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
 void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) mode;
-    (void) color;
+    CV_UNUSED(arr);
+    CV_UNUSED(mode);
+    CV_UNUSED(color);
     throw_no_ogl();
 #else
     if (!arr.empty())
@@ -1491,10 +1495,10 @@ void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scalar color)
 {
 #ifndef HAVE_OPENGL
-    (void) arr;
-    (void) indices;
-    (void) mode;
-    (void) color;
+    CV_UNUSED(arr);
+    CV_UNUSED(indices);
+    CV_UNUSED(mode);
+    CV_UNUSED(color);
     throw_no_ogl();
 #else
     if (!arr.empty() && !indices.empty())
@@ -1624,12 +1628,12 @@ Context& initializeContextFromGL()
             if (status == CL_SUCCESS)
             {
                 extensionStr.allocate(extensionSize+1);
-                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr, NULL);
+                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr.data(), NULL);
             }
             if (status != CL_SUCCESS)
                 CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platform extension string");
 
-            if (!strstr((const char*)extensionStr, "cl_khr_gl_sharing"))
+            if (!strstr((const char*)extensionStr.data(), "cl_khr_gl_sharing"))
                 continue;
         }
 
@@ -1688,7 +1692,7 @@ Context& initializeContextFromGL()
 
 void convertToGLTexture2D(InputArray src, Texture2D& texture)
 {
-    (void)src; (void)texture;
+    CV_UNUSED(src); CV_UNUSED(texture);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1722,7 +1726,7 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -1742,7 +1746,7 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
 
 void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 {
-    (void)texture; (void)dst;
+    CV_UNUSED(texture); CV_UNUSED(dst);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1782,7 +1786,7 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
@@ -1800,10 +1804,10 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #endif
 }
 
-//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
-UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, AccessFlag accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
 {
-    (void)buffer; (void)accessFlags;
+    CV_UNUSED(buffer); CV_UNUSED(accessFlags);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1820,7 +1824,7 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
     switch (accessFlags & (ACCESS_READ|ACCESS_WRITE))
     {
     default:
-    case ACCESS_READ|ACCESS_WRITE:
+    case ACCESS_READ+ACCESS_WRITE:
         clAccessFlags = CL_MEM_READ_WRITE;
         break;
     case ACCESS_READ:
@@ -1855,7 +1859,7 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
 
 void unmapGLBuffer(UMat& u)
 {
-    (void)u;
+    CV_UNUSED(u);
 #if !defined(HAVE_OPENGL)
     NO_OPENGL_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)

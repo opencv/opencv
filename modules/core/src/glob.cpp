@@ -60,7 +60,7 @@ namespace
 #ifdef WINRT
         WIN32_FIND_DATAW data;
 #else
-        WIN32_FIND_DATA data;
+        WIN32_FIND_DATAA data;
 #endif
         HANDLE handle;
         dirent ent;
@@ -160,7 +160,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
     return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
-    (void)dir;
+    CV_UNUSED(dir);
     struct stat stat_buf;
     if (0 != stat( path.c_str(), &stat_buf))
         return false;
@@ -171,7 +171,7 @@ static bool isDir(const cv::String& path, DIR* dir)
 
 bool cv::utils::fs::isDirectory(const cv::String& path)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
     return isDir(path, NULL);
 }
 
@@ -231,7 +231,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
-        CV_TRY
+        try
         {
             struct dirent *ent;
             while ((ent = readdir (dir)) != 0)
@@ -255,10 +255,10 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
                     result.push_back(entry);
             }
         }
-        CV_CATCH_ALL
+        catch (...)
         {
             closedir(dir);
-            CV_RETHROW();
+            throw;
         }
         closedir(dir);
     }
@@ -270,7 +270,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     result.clear();
     String path, wildchart;

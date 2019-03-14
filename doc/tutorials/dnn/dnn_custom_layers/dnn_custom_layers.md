@@ -32,11 +32,11 @@ Unspecified error: Can't create layer "layer_name" of type "MyType" in function 
 To import the model correctly you have to derive a class from cv::dnn::Layer with
 the following methods:
 
-@snippet dnn/custom_layers.cpp A custom layer interface
+@snippet dnn/custom_layers.hpp A custom layer interface
 
 And register it before the import:
 
-@snippet dnn/custom_layers.cpp Register a custom layer
+@snippet dnn/custom_layers.hpp Register a custom layer
 
 @note `MyType` is a type of unimplemented layer from the thrown exception.
 
@@ -44,27 +44,27 @@ Let's see what all the methods do:
 
 - Constructor
 
-@snippet dnn/custom_layers.cpp MyLayer::MyLayer
+@snippet dnn/custom_layers.hpp MyLayer::MyLayer
 
 Retrieves hyper-parameters from cv::dnn::LayerParams. If your layer has trainable
 weights they will be already stored in the Layer's member cv::dnn::Layer::blobs.
 
 - A static method `create`
 
-@snippet dnn/custom_layers.cpp MyLayer::create
+@snippet dnn/custom_layers.hpp MyLayer::create
 
 This method should create an instance of you layer and return cv::Ptr with it.
 
 - Output blobs' shape computation
 
-@snippet dnn/custom_layers.cpp MyLayer::getMemoryShapes
+@snippet dnn/custom_layers.hpp MyLayer::getMemoryShapes
 
 Returns layer's output shapes depends on input shapes. You may request an extra
 memory using `internals`.
 
 - Run a layer
 
-@snippet dnn/custom_layers.cpp MyLayer::forward
+@snippet dnn/custom_layers.hpp MyLayer::forward
 
 Implement a layer's logic here. Compute outputs for given inputs.
 
@@ -74,7 +74,7 @@ the second invocation of `forward` will has the same data at `outputs` and `inte
 
 - Optional `finalize` method
 
-@snippet dnn/custom_layers.cpp MyLayer::finalize
+@snippet dnn/custom_layers.hpp MyLayer::finalize
 
 The chain of methods are the following: OpenCV deep learning engine calls `create`
 method once then it calls `getMemoryShapes` for an every created layer then you
@@ -108,11 +108,11 @@ layer {
 
 This way our implementation can look like:
 
-@snippet dnn/custom_layers.cpp InterpLayer
+@snippet dnn/custom_layers.hpp InterpLayer
 
 Next we need to register a new layer type and try to import the model.
 
-@snippet dnn/custom_layers.cpp Register InterpLayer
+@snippet dnn/custom_layers.hpp Register InterpLayer
 
 ## Example: custom layer from TensorFlow
 This is an example of how to import a network with [tf.image.resize_bilinear](https://www.tensorflow.org/versions/master/api_docs/python/tf/image/resize_bilinear)
@@ -185,8 +185,42 @@ Custom layers import from TensorFlow is designed to put all layer's `attr` into
 cv::dnn::LayerParams but input `Const` blobs into cv::dnn::Layer::blobs.
 In our case resize's output shape will be stored in layer's `blobs[0]`.
 
-@snippet dnn/custom_layers.cpp ResizeBilinearLayer
+@snippet dnn/custom_layers.hpp ResizeBilinearLayer
 
 Next we register a layer and try to import the model.
 
-@snippet dnn/custom_layers.cpp Register ResizeBilinearLayer
+@snippet dnn/custom_layers.hpp Register ResizeBilinearLayer
+
+## Define a custom layer in Python
+The following example shows how to customize OpenCV's layers in Python.
+
+Let's consider [Holistically-Nested Edge Detection](https://arxiv.org/abs/1504.06375)
+deep learning model. That was trained with one and only difference comparing to
+a current version of [Caffe framework](http://caffe.berkeleyvision.org/). `Crop`
+layers that receive two input blobs and crop the first one to match spatial dimensions
+of the second one used to crop from the center. Nowadays Caffe's layer does it
+from the top-left corner. So using the latest version of Caffe or OpenCV you'll
+get shifted results with filled borders.
+
+Next we're going to replace OpenCV's `Crop` layer that makes top-left cropping by
+a centric one.
+
+- Create a class with `getMemoryShapes` and `forward` methods
+
+@snippet dnn/edge_detection.py CropLayer
+
+@note Both methods should return lists.
+
+- Register a new layer.
+
+@snippet dnn/edge_detection.py Register
+
+That's it! We've replaced an implemented OpenCV's layer to a custom one.
+You may find a full script in the [source code](https://github.com/opencv/opencv/tree/master/samples/dnn/edge_detection.py).
+
+<table border="0">
+<tr>
+<td>![](js_tutorials/js_assets/lena.jpg)</td>
+<td>![](images/lena_hed.jpg)</td>
+</tr>
+</table>

@@ -1,3 +1,4 @@
+@cond CUDA_MODULES
 Similarity check (PNSR and SSIM) on the GPU {#tutorial_gpu_basics_similarity}
 ===========================================
 @todo update this tutorial
@@ -204,3 +205,4 @@ It may be just the improvement needed for your application to work. You may obse
 instance of this on the [YouTube here](https://www.youtube.com/watch?v=3_ESXmFlnvY).
 
 @youtube{3_ESXmFlnvY}
+@endcond

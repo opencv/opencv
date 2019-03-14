@@ -18,7 +18,7 @@ int main( int /*argc*/, char** /*argv*/ )
 {
     help();
 
-    Mat img(500, 500, CV_8UC3);
+    Mat img(500, 500, CV_8UC3, Scalar::all(0));
     RNG& rng = theRNG();
 
     for(;;)

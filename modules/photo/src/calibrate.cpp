@@ -62,7 +62,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         // check inputs
         std::vector<Mat> images;
@@ -212,7 +212,7 @@ public:
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray _times) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         std::vector<Mat> images;
         src.getMatVector(images);

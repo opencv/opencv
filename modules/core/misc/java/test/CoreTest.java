@@ -947,12 +947,16 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMahalanobis() {
+        Mat src = new Mat(matSize, matSize, CvType.CV_32F);
+        Core.randu(src, -128, 128);
+
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
         Mat mean = new Mat(1, matSize, CvType.CV_32F);
-        Core.calcCovarMatrix(grayRnd_32f, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
+        Core.calcCovarMatrix(src, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
         covar = covar.inv();
-        Mat line1 = grayRnd_32f.row(0);
-        Mat line2 = grayRnd_32f.row(1);
+
+        Mat line1 = src.row(0);
+        Mat line2 = src.row(1);
 
         double d = Core.Mahalanobis(line1, line1, covar);
 

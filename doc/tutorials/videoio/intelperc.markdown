@@ -1,6 +1,8 @@
 Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors {#tutorial_intelperc}
 =======================================================================================
 
+**Note**: this tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
+
 Depth sensors compatible with Intel Perceptual Computing SDK are supported through VideoCapture
 class. Depth map, RGB image and some other formats of output can be retrieved by using familiar
 interface of VideoCapture.
@@ -78,5 +80,5 @@ there are two flags that should be used to set/get property of the needed genera
     flag value is assumed by default if neither of the two possible values of the property is set.
 
 For more information please refer to the example of usage
-[intelperc_capture.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/intelperc_capture.cpp)
+[videocapture_intelperc.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/videocapture_intelperc.cpp)
 in opencv/samples/cpp folder.

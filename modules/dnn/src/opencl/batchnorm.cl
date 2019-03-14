@@ -40,24 +40,27 @@
 //
 //M*/
 
-#define Dtype float
-#define Dtype4 float4
-#define Dtype8 float8
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 #if NUM == 8
     #define load(src, index) vload8(0, src + index)
     #define store(vec, dst, index) vstore8(vec, 0, dst + index)
-    #define vec_type Dtype8
+    #define float_type float8
+    #define convert_f convert_float8
     #define BATCH_NORM batch_norm8
 #elif NUM == 4
     #define load(src, index) vload4(0, src + index)
     #define store(vec, dst, index) vstore4(vec, 0, dst + index)
-    #define vec_type Dtype4
+    #define float_type float4
+    #define convert_f convert_float4
     #define BATCH_NORM batch_norm4
 #elif NUM == 1
     #define load(src, index) src[index]
     #define store(vec, dst, index) dst[index] = vec
-    #define vec_type Dtype
+    #define float_type float
+    #define convert_f convert_float
     #define BATCH_NORM batch_norm1
 #endif
 
@@ -65,8 +68,8 @@ __kernel void BATCH_NORM(__global const Dtype* src,
                          const int rows,
                          const int cols,
                          const int channels,
-                         __global const Dtype* weight,
-                         __global const Dtype* bias,
+                         __global const float* weight,
+                         __global const float* bias,
                          __global Dtype* dst)
 {
     int x = get_global_id(0);
@@ -76,9 +79,9 @@ __kernel void BATCH_NORM(__global const Dtype* src,
     if (x >= rows || y >= cols)
         return;
 
-    Dtype w = weight[x % channels];
-    Dtype b = bias[x % channels];
-    vec_type src_vec = load(src, index);
-    vec_type dst_vec = src_vec * w + (vec_type)b;
-    store(dst_vec, dst, index);
+    float w = weight[x % channels];
+    float b = bias[x % channels];
+    float_type src_vec = convert_f(load(src, index));
+    float_type dst_vec = src_vec * w + (float_type)b;
+    store(convert_T(dst_vec), dst, index);
 }

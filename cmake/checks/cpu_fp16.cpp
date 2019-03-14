@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#if defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700) || (defined __INTEL_COMPILER && defined __AVX__)
+#if defined __F16C__ || (defined _MSC_VER && _MSC_VER >= 1700 && defined __AVX__) || (defined __INTEL_COMPILER && defined __AVX__)
 #include <immintrin.h>
 int test()
 {

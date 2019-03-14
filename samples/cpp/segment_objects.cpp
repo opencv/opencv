@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     if (input.empty())
         cap.open(0);
     else
-        cap.open(input);
+        cap.open(samples::findFileOrKeep(input));
 
     if( !cap.isOpened() )
     {

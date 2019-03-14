@@ -416,7 +416,7 @@ int main(int argc, char** argv)
     if ( parser.get<string>("@input").size() == 1 && isdigit(parser.get<string>("@input")[0]) )
         cameraId = parser.get<int>("@input");
     else
-        inputName = parser.get<string>("@input");
+        inputName = samples::findFileOrKeep(parser.get<string>("@input"));
     if (!parser.check())
     {
         puts(help);
@@ -559,7 +559,7 @@ int main(int argc, char** argv)
             {
                 Rect r = extract3DBox(frame, shownFrame, selectedObjFrame,
                                       cameraMatrix, rvec, tvec, box, 4, true);
-                if( r.area() )
+                if( !r.empty() )
                 {
                     const int maxFrameIdx = 10000;
                     char path[1000];

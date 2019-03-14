@@ -47,11 +47,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -86,18 +86,15 @@
 //Yannick Verdie 2010, Max Kostin 2015
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
-void cvSetModeWindow_CARBON(const char* name, double prop_value);
 void cvSetModeWindow_COCOA(const char* name, double prop_value);
 void cvSetModeWindow_WinRT(const char* name, double prop_value);
 
 CvRect cvGetWindowRect_W32(const char* name);
 CvRect cvGetWindowRect_GTK(const char* name);
-CvRect cvGetWindowRect_CARBON(const char* name);
 CvRect cvGetWindowRect_COCOA(const char* name);
 
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
-double cvGetModeWindow_CARBON(const char* name);
 double cvGetModeWindow_COCOA(const char* name);
 double cvGetModeWindow_WinRT(const char* name);
 
@@ -109,6 +106,8 @@ double cvGetRatioWindow_GTK(const char* name);
 
 double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
+
+double cvGetPropVisible_W32(const char* name);
 
 //for QT
 #if defined (HAVE_QT)
@@ -125,5 +124,40 @@ void cvSetRatioWindow_QT(const char* name,double prop_value);
 double cvGetOpenGlProp_QT(const char* name);
 double cvGetPropVisible_QT(const char* name);
 #endif
+
+inline void convertToShow(const cv::Mat &src, cv::Mat &dst, bool toRGB = true)
+{
+    const int src_depth = src.depth();
+    CV_Assert(src_depth != CV_16F && src_depth != CV_32S);
+    cv::Mat tmp;
+    switch(src_depth)
+    {
+    case CV_8U:
+        tmp = src;
+        break;
+    case CV_8S:
+        cv::convertScaleAbs(src, tmp, 1, 127);
+        break;
+    case CV_16S:
+        cv::convertScaleAbs(src, tmp, 1/255., 127);
+        break;
+    case CV_16U:
+        cv::convertScaleAbs(src, tmp, 1/255.);
+        break;
+    case CV_32F:
+    case CV_64F: // assuming image has values in range [0, 1)
+        cv::convertScaleAbs(src, tmp, 256.);
+        break;
+    }
+    cv::cvtColor(tmp, dst, toRGB ? cv::COLOR_BGR2RGB : cv::COLOR_BGRA2BGR, dst.channels());
+}
+
+inline void convertToShow(const cv::Mat &src, const CvMat* arr, bool toRGB = true)
+{
+    cv::Mat dst = cv::cvarrToMat(arr);
+    convertToShow(src, dst, toRGB);
+    CV_Assert(dst.data == arr->data.ptr);
+}
+
 
 #endif /* __HIGHGUI_H_ */

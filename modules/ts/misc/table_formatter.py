@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys, re, os.path, cgi, stat, math
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
@@ -47,7 +48,7 @@ class table(object):
         if len(self.rows) - 1 == self.ridx:
             self.rows.append(tblRow(len(self.columns), properties))
         else:
-            self.rows[ridx + 1].props = properties
+            self.rows[self.ridx + 1].props = properties
         self.ridx += 1
         return self.rows[self.ridx]
 
@@ -97,7 +98,7 @@ class table(object):
 
     def layoutTable(self):
         columns = self.columns.values()
-        columns.sort(key=lambda c: c.index)
+        columns = sorted(columns, key=lambda c: c.index)
 
         colspanned = []
         rowspanned = []
@@ -205,6 +206,8 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
+        if sys.version_info >= (2,7):
+            unicode = str
         if isinstance(value, str):
             vstr = value
         elif isinstance(value, unicode):
@@ -337,7 +340,7 @@ class table(object):
         if align == "right":
             pattern = "%" + str(width) + "s"
         elif align == "center":
-            pattern = "%" + str((width - len(line)) / 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) / 2)
+            pattern = "%" + str((width - len(line)) // 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) // 2)
         else:
             pattern = "%-" + str(width) + "s"
 
@@ -351,7 +354,7 @@ class table(object):
         if valign == "bottom":
             return height - space
         if valign == "middle":
-            return (height - space + 1) / 2
+            return (height - space + 1) // 2
         return 0
 
     def htmlPrintTable(self, out, embeedcss = False):
@@ -723,7 +726,7 @@ def formatValue(val, metric, units = None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml")
         exit(0)
 
     parser = OptionParser()

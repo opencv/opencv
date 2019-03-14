@@ -16,8 +16,18 @@ CV_EXPORTS void remove_all(const cv::String& path);
 
 CV_EXPORTS cv::String getcwd();
 
+/** @brief Converts path p to a canonical absolute path
+ * Symlinks are processed if there is support for them on running platform.
+ *
+ * @param path input path. Target file/directory should exist.
+ */
+CV_EXPORTS cv::String canonical(const cv::String& path);
+
 /** Join path components */
 CV_EXPORTS cv::String join(const cv::String& base, const cv::String& path);
+
+/** Get parent directory */
+CV_EXPORTS cv::String getParent(const cv::String &path);
 
 /**
  * Generate a list of all files that match the globbing pattern.

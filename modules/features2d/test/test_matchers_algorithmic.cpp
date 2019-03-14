@@ -558,4 +558,60 @@ TEST( Features2d_DMatch, read_write )
     ASSERT_NE( strstr(str.c_str(), "4.5"), (char*)0 );
 }
 
+TEST( Features2d_FlannBasedMatcher, read_write )
+{
+    static const char* ymlfile = "%YAML:1.0\n---\n"
+    "format: 3\n"
+    "indexParams:\n"
+    "   -\n"
+    "      name: algorithm\n"
+    "      type: 9\n"  // FLANN_INDEX_TYPE_ALGORITHM
+    "      value: 6\n"// this line is changed!
+    "   -\n"
+    "      name: trees\n"
+    "      type: 4\n"
+    "      value: 4\n"
+    "searchParams:\n"
+    "   -\n"
+    "      name: checks\n"
+    "      type: 4\n"
+    "      value: 32\n"
+    "   -\n"
+    "      name: eps\n"
+    "      type: 5\n"
+    "      value: 4.\n"// this line is changed!
+    "   -\n"
+    "      name: sorted\n"
+    "      type: 8\n"    // FLANN_INDEX_TYPE_BOOL
+    "      value: 1\n";
+
+    Ptr<DescriptorMatcher> matcher = FlannBasedMatcher::create();
+    FileStorage fs_in(ymlfile, FileStorage::READ + FileStorage::MEMORY);
+    matcher->read(fs_in.root());
+    FileStorage fs_out(".yml", FileStorage::WRITE + FileStorage::MEMORY);
+    matcher->write(fs_out);
+    std::string out = fs_out.releaseAndGetString();
+
+    EXPECT_EQ(ymlfile, out);
+}
+
+
+TEST(Features2d_DMatch, issue_11855)
+{
+    Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
+                                        1, 1, 1);
+    Mat targets = (Mat_<uchar>(2, 3) << 1, 1, 1,
+                                        0, 0, 0);
+
+    Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
+    vector<vector<DMatch> > match;
+    bf->knnMatch(sources, targets, match, 1, noArray(), true);
+
+    ASSERT_EQ((size_t)1, match.size());
+    ASSERT_EQ((size_t)1, match[0].size());
+    EXPECT_EQ(1, match[0][0].queryIdx);
+    EXPECT_EQ(0, match[0][0].trainIdx);
+    EXPECT_EQ(0.0f, match[0][0].distance);
+}
+
 }} // namespace

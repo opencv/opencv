@@ -188,8 +188,8 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, astep);
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, bstep);
     refineStep(w, h, ivx::TypeToEnum<T>::imgType, cstep);
-#ifdef _MSC_VER
-    const float MAGIC_SCALE = 0x0.01010102;
+#ifdef _WIN32
+    const float MAGIC_SCALE = 0x0.01010102p0;
 #else
     const float MAGIC_SCALE = 0x1.010102p-8;
 #endif
@@ -431,7 +431,7 @@ int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, 
     return CV_HAL_ERROR_OK;
 }
 
-int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
+int ovx_hal_warpPerspective(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
     if (skipSmallImages<VX_KERNEL_WARP_PERSPECTIVE>(aw, ah))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

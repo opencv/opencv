@@ -48,7 +48,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 #endif
 }
 
-PERF_TEST_P(TestWarpAffine, WarpAffine_ovx,
+PERF_TEST_P(TestWarpAffine, DISABLED_WarpAffine_ovx,
     Combine(
         Values(szVGA, sz720p, sz1080p),
         InterType::all(),
@@ -116,7 +116,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 #endif
 }
 
-PERF_TEST_P(TestWarpPerspective, WarpPerspective_ovx,
+PERF_TEST_P(TestWarpPerspective, DISABLED_WarpPerspective_ovx,
     Combine(
         Values(szVGA, sz720p, sz1080p),
         InterType::all(),
@@ -271,7 +271,7 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
     }
 }
 
-PERF_TEST(Transform, getPerspectiveTransform)
+PERF_TEST(Transform, getPerspectiveTransform_1000)
 {
     unsigned int size = 8;
     Mat source(1, size/2, CV_32FC2);
@@ -280,12 +280,33 @@ PERF_TEST(Transform, getPerspectiveTransform)
 
     declare.in(source, destination, WARMUP_RNG);
 
-    TEST_CYCLE()
+    PERF_SAMPLE_BEGIN()
+    for (int i = 0; i < 1000; i++)
     {
         transformCoefficient = getPerspectiveTransform(source, destination);
     }
+    PERF_SAMPLE_END()
 
-    SANITY_CHECK(transformCoefficient, 1e-5);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST(Transform, getPerspectiveTransform_QR_1000)
+{
+    unsigned int size = 8;
+    Mat source(1, size/2, CV_32FC2);
+    Mat destination(1, size/2, CV_32FC2);
+    Mat transformCoefficient;
+
+    declare.in(source, destination, WARMUP_RNG);
+
+    PERF_SAMPLE_BEGIN()
+    for (int i = 0; i < 1000; i++)
+    {
+        transformCoefficient = getPerspectiveTransform(source, destination, DECOMP_QR);
+    }
+    PERF_SAMPLE_END()
+
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

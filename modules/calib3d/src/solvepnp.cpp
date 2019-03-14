@@ -46,18 +46,45 @@
 #include "epnp.h"
 #include "p3p.h"
 #include "ap3p.h"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "calib3d_c_api.h"
 
 #include <iostream>
 
 namespace cv
 {
+void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
+                   InputArray rvec, InputArray tvec, float length, int thickness)
+{
+    CV_INSTRUMENT_REGION();
+
+    int type = image.type();
+    int cn = CV_MAT_CN(type);
+    CV_CheckType(type, cn == 1 || cn == 3 || cn == 4,
+                 "Number of channels must be 1, 3 or 4" );
+
+    CV_Assert(image.getMat().total() > 0);
+    CV_Assert(length > 0);
+
+    // project axes points
+    vector<Point3f> axesPoints;
+    axesPoints.push_back(Point3f(0, 0, 0));
+    axesPoints.push_back(Point3f(length, 0, 0));
+    axesPoints.push_back(Point3f(0, length, 0));
+    axesPoints.push_back(Point3f(0, 0, length));
+    vector<Point2f> imagePoints;
+    projectPoints(axesPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints);
+
+    // draw axes lines
+    line(image, imagePoints[0], imagePoints[1], Scalar(0, 0, 255), thickness);
+    line(image, imagePoints[0], imagePoints[2], Scalar(0, 255, 0), thickness);
+    line(image, imagePoints[0], imagePoints[3], Scalar(255, 0, 0), thickness);
+}
 
 bool solvePnP( InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
                OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
@@ -134,9 +161,9 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == SOLVEPNP_ITERATIVE)
     {
-        CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
-        CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-        CvMat c_rvec = rvec, c_tvec = tvec;
+        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
+        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
+        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
         cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
                                      (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
                                      &c_rvec, &c_tvec, useExtrinsicGuess );
@@ -236,7 +263,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                         int iterationsCount, float reprojectionError, double confidence,
                         OutputArray _inliers, int flags)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
@@ -379,7 +406,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 int solveP3P( InputArray _opoints, InputArray _ipoints,
               InputArray _cameraMatrix, InputArray _distCoeffs,
               OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags) {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));

@@ -78,9 +78,10 @@ See the OpenCV sample camshiftdemo.c that tracks colored objects.
  */
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
-/** @example camshiftdemo.cpp
+/** @example samples/cpp/camshiftdemo.cpp
 An example using the mean-shift tracking algorithm
 */
+
 /** @brief Finds an object on a back projection image.
 
 @param probImage Back projection of the object histogram. See calcBackProject for details.
@@ -123,9 +124,10 @@ CV_EXPORTS_W int buildOpticalFlowPyramid( InputArray img, OutputArrayOfArrays py
                                           int derivBorder = BORDER_CONSTANT,
                                           bool tryReuseInputImage = true );
 
-/** @example lkdemo.cpp
+/** @example samples/cpp/lkdemo.cpp
 An example using the Lucas-Kanade optical flow algorithm
- */
+*/
+
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with
 pyramids.
 
@@ -247,11 +249,13 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 \f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}\f]
 when fullAffine=false.
 
+@deprecated Use cv::estimateAffine2D, cv::estimateAffinePartial2D instead. If you are using this function
+with images, extract points using cv::calcOpticalFlowPyrLK and then use the estimation functions.
+
 @sa
 estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
  */
-CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
-
+CV_DEPRECATED CV_EXPORTS Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
 enum
 {
@@ -261,15 +265,28 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
-/** @example image_alignment.cpp
-An example using the image alignment ECC algorithm
+/** @brief Computes the Enhanced Correlation Coefficient value between two images @cite EP08 .
+
+@param templateImage single-channel template image; CV_8U or CV_32F array.
+@param inputImage single-channel input image to be warped to provide an image similar to
+ templateImage, same type as templateImage.
+@param inputMask An optional mask to indicate valid values of inputImage.
+
+@sa
+findTransformECC
  */
+
+CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
+
+/** @example samples/cpp/image_alignment.cpp
+An example using the image alignment ECC algorithm
+*/
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
 @param templateImage single-channel template image; CV_8U or CV_32F array.
 @param inputImage single-channel input image which should be warped with the final warpMatrix in
-order to provide an image similar to templateImage, same type as temlateImage.
+order to provide an image similar to templateImage, same type as templateImage.
 @param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
 @param motionType parameter, specifying the type of motion:
  -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
@@ -286,6 +303,7 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional mask to indicate valid values of inputImage.
+@param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
 (@cite EP08), that is
@@ -313,16 +331,24 @@ sample image_alignment.cpp that demonstrates the use of the function. Note that 
 an exception if algorithm does not converges.
 
 @sa
-estimateAffine2D, estimateAffinePartial2D, findHomography
+computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
-                                      InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
-                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-                                      InputArray inputMask = noArray());
+                                      InputOutputArray warpMatrix, int motionType,
+                                      TermCriteria criteria,
+                                      InputArray inputMask, int gaussFiltSize);
 
-/** @example kalman.cpp
+/** @overload */
+CV_EXPORTS
+double findTransformECC(InputArray templateImage, InputArray inputImage,
+    InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
+    TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
+    InputArray inputMask = noArray());
+
+/** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter
 */
+
 /** @brief Kalman filter class.
 
 The class implements a standard Kalman filter <http://en.wikipedia.org/wiki/Kalman_filter>,
@@ -384,6 +410,29 @@ public:
 };
 
 
+/** @brief Read a .flo file
+
+ @param path Path to the file to be loaded
+
+ The function readOpticalFlow loads a flow field from a file and returns it as a single matrix.
+ Resulting Mat has a type CV_32FC2 - floating-point, 2-channel. First channel corresponds to the
+ flow in the horizontal direction (u), second - vertical (v).
+ */
+CV_EXPORTS_W Mat readOpticalFlow( const String& path );
+/** @brief Write a .flo to disk
+
+ @param path Path to the file to be written
+ @param flow Flow field to be stored
+
+ The function stores a flow field in a file, returns true on success, false otherwise.
+ The flow field must be a 2-channel, floating-point matrix (CV_32FC2). First channel corresponds
+ to the flow in the horizontal direction (u), second - vertical (v).
+ */
+CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
+
+/**
+   Base class for dense optical flow algorithms
+*/
 class CV_EXPORTS_W DenseOpticalFlow : public Algorithm
 {
 public:
@@ -420,131 +469,6 @@ public:
                       OutputArray err = cv::noArray()) = 0;
 };
 
-/** @brief "Dual TV L1" Optical Flow Algorithm.
-
-The class implements the "Dual TV L1" optical flow algorithm described in @cite Zach2007 and
-@cite Javier2012 .
-Here are important members of the class that control the algorithm, which you can set after
-constructing the class instance:
-
--   member double tau
-    Time step of the numerical scheme.
-
--   member double lambda
-    Weight parameter for the data term, attachment parameter. This is the most relevant
-    parameter, which determines the smoothness of the output. The smaller this parameter is,
-    the smoother the solutions we obtain. It depends on the range of motions of the images, so
-    its value should be adapted to each image sequence.
-
--   member double theta
-    Weight parameter for (u - v)\^2, tightness parameter. It serves as a link between the
-    attachment and the regularization terms. In theory, it should have a small value in order
-    to maintain both parts in correspondence. The method is stable for a large range of values
-    of this parameter.
-
--   member int nscales
-    Number of scales used to create the pyramid of images.
-
--   member int warps
-    Number of warpings per scale. Represents the number of times that I1(x+u0) and grad(
-    I1(x+u0) ) are computed per scale. This is a parameter that assures the stability of the
-    method. It also affects the running time, so it is a compromise between speed and
-    accuracy.
-
--   member double epsilon
-    Stopping criterion threshold used in the numerical scheme, which is a trade-off between
-    precision and running time. A small value will yield more accurate solutions at the
-    expense of a slower convergence.
-
--   member int iterations
-    Stopping criterion iterations number used in the numerical scheme.
-
-C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
-Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-*/
-class CV_EXPORTS_W DualTVL1OpticalFlow : public DenseOpticalFlow
-{
-public:
-    //! @brief Time step of the numerical scheme
-    /** @see setTau */
-    CV_WRAP virtual double getTau() const = 0;
-    /** @copybrief getTau @see getTau */
-    CV_WRAP virtual void setTau(double val) = 0;
-    //! @brief Weight parameter for the data term, attachment parameter
-    /** @see setLambda */
-    CV_WRAP virtual double getLambda() const = 0;
-    /** @copybrief getLambda @see getLambda */
-    CV_WRAP virtual void setLambda(double val) = 0;
-    //! @brief Weight parameter for (u - v)^2, tightness parameter
-    /** @see setTheta */
-    CV_WRAP virtual double getTheta() const = 0;
-    /** @copybrief getTheta @see getTheta */
-    CV_WRAP virtual void setTheta(double val) = 0;
-    //! @brief coefficient for additional illumination variation term
-    /** @see setGamma */
-    CV_WRAP virtual double getGamma() const = 0;
-    /** @copybrief getGamma @see getGamma */
-    CV_WRAP virtual void setGamma(double val) = 0;
-    //! @brief Number of scales used to create the pyramid of images
-    /** @see setScalesNumber */
-    CV_WRAP virtual int getScalesNumber() const = 0;
-    /** @copybrief getScalesNumber @see getScalesNumber */
-    CV_WRAP virtual void setScalesNumber(int val) = 0;
-    //! @brief Number of warpings per scale
-    /** @see setWarpingsNumber */
-    CV_WRAP virtual int getWarpingsNumber() const = 0;
-    /** @copybrief getWarpingsNumber @see getWarpingsNumber */
-    CV_WRAP virtual void setWarpingsNumber(int val) = 0;
-    //! @brief Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time
-    /** @see setEpsilon */
-    CV_WRAP virtual double getEpsilon() const = 0;
-    /** @copybrief getEpsilon @see getEpsilon */
-    CV_WRAP virtual void setEpsilon(double val) = 0;
-    //! @brief Inner iterations (between outlier filtering) used in the numerical scheme
-    /** @see setInnerIterations */
-    CV_WRAP virtual int getInnerIterations() const = 0;
-    /** @copybrief getInnerIterations @see getInnerIterations */
-    CV_WRAP virtual void setInnerIterations(int val) = 0;
-    //! @brief Outer iterations (number of inner loops) used in the numerical scheme
-    /** @see setOuterIterations */
-    CV_WRAP virtual int getOuterIterations() const = 0;
-    /** @copybrief getOuterIterations @see getOuterIterations */
-    CV_WRAP virtual void setOuterIterations(int val) = 0;
-    //! @brief Use initial flow
-    /** @see setUseInitialFlow */
-    CV_WRAP virtual bool getUseInitialFlow() const = 0;
-    /** @copybrief getUseInitialFlow @see getUseInitialFlow */
-    CV_WRAP virtual void setUseInitialFlow(bool val) = 0;
-    //! @brief Step between scales (<1)
-    /** @see setScaleStep */
-    CV_WRAP virtual double getScaleStep() const = 0;
-    /** @copybrief getScaleStep @see getScaleStep */
-    CV_WRAP virtual void setScaleStep(double val) = 0;
-    //! @brief Median filter kernel size (1 = no filter) (3 or 5)
-    /** @see setMedianFiltering */
-    CV_WRAP virtual int getMedianFiltering() const = 0;
-    /** @copybrief getMedianFiltering @see getMedianFiltering */
-    CV_WRAP virtual void setMedianFiltering(int val) = 0;
-
-    /** @brief Creates instance of cv::DualTVL1OpticalFlow*/
-    CV_WRAP static Ptr<DualTVL1OpticalFlow> create(
-                                            double tau = 0.25,
-                                            double lambda = 0.15,
-                                            double theta = 0.3,
-                                            int nscales = 5,
-                                            int warps = 5,
-                                            double epsilon = 0.01,
-                                            int innnerIterations = 30,
-                                            int outerIterations = 10,
-                                            double scaleStep = 0.8,
-                                            double gamma = 0.0,
-                                            int medianFiltering = 5,
-                                            bool useInitialFlow = false);
-};
-
-/** @brief Creates instance of cv::DenseOpticalFlow
-*/
-CV_EXPORTS_W Ptr<DualTVL1OpticalFlow> createOptFlow_DualTVL1();
 
 /** @brief Class computing a dense optical flow using the Gunnar Farneback's algorithm.
  */
@@ -586,6 +510,166 @@ public:
             int flags = 0);
 };
 
+/** @brief Variational optical flow refinement
+
+This class implements variational refinement of the input flow field, i.e.
+it uses input flow to initialize the minimization of the following functional:
+\f$E(U) = \int_{\Omega} \delta \Psi(E_I) + \gamma \Psi(E_G) + \alpha \Psi(E_S) \f$,
+where \f$E_I,E_G,E_S\f$ are color constancy, gradient constancy and smoothness terms
+respectively. \f$\Psi(s^2)=\sqrt{s^2+\epsilon^2}\f$ is a robust penalizer to limit the
+influence of outliers. A complete formulation and a description of the minimization
+procedure can be found in @cite Brox2004
+*/
+class CV_EXPORTS_W VariationalRefinement : public DenseOpticalFlow
+{
+public:
+    /** @brief @ref calc function overload to handle separate horizontal (u) and vertical (v) flow components
+    (to avoid extra splits/merges) */
+    CV_WRAP virtual void calcUV(InputArray I0, InputArray I1, InputOutputArray flow_u, InputOutputArray flow_v) = 0;
+
+    /** @brief Number of outer (fixed-point) iterations in the minimization procedure.
+    @see setFixedPointIterations */
+    CV_WRAP virtual int getFixedPointIterations() const = 0;
+    /** @copybrief getFixedPointIterations @see getFixedPointIterations */
+    CV_WRAP virtual void setFixedPointIterations(int val) = 0;
+
+    /** @brief Number of inner successive over-relaxation (SOR) iterations
+        in the minimization procedure to solve the respective linear system.
+    @see setSorIterations */
+    CV_WRAP virtual int getSorIterations() const = 0;
+    /** @copybrief getSorIterations @see getSorIterations */
+    CV_WRAP virtual void setSorIterations(int val) = 0;
+
+    /** @brief Relaxation factor in SOR
+    @see setOmega */
+    CV_WRAP virtual float getOmega() const = 0;
+    /** @copybrief getOmega @see getOmega */
+    CV_WRAP virtual void setOmega(float val) = 0;
+
+    /** @brief Weight of the smoothness term
+    @see setAlpha */
+    CV_WRAP virtual float getAlpha() const = 0;
+    /** @copybrief getAlpha @see getAlpha */
+    CV_WRAP virtual void setAlpha(float val) = 0;
+
+    /** @brief Weight of the color constancy term
+    @see setDelta */
+    CV_WRAP virtual float getDelta() const = 0;
+    /** @copybrief getDelta @see getDelta */
+    CV_WRAP virtual void setDelta(float val) = 0;
+
+    /** @brief Weight of the gradient constancy term
+    @see setGamma */
+    CV_WRAP virtual float getGamma() const = 0;
+    /** @copybrief getGamma @see getGamma */
+    CV_WRAP virtual void setGamma(float val) = 0;
+
+    /** @brief Creates an instance of VariationalRefinement
+    */
+    CV_WRAP static Ptr<VariationalRefinement> create();
+};
+
+/** @brief DIS optical flow algorithm.
+
+This class implements the Dense Inverse Search (DIS) optical flow algorithm. More
+details about the algorithm can be found at @cite Kroeger2016 . Includes three presets with preselected
+parameters to provide reasonable trade-off between speed and quality. However, even the slowest preset is
+still relatively fast, use DeepFlow if you need better quality and don't care about speed.
+
+This implementation includes several additional features compared to the algorithm described in the paper,
+including spatial propagation of flow vectors (@ref getUseSpatialPropagation), as well as an option to
+utilize an initial flow approximation passed to @ref calc (which is, essentially, temporal propagation,
+if the previous frame's flow field is passed).
+*/
+class CV_EXPORTS_W DISOpticalFlow : public DenseOpticalFlow
+{
+public:
+    enum
+    {
+        PRESET_ULTRAFAST = 0,
+        PRESET_FAST = 1,
+        PRESET_MEDIUM = 2
+    };
+
+    /** @brief Finest level of the Gaussian pyramid on which the flow is computed (zero level
+        corresponds to the original image resolution). The final flow is obtained by bilinear upscaling.
+        @see setFinestScale */
+    CV_WRAP virtual int getFinestScale() const = 0;
+    /** @copybrief getFinestScale @see getFinestScale */
+    CV_WRAP virtual void setFinestScale(int val) = 0;
+
+    /** @brief Size of an image patch for matching (in pixels). Normally, default 8x8 patches work well
+        enough in most cases.
+        @see setPatchSize */
+    CV_WRAP virtual int getPatchSize() const = 0;
+    /** @copybrief getPatchSize @see getPatchSize */
+    CV_WRAP virtual void setPatchSize(int val) = 0;
+
+    /** @brief Stride between neighbor patches. Must be less than patch size. Lower values correspond
+        to higher flow quality.
+        @see setPatchStride */
+    CV_WRAP virtual int getPatchStride() const = 0;
+    /** @copybrief getPatchStride @see getPatchStride */
+    CV_WRAP virtual void setPatchStride(int val) = 0;
+
+    /** @brief Maximum number of gradient descent iterations in the patch inverse search stage. Higher values
+        may improve quality in some cases.
+        @see setGradientDescentIterations */
+    CV_WRAP virtual int getGradientDescentIterations() const = 0;
+    /** @copybrief getGradientDescentIterations @see getGradientDescentIterations */
+    CV_WRAP virtual void setGradientDescentIterations(int val) = 0;
+
+    /** @brief Number of fixed point iterations of variational refinement per scale. Set to zero to
+        disable variational refinement completely. Higher values will typically result in more smooth and
+        high-quality flow.
+    @see setGradientDescentIterations */
+    CV_WRAP virtual int getVariationalRefinementIterations() const = 0;
+    /** @copybrief getGradientDescentIterations @see getGradientDescentIterations */
+    CV_WRAP virtual void setVariationalRefinementIterations(int val) = 0;
+
+    /** @brief Weight of the smoothness term
+    @see setVariationalRefinementAlpha */
+    CV_WRAP virtual float getVariationalRefinementAlpha() const = 0;
+    /** @copybrief getVariationalRefinementAlpha @see getVariationalRefinementAlpha */
+    CV_WRAP virtual void setVariationalRefinementAlpha(float val) = 0;
+
+    /** @brief Weight of the color constancy term
+    @see setVariationalRefinementDelta */
+    CV_WRAP virtual float getVariationalRefinementDelta() const = 0;
+    /** @copybrief getVariationalRefinementDelta @see getVariationalRefinementDelta */
+    CV_WRAP virtual void setVariationalRefinementDelta(float val) = 0;
+
+    /** @brief Weight of the gradient constancy term
+    @see setVariationalRefinementGamma */
+    CV_WRAP virtual float getVariationalRefinementGamma() const = 0;
+    /** @copybrief getVariationalRefinementGamma @see getVariationalRefinementGamma */
+    CV_WRAP virtual void setVariationalRefinementGamma(float val) = 0;
+
+
+    /** @brief Whether to use mean-normalization of patches when computing patch distance. It is turned on
+        by default as it typically provides a noticeable quality boost because of increased robustness to
+        illumination variations. Turn it off if you are certain that your sequence doesn't contain any changes
+        in illumination.
+    @see setUseMeanNormalization */
+    CV_WRAP virtual bool getUseMeanNormalization() const = 0;
+    /** @copybrief getUseMeanNormalization @see getUseMeanNormalization */
+    CV_WRAP virtual void setUseMeanNormalization(bool val) = 0;
+
+    /** @brief Whether to use spatial propagation of good optical flow vectors. This option is turned on by
+        default, as it tends to work better on average and can sometimes help recover from major errors
+        introduced by the coarse-to-fine scheme employed by the DIS optical flow algorithm. Turning this
+        option off can make the output flow field a bit smoother, however.
+    @see setUseSpatialPropagation */
+    CV_WRAP virtual bool getUseSpatialPropagation() const = 0;
+    /** @copybrief getUseSpatialPropagation @see getUseSpatialPropagation */
+    CV_WRAP virtual void setUseSpatialPropagation(bool val) = 0;
+
+    /** @brief Creates an instance of DISOpticalFlow
+
+    @param preset one of PRESET_ULTRAFAST, PRESET_FAST and PRESET_MEDIUM
+    */
+    CV_WRAP static Ptr<DISOpticalFlow> create(int preset = DISOpticalFlow::PRESET_FAST);
+};
 
 /** @brief Class used for calculating a sparse optical flow.
 

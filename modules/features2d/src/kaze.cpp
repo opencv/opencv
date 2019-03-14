@@ -57,7 +57,7 @@ namespace cv
     {
     public:
         KAZE_Impl(bool _extended, bool _upright, float _threshold, int _octaves,
-                   int _sublevels, int _diffusivity)
+                   int _sublevels, KAZE::DiffusivityType _diffusivity)
         : extended(_extended)
         , upright(_upright)
         , threshold(_threshold)
@@ -84,8 +84,8 @@ namespace cv
         void setNOctaveLayers(int octaveLayers_) CV_OVERRIDE { sublevels = octaveLayers_; }
         int getNOctaveLayers() const CV_OVERRIDE { return sublevels; }
 
-        void setDiffusivity(int diff_) CV_OVERRIDE { diffusivity = diff_; }
-        int getDiffusivity() const CV_OVERRIDE { return diffusivity; }
+        void setDiffusivity(KAZE::DiffusivityType diff_) CV_OVERRIDE{ diffusivity = diff_; }
+        KAZE::DiffusivityType getDiffusivity() const CV_OVERRIDE{ return diffusivity; }
 
         // returns the descriptor size in bytes
         int descriptorSize() const CV_OVERRIDE
@@ -110,7 +110,7 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints) CV_OVERRIDE
         {
-            CV_INSTRUMENT_REGION()
+            CV_INSTRUMENT_REGION();
 
             cv::Mat img = image.getMat();
             if (img.channels() > 1)
@@ -178,7 +178,7 @@ namespace cv
             threshold = (float)fn["threshold"];
             octaves = (int)fn["octaves"];
             sublevels = (int)fn["sublevels"];
-            diffusivity = (int)fn["diffusivity"];
+            diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
         }
 
         bool extended;
@@ -186,13 +186,13 @@ namespace cv
         float threshold;
         int octaves;
         int sublevels;
-        int diffusivity;
+        KAZE::DiffusivityType diffusivity;
     };
 
     Ptr<KAZE> KAZE::create(bool extended, bool upright,
                             float threshold,
                             int octaves, int sublevels,
-                            int diffusivity)
+                            KAZE::DiffusivityType diffusivity)
     {
         return makePtr<KAZE_Impl>(extended, upright, threshold, octaves, sublevels, diffusivity);
     }

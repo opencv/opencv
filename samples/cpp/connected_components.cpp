@@ -1,3 +1,4 @@
+
 #include <opencv2/core/utility.hpp>
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -32,44 +33,29 @@ static void on_trackbar(int, void*)
     imshow( "Connected Components", dst );
 }
 
-static void help()
-{
-    cout << "\n This program demonstrates connected components and use of the trackbar\n"
-             "Usage: \n"
-             "  ./connected_components <image(../data/stuff.jpg as default)>\n"
-             "The image is converted to grayscale and displayed, another image has a trackbar\n"
-             "that controls thresholding and thereby the extracted contours which are drawn in color\n";
-}
-
-const char* keys =
-{
-    "{help h||}{@image|../data/stuff.jpg|image for converting to a grayscale}"
-};
-
 int main( int argc, const char** argv )
 {
-    CommandLineParser parser(argc, argv, keys);
-    if (parser.has("help"))
-    {
-        help();
-        return 0;
-    }
-    string inputImage = parser.get<string>(0);
-    img = imread(inputImage.c_str(), 0);
+    CommandLineParser parser(argc, argv, "{@image|stuff.jpg|image for converting to a grayscale}");
+    parser.about("\nThis program demonstrates connected components and use of the trackbar\n");
+    parser.printMessage();
+    cout << "\nThe image is converted to grayscale and displayed, another image has a trackbar\n"
+            "that controls thresholding and thereby the extracted contours which are drawn in color\n";
+
+    String inputImage = parser.get<string>(0);
+    img = imread(samples::findFile(inputImage), IMREAD_GRAYSCALE);
 
     if(img.empty())
     {
         cout << "Could not read input image file: " << inputImage << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    namedWindow( "Image", 1 );
     imshow( "Image", img );
 
-    namedWindow( "Connected Components", 1 );
+    namedWindow( "Connected Components", WINDOW_AUTOSIZE);
     createTrackbar( "Threshold", "Connected Components", &threshval, 255, on_trackbar );
     on_trackbar(threshval, 0);
 
     waitKey(0);
-    return 0;
+    return EXIT_SUCCESS;
 }

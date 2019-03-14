@@ -112,8 +112,12 @@ const string exts[] = {
     "exr",
 #endif
     "bmp",
+#ifdef HAVE_IMGCODEC_PXM
     "ppm",
-    "ras"
+#endif
+#ifdef HAVE_IMGCODEC_SUNRASTER
+    "ras",
+#endif
 };
 
 INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image, testing::ValuesIn(exts));

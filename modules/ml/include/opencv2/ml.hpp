@@ -120,7 +120,7 @@ public:
     \f[(minVal, minVal*step, minVal*{step}^2, \dots,  minVal*{logStep}^n),\f]
     where \f$n\f$ is the maximal index satisfying
     \f[\texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}\f]
-    The grid is logarithmic, so logStep must always be greater then 1. Default value is 1.
+    The grid is logarithmic, so logStep must always be greater than 1. Default value is 1.
     */
     CV_PROP_RW double logStep;
 
@@ -239,7 +239,18 @@ public:
     /** @brief Returns vector of symbolic names captured in loadFromCSV() */
     CV_WRAP virtual void getNames(std::vector<String>& names) const = 0;
 
-    CV_WRAP static Mat getSubVector(const Mat& vec, const Mat& idx);
+    /** @brief Extract from 1D vector elements specified by passed indexes.
+    @param vec input vector (supported types: CV_32S, CV_32F, CV_64F)
+    @param idx 1D index vector
+     */
+    static CV_WRAP Mat getSubVector(const Mat& vec, const Mat& idx);
+
+    /** @brief Extract from matrix rows/cols specified by passed indexes.
+    @param matrix input matrix (supported types: CV_32S, CV_32F, CV_64F)
+    @param idx 1D index vector
+    @param layout specifies to extract rows (cv::ml::ROW_SAMPLES) or to extract columns (cv::ml::COL_SAMPLES)
+     */
+    static CV_WRAP Mat getSubMatrix(const Mat& matrix, const Mat& idx, int layout);
 
     /** @brief Reads the dataset from a .csv file and returns the ready-to-use training data.
 

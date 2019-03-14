@@ -6,12 +6,16 @@ extern "C"
 {
 #endif
 
-#if defined _WIN32
+#ifndef OPENCV_FFMPEG_API
+#if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
+#   define OPENCV_FFMPEG_API
+#elif defined _WIN32
 #   define OPENCV_FFMPEG_API __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #   define OPENCV_FFMPEG_API __attribute__ ((visibility ("default")))
 #else
 #   define OPENCV_FFMPEG_API
+#endif
 #endif
 
 enum
@@ -28,46 +32,37 @@ enum
     CV_FFMPEG_CAP_PROP_SAR_DEN=41
 };
 
+typedef struct CvCapture_FFMPEG CvCapture_FFMPEG;
+typedef struct CvVideoWriter_FFMPEG CvVideoWriter_FFMPEG;
 
 OPENCV_FFMPEG_API struct CvCapture_FFMPEG* cvCreateFileCapture_FFMPEG(const char* filename);
-OPENCV_FFMPEG_API struct CvCapture_FFMPEG_2* cvCreateFileCapture_FFMPEG_2(const char* filename);
 OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap,
                                                   int prop, double value);
-OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG_2(struct CvCapture_FFMPEG_2* cap,
-                                                    int prop, double value);
 OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap, int prop);
-OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG_2(struct CvCapture_FFMPEG_2* cap, int prop);
 OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap);
-OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG_2(struct CvCapture_FFMPEG_2* cap);
 OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data,
                                              int* step, int* width, int* height, int* cn);
-OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG_2(struct CvCapture_FFMPEG_2* capture, unsigned char** data,
-                                             int* step, int* width, int* height, int* cn);
 OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG(struct CvCapture_FFMPEG** cap);
-OPENCV_FFMPEG_API void cvReleaseCapture_FFMPEG_2(struct CvCapture_FFMPEG_2** cap);
+
 OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG(const char* filename,
             int fourcc, double fps, int width, int height, int isColor );
-OPENCV_FFMPEG_API struct CvVideoWriter_FFMPEG_2* cvCreateVideoWriter_FFMPEG_2(const char* filename,
-            int fourcc, double fps, int width, int height, int isColor );
-
 OPENCV_FFMPEG_API int cvWriteFrame_FFMPEG(struct CvVideoWriter_FFMPEG* writer, const unsigned char* data,
                                           int step, int width, int height, int cn, int origin);
-
 OPENCV_FFMPEG_API void cvReleaseVideoWriter_FFMPEG(struct CvVideoWriter_FFMPEG** writer);
 
-typedef void* (*CvCreateFileCapture_Plugin)( const char* filename );
-typedef void* (*CvCreateCameraCapture_Plugin)( int index );
-typedef int (*CvGrabFrame_Plugin)( void* capture_handle );
-typedef int (*CvRetrieveFrame_Plugin)( void* capture_handle, unsigned char** data, int* step,
+typedef CvCapture_FFMPEG* (*CvCreateFileCapture_Plugin)( const char* filename );
+typedef CvCapture_FFMPEG* (*CvCreateCameraCapture_Plugin)( int index );
+typedef int (*CvGrabFrame_Plugin)( CvCapture_FFMPEG* capture_handle );
+typedef int (*CvRetrieveFrame_Plugin)( CvCapture_FFMPEG* capture_handle, unsigned char** data, int* step,
                                        int* width, int* height, int* cn );
-typedef int (*CvSetCaptureProperty_Plugin)( void* capture_handle, int prop_id, double value );
-typedef double (*CvGetCaptureProperty_Plugin)( void* capture_handle, int prop_id );
-typedef void (*CvReleaseCapture_Plugin)( void** capture_handle );
-typedef void* (*CvCreateVideoWriter_Plugin)( const char* filename, int fourcc,
+typedef int (*CvSetCaptureProperty_Plugin)( CvCapture_FFMPEG* capture_handle, int prop_id, double value );
+typedef double (*CvGetCaptureProperty_Plugin)( CvCapture_FFMPEG* capture_handle, int prop_id );
+typedef void (*CvReleaseCapture_Plugin)( CvCapture_FFMPEG** capture_handle );
+typedef CvVideoWriter_FFMPEG* (*CvCreateVideoWriter_Plugin)( const char* filename, int fourcc,
                                              double fps, int width, int height, int iscolor );
-typedef int (*CvWriteFrame_Plugin)( void* writer_handle, const unsigned char* data, int step,
+typedef int (*CvWriteFrame_Plugin)( CvVideoWriter_FFMPEG* writer_handle, const unsigned char* data, int step,
                                     int width, int height, int cn, int origin);
-typedef void (*CvReleaseVideoWriter_Plugin)( void** writer );
+typedef void (*CvReleaseVideoWriter_Plugin)( CvVideoWriter_FFMPEG** writer );
 
 /*
  * For CUDA encoder

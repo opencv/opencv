@@ -126,10 +126,10 @@ Mat ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat, co
                 generateEdge(p3, p4, pts_square3d);
                 generateEdge(p4, p1, pts_square3d);
 
-                projectPoints(Mat(pts_square3d), rvec, tvec, camMat, distCoeffs, pts_square2d);
+                projectPoints(pts_square3d, rvec, tvec, camMat, distCoeffs, pts_square2d);
                 squares_black.resize(squares_black.size() + 1);
                 vector<Point2f> temp;
-                approxPolyDP(Mat(pts_square2d), temp, 1.0, true);
+                approxPolyDP(pts_square2d, temp, 1.0, true);
                 transform(temp.begin(), temp.end(), back_inserter(squares_black.back()), Mult(rendererResolutionMultiplier));
             }
 
@@ -139,7 +139,7 @@ Mat ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat, co
         for(int i = 0; i < patternSize.width - 1; ++i)
             corners3d.push_back(zero + (i + 1) * sqWidth * pb1 + (j + 1) * sqHeight * pb2);
     corners.clear();
-    projectPoints(Mat(corners3d), rvec, tvec, camMat, distCoeffs, corners);
+    projectPoints(corners3d, rvec, tvec, camMat, distCoeffs, corners);
 
     vector<Point3f> whole3d;
     vector<Point2f> whole2d;
@@ -147,9 +147,9 @@ Mat ChessBoardGenerator::generateChessBoard(const Mat& bg, const Mat& camMat, co
     generateEdge(whole[1], whole[2], whole3d);
     generateEdge(whole[2], whole[3], whole3d);
     generateEdge(whole[3], whole[0], whole3d);
-    projectPoints(Mat(whole3d), rvec, tvec, camMat, distCoeffs, whole2d);
+    projectPoints(whole3d, rvec, tvec, camMat, distCoeffs, whole2d);
     vector<Point2f> temp_whole2d;
-    approxPolyDP(Mat(whole2d), temp_whole2d, 1.0, true);
+    approxPolyDP(whole2d, temp_whole2d, 1.0, true);
 
     vector< vector<Point > > whole_contour(1);
     transform(temp_whole2d.begin(), temp_whole2d.end(),
@@ -213,7 +213,7 @@ Mat ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat
         pts3d[3] = p - pb1 * cbHalfWidthEx + cbHalfHeightEx * pb2;
 
         /* can remake with better perf */
-        projectPoints(Mat(pts3d), rvec, tvec, camMat, distCoeffs, pts2d);
+        projectPoints(pts3d, rvec, tvec, camMat, distCoeffs, pts2d);
 
         bool inrect1 = pts2d[0].x < bg.cols && pts2d[0].y < bg.rows && pts2d[0].x > 0 && pts2d[0].y > 0;
         bool inrect2 = pts2d[1].x < bg.cols && pts2d[1].y < bg.rows && pts2d[1].x > 0 && pts2d[1].y > 0;
@@ -278,7 +278,7 @@ Mat ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat
         pts3d[3] = p - pb1 * cbHalfWidthEx + cbHalfHeightEx * pb2;
 
         /* can remake with better perf */
-        projectPoints(Mat(pts3d), rvec, tvec, camMat, distCoeffs, pts2d);
+        projectPoints(pts3d, rvec, tvec, camMat, distCoeffs, pts2d);
 
         bool inrect1 = pts2d[0].x < bg.cols && pts2d[0].y < bg.rows && pts2d[0].x > 0 && pts2d[0].y > 0;
         bool inrect2 = pts2d[1].x < bg.cols && pts2d[1].y < bg.rows && pts2d[1].x > 0 && pts2d[1].y > 0;
@@ -320,7 +320,7 @@ Mat ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat
     pts3d[3] = p - pb1 * cbHalfWidthEx + cbHalfHeightEx * pb2;
 
     /* can remake with better perf */
-    projectPoints(Mat(pts3d), rvec, tvec, camMat, distCoeffs, pts2d);
+    projectPoints(pts3d, rvec, tvec, camMat, distCoeffs, pts2d);
 
     Point3f zero = p - pb1 * cbHalfWidth - cbHalfHeight * pb2;
 

@@ -362,7 +362,7 @@ public:
         }
 
         cv::AutoBuffer<double> _buf(buf_sz+noutputs);
-        double* buf = _buf;
+        double* buf = _buf.data();
 
         if( !_outputs.needed() )
         {
@@ -924,7 +924,7 @@ public:
             _idx[i] = i;
 
         AutoBuffer<double> _buf(max_lsize*2);
-        double* buf[] = { _buf, (double*)_buf + max_lsize };
+        double* buf[] = { _buf.data(), _buf.data() + max_lsize };
 
         const double* sw = _sw.empty() ? 0 : _sw.ptr<double>();
 
@@ -1187,7 +1187,7 @@ public:
             prev_dEdw_sign[i] = Mat::zeros(weights[i].size(), CV_8S);
             dEdw[i] = Mat::zeros(weights[i].size(), CV_64F);
         }
-
+        CV_Assert(total > 0);
         int dcount0 = max_buf_size/(2*total);
         dcount0 = std::max( dcount0, 1 );
         dcount0 = std::min( dcount0, count );

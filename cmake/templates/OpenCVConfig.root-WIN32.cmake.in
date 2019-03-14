@@ -113,6 +113,16 @@ elseif(MSVC)
     if(NOT has_VS2017)
       set(OpenCV_RUNTIME vc14) # selecting previous compatible runtime version
     endif()
+  elseif(MSVC_VERSION MATCHES "^192[0-9]$")
+    set(OpenCV_RUNTIME vc16)
+    check_one_config(has_VS2019)
+    if(NOT has_VS2019)
+      set(OpenCV_RUNTIME vc15) # selecting previous compatible runtime version
+      check_one_config(has_VS2017)
+      if(NOT has_VS2017)
+        set(OpenCV_RUNTIME vc14) # selecting previous compatible runtime version
+      endif()
+    endif()
   endif()
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)

@@ -69,6 +69,7 @@ protected:
     bool TestVec();
     bool TestMatxMultiplication();
     bool TestMatxElementwiseDivison();
+    bool TestMatMatxCastSum();
     bool TestSubMatAccess();
     bool TestExp();
     bool TestSVD();
@@ -794,13 +795,13 @@ bool CV_OperationsTest::TestTemplateMat()
 
         Size size(2, 5);
         TestType<float>(size, 1.f);
-        cv::Vec3f val1 = 1.f;
+        cv::Vec3f val1(1.f);
         TestType<cv::Vec3f>(size, val1);
-        cv::Matx31f val2 = 1.f;
+        cv::Matx31f val2(1.f);
         TestType<cv::Matx31f>(size, val2);
-        cv::Matx41f val3 = 1.f;
+        cv::Matx41f val3(1.f);
         TestType<cv::Matx41f>(size, val3);
-        cv::Matx32f val4 = 1.f;
+        cv::Matx32f val4(1.f);
         TestType<cv::Matx32f>(size, val4);
     }
     catch (const test_excep& e)
@@ -880,6 +881,74 @@ bool CV_OperationsTest::TestMatxMultiplication()
     catch(const test_excep&)
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
+
+bool CV_OperationsTest::TestMatMatxCastSum()
+{
+    try
+    {
+        Mat ref1 = (Mat_<double>(3, 1) << 1, 2, 3);
+        Mat ref2 = (Mat_<double>(3, 1) << 3, 4, 5);
+        Mat ref3 = Mat::ones(3, 1, CV_64FC1);
+
+        Mat mat = Mat::zeros(3, 1, CV_64FC1);
+
+        Mat tst1 = ref1.clone();
+        Mat_<double> tst2 = ref2.clone();
+        Matx<double, 3, 1> tst3(1, 2, 3);
+        Vec3d tst4(3, 4, 5);
+        Scalar tst5(1, 2, 3);
+        Mat res;
+
+        res = mat + tst1;
+        CHECK_DIFF_FLT(res, ref1);
+        res = mat + tst2;
+        CHECK_DIFF_FLT(res, ref2);
+        res = mat + tst3;
+        CHECK_DIFF_FLT(res, ref1);
+        res = mat + tst4;
+        CHECK_DIFF_FLT(res, ref2);
+
+        res = mat + tst5;
+        CHECK_DIFF_FLT(res, ref3);
+        res = mat + 1;
+        CHECK_DIFF_FLT(res, ref3);
+
+        cv::add(mat, tst1, res);
+        CHECK_DIFF_FLT(res, ref1);
+        cv::add(mat, tst2, res);
+        CHECK_DIFF_FLT(res, ref2);
+        cv::add(mat, tst3, res);
+        CHECK_DIFF_FLT(res, ref1);
+        cv::add(mat, tst4, res);
+        CHECK_DIFF_FLT(res, ref2);
+
+        cv::add(mat, tst5, res);
+        CHECK_DIFF_FLT(res, ref3);
+        cv::add(mat, 1, res);
+        CHECK_DIFF_FLT(res, ref3);
+
+        res = mat.clone(); res += tst1;
+        CHECK_DIFF_FLT(res, ref1);
+        res = mat.clone(); res += tst2;
+        CHECK_DIFF_FLT(res, ref2);
+        res = mat.clone(); res += tst3;
+        CHECK_DIFF_FLT(res, ref1);
+        res = mat.clone(); res += tst4;
+        CHECK_DIFF_FLT(res, ref2);
+
+        res = mat.clone(); res += tst5;
+        CHECK_DIFF_FLT(res, ref3);
+        res = mat.clone(); res += 1;
+        CHECK_DIFF_FLT(res, ref3);
+    }
+    catch (const test_excep& e)
+    {
+        ts->printf(cvtest::TS::LOG, "%s\n", e.s.c_str());
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return false;
     }
     return true;
@@ -970,7 +1039,14 @@ bool CV_OperationsTest::operations1()
         Size sz(10, 20);
         if (sz.area() != 200) throw test_excep();
         if (sz.width != 10 || sz.height != 20) throw test_excep();
-        if (((CvSize)sz).width != 10 || ((CvSize)sz).height != 20) throw test_excep();
+        if (cvSize(sz).width != 10 || cvSize(sz).height != 20) throw test_excep();
+
+        Rect r1(0, 0, 10, 20);
+        Size sz1(5, 10);
+        r1 -= sz1;
+        if (r1.size().width != 5 || r1.size().height != 10) throw test_excep();
+        Rect r2 = r1 - sz1;
+        if (r2.size().width != 0 || r2.size().height != 0) throw test_excep();
 
         Vec<double, 5> v5d(1, 1, 1, 1, 1);
         Vec<double, 6> v6d(1, 1, 1, 1, 1, 1);
@@ -1126,6 +1202,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestMatxElementwiseDivison())
+        return;
+
+    if (!TestMatMatxCastSum())
         return;
 
     if (!TestSubMatAccess())

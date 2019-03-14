@@ -1,3 +1,4 @@
+from __future__ import print_function
 import cv2 as cv
 import numpy as np
 import argparse
@@ -12,7 +13,8 @@ parser.add_argument('--height', default=-1, type=int, help='Resize input to spec
 parser.add_argument('--median_filter', default=0, type=int, help='Kernel size of postprocessing blurring.')
 args = parser.parse_args()
 
-net = cv.dnn.readNetFromTorch(args.model)
+net = cv.dnn.readNetFromTorch(cv.samples.findFile(args.model))
+net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV);
 
 if args.input:
     cap = cv.VideoCapture(args.input)
@@ -43,7 +45,7 @@ while cv.waitKey(1) < 0:
 
     t, _ = net.getPerfProfile()
     freq = cv.getTickFrequency() / 1000
-    print t / freq, 'ms'
+    print(t / freq, 'ms')
 
     if args.median_filter:
         out = cv.medianBlur(out, args.median_filter)

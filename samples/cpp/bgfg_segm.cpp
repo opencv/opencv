@@ -38,7 +38,10 @@ int main(int argc, const char** argv)
     if (file.empty())
         cap.open(camera);
     else
+    {
+        file = samples::findFileOrKeep(file);  // ignore gstreamer pipelines
         cap.open(file.c_str());
+    }
     if (!cap.isOpened())
     {
         cout << "Can not open video stream: '" << (file.empty() ? "<camera>" : file) << "'" << endl;

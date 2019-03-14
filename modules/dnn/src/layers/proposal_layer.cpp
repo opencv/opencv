@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_inf_engine.hpp"
 
 namespace cv { namespace dnn {
 
@@ -16,14 +17,14 @@ public:
     {
         setParamsFrom(params);
 
-        uint32_t featStride = params.get<uint32_t>("feat_stride", 16);
-        uint32_t baseSize = params.get<uint32_t>("base_size", 16);
+        featStride = params.get<uint32_t>("feat_stride", 16);
+        baseSize = params.get<uint32_t>("base_size", 16);
         // uint32_t minSize = params.get<uint32_t>("min_size", 16);
-        uint32_t keepTopBeforeNMS = params.get<uint32_t>("pre_nms_topn", 6000);
+        keepTopBeforeNMS = params.get<uint32_t>("pre_nms_topn", 6000);
         keepTopAfterNMS = params.get<uint32_t>("post_nms_topn", 300);
-        float nmsThreshold = params.get<float>("nms_thresh", 0.7);
-        DictValue ratios = params.get("ratio");
-        DictValue scales = params.get("scale");
+        nmsThreshold = params.get<float>("nms_thresh", 0.7);
+        ratios = params.get("ratio");
+        scales = params.get("scale");
 
         {
             LayerParams lp;
@@ -83,6 +84,12 @@ public:
         }
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && preferableTarget != DNN_TARGET_MYRIAD);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -130,24 +137,27 @@ public:
         return false;
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
-        std::vector<Mat*> layerInputs;
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        std::vector<Mat> layerInputs;
         std::vector<Mat> layerOutputs;
 
         // Scores permute layer.
-        Mat scores = getObjectScores(*inputs[0]);
-        layerInputs.assign(1, &scores);
+        Mat scores = getObjectScores(inputs[0]);
+        layerInputs.assign(1, scores);
         layerOutputs.assign(1, Mat(shape(scores.size[0], scores.size[2],
                                          scores.size[3], scores.size[1]), CV_32FC1));
         scoresPermute->finalize(layerInputs, layerOutputs);
 
         // BBox predictions permute layer.
-        Mat* bboxDeltas = inputs[1];
-        CV_Assert(bboxDeltas->dims == 4);
+        const Mat& bboxDeltas = inputs[1];
+        CV_Assert(bboxDeltas.dims == 4);
         layerInputs.assign(1, bboxDeltas);
-        layerOutputs.assign(1, Mat(shape(bboxDeltas->size[0], bboxDeltas->size[2],
-                                         bboxDeltas->size[3], bboxDeltas->size[1]), CV_32FC1));
+        layerOutputs.assign(1, Mat(shape(bboxDeltas.size[0], bboxDeltas.size[2],
+                                         bboxDeltas.size[3], bboxDeltas.size[1]), CV_32FC1));
         deltasPermute->finalize(layerInputs, layerOutputs);
     }
 
@@ -157,6 +167,9 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
+
+        if (inputs_.depth() == CV_16S)
+            return false;
 
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
@@ -237,23 +250,26 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
                    OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
         CV_Assert(internals.size() == 3);
-        const Mat& scores = *inputs[0];
-        const Mat& bboxDeltas = *inputs[1];
-        const Mat& imInfo = *inputs[2];
+        const Mat& scores = inputs[0];
+        const Mat& bboxDeltas = inputs[1];
+        const Mat& imInfo = inputs[2];
         Mat& priorBoxes = internals[0];
         Mat& permuttedScores = internals[1];
         Mat& permuttedDeltas = internals[2];
@@ -309,6 +325,61 @@ public:
                 outputs[i].rowRange(numDets, keepTopAfterNMS).setTo(0);
     }
 
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::ProposalLayer ieLayer(name);
+
+        ieLayer.setBaseSize(baseSize);
+        ieLayer.setFeatStride(featStride);
+        ieLayer.setMinSize(16);
+        ieLayer.setNMSThresh(nmsThreshold);
+        ieLayer.setPostNMSTopN(keepTopAfterNMS);
+        ieLayer.setPreNMSTopN(keepTopBeforeNMS);
+
+        std::vector<float> scalesVec(scales.size());
+        for (int i = 0; i < scales.size(); ++i)
+            scalesVec[i] = scales.get<float>(i);
+        ieLayer.setScale(scalesVec);
+
+        std::vector<float> ratiosVec(ratios.size());
+        for (int i = 0; i < ratios.size(); ++i)
+            ratiosVec[i] = ratios.get<float>(i);
+        ieLayer.setRatio(ratiosVec);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Proposal";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        ieLayer->params["base_size"] = format("%d", baseSize);
+        ieLayer->params["feat_stride"] = format("%d", featStride);
+        ieLayer->params["min_size"] = "16";
+        ieLayer->params["nms_thresh"] = format("%f", nmsThreshold);
+        ieLayer->params["post_nms_topn"] = format("%d", keepTopAfterNMS);
+        ieLayer->params["pre_nms_topn"] = format("%d", keepTopBeforeNMS);
+        if (ratios.size())
+        {
+            ieLayer->params["ratio"] = format("%f", ratios.get<float>(0));
+            for (int i = 1; i < ratios.size(); ++i)
+                ieLayer->params["ratio"] += format(",%f", ratios.get<float>(i));
+        }
+        if (scales.size())
+        {
+            ieLayer->params["scale"] = format("%f", scales.get<float>(0));
+            for (int i = 1; i < scales.size(); ++i)
+                ieLayer->params["scale"] += format(",%f", scales.get<float>(i));
+        }
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
+#endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
+
 private:
     // A first half of channels are background scores. We need only a second one.
     static Mat getObjectScores(const Mat& m)
@@ -339,8 +410,10 @@ private:
 
     Ptr<PermuteLayer> deltasPermute;
     Ptr<PermuteLayer> scoresPermute;
-    uint32_t keepTopAfterNMS;
+    uint32_t keepTopBeforeNMS, keepTopAfterNMS, featStride, baseSize;
     Mat fakeImageBlob;
+    float nmsThreshold;
+    DictValue ratios, scales;
 #ifdef HAVE_OPENCL
     UMat umat_fakeImageBlob;
 #endif

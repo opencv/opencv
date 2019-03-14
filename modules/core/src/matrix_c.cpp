@@ -4,20 +4,24 @@
 
 // glue
 
-CvMatND::CvMatND(const cv::Mat& m)
+CvMatND cvMatND(const cv::Mat& m)
 {
-    cvInitMatNDHeader(this, m.dims, m.size, m.type(), m.data );
+    CvMatND self;
+    cvInitMatNDHeader(&self, m.dims, m.size, m.type(), m.data );
     int i, d = m.dims;
     for( i = 0; i < d; i++ )
-        dim[i].step = (int)m.step[i];
-    type |= m.flags & cv::Mat::CONTINUOUS_FLAG;
+        self.dim[i].step = (int)m.step[i];
+    self.type |= m.flags & cv::Mat::CONTINUOUS_FLAG;
+    return self;
 }
 
-_IplImage::_IplImage(const cv::Mat& m)
+_IplImage cvIplImage(const cv::Mat& m)
 {
+    _IplImage self;
     CV_Assert( m.dims <= 2 );
-    cvInitImageHeader(this, m.size(), cvIplDepth(m.flags), m.channels());
-    cvSetData(this, m.data, (int)m.step[0]);
+    cvInitImageHeader(&self, cvSize(m.size()), cvIplDepth(m.flags), m.channels());
+    cvSetData(&self, m.data, (int)m.step[0]);
+    return self;
 }
 
 namespace cv {
@@ -120,8 +124,8 @@ static Mat iplImageToMat(const IplImage* img, bool copyData)
     }
     m.datalimit = m.datastart + m.step.p[0]*m.rows;
     m.dataend = m.datastart + m.step.p[0]*(m.rows-1) + esz*m.cols;
-    m.flags |= (m.cols*esz == m.step.p[0] || m.rows == 1 ? Mat::CONTINUOUS_FLAG : 0);
     m.step[1] = esz;
+    m.updateContinuityFlag();
 
     if( copyData )
     {
@@ -169,7 +173,7 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
         if( abuf )
         {
             abuf->allocate(((size_t)total*esz + sizeof(double)-1)/sizeof(double));
-            double* bufdata = *abuf;
+            double* bufdata = abuf->data();
             cvCvtSeqToArray(seq, bufdata, CV_WHOLE_SEQ);
             return Mat(total, 1, type, bufdata);
         }
@@ -222,7 +226,7 @@ CV_IMPL void cvSetIdentity( CvArr* arr, CvScalar value )
 
 CV_IMPL CvScalar cvTrace( const CvArr* arr )
 {
-    return cv::trace(cv::cvarrToMat(arr));
+    return cvScalar(cv::trace(cv::cvarrToMat(arr)));
 }
 
 

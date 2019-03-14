@@ -39,11 +39,18 @@
 //
 //M*////////////////////////////////////////////////////////////////////////////////////////
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <stdio.h>
 #import <AVFoundation/AVFoundation.h>
+
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 /********************** Declaration of class headers ************************/
 
@@ -154,7 +161,7 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
-    int       mMode;
+    uint32_t  mMode;
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
@@ -181,7 +188,8 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
                 double fps, CvSize frame_size,
                 int is_color=1);
         ~CvVideoWriter_AVFoundation();
-        bool writeFrame(const IplImage* image);
+        bool writeFrame(const IplImage* image) CV_OVERRIDE;
+        int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
     private:
         IplImage* argbimage;
 
@@ -200,27 +208,30 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
 
 /****************** Implementation of interface functions ********************/
 
-
-CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
-
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+{
+    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
-        return retval;
+        return makePtr<LegacyCapture>(retval);
     delete retval;
     return NULL;
+
 }
 
-CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
-        cvReleaseCapture(&retval);
-    return retval;
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+{
+    CvCaptureCAM* retval = new CvCaptureCAM(index);
+    if (retval->didStart())
+        return cv::makePtr<cv::LegacyCapture>(retval);
+    delete retval;
+    return 0;
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
-                                     double fps, CvSize frame_size,
-                                     int is_color) {
-    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+{
+    CvSize sz = { frameSize.width, frameSize.height };
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
+    return cv::makePtr<cv::LegacyWriter>(wrt);
 }
 
 /********************** Implementation of Classes ****************************/
@@ -792,9 +803,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     mFrameTimestamp = position;
     mFrameNum = round((mFrameTimestamp.value * mAssetTrack.nominalFrameRate) / double(mFrameTimestamp.timescale));
     [mAssetReader addOutput: mTrackOutput];
-    [mAssetReader startReading];
-
-    return true;
+    return [mAssetReader startReading];
 }
 
 int CvCaptureFile::didStart() {
@@ -1012,7 +1021,7 @@ double CvCaptureFile::getProperty(int property_id) const{
         case CV_CAP_PROP_POS_MSEC:
             return mFrameTimestamp.value * 1000.0 / mFrameTimestamp.timescale;
         case CV_CAP_PROP_POS_FRAMES:
-            return  mFrameNum;
+            return mAssetTrack.nominalFrameRate > 0 ? mFrameNum : 0;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = [mAsset duration];
             return (mFrameTimestamp.value * t.timescale) / double(mFrameTimestamp.timescale * t.value);
@@ -1027,7 +1036,7 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
-        case CV_CAP_PROP_MODE:
+        case CV_CAP_PROP_FOURCC:
             return mMode;
         default:
             break;
@@ -1048,21 +1057,18 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
         case CV_CAP_PROP_POS_MSEC:
             t = mAsset.duration;
             t.value = value * t.timescale / 1000;
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
         case CV_CAP_PROP_POS_FRAMES:
-            setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate));
-            retval = true;
+            retval = mAssetTrack.nominalFrameRate > 0 ? setupReadingAt(CMTimeMake(value, mAssetTrack.nominalFrameRate)) : false;
             break;
         case CV_CAP_PROP_POS_AVI_RATIO:
             t = mAsset.duration;
             t.value = round(t.value * value);
-            setupReadingAt(t);
-            retval = true;
+            retval = setupReadingAt(t);
             break;
-        case CV_CAP_PROP_MODE:
-            int mode;
+        case CV_CAP_PROP_FOURCC:
+            uint32_t mode;
             mode = cvRound(value);
             if (mMode == mode) {
                 retval = true;
@@ -1073,8 +1079,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
                     case CV_CAP_MODE_GRAY:
                     case CV_CAP_MODE_YUYV:
                         mMode = mode;
-                        setupReadingAt(mFrameTimestamp);
-                        retval = true;
+                        retval = setupReadingAt(mFrameTimestamp);
                         break;
                     default:
                         fprintf(stderr, "VIDEOIO ERROR: AVF Mac: Unsupported mode: %d\n", mode);
@@ -1327,3 +1332,5 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
+
+#pragma clang diagnostic pop
