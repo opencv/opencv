@@ -414,6 +414,7 @@ typedef Vec<int, 8> Vec8i;
 typedef Vec<float, 2> Vec2f;
 typedef Vec<float, 3> Vec3f;
 typedef Vec<float, 4> Vec4f;
+typedef Vec<float, 5> Vec5f;
 typedef Vec<float, 6> Vec6f;
 
 typedef Vec<double, 2> Vec2d;

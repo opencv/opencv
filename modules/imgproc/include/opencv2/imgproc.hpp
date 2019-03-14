@@ -3788,6 +3788,10 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset = Point());
 
+CV_EXPORTS_W void findContours2( InputArray image, OutputArrayOfArrays contours,
+                        	OutputArray circle_info,
+                      	 int mode, int method, Point offset = Point());
+
 /** @overload */
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
