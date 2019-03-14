@@ -1250,8 +1250,8 @@ static void initLabTabs()
                 y = cvRound(fy*fy*fy/softfloat(LUT_BASE*LUT_BASE));
             }
 
-            LabToYF_b[i*2  ] = (ushort)y;   // 2260 <= y <= BASE
-            LabToYF_b[i*2+1] = (ushort)ify; // 0 <= ify <= BASE
+            LabToYF_b[i*2  ] = (ushort)y;   // 0 <= y <= BASE
+            LabToYF_b[i*2+1] = (ushort)ify; // 2260 <= ify <= BASE
         }
 
         //Lookup table for a,b to x,z conversion
@@ -2144,58 +2144,62 @@ struct Lab2RGBinteger
         bo = tab[bo];
     }
 
-    // L, a, b should be in their natural range
-    inline void processLabToXYZ(const v_uint8x16& lv, const v_uint8x16& av, const v_uint8x16& bv,
-                                v_int32x4& xiv00, v_int32x4& yiv00, v_int32x4& ziv00,
-                                v_int32x4& xiv01, v_int32x4& yiv01, v_int32x4& ziv01,
-                                v_int32x4& xiv10, v_int32x4& yiv10, v_int32x4& ziv10,
-                                v_int32x4& xiv11, v_int32x4& yiv11, v_int32x4& ziv11) const
+#if CV_SIMD
+    inline void processLabToXYZ(const v_uint8& l, const v_uint8& a, const v_uint8& b,
+                                v_int32 (&xiv)[4], v_int32 (&y)[4], v_int32 (&ziv)[4]) const
     {
-        v_uint16x8 lv0, lv1;
-        v_expand(lv, lv0, lv1);
+        v_uint16 l0, l1;
+        v_expand(l, l0, l1);
+        v_int32 lq[4];
+        v_expand(v_reinterpret_as_s16(l0), lq[0], lq[1]);
+        v_expand(v_reinterpret_as_s16(l1), lq[2], lq[3]);
+
         // Load Y and IFY values from lookup-table
         // y = LabToYF_b[L_value*2], ify = LabToYF_b[L_value*2 + 1]
-        // LabToYF_b[i*2  ] = y;   // 2260 <= y <= BASE
-        // LabToYF_b[i*2+1] = ify; // 0 <= ify <= BASE
-        uint16_t CV_DECL_ALIGNED(16) v_lv0[8], v_lv1[8];
-        v_store_aligned(v_lv0, (lv0 << 1)); v_store_aligned(v_lv1, (lv1 << 1));
-        v_int16x8 ify0, ify1;
+        // LabToYF_b[i*2  ] = y;   // 0 <= y <= BASE
+        // LabToYF_b[i*2+1] = ify; // 2260 <= ify <= BASE
+        v_int32 yf[4];
+        for(int k = 0; k < 4; k++)
+        {
+            yf[k] = v_lut((const int*)LabToYF_b, lq[k]);
+        }
+        v_int32 ify[4];
+        v_int32 mask16 = vx_setall_s32(0xFFFF);
+        for(int k = 0; k < 4; k++)
+        {
+            y[k]   = yf[k] & mask16;
+            ify[k] = v_reinterpret_as_s32(v_reinterpret_as_u32(yf[k]) >> 16);
+        }
 
-        yiv00 = v_int32x4(LabToYF_b[v_lv0[0]  ], LabToYF_b[v_lv0[1]  ], LabToYF_b[v_lv0[2]  ], LabToYF_b[v_lv0[3]  ]);
-        yiv01 = v_int32x4(LabToYF_b[v_lv0[4]  ], LabToYF_b[v_lv0[5]  ], LabToYF_b[v_lv0[6]  ], LabToYF_b[v_lv0[7]  ]);
-        yiv10 = v_int32x4(LabToYF_b[v_lv1[0]  ], LabToYF_b[v_lv1[1]  ], LabToYF_b[v_lv1[2]  ], LabToYF_b[v_lv1[3]  ]);
-        yiv11 = v_int32x4(LabToYF_b[v_lv1[4]  ], LabToYF_b[v_lv1[5]  ], LabToYF_b[v_lv1[6]  ], LabToYF_b[v_lv1[7]  ]);
+        v_int16 ify0, ify1;
+        ify0 = v_pack(ify[0], ify[1]);
+        ify1 = v_pack(ify[2], ify[3]);
 
-        ify0 = v_int16x8(LabToYF_b[v_lv0[0]+1], LabToYF_b[v_lv0[1]+1], LabToYF_b[v_lv0[2]+1], LabToYF_b[v_lv0[3]+1],
-                         LabToYF_b[v_lv0[4]+1], LabToYF_b[v_lv0[5]+1], LabToYF_b[v_lv0[6]+1], LabToYF_b[v_lv0[7]+1]);
-        ify1 = v_int16x8(LabToYF_b[v_lv1[0]+1], LabToYF_b[v_lv1[1]+1], LabToYF_b[v_lv1[2]+1], LabToYF_b[v_lv1[3]+1],
-                         LabToYF_b[v_lv1[4]+1], LabToYF_b[v_lv1[5]+1], LabToYF_b[v_lv1[6]+1], LabToYF_b[v_lv1[7]+1]);
-
-        v_int16x8 adiv0, adiv1, bdiv0, bdiv1;
-        v_uint16x8 av0, av1, bv0, bv1;
-        v_expand(av, av0, av1); v_expand(bv, bv0, bv1);
+        v_int16 adiv0, adiv1, bdiv0, bdiv1;
+        v_uint16 a0, a1, b0, b1;
+        v_expand(a, a0, a1); v_expand(b, b0, b1);
         //adiv = aa*BASE/500 - 128*BASE/500, bdiv = bb*BASE/200 - 128*BASE/200;
         //approximations with reasonable precision
-        v_uint16x8 mulA = v_setall_u16(53687);
-        v_uint32x4 ma00, ma01, ma10, ma11;
-        v_uint32x4 addA = v_setall_u32(1 << 7);
-        v_mul_expand((av0 + (av0 << 2)), mulA, ma00, ma01);
-        v_mul_expand((av1 + (av1 << 2)), mulA, ma10, ma11);
-        adiv0 = v_reinterpret_as_s16(v_pack(((ma00 + addA) >> 13), ((ma01 + addA) >> 13)));
-        adiv1 = v_reinterpret_as_s16(v_pack(((ma10 + addA) >> 13), ((ma11 + addA) >> 13)));
+        v_uint16 mulA = vx_setall_u16(53687);
+        v_uint32 ma[4];
+        v_uint32 addA = vx_setall_u32(1 << 7);
+        v_mul_expand((a0 + (a0 << 2)), mulA, ma[0], ma[1]);
+        v_mul_expand((a1 + (a1 << 2)), mulA, ma[2], ma[3]);
+        adiv0 = v_reinterpret_as_s16(v_pack(((ma[0] + addA) >> 13), ((ma[1] + addA) >> 13)));
+        adiv1 = v_reinterpret_as_s16(v_pack(((ma[2] + addA) >> 13), ((ma[3] + addA) >> 13)));
 
-        v_uint16x8 mulB = v_setall_u16(41943);
-        v_uint32x4 mb00, mb01, mb10, mb11;
-        v_uint32x4 addB = v_setall_u32(1 << 4);
-        v_mul_expand(bv0, mulB, mb00, mb01);
-        v_mul_expand(bv1, mulB, mb10, mb11);
-        bdiv0 = v_reinterpret_as_s16(v_pack((mb00 + addB) >> 9, (mb01 + addB) >> 9));
-        bdiv1 = v_reinterpret_as_s16(v_pack((mb10 + addB) >> 9, (mb11 + addB) >> 9));
+        v_uint16 mulB = vx_setall_u16(41943);
+        v_uint32 mb[4];
+        v_uint32 addB = vx_setall_u32(1 << 4);
+        v_mul_expand(b0, mulB, mb[0], mb[1]);
+        v_mul_expand(b1, mulB, mb[2], mb[3]);
+        bdiv0 = v_reinterpret_as_s16(v_pack((mb[0] + addB) >> 9, (mb[1] + addB) >> 9));
+        bdiv1 = v_reinterpret_as_s16(v_pack((mb[2] + addB) >> 9, (mb[3] + addB) >> 9));
 
         // 0 <= adiv <= 8356, 0 <= bdiv <= 20890
         /* x = ifxz[0]; y = y; z = ifxz[1]; */
-        v_uint16x8 xiv0, xiv1, ziv0, ziv1;
-        v_int16x8 vSubA = v_setall_s16(-128*BASE/500 - minABvalue), vSubB = v_setall_s16(128*BASE/200-1 - minABvalue);
+        v_uint16 xiv0, xiv1, ziv0, ziv1;
+        v_int16 vSubA = vx_setall_s16(-128*BASE/500 - minABvalue), vSubB = vx_setall_s16(128*BASE/200-1 - minABvalue);
 
         // int ifxz[] = {ify + adiv, ify - bdiv};
         // ifxz[k] = abToXZ_b[ifxz[k]-minABvalue];
@@ -2204,130 +2208,20 @@ struct Lab2RGBinteger
         ziv0 = v_reinterpret_as_u16(v_add_wrap(v_sub_wrap(ify0, bdiv0), vSubB));
         ziv1 = v_reinterpret_as_u16(v_add_wrap(v_sub_wrap(ify1, bdiv1), vSubB));
 
-        uint16_t CV_DECL_ALIGNED(16) v_x0[8], v_x1[8], v_z0[8], v_z1[8];
-        v_store_aligned(v_x0, xiv0 ); v_store_aligned(v_x1, xiv1 );
-        v_store_aligned(v_z0, ziv0 ); v_store_aligned(v_z1, ziv1 );
+        v_uint32 uxiv[4], uziv[4];
+        v_expand(xiv0, uxiv[0], uxiv[1]);
+        v_expand(xiv1, uxiv[2], uxiv[3]);
+        v_expand(ziv0, uziv[0], uziv[1]);
+        v_expand(ziv1, uziv[2], uziv[3]);
 
-        xiv00 = v_int32x4(abToXZ_b[v_x0[0]], abToXZ_b[v_x0[1]], abToXZ_b[v_x0[2]], abToXZ_b[v_x0[3]]);
-        xiv01 = v_int32x4(abToXZ_b[v_x0[4]], abToXZ_b[v_x0[5]], abToXZ_b[v_x0[6]], abToXZ_b[v_x0[7]]);
-        xiv10 = v_int32x4(abToXZ_b[v_x1[0]], abToXZ_b[v_x1[1]], abToXZ_b[v_x1[2]], abToXZ_b[v_x1[3]]);
-        xiv11 = v_int32x4(abToXZ_b[v_x1[4]], abToXZ_b[v_x1[5]], abToXZ_b[v_x1[6]], abToXZ_b[v_x1[7]]);
-        ziv00 = v_int32x4(abToXZ_b[v_z0[0]], abToXZ_b[v_z0[1]], abToXZ_b[v_z0[2]], abToXZ_b[v_z0[3]]);
-        ziv01 = v_int32x4(abToXZ_b[v_z0[4]], abToXZ_b[v_z0[5]], abToXZ_b[v_z0[6]], abToXZ_b[v_z0[7]]);
-        ziv10 = v_int32x4(abToXZ_b[v_z1[0]], abToXZ_b[v_z1[1]], abToXZ_b[v_z1[2]], abToXZ_b[v_z1[3]]);
-        ziv11 = v_int32x4(abToXZ_b[v_z1[4]], abToXZ_b[v_z1[5]], abToXZ_b[v_z1[6]], abToXZ_b[v_z1[7]]);
+        for(int k = 0; k < 4; k++)
+        {
+            xiv[k] = v_lut(abToXZ_b, v_reinterpret_as_s32(uxiv[k]));
+            ziv[k] = v_lut(abToXZ_b, v_reinterpret_as_s32(uziv[k]));
+        }
         // abToXZ_b[i-minABvalue] = v; // -1335 <= v <= 88231
     }
-
-    void operator()(const float* src, float* dst, int n) const
-    {
-        int dcn = dstcn;
-        float alpha = ColorChannel<float>::max();
-
-        int i = 0;
-
-#if CV_SIMD128
-        if(enablePackedLab)
-        {
-            v_float32x4 vldiv  = v_setall_f32(256.f/100.0f);
-            v_float32x4 vf255  = v_setall_f32(255.f);
-            static const int nPixels = 16;
-            for(; i <= n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
-            {
-                /*
-                int L = saturate_cast<int>(src[i]*BASE/100.0f);
-                int a = saturate_cast<int>(src[i + 1]*BASE/256);
-                int b = saturate_cast<int>(src[i + 2]*BASE/256);
-                */
-                v_float32x4 vl[4], va[4], vb[4];
-                for(int k = 0; k < 4; k++)
-                {
-                    v_load_deinterleave(src + i + k*3*4, vl[k], va[k], vb[k]);
-                    vl[k] *= vldiv;
-                }
-
-                v_int32x4 ivl[4], iva[4], ivb[4];
-                for(int k = 0; k < 4; k++)
-                {
-                    ivl[k] = v_round(vl[k]), iva[k] = v_round(va[k]), ivb[k] = v_round(vb[k]);
-                }
-                v_int16x8 ivl16[2], iva16[2], ivb16[2];
-                ivl16[0] = v_pack(ivl[0], ivl[1]); iva16[0] = v_pack(iva[0], iva[1]); ivb16[0] = v_pack(ivb[0], ivb[1]);
-                ivl16[1] = v_pack(ivl[2], ivl[3]); iva16[1] = v_pack(iva[2], iva[3]); ivb16[1] = v_pack(ivb[2], ivb[3]);
-                v_uint8x16 ivl8, iva8, ivb8;
-                ivl8 = v_reinterpret_as_u8(v_pack(ivl16[0], ivl16[1]));
-                iva8 = v_reinterpret_as_u8(v_pack(iva16[0], iva16[1]));
-                ivb8 = v_reinterpret_as_u8(v_pack(ivb16[0], ivb16[1]));
-
-                v_int32x4 ixv[4], iyv[4], izv[4];
-
-                processLabToXYZ(ivl8, iva8, ivb8, ixv[0], iyv[0], izv[0],
-                                                  ixv[1], iyv[1], izv[1],
-                                                  ixv[2], iyv[2], izv[2],
-                                                  ixv[3], iyv[3], izv[3]);
-                /*
-                ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
-                go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
-                bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
-                */
-                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
-                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
-                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
-                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1)), tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
-                for(int k = 0; k < 4; k++)
-                {
-                    v_int32x4 i_r, i_g, i_b;
-                    v_uint32x4 r_vecs, g_vecs, b_vecs;
-                    i_r = (ixv[k]*C0 + iyv[k]*C1 + izv[k]*C2 + descaleShift) >> shift;
-                    i_g = (ixv[k]*C3 + iyv[k]*C4 + izv[k]*C5 + descaleShift) >> shift;
-                    i_b = (ixv[k]*C6 + iyv[k]*C7 + izv[k]*C8 + descaleShift) >> shift;
-
-                    //limit indices in table and then substitute
-                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
-                    int32_t CV_DECL_ALIGNED(16) rshifts[4], gshifts[4], bshifts[4];
-                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
-                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
-                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
-
-                    v_store_aligned(rshifts, rs);
-                    v_store_aligned(gshifts, gs);
-                    v_store_aligned(bshifts, bs);
-
-                    r_vecs = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
-                    g_vecs = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
-                    b_vecs = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
-
-                    v_float32x4 v_r, v_g, v_b;
-                    v_r = v_cvt_f32(v_reinterpret_as_s32(r_vecs))/vf255;
-                    v_g = v_cvt_f32(v_reinterpret_as_s32(g_vecs))/vf255;
-                    v_b = v_cvt_f32(v_reinterpret_as_s32(b_vecs))/vf255;
-
-                    if(dcn == 4)
-                    {
-                        v_store_interleave(dst + k*dcn*4, v_b, v_g, v_r, v_setall_f32(alpha));
-                    }
-                    else // dcn == 3
-                    {
-                        v_store_interleave(dst + k*dcn*4, v_b, v_g, v_r);
-                    }
-                }
-            }
-            vx_cleanup();
-        }
 #endif
-
-        for(; i < n*3; i += 3, dst += dcn)
-        {
-            int ro, go, bo;
-            process((uchar)(src[i + 0]*255.f/100.f), (uchar)src[i + 1], (uchar)src[i + 2], ro, go, bo);
-
-            dst[0] = bo/255.f;
-            dst[1] = go/255.f;
-            dst[2] = ro/255.f;
-            if(dcn == 4)
-                dst[3] = alpha;
-        }
-    }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
@@ -2335,84 +2229,85 @@ struct Lab2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
         i = 0;
 
-#if CV_SIMD128
+#if CV_SIMD
         if(enablePackedLab)
         {
-            static const int nPixels = 8*2;
-            for(; i <= n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
+            const int vsize = v_uint8::nlanes;
+            v_uint8 valpha = vx_setall_u8(alpha);
+            v_int32 vc[9];
+            for(int k = 0; k < 9; k++)
             {
-                /*
-                    int L = src[i + 0];
-                    int a = src[i + 1];
-                    int b = src[i + 2];
-                */
-                v_uint8x16 u8l, u8a, u8b;
-                v_load_deinterleave(src + i, u8l, u8a, u8b);
+                vc[k] = vx_setall_s32(coeffs[k]);
+            }
+            const int descaleShift = 1 << (shift-1);
+            v_int32 vdescale = vx_setall_s32(descaleShift);
+            for ( ; i <= n-vsize;
+                  i += vsize, src += 3*vsize, dst += dcn*vsize)
+            {
+                v_uint8 l, a, b;
+                v_load_deinterleave(src, l, a, b);
 
-                v_int32x4 xiv[4], yiv[4], ziv[4];
-                processLabToXYZ(u8l, u8a, u8b, xiv[0], yiv[0], ziv[0],
-                                               xiv[1], yiv[1], ziv[1],
-                                               xiv[2], yiv[2], ziv[2],
-                                               xiv[3], yiv[3], ziv[3]);
-                /*
-                        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
-                        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
-                        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
-                */
-                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
-                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
-                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
-                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1));
-                v_int32x4 tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
-                v_uint32x4 r_vecs[4], g_vecs[4], b_vecs[4];
+                v_int32 xq[4], yq[4], zq[4];
+                processLabToXYZ(l, a, b, xq, yq, zq);
+
+                // x, y, z exceed 2^16 so we cannot do v_mul_expand or v_dotprod
+                v_int32 rq[4], gq[4], bq[4];
                 for(int k = 0; k < 4; k++)
                 {
-                    v_int32x4 i_r, i_g, i_b;
-                    i_r = (xiv[k]*C0 + yiv[k]*C1 + ziv[k]*C2 + descaleShift) >> shift;
-                    i_g = (xiv[k]*C3 + yiv[k]*C4 + ziv[k]*C5 + descaleShift) >> shift;
-                    i_b = (xiv[k]*C6 + yiv[k]*C7 + ziv[k]*C8 + descaleShift) >> shift;
-
-                    //limit indices in table and then substitute
-                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
-                    int32_t CV_DECL_ALIGNED(16) rshifts[4], gshifts[4], bshifts[4];
-                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
-                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
-                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
-
-                    v_store_aligned(rshifts, rs);
-                    v_store_aligned(gshifts, gs);
-                    v_store_aligned(bshifts, bs);
-
-                    r_vecs[k] = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
-                    g_vecs[k] = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
-                    b_vecs[k] = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
+                    rq[k] = (vc[0] * xq[k] + vc[1] * yq[k] + vc[2] * zq[k] + vdescale) >> shift;
+                    gq[k] = (vc[3] * xq[k] + vc[4] * yq[k] + vc[5] * zq[k] + vdescale) >> shift;
+                    bq[k] = (vc[6] * xq[k] + vc[7] * yq[k] + vc[8] * zq[k] + vdescale) >> shift;
                 }
 
-                v_uint16x8 u_rvec0 = v_pack(r_vecs[0], r_vecs[1]), u_rvec1 = v_pack(r_vecs[2], r_vecs[3]);
-                v_uint16x8 u_gvec0 = v_pack(g_vecs[0], g_vecs[1]), u_gvec1 = v_pack(g_vecs[2], g_vecs[3]);
-                v_uint16x8 u_bvec0 = v_pack(b_vecs[0], b_vecs[1]), u_bvec1 = v_pack(b_vecs[2], b_vecs[3]);
+                //limit indices in table and then substitute
+                //ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                v_int32 z = vx_setzero_s32(), up = vx_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                for (int k = 0; k < 4; k++)
+                {
+                    rq[k] = v_max(z, v_min(up, rq[k]));
+                    gq[k] = v_max(z, v_min(up, gq[k]));
+                    bq[k] = v_max(z, v_min(up, bq[k]));
+                }
 
-                v_uint8x16 u8_b, u8_g, u8_r;
-                u8_b = v_pack(u_bvec0, u_bvec1);
-                u8_g = v_pack(u_gvec0, u_gvec1);
-                u8_r = v_pack(u_rvec0, u_rvec1);
+                // [RRR... , GGG... , BBB...]
+                int32_t CV_DECL_ALIGNED(v_uint8::nlanes) vidx[vsize*3];
+                for (int k = 0; k < 4; k++)
+                    v_store_aligned(vidx + 0*vsize + k*vsize/4, rq[k]);
+                for (int k = 0; k < 4; k++)
+                    v_store_aligned(vidx + 1*vsize + k*vsize/4, gq[k]);
+                for (int k = 0; k < 4; k++)
+                    v_store_aligned(vidx + 2*vsize + k*vsize/4, bq[k]);
+
+                v_uint16 rgb[6];
+                for(int k = 0; k < 6; k++)
+                {
+                    rgb[k] = vx_lut(tab, vidx + k*vsize/2);
+                }
+
+                v_uint16 R0, R1, G0, G1, B0, B1;
+
+                v_uint8 R, G, B;
+                R = v_pack(rgb[0], rgb[1]);
+                G = v_pack(rgb[2], rgb[3]);
+                B = v_pack(rgb[4], rgb[5]);
 
                 if(dcn == 4)
                 {
-                    v_store_interleave(dst, u8_b, u8_g, u8_r, v_setall_u8(alpha));
+                    v_store_interleave(dst, B, G, R, valpha);
                 }
-                else
+                else // dcn == 3
                 {
-                    v_store_interleave(dst, u8_b, u8_g, u8_r);
+                    v_store_interleave(dst, B, G, R);
                 }
             }
+            vx_cleanup();
         }
 #endif
 
-        for (; i < n*3; i += 3, dst += dcn)
+        for (; i < n; i++, src += 3, dst += dcn)
         {
             int ro, go, bo;
-            process(src[i + 0], src[i + 1], src[i + 2], ro, go, bo);
+            process(src[0], src[1], src[2], ro, go, bo);
 
             dst[0] = saturate_cast<uchar>(bo);
             dst[1] = saturate_cast<uchar>(go);
@@ -2454,60 +2349,7 @@ struct Lab2RGB_b
     Lab2RGB_b( int _dstcn, int _blueIdx, const float* _coeffs,
                const float* _whitept, bool _srgb )
     : fcvt(3, _blueIdx, _coeffs, _whitept, _srgb ), icvt(_dstcn, _blueIdx, _coeffs, _whitept, _srgb), dstcn(_dstcn)
-    {
-        #if CV_NEON
-        v_scale_inv = vdupq_n_f32(100.f/255.f);
-        v_scale = vdupq_n_f32(255.f);
-        v_alpha = vdup_n_u8(ColorChannel<uchar>::max());
-        v_128 = vdupq_n_f32(128.0f);
-        #elif CV_SSE2
-        v_scale = _mm_set1_ps(255.f);
-        v_alpha = _mm_set1_ps(ColorChannel<uchar>::max());
-        v_zero = _mm_setzero_si128();
-        haveSIMD = checkHardwareSupport(CV_CPU_SSE2);
-        #endif
-    }
-
-    #if CV_SSE2
-    // 16s x 8
-    void process(__m128i v_r, __m128i v_g, __m128i v_b,
-                 const __m128& v_coeffs_, const __m128& v_res_,
-                 float * buf) const
-    {
-        __m128 v_r0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_r, v_zero));
-        __m128 v_g0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_g, v_zero));
-        __m128 v_b0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v_b, v_zero));
-
-        __m128 v_r1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_r, v_zero));
-        __m128 v_g1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_g, v_zero));
-        __m128 v_b1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v_b, v_zero));
-
-        __m128 v_coeffs = v_coeffs_;
-        __m128 v_res = v_res_;
-
-        v_r0 = _mm_sub_ps(_mm_mul_ps(v_r0, v_coeffs), v_res);
-        v_g1 = _mm_sub_ps(_mm_mul_ps(v_g1, v_coeffs), v_res);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
-
-        v_r1 = _mm_sub_ps(_mm_mul_ps(v_r1, v_coeffs), v_res);
-        v_b0 = _mm_sub_ps(_mm_mul_ps(v_b0, v_coeffs), v_res);
-
-        v_coeffs = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_coeffs), 0x49));
-        v_res = _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(v_res), 0x49));
-
-        v_g0 = _mm_sub_ps(_mm_mul_ps(v_g0, v_coeffs), v_res);
-        v_b1 = _mm_sub_ps(_mm_mul_ps(v_b1, v_coeffs), v_res);
-
-        _mm_store_ps(buf, v_r0);
-        _mm_store_ps(buf + 4, v_r1);
-        _mm_store_ps(buf + 8, v_g0);
-        _mm_store_ps(buf + 12, v_g1);
-        _mm_store_ps(buf + 16, v_b0);
-        _mm_store_ps(buf + 20, v_b1);
-    }
-    #endif
+    { }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
@@ -2519,11 +2361,31 @@ struct Lab2RGB_b
 
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
+#if CV_SIMD
+        float CV_DECL_ALIGNED(v_uint8::nlanes) buf[3*BLOCK_SIZE];
+#else
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
-        #if CV_SSE2
-        __m128 v_coeffs = _mm_set_ps(100.f/255.f, 1.f, 1.f, 100.f/255.f);
-        __m128 v_res = _mm_set_ps(0.f, 128.f, 128.f, 0.f);
-        #endif
+#endif
+
+        static const softfloat fl = softfloat(100)/f255;
+
+#if CV_SIMD
+        const int fsize = v_float32::nlanes;
+        v_float32 vl = vx_setall_f32((float)fl);
+        v_float32 va = vx_setall_f32(1.f);
+        v_float32 vb = vx_setall_f32(1.f);
+        v_float32 vaLow = vx_setall_f32(-128.f), vbLow = vx_setall_f32(-128.f);
+        //TODO: fix that when v_interleave is available
+        float CV_DECL_ALIGNED(v_uint8::nlanes) interTmpM[fsize*3], interTmpA[fsize*3];
+        v_store_interleave(interTmpM, vl, va, vb);
+        v_store_interleave(interTmpA, vx_setzero_f32(), vaLow, vbLow);
+        v_float32 mluv[3], aluv[3];
+        for(int k = 0; k < 3; k++)
+        {
+            mluv[k] = vx_load_aligned(interTmpM + k*fsize);
+            aluv[k] = vx_load_aligned(interTmpA + k*fsize);
+        }
+#endif
 
         i = 0;
         for(; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
@@ -2531,129 +2393,91 @@ struct Lab2RGB_b
             int dn = std::min(n - i, (int)BLOCK_SIZE);
             j = 0;
 
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24)
+#if CV_SIMD
+            const int vsize = v_uint8::nlanes;
+            for( ; j <= (dn - vsize)*3; j += 3*vsize )
             {
-                uint8x8x3_t v_src = vld3_u8(src + j);
-                uint16x8_t v_t0 = vmovl_u8(v_src.val[0]),
-                           v_t1 = vmovl_u8(v_src.val[1]),
-                           v_t2 = vmovl_u8(v_src.val[2]);
+                v_uint8 s0, s1, s2;
+                s0 = vx_load(src + j + 0*vsize);
+                s1 = vx_load(src + j + 1*vsize);
+                s2 = vx_load(src + j + 2*vsize);
 
-                float32x4x3_t v_dst;
-                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t0))), v_scale_inv);
-                v_dst.val[1] = vsubq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t1))), v_128);
-                v_dst.val[2] = vsubq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(v_t2))), v_128);
-                vst3q_f32(buf + j, v_dst);
-
-                v_dst.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t0))), v_scale_inv);
-                v_dst.val[1] = vsubq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t1))), v_128);
-                v_dst.val[2] = vsubq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(v_t2))), v_128);
-                vst3q_f32(buf + j + 12, v_dst);
-            }
-            #elif CV_SSE2
-            if (haveSIMD)
-            {
-                for ( ; j <= (dn - 8) * 3; j += 24)
+                v_uint16 ss[6];
+                v_expand(s0, ss[0], ss[1]);
+                v_expand(s1, ss[2], ss[3]);
+                v_expand(s2, ss[4], ss[5]);
+                v_int32 vs[12];
+                for(int k = 0; k < 6; k++)
                 {
-                    __m128i v_src0 = _mm_loadu_si128((__m128i const *)(src + j));
-                    __m128i v_src1 = _mm_loadl_epi64((__m128i const *)(src + j + 16));
+                    v_expand(v_reinterpret_as_s16(ss[k]), vs[k*2+0], vs[k*2+1]);
+                }
 
-                    process(_mm_unpacklo_epi8(v_src0, v_zero),
-                            _mm_unpackhi_epi8(v_src0, v_zero),
-                            _mm_unpacklo_epi8(v_src1, v_zero),
-                            v_coeffs, v_res,
-                            buf + j);
+                for(int bufp = 0; bufp < 12; bufp++)
+                {
+                    v_store_aligned(buf + j + bufp, v_muladd(v_cvt_f32(vs[bufp]), mluv[bufp%3], aluv[bufp%3]));
                 }
             }
-            #endif
+            vx_cleanup();
+#endif
 
             for( ; j < dn*3; j += 3 )
             {
-                buf[j] = src[j]*(100.f/255.f);
-                buf[j+1] = (float)(src[j+1] - 128);
-                buf[j+2] = (float)(src[j+2] - 128);
+                buf[j] = src[j]*((float)fl);
+                buf[j+1] = (float)(src[j+1] - 128.f);
+                buf[j+2] = (float)(src[j+2] - 128.f);
             }
+
             fcvt(buf, buf, dn);
+
             j = 0;
 
-            #if CV_NEON
-            for ( ; j <= (dn - 8) * 3; j += 24, dst += dcn * 8)
+#if CV_SIMD
+            static const int nBlock = 4*fsize;
+            v_float32 v255 = vx_setall_f32(255.f);
+            if(dcn == 4)
             {
-                float32x4x3_t v_src0 = vld3q_f32(buf + j), v_src1 = vld3q_f32(buf + j + 12);
-                uint8x8_t v_dst0 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[0], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[0], v_scale)))));
-                uint8x8_t v_dst1 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[1], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[1], v_scale)))));
-                uint8x8_t v_dst2 = vqmovn_u16(vcombine_u16(vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src0.val[2], v_scale))),
-                                                           vqmovn_u32(cv_vrndq_u32_f32(vmulq_f32(v_src1.val[2], v_scale)))));
+                v_uint8 valpha = vx_setall_u8(alpha);
+                for( ; j <= (dn-nBlock)*3;
+                     j += nBlock*3, dst += nBlock)
+                {
+                    v_float32 vf[4*3];
+                    for(int k = 0; k < 4; k++)
+                    {
+                        v_load_deinterleave(buf + j, vf[k*3+0], vf[k*3+1], vf[k*3+2]);
+                    }
 
-                if (dcn == 4)
-                {
-                    uint8x8x4_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    v_dst.val[3] = v_alpha;
-                    vst4_u8(dst, v_dst);
-                }
-                else
-                {
-                    uint8x8x3_t v_dst;
-                    v_dst.val[0] = v_dst0;
-                    v_dst.val[1] = v_dst1;
-                    v_dst.val[2] = v_dst2;
-                    vst3_u8(dst, v_dst);
+                    v_int32 vi[4*3];
+                    for(int k = 0; k < 4*3; k++)
+                    {
+                        vi[k] = v_round(vf[k]*v255);
+                    }
+
+                    v_uint8 rgb[3];
+                    for(int k = 0; k < 3; k++)
+                    {
+                        rgb[k] = v_pack_u(v_pack(vi[0*3+k], vi[1*3+k]),
+                                          v_pack(vi[2*3+k], vi[3*3+k]));
+                    }
+
+                    v_store_interleave(dst, rgb[0], rgb[1], rgb[2], valpha);
                 }
             }
-            #elif CV_SSE2
-            if (dcn == 3 && haveSIMD)
+            else // dcn == 3
             {
-                for ( ; j <= (dn * 3 - 16); j += 16, dst += 16)
+                for(; j < dn*3 - nBlock; j += nBlock, dst += nBlock)
                 {
-                    __m128 v_src0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_src1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_src2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-                    __m128 v_src3 = _mm_mul_ps(_mm_load_ps(buf + j + 12), v_scale);
-
-                    __m128i v_dst0 = _mm_packs_epi32(_mm_cvtps_epi32(v_src0),
-                                                     _mm_cvtps_epi32(v_src1));
-                    __m128i v_dst1 = _mm_packs_epi32(_mm_cvtps_epi32(v_src2),
-                                                     _mm_cvtps_epi32(v_src3));
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
+                    v_float32 vf[4];
+                    v_int32 vi[4];
+                    for(int k = 0; k < 4; k++)
+                    {
+                        vf[k] = vx_load_aligned(buf + j + k*fsize);
+                        vi[k] = v_round(vf[k]*v255);
+                    }
+                    v_store(dst, v_pack_u(v_pack(vi[0], vi[1]), v_pack(vi[2], vi[3])));
                 }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
             }
-            else if (dcn == 4 && haveSIMD)
-            {
-                for ( ; j <= (dn * 3 - 12); j += 12, dst += 16)
-                {
-                    __m128 v_buf0 = _mm_mul_ps(_mm_load_ps(buf + j), v_scale);
-                    __m128 v_buf1 = _mm_mul_ps(_mm_load_ps(buf + j + 4), v_scale);
-                    __m128 v_buf2 = _mm_mul_ps(_mm_load_ps(buf + j + 8), v_scale);
-
-                    __m128 v_ba0 = _mm_unpackhi_ps(v_buf0, v_alpha);
-                    __m128 v_ba1 = _mm_unpacklo_ps(v_buf2, v_alpha);
-
-                    __m128i v_src0 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf0, v_ba0, 0x44));
-                    __m128i v_src1 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba0, v_buf1, 0x4e)), 0x78);
-                    __m128i v_src2 = _mm_cvtps_epi32(_mm_shuffle_ps(v_buf1, v_ba1, 0x4e));
-                    __m128i v_src3 = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_shuffle_ps(v_ba1, v_buf2, 0xee)), 0x78);
-
-                    __m128i v_dst0 = _mm_packs_epi32(v_src0, v_src1);
-                    __m128i v_dst1 = _mm_packs_epi32(v_src2, v_src3);
-
-                    _mm_storeu_si128((__m128i *)dst, _mm_packus_epi16(v_dst0, v_dst1));
-                }
-
-                int jr = j % 3;
-                if (jr)
-                    dst -= jr, j -= jr;
-            }
-            #endif
+            vx_cleanup();
+#endif
 
             for( ; j < dn*3; j += 3, dst += dcn )
             {
@@ -2668,15 +2492,6 @@ struct Lab2RGB_b
 
     Lab2RGBfloat   fcvt;
     Lab2RGBinteger icvt;
-    #if CV_NEON
-    float32x4_t v_scale, v_scale_inv, v_128;
-    uint8x8_t v_alpha;
-    #elif CV_SSE2
-    __m128 v_scale;
-    __m128 v_alpha;
-    __m128i v_zero;
-    bool haveSIMD;
-    #endif
     int dstcn;
 };
 
@@ -3560,7 +3375,8 @@ struct Luv2RGB_b
         }
 #endif
 
-        for( i = 0; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
+        i = 0;
+        for( ; i < n; i += BLOCK_SIZE, src += BLOCK_SIZE*3 )
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
             j = 0;
