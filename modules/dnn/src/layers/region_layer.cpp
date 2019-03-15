@@ -280,8 +280,8 @@ public:
 
                             dstData[box_index + 0] = (x + logistic_activate(srcData[box_index + 0])) / cols;
                             dstData[box_index + 1] = (y + logistic_activate(srcData[box_index + 1])) / rows;
-                            dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / hNorm;
-                            dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / wNorm;
+                            dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
+                            dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
 
                             int class_index = index_sample_offset + index * cell_size + 5;
                             for (int j = 0; j < classes; ++j) {
