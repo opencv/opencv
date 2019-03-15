@@ -71,7 +71,7 @@ TEST_P(Imgcodecs_FileMode, regression)
 
 const string all_images[] =
 {
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
     "readwrite/Rome.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Bretagne2.jp2",
