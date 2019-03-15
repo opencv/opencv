@@ -778,9 +778,7 @@ static bool __OpenCLinitializeD3D11()
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
     bool useCLNVEXT = false;
 
-#ifndef HAVE_OPENCL_D3D11_NV
-    NO_OPENCL_D3D11_NV_SUPPORT_ERROR;
-#else
+#ifdef HAVE_OPENCL_D3D11_NV
     if (initializedPlatform != platform)
     {
         clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
