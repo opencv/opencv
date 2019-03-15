@@ -57,9 +57,6 @@
 #define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
-#ifndef HAVE_OPENCL_D3D11_NV
-#define NO_OPENCL_D3D11_NV_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL Nvidia D3D11 extension support")
-#endif // HAVE_OPENCL
 
 namespace cv { namespace directx {
 
