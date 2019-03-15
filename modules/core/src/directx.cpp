@@ -1263,15 +1263,15 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 #else
 
     bool useCLNVEXT = __OpenCLinitializeD3D11();
-    if(!useCLNVEXT){
-        __convertToD3D11Texture2DKHR(src,pD3D11Texture2D);
-    }
 #ifdef HAVE_OPENCL_D3D11_NV
-    else
-    {
+    if(useCLNVEXT){
         __convertToD3D11Texture2DNV(src,pD3D11Texture2D);
     }
+    else
 #endif
+    {
+        __convertToD3D11Texture2DKHR(src,pD3D11Texture2D);
+    }
 #endif
 }
 
@@ -1285,15 +1285,16 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #else
 
     bool useCLNVEXT = __OpenCLinitializeD3D11();
-    if(!useCLNVEXT){
-        __convertFromD3D11Texture2DKHR(pD3D11Texture2D,dst);
-    }
 #ifdef HAVE_OPENCL_D3D11_NV
-    else
+    if(useCLNVEXT)
     {
         __convertFromD3D11Texture2DNV(pD3D11Texture2D,dst);
     }
+    else
 #endif
+    {
+        __convertFromD3D11Texture2DKHR(pD3D11Texture2D,dst);
+    }
 #endif
 }
 
