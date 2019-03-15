@@ -44,6 +44,9 @@
 
 #ifdef HAVE_JASPER
 
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
 #include "grfmt_jpeg2000.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -70,7 +73,36 @@ struct JasperInitializer
     ~JasperInitializer() { jas_cleanup(); }
 };
 
-static JasperInitializer initialize_jasper;
+static JasperInitializer& _initJasper()
+{
+    static JasperInitializer initialize_jasper;
+    return initialize_jasper;
+}
+
+static bool isJasperEnabled()
+{
+    static const bool PARAM_ENABLE_JASPER = utils::getConfigurationParameterBool("OPENCV_IO_ENABLE_JASPER",
+#ifdef OPENCV_IMGCODECS_FORCE_JASPER
+        true
+#else
+        false
+#endif
+    );
+    return PARAM_ENABLE_JASPER;
+}
+static JasperInitializer& initJasper()
+{
+    if (isJasperEnabled())
+    {
+        return _initJasper();
+    }
+    else
+    {
+        const char* message = "imgcodecs: Jasper (JPEG-2000) codec is disabled. You can enable it via 'OPENCV_IO_ENABLE_JASPER' option. Refer for details and cautions here: https://github.com/opencv/opencv/issues/14058";
+        CV_LOG_WARNING(NULL, message);
+        CV_Error(Error::StsNotImplemented, message);
+    }
+}
 
 
 /////////////////////// Jpeg2KDecoder ///////////////////
@@ -90,6 +122,7 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 
 ImageDecoder Jpeg2KDecoder::newDecoder() const
 {
+    initJasper();
     return makePtr<Jpeg2KDecoder>();
 }
 
@@ -97,12 +130,14 @@ void  Jpeg2KDecoder::close()
 {
     if( m_stream )
     {
+        CV_Assert(isJasperEnabled());
         jas_stream_close( (jas_stream_t*)m_stream );
         m_stream = 0;
     }
 
     if( m_image )
     {
+        CV_Assert(isJasperEnabled());
         jas_image_destroy( (jas_image_t*)m_image );
         m_image = 0;
     }
@@ -111,6 +146,7 @@ void  Jpeg2KDecoder::close()
 
 bool  Jpeg2KDecoder::readHeader()
 {
+    CV_Assert(isJasperEnabled());
     bool result = false;
 
     close();
@@ -177,6 +213,8 @@ static void Jpeg2KDecoder_close(Jpeg2KDecoder* ptr)
 
 bool  Jpeg2KDecoder::readData( Mat& img )
 {
+    CV_Assert(isJasperEnabled());
+
     Ptr<Jpeg2KDecoder> close_this(this, Jpeg2KDecoder_close);
     bool result = false;
     bool color = img.channels() > 1;
@@ -319,6 +357,8 @@ bool  Jpeg2KDecoder::readComponent8u( uchar *data, void *_buffer,
                                       int step, int cmpt,
                                       int maxval, int offset, int ncmpts )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_matrix_t* buffer = (jas_matrix_t*)_buffer;
     jas_image_t* image = (jas_image_t*)m_image;
     int xstart = jas_image_cmpttlx( image, cmpt );
@@ -383,6 +423,8 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
                                        int step, int cmpt,
                                        int maxval, int offset, int ncmpts )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_matrix_t* buffer = (jas_matrix_t*)_buffer;
     jas_image_t* image = (jas_image_t*)m_image;
     int xstart = jas_image_cmpttlx( image, cmpt );
@@ -458,6 +500,7 @@ Jpeg2KEncoder::~Jpeg2KEncoder()
 
 ImageEncoder Jpeg2KEncoder::newEncoder() const
 {
+    initJasper();
     return makePtr<Jpeg2KEncoder>();
 }
 
@@ -469,6 +512,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 
 bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 {
+    CV_Assert(isJasperEnabled());
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();
     depth = depth == CV_8U ? 8 : 16;
@@ -525,6 +569,8 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 
 bool  Jpeg2KEncoder::writeComponent8u( void *__img, const Mat& _img )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_image_t* img = (jas_image_t*)__img;
     int w = _img.cols, h = _img.rows, ncmpts = _img.channels();
     jas_matrix_t *row = jas_matrix_create( 1, w );
@@ -549,6 +595,8 @@ bool  Jpeg2KEncoder::writeComponent8u( void *__img, const Mat& _img )
 
 bool  Jpeg2KEncoder::writeComponent16u( void *__img, const Mat& _img )
 {
+    CV_Assert(isJasperEnabled());
+
     jas_image_t* img = (jas_image_t*)__img;
     int w = _img.cols, h = _img.rows, ncmpts = _img.channels();
     jas_matrix_t *row = jas_matrix_create( 1, w );
