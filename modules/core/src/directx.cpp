@@ -872,7 +872,7 @@ bool ocl_convert_bgr_to_nv12(
 
 namespace directx {
 
-#if defined(HAVE_OPENCL)
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
     D3D11_TEXTURE2D_DESC desc = { 0 };
@@ -1065,7 +1065,7 @@ static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11T
 }
 #endif
 
-#if defined(HAVE_OPENCL)
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
     D3D11_TEXTURE2D_DESC desc = { 0 };
