@@ -778,7 +778,9 @@ static bool __OpenCLinitializeD3D11()
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
     bool useCLNVEXT = false;
 
-#ifdef HAVE_OPENCL_D3D11_NV
+#ifndef HAVE_OPENCL_D3D11_NV
+    NO_OPENCL_D3D11_NV_SUPPORT_ERROR
+#else
     if (initializedPlatform != platform)
     {
         clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
@@ -870,14 +872,9 @@ bool ocl_convert_bgr_to_nv12(
 
 namespace directx {
 
+#if defined(HAVE_OPENCL)
 static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
-    CV_UNUSED(src); CV_UNUSED(pD3D11Texture2D);
-#if !defined(HAVE_DIRECTX)
-    NO_DIRECTX_SUPPORT_ERROR;
-#elif !defined(HAVE_OPENCL)
-    NO_OPENCL_SUPPORT_ERROR;
-#else
     D3D11_TEXTURE2D_DESC desc = { 0 };
     pD3D11Texture2D->GetDesc(&desc);
 
@@ -969,15 +966,12 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
 #endif
-#endif
 }
+#endif
 
+#if defined(HAVE_OPENCL_D3D11_NV)
 static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
-    CV_UNUSED(src); CV_UNUSED(pD3D11Texture2D);
-#if !defined(HAVE_OPENCL_D3D11_NV)
-    NO_OPENCL_D3D11_NV_SUPPORT_ERROR;
-#else
     D3D11_TEXTURE2D_DESC desc = { 0 };
     pD3D11Texture2D->GetDesc(&desc);
 
@@ -1068,18 +1062,12 @@ static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11T
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
 #endif
-
-#endif // HAVE_OPENCL_D3D11_NV
 }
+#endif
 
+#if defined(HAVE_OPENCL)
 static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
-    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst);
-#if !defined(HAVE_DIRECTX)
-    NO_DIRECTX_SUPPORT_ERROR;
-#elif !defined(HAVE_OPENCL)
-    NO_OPENCL_SUPPORT_ERROR;
-#else
     D3D11_TEXTURE2D_DESC desc = { 0 };
     pD3D11Texture2D->GetDesc(&desc);
 
@@ -1168,15 +1156,12 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
 #endif
-#endif
 }
+#endif
 
+#if defined(HAVE_OPENCL_D3D11_NV)
 static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
 {
-    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst);
-#if !defined(HAVE_OPENCL_D3D11_NV)
-    NO_OPENCL_D3D11_NV_SUPPORT_ERROR;
-#else
     D3D11_TEXTURE2D_DESC desc = { 0 };
     pD3D11Texture2D->GetDesc(&desc);
 
@@ -1265,9 +1250,8 @@ static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, Outp
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed");
     }
 #endif
-
-#endif // HAVE_OPENCL_D3D11_NV
 }
+#endif
 
 void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
