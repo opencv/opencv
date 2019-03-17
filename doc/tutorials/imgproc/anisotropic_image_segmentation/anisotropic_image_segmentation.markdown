@@ -1,6 +1,9 @@
 Anisotropic image segmentation by a gradient structure tensor {#tutorial_anisotropic_image_segmentation_by_a_gst}
 ==========================
 
+@prev_tutorial{tutorial_motion_deblur_filter}
+@next_tutorial{tutorial_periodic_noise_removing_filter}
+
 Goal
 ----
 
