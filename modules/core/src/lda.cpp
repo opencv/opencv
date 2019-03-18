@@ -322,6 +322,8 @@ private:
         //  Fortran subroutine in EISPACK.
 
         // Initialize
+        const int max_iters_count = 1000 * this->n;
+
         int nn = this->n;
         int n1 = nn - 1;
         int low = 0;
@@ -487,7 +489,9 @@ private:
                     }
                 }
 
-                iter = iter + 1; // (Could check iteration count here.)
+                iter = iter + 1;
+                if (iter > max_iters_count)
+                    CV_Error(Error::StsNoConv, "Algorithm doesn't converge (complex eigen values?)");
 
                 // Look for two consecutive small sub-diagonal elements
                 int m = n1 - 2;
