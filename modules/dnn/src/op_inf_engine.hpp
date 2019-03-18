@@ -18,7 +18,6 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 #include <inference_engine.hpp>
-#include <vpu/vpu_plugin_config.hpp>
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
 #endif

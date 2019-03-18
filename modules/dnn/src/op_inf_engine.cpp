@@ -12,6 +12,7 @@
 #ifdef HAVE_INF_ENGINE
 #include <ie_extension.h>
 #include <ie_plugin_dispatcher.hpp>
+#include <vpu/vpu_plugin_config.hpp>
 #endif  // HAVE_INF_ENGINE
 
 namespace cv { namespace dnn {
@@ -684,47 +685,32 @@ static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEngineP
 }
 
 bool wrapperIsMyriadX() {
-    std::vector<float> inp(1, 1);
-    std::vector<float> out(1, 1);
-    InferenceEngine::Builder::Network netBuilder("");
-    InferenceEngine::idx_t inpId;
-    {
-        InferenceEngine::Builder::InputLayer inpLayer("input");
-        inpLayer.setPort(InferenceEngine::Port({1, 1, 1, 1}));
-        inpId = netBuilder.addLayer(inpLayer);
-    }
+    InferenceEngine::Builder::Network builder("");
+    InferenceEngine::idx_t inpId = builder.addLayer(
+                                   InferenceEngine::Builder::InputLayer().setPort(InferenceEngine::Port({1})));
+
+#if INF_ENGINE_RELEASE <= 2018050000
     InferenceEngine::idx_t clampId;
     {
-        InferenceEngine::Builder::ClampLayer ieLayer("clamp");
-        ieLayer.setMinValue(0);
-        ieLayer.setMaxValue(6);
-        clampId = netBuilder.addLayer({inpId}, ieLayer);
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ClampLayer();
+        auto& blobs = l.getConstantData();
+        auto blob = InferenceEngine::make_shared_blob<int16_t>(
+                        InferenceEngine::Precision::FP16,
+                        InferenceEngine::Layout::C, {1});
+        blob->allocate();
+        blobs[""] = blob;
+        clampId = builder.addLayer({inpId}, l);
     }
-    {
-        InferenceEngine::Builder::OutputLayer outLayer("output");
-        outLayer.setPort(InferenceEngine::Port({}, InferenceEngine::Precision::FP16));
-        netBuilder.addLayer({clampId}, outLayer);
-    }
+    builder.addLayer({InferenceEngine::PortInfo(clampId)}, InferenceEngine::Builder::OutputLayer());
+#else
+    InferenceEngine::idx_t clampId = builder.addLayer({inpId}, InferenceEngine::Builder::ClampLayer());
+    builder.addLayer({InferenceEngine::PortInfo(clampId)},
+                      InferenceEngine::Builder::OutputLayer().setPort(InferenceEngine::Port({},
+                      InferenceEngine::Precision::FP16)));
+#endif
 
-    auto cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
-
-    for (const auto& it : cnn.getInputsInfo()) {
-        it.second->setPrecision(InferenceEngine::Precision::FP32);
-    }
-    for (const auto& it : cnn.getOutputsInfo()) {
-        it.second->setPrecision(InferenceEngine::Precision::FP32);
-    }
-
-    InferenceEngine::BlobMap inputBlobs;
-    InferenceEngine::BlobMap outputBlobs;
-
-    inputBlobs["input"] = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                   InferenceEngine::Layout::NCHW,
-                                                                   {1, 1, 1, 1}, inp.data());
-
-    outputBlobs["clamp"] = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    InferenceEngine::Layout::NCHW,
-                                                                    {1, 1, 1, 1}, out.data());
+    InferenceEngine::CNNNetwork cnn = InferenceEngine::CNNNetwork(
+                                      InferenceEngine::Builder::convertToICNNNetwork(builder.build()));
 
     InferenceEngine::TargetDevice device = InferenceEngine::TargetDevice::eMYRIAD;
     auto& sharedPlugins = getSharedPlugins();
@@ -743,9 +729,6 @@ bool wrapperIsMyriadX() {
         auto netExec = plugin.LoadNetwork(cnn, {{InferenceEngine::VPUConfigParams::KEY_VPU_PLATFORM,
                                                  InferenceEngine::VPUConfigParams::VPU_2480}});
         auto infRequest = netExec.CreateInferRequest();
-        infRequest.SetInput(inputBlobs);
-        infRequest.SetOutput(outputBlobs);
-        infRequest.Infer();
     } catch(...) {
         return false;
     }
