@@ -130,8 +130,10 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_XINE
     DECLARE_STATIC_BACKEND(CAP_XINE, "XINE", MODE_CAPTURE_BY_FILENAME, createXINECapture, 0, 0),
 #endif
-
-    // dropped backends: MIL, TYZX, Android
+#ifdef HAVE_ANDROID_MEDIANDK
+    DECLARE_STATIC_BACKEND(CAP_ANDROID, "ANDROID_MEDIANDK", MODE_CAPTURE_BY_FILENAME, createAndroidCapture_file, 0, 0),
+#endif
+    // dropped backends: MIL, TYZX
 };
 
 bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
