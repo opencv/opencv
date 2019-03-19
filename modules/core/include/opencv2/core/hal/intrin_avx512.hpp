@@ -30,6 +30,24 @@ inline __m512d _v512_combine(const __m256d& lo, const __m256d& hi)
 inline int _v_cvtsi512_si32(const __m512i& a)
 { return _mm_cvtsi128_si32(_mm512_castsi512_si128(a)); }
 
+inline __m256i _v512_extract_high(const __m512i& v)
+{ return _mm512_extracti32x8_epi32(v, 1); }
+
+inline __m256  _v512_extract_high(const __m512& v)
+{ return _mm512_extractf32x8_ps(v, 1); }
+
+inline __m256d _v512_extract_high(const __m512d& v)
+{ return _mm512_extractf64x4_pd(v, 1); }
+
+inline __m256i _v512_extract_low(const __m512i& v)
+{ return _mm512_castsi512_si256(v); }
+
+inline __m256  _v512_extract_low(const __m512& v)
+{ return _mm512_castps512_ps256(v); }
+
+inline __m256d _v512_extract_low(const __m512d& v)
+{ return _mm512_castpd512_pd256(v); }
+
 /*inline __m512i _v512_shuffle_odd_64(const __m512i& v)
 { return _mm512_permutex_epi64(v, _MM_SHUFFLE(3, 1, 2, 0)); }
 
@@ -63,24 +81,6 @@ inline __m512d _v512_permute4x64(const __m512d& a)
 template<int imm, typename _Tpvec>
 inline _Tpvec v512_permute4x64(const _Tpvec& a)
 { return _Tpvec(_v512_permute4x64<imm>(a.val)); }
-
-inline __m256i _v512_extract_high(const __m512i& v)
-{ return _mm256_extracti128_si256(v, 1); }
-
-inline __m256  _v512_extract_high(const __m512& v)
-{ return _mm256_extractf128_ps(v, 1); }
-
-inline __m256d _v512_extract_high(const __m512d& v)
-{ return _mm256_extractf128_pd(v, 1); }
-
-inline __m256i _v512_extract_low(const __m512i& v)
-{ return _mm256_castsi256_si128(v); }
-
-inline __m256  _v512_extract_low(const __m512& v)
-{ return _mm256_castps256_ps128(v); }
-
-inline __m256d _v512_extract_low(const __m512d& v)
-{ return _mm256_castpd256_pd128(v); }
 
 inline __m512i _v512_packs_epu32(const __m512i& a, const __m512i& b)
 {
@@ -321,143 +321,143 @@ struct v_float64x8
 
 #define OPENCV_HAL_IMPL_AVX_LOADSTORE(_Tpvec, _Tp)                    \
     inline _Tpvec v512_load(const _Tp* ptr)                           \
-    { return _Tpvec(_mm256_loadu_si256((const __m512i*)ptr)); }       \
+    { return _Tpvec(_mm512_loadu_si512((const __m512i*)ptr)); }       \
     inline _Tpvec v512_load_aligned(const _Tp* ptr)                   \
-    { return _Tpvec(_mm256_load_si256((const __m512i*)ptr)); }        \
+    { return _Tpvec(_mm512_load_si512((const __m512i*)ptr)); }        \
     inline _Tpvec v512_load_low(const _Tp* ptr)                       \
     {                                                                 \
-        __m256i v128 = _mm_loadu_si128((const __m256i*)ptr);          \
-        return _Tpvec(_mm256_castsi128_si256(v128));                  \
+        __m256i v256 = _mm256_loadu_si256((const __m256i*)ptr);       \
+        return _Tpvec(_mm512_castsi256_si512(v256));                  \
     }                                                                 \
     inline _Tpvec v512_load_halves(const _Tp* ptr0, const _Tp* ptr1)  \
     {                                                                 \
-        __m256i vlo = _mm_loadu_si128((const __m256i*)ptr0);          \
-        __m256i vhi = _mm_loadu_si128((const __m256i*)ptr1);          \
+        __m256i vlo = _mm256_loadu_si256((const __m256i*)ptr0);       \
+        __m256i vhi = _mm256_loadu_si256((const __m256i*)ptr1);       \
         return _Tpvec(_v512_combine(vlo, vhi));                       \
     }                                                                 \
     inline void v_store(_Tp* ptr, const _Tpvec& a)                    \
-    { _mm256_storeu_si256((__m512i*)ptr, a.val); }                    \
+    { _mm512_storeu_si512((__m512i*)ptr, a.val); }                    \
     inline void v_store_aligned(_Tp* ptr, const _Tpvec& a)            \
-    { _mm256_store_si256((__m512i*)ptr, a.val); }                     \
+    { _mm512_store_si512((__m512i*)ptr, a.val); }                     \
     inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a)    \
-    { _mm256_stream_si256((__m512i*)ptr, a.val); }                    \
+    { _mm512_stream_si512((__m512i*)ptr, a.val); }                    \
     inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
     { \
         if( mode == hal::STORE_UNALIGNED ) \
-            _mm256_storeu_si256((__m512i*)ptr, a.val); \
+            _mm512_storeu_si512((__m512i*)ptr, a.val); \
         else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
-            _mm256_stream_si256((__m512i*)ptr, a.val); \
+            _mm512_stream_si512((__m512i*)ptr, a.val); \
         else \
-            _mm256_store_si256((__m512i*)ptr, a.val); \
+            _mm512_store_si512((__m512i*)ptr, a.val); \
     } \
     inline void v_store_low(_Tp* ptr, const _Tpvec& a)                \
-    { _mm_storeu_si128((__m256i*)ptr, _v512_extract_low(a.val)); }    \
+    { _mm256_storeu_si256((__m256i*)ptr, _v512_extract_low(a.val)); }    \
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)               \
-    { _mm_storeu_si128((__m256i*)ptr, _v512_extract_high(a.val)); }
+    { _mm256_storeu_si256((__m256i*)ptr, _v512_extract_high(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint8x32,  uchar)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int8x32,   schar)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint16x16, ushort)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int16x16,  short)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint32x8,  unsigned)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int32x8,   int)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint64x4,  uint64)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x4,   int64)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint8x64,  uchar)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int8x64,   schar)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint16x32, ushort)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int16x32,  short)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint32x16,  unsigned)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int32x16,   int)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint64x8,  uint64)
+OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x8,   int64)
 
 #define OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(_Tpvec, _Tp, suffix, halfreg)   \
     inline _Tpvec v512_load(const _Tp* ptr)                               \
-    { return _Tpvec(_mm256_loadu_##suffix(ptr)); }                        \
+    { return _Tpvec(_mm512_loadu_##suffix(ptr)); }                        \
     inline _Tpvec v512_load_aligned(const _Tp* ptr)                       \
-    { return _Tpvec(_mm256_load_##suffix(ptr)); }                         \
+    { return _Tpvec(_mm512_load_##suffix(ptr)); }                         \
     inline _Tpvec v512_load_low(const _Tp* ptr)                           \
     {                                                                     \
-        return _Tpvec(_mm256_cast##suffix##128_##suffix##256              \
-                     (_mm_loadu_##suffix(ptr)));                          \
+        return _Tpvec(_mm512_cast##suffix##256_##suffix##512              \
+                     (_mm256_loadu_##suffix(ptr)));                       \
     }                                                                     \
     inline _Tpvec v512_load_halves(const _Tp* ptr0, const _Tp* ptr1)      \
     {                                                                     \
-        halfreg vlo = _mm_loadu_##suffix(ptr0);                           \
-        halfreg vhi = _mm_loadu_##suffix(ptr1);                           \
+        halfreg vlo = _mm256_loadu_##suffix(ptr0);                        \
+        halfreg vhi = _mm256_loadu_##suffix(ptr1);                        \
         return _Tpvec(_v512_combine(vlo, vhi));                           \
     }                                                                     \
     inline void v_store(_Tp* ptr, const _Tpvec& a)                        \
-    { _mm256_storeu_##suffix(ptr, a.val); }                               \
+    { _mm512_storeu_##suffix(ptr, a.val); }                               \
     inline void v_store_aligned(_Tp* ptr, const _Tpvec& a)                \
-    { _mm256_store_##suffix(ptr, a.val); }                                \
+    { _mm512_store_##suffix(ptr, a.val); }                                \
     inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a)        \
-    { _mm256_stream_##suffix(ptr, a.val); }                               \
+    { _mm512_stream_##suffix(ptr, a.val); }                               \
     inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode mode) \
     { \
         if( mode == hal::STORE_UNALIGNED ) \
-            _mm256_storeu_##suffix(ptr, a.val); \
+            _mm512_storeu_##suffix(ptr, a.val); \
         else if( mode == hal::STORE_ALIGNED_NOCACHE )  \
-            _mm256_stream_##suffix(ptr, a.val); \
+            _mm512_stream_##suffix(ptr, a.val); \
         else \
-            _mm256_store_##suffix(ptr, a.val); \
+            _mm512_store_##suffix(ptr, a.val); \
     } \
     inline void v_store_low(_Tp* ptr, const _Tpvec& a)                    \
-    { _mm_storeu_##suffix(ptr, _v512_extract_low(a.val)); }               \
+    { _mm256_storeu_##suffix(ptr, _v512_extract_low(a.val)); }            \
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)                   \
-    { _mm_storeu_##suffix(ptr, _v512_extract_high(a.val)); }
+    { _mm256_storeu_##suffix(ptr, _v512_extract_high(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float32x8, float,  ps, __m256)
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x4, double, pd, __m256d)
+OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float32x16, float,  ps, __m256)
+OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x8, double, pd, __m256d)
 
 #define OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, _Tpvecf, suffix, cast) \
     inline _Tpvec v_reinterpret_as_##suffix(const _Tpvecf& a)   \
     { return _Tpvec(cast(a.val)); }
 
-#define OPENCV_HAL_IMPL_AVX_INIT(_Tpvec, _Tp, suffix, ssuffix, ctype_s)          \
-    inline _Tpvec v512_setzero_##suffix()                                        \
-    { return _Tpvec(_mm256_setzero_si256()); }                                   \
-    inline _Tpvec v512_setall_##suffix(_Tp v)                                    \
-    { return _Tpvec(_mm256_set1_##ssuffix((ctype_s)v)); }                        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x16, suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x16,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x8,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x8,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x4,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x4,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float32x8, suffix, _mm256_castps_si256)   \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float64x4, suffix, _mm256_castpd_si256)
+#define OPENCV_HAL_IMPL_AVX_INIT(_Tpvec, _Tp, suffix, ssuffix, ctype_s)           \
+    inline _Tpvec v512_setzero_##suffix()                                         \
+    { return _Tpvec(_mm512_setzero_si512()); }                                    \
+    inline _Tpvec v512_setall_##suffix(_Tp v)                                     \
+    { return _Tpvec(_mm512_set1_##ssuffix((ctype_s)v)); }                         \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x64,   suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x64,    suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x32,  suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x32,   suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x16,  suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x16,   suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x8,   suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x8,    suffix, OPENCV_HAL_NOP)        \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float32x16, suffix, _mm256_castps_si256)   \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float64x8,  suffix, _mm256_castpd_si256)
 
-OPENCV_HAL_IMPL_AVX_INIT(v_uint8x32,  uchar,    u8,  epi8,   char)
-OPENCV_HAL_IMPL_AVX_INIT(v_int8x32,   schar,    s8,  epi8,   char)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint16x16, ushort,   u16, epi16,  short)
-OPENCV_HAL_IMPL_AVX_INIT(v_int16x16,  short,    s16, epi16,  short)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint32x8,  unsigned, u32, epi32,  int)
-OPENCV_HAL_IMPL_AVX_INIT(v_int32x8,   int,      s32, epi32,  int)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint64x4,  uint64,   u64, epi64x, int64)
-OPENCV_HAL_IMPL_AVX_INIT(v_int64x4,   int64,    s64, epi64x, int64)
+OPENCV_HAL_IMPL_AVX_INIT(v_uint8x64,  uchar,    u8,  epi8,   char)
+OPENCV_HAL_IMPL_AVX_INIT(v_int8x64,   schar,    s8,  epi8,   char)
+OPENCV_HAL_IMPL_AVX_INIT(v_uint16x32, ushort,   u16, epi16,  short)
+OPENCV_HAL_IMPL_AVX_INIT(v_int16x32,  short,    s16, epi16,  short)
+OPENCV_HAL_IMPL_AVX_INIT(v_uint32x16, unsigned, u32, epi32,  int)
+OPENCV_HAL_IMPL_AVX_INIT(v_int32x16,  int,      s32, epi32,  int)
+OPENCV_HAL_IMPL_AVX_INIT(v_uint64x8,  uint64,   u64, epi64,  int64)
+OPENCV_HAL_IMPL_AVX_INIT(v_int64x8,   int64,    s64, epi64,  int64)
 
 #define OPENCV_HAL_IMPL_AVX_INIT_FLT(_Tpvec, _Tp, suffix, zsuffix, cast) \
     inline _Tpvec v512_setzero_##suffix()                                \
-    { return _Tpvec(_mm256_setzero_##zsuffix()); }                       \
+    { return _Tpvec(_mm512_setzero_##zsuffix()); }                       \
     inline _Tpvec v512_setall_##suffix(_Tp v)                            \
-    { return _Tpvec(_mm256_set1_##zsuffix(v)); }                         \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x16, suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x16,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x8,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x8,   suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x4,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x4,   suffix, cast)
+    { return _Tpvec(_mm512_set1_##zsuffix(v)); }                         \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x64,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x64,   suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x32, suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x32,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x16, suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x16,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x8,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x8,   suffix, cast)
 
-OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float32x8, float,  f32, ps, _mm256_castsi256_ps)
-OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float64x4, double, f64, pd, _mm256_castsi256_pd)
+OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float32x16, float,  f32, ps, _mm512_castsi512_ps)
+OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float64x8,  double, f64, pd, _mm512_castsi512_pd)
 
-inline v_float32x8 v_reinterpret_as_f32(const v_float32x8& a)
+inline v_float32x16 v_reinterpret_as_f32(const v_float32x16& a)
 { return a; }
-inline v_float32x8 v_reinterpret_as_f32(const v_float64x4& a)
-{ return v_float32x8(_mm256_castpd_ps(a.val)); }
+inline v_float32x16 v_reinterpret_as_f32(const v_float64x8& a)
+{ return v_float32x16(_mm512_castpd_ps(a.val)); }
 
-inline v_float64x4 v_reinterpret_as_f64(const v_float64x4& a)
+inline v_float64x8 v_reinterpret_as_f64(const v_float64x8& a)
 { return a; }
-inline v_float64x4 v_reinterpret_as_f64(const v_float32x8& a)
-{ return v_float64x4(_mm256_castps_pd(a.val)); }
+inline v_float64x8 v_reinterpret_as_f64(const v_float32x16& a)
+{ return v_float64x8(_mm512_castps_pd(a.val)); }
 
 #if CV_FP16
 inline v_float32x8 v512_load_fp16_f32(const short* ptr)
