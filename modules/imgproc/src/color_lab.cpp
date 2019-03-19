@@ -3154,8 +3154,8 @@ struct Luv2RGBinteger
         // vp: +/- 0.25*BASE*1024
         int up = LUVLUT.LuToUp_b[LL*256+uu];
         int vp = LUVLUT.LvToVp_b[LL*256+vv];
-        //X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
-        //Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
+        // X = y*3.f* up/((float)BASE/1024) *vp/((float)BASE*1024);
+        // Z = y*(((12.f*13.f)*((float)LL)*100.f/255.f - up/((float)BASE))*vp/((float)BASE*1024) - 5.f);
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
@@ -3188,36 +3188,113 @@ struct Luv2RGBinteger
         bo = tab[bo];
     }
 
-    inline void processLuvToXYZ(const v_uint8x16& lv, const v_uint8x16& uv, const v_uint8x16& vv,
-                                int32_t* xyz) const
+    inline void processLuvToXYZ(const v_uint8& lv, const v_uint8& uv, const v_uint8& vv,
+                                v_int32 (&x)[4], v_int32 (&y)[4], v_int32 (&z)[4]) const
     {
-        uint8_t CV_DECL_ALIGNED(v_uint8::nlanes) lvstore[16], uvstore[16], vvstore[16];
-        v_store_aligned(lvstore, lv); v_store_aligned(uvstore, uv); v_store_aligned(vvstore, vv);
+        const int vsize = v_uint8::nlanes;
 
-        for(int i = 0; i < 16; i++)
+        v_uint16 lv0, lv1;
+        v_expand(lv, lv0, lv1);
+        v_uint32 lq[4];
+        v_expand(lv0, lq[0], lq[1]);
+        v_expand(lv1, lq[2], lq[3]);
+
+        // y = LabToYF_b[LL*2];
+        // load int32 instead of int16 then cut unused part by masking
+        v_int32 mask16 = vx_setall_s32(0xFFFF);
+        for(int k = 0; k < 4; k++)
         {
-            int LL = lvstore[i];
-            int u = uvstore[i];
-            int v = vvstore[i];
-            int y = LabToYF_b[LL*2];
+            y[k] = v_lut((const int*)LabToYF_b, v_reinterpret_as_s32(lq[k])) & mask16;
+        }
 
-            int up = LUVLUT.LuToUp_b[LL*256+u];
-            int vp = LUVLUT.LvToVp_b[LL*256+v];
+        v_int32 up[4], vp[4];
+        // int up = LUVLUT.LuToUp_b[LL*256+u];
+        // int vp = LUVLUT.LvToVp_b[LL*256+v];
+        v_uint16 uv0, uv1, vv0, vv1;
+        v_expand(uv, uv0, uv1);
+        v_expand(vv, vv0, vv1);
+        // LL*256
+        v_uint16 ll0, ll1;
+        ll0 = lv0 << 8; ll1 = lv1 << 8;
+        v_uint16 upidx0, upidx1, vpidx0, vpidx1;
+        upidx0 = ll0 + uv0; upidx1 = ll1 + uv1;
+        vpidx0 = ll0 + vv0; vpidx1 = ll1 + vv1;
+        v_uint32 upidx[4], vpidx[4];
+        v_expand(upidx0, upidx[0], upidx[1]); v_expand(upidx1, upidx[2], upidx[3]);
+        v_expand(vpidx0, vpidx[0], vpidx[1]); v_expand(vpidx1, vpidx[2], vpidx[3]);
+        for(int k = 0; k < 4; k++)
+        {
+            up[k] = v_lut(LUVLUT.LuToUp_b, v_reinterpret_as_s32(upidx[k]));
+            vp[k] = v_lut(LUVLUT.LvToVp_b, v_reinterpret_as_s32(vpidx[k]));
+        }
 
-            long long int xv = up*(long long int)vp;
-            long long int vpl = LUVLUT.LvToVpl_b[LL*256+v];
-            long long int zp = vpl - xv*(255/3);
+        // long long int vpl = LUVLUT.LvToVpl_b[LL*256+v];
+        v_int64 vpl[8];
+        int32_t CV_DECL_ALIGNED(vsize) vpidxstore[vsize];
+        for(int k = 0; k < 4; k++)
+        {
+            v_store_aligned(vpidxstore + k*vsize/4, v_reinterpret_as_s32(vpidx[k]));
+        }
+        for(int k = 0; k < 8; k++)
+        {
+            vpl[k] = vx_lut((const int64_t*)LUVLUT.LvToVpl_b, vpidxstore + k*vsize/8);
+        }
+
+        // not all 64-bit arithmetic is available in univ. intrinsics
+        // need to handle it with scalar code
+        int64_t CV_DECL_ALIGNED(vsize) vvpl[vsize];
+        for(int k = 0; k < 8; k++)
+        {
+            v_store_aligned(vvpl + k*vsize/8, vpl[k]);
+        }
+        int32_t CV_DECL_ALIGNED(vsize) vup[vsize], vvp[vsize], vx[vsize], vy[vsize], vzm[vsize];
+        for(int k = 0; k < 4; k++)
+        {
+            v_store_aligned(vup + k*vsize/4, up[k]);
+            v_store_aligned(vvp + k*vsize/4, vp[k]);
+            v_store_aligned(vy + k*vsize/4, y[k]);
+        }
+        for(int i = 0; i < vsize; i++)
+        {
+            int32_t y_ = vy[i];
+            int32_t up_ = vup[i];
+            int32_t vp_ = vvp[i];
+
+            int64_t vpl_ = vvpl[i];
+            int64_t xv = up_*(int64_t)vp_;
+
+            int64_t zp = vpl_ - xv*(255/3);
             zp = zp >> base_shift;
-            long long int zq = zp - (5*255*BASE);
-            int zm = (int)((y*zq) >> base_shift);
+            int64_t zq = zp - (5*255*BASE);
+            int32_t zm = (int32_t)((y_*zq) >> base_shift);
+            vzm[i] = zm;
 
-            int x = (int)(xv >> base_shift);
-            x = (y*x) >> base_shift;
+            vx[i] = (int32_t)(xv >> base_shift);
+        }
+        v_int32 zm[4];
+        for(int k = 0; k < 4; k++)
+        {
+            x[k] = vx_load_aligned(vx + k*vsize/4);
+            zm[k] = vx_load_aligned(vzm + k*vsize/4);
+        }
 
-            int z = zm/256 + zm/65536;
-            x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+        for(int k = 0; k < 4; k++)
+        {
+            x[k] = (y[k]*x[k]) >> base_shift;
+        }
 
-            xyz[i] = x; xyz[i + 16] = y; xyz[i + 32] = z;
+        // z = zm/256 + zm/65536;
+        for (int k = 0; k < 4; k++)
+        {
+            z[k] = (zm[k] >> 8) + (zm[k] >> 16);
+        }
+
+        // (x, z) = clip((x, z), min=0, max=2*BASE)
+        v_int32 zero = vx_setzero_s32(), base2 = vx_setall_s32(2*BASE);
+        for(int k = 0; k < 4; k++)
+        {
+            x[k] = v_max(zero, v_min(base2, x[k]));
+            z[k] = v_max(zero, v_min(base2, z[k]));
         }
     }
 
@@ -3227,72 +3304,113 @@ struct Luv2RGBinteger
         uchar alpha = ColorChannel<uchar>::max();
 
         i = 0;
-#if CV_SIMD128
+
+#if CV_SIMD
         if(enablePackedLuv2RGB)
         {
-            static const int nPixels = 16;
-            for (; i < n*3-3*nPixels; i += 3*nPixels, dst += dcn*nPixels)
+            static const int vsize = v_uint8::nlanes;
+            const int descaleShift = 1 << (shift-1);
+            v_int16 vdescale = vx_setall_s16(descaleShift);
+            v_int16 vc[9];
+            for(int k = 0; k < 9; k++)
             {
-                v_uint8x16 u8l, u8u, u8v;
-                v_load_deinterleave(src + i, u8l, u8u, u8v);
+                vc[k] = vx_setall_s16((short)coeffs[k]);
+            }
+            v_int16 one = vx_setall_s16(1);
+            v_int16 cbxy, cbz1, cgxy, cgz1, crxy, crz1;
+            v_int16 dummy;
+            v_zip(vc[0], vc[1], crxy, dummy);
+            v_zip(vc[2],   one, crz1, dummy);
+            v_zip(vc[3], vc[4], cgxy, dummy);
+            v_zip(vc[5],   one, cgz1, dummy);
+            v_zip(vc[6], vc[7], cbxy, dummy);
+            v_zip(vc[8],   one, cbz1, dummy);
+            // fixing 16bit signed multiplication
+            // by subtracting 2^(base_shift-1) and then adding result back
+            v_int32 dummy32, fm[3];
+            v_expand(vc[0]+vc[1]+vc[2], fm[0], dummy32);
+            v_expand(vc[3]+vc[4]+vc[5], fm[1], dummy32);
+            v_expand(vc[6]+vc[7]+vc[8], fm[2], dummy32);
+            fm[0] = fm[0] << (base_shift-1);
+            fm[1] = fm[1] << (base_shift-1);
+            fm[2] = fm[2] << (base_shift-1);
 
-                int32_t CV_DECL_ALIGNED(v_uint8x16::nlanes) xyz[48];
-                processLuvToXYZ(u8l, u8u, u8v, xyz);
+            for (; i <= n-vsize; i += vsize, src += 3*vsize, dst += dcn*vsize)
+            {
+                v_uint8 u8l, u8u, u8v;
+                v_load_deinterleave(src, u8l, u8u, u8v);
 
-                v_int32x4 xiv[4], yiv[4], ziv[4];
-                for(int k = 0; k < 4; k++)
+                v_int32 xiv[4], yiv[4], ziv[4];
+
+                processLuvToXYZ(u8l, u8u, u8v, xiv, yiv, ziv);
+
+                // [xxyyzz]
+                v_uint16 xyz[6];
+                xyz[0] = v_pack_u(xiv[0], xiv[1]); xyz[1] = v_pack_u(xiv[2], xiv[3]);
+                xyz[2] = v_pack_u(yiv[0], yiv[1]); xyz[3] = v_pack_u(yiv[2], yiv[3]);
+                xyz[4] = v_pack_u(ziv[0], ziv[1]); xyz[5] = v_pack_u(ziv[2], ziv[3]);
+
+                // ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
+                // go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
+                // bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
+
+                // fix 16bit multiplication: c_i*v = c_i*(v-fixmul) + c_i*fixmul
+                v_uint16 fixmul = vx_setall_u16(1 << (base_shift-1));
+                v_int16 sxyz[6];
+                for(int k = 0; k < 6; k++)
                 {
-                    xiv[k] = v_load_aligned(xyz + 4*k);
-                    yiv[k] = v_load_aligned(xyz + 4*k + 16);
-                    ziv[k] = v_load_aligned(xyz + 4*k + 32);
+                    sxyz[k] = v_reinterpret_as_s16(v_sub_wrap(xyz[k], fixmul));
                 }
 
-                /*
-                        ro = CV_DESCALE(C0 * x + C1 * y + C2 * z, shift);
-                        go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
-                        bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
-                */
-                v_int32x4 C0 = v_setall_s32(coeffs[0]), C1 = v_setall_s32(coeffs[1]), C2 = v_setall_s32(coeffs[2]);
-                v_int32x4 C3 = v_setall_s32(coeffs[3]), C4 = v_setall_s32(coeffs[4]), C5 = v_setall_s32(coeffs[5]);
-                v_int32x4 C6 = v_setall_s32(coeffs[6]), C7 = v_setall_s32(coeffs[7]), C8 = v_setall_s32(coeffs[8]);
-                v_int32x4 descaleShift = v_setall_s32(1 << (shift-1));
-                v_int32x4 tabsz = v_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
-                v_uint32x4 r_vecs[4], g_vecs[4], b_vecs[4];
+                v_int16 xy[4], zd[4];
+                v_zip(sxyz[0], sxyz[2], xy[0], xy[1]);
+                v_zip(sxyz[4], vdescale, zd[0], zd[1]);
+                v_zip(sxyz[1], sxyz[3], xy[2], xy[3]);
+                v_zip(sxyz[5], vdescale, zd[2], zd[3]);
+
+                // [rrrrggggbbbb]
+                v_int32 i_rgb[4*3];
+                // a bit faster than one loop for all
                 for(int k = 0; k < 4; k++)
                 {
-                    v_int32x4 i_r, i_g, i_b;
-                    i_r = (xiv[k]*C0 + yiv[k]*C1 + ziv[k]*C2 + descaleShift) >> shift;
-                    i_g = (xiv[k]*C3 + yiv[k]*C4 + ziv[k]*C5 + descaleShift) >> shift;
-                    i_b = (xiv[k]*C6 + yiv[k]*C7 + ziv[k]*C8 + descaleShift) >> shift;
-
-                    //limit indices in table and then substitute
-                    //ro = tab[ro]; go = tab[go]; bo = tab[bo];
-                    int32_t CV_DECL_ALIGNED(v_uint8x16::nlanes) rshifts[4], gshifts[4], bshifts[4];
-                    v_int32x4 rs = v_max(v_setzero_s32(), v_min(tabsz, i_r));
-                    v_int32x4 gs = v_max(v_setzero_s32(), v_min(tabsz, i_g));
-                    v_int32x4 bs = v_max(v_setzero_s32(), v_min(tabsz, i_b));
-
-                    v_store_aligned(rshifts, rs);
-                    v_store_aligned(gshifts, gs);
-                    v_store_aligned(bshifts, bs);
-
-                    r_vecs[k] = v_uint32x4(tab[rshifts[0]], tab[rshifts[1]], tab[rshifts[2]], tab[rshifts[3]]);
-                    g_vecs[k] = v_uint32x4(tab[gshifts[0]], tab[gshifts[1]], tab[gshifts[2]], tab[gshifts[3]]);
-                    b_vecs[k] = v_uint32x4(tab[bshifts[0]], tab[bshifts[1]], tab[bshifts[2]], tab[bshifts[3]]);
+                    i_rgb[k+4*0] = (v_dotprod(xy[k], crxy) + v_dotprod(zd[k], crz1) + fm[0]) >> shift;
+                }
+                for(int k = 0; k < 4; k++)
+                {
+                    i_rgb[k+4*1] = (v_dotprod(xy[k], cgxy) + v_dotprod(zd[k], cgz1) + fm[1]) >> shift;
+                }
+                for(int k = 0; k < 4; k++)
+                {
+                    i_rgb[k+4*2] = (v_dotprod(xy[k], cbxy) + v_dotprod(zd[k], cbz1) + fm[2]) >> shift;
                 }
 
-                v_uint16x8 u_rvec0 = v_pack(r_vecs[0], r_vecs[1]), u_rvec1 = v_pack(r_vecs[2], r_vecs[3]);
-                v_uint16x8 u_gvec0 = v_pack(g_vecs[0], g_vecs[1]), u_gvec1 = v_pack(g_vecs[2], g_vecs[3]);
-                v_uint16x8 u_bvec0 = v_pack(b_vecs[0], b_vecs[1]), u_bvec1 = v_pack(b_vecs[2], b_vecs[3]);
+                // limit indices in table and then substitute
+                // ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                v_int32 z32 = vx_setzero_s32();
+                v_int32 tabsz = vx_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                // [rr.., gg.., bb..]
+                int32_t CV_DECL_ALIGNED(vsize) rgbshifts[3*vsize];
+                for(int k = 0; k < 12; k++)
+                {
+                    v_int32 rgbs = v_max(z32, v_min(tabsz, i_rgb[k]));
+                    v_store_aligned(rgbshifts + k*vsize/4, rgbs);
+                }
 
-                v_uint8x16 u8_b, u8_g, u8_r;
-                u8_b = v_pack(u_bvec0, u_bvec1);
-                u8_g = v_pack(u_gvec0, u_gvec1);
-                u8_r = v_pack(u_rvec0, u_rvec1);
+                // [rrggbb]
+                v_uint16 u_rgbvec[6];
+                for(int k = 0; k < 6; k++)
+                {
+                    u_rgbvec[k] = vx_lut(tab, rgbshifts + k*vsize/2);
+                }
+
+                v_uint8 u8_b, u8_g, u8_r;
+                u8_r = v_pack(u_rgbvec[0], u_rgbvec[1]);
+                u8_g = v_pack(u_rgbvec[2], u_rgbvec[3]);
+                u8_b = v_pack(u_rgbvec[4], u_rgbvec[5]);
 
                 if(dcn == 4)
                 {
-                    v_store_interleave(dst, u8_b, u8_g, u8_r, v_setall_u8(alpha));
+                    v_store_interleave(dst, u8_b, u8_g, u8_r, vx_setall_u8(alpha));
                 }
                 else
                 {
@@ -3303,10 +3421,10 @@ struct Luv2RGBinteger
         }
 #endif
 
-        for (; i < n*3; i += 3, dst += dcn)
+        for (; i < n; i++, src += 3, dst += dcn)
         {
             int ro, go, bo;
-            process(src[i + 0], src[i + 1], src[i + 2], ro, go, bo);
+            process(src[0], src[1], src[2], ro, go, bo);
 
             dst[0] = saturate_cast<uchar>(bo);
             dst[1] = saturate_cast<uchar>(go);
