@@ -291,7 +291,7 @@ struct RGB2XYZ_i<uchar>
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         int descaleShift = 1 << (shift-1);
-        v_int16 vdescale = vx_setall_s16(descaleShift);
+        v_int16 vdescale = vx_setall_s16((short)descaleShift);
         v_int16 cxbg, cxr1, cybg, cyr1, czbg, czr1;
         v_int16 dummy;
         v_zip(vx_setall_s16((short)C0), vx_setall_s16((short)C1), cxbg, dummy);
@@ -1570,7 +1570,7 @@ struct RGB2Lab_b
             v_uint16 vLscale = vx_setall_u16(Lscale);
             v_mul_expand(Ldiff0, vLscale, vL[0], vL[1]);
             v_mul_expand(Ldiff1, vLscale, vL[2], vL[3]);
-            v_uint32 vLshift = vx_setall_u32(Lshift + labDescaleShift);
+            v_uint32 vLshift = vx_setall_u32((uint32_t)(Lshift + labDescaleShift));
             for(int k = 0; k < 4; k++)
             {
                 vL[k] = (vL[k] + vLshift) >> lab_shift2;
