@@ -1459,7 +1459,9 @@ struct RGB2Lab_b
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
         i = 0;
+
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         const int xyzDescaleShift = 1 << (lab_shift - 1);
@@ -1581,8 +1583,8 @@ struct RGB2Lab_b
 
             // a = (500*(fX - fY) + (128*(1 << lab_shift2) + labDescaleShift)) >> lab_shift2;
             // b = (200*(fY - fZ) + (128*(1 << lab_shift2) + labDescaleShift)) >> lab_shift2;
-            v_int16 adiff0 = fX0 - fY0, adiff1 = fX1 - fY1;
-            v_int16 bdiff0 = fY0 - fZ0, bdiff1 = fY1 - fZ1;
+            v_int16 adiff0 = v_sub_wrap(fX0, fY0), adiff1 = v_sub_wrap(fX1, fY1);
+            v_int16 bdiff0 = v_sub_wrap(fY0, fZ0), bdiff1 = v_sub_wrap(fY1, fZ1);
 
             // [4 for a, 4 for b]
             v_int32 ab[8];
@@ -1609,6 +1611,7 @@ struct RGB2Lab_b
 
         vx_cleanup();
 #endif
+
         for(; i < n; i++, src += scn, dst += 3 )
         {
             int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
