@@ -29,7 +29,7 @@ using namespace cv;
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 
-static inline void deleter_AMediExtractor(AMediaExtractor *extractor) {
+static inline void deleter_AMediaExtractor(AMediaExtractor *extractor) {
     AMediaExtractor_delete(extractor);
 }
 
@@ -177,7 +177,7 @@ public:
             return false;
         }
 
-        mediaExtractor = std::shared_ptr<AMediaExtractor>(AMediaExtractor_new(), deleter_AMediExtractor);
+        mediaExtractor = std::shared_ptr<AMediaExtractor>(AMediaExtractor_new(), deleter_AMediaExtractor);
         if (!mediaExtractor) {
             return false;
         }
