@@ -1077,100 +1077,129 @@ inline v_float64x2 v_lut_pairs(const double* tab, const int* idx) { return v_loa
 
 inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_int32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_uint32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[2] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1)
+    };
     return v_float64x2(tab[idx[0]], tab[idx[1]]);
 }
 
 inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
-    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
+    vec_float4 xy0 = vec_ld_l8(tab + vec_extract(idxvec.val, 0));
+    vec_float4 xy1 = vec_ld_l8(tab + vec_extract(idxvec.val, 1));
+    vec_float4 xy2 = vec_ld_l8(tab + vec_extract(idxvec.val, 2));
+    vec_float4 xy3 = vec_ld_l8(tab + vec_extract(idxvec.val, 3));
+    vec_float4 xy02 = vec_mergeh(xy0, xy2); // x0, x2, y0, y2
+    vec_float4 xy13 = vec_mergeh(xy1, xy3); // x1, x3, y1, y3
+    x.val = vec_mergeh(xy02, xy13);
+    y.val = vec_mergel(xy02, xy13);
 }
-
 inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float64x2(tab[idx[0]], tab[idx[1]]);
-    y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+    vec_double2 xy0 = vsx_ld(vec_extract(idxvec.val, 0), tab);
+    vec_double2 xy1 = vsx_ld(vec_extract(idxvec.val, 1), tab);
+    x.val = vec_mergeh(xy0, xy1);
+    y.val = vec_mergel(xy0, xy1);
 }
 
 inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
 {
-    vec_short8 vec0 = vec_mergeh((vec_short8)vec.val, (vec_short8)vec_mergesql(vec.val, vec.val));
-    vec0 = vec_mergeh(vec0, vec_mergesql(vec0, vec0));
-    return v_int8x16(vec_mergeh((vec_char16)vec0, (vec_char16)vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 2, 1, 3, 4, 6, 5, 7, 8, 10, 9, 11, 12, 14, 13, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+
 inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
 {
-    vec_char16 vec0 = (vec_char16)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int8x16(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 4, 1, 5, 2, 6, 3, 7, 8, 12, 9, 13, 10, 14, 11, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
 {
-    vec_short8 vec0 = (vec_short8)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int16x8(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0,1, 4,5, 2,3, 6,7, 8,9, 12,13, 10,11, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+
 inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
 {
-    return v_int16x8(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1, 8,9, 2,3, 10,11, 4,5, 12,13, 6,7, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
 
 inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
 {
-    return v_int32x4(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1,2,3, 8,9,10,11, 4,5,6,7, 12,13,14,15};
+    return v_int32x4(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
-inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec)
+{ return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec)
+{ return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
 
 inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
 {
-    schar CV_DECL_ALIGNED(32) val[16];
-    v_store_aligned(val, vec);
-    return v_int8x16(val[0], val[1], val[2], val[4], val[5], val[6], val[8], val[9], val[10], val[12], val[13], val[14], val[15], val[15], val[15], val[15]);
+    static const vec_uchar16 perm = {0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 15, 15, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 {
-    short CV_DECL_ALIGNED(32) val[8];
-    v_store_aligned(val, vec);
-    return v_int16x8(val[0], val[1], val[2], val[4], val[5], val[6], val[7], val[7]);
+    static const vec_uchar16 perm = {0,1, 2,3, 4,5, 8,9, 10,11, 12,13, 14,15, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
-inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
-inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
-inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec)
+{ return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec)
+{ return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec)
+{ return vec; }
 
 /////// FP16 support ////////
 
