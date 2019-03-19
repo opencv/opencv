@@ -30,7 +30,7 @@ inline __m512d _v512_combine(const __m256d& lo, const __m256d& hi)
 inline int _v_cvtsi512_si32(const __m512i& a)
 { return _mm_cvtsi128_si32(_mm512_castsi512_si128(a)); }
 
-inline __m512i _v512_shuffle_odd_64(const __m512i& v)
+/*inline __m512i _v512_shuffle_odd_64(const __m512i& v)
 { return _mm512_permutex_epi64(v, _MM_SHUFFLE(3, 1, 2, 0)); }
 
 inline __m512d _v512_shuffle_odd_64(const __m512d& v)
@@ -88,7 +88,7 @@ inline __m512i _v512_packs_epu32(const __m512i& a, const __m512i& b)
     __m512i am = _mm256_min_epu32(a, m);
     __m512i bm = _mm256_min_epu32(b, m);
     return _mm256_packus_epi32(am, bm);
-}
+}*/
 
 ///////// Types ////////////
 
@@ -116,187 +116,205 @@ struct v_uint8x64
                uchar v56, uchar v57, uchar v58, uchar v59,
                uchar v60, uchar v61, uchar v62, uchar v63)
     {
-        val = _mm512_setr_epi8((char)v0,  (char)v1,  (char)v2,  (char)v3,  (char)v4,  (char)v5,  (char)v6 , (char)v7,
-                               (char)v8,  (char)v9,  (char)v10, (char)v11, (char)v12, (char)v13, (char)v14, (char)v15,
-                               (char)v16, (char)v17, (char)v18, (char)v19, (char)v20, (char)v21, (char)v22, (char)v23,
-                               (char)v24, (char)v25, (char)v26, (char)v27, (char)v28, (char)v29, (char)v30, (char)v31,
-                               (char)v32, (char)v33, (char)v34, (char)v35, (char)v36, (char)v37, (char)v38, (char)v39,
-                               (char)v40, (char)v41, (char)v42, (char)v43, (char)v44, (char)v45, (char)v46, (char)v47,
-                               (char)v48, (char)v49, (char)v50, (char)v51, (char)v52, (char)v53, (char)v54, (char)v55,
-                               (char)v56, (char)v57, (char)v58, (char)v59, (char)v60, (char)v61, (char)v62, (char)v63);
+        val = _mm512_set_epi8((char)v63, (char)v62, (char)v61, (char)v60, (char)v59, (char)v58, (char)v57, (char)v56,
+                              (char)v55, (char)v54, (char)v53, (char)v52, (char)v51, (char)v50, (char)v49, (char)v48,
+                              (char)v47, (char)v46, (char)v45, (char)v44, (char)v43, (char)v42, (char)v41, (char)v40,
+                              (char)v39, (char)v38, (char)v37, (char)v36, (char)v35, (char)v34, (char)v33, (char)v32,
+                              (char)v31, (char)v30, (char)v29, (char)v28, (char)v27, (char)v26, (char)v25, (char)v24,
+                              (char)v23, (char)v22, (char)v21, (char)v20, (char)v19, (char)v18, (char)v17, (char)v16,
+                              (char)v15, (char)v14, (char)v13, (char)v12, (char)v11, (char)v10, (char)v9,  (char)v8,
+                              (char)v7,  (char)v6,  (char)v5,  (char)v4,  (char)v3,  (char)v2,  (char)v1,  (char)v0);
     }
     v_uint8x64() : val(_mm512_setzero_si512()) {}
     uchar get0() const { return (uchar)_v_cvtsi512_si32(val); }
 };
 
-struct v_int8x32
+struct v_int8x64
 {
     typedef schar lane_type;
-    enum { nlanes = 32 };
+    enum { nlanes = 64 };
     __m512i val;
 
-    explicit v_int8x32(__m512i v) : val(v) {}
-    v_int8x32(schar v0,  schar v1,  schar v2,  schar v3,
+    explicit v_int8x64(__m512i v) : val(v) {}
+    v_int8x64(schar v0,  schar v1,  schar v2,  schar v3,
               schar v4,  schar v5,  schar v6,  schar v7,
               schar v8,  schar v9,  schar v10, schar v11,
               schar v12, schar v13, schar v14, schar v15,
               schar v16, schar v17, schar v18, schar v19,
               schar v20, schar v21, schar v22, schar v23,
               schar v24, schar v25, schar v26, schar v27,
-              schar v28, schar v29, schar v30, schar v31)
+              schar v28, schar v29, schar v30, schar v31,
+              schar v32, schar v33, schar v34, schar v35,
+              schar v36, schar v37, schar v38, schar v39,
+              schar v40, schar v41, schar v42, schar v43,
+              schar v44, schar v45, schar v46, schar v47,
+              schar v48, schar v49, schar v50, schar v51,
+              schar v52, schar v53, schar v54, schar v55,
+              schar v56, schar v57, schar v58, schar v59,
+              schar v60, schar v61, schar v62, schar v63)
     {
-        val = _mm256_setr_epi8(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9,
-            v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20,
-            v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31);
+        val = _mm512_set_epi8(v63, v62, v61, v60, v59, v58, v57, v56, v55, v54, v53, v52, v51, v50, v49, v48,
+                              v47, v46, v45, v44, v43, v42, v41, v40, v39, v38, v37, v36, v35, v34, v33, v32,
+                              v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
+                              v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
-    v_int8x32() : val(_mm256_setzero_si256()) {}
-    schar get0() const { return (schar)_v_cvtsi256_si32(val); }
+    v_int8x64() : val(_mm512_setzero_si512()) {}
+    schar get0() const { return (schar)_v_cvtsi512_si32(val); }
 };
 
-struct v_uint16x16
+struct v_uint16x32
 {
     typedef ushort lane_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 32 };
     __m512i val;
 
-    explicit v_uint16x16(__m512i v) : val(v) {}
-    v_uint16x16(ushort v0,  ushort v1,  ushort v2,  ushort v3,
+    explicit v_uint16x32(__m512i v) : val(v) {}
+    v_uint16x32(ushort v0,  ushort v1,  ushort v2,  ushort v3,
                 ushort v4,  ushort v5,  ushort v6,  ushort v7,
                 ushort v8,  ushort v9,  ushort v10, ushort v11,
-                ushort v12, ushort v13, ushort v14, ushort v15)
+                ushort v12, ushort v13, ushort v14, ushort v15,
+                ushort v16, ushort v17, ushort v18, ushort v19,
+                ushort v20, ushort v21, ushort v22, ushort v23,
+                ushort v24, ushort v25, ushort v26, ushort v27,
+                ushort v28, ushort v29, ushort v30, ushort v31)
     {
-        val = _mm256_setr_epi16((short)v0, (short)v1, (short)v2, (short)v3,
-            (short)v4,  (short)v5,  (short)v6,  (short)v7,  (short)v8,  (short)v9,
-            (short)v10, (short)v11, (short)v12, (short)v13, (short)v14, (short)v15);
+        val = _mm512_set_epi16((short)v31, (short)v30, (short)v29, (short)v28, (short)v27, (short)v26, (short)v25, (short)v24,
+                               (short)v23, (short)v22, (short)v21, (short)v20, (short)v19, (short)v18, (short)v17, (short)v16,
+                               (short)v15, (short)v14, (short)v13, (short)v12, (short)v11, (short)v10, (short)v9,  (short)v8,
+                               (short)v7,  (short)v6,  (short)v5,  (short)v4,  (short)v3,  (short)v2,  (short)v1,  (short)v0);
     }
-    v_uint16x16() : val(_mm256_setzero_si256()) {}
+    v_uint16x32() : val(_mm512_setzero_si512()) {}
     ushort get0() const { return (ushort)_v_cvtsi256_si32(val); }
 };
 
-struct v_int16x16
+struct v_int16x32
 {
     typedef short lane_type;
+    enum { nlanes = 32 };
+    __m512i val;
+
+    explicit v_int16x32(__m512i v) : val(v) {}
+    v_int16x32(short v0,  short v1,  short v2,  short v3,  short v4,  short v5,  short v6,  short v7,
+               short v8,  short v9,  short v10, short v11, short v12, short v13, short v14, short v15,
+               short v16, short v17, short v18, short v19, short v20, short v21, short v22, short v23,
+               short v24, short v25, short v26, short v27, short v28, short v29, short v30, short v31)
+    {
+        val = _mm512_set_epi16(v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
+                               v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
+    }
+    v_int16x32() : val(_mm512_setzero_si512()) {}
+    short get0() const { return (short)_v_cvtsi512_si32(val); }
+};
+
+struct v_uint32x16
+{
+    typedef unsigned lane_type;
     enum { nlanes = 16 };
     __m512i val;
 
-    explicit v_int16x16(__m512i v) : val(v) {}
-    v_int16x16(short v0,  short v1,  short v2,  short v3,
-               short v4,  short v5,  short v6,  short v7,
-               short v8,  short v9,  short v10, short v11,
-               short v12, short v13, short v14, short v15)
+    explicit v_uint32x16(__m512i v) : val(v) {}
+    v_uint32x16(unsigned v0,  unsigned v1,  unsigned v2,  unsigned v3,
+                unsigned v4,  unsigned v5,  unsigned v6,  unsigned v7,
+                unsigned v8,  unsigned v9,  unsigned v10, unsigned v11,
+                unsigned v12, unsigned v13, unsigned v14, unsigned v15)
     {
-        val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7,
-            v8, v9, v10, v11, v12, v13, v14, v15);
+        val = _mm512_setr_epi32((unsigned)v0,  (unsigned)v1,  (unsigned)v2,  (unsigned)v3,
+                                (unsigned)v4,  (unsigned)v5,  (unsigned)v6,  (unsigned)v7,
+                                (unsigned)v8,  (unsigned)v9,  (unsigned)v10, (unsigned)v11,
+                                (unsigned)v12, (unsigned)v13, (unsigned)v14, (unsigned)v15);
     }
-    v_int16x16() : val(_mm256_setzero_si256()) {}
-    short get0() const { return (short)_v_cvtsi256_si32(val); }
+    v_uint32x16() : val(_mm512_setzero_si512()) {}
+    unsigned get0() const { return (unsigned)_v_cvtsi512_si32(val); }
 };
 
-struct v_uint32x8
-{
-    typedef unsigned lane_type;
-    enum { nlanes = 8 };
-    __m512i val;
-
-    explicit v_uint32x8(__m512i v) : val(v) {}
-    v_uint32x8(unsigned v0, unsigned v1, unsigned v2, unsigned v3,
-               unsigned v4, unsigned v5, unsigned v6, unsigned v7)
-    {
-        val = _mm256_setr_epi32((unsigned)v0, (unsigned)v1, (unsigned)v2,
-            (unsigned)v3, (unsigned)v4, (unsigned)v5, (unsigned)v6, (unsigned)v7);
-    }
-    v_uint32x8() : val(_mm256_setzero_si256()) {}
-    unsigned get0() const { return (unsigned)_v_cvtsi256_si32(val); }
-};
-
-struct v_int32x8
+struct v_int32x16
 {
     typedef int lane_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 16 };
     __m512i val;
 
-    explicit v_int32x8(__m512i v) : val(v) {}
-    v_int32x8(int v0, int v1, int v2, int v3,
-              int v4, int v5, int v6, int v7)
+    explicit v_int32x16(__m512i v) : val(v) {}
+    v_int32x16(int v0, int v1, int v2,  int v3,  int v4,  int v5,  int v6,  int v7,
+               int v8, int v9, int v10, int v11, int v12, int v13, int v14, int v15)
     {
-        val = _mm256_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7);
+        val = _mm512_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_int32x8() : val(_mm256_setzero_si256()) {}
-    int get0() const { return _v_cvtsi256_si32(val); }
+    v_int32x16() : val(_mm512_setzero_si512()) {}
+    int get0() const { return _v_cvtsi512_si32(val); }
 };
 
-struct v_float32x8
+struct v_float32x16
 {
     typedef float lane_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 16 };
     __m512 val;
 
-    explicit v_float32x8(__m512 v) : val(v) {}
-    v_float32x8(float v0, float v1, float v2, float v3,
-                float v4, float v5, float v6, float v7)
+    explicit v_float32x16(__m512 v) : val(v) {}
+    v_float32x16(float v0, float v1, float v2,  float v3,  float v4,  float v5,  float v6,  float v7,
+                 float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15)
     {
-        val = _mm256_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7);
+        val = _mm512_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
     }
-    v_float32x8() : val(_mm256_setzero_ps()) {}
-    float get0() const { return _mm_cvtss_f32(_mm256_castps256_ps128(val)); }
+    v_float32x16() : val(_mm512_setzero_ps()) {}
+    float get0() const { return _mm_cvtss_f32(_mm512_castps512_ps128(val)); }
 };
 
-struct v_uint64x4
+struct v_uint64x8
 {
     typedef uint64 lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 8 };
     __m512i val;
 
-    explicit v_uint64x4(__m512i v) : val(v) {}
-    v_uint64x4(uint64 v0, uint64 v1, uint64 v2, uint64 v3)
-    { val = _mm256_setr_epi64x((int64)v0, (int64)v1, (int64)v2, (int64)v3); }
-    v_uint64x4() : val(_mm256_setzero_si256()) {}
+    explicit v_uint64x8(__m512i v) : val(v) {}
+    v_uint64x8(uint64 v0, uint64 v1, uint64 v2, uint64 v3, uint64 v4, uint64 v5, uint64 v6, uint64 v7)
+    { val = _mm512_setr_epi64((int64)v0, (int64)v1, (int64)v2, (int64)v3, (int64)v4, (int64)v5, (int64)v6, (int64)v7); }
+    v_uint64x8() : val(_mm512_setzero_si512()) {}
     uint64 get0() const
     {
     #if defined __x86_64__ || defined _M_X64
-        return (uint64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val));
+        return (uint64)_mm_cvtsi128_si64(_mm512_castsi512_si128(val));
     #else
-        int a = _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
-        int b = _mm_cvtsi128_si32(_mm256_castsi256_si128(_mm256_srli_epi64(val, 32)));
+        int a = _mm_cvtsi128_si32(_mm512_castsi512_si128(val));
+        int b = _mm_cvtsi128_si32(_mm512_castsi512_si128(_mm512_srli_epi64(val, 32)));
         return (unsigned)a | ((uint64)(unsigned)b << 32);
     #endif
     }
 };
 
-struct v_int64x4
+struct v_int64x8
 {
     typedef int64 lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 8 };
     __m512i val;
 
-    explicit v_int64x4(__m512i v) : val(v) {}
-    v_int64x4(int64 v0, int64 v1, int64 v2, int64 v3)
-    { val = _mm256_setr_epi64x(v0, v1, v2, v3); }
-    v_int64x4() : val(_mm256_setzero_si256()) {}
+    explicit v_int64x8(__m512i v) : val(v) {}
+    v_int64x8(int64 v0, int64 v1, int64 v2, int64 v3, int64 v4, int64 v5, int64 v6, int64 v7)
+    { val = _mm512_setr_epi64(v0, v1, v2, v3, v4, v5, v6, v7); }
+    v_int64x8() : val(_mm512_setzero_si512()) {}
 
     int64 get0() const
     {
     #if defined __x86_64__ || defined _M_X64
-        return (int64)_mm_cvtsi128_si64(_mm256_castsi256_si128(val));
+        return (int64)_mm_cvtsi128_si64(_mm512_castsi512_si128(val));
     #else
-        int a = _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
-        int b = _mm_cvtsi128_si32(_mm256_castsi256_si128(_mm256_srli_epi64(val, 32)));
+        int a = _mm_cvtsi128_si32(_mm512_castsi512_si128(val));
+        int b = _mm_cvtsi128_si32(_mm512_castsi512_si128(_mm512_srli_epi64(val, 32)));
         return (int64)((unsigned)a | ((uint64)(unsigned)b << 32));
     #endif
     }
 };
 
-struct v_float64x4
+struct v_float64x8
 {
     typedef double lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 8 };
     __m512d val;
 
-    explicit v_float64x4(__m512d v) : val(v) {}
-    v_float64x4(double v0, double v1, double v2, double v3)
-    { val = _mm256_setr_pd(v0, v1, v2, v3); }
-    v_float64x4() : val(_mm256_setzero_pd()) {}
-    double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
+    explicit v_float64x8(__m512d v) : val(v) {}
+    v_float64x8(double v0, double v1, double v2, double v3, double v4, double v5, double v6, double v7)
+    { val = _mm512_setr_pd(v0, v1, v2, v3, v4, v5, v6, v7); }
+    v_float64x8() : val(_mm512_setzero_pd()) {}
+    double get0() const { return _mm_cvtsd_f64(_mm512_castpd512_pd128(val)); }
 };
 
 //////////////// Load and store operations ///////////////
