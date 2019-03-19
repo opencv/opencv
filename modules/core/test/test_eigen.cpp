@@ -519,4 +519,15 @@ TEST_P(Core_EigenZero, double)
 }
 INSTANTIATE_TEST_CASE_P(/**/, Core_EigenZero, testing::Values(2, 3, 5));
 
+TEST(Core_EigenNonSymmetric, convergence)
+{
+    Matx33d m(
+        0, -1, 0,
+        1, 0, 1,
+        0, -1, 0);
+    Mat eigenvalues, eigenvectors;
+    // eigen values are complex, algorithm doesn't converge
+    EXPECT_THROW(cv::eigenNonSymmetric(m, eigenvalues, eigenvectors), cv::Exception);  // exception instead of hang
+}
+
 }} // namespace
