@@ -527,7 +527,19 @@ TEST(Core_EigenNonSymmetric, convergence)
         0, -1, 0);
     Mat eigenvalues, eigenvectors;
     // eigen values are complex, algorithm doesn't converge
-    EXPECT_THROW(cv::eigenNonSymmetric(m, eigenvalues, eigenvectors), cv::Exception);  // exception instead of hang
+    try
+    {
+        cv::eigenNonSymmetric(m, eigenvalues, eigenvectors);
+        std::cout << Mat(eigenvalues.t()) << std::endl;
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(Error::StsNoConv, e.code) << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unknown exception has been raised";
+    }
 }
 
 }} // namespace
