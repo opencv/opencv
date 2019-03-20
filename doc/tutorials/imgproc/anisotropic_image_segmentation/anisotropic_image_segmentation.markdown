@@ -60,7 +60,7 @@ You can find source code in the `samples/cpp/tutorial_code/ImgProc/anisotropic_i
 @end_toggle
 
 @add_toggle_python
-    @include python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py
+    @include samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py
 @end_toggle
 
 Explanation
@@ -68,43 +68,43 @@ Explanation
 An anisotropic image segmentation algorithm consists of a gradient structure tensor calculation, an orientation calculation, a coherency calculation and an orientation and coherency thresholding:
 
 @add_toggle_cpp
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp main
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp main
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py main
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py main
 @end_toggle
 
 A function calcGST() calculates orientation and coherency by using a gradient structure tensor. An input parameter w defines a window size:
 
 @add_toggle_cpp
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp calcGST
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp calcGST
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py calcGST
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py calcGST
 @end_toggle
 
 
 The below code applies a thresholds LowThr and HighThr to image orientation and a threshold C_Thr to image coherency calculated by the previous function. LowThr and HighThr define orientation range:
 
 @add_toggle_cpp
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp thresholding
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp thresholding
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py thresholding
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py thresholding
 @end_toggle
 
 
 And finally we combine thresholding results:
 
 @add_toggle_cpp
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp combining
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp combining
 @end_toggle
 
 @add_toggle_python
-@snippet python/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py combining
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py combining
 @end_toggle
 
 

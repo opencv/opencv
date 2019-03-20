@@ -1,7 +1,4 @@
-####
-# @brief You will learn how to segment an anisotropic image with a single local orientation by a gradient structure tensor (GST)
-# @author Karpushin Vladislav, karpushin@ngs.ru, https://github.com/VladKarpushin
-####
+
 import cv2 as cv
 import numpy as np
 import argparse
