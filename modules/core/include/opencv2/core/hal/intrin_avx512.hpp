@@ -459,18 +459,17 @@ inline v_float64x8 v_reinterpret_as_f64(const v_float64x8& a)
 inline v_float64x8 v_reinterpret_as_f64(const v_float32x16& a)
 { return v_float64x8(_mm512_castps_pd(a.val)); }
 
-#if CV_FP16
-inline v_float32x8 v512_load_fp16_f32(const short* ptr)
+// FP16
+inline v_float32x16 v512_load_expand(const float16_t* ptr)
 {
-    return v_float32x8(_mm256_cvtph_ps(_mm_loadu_si128((const __m256i*)ptr)));
+    return v_float32x16(_mm512_cvtph_ps(_mm256_loadu_si256((const __m256i*)ptr)));
 }
 
-inline void v_store_fp16(short* ptr, const v_float32x8& a)
+inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
 {
-    __m256i fp16_value = _mm256_cvtps_ph(a.val, 0);
-    _mm_store_si128((__m256i*)ptr, fp16_value);
+    __m256i ah = _mm512_cvtps_ph(a.val, 0);
+    _mm256_storeu_si256((__m256i*)ptr, ah);
 }
-#endif
 
 /* Recombine */
 /*#define OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, perm)                    \
@@ -2767,18 +2766,6 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int32x8, int, s32, v_uint32x8, unsign
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_float32x8, float, f32, v_uint32x8, unsigned, u32)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int64x4, int64, s64, v_uint64x4, uint64, u64)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_float64x4, double, f64, v_uint64x4, uint64, u64)
-
-// FP16
-inline v_float32x8 v512_load_expand(const float16_t* ptr)
-{
-    return v_float32x8(_mm256_cvtph_ps(_mm_loadu_si128((const __m256i*)ptr)));
-}
-
-inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
-{
-    __m256i ah = _mm256_cvtps_ph(a.val, 0);
-    _mm_storeu_si128((__m256i*)ptr, ah);
-}
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 
