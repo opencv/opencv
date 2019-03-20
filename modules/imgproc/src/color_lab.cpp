@@ -17,6 +17,10 @@
 
 using cv::softfloat;
 
+// this should work for SIMD sizes up to 512 bits
+// can't use v_uint8::nlanes due to compilation issues
+#define MAX_ALIGN 64
+
 static const float * splineBuild(const softfloat* f, size_t n)
 {
     float* tab = cv::allocSingleton<float>(n * 4);
@@ -57,18 +61,18 @@ template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab
 }
 
 #if CV_SIMD
-template<typename _Tp> static inline cv::v_float32 splineInterpolate(cv::v_float32 x, const _Tp* tab, int n)
+template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v_float32& x, const _Tp* tab, int n)
 {
     using namespace cv;
     v_int32 ix = v_min(v_max(v_trunc(x), vx_setzero_s32()), vx_setall_s32(n-1));
-    x -= v_cvt_f32(ix);
+    cv::v_float32 xx = x - v_cvt_f32(ix);
     ix = ix << 2;
 
     v_float32 t[4];
     for(int i = 0; i < 4; i++)
         t[i] = v_lut(tab + i, ix);
 
-    return v_fma(v_fma(v_fma(t[3], x, t[2]), x, t[1]), x, t[0]);
+    return v_fma(v_fma(v_fma(t[3], xx, t[2]), xx, t[1]), xx, t[0]);
 }
 #endif
 
@@ -1503,7 +1507,7 @@ struct RGB2Lab_b
                 v_expand(drgb[k], qrgb[k*2+0], qrgb[k*2+1]);
             }
 
-            uint32_t CV_DECL_ALIGNED(v_uint8::nlanes) vdrgb[vsize*3];
+            uint32_t CV_DECL_ALIGNED(MAX_ALIGN) vdrgb[vsize*3];
             for(int k = 0; k < 12; k++)
             {
                 v_store_aligned(vdrgb + k*vsize/4, qrgb[k]);
@@ -1542,7 +1546,7 @@ struct RGB2Lab_b
 
             // [fX, fY, fZ] = LabCbrtTab_b[vx, vy, vz]
             // [4 per X, 4 per Y, 4 per Z]
-            uint32_t CV_DECL_ALIGNED(v_uint8::nlanes) vxyz[vsize*3];
+            uint32_t CV_DECL_ALIGNED(MAX_ALIGN) vxyz[vsize*3];
             for(int j = 0; j < 4; j++)
             {
                 v_store_aligned(vxyz + (0*4+j)*vsize/4, x[j]);
@@ -2273,7 +2277,7 @@ struct Lab2RGBinteger
                 }
 
                 // [RRR... , GGG... , BBB...]
-                int32_t CV_DECL_ALIGNED(v_uint8::nlanes) vidx[vsize*3];
+                int32_t CV_DECL_ALIGNED(MAX_ALIGN) vidx[vsize*3];
                 for (int k = 0; k < 4; k++)
                     v_store_aligned(vidx + 0*vsize + k*vsize/4, rq[k]);
                 for (int k = 0; k < 4; k++)
@@ -2365,7 +2369,7 @@ struct Lab2RGB_b
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 #if CV_SIMD
-        float CV_DECL_ALIGNED(v_uint8::nlanes) buf[3*BLOCK_SIZE];
+        float CV_DECL_ALIGNED(MAX_ALIGN) buf[3*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 #endif
@@ -2379,7 +2383,7 @@ struct Lab2RGB_b
         v_float32 vb = vx_setall_f32(1.f);
         v_float32 vaLow = vx_setall_f32(-128.f), vbLow = vx_setall_f32(-128.f);
         //TODO: fix that when v_interleave is available
-        float CV_DECL_ALIGNED(v_uint8::nlanes) interTmpM[fsize*3], interTmpA[fsize*3];
+        float CV_DECL_ALIGNED(MAX_ALIGN) interTmpM[fsize*3], interTmpA[fsize*3];
         v_store_interleave(interTmpM, vl, va, vb);
         v_store_interleave(interTmpA, vx_setzero_f32(), vaLow, vbLow);
         v_float32 mluv[3], aluv[3];
@@ -2976,7 +2980,7 @@ struct RGB2Luv_b
 
         int i, j, scn = srccn;
 #if CV_SIMD
-        float CV_DECL_ALIGNED(v_uint8::nlanes) buf[bufChannels*BLOCK_SIZE];
+        float CV_DECL_ALIGNED(MAX_ALIGN) buf[bufChannels*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[bufChannels*BLOCK_SIZE];
 #endif
@@ -2992,7 +2996,7 @@ struct RGB2Luv_b
         v_float32 mu = vx_setall_f32((float)fu), au = vx_setall_f32((float)su);
         v_float32 mv = vx_setall_f32((float)fv), av = vx_setall_f32((float)sv);
         //TODO: fix that when v_interleave is available
-        float CV_DECL_ALIGNED(v_uint8::nlanes) interTmpM[fsize*3], interTmpA[fsize*3];
+        float CV_DECL_ALIGNED(MAX_ALIGN) interTmpM[fsize*3], interTmpA[fsize*3];
         v_store_interleave(interTmpM, ml, mu, mv);
         v_store_interleave(interTmpA, al, au, av);
         v_float32 mluv[3], aluv[3];
@@ -3233,7 +3237,7 @@ struct Luv2RGBinteger
 
         // long long int vpl = LUVLUT.LvToVpl_b[LL*256+v];
         v_int64 vpl[8];
-        int32_t CV_DECL_ALIGNED(vsize) vpidxstore[vsize];
+        int32_t CV_DECL_ALIGNED(MAX_ALIGN) vpidxstore[vsize];
         for(int k = 0; k < 4; k++)
         {
             v_store_aligned(vpidxstore + k*vsize/4, v_reinterpret_as_s32(vpidx[k]));
@@ -3245,12 +3249,12 @@ struct Luv2RGBinteger
 
         // not all 64-bit arithmetic is available in univ. intrinsics
         // need to handle it with scalar code
-        int64_t CV_DECL_ALIGNED(vsize) vvpl[vsize];
+        int64_t CV_DECL_ALIGNED(MAX_ALIGN) vvpl[vsize];
         for(int k = 0; k < 8; k++)
         {
             v_store_aligned(vvpl + k*vsize/8, vpl[k]);
         }
-        int32_t CV_DECL_ALIGNED(vsize) vup[vsize], vvp[vsize], vx[vsize], vy[vsize], vzm[vsize];
+        int32_t CV_DECL_ALIGNED(MAX_ALIGN) vup[vsize], vvp[vsize], vx[vsize], vy[vsize], vzm[vsize];
         for(int k = 0; k < 4; k++)
         {
             v_store_aligned(vup + k*vsize/4, up[k]);
@@ -3392,7 +3396,7 @@ struct Luv2RGBinteger
                 v_int32 z32 = vx_setzero_s32();
                 v_int32 tabsz = vx_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
                 // [rr.., gg.., bb..]
-                int32_t CV_DECL_ALIGNED(vsize) rgbshifts[3*vsize];
+                int32_t CV_DECL_ALIGNED(MAX_ALIGN) rgbshifts[3*vsize];
                 for(int k = 0; k < 12; k++)
                 {
                     v_int32 rgbs = v_max(z32, v_min(tabsz, i_rgb[k]));
@@ -3469,7 +3473,7 @@ struct Luv2RGB_b
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 #if CV_SIMD
-        float CV_DECL_ALIGNED(v_uint8::nlanes) buf[3*BLOCK_SIZE];
+        float CV_DECL_ALIGNED(MAX_ALIGN) buf[3*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
 #endif
@@ -3485,7 +3489,7 @@ struct Luv2RGB_b
         v_float32 vv = vx_setall_f32((float)fv);
         v_float32 vuLow = vx_setall_f32((float)uLow), vvLow = vx_setall_f32((float)vLow);
         //TODO: fix that when v_interleave is available
-        float CV_DECL_ALIGNED(v_uint8::nlanes) interTmpM[fsize*3], interTmpA[fsize*3];
+        float CV_DECL_ALIGNED(MAX_ALIGN) interTmpM[fsize*3], interTmpA[fsize*3];
         v_store_interleave(interTmpM, vl, vu, vv);
         v_store_interleave(interTmpA, vx_setzero_f32(), vuLow, vvLow);
         v_float32 mluv[3], aluv[3];
