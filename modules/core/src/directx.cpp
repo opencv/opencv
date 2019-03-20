@@ -263,8 +263,12 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 
     size_t exts_len;
     status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
     cv::AutoBuffer<char> extensions(exts_len);
     status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, exts_len, extensions, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
     bool is_support_cl_khr_d3d11_sharing = false;
     if (strstr(extensions, "cl_khr_d3d11_sharing"))
         is_support_cl_khr_d3d11_sharing = true;
@@ -801,8 +805,12 @@ static bool __OpenCLinitializeD3D11()
     bool useCLNVEXT = false;
     size_t exts_len;
     cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
     cv::AutoBuffer<char> extensions(exts_len);
     status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, exts_len, extensions, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
     bool is_support_cl_khr_d3d11_sharing = false;
     if (strstr(extensions, "cl_khr_d3d11_sharing"))
         is_support_cl_khr_d3d11_sharing = true;
