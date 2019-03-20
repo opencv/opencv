@@ -11,11 +11,6 @@
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
 
-/**
- * todo: supporting half precision for power9
- * convert instractions xvcvhpsp, xvcvsphp
-**/
-
 namespace cv
 {
 
@@ -1203,20 +1198,62 @@ inline v_float32x4 v_pack_triplets(const v_float32x4& vec)
 
 /////// FP16 support ////////
 
-// [TODO] implement these 2 using VSX or universal intrinsics (copy from intrin_sse.cpp and adopt)
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
-    return v_float32x4((float)ptr[0], (float)ptr[1], (float)ptr[2], (float)ptr[3]);
+    vec_ushort8 vf16 = vec_ld_l8((const ushort*)ptr);
+#if CV_VSX3 && defined(vec_extract_fp_from_shorth)
+    return v_float32x4(vec_extract_fp_from_shorth(vf16));
+#elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_float4 vf32;
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    return v_float32x4(vf32);
+#else
+    const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 maxexp = vec_int4_sp(0x7c000000);
+    const vec_float4 deltaf = vec_float4_c(vec_int4_sp(0x38800000));
+
+    vec_int4 bits = vec_int4_c(vec_mergeh(vec_short8_c(z), vec_short8_c(vf16)));
+    vec_int4 e = vec_and(bits, maxexp), sign = vec_and(bits, signmask);
+    vec_int4 t = vec_add(vec_sr(vec_xor(bits, sign), vec_uint4_sp(3)), delta); // ((h & 0x7fff) << 13) + delta
+    vec_int4 zt = vec_int4_c(vec_sub(vec_float4_c(vec_add(t, vec_int4_sp(1 << 23))), deltaf));
+
+    t = vec_add(t, vec_and(delta, vec_cmpeq(maxexp, e)));
+    vec_bint4 zmask = vec_cmpeq(e, z);
+    vec_int4 ft = vec_sel(t, zt, zmask);
+    return v_float32x4(vec_float4_c(vec_or(ft, sign)));
+#endif
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-    float CV_DECL_ALIGNED(32) f[4];
-    v_store_aligned(f, v);
-    ptr[0] = float16_t(f[0]);
-    ptr[1] = float16_t(f[1]);
-    ptr[2] = float16_t(f[2]);
-    ptr[3] = float16_t(f[3]);
+// fixme: Is there any buitin op or intrinsic that cover "xvcvsphp"?
+#if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_ushort8 vf16;
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
+#else
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 rval = vec_int4_sp(0x3f000000);
+
+    vec_int4 t = vec_int4_c(v.val);
+    vec_int4 sign = vec_sra(vec_and(t, signmask), vec_uint4_sp(16));
+    t = vec_and(vec_nor(signmask, signmask), t);
+
+    vec_bint4 finitemask = vec_cmpgt(vec_int4_sp(0x47800000), t);
+    vec_bint4 isnan = vec_cmpgt(t, vec_int4_sp(0x7f800000));
+    vec_int4 naninf = vec_sel(vec_int4_sp(0x7c00), vec_int4_sp(0x7e00), isnan);
+    vec_bint4 tinymask = vec_cmpgt(vec_int4_sp(0x38800000), t);
+    vec_int4 tt = vec_int4_c(vec_add(vec_float4_c(t), vec_float4_c(rval)));
+    tt = vec_sub(tt, rval);
+    vec_int4 odd = vec_and(vec_sr(t, vec_uint4_sp(13)), vec_int4_sp(1));
+    vec_int4 nt = vec_add(t, vec_int4_sp(0xc8000fff));
+    nt = vec_sr(vec_add(nt, odd), vec_uint4_sp(13));
+    t = vec_sel(nt, tt, tinymask);
+    t = vec_sel(naninf, t, finitemask);
+    t = vec_or(t, sign);
+    vec_st_l8(vec_packs(t, t), ptr);
+#endif
 }
 
 inline void v_cleanup() {}
