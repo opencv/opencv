@@ -261,61 +261,44 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
 
+    size_t exts_len;
+    status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+    cv::AutoBuffer<char> extensions(exts_len);
+    status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, exts_len, extensions, NULL);
+    bool is_support_cl_khr_d3d11_sharing = false;
+    if (strstr(extensions, "cl_khr_d3d11_sharing"))
+        is_support_cl_khr_d3d11_sharing = true;
+#ifdef HAVE_OPENCL_D3D11_NV
+    bool is_support_cl_nv_d3d11_sharing = false;
+    if (strstr(extensions, "cl_nv_d3d11_sharing"))
+        is_support_cl_nv_d3d11_sharing = true;
+    if (!is_support_cl_nv_d3d11_sharing && !is_support_cl_khr_d3d11_sharing)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#else
+    if (!is_support_cl_khr_d3d11_sharing)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#endif
+
     int found = -1;
     cl_device_id device = NULL;
     cl_uint numDevices = 0;
     cl_context context = NULL;
 
 #ifdef HAVE_OPENCL_D3D11_NV
-    // try with CL_PREFERRED_DEVICES_FOR_D3D11_NV(Need to check it first)
-    for (int i = 0; i < (int)numPlatforms; i++)
+    if (is_support_cl_nv_d3d11_sharing)
     {
-        clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
-        if (!clGetDeviceIDsFromD3D11NV)
-            continue;
-
-        device = NULL;
-        numDevices = 0;
-        status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
-                CL_PREFERRED_DEVICES_FOR_D3D11_NV, 1, &device, &numDevices);
-        if (status != CL_SUCCESS)
-            continue;
-        if (numDevices > 0)
-        {
-            cl_context_properties properties[] = {
-                    CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-                    CL_CONTEXT_D3D11_DEVICE_NV, (cl_context_properties)(pD3D11Device),
-                    //CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
-                    0
-            };
-
-            context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
-            if (status != CL_SUCCESS)
-            {
-                clReleaseDevice(device);
-            }
-            else
-            {
-                found = i;
-                break;
-            }
-        }
-    }
-    if (found < 0)
-    {
-        // try with CL_ALL_DEVICES_FOR_D3D11_NV
+        // try with CL_PREFERRED_DEVICES_FOR_D3D11_NV
         for (int i = 0; i < (int)numPlatforms; i++)
         {
             clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
             if (!clGetDeviceIDsFromD3D11NV)
                 continue;
 
             device = NULL;
             numDevices = 0;
             status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
-                    CL_ALL_DEVICES_FOR_D3D11_NV, 1, &device, &numDevices);
+                CL_PREFERRED_DEVICES_FOR_D3D11_NV, 1, &device, &numDevices);
             if (status != CL_SUCCESS)
                 continue;
             if (numDevices > 0)
@@ -326,6 +309,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
                         //CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
                         0
                 };
+
                 context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
                 if (status != CL_SUCCESS)
                 {
@@ -335,83 +319,123 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
                 {
                     found = i;
                     break;
+                }
+            }
+        }
+        if (found < 0)
+        {
+            // try with CL_ALL_DEVICES_FOR_D3D11_NV
+            for (int i = 0; i < (int)numPlatforms; i++)
+            {
+                clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
+                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+                if (!clGetDeviceIDsFromD3D11NV)
+                    continue;
+
+                device = NULL;
+                numDevices = 0;
+                status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
+                    CL_ALL_DEVICES_FOR_D3D11_NV, 1, &device, &numDevices);
+                if (status != CL_SUCCESS)
+                    continue;
+                if (numDevices > 0)
+                {
+                    cl_context_properties properties[] = {
+                            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                            CL_CONTEXT_D3D11_DEVICE_NV, (cl_context_properties)(pD3D11Device),
+                            //CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                            0
+                    };
+                    context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                    if (status != CL_SUCCESS)
+                    {
+                        clReleaseDevice(device);
+                    }
+                    else
+                    {
+                        found = i;
+                        break;
+                    }
                 }
             }
         }
     }
 #endif
-    if (found < 0)
+    if (is_support_cl_khr_d3d11_sharing)
     {
-        // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
-        for (int i = 0; i < (int)numPlatforms; i++)
+        if (found < 0)
         {
-            clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
+            // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
+            for (int i = 0; i < (int)numPlatforms; i++)
+            {
+                clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
                     clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
-            if (!clGetDeviceIDsFromD3D11KHR)
-                continue;
+                if (!clGetDeviceIDsFromD3D11KHR)
+                    continue;
 
-            device = NULL;
-            numDevices = 0;
+                device = NULL;
+                numDevices = 0;
 
-            status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
+                status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
                     CL_PREFERRED_DEVICES_FOR_D3D11_KHR, 1, &device, &numDevices);
 
-            if (status != CL_SUCCESS)
-                continue;
-            if (numDevices > 0)
-            {
-                cl_context_properties properties[] = {
-                        CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-                        CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
-                        CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
-                        NULL, NULL
-                };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
                 if (status != CL_SUCCESS)
+                    continue;
+                if (numDevices > 0)
                 {
-                    clReleaseDevice(device);
-                }
-                else
-                {
-                    found = i;
-                    break;
+                    cl_context_properties properties[] = {
+                            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+                            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                            NULL, NULL
+                    };
+                    context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                    if (status != CL_SUCCESS)
+                    {
+                        clReleaseDevice(device);
+                    }
+                    else
+                    {
+                        found = i;
+                        break;
+                    }
                 }
             }
         }
-    }
-    if (found < 0)
-    {
-        // try with CL_ALL_DEVICES_FOR_D3D11_KHR
-        for (int i = 0; i < (int)numPlatforms; i++)
+        if (found < 0)
         {
-            clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
-            if (!clGetDeviceIDsFromD3D11KHR)
-                continue;
-
-            device = NULL;
-            numDevices = 0;
-            status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
-                    CL_ALL_DEVICES_FOR_D3D11_KHR, 1, &device, &numDevices);
-            if (status != CL_SUCCESS)
-                continue;
-            if (numDevices > 0)
+            // try with CL_ALL_DEVICES_FOR_D3D11_KHR
+            for (int i = 0; i < (int)numPlatforms; i++)
             {
-                cl_context_properties properties[] = {
-                        CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-                        CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
-                        CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
-                        NULL, NULL
-                };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
+                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+                if (!clGetDeviceIDsFromD3D11KHR)
+                    continue;
+
+                device = NULL;
+                numDevices = 0;
+                status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
+                    CL_ALL_DEVICES_FOR_D3D11_KHR, 1, &device, &numDevices);
                 if (status != CL_SUCCESS)
+                    continue;
+                if (numDevices > 0)
                 {
-                    clReleaseDevice(device);
-                }
-                else
-                {
-                    found = i;
-                    break;
+                    cl_context_properties properties[] = {
+                            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+                            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                            NULL, NULL
+                    };
+                    context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                    if (status != CL_SUCCESS)
+                    {
+                        clReleaseDevice(device);
+                    }
+                    else
+                    {
+                        found = i;
+                        break;
+                    }
                 }
             }
         }
@@ -773,39 +797,63 @@ static bool __OpenCLinitializeD3D11()
     using namespace cv::ocl;
     static cl_platform_id initializedPlatform = NULL;
     cl_platform_id platform = (cl_platform_id)Platform::getDefault().ptr();
+
     bool useCLNVEXT = false;
+    size_t exts_len;
+    cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+    cv::AutoBuffer<char> extensions(exts_len);
+    status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, exts_len, extensions, NULL);
+    bool is_support_cl_khr_d3d11_sharing = false;
+    if (strstr(extensions, "cl_khr_d3d11_sharing"))
+        is_support_cl_khr_d3d11_sharing = true;
+#ifdef HAVE_OPENCL_D3D11_NV
+    bool is_support_cl_nv_d3d11_sharing = false;
+    if (strstr(extensions, "cl_nv_d3d11_sharing"))
+        is_support_cl_nv_d3d11_sharing = true;
+    if (!is_support_cl_nv_d3d11_sharing && !is_support_cl_khr_d3d11_sharing)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#else
+    if (!is_support_cl_khr_d3d11_sharing)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
+#endif
 
 #ifdef HAVE_OPENCL_D3D11_NV
-    if (initializedPlatform != platform)
+    if (is_support_cl_nv_d3d11_sharing)
     {
-        clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
+        if (initializedPlatform != platform)
+        {
+            clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
                 clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
-        clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
+            clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
                 clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
-        clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
+            clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
                 clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
-        initializedPlatform = platform;
-    }
-    if (clCreateFromD3D11Texture2DNV && clEnqueueAcquireD3D11ObjectsNV && clEnqueueReleaseD3D11ObjectsNV)
-    {
-        useCLNVEXT =true;
+            initializedPlatform = platform;
+        }
+        if (clCreateFromD3D11Texture2DNV && clEnqueueAcquireD3D11ObjectsNV && clEnqueueReleaseD3D11ObjectsNV)
+        {
+            useCLNVEXT = true;
+        }
     }
     else
 #endif
     {
-        if (initializedPlatform != platform)
+        if (is_support_cl_khr_d3d11_sharing)
         {
-            clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
+            if (initializedPlatform != platform)
+            {
+                clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
                     clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
-            clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
+                clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
                     clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
-            clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
+                clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
                     clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
-            initializedPlatform = platform;
-        }
-        if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
-        {
-            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
+                initializedPlatform = platform;
+            }
+            if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
+            {
+                CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't find functions for D3D11");
+            }
         }
     }
     return useCLNVEXT;
