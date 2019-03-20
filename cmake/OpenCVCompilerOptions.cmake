@@ -294,9 +294,16 @@ endif()
 # workaround gcc bug for aligned ld/st
 # https://github.com/opencv/opencv/issues/13211
 if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
-  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" "OPENCV_CHECK_VSX_ALIGNED" "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
+  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ALIGNED "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
   if(NOT OPENCV_CHECK_VSX_ALIGNED)
     add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+  endif()
+endif()
+# validate inline asm with fixes register number and constraints wa, wd, wf
+if(PPC64LE)
+  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
+  if(NOT OPENCV_CHECK_VSX_ASM)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ASM)
   endif()
 endif()
 
