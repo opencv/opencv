@@ -177,8 +177,6 @@ pattern (every view is described by several 3D-2D point correspondences).
         opencv_source_code/samples/cpp/calibration.cpp
     -   A calibration sample in order to do 3D reconstruction can be found at
         opencv_source_code/samples/cpp/build3dmodel.cpp
-    -   A calibration sample of an artificially generated camera and chessboard patterns can be
-        found at opencv_source_code/samples/cpp/calibration_artificial.cpp
     -   A calibration example on stereo calibration can be found at
         opencv_source_code/samples/cpp/stereo_calib.cpp
     -   A calibration example on stereo matching can be found at
