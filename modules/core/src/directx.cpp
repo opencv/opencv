@@ -295,7 +295,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         for (int i = 0; i < (int)numPlatforms; i++)
         {
             clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
             if (!clGetDeviceIDsFromD3D11NV)
                 continue;
 
@@ -332,7 +332,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             for (int i = 0; i < (int)numPlatforms; i++)
             {
                 clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+                        clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
                 if (!clGetDeviceIDsFromD3D11NV)
                     continue;
 
@@ -373,7 +373,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             for (int i = 0; i < (int)numPlatforms; i++)
             {
                 clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+                        clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
                 if (!clGetDeviceIDsFromD3D11KHR)
                     continue;
 
@@ -412,7 +412,7 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             for (int i = 0; i < (int)numPlatforms; i++)
             {
                 clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+                        clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
                 if (!clGetDeviceIDsFromD3D11KHR)
                     continue;
 
@@ -831,11 +831,11 @@ static bool __OpenCLinitializeD3D11()
         if (initializedPlatform != platform)
         {
             clCreateFromD3D11Texture2DNV = (clCreateFromD3D11Texture2DNV_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
+                    clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DNV");
             clEnqueueAcquireD3D11ObjectsNV = (clEnqueueAcquireD3D11ObjectsNV_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
+                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsNV");
             clEnqueueReleaseD3D11ObjectsNV = (clEnqueueReleaseD3D11ObjectsNV_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
+                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsNV");
             initializedPlatform = platform;
         }
         if (clCreateFromD3D11Texture2DNV && clEnqueueAcquireD3D11ObjectsNV && clEnqueueReleaseD3D11ObjectsNV)
@@ -851,11 +851,11 @@ static bool __OpenCLinitializeD3D11()
             if (initializedPlatform != platform)
             {
                 clCreateFromD3D11Texture2DKHR = (clCreateFromD3D11Texture2DKHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
+                        clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromD3D11Texture2DKHR");
                 clEnqueueAcquireD3D11ObjectsKHR = (clEnqueueAcquireD3D11ObjectsKHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
+                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireD3D11ObjectsKHR");
                 clEnqueueReleaseD3D11ObjectsKHR = (clEnqueueReleaseD3D11ObjectsKHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
+                        clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseD3D11ObjectsKHR");
                 initializedPlatform = platform;
             }
             if (!clCreateFromD3D11Texture2DKHR || !clEnqueueAcquireD3D11ObjectsKHR || !clEnqueueReleaseD3D11ObjectsKHR)
