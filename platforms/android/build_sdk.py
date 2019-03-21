@@ -281,7 +281,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build OpenCV for Android SDK')
     parser.add_argument("work_dir", nargs='?', default='.', help="Working directory (and output)")
     parser.add_argument("opencv_dir", nargs='?', default=os.path.join(SCRIPT_DIR, '../..'), help="Path to OpenCV source dir")
-    parser.add_argument('--config', default='ndk-18.config.py', type=str, help="Package build configuration", )
+    parser.add_argument('--config', default='ndk-18-api-level-21.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
     parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')
