@@ -18,11 +18,9 @@ import cv2 as cv
 
 from gaussian_mix import make_gaussians
 
-if __name__ == '__main__':
+def main():
     cluster_n = 5
     img_size = 512
-
-    print(__doc__)
 
     # generating bright palette
     colors = np.zeros((1, cluster_n, 3), np.uint8)
@@ -43,8 +41,15 @@ if __name__ == '__main__':
 
             cv.circle(img, (x, y), 1, c, -1)
 
-        cv.imshow('gaussian mixture', img)
+        cv.imshow('kmeans', img)
         ch = cv.waitKey(0)
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()
