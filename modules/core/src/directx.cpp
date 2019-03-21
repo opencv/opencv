@@ -57,7 +57,6 @@
 #define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
 
-
 namespace cv { namespace directx {
 
 int getTypeFromDXGI_FORMAT(const int iDXGI_FORMAT)
@@ -792,7 +791,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
 
 } // namespace cv::ocl
 
-#if defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 
 #ifdef HAVE_OPENCL_D3D11_NV
 clCreateFromD3D11Texture2DNV_fn clCreateFromD3D11Texture2DNV = NULL;
@@ -873,7 +872,7 @@ static bool __OpenCLinitializeD3D11()
     }
     return useCLNVEXT;
 }
-#endif // defined(HAVE_DIRECTX) &&  defined(HAVE_OPENCL)
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
 
 } // namespace directx
 
@@ -903,6 +902,7 @@ bool ocl_convert_nv12_to_bgr(
     return k.run(2, globalsize, 0, false);
 }
 
+
 static
 bool ocl_convert_bgr_to_nv12(
     cl_mem clBuffer,
@@ -927,6 +927,7 @@ bool ocl_convert_bgr_to_nv12(
 #endif // HAVE_DIRECTX && HAVE_OPENCL
 
 } // namespace ocl
+
 
 namespace directx {
 
@@ -974,6 +975,7 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
 #endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
@@ -1164,6 +1166,7 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
 #endif
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
