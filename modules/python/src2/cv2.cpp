@@ -108,7 +108,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 }
 
 #include "pyopencv_generated_include.h"
-// #include "opencv2/core/types_c.h"
+#include "opencv2/core/types_c.h"
 
 #include "opencv2/opencv_modules.hpp"
 
