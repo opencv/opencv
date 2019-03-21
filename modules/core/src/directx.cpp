@@ -257,25 +257,32 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
     std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
-
     size_t exts_len;
-    status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
-    cv::AutoBuffer<char> extensions(exts_len);
-    status = clGetPlatformInfo(platforms[0], CL_PLATFORM_EXTENSIONS, exts_len, static_cast<void*>(extensions.data()), NULL);
-    if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
+    cv::AutoBuffer<char> extensions;
     bool is_support_cl_khr_d3d11_sharing = false;
-    if (strstr(extensions.data(), "cl_khr_d3d11_sharing"))
-        is_support_cl_khr_d3d11_sharing = true;
 #ifdef HAVE_OPENCL_D3D11_NV
     bool is_support_cl_nv_d3d11_sharing = false;
-    if (strstr(extensions.data(), "cl_nv_d3d11_sharing"))
-        is_support_cl_nv_d3d11_sharing = true;
+#endif
+    for (int i = 0; i < (int)numPlatforms; i++)
+    {
+        status = clGetPlatformIDs(numPlatforms, &platforms[i], NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+        status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
+        extensions.resize(exts_len);
+        status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, exts_len, static_cast<void*>(extensions.data()), NULL);
+        if (status != CL_SUCCESS)
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
+        if (strstr(extensions.data(), "cl_khr_d3d11_sharing"))
+            is_support_cl_khr_d3d11_sharing = true;
+#ifdef HAVE_OPENCL_D3D11_NV
+        if (strstr(extensions.data(), "cl_nv_d3d11_sharing"))
+            is_support_cl_nv_d3d11_sharing = true;
+#endif
+    }
+#ifdef HAVE_OPENCL_D3D11_NV
     if (!is_support_cl_nv_d3d11_sharing && !is_support_cl_khr_d3d11_sharing)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No supported extensions");
 #else
