@@ -79,7 +79,15 @@ TEST_P(Test_ONNX_layers, MaxPooling)
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
+}
 
+
+TEST_P(Test_ONNX_layers, Two_convolution)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
     // Reference output values are in range [-0.855, 0.611]
     testONNXModels("two_convolution");
 }
@@ -293,6 +301,10 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is disabled");
+#endif
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL
                 || target == DNN_TARGET_MYRIAD) {
         throw SkipTestException("");
@@ -307,9 +319,13 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))) {
         throw SkipTestException("");
     }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
     // output range: [-11; 8]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16) ? 0.017 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16) ? 0.14 : default_lInf;
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
     testONNXModels("tiny_yolo2", pb, l1, lInf);
 }
 
@@ -349,6 +365,11 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 {
     double l1 = default_l1;
     double lInf = default_lInf;
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
     // Output values are in range [-2.011, 2.111]
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         l1 = 0.007;

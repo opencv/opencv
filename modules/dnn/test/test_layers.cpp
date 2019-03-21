@@ -251,7 +251,8 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
     {
         if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 ||
-            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
+            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU) ||
+            INF_ENGINE_RELEASE > 2018050000)
         throw SkipTestException("");
     }
 #endif

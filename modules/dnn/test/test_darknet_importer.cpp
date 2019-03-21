@@ -267,6 +267,11 @@ public:
 
 TEST_P(Test_Darknet_nets, YoloVoc)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_MYRIAD ||
+        target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("Test is disabled");
+#endif
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(6, 7) << 0, 6,  0.750469f, 0.577374f, 0.127391f, 0.902949f, 0.300809f,  // a car
                                     0, 1,  0.780879f, 0.270762f, 0.264102f, 0.732475f, 0.745412f,  // a bicycle
@@ -291,6 +296,10 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(4, 7) << 0, 6,  0.761967f, 0.579042f, 0.159161f, 0.894482f, 0.31994f,   // a car
                                     0, 11, 0.780595f, 0.129696f, 0.386467f, 0.445275f, 0.920994f,  // a dog
@@ -315,6 +324,10 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
 
 TEST_P(Test_Darknet_nets, YOLOv3)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(9, 7) << 0, 7,  0.952983f, 0.614622f, 0.150257f, 0.901369f, 0.289251f,  // a truck
                                     0, 1,  0.987908f, 0.150913f, 0.221933f, 0.742255f, 0.74626f,   // a bicycle

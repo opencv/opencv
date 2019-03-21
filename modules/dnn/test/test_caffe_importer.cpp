@@ -376,6 +376,12 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 TEST_P(Test_Caffe_nets, Colorization)
 {
     checkBackend();
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled");
+#endif
+
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
     Mat ref = blobFromNPY(_tf("colorization_out.npy"));
     Mat kernel = blobFromNPY(_tf("colorization_pts_in_hull.npy"));
