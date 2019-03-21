@@ -45,6 +45,7 @@
 #define __PYCOMPAT_HPP__
 
 #if PY_MAJOR_VERSION >= 3
+
 // Python3 treats all ints as longs, PyInt_X functions have been removed.
 #define PyInt_Check PyLong_Check
 #define PyInt_CheckExact PyLong_CheckExact
@@ -53,18 +54,42 @@
 #define PyInt_FromLong PyLong_FromLong
 #define PyNumber_Int PyNumber_Long
 
-// Python3 strings are unicode, these defines mimic the Python2 functionality.
-#define PyString_Check PyUnicode_Check
+
 #define PyString_FromString PyUnicode_FromString
 #define PyString_FromStringAndSize PyUnicode_FromStringAndSize
-#define PyString_Size PyUnicode_GET_SIZE
 
-// PyUnicode_AsUTF8 isn't available until Python 3.3
-#if (PY_VERSION_HEX < 0x03030000)
-#define PyString_AsString _PyUnicode_AsString
-#else
-#define PyString_AsString PyUnicode_AsUTF8
 #endif
+
+static inline bool getUnicodeString(PyObject * obj, std::string &str)
+{
+    bool res = false;
+    if (PyUnicode_Check(obj))
+    {
+        PyObject * bytes = PyUnicode_AsUTF8String(obj);
+        if (PyBytes_Check(bytes))
+        {
+            const char * raw = PyBytes_AsString(bytes);
+            if (raw)
+            {
+                str = std::string(raw);
+                res = true;
+            }
+        }
+        Py_XDECREF(bytes);
+    }
+#if PY_MAJOR_VERSION < 3
+    else if (PyString_Check(obj))
+    {
+        const char * raw = PyString_AsString(obj);
+        if (raw)
+        {
+            str = std::string(raw);
+            res = true;
+        }
+    }
 #endif
+    return res;
+}
+
 
 #endif // END HEADER GUARD

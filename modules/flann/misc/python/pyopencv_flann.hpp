@@ -27,20 +27,20 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
         return true;
 
     if(PyDict_Check(o)) {
-        while(PyDict_Next(o, &pos, &key, &item)) {
-            if( !PyString_Check(key) ) {
+        while(PyDict_Next(o, &pos, &key, &item))
+        {
+            // get key
+            std::string k;
+            if (!getUnicodeString(key, k))
+            {
                 ok = false;
                 break;
             }
-
-            String k = PyString_AsString(key);
-            if( PyString_Check(item) )
+            // get value
+            if( !!PyBool_Check(item) )
             {
-                const char* value = PyString_AsString(item);
-                p.setString(k, value);
-            }
-            else if( !!PyBool_Check(item) )
                 p.setBool(k, item == Py_True);
+            }
             else if( PyInt_Check(item) )
             {
                 int value = (int)PyInt_AsLong(item);
@@ -56,8 +56,13 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
             }
             else
             {
-                ok = false;
-                break;
+                std::string val_str;
+                if (!getUnicodeString(item, val_str))
+                {
+                    ok = false;
+                    break;
+                }
+                p.setString(k, val_str);
             }
         }
     }
