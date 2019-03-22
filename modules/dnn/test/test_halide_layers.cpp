@@ -159,10 +159,6 @@ TEST_P(Deconvolution, Accuracy)
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_MYRIAD) &&
-        dilation.width == 2 && dilation.height == 2)
-        throw SkipTestException("");
-
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018040000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU
             && hasBias && group != 1)
@@ -216,7 +212,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Deconvolution, Combine(
 /*in size*/  Values(Size(5, 6)),
 /*kernel*/   Values(Size(3, 1), Size(1, 3)),
 /*pad*/      Values(Size(1, 0), Size(0, 1)),
-/*dilation*/ Values(Size(1, 1), Size(2, 2)),
+/*dilation*/ Values(Size(1, 1)),
 /*stride, adj. pad*/ Values(Vec4i(1,1, 0,0), Vec4i(2,2, 1,0), Vec4i(1,2, 0,1)),
 /*has bias*/ Bool(),
              dnnBackendsAndTargetsWithHalide()

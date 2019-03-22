@@ -160,7 +160,7 @@ public:
 
     InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
 
-    void addLayer(InferenceEngine::Builder::Layer& layer);
+    void addLayer(InferenceEngine::Builder::Layer& layer, int targetId);
 
     void addOutput(const std::string& name);
 
@@ -194,6 +194,7 @@ private:
     bool hasNetOwner;
 
     std::map<std::string, int> layers;
+    std::map<std::string, int> layersTargets;  // Maps layer name to target device.
     std::vector<std::string> requestedOutputs;
 
     std::set<int> unconnectedLayersIds;

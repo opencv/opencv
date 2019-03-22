@@ -29,6 +29,37 @@ namespace cv { namespace dnn {
 // we can use some predefined name.
 static std::string kDefaultInpLayerName = "empty_inp_layer_name";
 
+// Redefine IE's HeteroDeviceLoader to use statically initialized plugins.
+class InfEngineHeteroDeviceLoader: public InferenceEngine::IHeteroDeviceLoader
+{
+public:
+    InfEngineHeteroDeviceLoader(InferenceEngine::InferenceEnginePluginPtr _plugin) : plugin(_plugin) {}
+
+    InferenceEngine::StatusCode LoadNetwork(const std::string& device,
+                                            InferenceEngine::IExecutableNetwork::Ptr &ret,
+                                            InferenceEngine::ICNNNetwork &network,
+                                            const std::map<std::string, std::string> &config,
+                                            InferenceEngine::ResponseDesc *resp) noexcept override
+    {
+        return plugin->LoadNetwork(ret, network, {}, resp);
+    }
+
+    void QueryNetwork(const std::string &device,
+                      const InferenceEngine::ICNNNetwork &network,
+                      InferenceEngine::QueryNetworkResult &res) noexcept override
+    {
+        plugin->QueryNetwork(network, {}, res);
+    }
+
+    void SetLogCallback(InferenceEngine::IErrorListener &listener) override
+    {
+        plugin->SetLogCallback(listener);
+    }
+
+private:
+    InferenceEngine::InferenceEnginePluginPtr plugin;
+};
+
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
@@ -122,6 +153,23 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
     dataPtr->name = layerName;
 }
 
+static inline InferenceEngine::TargetDevice getTargetDeviceById(int targetId)
+{
+    switch (targetId)
+    {
+    case DNN_TARGET_CPU:
+        return InferenceEngine::TargetDevice::eCPU;
+    case DNN_TARGET_OPENCL: case DNN_TARGET_OPENCL_FP16:
+        return InferenceEngine::TargetDevice::eGPU;
+    case DNN_TARGET_MYRIAD:
+        return InferenceEngine::TargetDevice::eMYRIAD;
+    case DNN_TARGET_FPGA:
+        return InferenceEngine::TargetDevice::eFPGA;
+    default:
+        CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
+    }
+}
+
 void InfEngineBackendNet::init(int targetId)
 {
     if (!hasNetOwner)
@@ -141,25 +189,17 @@ void InfEngineBackendNet::init(int targetId)
             netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
         }
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
+
+        for (const auto& it : layersTargets)
+        {
+            InferenceEngine::CNNLayerPtr l = cnn.getLayerByName(it.first.c_str());
+            CV_Assert(l);
+            auto layerTarget = getTargetDeviceById(it.second);
+            l->affinity = InferenceEngine::getDeviceName(layerTarget);
+        }
     }
 
-    switch (targetId)
-    {
-    case DNN_TARGET_CPU:
-        targetDevice = InferenceEngine::TargetDevice::eCPU;
-        break;
-    case DNN_TARGET_OPENCL: case DNN_TARGET_OPENCL_FP16:
-        targetDevice = InferenceEngine::TargetDevice::eGPU;
-        break;
-    case DNN_TARGET_MYRIAD:
-        targetDevice = InferenceEngine::TargetDevice::eMYRIAD;
-        break;
-    case DNN_TARGET_FPGA:
-        targetDevice = InferenceEngine::TargetDevice::eFPGA;
-        break;
-    default:
-        CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
-    }
+    targetDevice = getTargetDeviceById(targetId);
 
     for (const auto& name : requestedOutputs)
     {
@@ -186,7 +226,7 @@ void InfEngineBackendNet::init(int targetId)
     initPlugin(cnn);
 }
 
-void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
+void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer, int targetId)
 {
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
     // Add weights to network and connect them after input blobs.
@@ -227,6 +267,7 @@ void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
     int id = netBuilder.addLayer(layer);
     const std::string& layerName = layer.getName();
     CV_Assert(layers.insert({layerName, id}).second);
+    layersTargets[layerName] = targetId;
     unconnectedLayersIds.insert(id);
 
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
@@ -747,58 +788,100 @@ static bool detectMyriadX_()
 }
 #endif // >= 2018R5
 
+static InferenceEngine::InferenceEnginePluginPtr
+findPluginOrCreate(InferenceEngine::TargetDevice targetDevice, bool isHetero = false)
+{
+    InferenceEngine::InferenceEnginePluginPtr pluginPtr;
+    auto dispatcher = InferenceEngine::PluginDispatcher({""});
+
+    if (isHetero)
+    {
+        pluginPtr = dispatcher.getPluginByDevice("HETERO");
+        InferenceEngine::HeteroPluginPtr heteroPlugin(pluginPtr);
+        auto targetPlugin = findPluginOrCreate(targetDevice);
+        auto cpuPlugin = findPluginOrCreate(InferenceEngine::TargetDevice::eCPU);
+        heteroPlugin->SetDeviceLoader(InferenceEngine::getDeviceName(targetDevice),
+                                      std::make_shared<InfEngineHeteroDeviceLoader>(targetPlugin));
+        heteroPlugin->SetDeviceLoader("CPU", std::make_shared<InfEngineHeteroDeviceLoader>(cpuPlugin));
+        return heteroPlugin;
+    }
+
+    AutoLock lock(getInitializationMutex());
+    auto& sharedPlugins = getSharedPlugins();
+    auto pluginIt = sharedPlugins.find(targetDevice);
+    if (pluginIt != sharedPlugins.end())
+        return pluginIt->second;
+
+    pluginPtr = dispatcher.getSuitablePlugin(targetDevice);
+
+    if (targetDevice == InferenceEngine::TargetDevice::eCPU)
+    {
+        std::string suffixes[] = {"_avx2", "_sse4", ""};
+        bool haveFeature[] = {
+            checkHardwareSupport(CPU_AVX2),
+            checkHardwareSupport(CPU_SSE4_2),
+            true
+        };
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!haveFeature[i])
+                continue;
+#ifdef _WIN32
+            std::string libName = "cpu_extension" + suffixes[i] + ".dll";
+#else
+            std::string libName = "libcpu_extension" + suffixes[i] + ".so";
+#endif  // _WIN32
+            try
+            {
+                InferenceEngine::IExtensionPtr extension =
+                    InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
+                pluginPtr->AddExtension(extension, 0);
+                break;
+            }
+            catch(...) {}
+        }
+        // Some of networks can work without a library of extra layers.
+    }
+
+    sharedPlugins[targetDevice] = pluginPtr;
+    return pluginPtr;
+}
+
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
 
     try
     {
-        AutoLock lock(getInitializationMutex());
-        auto& sharedPlugins = getSharedPlugins();
-        auto pluginIt = sharedPlugins.find(targetDevice);
-        if (pluginIt != sharedPlugins.end())
+        // Check if network is heterogenous or not.
+        bool isHetero = false;
+        if (targetDevice == InferenceEngine::TargetDevice::eFPGA)
         {
-            enginePtr = pluginIt->second;
+            isHetero = true;
         }
-        else
+        else if (targetDevice != InferenceEngine::TargetDevice::eCPU && !hasNetOwner)
         {
-            auto dispatcher = InferenceEngine::PluginDispatcher({""});
-            if (targetDevice == InferenceEngine::TargetDevice::eFPGA)
-                enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
-            else
-                enginePtr = dispatcher.getSuitablePlugin(targetDevice);
-            sharedPlugins[targetDevice] = enginePtr;
-
-            if (targetDevice == InferenceEngine::TargetDevice::eCPU ||
-                targetDevice == InferenceEngine::TargetDevice::eFPGA)
+            int numCPULayers = 0;
+            for (const auto& it : layersTargets)
             {
-                std::string suffixes[] = {"_avx2", "_sse4", ""};
-                bool haveFeature[] = {
-                    checkHardwareSupport(CPU_AVX2),
-                    checkHardwareSupport(CPU_SSE4_2),
-                    true
-                };
-                for (int i = 0; i < 3; ++i)
+                if (it.second == DNN_TARGET_CPU)
                 {
-                    if (!haveFeature[i])
-                        continue;
-    #ifdef _WIN32
-                    std::string libName = "cpu_extension" + suffixes[i] + ".dll";
-    #else
-                    std::string libName = "libcpu_extension" + suffixes[i] + ".so";
-    #endif  // _WIN32
-                    try
-                    {
-                        InferenceEngine::IExtensionPtr extension =
-                            InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
-                        enginePtr->AddExtension(extension, 0);
-                        break;
-                    }
-                    catch(...) {}
+                    numCPULayers += 1;
                 }
-                // Some of networks can work without a library of extra layers.
+            }
+            if (numCPULayers == layersTargets.size())
+            {
+                // Network is homogenous on the CPU
+                targetDevice = InferenceEngine::TargetDevice::eCPU;
+            }
+            else if (numCPULayers != 0)
+            {
+                // Network is heterogenous with CPU fallbacks
+                isHetero = true;
             }
         }
+
+        enginePtr = findPluginOrCreate(targetDevice, isHetero);
         plugin = InferenceEngine::InferencePlugin(enginePtr);
 
         netExec = plugin.LoadNetwork(net, {});

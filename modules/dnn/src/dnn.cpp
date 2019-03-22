@@ -1557,11 +1557,19 @@ struct Net::Impl
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
-                addInfEngineNetOutputs(ld);
-                net = Ptr<InfEngineBackendNet>();
-                netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
-                layer->preferableTarget = DNN_TARGET_CPU;
-                continue;
+                bool supportCPUTarget = false;
+                if (layer->preferableTarget != DNN_TARGET_CPU)
+                {
+                    layer->preferableTarget = DNN_TARGET_CPU;
+                    supportCPUTarget = layer->supportBackend(preferableBackend);
+                }
+                if (!supportCPUTarget)
+                {
+                    addInfEngineNetOutputs(ld);
+                    net = Ptr<InfEngineBackendNet>();
+                    netBlobsWrappers.clear();  // Is not used for R5 release but we don't wrap it to #ifdef.
+                    continue;
+                }
             }
             ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
@@ -1633,9 +1641,9 @@ struct Net::Impl
 
             // Convert weights in FP16 for specific targets.
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
-                 preferableTarget == DNN_TARGET_MYRIAD ||
-                 preferableTarget == DNN_TARGET_FPGA) && !fused)
+            if ((layer->preferableTarget == DNN_TARGET_OPENCL_FP16 ||
+                 layer->preferableTarget == DNN_TARGET_MYRIAD ||
+                 layer->preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
                 for (const std::string& name : {"weights", "biases"})
@@ -1668,7 +1676,7 @@ struct Net::Impl
             }
 
             if (!fused)
-                net->addLayer(ieNode->layer);
+                net->addLayer(ieNode->layer, layer->preferableTarget);
 
             net->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers, ieNode->layer.getName());
             net->addBlobs(ld.inputBlobsWrappers);
