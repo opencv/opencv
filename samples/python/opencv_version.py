@@ -13,11 +13,11 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import numpy as np
 import cv2 as cv
 
-if __name__ == '__main__':
+def main():
     import sys
-    print(__doc__)
 
     try:
         param = sys.argv[1]
@@ -31,3 +31,11 @@ if __name__ == '__main__':
         print("\t--help\n\t\tprint this help")
     else:
         print("Welcome to OpenCV")
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

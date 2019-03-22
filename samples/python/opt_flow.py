@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 import video
 
 
@@ -55,9 +56,8 @@ def warp_flow(img, flow):
     res = cv.remap(img, flow, None, cv.INTER_LINEAR)
     return res
 
-if __name__ == '__main__':
+def main():
     import sys
-    print(__doc__)
     try:
         fn = sys.argv[1]
     except IndexError:
@@ -94,4 +94,11 @@ if __name__ == '__main__':
             if show_glitch:
                 cur_glitch = img.copy()
             print('glitch is', ['off', 'on'][show_glitch])
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -19,6 +19,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 from common import anorm, getsize
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
@@ -137,9 +138,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
     return vis
 
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -187,4 +186,11 @@ if __name__ == '__main__':
 
     match_and_draw('find_obj')
     cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()
