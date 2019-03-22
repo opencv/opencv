@@ -10,23 +10,9 @@ endif()
 mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
 
 if(OPENCL_FOUND)
-  if(WITH_OPENCL_D3D11_NV)
-    if(NOT EXISTS "${OPENCL_INCLUDE_DIR}/CL/cl_d3d11_ext.h")
-      message(STATUS "CL/cl_d3d11_ext.h not found in OPENCL_INCLUDE_DIR. Automatic detection has been turned on")
-      unset(OPENCL_INCLUDE_DIR CACHE)
-      find_path(OPENCL_INCLUDE_DIR
-        NAMES CL/cl_d3d11_ext.h
-        PATHS ENV CUDA_PATH ENV ProgramFiles
-        PATH_SUFFIXES include
-        DOC "Extended opencl include directory")
-      if(OPENCL_INCLUDE_DIR)
-        set(HAVE_OPENCL_D3D11_NV ON)
-      else()
-        message(WARNING "Header file cl_d3d11_ext.h not found")
-      endif()
-    else()
-      set(HAVE_OPENCL_D3D11_NV ON)
-    endif()
+
+  if(WITH_OPENCL_D3D11_NV AND EXISTS "${OPENCL_INCLUDE_DIR}/CL/cl_d3d11_ext.h")
+    set(HAVE_OPENCL_D3D11_NV ON)
   endif()
 
   if(OPENCL_LIBRARY)
