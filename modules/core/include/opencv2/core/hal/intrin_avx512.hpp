@@ -9,14 +9,10 @@
 #define CV_SIMD512_64F 1
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
-namespace cv
-{
-
-//! @cond IGNORED
-
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
-
 ///////// Utils ////////////
+
+namespace
+{
 
 inline __m512i _v512_combine(const __m256i& lo, const __m256i& hi)
 { return _mm512_inserti32x8(_mm512_castsi256_si512(lo), hi, 1); }
@@ -48,23 +44,21 @@ inline __m256  _v512_extract_low(const __m512& v)
 inline __m256d _v512_extract_low(const __m512d& v)
 { return _mm512_castpd512_pd256(v); }
 
+inline __m512i _v512_insert(const __m512i& a, const __m256i& b)
+{ return _mm512_inserti32x8(a, b, 0); }
+
+inline __m512 _v512_insert(const __m512& a, const __m256& b)
+{ return _mm512_insertf32x8(a, b, 0); }
+
+inline __m512d _v512_insert(const __m512d& a, const __m256d& b)
+{ return _mm512_insertf64x4(a, b, 0); }
+
+}
 /*inline __m512i _v512_shuffle_odd_64(const __m512i& v)
 { return _mm512_permutex_epi64(v, _MM_SHUFFLE(3, 1, 2, 0)); }
 
 inline __m512d _v512_shuffle_odd_64(const __m512d& v)
 { return _mm512_permutex_pd(v, _MM_SHUFFLE(3, 1, 2, 0)); }
-
-template<int imm>
-inline __m512i _v512_permute2x128(const __m512i& a, const __m512i& b)
-{ return _mm256_permute2x128_si256(a, b, imm); }
-
-template<int imm>
-inline __m512 _v512_permute2x128(const __m512& a, const __m512& b)
-{ return _mm256_permute2f128_ps(a, b, imm); }
-
-template<int imm>
-inline __m512d _v512_permute2x128(const __m512d& a, const __m512d& b)
-{ return _mm256_permute2f128_pd(a, b, imm); }
 
 template<int imm, typename _Tpvec>
 inline _Tpvec v512_permute2x128(const _Tpvec& a, const _Tpvec& b)
@@ -88,7 +82,49 @@ inline __m512i _v512_packs_epu32(const __m512i& a, const __m512i& b)
     __m512i am = _mm256_min_epu32(a, m);
     __m512i bm = _mm256_min_epu32(b, m);
     return _mm256_packus_epi32(am, bm);
-}*/
+}
+
+//////////////// Variant Value reordering ///////////////
+
+// shuffle
+// todo: emluate 64bit
+#define OPENCV_HAL_IMPL_AVX_SHUFFLE(_Tpvec, intrin)  \
+template<int m>                                  \
+inline _Tpvec v512_shuffle(const _Tpvec& a)      \
+{ return _Tpvec(_mm256_##intrin(a.val, m)); }
+
+OPENCV_HAL_IMPL_AVX_SHUFFLE(v_uint32x8,  shuffle_epi32)
+OPENCV_HAL_IMPL_AVX_SHUFFLE(v_int32x8,   shuffle_epi32)
+OPENCV_HAL_IMPL_AVX_SHUFFLE(v_float32x8, permute_ps)
+OPENCV_HAL_IMPL_AVX_SHUFFLE(v_float64x4, permute_pd)
+
+template<typename _Tpvec>
+inline _Tpvec v512_alignr_128(const _Tpvec& a, const _Tpvec& b)
+{ return v512_permute2x128<0x21>(a, b); }
+
+template<typename _Tpvec>
+inline _Tpvec v512_alignr_64(const _Tpvec& a, const _Tpvec& b)
+{ return _Tpvec(_mm256_alignr_epi8(a.val, b.val, 8)); }
+inline v_float64x4 v512_alignr_64(const v_float64x4& a, const v_float64x4& b)
+{ return v_float64x4(_mm256_shuffle_pd(b.val, a.val, _MM_SHUFFLE(0, 0, 1, 1))); }
+// todo: emulate float32
+
+template<typename _Tpvec>
+inline _Tpvec v512_swap_halves(const _Tpvec& a)
+{ return v512_permute2x128<1>(a, a); }
+
+template<typename _Tpvec>
+inline _Tpvec v512_reverse_64(const _Tpvec& a)
+{ return v512_permute4x64<_MM_SHUFFLE(0, 1, 2, 3)>(a); }
+
+*/
+
+namespace cv
+{
+
+//! @cond IGNORED
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 ///////// Types ////////////
 
@@ -471,342 +507,198 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
     _mm256_storeu_si256((__m256i*)ptr, ah);
 }
 
-/* Recombine */
-/*#define OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, perm)                    \
-    inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)    \
-    { return _Tpvec(perm(a.val, b.val, 0x20)); }                     \
-    inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)   \
-    { return _Tpvec(perm(a.val, b.val, 0x31)); }                     \
-    inline void v_recombine(const _Tpvec& a, const _Tpvec& b,        \
-                             _Tpvec& c, _Tpvec& d)                   \
-    { c = v_combine_low(a, b); d = v_combine_high(a, b); }
-
-#define OPENCV_HAL_IMPL_AVX_UNPACKS(_Tpvec, suffix)                  \
-    OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, _mm256_permute2x128_si256)   \
-    inline void v_zip(const _Tpvec& a0, const _Tpvec& a1,            \
-                             _Tpvec& b0, _Tpvec& b1)                 \
-    {                                                                \
-        __m512i v0 = _v512_shuffle_odd_64(a0.val);                   \
-        __m512i v1 = _v512_shuffle_odd_64(a1.val);                   \
-        b0.val = _mm256_unpacklo_##suffix(v0, v1);                   \
-        b1.val = _mm256_unpackhi_##suffix(v0, v1);                   \
+/* Recombine & ZIP */
+#define OPENCV_HAL_IMPL_AVX_ZIP(_Tpvec, suffix)                                            \
+    inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)                          \
+    { return _v512_combine(_v512_extract_low(a.val), _v512_extract_low(b.val)); }          \
+    inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)                         \
+    { return _v512_insert(b.val, _v512_extract_high(a.val)); }                             \
+    inline void v_recombine(const _Tpvec& a, const _Tpvec& b,                              \
+                                  _Tpvec& c, _Tpvec& d)                                    \
+    {                                                                                      \
+        _Tpvec a1b0 = _v512_combine(_v512_extract_high(a), _v512_extract_low(b));          \
+        c = _v_512_combine(_v512_extract_low(a),_v512_extract_low(b));                     \
+        d = _v_512_insert(b,_v512_extract_high(a));                                        \
+    }                                                                                      \
+    inline void v_zip(const _Tpvec& a, const _Tpvec& b,                                    \
+                            _Tpvec& ab0, _Tpvec& ab1)                                      \
+    {                                                                                      \
+        ab0.val = _mm512_maskz_expand_##suffix(0x55555555, a);                             \
+        ab1.val = _mm512_maskz_expand_##suffix(0x55555555 << _Tpvec::nlanes/2, a);         \
+        ab0.val = _mm512_mask_expand_##suffix(ab0.val, 0xAAAAAAAA, b);                     \
+        ab1.val = _mm512_mask_expand_##suffix(ab1.val, 0xAAAAAAAA << _Tpvec::nlanes/2, b); \
     }
 
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_uint8x32,  epi8)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_int8x32,   epi8)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_uint16x16, epi16)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_int16x16,  epi16)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_uint32x8,  epi32)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_int32x8,   epi32)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_uint64x4,  epi64)
-OPENCV_HAL_IMPL_AVX_UNPACKS(v_int64x4,   epi64)
-OPENCV_HAL_IMPL_AVX_COMBINE(v_float32x8, _mm256_permute2f128_ps)
-OPENCV_HAL_IMPL_AVX_COMBINE(v_float64x4, _mm256_permute2f128_pd)
-
-inline void v_zip(const v_float32x8& a0, const v_float32x8& a1, v_float32x8& b0, v_float32x8& b1)
-{
-    __m512 v0 = _mm256_unpacklo_ps(a0.val, a1.val);
-    __m512 v1 = _mm256_unpackhi_ps(a0.val, a1.val);
-    v_recombine(v_float32x8(v0), v_float32x8(v1), b0, b1);
-}
-
-inline void v_zip(const v_float64x4& a0, const v_float64x4& a1, v_float64x4& b0, v_float64x4& b1)
-{
-    __m512d v0 = _v_shuffle_odd_64(a0.val);
-    __m512d v1 = _v_shuffle_odd_64(a1.val);
-    b0.val = _mm256_unpacklo_pd(v0, v1);
-    b1.val = _mm256_unpackhi_pd(v0, v1);
-}*/
-
-//////////////// Variant Value reordering ///////////////
-
-// unpacks
-#define OPENCV_HAL_IMPL_AVX_UNPACK(_Tpvec, suffix)                 \
-    inline _Tpvec v512_unpacklo(const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(_mm256_unpacklo_##suffix(a.val, b.val)); }     \
-    inline _Tpvec v512_unpackhi(const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(_mm256_unpackhi_##suffix(a.val, b.val)); }
-
-OPENCV_HAL_IMPL_AVX_UNPACK(v_uint8x32,  epi8)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_int8x32,   epi8)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_uint16x16, epi16)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_int16x16,  epi16)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_uint32x8,  epi32)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_int32x8,   epi32)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_uint64x4,  epi64)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_int64x4,   epi64)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_UNPACK(v_float64x4, pd)
-
-// blend
-#define OPENCV_HAL_IMPL_AVX_BLEND(_Tpvec, suffix)               \
-    template<int m>                                             \
-    inline _Tpvec v512_blend(const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(_mm256_blend_##suffix(a.val, b.val, m)); }
-
-OPENCV_HAL_IMPL_AVX_BLEND(v_uint16x16, epi16)
-OPENCV_HAL_IMPL_AVX_BLEND(v_int16x16,  epi16)
-OPENCV_HAL_IMPL_AVX_BLEND(v_uint32x8,  epi32)
-OPENCV_HAL_IMPL_AVX_BLEND(v_int32x8,   epi32)
-OPENCV_HAL_IMPL_AVX_BLEND(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_BLEND(v_float64x4, pd)
-
-template<int m>
-inline v_uint64x4 v512_blend(const v_uint64x4& a, const v_uint64x4& b)
-{
-    enum {M0 = m};
-    enum {M1 = (M0 | (M0 << 2)) & 0x33};
-    enum {M2 = (M1 | (M1 << 1)) & 0x55};
-    enum {MM =  M2 | (M2 << 1)};
-    return v_uint64x4(_mm256_blend_epi32(a.val, b.val, MM));
-}
-template<int m>
-inline v_int64x4 v512_blend(const v_int64x4& a, const v_int64x4& b)
-{ return v_int64x4(v512_blend<m>(v_uint64x4(a.val), v_uint64x4(b.val)).val); }
-
-// shuffle
-// todo: emluate 64bit
-#define OPENCV_HAL_IMPL_AVX_SHUFFLE(_Tpvec, intrin)  \
-    template<int m>                                  \
-    inline _Tpvec v512_shuffle(const _Tpvec& a)      \
-    { return _Tpvec(_mm256_##intrin(a.val, m)); }
-
-OPENCV_HAL_IMPL_AVX_SHUFFLE(v_uint32x8,  shuffle_epi32)
-OPENCV_HAL_IMPL_AVX_SHUFFLE(v_int32x8,   shuffle_epi32)
-OPENCV_HAL_IMPL_AVX_SHUFFLE(v_float32x8, permute_ps)
-OPENCV_HAL_IMPL_AVX_SHUFFLE(v_float64x4, permute_pd)
-
-template<typename _Tpvec>
-inline void v512_zip(const _Tpvec& a, const _Tpvec& b, _Tpvec& ab0, _Tpvec& ab1)
-{
-    ab0 = v512_unpacklo(a, b);
-    ab1 = v512_unpackhi(a, b);
-}
-
-template<typename _Tpvec>
-inline _Tpvec v512_combine_diagonal(const _Tpvec& a, const _Tpvec& b)
-{ return _Tpvec(_mm256_blend_epi32(a.val, b.val, 0xf0)); }
-
-inline v_float32x8 v512_combine_diagonal(const v_float32x8& a, const v_float32x8& b)
-{ return v512_blend<0xf0>(a, b); }
-
-inline v_float64x4 v512_combine_diagonal(const v_float64x4& a, const v_float64x4& b)
-{ return v512_blend<0xc>(a, b); }
-
-template<typename _Tpvec>
-inline _Tpvec v512_alignr_128(const _Tpvec& a, const _Tpvec& b)
-{ return v512_permute2x128<0x21>(a, b); }
-
-template<typename _Tpvec>
-inline _Tpvec v512_alignr_64(const _Tpvec& a, const _Tpvec& b)
-{ return _Tpvec(_mm256_alignr_epi8(a.val, b.val, 8)); }
-inline v_float64x4 v512_alignr_64(const v_float64x4& a, const v_float64x4& b)
-{ return v_float64x4(_mm256_shuffle_pd(b.val, a.val, _MM_SHUFFLE(0, 0, 1, 1))); }
-// todo: emulate float32
-
-template<typename _Tpvec>
-inline _Tpvec v512_swap_halves(const _Tpvec& a)
-{ return v512_permute2x128<1>(a, a); }
-
-template<typename _Tpvec>
-inline _Tpvec v512_reverse_64(const _Tpvec& a)
-{ return v512_permute4x64<_MM_SHUFFLE(0, 1, 2, 3)>(a); }
-
-// ZIP
-#define OPENCV_HAL_IMPL_AVX_ZIP(_Tpvec)                              \
-    inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)    \
-    { return v512_permute2x128<0x20>(a, b); }                        \
-    inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)   \
-    { return v512_permute2x128<0x31>(a, b); }                        \
-    inline void v_recombine(const _Tpvec& a, const _Tpvec& b,        \
-                             _Tpvec& c, _Tpvec& d)                   \
-    {                                                                \
-        _Tpvec a1b0 = v512_alignr_128(a, b);                         \
-        c = v512_combine_diagonal(a, a1b0);                          \
-        d = v512_combine_diagonal(a1b0, b);                          \
-    }                                                                \
-    inline void v_zip(const _Tpvec& a, const _Tpvec& b,              \
-                      _Tpvec& ab0, _Tpvec& ab1)                      \
-    {                                                                \
-        _Tpvec ab0ab2, ab1ab3;                                       \
-        v512_zip(a, b, ab0ab2, ab1ab3);                              \
-        v_recombine(ab0ab2, ab1ab3, ab0, ab1);                       \
-    }
-
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint8x32)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int8x32)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint16x16)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int16x16)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint32x8)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int32x8)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint64x4)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int64x4)
-OPENCV_HAL_IMPL_AVX_ZIP(v_float32x8)
-OPENCV_HAL_IMPL_AVX_ZIP(v_float64x4)
+OPENCV_HAL_IMPL_AVX_ZIP(v_uint8x64, epi8)
+OPENCV_HAL_IMPL_AVX_ZIP(v_int8x64, epi8)
+OPENCV_HAL_IMPL_AVX_ZIP(v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX_ZIP(v_int16x32, epi16)
+OPENCV_HAL_IMPL_AVX_ZIP(v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX_ZIP(v_int32x16, epi32)
+OPENCV_HAL_IMPL_AVX_ZIP(v_uint64x8, epi64)
+OPENCV_HAL_IMPL_AVX_ZIP(v_int64x8, epi64)
+OPENCV_HAL_IMPL_AVX_ZIP(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX_ZIP(v_float64x8, pd)
 
 ////////// Arithmetic, bitwise and comparison operations /////////
 
 /* Element-wise binary and unary operations */
-
-/** Arithmetics **/
-#define OPENCV_HAL_IMPL_AVX_BIN_OP(bin_op, _Tpvec, intrin)            \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(intrin(a.val, b.val)); }                          \
-    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)    \
-    { a.val = intrin(a.val, b.val); return a; }
-
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint8x32,  _mm256_adds_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint8x32,  _mm256_subs_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int8x32,   _mm256_adds_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int8x32,   _mm256_subs_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint16x16, _mm256_adds_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint16x16, _mm256_subs_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int16x16,  _mm256_adds_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int16x16,  _mm256_subs_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint32x8,  _mm256_add_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint32x8,  _mm256_sub_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint32x8,  _mm256_mullo_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int32x8,   _mm256_add_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int32x8,   _mm256_sub_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int32x8,   _mm256_mullo_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint64x4,  _mm256_add_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint64x4,  _mm256_sub_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int64x4,   _mm256_add_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int64x4,   _mm256_sub_epi64)
-
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float32x8, _mm256_add_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float32x8, _mm256_sub_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float32x8, _mm256_mul_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float32x8, _mm256_div_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float64x4, _mm256_add_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float64x4, _mm256_sub_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float64x4, _mm256_mul_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float64x4, _mm256_div_pd)
-
-// saturating multiply 8-bit, 16-bit
-inline v_uint8x32 operator * (const v_uint8x32& a, const v_uint8x32& b)
-{
-    v_uint16x16 c, d;
-    v_mul_expand(a, b, c, d);
-    return v_pack(c, d);
-}
-inline v_int8x32 operator * (const v_int8x32& a, const v_int8x32& b)
-{
-    v_int16x16 c, d;
-    v_mul_expand(a, b, c, d);
-    return v_pack(c, d);
-}
-inline v_uint16x16 operator * (const v_uint16x16& a, const v_uint16x16& b)
-{
-    __m512i pl = _mm256_mullo_epi16(a.val, b.val);
-    __m512i ph = _mm256_mulhi_epu16(a.val, b.val);
-    __m512i p0 = _mm256_unpacklo_epi16(pl, ph);
-    __m512i p1 = _mm256_unpackhi_epi16(pl, ph);
-    return v_uint16x16(_v512_packs_epu32(p0, p1));
-}
-inline v_int16x16 operator * (const v_int16x16& a, const v_int16x16& b)
-{
-    __m512i pl = _mm256_mullo_epi16(a.val, b.val);
-    __m512i ph = _mm256_mulhi_epi16(a.val, b.val);
-    __m512i p0 = _mm256_unpacklo_epi16(pl, ph);
-    __m512i p1 = _mm256_unpackhi_epi16(pl, ph);
-    return v_int16x16(_mm256_packs_epi32(p0, p1));
-}
-inline v_uint8x32& operator *= (v_uint8x32& a, const v_uint8x32& b)
-{ a = a * b; return a; }
-inline v_int8x32& operator *= (v_int8x32& a, const v_int8x32& b)
-{ a = a * b; return a; }
-inline v_uint16x16& operator *= (v_uint16x16& a, const v_uint16x16& b)
-{ a = a * b; return a; }
-inline v_int16x16& operator *= (v_int16x16& a, const v_int16x16& b)
-{ a = a * b; return a; }
 
 /** Non-saturating arithmetics **/
 #define OPENCV_HAL_IMPL_AVX_BIN_FUNC(func, _Tpvec, intrin) \
     inline _Tpvec func(const _Tpvec& a, const _Tpvec& b)   \
     { return _Tpvec(intrin(a.val, b.val)); }
 
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint8x32,  _mm256_add_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int8x32,   _mm256_add_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint16x16, _mm256_add_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int16x16,  _mm256_add_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint8x32,  _mm256_sub_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int8x32,   _mm256_sub_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint16x16, _mm256_sub_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int16x16,  _mm256_sub_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_uint16x16, _mm256_mullo_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_int16x16,  _mm256_mullo_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint8x64, _mm512_add_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int8x64, _mm512_add_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint16x32, _mm512_add_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int16x32, _mm512_add_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint8x64, _mm512_sub_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int8x64, _mm512_sub_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint16x32, _mm512_sub_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int16x32, _mm512_sub_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_uint16x32, _mm512_mullo_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_int16x32, _mm512_mullo_epi16)
 
-inline v_uint8x32 v_mul_wrap(const v_uint8x32& a, const v_uint8x32& b)
+inline v_uint8x64 v_mul_wrap(const v_uint8x64& a, const v_uint8x64& b)
 {
-    __m512i ad = _mm256_srai_epi16(a.val, 8);
-    __m512i bd = _mm256_srai_epi16(b.val, 8);
-    __m512i p0 = _mm256_mullo_epi16(a.val, b.val); // even
-    __m512i p1 = _mm256_slli_epi16(_mm256_mullo_epi16(ad, bd), 8); // odd
-
-    const __m512i b01 = _mm256_set1_epi32(0xFF00FF00);
-    return v_uint8x32(_mm256_blendv_epi8(p0, p1, b01));
+    __m512i ad = _mm512_srai_epi16(a.val, 8);
+    __m512i bd = _mm512_srai_epi16(b.val, 8);
+    __m512i p0 = _mm512_mullo_epi16(a.val, b.val); // even
+    __m512i p1 = _mm512_slli_epi16(_mm512_mullo_epi16(ad, bd), 8); // odd
+    return v_uint8x64(_mm512_mask_blend_epi8(0x5555555555555555, p0, p1));
 }
-inline v_int8x32 v_mul_wrap(const v_int8x32& a, const v_int8x32& b)
+inline v_int8x64 v_mul_wrap(const v_int8x64& a, const v_int8x64& b)
 {
     return v_reinterpret_as_s8(v_mul_wrap(v_reinterpret_as_u8(a), v_reinterpret_as_u8(b)));
 }
 
+#define OPENCV_HAL_IMPL_AVX_BIN_OP(bin_op, _Tpvec, intrin)            \
+    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)  \
+    { return _Tpvec(intrin(a.val, b.val)); }                          \
+    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)    \
+    { a.val = intrin(a.val, b.val); return a; }
+
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint32x16, _mm512_add_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint32x16, _mm512_sub_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int32x16, _mm512_add_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int32x16, _mm512_sub_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint64x8, _mm512_add_epi64)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint64x8, _mm512_sub_epi64)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int64x8, _mm512_add_epi64)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int64x8, _mm512_sub_epi64)
+
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint32x16, _mm256_mullo_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int32x16, _mm256_mullo_epi32)
+
+/** Saturating arithmetics **/
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint8x64,  _mm512_adds_epu8)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint8x64,  _mm512_subs_epu8)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int8x64,   _mm512_adds_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int8x64,   _mm512_subs_epi8)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint16x32, _mm512_adds_epu16)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint16x32, _mm512_subs_epu16)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int16x32,  _mm512_adds_epi16)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int16x32,  _mm512_subs_epi16)
+
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float32x16, _mm512_add_ps)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float32x16, _mm512_sub_ps)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float32x16, _mm512_mul_ps)
+OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float32x16, _mm512_div_ps)
+OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float64x8, _mm512_add_pd)
+OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float64x8, _mm512_sub_pd)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float64x8, _mm512_mul_pd)
+OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float64x8, _mm512_div_pd)
+
+// saturating multiply
+inline v_uint8x64 operator * (const v_uint8x64& a, const v_uint8x64& b)
+{
+    v_uint16x32 c, d;
+    v_mul_expand(a, b, c, d);
+    return v_pack(c, d);
+}
+inline v_int8x64 operator * (const v_int8x64& a, const v_int8x64& b)
+{
+    v_int16x32 c, d;
+    v_mul_expand(a, b, c, d);
+    return v_pack(c, d);
+}
+inline v_uint16x32 operator * (const v_uint16x32& a, const v_uint16x32& b)
+{
+    __m512i pl = _mm512_mullo_epi16(a.val, b.val);
+    __m512i ph = _mm512_mulhi_epu16(a.val, b.val);
+    __m512i p0 = _mm512_unpacklo_epi16(pl, ph);
+    __m512i p1 = _mm512_unpackhi_epi16(pl, ph);
+    return v_uint16x32(_v512_packs_epu32(p0, p1));
+}
+inline v_int16x32 operator * (const v_int16x32& a, const v_int16x32& b)
+{
+    __m512i pl = _mm512_mullo_epi16(a.val, b.val);
+    __m512i ph = _mm512_mulhi_epi16(a.val, b.val);
+    __m512i p0 = _mm512_unpacklo_epi16(pl, ph);
+    __m512i p1 = _mm512_unpackhi_epi16(pl, ph);
+    return v_int16x32(_mm512_packs_epi32(p0, p1));
+}
+
+inline v_uint8x64& operator *= (v_uint8x64& a, const v_uint8x64& b)
+{ a = a * b; return a; }
+inline v_int8x64& operator *= (v_int8x64& a, const v_int8x64& b)
+{ a = a * b; return a; }
+inline v_uint16x32& operator *= (v_uint16x32& a, const v_uint16x32& b)
+{ a = a * b; return a; }
+inline v_int16x32& operator *= (v_int16x32& a, const v_int16x32& b)
+{ a = a * b; return a; }
+
+inline v_int16x32 v_mul_hi(const v_int16x32& a, const v_int16x32& b) { return v_int16x32(_mm512_mulhi_epi16(a.val, b.val)); }
+inline v_uint16x32 v_mul_hi(const v_uint16x32& a, const v_uint16x32& b) { return v_uint16x32(_mm512_mulhi_epu16(a.val, b.val)); }
+
 //  Multiply and expand
-inline void v_mul_expand(const v_uint8x32& a, const v_uint8x32& b,
-                         v_uint16x16& c, v_uint16x16& d)
+inline void v_mul_expand(const v_uint8x64& a, const v_uint8x64& b,
+                         v_uint16x32& c, v_uint16x32& d)
 {
-    v_uint16x16 a0, a1, b0, b1;
+    v_uint16x32 a0, a1, b0, b1;
     v_expand(a, a0, a1);
     v_expand(b, b0, b1);
     c = v_mul_wrap(a0, b0);
     d = v_mul_wrap(a1, b1);
 }
 
-inline void v_mul_expand(const v_int8x32& a, const v_int8x32& b,
-                         v_int16x16& c, v_int16x16& d)
+inline void v_mul_expand(const v_int8x64& a, const v_int8x64& b,
+                         v_int16x32& c, v_int16x32& d)
 {
-    v_int16x16 a0, a1, b0, b1;
+    v_int16x32 a0, a1, b0, b1;
     v_expand(a, a0, a1);
     v_expand(b, b0, b1);
     c = v_mul_wrap(a0, b0);
     d = v_mul_wrap(a1, b1);
 }
 
-inline void v_mul_expand(const v_int16x16& a, const v_int16x16& b,
-                         v_int32x8& c, v_int32x8& d)
+inline void v_mul_expand(const v_int16x32& a, const v_int16x32& b,
+                         v_int32x16& c, v_int32x16& d)
 {
-    v_int16x16 vhi = v_int16x16(_mm256_mulhi_epi16(a.val, b.val));
-
-    v_int16x16 v0, v1;
-    v_zip(v_mul_wrap(a, b), vhi, v0, v1);
+    v_int16x32 v0, v1;
+    v_zip(v_mul_wrap(a, b), v_mul_hi(a, b), v0, v1);
 
     c = v_reinterpret_as_s32(v0);
     d = v_reinterpret_as_s32(v1);
 }
 
-inline void v_mul_expand(const v_uint16x16& a, const v_uint16x16& b,
-                         v_uint32x8& c, v_uint32x8& d)
+inline void v_mul_expand(const v_uint16x32& a, const v_uint16x32& b,
+                         v_uint32x16& c, v_uint32x16& d)
 {
-    v_uint16x16 vhi = v_uint16x16(_mm256_mulhi_epu16(a.val, b.val));
-
     v_uint16x16 v0, v1;
-    v_zip(v_mul_wrap(a, b), vhi, v0, v1);
+    v_zip(v_mul_wrap(a, b), v_mul_hi(a, b), v0, v1);
 
     c = v_reinterpret_as_u32(v0);
     d = v_reinterpret_as_u32(v1);
 }
 
-inline void v_mul_expand(const v_uint32x8& a, const v_uint32x8& b,
-                         v_uint64x4& c, v_uint64x4& d)
+inline void v_mul_expand(const v_uint32x16& a, const v_uint32x16& b,
+                         v_uint64x8& c, v_uint64x8& d)
 {
-    __m512i v0 = _mm256_mul_epu32(a.val, b.val);
-    __m512i v1 = _mm256_mul_epu32(_mm256_srli_epi64(a.val, 32), _mm256_srli_epi64(b.val, 32));
-    v_zip(v_uint64x4(v0), v_uint64x4(v1), c, d);
+    v_zip(v_uint64x8(_mm512_mul_epu32(a.val, b.val)),
+          v_uint64x8(_mm512_mul_epu32(_mm512_srli_epi64(a.val, 32), _mm512_srli_epi64(b.val, 32))), c, d);
 }
-
-inline v_int16x16 v_mul_hi(const v_int16x16& a, const v_int16x16& b) { return v_int16x16(_mm256_mulhi_epi16(a.val, b.val)); }
-inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return v_uint16x16(_mm256_mulhi_epu16(a.val, b.val)); }
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_AVX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)  \

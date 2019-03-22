@@ -184,7 +184,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 // we define those sets of intrinsics at once.
 // For some of AVX512 intrinsics get v512_ prefix instead of v_, e.g. v512_load() vs v_load().
 // Wide intrinsics will be mapped to v512_ counterparts in this case(e.g. vx_load() => v512_load())
-#if AVX512_SKX
+#if CV_AVX512_SKX
 
 #define CV__SIMD_FORWARD 512
 #include "opencv2/core/hal/intrin_forward.hpp"
