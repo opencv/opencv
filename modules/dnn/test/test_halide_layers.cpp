@@ -228,6 +228,10 @@ TEST_P(LRN, Accuracy)
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
 
+    if ((inSize.width == 5 || inSize.height == 5) && targetId == DNN_TARGET_MYRIAD &&
+        nrmType == "ACROSS_CHANNELS")
+        throw SkipTestException("This test case is disabled");
+
     LayerParams lp;
     lp.set("norm_region", nrmType);
     lp.set("local_size", localSize);
