@@ -565,7 +565,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifndef CV_CXX_STD_ARRAY
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+#  if __cplusplus >= 201103L || (defined(__cplusplus) && defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
 #    define CV_CXX_STD_ARRAY 1
 #    include <array>
 #  endif
