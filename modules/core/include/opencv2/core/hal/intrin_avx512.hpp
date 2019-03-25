@@ -588,8 +588,10 @@ OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint64x8, _mm512_sub_epi64)
 OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int64x8, _mm512_add_epi64)
 OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int64x8, _mm512_sub_epi64)
 
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint32x16, _mm256_mullo_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int32x16, _mm256_mullo_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint32x16, _mm512_mullo_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int32x16, _mm512_mullo_epi32)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint64x8, _mm512_mullo_epi64)
+OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int64x8, _mm512_mullo_epi64)
 
 /** Saturating arithmetics **/
 OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint8x64,  _mm512_adds_epu8)
@@ -700,73 +702,75 @@ inline void v_mul_expand(const v_uint32x16& a, const v_uint32x16& b,
           v_uint64x8(_mm512_mul_epu32(_mm512_srli_epi64(a.val, 32), _mm512_srli_epi64(b.val, 32))), c, d);
 }
 
-/** Bitwise shifts **/
-#define OPENCV_HAL_IMPL_AVX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)  \
-    inline _Tpuvec operator << (const _Tpuvec& a, int imm)            \
-    { return _Tpuvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    inline _Tpsvec operator << (const _Tpsvec& a, int imm)            \
-    { return _Tpsvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    inline _Tpuvec operator >> (const _Tpuvec& a, int imm)            \
-    { return _Tpuvec(_mm256_srli_##suffix(a.val, imm)); }             \
-    inline _Tpsvec operator >> (const _Tpsvec& a, int imm)            \
-    { return _Tpsvec(srai(a.val, imm)); }                             \
-    template<int imm>                                                 \
-    inline _Tpuvec v_shl(const _Tpuvec& a)                            \
-    { return _Tpuvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    template<int imm>                                                 \
-    inline _Tpsvec v_shl(const _Tpsvec& a)                            \
-    { return _Tpsvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    template<int imm>                                                 \
-    inline _Tpuvec v_shr(const _Tpuvec& a)                            \
-    { return _Tpuvec(_mm256_srli_##suffix(a.val, imm)); }             \
-    template<int imm>                                                 \
-    inline _Tpsvec v_shr(const _Tpsvec& a)                            \
-    { return _Tpsvec(srai(a.val, imm)); }
-
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint16x16, v_int16x16, epi16, _mm256_srai_epi16)
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint32x8,  v_int32x8,  epi32, _mm256_srai_epi32)
-
-inline __m512i _mm256_srai_epi64xx(const __m512i a, int imm)
+inline void v_mul_expand(const v_int32x16& a, const v_int32x16& b,
+    v_int64x8& c, v_int64x8& d)
 {
-    __m512i d = _mm256_set1_epi64x((int64)1 << 63);
-    __m512i r = _mm256_srli_epi64(_mm256_add_epi64(a, d), imm);
-    return _mm256_sub_epi64(r, _mm256_srli_epi64(d, imm));
+    v_zip(v_int64x8(_mm512_mul_epi32(a.val, b.val)),
+          v_int64x8(_mm512_mul_epi32(_mm512_srli_epi64(a.val, 32), _mm512_srli_epi64(b.val, 32))), c, d);
 }
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint64x4,  v_int64x4,  epi64, _mm256_srai_epi64xx)
+
+/** Bitwise shifts **/
+#define OPENCV_HAL_IMPL_AVX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix)  \
+    inline _Tpuvec operator << (const _Tpuvec& a, int imm)      \
+    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }       \
+    inline _Tpsvec operator << (const _Tpsvec& a, int imm)      \
+    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }       \
+    inline _Tpuvec operator >> (const _Tpuvec& a, int imm)      \
+    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }       \
+    inline _Tpsvec operator >> (const _Tpsvec& a, int imm)      \
+    { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }       \
+    template<int imm>                                           \
+    inline _Tpuvec v_shl(const _Tpuvec& a)                      \
+    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }       \
+    template<int imm>                                           \
+    inline _Tpsvec v_shl(const _Tpsvec& a)                      \
+    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }       \
+    template<int imm>                                           \
+    inline _Tpuvec v_shr(const _Tpuvec& a)                      \
+    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }       \
+    template<int imm>                                           \
+    inline _Tpsvec v_shr(const _Tpsvec& a)                      \
+    { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }
+
+OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint16x32, v_int16x32, epi16)
+OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint32x16, v_int32x16, epi32)
+OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint64x8,  v_int64x8,  epi64)
 
 
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_AVX_LOGIC_OP(_Tpvec, suffix, not_const)  \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(&, _Tpvec, _mm256_and_##suffix)   \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(|, _Tpvec, _mm256_or_##suffix)    \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(^, _Tpvec, _mm256_xor_##suffix)   \
+    OPENCV_HAL_IMPL_AVX_BIN_OP(&, _Tpvec, _mm512_and_##suffix)   \
+    OPENCV_HAL_IMPL_AVX_BIN_OP(|, _Tpvec, _mm512_or_##suffix)    \
+    OPENCV_HAL_IMPL_AVX_BIN_OP(^, _Tpvec, _mm512_xor_##suffix)   \
     inline _Tpvec operator ~ (const _Tpvec& a)                   \
-    { return _Tpvec(_mm256_xor_##suffix(a.val, not_const)); }
+    { return _Tpvec(_mm512_xor_##suffix(a.val, not_const)); }
 
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint8x32,   si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int8x32,    si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint16x16,  si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int16x16,   si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint32x8,   si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int32x8,    si256, _mm256_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint64x4,   si256, _mm256_set1_epi64x(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int64x4,    si256, _mm256_set1_epi64x(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float32x8,  ps,    _mm256_castsi256_ps(_mm256_set1_epi32(-1)))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float64x4,  pd,    _mm256_castsi256_pd(_mm256_set1_epi32(-1)))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint8x64,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int8x64,    si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint16x32,  si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int16x32,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint32x16,  si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int32x16,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint64x8,   si512, _mm512_set1_epi64(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int64x8,    si512, _mm512_set1_epi64(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float32x16, ps,    _mm512_castsi512_ps(_mm512_set1_epi32(-1)))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float64x8,  pd,    _mm512_castsi512_pd(_mm512_set1_epi32(-1)))
 
 /** Select **/
 #define OPENCV_HAL_IMPL_AVX_SELECT(_Tpvec, suffix)                               \
     inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_blendv_##suffix(b.val, a.val, mask.val)); }
+    { return _Tpvec(_mm512_mask_blend_##suffix(_mm512_cmp_##suffix##_mask(mask.val, _mm512_setzero_si512(), _MM_CMPINT_EQ), a.val, b.val)); }
 
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint8x32,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int8x32,   epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint16x16, epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int16x16,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint32x8,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int32x8,   epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float64x4, pd)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint8x64,   epi8)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int8x64,    epi8)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int16x32,  epi16)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int32x16,  epi32)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint64x8,  epi64)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int64x8,   epi64)
+OPENCV_HAL_IMPL_AVX_SELECT(v_float32x16,   ps)
+OPENCV_HAL_IMPL_AVX_SELECT(v_float64x8,    pd)
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                     \
@@ -2664,9 +2668,9 @@ inline void v512_cleanup() { _mm256_zeroall(); }
 //! @name Check SIMD256 support
 //! @{
 //! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD256()
+static inline bool hasSIMD512()
 {
-    return (CV_CPU_HAS_SUPPORT_AVX2) ? true : false;
+    return (CV_CPU_HAS_SUPPORT_AVX512_SKX) ? true : false;
 }
 //! @}
 
