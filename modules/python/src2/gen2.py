@@ -50,8 +50,6 @@ gen_template_func_body = Template("""$code_decl
     }
 """)
 
-head_init_str = "CV_PYTHON_TYPE_HEAD_INIT()"
-
 gen_template_simple_type_decl = Template("""
 struct pyopencv_${name}_t
 {
@@ -59,12 +57,7 @@ struct pyopencv_${name}_t
     ${cname} v;
 };
 
-static PyTypeObject pyopencv_${name}_Type =
-{
-    %s
-    MODULESTR".$wname",
-    sizeof(pyopencv_${name}_t),
-};
+REGISTER_TYPE(${name}, $wname)
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
@@ -95,7 +88,7 @@ struct PyOpenCV_Converter< ${cname} >
         return false;
     }
 };
-""" % head_init_str)
+""")
 
 gen_template_mappable = Template("""
     {
@@ -114,12 +107,7 @@ struct pyopencv_${name}_t
     Ptr<${cname1}> v;
 };
 
-static PyTypeObject pyopencv_${name}_Type =
-{
-    %s
-    MODULESTR".$wname",
-    sizeof(pyopencv_${name}_t),
-};
+REGISTER_TYPE(${name}, $wname)
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
@@ -153,7 +141,7 @@ struct PyOpenCV_Converter< Ptr<${cname}> >
     }
 };
 
-""" % head_init_str)
+""")
 
 gen_template_map_type_cvt = Template("""
 template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name);

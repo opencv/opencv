@@ -39,12 +39,6 @@ PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src);
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
-#if PY_MAJOR_VERSION >= 3
-#  define CV_PYTHON_TYPE_HEAD_INIT() PyVarObject_HEAD_INIT(&PyType_Type, 0)
-#else
-#  define CV_PYTHON_TYPE_HEAD_INIT() PyObject_HEAD_INIT(&PyType_Type) 0,
-#endif
-
 #define CV_PY_TO_CLASS(TYPE)                                                                          \
 template<>                                                                                            \
 bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
@@ -1681,6 +1675,27 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
+#if PY_MAJOR_VERSION >= 3
+#  define PUBLISH_OBJECT(name, type) Py_INCREF(&type); PyModule_AddObject(m, name, (PyObject *)&type);
+// #  define REGISTER_TYPE(name, wname)
+#  define REGISTER_TYPE(name, wname) \
+    static PyTypeObject pyopencv_##name##_Type = \
+    { \
+        PyVarObject_HEAD_INIT(&PyType_Type, 0) \
+        MODULESTR"."#wname, \
+        sizeof(pyopencv_##name##_t), \
+    };
+#else
+#  define PUBLISH_OBJECT(name, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++; PyModule_AddObject(m, name, (PyObject *)&type);
+#  define REGISTER_TYPE(name, wname) \
+    static PyTypeObject pyopencv_##name##_Type = \
+    { \
+        PyObject_HEAD_INIT(&PyType_Type) 0, \
+        MODULESTR"."#wname, \
+        sizeof(pyopencv_##name##_t), \
+    };
+#endif
+
 #include "pyopencv_generated_enums.h"
 #include "pyopencv_custom_headers.h"
 #include "pyopencv_generated_types.h"
@@ -1783,15 +1798,7 @@ static bool init_body(PyObject * m)
     Py_DECREF(opencv_error_dict);
     PyDict_SetItemString(d, "error", opencv_error);
 
-#if PY_MAJOR_VERSION >= 3
-#define PUBLISH_OBJECT(name, type) Py_INCREF(&type); PyModule_AddObject(m, name, (PyObject *)&type);
-#else
-// Unrolled Py_INCREF(&type) without (PyObject*) cast
-// due to "warning: dereferencing type-punned pointer will break strict-aliasing rules"
-#define PUBLISH_OBJECT(name, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++; PyModule_AddObject(m, name, (PyObject *)&type);
-#endif
 #include "pyopencv_generated_type_publish.h"
-#undef PUBLISH_OBJECT
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
     PUBLISH(CV_8U);
