@@ -42,6 +42,8 @@
 #ifndef __OPENCV_TEST_COMMON_HPP__
 #define __OPENCV_TEST_COMMON_HPP__
 
+#include "opencv2/dnn/utils/inference_engine.hpp"
+
 #ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
 #endif
