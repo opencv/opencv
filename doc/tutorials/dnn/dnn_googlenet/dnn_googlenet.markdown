@@ -8,7 +8,7 @@ In this tutorial you will learn how to use opencv_dnn module for image classific
 GoogLeNet trained network from [Caffe model zoo](http://caffe.berkeleyvision.org/model_zoo.html).
 
 We will demonstrate results of this example on the following picture.
-![Buran space shuttle](images/space_shuttle.jpg)
+![Buran space shuttle](https://github.com/opencv/opencv_extra/blob/3.4/testdata/dnn/space_shuttle.jpg)
 
 Source Code
 -----------
