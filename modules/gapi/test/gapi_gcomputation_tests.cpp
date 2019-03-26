@@ -7,6 +7,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <ade/util/zip_range.hpp>
 
 namespace opencv_test
 {
@@ -65,4 +66,28 @@ namespace opencv_test
       ASSERT_NO_THROW(m_c.apply(in_mat, out_mat, cv::compile_args(pkg)));
   }
 
+  TEST(GComputationTest, VectorAsOutputApply)
+  {
+      cv::GMat in;
+      cv::GMat out[3];
+      std::tie(out[0], out[1], out[2]) = cv::gapi::split3(in);
+
+      cv::Mat in_mat(3, 3, CV_8UC3);
+      cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+      std::vector<cv::Mat> out_mats(3);
+      std::vector<cv::Mat> ref_mats(3);
+
+      cv::split(in_mat, ref_mats);
+
+      cv::GComputation({in}, {out[0], out[1], out[2]}).apply({in_mat}, out_mats);
+
+      EXPECT_EQ(cv::Size(3, 3), out_mats[0].size());
+      for (const auto& it : ade::util::zip(ref_mats, out_mats))
+      {
+          const auto& ref_mat = std::get<0>(it);
+          const auto& out_mat = std::get<1>(it);
+
+          EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+      }
+  }
 } // namespace opencv_test
