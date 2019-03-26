@@ -5,6 +5,10 @@
 #include "precomp.hpp"
 
 #include <memory>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <chrono>
 #include <android/log.h>
 #include <camera/NdkCameraManager.h>
 #include <camera/NdkCameraError.h>
@@ -15,6 +19,7 @@
 using namespace cv;
 
 #define TAG "NativeCamera"
+#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
@@ -68,6 +73,7 @@ static inline void deleter_ACameraOutputTarget(ACameraOutputTarget *outputTarget
 static inline void deleter_ACaptureRequest(ACaptureRequest *captureRequest) {
     ACaptureRequest_free(captureRequest);
 }
+
 /*
  * CameraDevice callbacks
  */
@@ -101,16 +107,6 @@ static void OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
     }
 }
 
-static ACameraDevice_stateCallbacks* GetDeviceListener() {
-    static ACameraDevice_stateCallbacks cameraDeviceListener = {
-        .onDisconnected = ::OnDeviceDisconnect,
-        .onError = ::OnDeviceError,
-    };
-    return &cameraDeviceListener;
-}
-
-/***************************  Session state management  ***********************/
-
 enum class CaptureSessionState {
     INITIALIZING,  // session is ready
     READY,         // session is ready
@@ -118,31 +114,21 @@ enum class CaptureSessionState {
     CLOSED         // session was closed
 };
 
-static CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
+void OnSessionClosed(void* context, ACameraCaptureSession* session);
 
-static void OnSessionClosed(void* /* ctx */, ACameraCaptureSession* session) {
-    LOGW("session %p closed", session);
-    sessionState = CaptureSessionState::CLOSED;
-}
+void OnSessionReady(void* context, ACameraCaptureSession* session);
 
-static void OnSessionReady(void* /* ctx */, ACameraCaptureSession* session) {
-    LOGW("session %p ready", session);
-    sessionState = CaptureSessionState::READY;
-}
+void OnSessionActive(void* context, ACameraCaptureSession* session);
 
-static void OnSessionActive(void* /* ctx */, ACameraCaptureSession* session) {
-    LOGW("session %p active", session);
-    sessionState = CaptureSessionState::ACTIVE;
-}
+void OnCaptureCompleted(void* context,
+                        ACameraCaptureSession* session,
+                        ACaptureRequest* request,
+                        const ACameraMetadata* result);
 
-static ACameraCaptureSession_stateCallbacks* GetSessionListener() {
-    static ACameraCaptureSession_stateCallbacks sessionListener = {
-        .onActive = OnSessionActive,
-        .onReady = OnSessionReady,
-        .onClosed = OnSessionClosed,
-    };
-    return &sessionListener;
-}
+void OnCaptureFailed(void* context,
+                     ACameraCaptureSession* session,
+                     ACaptureRequest* request,
+                     ACameraCaptureFailure* failure);
 
 class AndroidCameraCapture : public IVideoCapture
 {
@@ -154,17 +140,61 @@ class AndroidCameraCapture : public IVideoCapture
     std::shared_ptr<ACameraOutputTarget> outputTarget;
     std::shared_ptr<ACaptureRequest> captureRequest;
     std::shared_ptr<ACameraCaptureSession> captureSession;
+    CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
     int32_t frameWidth;
     int32_t frameHeight;
     int32_t colorFormat;
     std::vector<uint8_t> buffer;
-    bool sessionOutputAdded;
-    bool targetAdded;
+    bool sessionOutputAdded = false;
+    bool targetAdded = false;
 
 public:
-    AndroidCameraCapture() : sessionOutputAdded(false), targetAdded(false)  {}
+    // for synchronization with NDK capture callback
+    bool waitingCapture = false;
+    bool captureSuccess = false;
+    std::mutex mtx;
+    std::condition_variable condition;
+
+public:
+    AndroidCameraCapture() {}
 
     ~AndroidCameraCapture() { cleanUp(); }
+
+    ACameraDevice_stateCallbacks* GetDeviceListener() {
+        static ACameraDevice_stateCallbacks cameraDeviceListener = {
+            .onDisconnected = ::OnDeviceDisconnect,
+            .onError = ::OnDeviceError,
+        };
+        return &cameraDeviceListener;
+    }
+
+    ACameraCaptureSession_stateCallbacks* GetSessionListener() {
+        static ACameraCaptureSession_stateCallbacks sessionListener = {
+            .context = this,
+            .onActive = ::OnSessionActive,
+            .onReady = ::OnSessionReady,
+            .onClosed = ::OnSessionClosed,
+        };
+        return &sessionListener;
+    }
+
+    ACameraCaptureSession_captureCallbacks* GetCaptureCallback() {
+        static ACameraCaptureSession_captureCallbacks captureListener{
+            .context = this,
+            .onCaptureStarted = nullptr,
+            .onCaptureProgressed = nullptr,
+            .onCaptureCompleted = ::OnCaptureCompleted,
+            .onCaptureFailed = ::OnCaptureFailed,
+            .onCaptureSequenceCompleted = nullptr,
+            .onCaptureSequenceAborted = nullptr,
+            .onCaptureBufferLost = nullptr,
+        };
+        return &captureListener;
+    }
+
+    void setSessionState(CaptureSessionState newSessionState) {
+        this->sessionState = newSessionState;
+    }
 
     bool isOpened() const CV_OVERRIDE { return imageReader.get() != nullptr && captureSession.get() != nullptr; }
 
@@ -173,13 +203,32 @@ public:
     bool grabFrame() CV_OVERRIDE
     {
         AImage* img;
-        media_status_t mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
-        if (mStatus != AMEDIA_OK) {
-            LOGE("Acquire image failed with error code: %d", mStatus);
-            if (mStatus != AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE) {
-                LOGE("No Buffer Available error occured - try again later");
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            media_status_t mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
+            if (mStatus != AMEDIA_OK) {
+                if (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE) {
+                    // this error is not fatal - we just need to wait for a buffer to become available
+                    LOGW("No Buffer Available error occured - waiting for callback");
+                    waitingCapture = true;
+                    captureSuccess = false;
+                    condition.wait_for(lock, std::chrono::seconds(2), [this]{ return !waitingCapture; });
+                    waitingCapture = false;
+                    if (captureSuccess) {
+                        mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
+                        if (mStatus != AMEDIA_OK) {
+                            LOGE("Acquire image failed with error code: %d", mStatus);
+                            return false;
+                        }
+                    } else {
+                        LOGE("Capture failed or callback timed out");
+                        return false;
+                    }
+                } else {
+                    LOGE("Acquire image failed with error code: %d", mStatus);
+                    return false;
+                }
             }
-            return false;
         }
         std::shared_ptr<AImage> image = std::shared_ptr<AImage>(img, deleter_AImage);
         int32_t srcFormat = -1;
@@ -364,7 +413,7 @@ public:
         }
         captureSession = std::shared_ptr<ACameraCaptureSession>(session, deleter_ACameraCaptureSession);
 
-        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), nullptr, 1, &request, nullptr);
+        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
             LOGE("CameraCaptureSession set repeating request failed with error code: %d", cStatus);
             return false;
@@ -386,6 +435,53 @@ public:
         }
     }
 };
+
+/********************************  Session management  *******************************/
+
+void OnSessionClosed(void* context, ACameraCaptureSession* session) {
+    LOGW("session %p closed", session);
+    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::CLOSED);
+}
+
+void OnSessionReady(void* context, ACameraCaptureSession* session) {
+    LOGW("session %p ready", session);
+    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::READY);
+}
+
+void OnSessionActive(void* context, ACameraCaptureSession* session) {
+    LOGW("session %p active", session);
+    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::ACTIVE);
+}
+
+void OnCaptureCompleted(void* context,
+                        ACameraCaptureSession* session,
+                        ACaptureRequest* /* request */,
+                        const ACameraMetadata* /* result */) {
+    LOGV("session %p capture completed", session);
+    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    std::unique_lock<std::mutex> lock(cameraCapture->mtx);
+
+    if (cameraCapture->waitingCapture) {
+        cameraCapture->waitingCapture = false;
+        cameraCapture->captureSuccess = true;
+        cameraCapture->condition.notify_one();
+    }
+}
+
+void OnCaptureFailed(void* context,
+                     ACameraCaptureSession* session,
+                     ACaptureRequest* /* request */,
+                     ACameraCaptureFailure* /* failure */) {
+    LOGV("session %p capture failed", session);
+    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    std::unique_lock<std::mutex> lock(cameraCapture->mtx);
+
+    if (cameraCapture->waitingCapture) {
+        cameraCapture->waitingCapture = false;
+        cameraCapture->captureSuccess = false;
+        cameraCapture->condition.notify_one();
+    }
+}
 
 /****************** Implementation of interface functions ********************/
 
