@@ -157,17 +157,20 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 #if !defined(GAPI_STANDALONE)
             // Building as part of OpenCV - follow OpenCV behavior
             // if output buffer is not enough to hold the result, reallocate it
-            auto& out_mat   = *get<cv::Mat*>(args.outObjs.at(index));
-            out_mat.create(cv::gapi::own::to_ocv(desc.size), type);
-#else
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
+            {
+                auto& out_mat   = *get<cv::Mat*>(args.outObjs.at(index));
+                out_mat.create(cv::gapi::own::to_ocv(desc.size), type);
+                continue;
+            }
+#endif // !defined(GAPI_STANDALONE)
             // Building standalone - output buffer should always exist,
             // and _exact_ match our inferred metadata
             auto& out_mat   = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
             GAPI_Assert(   out_mat.type() == type
                         && out_mat.data   != nullptr
                         && out_mat.rows   == desc.size.height
-                        && out_mat.cols   == desc.size.width)
-#endif // !defined(GAPI_STANDALONE)
+                        && out_mat.cols   == desc.size.width);
         }
     }
     // Update storage with user-passed objects
