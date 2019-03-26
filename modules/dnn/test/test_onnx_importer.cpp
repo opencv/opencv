@@ -73,6 +73,7 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("deconvolution");
     testONNXModels("two_deconvolution");
     testONNXModels("deconvolution_group");
+    testONNXModels("deconvolution_output_shape");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)

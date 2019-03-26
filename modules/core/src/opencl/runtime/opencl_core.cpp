@@ -47,6 +47,7 @@
 
 #if defined(HAVE_OPENCL_STATIC)
 #if defined __APPLE__
+#define CL_SILENCE_DEPRECATION
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>
