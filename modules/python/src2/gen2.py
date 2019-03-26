@@ -859,7 +859,6 @@ class PythonWrapperGenerator(object):
         self.code_enums = StringIO()
         self.code_types = StringIO()
         self.code_funcs = StringIO()
-        self.code_type_reg = StringIO()
         self.code_ns_reg = StringIO()
         self.code_type_publish = StringIO()
         self.py_signatures = dict()
@@ -1123,8 +1122,7 @@ class PythonWrapperGenerator(object):
             code = classinfo.gen_code(self)
             self.code_types.write(code)
             if not classinfo.ismap:
-                self.code_type_reg.write("MKTYPE2(%s);\n" % (classinfo.name,) )
-                self.code_type_publish.write("PUBLISH_OBJECT(\"{name}\", pyopencv_{name}_Type);\n".format(name=classinfo.name))
+                self.code_type_publish.write("PUBLISH_OBJECT({});\n".format(classinfo.name))
 
         # step 3: generate the code for all the global functions
         for ns_name, ns in sorted(self.namespaces.items()):
@@ -1155,7 +1153,6 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated_enums.h", self.code_enums)
         self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
         self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
         self.save(output_path, "pyopencv_generated_type_publish.h", self.code_type_publish)
         self.save_json(output_path, "pyopencv_signatures.json", self.py_signatures)

@@ -1676,7 +1676,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-#  define PUBLISH_OBJECT(name, type) Py_INCREF(&type); PyModule_AddObject(m, name, (PyObject *)&type);
+#  define PUBLISH_OBJECT(name, A, type) Py_INCREF(&type); PyModule_AddObject(m, name, (PyObject *)&type);
 // #  define REGISTER_TYPE(name, wname)
 #  define REGISTER_TYPE(name, wname) \
     static PyTypeObject pyopencv_##name##_Type = \
@@ -1686,7 +1686,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
         sizeof(pyopencv_##name##_t), \
     };
 #else
-#  define PUBLISH_OBJECT(name, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++; PyModule_AddObject(m, name, (PyObject *)&type);
+#  define PUBLISH_OBJECT(name, A, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++; PyModule_AddObject(m, name, (PyObject *)&type);
 #  define REGISTER_TYPE(name, wname) \
     static PyTypeObject pyopencv_##name##_Type = \
     { \
@@ -1767,19 +1767,23 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
 #include "pyopencv_generated_ns_reg.h"
 
-static int to_ok(PyTypeObject *to)
-{
-  to->tp_alloc = PyType_GenericAlloc;
-  to->tp_new = PyType_GenericNew;
-  to->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
-  return (PyType_Ready(to) == 0);
-}
-
 static bool init_body(PyObject * m)
 {
-#define MKTYPE2(NAME) pyopencv_##NAME##_specials(); if (!to_ok(&pyopencv_##NAME##_Type)) return false
-    #include "pyopencv_generated_type_reg.h"
-#undef MKTYPE2
+#define PUBLISH_OBJECT(NAME) \
+    { \
+        pyopencv_##NAME##_specials(); \
+        pyopencv_##NAME##_Type.tp_alloc = PyType_GenericAlloc; \
+        pyopencv_##NAME##_Type.tp_new = PyType_GenericNew; \
+        pyopencv_##NAME##_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
+        if (PyType_Ready(&pyopencv_##NAME##_Type) != 0) \
+        { \
+            return false; \
+        } \
+    }
+
+#include "pyopencv_generated_type_publish.h"
+
+#undef PUBLISH_OBJECT
 
     init_submodules(m); // from "pyopencv_generated_ns_reg.h"
 
@@ -1798,7 +1802,19 @@ static bool init_body(PyObject * m)
     Py_DECREF(opencv_error_dict);
     PyDict_SetItemString(d, "error", opencv_error);
 
+#if PY_MAJOR_VERSION >= 3
+#  define PUBLISH_OBJECT(NAME) \
+    Py_INCREF(&pyopencv_##NAME##_Type); \
+    PyModule_AddObject(m, #NAME, (PyObject *)&pyopencv_##NAME##_Type);
+#else
+#  define PUBLISH_OBJECT(NAME) \
+    _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&pyopencv_##NAME##_Type)->ob_refcnt++; \
+    PyModule_AddObject(m, #NAME, (PyObject *)&pyopencv_##NAME##_Type);
+#endif
+
 #include "pyopencv_generated_type_publish.h"
+
+#undef PUBLISH_OBJECT
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
     PUBLISH(CV_8U);
