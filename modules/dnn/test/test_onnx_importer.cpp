@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 
@@ -84,9 +84,11 @@ TEST_P(Test_ONNX_layers, Convolution)
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX"); // 2018R5+ is failed
 #endif
     // Reference output values are in range [-0.855, 0.611]
     testONNXModels("two_convolution");
@@ -157,6 +159,11 @@ TEST_P(Test_ONNX_layers, Multiplication)
 
 TEST_P(Test_ONNX_layers, Constant)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+#endif
     testONNXModels("constant");
 }
 
@@ -301,27 +308,33 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+        throw SkipTestException("Test is disabled for DLIE targets");
 #endif
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL
-                || target == DNN_TARGET_MYRIAD) {
-        throw SkipTestException("");
-    }
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled for Myriad targets");
+#endif
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled for OpenCL targets");
     testONNXModels("resnet101_duc_hdc", pb);
 }
 
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
-    if (cvtest::skipUnstableTests ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))) {
-        throw SkipTestException("");
-    }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip unstable test");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE
+            && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+    )
+        throw SkipTestException("Test is disabled for DLIE OpenCL targets");
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
     // output range: [-11; 8]
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
@@ -363,13 +376,16 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
 {
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
+
     double l1 = default_l1;
     double lInf = default_lInf;
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
-#endif
     // Output values are in range [-2.011, 2.111]
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         l1 = 0.007;
@@ -387,9 +403,6 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 
 TEST_P(Test_ONNX_nets, Inception_v2)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
-
     testONNXModels("inception_v2", pb, default_l1, default_lInf, true);
 }
 
@@ -401,9 +414,9 @@ TEST_P(Test_ONNX_nets, DenseNet121)
 
 TEST_P(Test_ONNX_nets, Inception_v1)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R5");
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
     testONNXModels("inception_v1", pb);
 }

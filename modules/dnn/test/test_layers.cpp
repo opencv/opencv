@@ -236,9 +236,9 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
@@ -247,15 +247,19 @@ TEST_P(Test_Caffe_layers, Concat)
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-    {
-        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 ||
-            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU) ||
-            INF_ENGINE_RELEASE > 2018050000)
-        throw SkipTestException("");
-    }
+        throw SkipTestException("Test is disabled for DLIE due negative_slope parameter");
 #endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE
+        && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16
+            || (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
+    )
+        throw SkipTestException("Test is disabled for DLIE");
+#endif
+
     checkBackend();
 
     // Test case

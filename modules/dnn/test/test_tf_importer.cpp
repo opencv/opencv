@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2017-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 /*
@@ -140,9 +140,15 @@ TEST_P(Test_TensorFlow_layers, padding)
 
 TEST_P(Test_TensorFlow_layers, padding_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+        throw SkipTestException("Test is disabled for DLIE");
+#endif
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
     // Reference output values are in range [0.0006, 2.798]
     runTensorFlowNet("padding_same");
@@ -191,9 +197,11 @@ TEST_P(Test_TensorFlow_layers, pooling)
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
     // Reference output values are in range [-0.519531, 0.112976]
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
     runTensorFlowNet("ave_pool_same");
 }
@@ -233,34 +241,36 @@ TEST_P(Test_TensorFlow_layers, reshape)
 
 TEST_P(Test_TensorFlow_layers, flatten)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+        throw SkipTestException("Test is disabled for DLIE");
 #endif
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+
     runTensorFlowNet("flatten", true);
 }
 
 TEST_P(Test_TensorFlow_layers, unfused_flatten)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+        throw SkipTestException("Test is disabled for DLIE");
 #endif
+
     runTensorFlowNet("unfused_flatten");
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
 
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("");
+        throw SkipTestException("Test is disabled for DLIE/OCL target (OpenVINO 2018R5)");
 #endif
     runTensorFlowNet("leaky_relu_order1");
     runTensorFlowNet("leaky_relu_order2");
@@ -269,18 +279,30 @@ TEST_P(Test_TensorFlow_layers, leaky_relu)
 
 TEST_P(Test_TensorFlow_layers, l2_normalize)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
+
     runTensorFlowNet("l2_normalize");
 }
 
 // TODO: fix it and add to l2_normalize
 TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE
+            && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+    )
+        throw SkipTestException("Test is disabled for DLIE for OpenCL targets");
+#endif
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled for Myriad targets");
+#endif
+
     runTensorFlowNet("l2_normalize_3d");
 }
 
@@ -329,11 +351,14 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 {
-    checkBackend();
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
+
+    checkBackend();
     std::string proto = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pbtxt", false);
     std::string model = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pb", false);
 
@@ -363,9 +388,11 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
 {
     checkBackend();
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
 
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", false);
@@ -419,10 +446,11 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("Unstable test case");
+        throw SkipTestException("Test is disabled for DLIE OpenCL targets in OpenVINO 2018R5");
 #endif
+
     checkBackend();
     std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt", false);
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pb", false);
@@ -483,12 +511,12 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 // np.save('east_text_detection.geometry.npy', geometry)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
-    checkBackend();
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
+
+    checkBackend();
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
@@ -559,10 +587,17 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Test is disabled");
+        throw SkipTestException("Test is disabled for DLIE");
 #endif
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
+
     // Reference output values are in range [-3.504, -0.002]
     runTensorFlowNet("fp16_padding_same", false, 6e-4, 4e-3);
 }
