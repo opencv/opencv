@@ -355,7 +355,7 @@ struct v_float64x8
 
 //////////////// Load and store operations ///////////////
 
-#define OPENCV_HAL_IMPL_AVX_LOADSTORE(_Tpvec, _Tp)                    \
+#define OPENCV_HAL_IMPL_AVX512_LOADSTORE(_Tpvec, _Tp)                    \
     inline _Tpvec v512_load(const _Tp* ptr)                           \
     { return _Tpvec(_mm512_loadu_si512((const __m512i*)ptr)); }       \
     inline _Tpvec v512_load_aligned(const _Tp* ptr)                   \
@@ -391,16 +391,16 @@ struct v_float64x8
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)               \
     { _mm256_storeu_si256((__m256i*)ptr, _v512_extract_high(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint8x64,  uchar)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int8x64,   schar)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint16x32, ushort)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int16x32,  short)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint32x16,  unsigned)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int32x16,   int)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_uint64x8,  uint64)
-OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x8,   int64)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_uint8x64,  uchar)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_int8x64,   schar)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_uint16x32, ushort)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_int16x32,  short)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_uint32x16,  unsigned)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_int32x16,   int)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_uint64x8,  uint64)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE(v_int64x8,   int64)
 
-#define OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(_Tpvec, _Tp, suffix, halfreg)   \
+#define OPENCV_HAL_IMPL_AVX512_LOADSTORE_FLT(_Tpvec, _Tp, suffix, halfreg)   \
     inline _Tpvec v512_load(const _Tp* ptr)                               \
     { return _Tpvec(_mm512_loadu_##suffix(ptr)); }                        \
     inline _Tpvec v512_load_aligned(const _Tp* ptr)                       \
@@ -436,54 +436,54 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE(v_int64x8,   int64)
     inline void v_store_high(_Tp* ptr, const _Tpvec& a)                   \
     { _mm256_storeu_##suffix(ptr, _v512_extract_high(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float32x16, float,  ps, __m256)
-OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x8, double, pd, __m256d)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE_FLT(v_float32x16, float,  ps, __m256)
+OPENCV_HAL_IMPL_AVX512_LOADSTORE_FLT(v_float64x8, double, pd, __m256d)
 
-#define OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, _Tpvecf, suffix, cast) \
+#define OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, _Tpvecf, suffix, cast) \
     inline _Tpvec v_reinterpret_as_##suffix(const _Tpvecf& a)   \
     { return _Tpvec(cast(a.val)); }
 
-#define OPENCV_HAL_IMPL_AVX_INIT(_Tpvec, _Tp, suffix, ssuffix, ctype_s)           \
-    inline _Tpvec v512_setzero_##suffix()                                         \
-    { return _Tpvec(_mm512_setzero_si512()); }                                    \
-    inline _Tpvec v512_setall_##suffix(_Tp v)                                     \
-    { return _Tpvec(_mm512_set1_##ssuffix((ctype_s)v)); }                         \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x64,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x64,    suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x32,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x32,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x16,  suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x16,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x8,   suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x8,    suffix, OPENCV_HAL_NOP)        \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float32x16, suffix, _mm256_castps_si256)   \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_float64x8,  suffix, _mm256_castpd_si256)
+#define OPENCV_HAL_IMPL_AVX512_INIT(_Tpvec, _Tp, suffix, ssuffix, ctype_s)         \
+    inline _Tpvec v512_setzero_##suffix()                                          \
+    { return _Tpvec(_mm512_setzero_si512()); }                                     \
+    inline _Tpvec v512_setall_##suffix(_Tp v)                                      \
+    { return _Tpvec(_mm512_set1_##ssuffix((ctype_s)v)); }                          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,   suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,    suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint16x32,  suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int16x32,   suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint32x16,  suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int32x16,   suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint64x8,   suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int64x8,    suffix, OPENCV_HAL_NOP)      \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_float32x16, suffix, _mm256_castps_si256) \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_float64x8,  suffix, _mm256_castpd_si256)
 
-OPENCV_HAL_IMPL_AVX_INIT(v_uint8x64,  uchar,    u8,  epi8,   char)
-OPENCV_HAL_IMPL_AVX_INIT(v_int8x64,   schar,    s8,  epi8,   char)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint16x32, ushort,   u16, epi16,  short)
-OPENCV_HAL_IMPL_AVX_INIT(v_int16x32,  short,    s16, epi16,  short)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint32x16, unsigned, u32, epi32,  int)
-OPENCV_HAL_IMPL_AVX_INIT(v_int32x16,  int,      s32, epi32,  int)
-OPENCV_HAL_IMPL_AVX_INIT(v_uint64x8,  uint64,   u64, epi64,  int64)
-OPENCV_HAL_IMPL_AVX_INIT(v_int64x8,   int64,    s64, epi64,  int64)
+OPENCV_HAL_IMPL_AVX512_INIT(v_uint8x64,  uchar,    u8,  epi8,   char)
+OPENCV_HAL_IMPL_AVX512_INIT(v_int8x64,   schar,    s8,  epi8,   char)
+OPENCV_HAL_IMPL_AVX512_INIT(v_uint16x32, ushort,   u16, epi16,  short)
+OPENCV_HAL_IMPL_AVX512_INIT(v_int16x32,  short,    s16, epi16,  short)
+OPENCV_HAL_IMPL_AVX512_INIT(v_uint32x16, unsigned, u32, epi32,  int)
+OPENCV_HAL_IMPL_AVX512_INIT(v_int32x16,  int,      s32, epi32,  int)
+OPENCV_HAL_IMPL_AVX512_INIT(v_uint64x8,  uint64,   u64, epi64,  int64)
+OPENCV_HAL_IMPL_AVX512_INIT(v_int64x8,   int64,    s64, epi64,  int64)
 
-#define OPENCV_HAL_IMPL_AVX_INIT_FLT(_Tpvec, _Tp, suffix, zsuffix, cast) \
-    inline _Tpvec v512_setzero_##suffix()                                \
-    { return _Tpvec(_mm512_setzero_##zsuffix()); }                       \
-    inline _Tpvec v512_setall_##suffix(_Tp v)                            \
-    { return _Tpvec(_mm512_set1_##zsuffix(v)); }                         \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x64,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x64,   suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x32, suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int16x32,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint32x16, suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int32x16,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint64x8,  suffix, cast)          \
-    OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int64x8,   suffix, cast)
+#define OPENCV_HAL_IMPL_AVX512_INIT_FLT(_Tpvec, _Tp, suffix, zsuffix, cast) \
+    inline _Tpvec v512_setzero_##suffix()                                   \
+    { return _Tpvec(_mm512_setzero_##zsuffix()); }                          \
+    inline _Tpvec v512_setall_##suffix(_Tp v)                               \
+    { return _Tpvec(_mm512_set1_##zsuffix(v)); }                            \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,   suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint16x32, suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int16x32,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint32x16, suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int32x16,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint64x8,  suffix, cast)          \
+    OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int64x8,   suffix, cast)
 
-OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float32x16, float,  f32, ps, _mm512_castsi512_ps)
-OPENCV_HAL_IMPL_AVX_INIT_FLT(v_float64x8,  double, f64, pd, _mm512_castsi512_pd)
+OPENCV_HAL_IMPL_AVX512_INIT_FLT(v_float32x16, float,  f32, ps, _mm512_castsi512_ps)
+OPENCV_HAL_IMPL_AVX512_INIT_FLT(v_float64x8,  double, f64, pd, _mm512_castsi512_pd)
 
 inline v_float32x16 v_reinterpret_as_f32(const v_float32x16& a)
 { return a; }
@@ -508,7 +508,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
 }
 
 /* Recombine & ZIP */
-#define OPENCV_HAL_IMPL_AVX_ZIP(_Tpvec, suffix)                                            \
+#define OPENCV_HAL_IMPL_AVX512_ZIP(_Tpvec, suffix)                                         \
     inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)                          \
     { return _v512_combine(_v512_extract_low(a.val), _v512_extract_low(b.val)); }          \
     inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)                         \
@@ -529,36 +529,36 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
         ab1.val = _mm512_mask_expand_##suffix(ab1.val, 0xAAAAAAAA << _Tpvec::nlanes/2, b); \
     }
 
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint8x64, epi8)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int8x64, epi8)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint16x32, epi16)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int16x32, epi16)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint32x16, epi32)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int32x16, epi32)
-OPENCV_HAL_IMPL_AVX_ZIP(v_uint64x8, epi64)
-OPENCV_HAL_IMPL_AVX_ZIP(v_int64x8, epi64)
-OPENCV_HAL_IMPL_AVX_ZIP(v_float32x16, ps)
-OPENCV_HAL_IMPL_AVX_ZIP(v_float64x8, pd)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint8x64, epi8)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int8x64, epi8)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint64x8, epi64)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int64x8, epi64)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_float64x8, pd)
 
 ////////// Arithmetic, bitwise and comparison operations /////////
 
 /* Element-wise binary and unary operations */
 
 /** Non-saturating arithmetics **/
-#define OPENCV_HAL_IMPL_AVX_BIN_FUNC(func, _Tpvec, intrin) \
-    inline _Tpvec func(const _Tpvec& a, const _Tpvec& b)   \
+#define OPENCV_HAL_IMPL_AVX512_BIN_FUNC(func, _Tpvec, intrin) \
+    inline _Tpvec func(const _Tpvec& a, const _Tpvec& b)      \
     { return _Tpvec(intrin(a.val, b.val)); }
 
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint8x64, _mm512_add_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int8x64, _mm512_add_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_uint16x32, _mm512_add_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_add_wrap, v_int16x32, _mm512_add_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint8x64, _mm512_sub_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int8x64, _mm512_sub_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_uint16x32, _mm512_sub_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_sub_wrap, v_int16x32, _mm512_sub_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_uint16x32, _mm512_mullo_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_mul_wrap, v_int16x32, _mm512_mullo_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_add_wrap, v_uint8x64, _mm512_add_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_add_wrap, v_int8x64, _mm512_add_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_add_wrap, v_uint16x32, _mm512_add_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_add_wrap, v_int16x32, _mm512_add_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_sub_wrap, v_uint8x64, _mm512_sub_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_sub_wrap, v_int8x64, _mm512_sub_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_sub_wrap, v_uint16x32, _mm512_sub_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_sub_wrap, v_int16x32, _mm512_sub_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_mul_wrap, v_uint16x32, _mm512_mullo_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_mul_wrap, v_int16x32, _mm512_mullo_epi16)
 
 inline v_uint8x64 v_mul_wrap(const v_uint8x64& a, const v_uint8x64& b)
 {
@@ -573,44 +573,44 @@ inline v_int8x64 v_mul_wrap(const v_int8x64& a, const v_int8x64& b)
     return v_reinterpret_as_s8(v_mul_wrap(v_reinterpret_as_u8(a), v_reinterpret_as_u8(b)));
 }
 
-#define OPENCV_HAL_IMPL_AVX_BIN_OP(bin_op, _Tpvec, intrin)            \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(intrin(a.val, b.val)); }                          \
-    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)    \
+#define OPENCV_HAL_IMPL_AVX512_BIN_OP(bin_op, _Tpvec, intrin)            \
+    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)     \
+    { return _Tpvec(intrin(a.val, b.val)); }                             \
+    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)       \
     { a.val = intrin(a.val, b.val); return a; }
 
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint32x16, _mm512_add_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint32x16, _mm512_sub_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int32x16, _mm512_add_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int32x16, _mm512_sub_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint64x8, _mm512_add_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint64x8, _mm512_sub_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int64x8, _mm512_add_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int64x8, _mm512_sub_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_uint32x16, _mm512_add_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_uint32x16, _mm512_sub_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_int32x16, _mm512_add_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_int32x16, _mm512_sub_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_uint64x8, _mm512_add_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_uint64x8, _mm512_sub_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_int64x8, _mm512_add_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_int64x8, _mm512_sub_epi64)
 
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint32x16, _mm512_mullo_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int32x16, _mm512_mullo_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_uint64x8, _mm512_mullo_epi64)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_int64x8, _mm512_mullo_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_uint32x16, _mm512_mullo_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_int32x16, _mm512_mullo_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_uint64x8, _mm512_mullo_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_int64x8, _mm512_mullo_epi64)
 
 /** Saturating arithmetics **/
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint8x64,  _mm512_adds_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint8x64,  _mm512_subs_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int8x64,   _mm512_adds_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int8x64,   _mm512_subs_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_uint16x32, _mm512_adds_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_uint16x32, _mm512_subs_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_int16x32,  _mm512_adds_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_int16x32,  _mm512_subs_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_uint8x64,  _mm512_adds_epu8)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_uint8x64,  _mm512_subs_epu8)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_int8x64,   _mm512_adds_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_int8x64,   _mm512_subs_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_uint16x32, _mm512_adds_epu16)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_uint16x32, _mm512_subs_epu16)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_int16x32,  _mm512_adds_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_int16x32,  _mm512_subs_epi16)
 
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float32x16, _mm512_add_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float32x16, _mm512_sub_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float32x16, _mm512_mul_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float32x16, _mm512_div_ps)
-OPENCV_HAL_IMPL_AVX_BIN_OP(+, v_float64x8, _mm512_add_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(-, v_float64x8, _mm512_sub_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(*, v_float64x8, _mm512_mul_pd)
-OPENCV_HAL_IMPL_AVX_BIN_OP(/, v_float64x8, _mm512_div_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_float32x16, _mm512_add_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_float32x16, _mm512_sub_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_float32x16, _mm512_mul_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(/, v_float32x16, _mm512_div_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(+, v_float64x8, _mm512_add_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(-, v_float64x8, _mm512_sub_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(*, v_float64x8, _mm512_mul_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_OP(/, v_float64x8, _mm512_div_pd)
 
 // saturating multiply
 inline v_uint8x64 operator * (const v_uint8x64& a, const v_uint8x64& b)
@@ -710,146 +710,131 @@ inline void v_mul_expand(const v_int32x16& a, const v_int32x16& b,
 }
 
 /** Bitwise shifts **/
-#define OPENCV_HAL_IMPL_AVX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix)  \
-    inline _Tpuvec operator << (const _Tpuvec& a, int imm)      \
-    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }       \
-    inline _Tpsvec operator << (const _Tpsvec& a, int imm)      \
-    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }       \
-    inline _Tpuvec operator >> (const _Tpuvec& a, int imm)      \
-    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }       \
-    inline _Tpsvec operator >> (const _Tpsvec& a, int imm)      \
-    { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }       \
-    template<int imm>                                           \
-    inline _Tpuvec v_shl(const _Tpuvec& a)                      \
-    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }       \
-    template<int imm>                                           \
-    inline _Tpsvec v_shl(const _Tpsvec& a)                      \
-    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }       \
-    template<int imm>                                           \
-    inline _Tpuvec v_shr(const _Tpuvec& a)                      \
-    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }       \
-    template<int imm>                                           \
-    inline _Tpsvec v_shr(const _Tpsvec& a)                      \
+#define OPENCV_HAL_IMPL_AVX512_SHIFT_OP(_Tpuvec, _Tpsvec, suffix) \
+    inline _Tpuvec operator << (const _Tpuvec& a, int imm)        \
+    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }         \
+    inline _Tpsvec operator << (const _Tpsvec& a, int imm)        \
+    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }         \
+    inline _Tpuvec operator >> (const _Tpuvec& a, int imm)        \
+    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }         \
+    inline _Tpsvec operator >> (const _Tpsvec& a, int imm)        \
+    { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }         \
+    template<int imm>                                             \
+    inline _Tpuvec v_shl(const _Tpuvec& a)                        \
+    { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }         \
+    template<int imm>                                             \
+    inline _Tpsvec v_shl(const _Tpsvec& a)                        \
+    { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }         \
+    template<int imm>                                             \
+    inline _Tpuvec v_shr(const _Tpuvec& a)                        \
+    { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }         \
+    template<int imm>                                             \
+    inline _Tpsvec v_shr(const _Tpsvec& a)                        \
     { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }
 
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint16x32, v_int16x32, epi16)
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint32x16, v_int32x16, epi32)
-OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint64x8,  v_int64x8,  epi64)
+OPENCV_HAL_IMPL_AVX512_SHIFT_OP(v_uint16x32, v_int16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_SHIFT_OP(v_uint32x16, v_int32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_SHIFT_OP(v_uint64x8,  v_int64x8,  epi64)
 
 
 /** Bitwise logic **/
-#define OPENCV_HAL_IMPL_AVX_LOGIC_OP(_Tpvec, suffix, not_const)  \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(&, _Tpvec, _mm512_and_##suffix)   \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(|, _Tpvec, _mm512_or_##suffix)    \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(^, _Tpvec, _mm512_xor_##suffix)   \
-    inline _Tpvec operator ~ (const _Tpvec& a)                   \
+#define OPENCV_HAL_IMPL_AVX512_LOGIC_OP(_Tpvec, suffix, not_const) \
+    OPENCV_HAL_IMPL_AVX512_BIN_OP(&, _Tpvec, _mm512_and_##suffix)  \
+    OPENCV_HAL_IMPL_AVX512_BIN_OP(|, _Tpvec, _mm512_or_##suffix)   \
+    OPENCV_HAL_IMPL_AVX512_BIN_OP(^, _Tpvec, _mm512_xor_##suffix)  \
+    inline _Tpvec operator ~ (const _Tpvec& a)                     \
     { return _Tpvec(_mm512_xor_##suffix(a.val, not_const)); }
 
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint8x64,   si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int8x64,    si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint16x32,  si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int16x32,   si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint32x16,  si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int32x16,   si512, _mm512_set1_epi32(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint64x8,   si512, _mm512_set1_epi64(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int64x8,    si512, _mm512_set1_epi64(-1))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float32x16, ps,    _mm512_castsi512_ps(_mm512_set1_epi32(-1)))
-OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float64x8,  pd,    _mm512_castsi512_pd(_mm512_set1_epi32(-1)))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint8x64,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_int8x64,    si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint16x32,  si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_int16x32,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint32x16,  si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_int32x16,   si512, _mm512_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint64x8,   si512, _mm512_set1_epi64(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_int64x8,    si512, _mm512_set1_epi64(-1))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_float32x16, ps,    _mm512_castsi512_ps(_mm512_set1_epi32(-1)))
+OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_float64x8,  pd,    _mm512_castsi512_pd(_mm512_set1_epi32(-1)))
 
 /** Select **/
-#define OPENCV_HAL_IMPL_AVX_SELECT(_Tpvec, suffix)                               \
+#define OPENCV_HAL_IMPL_AVX512_SELECT(_Tpvec, suffix)                            \
     inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
     { return _Tpvec(_mm512_mask_blend_##suffix(_mm512_cmp_##suffix##_mask(mask.val, _mm512_setzero_si512(), _MM_CMPINT_EQ), a.val, b.val)); }
 
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint8x64,   epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int8x64,    epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint16x32, epi16)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int16x32,  epi16)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint32x16, epi32)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int32x16,  epi32)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint64x8,  epi64)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int64x8,   epi64)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float32x16,   ps)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float64x8,    pd)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_uint8x64,   epi8)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_int8x64,    epi8)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_int16x32,  epi16)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_int32x16,  epi32)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_uint64x8,  epi64)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_int64x8,   epi64)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_float32x16,   ps)
+OPENCV_HAL_IMPL_AVX512_SELECT(v_float64x8,    pd)
 
 /** Comparison **/
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                     \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b)  \
-    { return ~(a == b); }                                         \
-    inline _Tpvec operator <  (const _Tpvec& a, const _Tpvec& b)  \
-    { return b > a; }                                             \
-    inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b)  \
-    { return ~(a < b); }                                          \
-    inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b)  \
-    { return b >= a; }
+#define OPENCV_HAL_IMPL_AVX512_CMP_INT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
+    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)               \
+    { return _Tpvec(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval)); }
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, sbit)   \
-    inline _Tpuvec operator == (const _Tpuvec& a, const _Tpuvec& b)      \
-    { return _Tpuvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpuvec operator > (const _Tpuvec& a, const _Tpuvec& b)       \
-    {                                                                    \
-        __m512i smask = _mm256_set1_##suffix(sbit);                      \
-        return _Tpuvec(_mm256_cmpgt_##suffix(                            \
-                       _mm256_xor_si256(a.val, smask),                   \
-                       _mm256_xor_si256(b.val, smask)));                 \
-    }                                                                    \
-    inline _Tpsvec operator == (const _Tpsvec& a, const _Tpsvec& b)      \
-    { return _Tpsvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpsvec operator > (const _Tpsvec& a, const _Tpsvec& b)       \
-    { return _Tpsvec(_mm256_cmpgt_##suffix(a.val, b.val)); }             \
-    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpuvec)                               \
-    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpsvec)
+#define OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(_Tpvec, sufcmp, sufset, tval)           \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(==, _MM_CMPINT_EQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(!=, _MM_CMPINT_NE,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(<,  _MM_CMPINT_LT,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(>,  _MM_CMPINT_NLE, _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(<=, _MM_CMPINT_LE,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX_CMP_INT(>=, _MM_CMPINT_NLT, _Tpvec, sufcmp, sufset, tval)
 
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint8x32,  v_int8x32,  epi8,  (char)-128)
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint16x16, v_int16x16, epi16, (short)-32768)
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint32x8,  v_int32x8,  epi32, (int)0x80000000)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint8x64,   epu8,  epi8, (char)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int8x64,    epi8,  epi8, (char)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint16x32, epu16, epi16, (short)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int16x32,  epi16, epi16, (short)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint32x16, epu32, epi32, (int)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int32x16,  epi32, epi32, (int)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint64x8,  epu64, epi64, (int64)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int64x8,   epi64, epi64, (int64)-1)
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(_Tpvec)                 \
-    inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_cmpeq_epi64(a.val, b.val)); }         \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
-    { return ~(a == b); }
+#define OPENCV_HAL_IMPL_AVX512_CMP_FLT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
+    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)               \
+    { return _Tpvec(_mm512_castsi512_##sufcmp(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval))); }
 
-OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_uint64x4)
-OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
+#define OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(_Tpvec, sufcmp, sufset, tval)           \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(==, _CMP_EQ_OQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(!=, _CMP_NEQ_OQ, _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(<,  _CMP_LT_OQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(>,  _CMP_GT_OQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(<=, _CMP_LE_OQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(>=, _CMP_GE_OQ,  _Tpvec, sufcmp, sufset, tval)
 
-#define OPENCV_HAL_IMPL_AVX_CMP_FLT(bin_op, imm8, _Tpvec, suffix)    \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_cmp_##suffix(a.val, b.val, imm8)); }
+OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(v_float32x16, ps, epi32, (int)-1)
+OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(v_float64x8,  pd, epi64, (int64)-1)
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(_Tpvec, suffix)               \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(==, _CMP_EQ_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(!=, _CMP_NEQ_OQ, _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(<,  _CMP_LT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(>,  _CMP_GT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(<=, _CMP_LE_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(>=, _CMP_GE_OQ,  _Tpvec, suffix)
-
-OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float64x4, pd)
-
-inline v_float32x8 v_not_nan(const v_float32x8& a)
-{ return v_float32x8(_mm256_cmp_ps(a.val, a.val, _CMP_ORD_Q)); }
-inline v_float64x4 v_not_nan(const v_float64x4& a)
-{ return v_float64x4(_mm256_cmp_pd(a.val, a.val, _CMP_ORD_Q)); }
+inline v_float32x16 v_not_nan(const v_float32x16& a)
+{ return v_float32x16(_mm512_castsi512_ps(_mm512_maskz_set1_epi32(_mm512_cmp_ps_mask(a.val, a.val, _CMP_ORD_Q), (int)-1))); }
+inline v_float64x8 v_not_nan(const v_float64x8& a)
+{ return v_float64x8(_mm512_castsi512_pd(_mm512_maskz_set1_epi64(_mm512_cmp_pd_mask(a.val, a.val, _CMP_ORD_Q), (int64)-1))); }
 
 /** min/max **/
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_uint8x32,  _mm256_min_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_uint8x32,  _mm256_max_epu8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_int8x32,   _mm256_min_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_int8x32,   _mm256_max_epi8)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_uint16x16, _mm256_min_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_uint16x16, _mm256_max_epu16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_int16x16,  _mm256_min_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_int16x16,  _mm256_max_epi16)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_uint32x8,  _mm256_min_epu32)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_uint32x8,  _mm256_max_epu32)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_int32x8,   _mm256_min_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_int32x8,   _mm256_max_epi32)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_float32x8, _mm256_min_ps)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_float32x8, _mm256_max_ps)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_min, v_float64x4, _mm256_min_pd)
-OPENCV_HAL_IMPL_AVX_BIN_FUNC(v_max, v_float64x4, _mm256_max_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_uint8x64,   _mm512_min_epu8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_uint8x64,   _mm512_max_epu8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_int8x64,    _mm512_min_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_int8x64,    _mm512_max_epi8)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_uint16x32,  _mm512_min_epu16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_uint16x32,  _mm512_max_epu16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_int16x32,   _mm512_min_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_int16x32,   _mm512_max_epi16)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_uint32x16,  _mm512_min_epu32)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_uint32x16,  _mm512_max_epu32)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_int32x16,   _mm512_min_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_int32x16,   _mm512_max_epi32)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_uint64x8,   _mm512_min_epu64)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_uint64x8,   _mm512_max_epu64)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_int64x8,    _mm512_min_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_int64x8,    _mm512_max_epi64)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_float32x16, _mm512_min_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float32x16, _mm512_max_ps)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_float64x8,  _mm512_min_pd)
+OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float64x8,  _mm512_max_pd)
 
 /** Rotate **/
 template<int imm>
