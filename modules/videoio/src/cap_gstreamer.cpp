@@ -1142,7 +1142,7 @@ public:
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
-    bool open(const char* filename, int fourcc,
+    bool open(const std::string &filename, int fourcc,
                        double fps, const Size &frameSize, bool isColor );
     void close();
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
@@ -1280,13 +1280,12 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  * If the file extension did was not recognize, an avi container is used
  *
  */
-bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
+bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                     double fps, const cv::Size &frameSize, bool is_color )
 {
     // check arguments
-    assert (filename);
-    assert (fps > 0);
-    assert (frameSize.width > 0  &&  frameSize.height > 0);
+    if (filename.empty() || frameSize.width <= 0 ||  frameSize.height <= 0 || fps <= 0)
+        return false;
 
     // init gstreamer
     gst_initializer::init();
@@ -1313,7 +1312,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
 
-    encodebin = gst_parse_launch(filename, &err);
+    encodebin = gst_parse_launch(filename.c_str(), &err);
     manualpipeline = (encodebin != NULL);
 
     if(manualpipeline)
@@ -1377,7 +1376,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         }
 
         //create container caps from file extension
-        mime = filenameToMimetype(filename);
+        mime = filenameToMimetype(filename.c_str());
         if (!mime) {
             CV_WARN("Gstreamer Opencv backend does not support this file type.");
             return false;
@@ -1396,7 +1395,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         g_object_set(G_OBJECT(encodebin), "profile", containerprofile, NULL);
         source = gst_element_factory_make("appsrc", NULL);
         file = gst_element_factory_make("filesink", NULL);
-        g_object_set(G_OBJECT(file), "location", filename, NULL);
+        g_object_set(G_OBJECT(file), "location", filename.c_str(), NULL);
     }
 
     if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
@@ -1541,12 +1540,11 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     return true;
 }
 
-Ptr<IVideoWriter> cv::create_GStreamer_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+Ptr<IVideoWriter> cv::create_GStreamer_writer(const std::string &filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    if (wrt->open(filename.c_str(), fourcc, fps, frameSize, isColor))
+    if (wrt->open(filename, fourcc, fps, frameSize, isColor))
         return makePtr<LegacyWriter>(wrt);
-
     delete wrt;
     return 0;
 }
