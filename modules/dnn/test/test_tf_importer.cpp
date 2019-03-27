@@ -549,6 +549,7 @@ TEST_P(Test_TensorFlow_layers, slice)
 TEST_P(Test_TensorFlow_layers, softmax)
 {
     runTensorFlowNet("keras_softmax");
+    runTensorFlowNet("slim_softmax");
 }
 
 TEST_P(Test_TensorFlow_layers, relu6)
