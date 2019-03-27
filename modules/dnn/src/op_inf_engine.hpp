@@ -114,10 +114,8 @@ public:
 
     virtual size_t getBatchSize() const noexcept CV_OVERRIDE;
 
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
-    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) noexcept;
-    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) noexcept;
-#endif
+    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) noexcept CV_OVERRIDE;
+    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) noexcept CV_OVERRIDE;
 
     void init(int targetId);
 
