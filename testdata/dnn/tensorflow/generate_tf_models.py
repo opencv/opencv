@@ -672,6 +672,11 @@ conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
 sub = conv - inp
 save(inp, sub, 'eltwise_sub')
 ################################################################################
+inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
+softmax = tf.contrib.slim.softmax(conv)
+save(inp, softmax, 'slim_softmax')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
