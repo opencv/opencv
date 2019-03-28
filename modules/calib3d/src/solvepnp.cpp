@@ -80,9 +80,10 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     line(image, imagePoints[0], imagePoints[3], Scalar(255, 0, 0), thickness);
 }
 
-bool solvePnP( InputArray _opoints, InputArray _ipoints,
+static
+bool solvePnP_(InputArray _opoints, InputArray _ipoints,
                InputArray _cameraMatrix, InputArray _distCoeffs,
-               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
+               InputOutputArray _rvec, InputOutputArray _tvec, bool useExtrinsicGuess, int flags)
 {
     CV_INSTRUMENT_REGION();
 
@@ -90,6 +91,8 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
                && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+
+    CV_DbgAssert(!useExtrinsicGuess || flags == SOLVEPNP_ITERATIVE);  // OPENCV_FUTURE
 
     Mat rvec, tvec;
     if( flags != SOLVEPNP_ITERATIVE )
@@ -196,6 +199,42 @@ bool solvePnP( InputArray _opoints, InputArray _ipoints,
     return result;
 }
 
+bool solvePnP(
+        InputArray objectPoints, InputArray imagePoints,
+        InputArray cameraMatrix, InputArray distCoeffs,
+        OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess, int flags)
+{
+    return solvePnP_(objectPoints, imagePoints, cameraMatrix, distCoeffs,
+            (const _InputOutputArray&)rvec, (const _InputOutputArray&)tvec, useExtrinsicGuess,
+            flags);
+}
+
+bool solvePnP(
+        InputArray objectPoints, InputArray imagePoints,
+        InputArray cameraMatrix, InputArray distCoeffs,
+        InputArray rvec0, InputArray tvec0,
+        OutputArray rvec, OutputArray tvec,
+        enum SolvePnPType flags)
+{
+    Mat rvec_, tvec_;
+    rvec0.copyTo(rvec_);
+    tvec0.copyTo(tvec_);
+    bool result = solvePnP_(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec_, tvec_, true, flags);
+    rvec_.copyTo(rvec);
+    tvec_.copyTo(tvec);
+    return result;
+}
+
+bool solvePnPExtrinsicGuess(
+        InputArray objectPoints, InputArray imagePoints,
+        InputArray cameraMatrix, InputArray distCoeffs,
+        InputOutputArray rvec, InputOutputArray tvec,
+        enum SolvePnPType flags)
+{
+    return solvePnP_(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec, true, flags);
+}
+
+
 class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 
@@ -212,8 +251,8 @@ public:
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
 
-        bool correspondence = solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
-                                            rvec, tvec, useExtrinsicGuess, flags );
+        bool correspondence = solvePnP_(_m1, _m2, cameraMatrix, distCoeffs,
+                                        rvec, tvec, useExtrinsicGuess, flags);
 
         Mat _local_model;
         hconcat(rvec, tvec, _local_model);
@@ -309,7 +348,9 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if( model_points == npoints )
     {
-        bool result = solvePnP(opoints, ipoints, cameraMatrix, distCoeffs, _rvec, _tvec, useExtrinsicGuess, ransac_kernel_method);
+        bool result = solvePnP_(opoints, ipoints, cameraMatrix, distCoeffs,
+                (const _InputOutputArray&)_rvec, (const _InputOutputArray&)_tvec, useExtrinsicGuess,
+                ransac_kernel_method);
 
         if(!result)
         {
@@ -370,9 +411,9 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
-    result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                      distCoeffs, rvec, tvec, useExtrinsicGuess,
-                      (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    result = solvePnP_(opoints_inliers, ipoints_inliers, cameraMatrix, distCoeffs,
+            (const _InputOutputArray&)rvec, (const _InputOutputArray&)tvec, useExtrinsicGuess,
+            (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
 
     if( result <= 0 )
     {

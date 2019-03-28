@@ -477,8 +477,8 @@ TEST(Calib3d_SolvePnP, double_support)
     Mat R,t, RF, tF;
     vector<int> inliers;
 
-    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
-    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, true, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3dF, points2dF, intrinsics, cv::Mat(), RF, tF, false, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
+    solvePnPRansac(points3d, points2d, intrinsics, cv::Mat(), R, t, false, 100, 8.f, 0.999, inliers, cv::SOLVEPNP_P3P);
 
     EXPECT_LE(cvtest::norm(R, Mat_<double>(RF), NORM_INF), 1e-3);
     EXPECT_LE(cvtest::norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
@@ -509,17 +509,17 @@ TEST(Calib3d_SolvePnP, translation)
     rvec =(Mat_<float>(3,1) << 0, 0, 0);
     tvec = (Mat_<float>(3,1) << 100, 100, 0);
 
-    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
+    solvePnPExtrinsicGuess(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec);
     EXPECT_TRUE(checkRange(rvec));
     EXPECT_TRUE(checkRange(tvec));
 
     rvec =(Mat_<double>(3,1) << 0, 0, 0);
     tvec = (Mat_<double>(3,1) << 100, 100, 0);
-    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, true);
+    solvePnPExtrinsicGuess(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec);
     EXPECT_TRUE(checkRange(rvec));
     EXPECT_TRUE(checkRange(tvec));
 
-    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec, false);
+    solvePnP(p3d, p2d, cameraIntrinsic, noArray(), rvec, tvec);
     EXPECT_TRUE(checkRange(rvec));
     EXPECT_TRUE(checkRange(tvec));
 }
@@ -546,7 +546,7 @@ TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
         Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
         Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
 
-        solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+        solvePnPExtrinsicGuess(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, SOLVEPNP_ITERATIVE);
 
         std::cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
         std::cout << "rvec_est: " << rvec_est.t() << std::endl;
@@ -577,7 +577,7 @@ TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
         Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
         Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
 
-        solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+        solvePnPExtrinsicGuess(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, SOLVEPNP_ITERATIVE);
 
         std::cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
         std::cout << "rvec_est: " << rvec_est.t() << std::endl;
