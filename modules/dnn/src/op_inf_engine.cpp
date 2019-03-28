@@ -784,7 +784,11 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R3)
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = const_cast<InferenceEngine::CNNNetwork&>(t_net).getInputShapes();
+#else
     InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+#endif
     InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
     bool equal_flag = true;
     size_t i = 0;
