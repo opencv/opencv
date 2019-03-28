@@ -1136,10 +1136,8 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         fileType = [AVFileTypeMPEG4 copy];
     }else if ([fileExt isEqualToString:@"m4v"]){
         fileType = [AVFileTypeAppleM4V copy];
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
     }else if ([fileExt isEqualToString:@"3gp"] || [fileExt isEqualToString:@"3gpp"] || [fileExt isEqualToString:@"sdv"]  ){
         fileType = [AVFileType3GPP copy];
-#endif
     } else{
         is_good = false;
     }
