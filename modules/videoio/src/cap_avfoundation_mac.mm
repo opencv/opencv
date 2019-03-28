@@ -1115,7 +1115,7 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
 
 
 CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filename, int fourcc, double fps, CvSize frame_size, int is_color)
-    : is_good(true)
+    : path(0), codec(0), fileType(0), mMovieFPS(0), movieColor(0), mFrameNum(0), is_good(true)
 {
     if (fps <= 0 || frame_size.width <= 0 || frame_size.height <= 0)
     {
@@ -1124,7 +1124,6 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
     }
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    mFrameNum = 0;
     mMovieFPS = fps;
     movieSize = frame_size;
     movieColor = is_color;
@@ -1232,14 +1231,20 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
 CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    [mMovieWriterInput markAsFinished];
-    [mMovieWriter finishWriting];
-    [mMovieWriter release];
-    [mMovieWriterInput release];
-    [mMovieWriterAdaptor release];
-    [path release];
-    [codec release];
-    [fileType release];
+    if (mMovieWriterInput && mMovieWriter && mMovieWriterAdaptor)
+    {
+        [mMovieWriterInput markAsFinished];
+        [mMovieWriter finishWriting];
+        [mMovieWriter release];
+        [mMovieWriterInput release];
+        [mMovieWriterAdaptor release];
+    }
+    if (path)
+        [path release];
+    if (codec)
+        [codec release];
+    if (fileType)
+        [fileType release];
     cvReleaseImage(&argbimage);
 
     [localpool drain];
