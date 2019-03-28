@@ -837,272 +837,183 @@ OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_float64x8,  _mm512_min_pd)
 OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float64x8,  _mm512_max_pd)
 
 /** Rotate **/
-template<int imm>
-inline v_uint8x32 v_rotate_left(const v_uint8x32& a, const v_uint8x32& b)
-{
-    enum {IMM_R = (16 - imm) & 0xFF};
-    enum {IMM_R2 = (32 - imm) & 0xFF};
-
-    if (imm == 0)  return a;
-    if (imm == 32) return b;
-    if (imm > 32)  return v_uint8x32();
-
-    __m512i swap = _mm256_permute2x128_si256(a.val, b.val, 0x03);
-    if (imm == 16) return v_uint8x32(swap);
-    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swap, IMM_R));
-    return v_uint8x32(_mm256_alignr_epi8(swap, b.val, IMM_R2)); // imm < 32
+#define OPENCV_HAL_IMPL_AVX512_ROTATE(_Tpvec, suffix)                                                                                    \
+template<int imm>                                                                                                                        \
+inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                                            \
+{                                                                                                                                        \
+    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    if (imm == 0) return a;                                                                                                              \
+    if (imm == _Tpvec::nlanes) return b;                                                                                                 \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << SHIFT2, b), -1 << imm, a));                           \
+  /*const _Tpvec::lane_type idx[] = { 0x00+SHIFT2,0x01+SHIFT2,0x02+SHIFT2,0x03+SHIFT2,0x04+SHIFT2,0x05+SHIFT2,0x06+SHIFT2,0x07+SHIFT2,   \
+                                      0x08+SHIFT2,0x09+SHIFT2,0x0a+SHIFT2,0x0b+SHIFT2,0x0c+SHIFT2,0x0d+SHIFT2,0x0e+SHIFT2,0x0f+SHIFT2,   \
+                                      0x10+SHIFT2,0x11+SHIFT2,0x12+SHIFT2,0x13+SHIFT2,0x14+SHIFT2,0x15+SHIFT2,0x16+SHIFT2,0x17+SHIFT2,   \
+                                      0x18+SHIFT2,0x19+SHIFT2,0x1a+SHIFT2,0x1b+SHIFT2,0x1c+SHIFT2,0x1d+SHIFT2,0x1e+SHIFT2,0x1f+SHIFT2,   \
+                                      0x20+SHIFT2,0x21+SHIFT2,0x22+SHIFT2,0x23+SHIFT2,0x24+SHIFT2,0x25+SHIFT2,0x26+SHIFT2,0x27+SHIFT2,   \
+                                      0x28+SHIFT2,0x29+SHIFT2,0x2a+SHIFT2,0x2b+SHIFT2,0x2c+SHIFT2,0x2d+SHIFT2,0x2e+SHIFT2,0x2f+SHIFT2,   \
+                                      0x30+SHIFT2,0x31+SHIFT2,0x32+SHIFT2,0x33+SHIFT2,0x34+SHIFT2,0x35+SHIFT2,0x36+SHIFT2,0x37+SHIFT2,   \
+                                      0x38+SHIFT2,0x39+SHIFT2,0x3a+SHIFT2,0x3b+SHIFT2,0x3c+SHIFT2,0x3d+SHIFT2,0x3e+SHIFT2,0x3f+SHIFT2 }; \
+    return _Tpvec(_mm512_permutex2var_##suffix(b, _mm512_load_si512(idx), a));*/                                                         \
+}                                                                                                                                        \
+template<int imm>                                                                                                                        \
+inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                           \
+{                                                                                                                                        \
+    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    if (imm == 0) return a;                                                                                                              \
+    if (imm == _Tpvec::nlanes) return b;                                                                                                 \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << imm, a), -1 << SHIFT2, b));                           \
+  /*const _Tpvec::lane_type idx[] = { 0x00+imm,0x01+imm,0x02+imm,0x03+imm,0x04+imm,0x05+imm,0x06+imm,0x07+imm,                           \
+                                      0x08+imm,0x09+imm,0x0a+imm,0x0b+imm,0x0c+imm,0x0d+imm,0x0e+imm,0x0f+imm,                           \
+                                      0x10+imm,0x11+imm,0x12+imm,0x13+imm,0x14+imm,0x15+imm,0x16+imm,0x17+imm,                           \
+                                      0x18+imm,0x19+imm,0x1a+imm,0x1b+imm,0x1c+imm,0x1d+imm,0x1e+imm,0x1f+imm,                           \
+                                      0x20+imm,0x21+imm,0x22+imm,0x23+imm,0x24+imm,0x25+imm,0x26+imm,0x27+imm,                           \
+                                      0x28+imm,0x29+imm,0x2a+imm,0x2b+imm,0x2c+imm,0x2d+imm,0x2e+imm,0x2f+imm,                           \
+                                      0x30+imm,0x31+imm,0x32+imm,0x33+imm,0x34+imm,0x35+imm,0x36+imm,0x37+imm,                           \
+                                      0x38+imm,0x39+imm,0x3a+imm,0x3b+imm,0x3c+imm,0x3d+imm,0x3e+imm,0x3f+imm };                         \
+    return _Tpvec(_mm512_permutex2var_##suffix(a, _mm512_load_si512(idx), b));*/                                                         \
+}                                                                                                                                        \
+template<int imm>                                                                                                                        \
+inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                             \
+{                                                                                                                                        \
+    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    if (imm == 0) return a;                                                                                                              \
+    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
+    return _Tpvec(_mm512_maskz_expand_##suffix(-1 << imm, a));                                                                           \
+}                                                                                                                                        \
+template<int imm>                                                                                                                        \
+inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                            \
+{                                                                                                                                        \
+    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    if (imm == 0) return a;                                                                                                              \
+    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
+    return _Tpvec(_mm512_maskz_compress_##suffix(-1 << imm, a));                                                                         \
 }
-
-template<int imm>
-inline v_uint8x32 v_rotate_right(const v_uint8x32& a, const v_uint8x32& b)
-{
-    enum {IMM_L = (imm - 16) & 0xFF};
-
-    if (imm == 0)  return a;
-    if (imm == 32) return b;
-    if (imm > 32)  return v_uint8x32();
-
-    __m512i swap = _mm256_permute2x128_si256(a.val, b.val, 0x21);
-    if (imm == 16) return v_uint8x32(swap);
-    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swap, a.val, imm));
-    return v_uint8x32(_mm256_alignr_epi8(b.val, swap, IMM_L));
-}
-
-template<int imm>
-inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
-{
-    enum {IMM_L = (imm - 16) & 0xFF};
-    enum {IMM_R = (16 - imm) & 0xFF};
-
-    if (imm == 0) return a;
-    if (imm > 32) return v_uint8x32();
-
-    // ESAC control[3] ? [127:0] = 0
-    __m512i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(0, 0, 2, 0));
-    if (imm == 16) return v_uint8x32(swapz);
-    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(a.val, swapz, IMM_R));
-    return v_uint8x32(_mm256_slli_si256(swapz, IMM_L));
-}
-
-template<int imm>
-inline v_uint8x32 v_rotate_right(const v_uint8x32& a)
-{
-    enum {IMM_L = (imm - 16) & 0xFF};
-
-    if (imm == 0) return a;
-    if (imm > 32) return v_uint8x32();
-
-    // ESAC control[3] ? [127:0] = 0
-    __m512i swapz = _mm256_permute2x128_si256(a.val, a.val, _MM_SHUFFLE(2, 0, 0, 1));
-    if (imm == 16) return v_uint8x32(swapz);
-    if (imm < 16)  return v_uint8x32(_mm256_alignr_epi8(swapz, a.val, imm));
-    return v_uint8x32(_mm256_srli_si256(swapz, IMM_L));
-}
-
-#define OPENCV_HAL_IMPL_AVX_ROTATE_CAST(intrin, _Tpvec, cast)     \
-    template<int imm>                                             \
-    inline _Tpvec intrin(const _Tpvec& a, const _Tpvec& b)        \
-    {                                                             \
-        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
-        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a),    \
-                                       v_reinterpret_as_u8(b));   \
-        return _Tpvec(cast(ret.val));                             \
-    }                                                             \
-    template<int imm>                                             \
-    inline _Tpvec intrin(const _Tpvec& a)                         \
-    {                                                             \
-        enum {IMMxW = imm * sizeof(typename _Tpvec::lane_type)};  \
-        v_uint8x32 ret = intrin<IMMxW>(v_reinterpret_as_u8(a));   \
-        return _Tpvec(cast(ret.val));                             \
-    }
 
 #define OPENCV_HAL_IMPL_AVX_ROTATE(_Tpvec)                                  \
     OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_left,  _Tpvec, OPENCV_HAL_NOP) \
     OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, _Tpvec, OPENCV_HAL_NOP)
 
-OPENCV_HAL_IMPL_AVX_ROTATE(v_int8x32)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_uint16x16)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_int16x16)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_uint32x8)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_int32x8)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_uint64x4)
-OPENCV_HAL_IMPL_AVX_ROTATE(v_int64x4)
-
-OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_left,  v_float32x8, _mm256_castsi256_ps)
-OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float32x8, _mm256_castsi256_ps)
-OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_left,  v_float64x4, _mm256_castsi256_pd)
-OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, v_float64x4, _mm256_castsi256_pd)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint8x64,   epi8)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_int8x64,    epi8)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_int16x32,  epi16)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_int32x16,  epi32)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint64x8,  epi64)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_int64x8,   epi64)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_float32x16,   ps)
+OPENCV_HAL_IMPL_AVX512_ROTATE(v_float64x8,    pd)
 
 ////////// Reduce and mask /////////
 
 /** Reduce **/
-#define OPENCV_HAL_IMPL_AVX_REDUCE_16(_Tpvec, sctype, func, intrin) \
-    inline sctype v_reduce_##func(const _Tpvec& a)                  \
-    {                                                               \
-        __m256i v0 = _v512_extract_low(a.val);                      \
-        __m256i v1 = _v512_extract_high(a.val);                     \
-        v0 = intrin(v0, v1);                                        \
-        v0 = intrin(v0, _mm_srli_si128(v0, 8));                     \
-        v0 = intrin(v0, _mm_srli_si128(v0, 4));                     \
-        v0 = intrin(v0, _mm_srli_si128(v0, 2));                     \
-        return (sctype) _mm_cvtsi128_si32(v0);                      \
+#define OPENCV_HAL_IMPL_AVX512_REDUCE(func, ifunc, _Tpvec, sctype, suffix) \
+    inline sctype v_reduce_##func(const _Tpvec& a)                         \
+    { return _mm512_reduce_##ifunc##_##suffix(a); }
+
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_uint32x16,  uint,   _epu32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_int32x16,   int,    _epi32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_uint64x8,   uint64, _epu64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_int64x8,    int64,  _epi64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_float32x16, float,  _ps)
+OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_float64x8,  double, _pd)
+
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_uint32x16,  uint,   _epu32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_int32x16,   int,    _epi32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_uint64x8,   uint64, _epu64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_int64x8,    int64,  _epi64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_float32x16, float,  _ps)
+OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_float64x8,  double, _pd)
+
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_uint32x16,  uint,   _epu32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_int32x16,   int,    _epi32)
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_uint64x8,   uint64, _epu64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_int64x8,    int64,  _epi64)
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_float32x16, float,  _ps)
+OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_float64x8,  double, _pd)
+
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_32(func, ifunc, _Tpvec, sctype, suffix) \
+    inline sctype v_reduce_##func(const _Tpvec& a)                            \
+    { return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_cvt##suffix##_epi32(_mm256_##ifunc##_##suffix(_v512_extract_low(a.val), _v512_extract_high(a.val)))); }
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(func, ifunc, _Tpvec, sctype, suffix) \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                \
+    { return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_##ifunc##_##suffix(_mm512_cvt##suffix##_epi32(_v512_extract_low(a.val)), _mm512_cvt##suffix##_epi32(_v512_extract_high(a.val)))); }
+
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(min, min, v_uint16x32, ushort, epu16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(min, min, v_int16x32,  short,  epi16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(max, max, v_uint16x32, ushort, epu16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(max, max, v_int16x32,  short,  epi16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(sum, add, v_uint16x32, uint, epu16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(sum, add, v_int16x32,  int,  epi16)
+
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_64(func, ifunc, _Tpvec, sctype, suffix)                                      \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                                 \
+    {                                                                                                              \
+        __m256i half = _mm256_##ifunc##_##suffix(_v512_extract_low(a.val), _v512_extract_high(a.val));             \
+        __m128i quarter = _mm_##ifunc##_##suffix(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1)); \
+        return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_cvt##suffix##_epi32(quarter));                         \
+    }
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(func, ifunc, _Tpvec, sctype, suffix)                                  \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                                 \
+    {                                                                                                              \
+        __m512i half = _mm512_##ifunc##_##suffix(_mm512_cvt##suffix##_epi16(_v512_extract_low(a.val)),             \
+                                                 _mm512_cvt##suffix##_epi16(_v512_extract_high(a.val)));           \
+        __m256i quarter = _mm256_##ifunc##_##suffix(_v512_extract_low(half), _v512_extract_high(half));            \
+        return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_cvtepi16_epi32(quarter));                              \
     }
 
-OPENCV_HAL_IMPL_AVX_REDUCE_16(v_uint16x16, ushort, min, _mm_min_epu16)
-OPENCV_HAL_IMPL_AVX_REDUCE_16(v_int16x16,  short,  min, _mm_min_epi16)
-OPENCV_HAL_IMPL_AVX_REDUCE_16(v_uint16x16, ushort, max, _mm_max_epu16)
-OPENCV_HAL_IMPL_AVX_REDUCE_16(v_int16x16,  short,  max, _mm_max_epi16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(min, min, v_uint8x64, uchar, epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(min, min, v_int8x64,  char,  epi8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(max, max, v_uint8x64, uchar, epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(max, max, v_int8x64,  char,  epi8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(sum, add, v_uint8x64, uint, epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(sum, add, v_int8x64,  int,  epi8)
 
-#define OPENCV_HAL_IMPL_AVX_REDUCE_8(_Tpvec, sctype, func, intrin) \
-    inline sctype v_reduce_##func(const _Tpvec& a)                 \
-    {                                                              \
-        __m256i v0 = _v512_extract_low(a.val);                     \
-        __m256i v1 = _v512_extract_high(a.val);                    \
-        v0 = intrin(v0, v1);                                       \
-        v0 = intrin(v0, _mm_srli_si128(v0, 8));                    \
-        v0 = intrin(v0, _mm_srli_si128(v0, 4));                    \
-        return (sctype) _mm_cvtsi128_si32(v0);                     \
-    }
-
-OPENCV_HAL_IMPL_AVX_REDUCE_8(v_uint32x8, unsigned, min, _mm_min_epu32)
-OPENCV_HAL_IMPL_AVX_REDUCE_8(v_int32x8,  int,      min, _mm_min_epi32)
-OPENCV_HAL_IMPL_AVX_REDUCE_8(v_uint32x8, unsigned, max, _mm_max_epu32)
-OPENCV_HAL_IMPL_AVX_REDUCE_8(v_int32x8,  int,      max, _mm_max_epi32)
-
-#define OPENCV_HAL_IMPL_AVX_REDUCE_FLT(func, intrin)                  \
-    inline float v_reduce_##func(const v_float32x8& a)                \
-    {                                                                 \
-        __m256 v0 = _v512_extract_low(a.val);                         \
-        __m256 v1 = _v512_extract_high(a.val);                        \
-        v0 = intrin(v0, v1);                                          \
-        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 3, 2))); \
-        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 0, 3))); \
-        return _mm_cvtss_f32(v0);                                     \
-    }
-
-OPENCV_HAL_IMPL_AVX_REDUCE_FLT(min, _mm_min_ps)
-OPENCV_HAL_IMPL_AVX_REDUCE_FLT(max, _mm_max_ps)
-
-inline ushort v_reduce_sum(const v_uint16x16& a)
+inline v_float32x16 v_reduce_sum4(const v_float32x16& a, const v_float32x16& b,
+                                  const v_float32x16& c, const v_float32x16& d)
 {
-    __m256i a0 = _v512_extract_low(a.val);
-    __m256i a1 = _v512_extract_high(a.val);
-
-    __m256i s0 = _mm_adds_epu16(a0, a1);
-            s0 = _mm_adds_epu16(s0, _mm_srli_si128(s0, 8));
-            s0 = _mm_adds_epu16(s0, _mm_srli_si128(s0, 4));
-            s0 = _mm_adds_epu16(s0, _mm_srli_si128(s0, 2));
-
-    return (ushort)_mm_cvtsi128_si32(s0);
+    __m256 abl = _mm256_hadd_ps(_v512_extract_low(a.val), _v512_extract_low(b.val));
+    __m256 abh = _mm256_hadd_ps(_v512_extract_high(a.val), _v512_extract_high(b.val));
+    __m256 cdl = _mm256_hadd_ps(_v512_extract_low(c.val), _v512_extract_low(d.val));
+    __m256 cdh = _mm256_hadd_ps(_v512_extract_high(c.val), _v512_extract_high(d.val));
+    return v_float32x16(_v512_combine(_mm256_hadd_ps(abl, cdl), _mm256_hadd_ps(abh, cdh)));
 }
 
-inline short v_reduce_sum(const v_int16x16& a)
+inline unsigned v_reduce_sad(const v_uint8x64& a, const v_uint8x64& b)
 {
-    __m512i s0 = _mm256_hadds_epi16(a.val, a.val);
-            s0 = _mm256_hadds_epi16(s0, s0);
-            s0 = _mm256_hadds_epi16(s0, s0);
-
-    __m256i s1 = _v512_extract_high(s0);
-            s1 = _mm_adds_epi16(_v512_extract_low(s0), s1);
-
-    return (short)_mm_cvtsi128_si32(s1);
+    return (unsigned)_mm512_reduce_add_epi32(_mm512_sad_epu8(a.val, b.val));
 }
-
-inline int v_reduce_sum(const v_int32x8& a)
+inline unsigned v_reduce_sad(const v_int8x64& a, const v_int8x64& b)
 {
-    __m512i s0 = _mm256_hadd_epi32(a.val, a.val);
-            s0 = _mm256_hadd_epi32(s0, s0);
-
-    __m256i s1 = _v512_extract_high(s0);
-            s1 = _mm_add_epi32(_v512_extract_low(s0), s1);
-
-    return _mm_cvtsi128_si32(s1);
+    __m512i half = _mm512_set1_epi8(0x80);
+    return (unsigned)_mm512_reduce_add_epi32(_mm512_sad_epu8(_mm512_add_epi8(a.val, half), _mm512_add_epi8(b.val, half)));
 }
-
-inline unsigned v_reduce_sum(const v_uint32x8& a)
-{ return v_reduce_sum(v_reinterpret_as_s32(a)); }
-
-inline float v_reduce_sum(const v_float32x8& a)
-{
-    __m512 s0 = _mm256_hadd_ps(a.val, a.val);
-           s0 = _mm256_hadd_ps(s0, s0);
-
-    __m256 s1 = _v512_extract_high(s0);
-           s1 = _mm_add_ps(_v512_extract_low(s0), s1);
-
-    return _mm_cvtss_f32(s1);
-}
-
-inline double v_reduce_sum(const v_float64x4& a)
-{
-    __m512d s0 = _mm256_hadd_pd(a.val, a.val);
-    return _mm_cvtsd_f64(_mm_add_pd(_v512_extract_low(s0), _v512_extract_high(s0)));
-}
-
-inline v_float32x8 v_reduce_sum4(const v_float32x8& a, const v_float32x8& b,
-                                 const v_float32x8& c, const v_float32x8& d)
-{
-    __m512 ab = _mm256_hadd_ps(a.val, b.val);
-    __m512 cd = _mm256_hadd_ps(c.val, d.val);
-    return v_float32x8(_mm256_hadd_ps(ab, cd));
-}
-
-inline unsigned v_reduce_sad(const v_uint8x32& a, const v_uint8x32& b)
-{
-    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(a.val, b.val));
-}
-inline unsigned v_reduce_sad(const v_int8x32& a, const v_int8x32& b)
-{
-    __m512i half = _mm256_set1_epi8(0x7f);
-    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(_mm256_add_epi8(a.val, half), _mm256_add_epi8(b.val, half)));
-}
-inline unsigned v_reduce_sad(const v_uint16x16& a, const v_uint16x16& b)
-{
-    v_uint32x8 l, h;
-    v_expand(v_add_wrap(a - b, b - a), l, h);
-    return v_reduce_sum(l + h);
-}
-inline unsigned v_reduce_sad(const v_int16x16& a, const v_int16x16& b)
-{
-    v_uint32x8 l, h;
-    v_expand(v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))), l, h);
-    return v_reduce_sum(l + h);
-}
-inline unsigned v_reduce_sad(const v_uint32x8& a, const v_uint32x8& b)
-{
-    return v_reduce_sum(v_max(a, b) - v_min(a, b));
-}
-inline unsigned v_reduce_sad(const v_int32x8& a, const v_int32x8& b)
-{
-    v_int32x8 m = a < b;
-    return v_reduce_sum(v_reinterpret_as_u32(((a - b) ^ m) - m));
-}
-inline float v_reduce_sad(const v_float32x8& a, const v_float32x8& b)
-{
-    return v_reduce_sum((a - b) & v_float32x8(_mm256_castsi256_ps(_mm256_set1_epi32(0x7fffffff))));
-}
+inline unsigned v_reduce_sad(const v_uint16x32& a, const v_uint16x32& b)
+{ return v_reduce_sum(v_add_wrap(a - b, b - a)); }
+inline unsigned v_reduce_sad(const v_int16x32& a, const v_int16x32& b)
+{ return v_reduce_sum(v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b)))); }
+inline unsigned v_reduce_sad(const v_uint32x16& a, const v_uint32x16& b)
+{ return v_reduce_sum(v_max(a, b) - v_min(a, b)); }
+inline unsigned v_reduce_sad(const v_int32x16& a, const v_int32x16& b)
+{ return v_reduce_sum(v_reinterpret_as_u32(v_max(a, b) - v_min(a, b))); }
+inline float v_reduce_sad(const v_float32x16& a, const v_float32x16& b)
+{ return v_reduce_sum((a - b) & v_float32x8(_mm512_castsi512_ps(_mm512_set1_epi32(0x7fffffff)))); }
+inline double v_reduce_sad(const v_float64x8& a, const v_float64x8& b)
+{ return v_reduce_sum((a - b) & v_float64x8(_mm512_castsi512_pd(_mm512_set1_epi64(0x7fffffffffffffff)))); }
 
 /** Popcount **/
-#define OPENCV_HAL_IMPL_AVX_POPCOUNT(_Tpvec)                     \
-    inline v_uint32x8 v_popcount(const _Tpvec& a)                \
-    {                                                            \
-        const v_uint32x8 m1 = v512_setall_u32(0x55555555);       \
-        const v_uint32x8 m2 = v512_setall_u32(0x33333333);       \
-        const v_uint32x8 m4 = v512_setall_u32(0x0f0f0f0f);       \
-        v_uint32x8 p  = v_reinterpret_as_u32(a);                 \
-        p = ((p >> 1) & m1) + (p & m1);                          \
-        p = ((p >> 2) & m2) + (p & m2);                          \
-        p = ((p >> 4) & m4) + (p & m4);                          \
-        p.val = _mm256_sad_epu8(p.val, _mm256_setzero_si256());  \
-        return p;                                                \
-    }
+#define OPENCV_HAL_IMPL_AVX512_POPCOUNT(_Tpvec, _Tpuvec, suffix) \
+    inline _Tpuvec v_popcount(const _Tpvec& a)                   \
+    { return _Tpuvec(_mm512_popcnt_##suffix(a.val)); }           \
+    inline _Tpuvec v_popcount(const _Tupvec& a)                  \
+    { return _Tpuvec(_mm512_popcnt_##suffix(a.val)); }
 
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_uint8x32)
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_int8x32)
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_uint16x16)
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_int16x16)
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_uint32x8)
-OPENCV_HAL_IMPL_AVX_POPCOUNT(v_int32x8)
+OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int8x64,  v_uint8x64,  epi8)
+OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int16x32, v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int32x16, v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int64x8,  v_uint64x8,  epi64)
 
 /** Mask **/
 inline int v_signmask(const v_int8x32& a)
