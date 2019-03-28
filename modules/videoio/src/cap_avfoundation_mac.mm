@@ -1115,18 +1115,17 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
 
 
 CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filename, int fourcc, double fps, CvSize frame_size, int is_color)
-    : path(0), codec(0), fileType(0), mMovieFPS(0), movieColor(0), mFrameNum(0), is_good(true)
+    : argbimage(nil), mMovieWriter(nil), mMovieWriterInput(nil), mMovieWriterAdaptor(nil), path(nil),
+    codec(nil), fileType(nil), mMovieFPS(fps), movieSize(frame_size), movieColor(is_color), mFrameNum(0),
+    is_good(true)
 {
-    if (fps <= 0 || frame_size.width <= 0 || frame_size.height <= 0)
+    if (mMovieFPS <= 0 || movieSize.width <= 0 || movieSize.height <= 0)
     {
         is_good = false;
         return;
     }
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    mMovieFPS = fps;
-    movieSize = frame_size;
-    movieColor = is_color;
     argbimage = cvCreateImage(movieSize, IPL_DEPTH_8U, 4);
     path = [[[NSString stringWithUTF8String:filename.c_str()] stringByExpandingTildeInPath] retain];
 
@@ -1154,8 +1153,6 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
     cc[4] = 0;
     int cc2 = CV_FOURCC(cc[0], cc[1], cc[2], cc[3]);
     if (cc2!=fourcc) {
-        fprintf(stderr, "OpenCV: Didn't properly encode FourCC. Expected 0x%08X but got 0x%08X.\n", fourcc, cc2);
-        //exception;
         is_good = false;
     }
 
@@ -1218,8 +1215,6 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
 
         if(mMovieWriter.status == AVAssetWriterStatusFailed){
             NSLog(@"AVF: AVAssetWriter status: %@", [mMovieWriter.error localizedDescription]);
-            // TODO: error handling, cleanup. Throw execption?
-            // return;
             is_good = false;
         }
     }
@@ -1245,7 +1240,8 @@ CvVideoWriter_AVFoundation::~CvVideoWriter_AVFoundation() {
         [codec release];
     if (fileType)
         [fileType release];
-    cvReleaseImage(&argbimage);
+    if (argbimage)
+        cvReleaseImage(&argbimage);
 
     [localpool drain];
 
