@@ -1548,6 +1548,10 @@ foreach(s ${CUSTOM_STATUS})
   status(${CUSTOM_STATUS_${s}})
 endforeach()
 
+if((WITH_CUDA OR HAVE_CUDA) AND OPENCV_EXTRA_MODULES_PATH STREQUAL "")
+	message(FATAL_ERROR "cuda has moved to the contrib dir, please set the OPENCV_EXTRA_MODULES_PATH (opencv_contrib)")
+endif()
+
 if(WITH_CUDA OR HAVE_CUDA)
   ocv_build_features_string(cuda_features
     IF HAVE_CUFFT THEN "CUFFT"
