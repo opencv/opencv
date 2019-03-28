@@ -661,7 +661,10 @@ void TFImporter::populateNet(Net dstNet)
     RemoveIdentityOps(netTxt);
 
     if (!netTxt.ByteSize())
+    {
         simplifySubgraphs(netBin);
+        sortByExecutionOrder(netBin);
+    }
 
     std::set<String> layers_to_ignore;
 
