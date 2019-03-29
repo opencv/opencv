@@ -51,13 +51,9 @@ gen_template_func_body = Template("""$code_decl
 """)
 
 gen_template_simple_type_decl = Template("""
-struct pyopencv_${name}_t
-{
-    PyObject_HEAD
-    ${cname} v;
-};
 
-REGISTER_TYPE(${name}, $wname)
+//==================================================================================================
+// ${name} (simple)
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
@@ -101,13 +97,8 @@ gen_template_mappable = Template("""
 """)
 
 gen_template_type_decl = Template("""
-struct pyopencv_${name}_t
-{
-    PyObject_HEAD
-    Ptr<${cname1}> v;
-};
-
-REGISTER_TYPE(${name}, $wname)
+//==================================================================================================
+// ${name}
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
@@ -157,6 +148,9 @@ gen_template_set_prop_from_map = Template("""
     }""")
 
 gen_template_type_impl = Template("""
+//==================================================================================================
+// ${name} (impl)
+
 static PyObject* pyopencv_${name}_repr(PyObject* self)
 {
     char str[1000];
@@ -1121,8 +1115,14 @@ class PythonWrapperGenerator(object):
         for decl_idx, name, classinfo in classlist1:
             code = classinfo.gen_code(self)
             self.code_types.write(code)
-            if not classinfo.ismap:
-                self.code_type_publish.write("PUBLISH_OBJECT({});\n".format(classinfo.name))
+            if classinfo.ismap:
+                continue
+            if classinfo.issimple:
+                self.code_type_publish.write("CVPY_TYPE({}, {});\n".format(classinfo.name, classinfo.cname))
+            else:
+                cname1 = "cv::Algorithm" if classinfo.isalgorithm else classinfo.cname
+                self.code_type_publish.write("CVPY_TYPE({}, Ptr<{}>);\n".format(classinfo.name, cname1))
+
 
         # step 3: generate the code for all the global functions
         for ns_name, ns in sorted(self.namespaces.items()):

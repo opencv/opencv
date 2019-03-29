@@ -58,7 +58,7 @@
 #define PyString_FromString PyUnicode_FromString
 #define PyString_FromStringAndSize PyUnicode_FromStringAndSize
 
-#endif
+#endif // PY_MAJOR >=3
 
 static inline bool getUnicodeString(PyObject * obj, std::string &str)
 {
@@ -90,6 +90,46 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 #endif
     return res;
 }
+
+//==================================================================================================
+
+#if PY_MAJOR_VERSION >= 3
+#define CVPY_TYPE_HEAD PyVarObject_HEAD_INIT(&PyType_Type, 0)
+#define CVPY_TYPE_INCREF(T) Py_INCREF(&T)
+#else
+#define CVPY_TYPE_HEAD PyObject_HEAD_INIT(&PyType_Type) 0,
+#define CVPY_TYPE_INCREF(T) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&T)->ob_refcnt++
+#endif
+
+
+#define CVPY_TYPE_DECLARE(name, name2) \
+    struct pyopencv_##name##_t \
+    { \
+        PyObject_HEAD \
+        name2 v; \
+    }; \
+
+#define CVPY_TYPE_REGISTER_STATIC(name) \
+    static PyTypeObject pyopencv_##name##_Type = \
+    { \
+        CVPY_TYPE_HEAD \
+        MODULESTR"."#name, \
+        sizeof(pyopencv_##name##_t), \
+    };
+
+#define CVPY_TYPE_INIT_STATIC(name, err_code) \
+    { \
+        pyopencv_##name##_specials(); \
+        pyopencv_##name##_Type.tp_alloc = PyType_GenericAlloc; \
+        pyopencv_##name##_Type.tp_new = PyType_GenericNew; \
+        pyopencv_##name##_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
+        if (PyType_Ready(&pyopencv_##name##_Type) != 0) \
+        { \
+            err_code; \
+        } \
+        CVPY_TYPE_INCREF(pyopencv_##name##_Type); \
+        PyModule_AddObject(m, #name, (PyObject *)&pyopencv_##name##_Type); \
+    }
 
 
 #endif // END HEADER GUARD

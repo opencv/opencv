@@ -1675,31 +1675,17 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
-#if PY_MAJOR_VERSION >= 3
-#  define PUBLISH_OBJECT(name, A, type) Py_INCREF(&type); PyModule_AddObject(m, name, (PyObject *)&type);
-// #  define REGISTER_TYPE(name, wname)
-#  define REGISTER_TYPE(name, wname) \
-    static PyTypeObject pyopencv_##name##_Type = \
-    { \
-        PyVarObject_HEAD_INIT(&PyType_Type, 0) \
-        MODULESTR"."#wname, \
-        sizeof(pyopencv_##name##_t), \
-    };
-#else
-#  define PUBLISH_OBJECT(name, A, type) _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&type)->ob_refcnt++; PyModule_AddObject(m, name, (PyObject *)&type);
-#  define REGISTER_TYPE(name, wname) \
-    static PyTypeObject pyopencv_##name##_Type = \
-    { \
-        PyObject_HEAD_INIT(&PyType_Type) 0, \
-        MODULESTR"."#wname, \
-        sizeof(pyopencv_##name##_t), \
-    };
-#endif
+#define CVPY_TYPE(name, name2) \
+    CVPY_TYPE_DECLARE(name, name2) \
+    CVPY_TYPE_REGISTER_STATIC(name)
 
 #include "pyopencv_generated_enums.h"
 #include "pyopencv_custom_headers.h"
+#include "pyopencv_generated_type_publish.h"
 #include "pyopencv_generated_types.h"
 #include "pyopencv_generated_funcs.h"
+
+#undef CVPY_TYPE
 
 static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
@@ -1769,23 +1755,12 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
 static bool init_body(PyObject * m)
 {
-#define PUBLISH_OBJECT(NAME) \
-    { \
-        pyopencv_##NAME##_specials(); \
-        pyopencv_##NAME##_Type.tp_alloc = PyType_GenericAlloc; \
-        pyopencv_##NAME##_Type.tp_new = PyType_GenericNew; \
-        pyopencv_##NAME##_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
-        if (PyType_Ready(&pyopencv_##NAME##_Type) != 0) \
-        { \
-            return false; \
-        } \
-    }
-
-#include "pyopencv_generated_type_publish.h"
-
-#undef PUBLISH_OBJECT
 
     init_submodules(m); // from "pyopencv_generated_ns_reg.h"
+
+#define CVPY_TYPE(name, name2) CVPY_TYPE_INIT_STATIC(name, return false)
+#include "pyopencv_generated_type_publish.h"
+#undef CVPY_TYPE
 
     PyObject* d = PyModule_GetDict(m);
 
@@ -1802,19 +1777,6 @@ static bool init_body(PyObject * m)
     Py_DECREF(opencv_error_dict);
     PyDict_SetItemString(d, "error", opencv_error);
 
-#if PY_MAJOR_VERSION >= 3
-#  define PUBLISH_OBJECT(NAME) \
-    Py_INCREF(&pyopencv_##NAME##_Type); \
-    PyModule_AddObject(m, #NAME, (PyObject *)&pyopencv_##NAME##_Type);
-#else
-#  define PUBLISH_OBJECT(NAME) \
-    _Py_INC_REFTOTAL _Py_REF_DEBUG_COMMA (&pyopencv_##NAME##_Type)->ob_refcnt++; \
-    PyModule_AddObject(m, #NAME, (PyObject *)&pyopencv_##NAME##_Type);
-#endif
-
-#include "pyopencv_generated_type_publish.h"
-
-#undef PUBLISH_OBJECT
 
 #define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
     PUBLISH(CV_8U);
