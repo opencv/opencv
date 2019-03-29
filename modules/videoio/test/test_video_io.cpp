@@ -381,8 +381,6 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
    makeParam("mp4", "MJPG", 30.f, CAP_AVFOUNDATION),
    makeParam("m4v", "H264", 30.f, CAP_AVFOUNDATION),
    makeParam("m4v", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("3gp", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("3gp", "MJPG", 30.f, CAP_AVFOUNDATION),
 #endif
 
     makeParam("avi", "XVID", 30.f, CAP_FFMPEG),
