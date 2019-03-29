@@ -236,9 +236,9 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018050000
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
@@ -247,14 +247,19 @@ TEST_P(Test_Caffe_layers, Concat)
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
 {
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-    {
-        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 ||
-            (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
-        throw SkipTestException("");
-    }
+        throw SkipTestException("Test is disabled for DLIE due negative_slope parameter");
 #endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE
+        && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16
+            || (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
+    )
+        throw SkipTestException("Test is disabled for DLIE");
+#endif
+
     checkBackend();
 
     // Test case
@@ -312,7 +317,10 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
-    testLayerUsingCaffeModels("layer_prelu_fc", true, false);
+    // Reference output values are in range [-0.0001, 10.3906]
+    double l1 = (target == DNN_TARGET_MYRIAD) ? 0.005 : 0.0;
+    double lInf = (target == DNN_TARGET_MYRIAD) ? 0.021 : 0.0;
+    testLayerUsingCaffeModels("layer_prelu_fc", true, false, l1, lInf);
 }
 
 //template<typename XMat>
@@ -358,6 +366,11 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
 
 TEST_P(Test_Caffe_layers, Conv_Elu)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE <= 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("");
+#endif
+
     Net net = readNetFromTensorflow(_tf("layer_elu_model.pb"));
     ASSERT_FALSE(net.empty());
 
@@ -938,7 +951,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 
     Mat out = net.forward();
 
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.4e-3 : 1e-5;
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-3 : 1e-5;
     double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.8e-2 : 1e-4;
     normAssert(outDefault, out, "", l1, lInf);
 

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #ifndef __OPENCV_DNN_OP_INF_ENGINE_HPP__
@@ -11,6 +11,8 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/dnn.hpp"
+
+#include "opencv2/dnn/utils/inference_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
 #if defined(__GNUC__) && __GNUC__ >= 5
@@ -276,6 +278,12 @@ public:
 private:
     InferenceEngine::CNNNetwork t_net;
 };
+
+CV__DNN_EXPERIMENTAL_NS_BEGIN
+
+bool isMyriadX();
+
+CV__DNN_EXPERIMENTAL_NS_END
 
 #endif  // HAVE_INF_ENGINE
 
