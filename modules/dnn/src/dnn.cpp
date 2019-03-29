@@ -2146,10 +2146,6 @@ struct Net::Impl
                     }
                 }
             }
-
-            if (preferableBackend != DNN_BACKEND_OPENCV)
-                continue;  // Go to the next layer.
-
             // the optimization #2. if there is no layer that takes max pooling layer's computed
             // max indices (and only some semantical segmentation networks might need this;
             // many others only take the maximum values), then we switch the max pooling
@@ -2169,6 +2165,9 @@ struct Net::Impl
                     printf_(("\tsimplified pooling layer %s\n", poolingLayer->name.c_str()));
                 }
             }
+
+            if (preferableBackend != DNN_BACKEND_OPENCV)
+                continue;  // Go to the next layer.
 
             // the optimization #3. if there is concat layer that concatenates channels
             // from the inputs together (i.e. axis == 1) then we make the inputs of

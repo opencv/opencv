@@ -89,7 +89,15 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
 ocv_create_module(${libs} ${INF_ENGINE_TARGET})
 ocv_add_samples()
 ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
-ocv_add_perf_tests(${INF_ENGINE_TARGET})
+
+set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
+file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
+file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
+ocv_add_perf_tests(${INF_ENGINE_TARGET}
+    FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.cpp"
+    FILES Src ${perf_srcs}
+    FILES Include ${perf_hdrs}
+)
 
 ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
 ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
