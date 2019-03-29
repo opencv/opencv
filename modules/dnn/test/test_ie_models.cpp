@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "test_precomp.hpp"
 
@@ -221,8 +221,15 @@ TEST_P(DNNTestOpenVINO, models)
     {
         auto dstIt = cvOutputsMap.find(srcIt.first);
         CV_Assert(dstIt != cvOutputsMap.end());
+        double normInfIE = cvtest::norm(srcIt.second, cv::NORM_INF);
         double normInf = cvtest::norm(srcIt.second, dstIt->second, cv::NORM_INF);
-        EXPECT_EQ(normInf, 0);
+        double eps = 0;
+        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        {
+            double fp16_eps = 1.0/1024;
+            eps = fp16_eps * 1/*ULP*/ * std::max(normInfIE, 1.0);
+        }
+        EXPECT_LE(normInf, eps) << "IE: " << normInfIE;
     }
 }
 
