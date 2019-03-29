@@ -1137,12 +1137,6 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         fileType = [AVFileTypeMPEG4 copy];
     }else if ([fileExt isEqualToString:@"m4v"]){
         fileType = [AVFileTypeAppleM4V copy];
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_11
-    }else if ([fileExt isEqualToString:@"3gp"] || [fileExt isEqualToString:@"3gpp"] || [fileExt isEqualToString:@"sdv"]  ){
-        fileType = [AVFileType3GPP copy];
-    }else if ([fileExt isEqualToString:@"3g2"] || [fileExt isEqualToString:@"3gp2"]){
-        fileType = [AVFileType3GPP2 copy];
-#endif
     } else{
         is_good = false;
     }
