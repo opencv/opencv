@@ -72,5 +72,6 @@ namespace opencv_test
     class ConvertToPerfTest : public TestPerfParams<tuple<MatType, int, cv::Size, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class Text2PointPerfTest : public TestBaseWithParam<tuple<int>> {};
 }
 #endif // OPENCV_GAPI_CORE_PERF_TESTS_HPP

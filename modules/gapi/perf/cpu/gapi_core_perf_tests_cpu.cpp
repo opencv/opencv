@@ -283,4 +283,8 @@ INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestCPU, ResizeFxFyPerfTest,
         Values(0.5, 0.1),
         Values(0.5, 0.1),
         Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(Text2PointsPerfTestInst, Text2PointPerfTest,
+                        Values(1));
+
 }

@@ -1797,6 +1797,22 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(Text2PointPerfTest, TestPerformance)
+{
+
+    int fs = 3;
+    int ff = cv::FONT_HERSHEY_SIMPLEX;
+    std::string text = "TheQuickBrownFoxJumps";
+
+    TEST_CYCLE()
+    {
+        text2Points(text, cv::Point(30, 100), ff, fs, false);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 //------------------------------------------------------------------------------
 
 }
