@@ -180,6 +180,15 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #endif
 
+// todo: only require CV_AVX_512F and emulate necessary VL/BW/DQ
+#if CV_AVX512_SKX
+
+#define CV__SIMD_FORWARD 512
+#include "opencv2/core/hal/intrin_forward.hpp"
+#include "opencv2/core/hal/avx512/avx512.hpp"
+
+#endif
+
 //! @cond IGNORED
 
 namespace cv {
@@ -327,7 +336,25 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 1
     #define CV_SIMD_64F CV_SIMD512_64F
     #define CV_SIMD_WIDTH 64
-    // TODO typedef v_uint8 / v_int32 / etc types here
+    typedef v_uint8x64    v_uint8;
+    typedef v_int8x64     v_int8;
+    typedef v_uint16x32   v_uint16;
+    typedef v_int16x32    v_int16;
+    typedef v_uint32x16   v_uint32;
+    typedef v_int32x16    v_int32;
+    typedef v_uint64x8    v_uint64;
+    typedef v_int64x8     v_int64;
+    typedef v_float32x16  v_float32;
+    typedef v_mask8x64    v_mask8;
+    typedef v_mask16x32   v_mask16;
+    typedef v_mask32x16   v_mask32;
+    typedef v_mask64x8    v_mask64;
+    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v512)
+    #if CV_SIMD512_64F
+    typedef v_float64x8  v_float64;
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v512, load)
+    #endif
+    inline void vx_cleanup() { v512_cleanup(); }
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
 #elif CV_SIMD256 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 256)
@@ -346,6 +373,12 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint64x4   v_uint64;
     typedef v_int64x4    v_int64;
     typedef v_float32x8  v_float32;
+    /*
+    typedef v_mask8x32   v_mask8;
+    typedef v_mask16x16  v_mask16;
+    typedef v_mask32x8   v_mask32;
+    typedef v_mask64x4   v_mask64;
+    */
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v256)
     #if CV_SIMD256_64F
     typedef v_float64x4  v_float64;
@@ -369,6 +402,12 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint64x2  v_uint64;
     typedef v_int64x2   v_int64;
     typedef v_float32x4 v_float32;
+    /*
+    typedef v_mask8x16  v_mask8;
+    typedef v_mask16x8  v_mask16;
+    typedef v_mask32x4  v_mask32;
+    typedef v_mask64x2  v_mask64;
+    */
     CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v)
     #if CV_SIMD128_64F
     typedef v_float64x2 v_float64;
