@@ -45,6 +45,10 @@
 #include <iostream>
 #include <ostream>
 
+#if defined(__OpenBSD__)
+#include <unistd.h>
+#endif
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
