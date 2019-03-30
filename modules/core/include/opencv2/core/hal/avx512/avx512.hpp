@@ -14,9 +14,10 @@ namespace cv
 //! @cond IGNORED
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
-/*
+
 #include "emulate.hpp"
 #include "types.hpp"
+/*
 #include "memory.hpp"
 #include "operators.hpp"
 #include "arithmetic.hpp"
