@@ -1437,6 +1437,18 @@ template<> struct pyopencvVecConverter<RotatedRect>
     }
 };
 
+template<> struct pyopencvVecConverter<Rect>
+{
+    static bool to(PyObject* obj, std::vector<Rect>& value, const ArgInfo info)
+    {
+        return pyopencv_to_generic_vec(obj, value, info);
+    }
+    static PyObject* from(const std::vector<Rect>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
 template<>
 bool pyopencv_to(PyObject *obj, TermCriteria& dst, const char *name)
 {
