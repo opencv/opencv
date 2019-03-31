@@ -94,7 +94,7 @@ void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __HAIKU__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
