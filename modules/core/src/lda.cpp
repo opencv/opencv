@@ -903,19 +903,19 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(InputArray src, bool fallbackSymmetric = true) :
+    EigenvalueDecomposition() :
         n(0),
         d(NULL), e(NULL), ort(NULL),
         V(NULL), H(NULL)
     {
-        compute(src, fallbackSymmetric);
+        // nothing
     }
 
     // This function computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(InputArray src, bool fallbackSymmetric)
+    void compute(InputArray src, bool fallbackSymmetric = true)
     {
         CV_INSTRUMENT_REGION();
 
@@ -970,7 +970,8 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     else
         src64f = src;
 
-    EigenvalueDecomposition eigensystem(src64f, false);
+    EigenvalueDecomposition eigensystem;
+    eigensystem.compute(src64f, false);
 
     // EigenvalueDecomposition returns transposed and non-sorted eigenvalues
     std::vector<double> eigenvalues64f;
@@ -1146,7 +1147,8 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // M = inv(Sw)*Sb
     Mat M;
     gemm(Swi, Sb, 1.0, Mat(), 0.0, M);
-    EigenvalueDecomposition es(M);
+    EigenvalueDecomposition es;
+    es.compute(M);
     _eigenvalues = es.eigenvalues();
     _eigenvectors = es.eigenvectors();
     // reshape eigenvalues, so they are stored by column
