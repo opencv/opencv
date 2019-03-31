@@ -98,6 +98,10 @@ ocv_add_perf_tests(${INF_ENGINE_TARGET}
     FILES Src ${perf_srcs}
     FILES Include ${perf_hdrs}
 )
+set_property(
+  SOURCE "${CMAKE_CURRENT_LIST_DIR}/test/test_common.cpp"
+  PROPERTY COMPILE_DEFINITIONS "__OPENCV_TESTS=1"
+)
 
 ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
 ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
