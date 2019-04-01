@@ -5,7 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include <ade/graph.hpp>
 #include "compiler/transactions.hpp"
 
