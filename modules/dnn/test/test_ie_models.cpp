@@ -177,34 +177,17 @@ TEST_P(DNNTestOpenVINO, models)
 {
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
+    std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
 
 #ifdef INF_ENGINE_RELEASE
-#if INF_ENGINE_RELEASE <= 2018030000
-    if (target == DNN_TARGET_MYRIAD && (modelName == "landmarks-regression-retail-0001" ||
-                                        modelName == "semantic-segmentation-adas-0001" ||
-                                        modelName == "face-reidentification-retail-0001"))
-        throw SkipTestException("");
-#elif INF_ENGINE_RELEASE == 2018040000
-    if (modelName == "single-image-super-resolution-0034" ||
-        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
-                                         modelName == "landmarks-regression-retail-0009" ||
-                                          modelName == "semantic-segmentation-adas-0001")))
-        throw SkipTestException("");
-#elif INF_ENGINE_RELEASE == 2018050000
-    if (modelName == "single-image-super-resolution-0063" ||
-        modelName == "single-image-super-resolution-1011" ||
-        modelName == "single-image-super-resolution-1021" ||
-        (target == DNN_TARGET_OPENCL_FP16 && modelName == "face-reidentification-retail-0095") ||
-        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
-                                         modelName == "semantic-segmentation-adas-0001")))
-        throw SkipTestException("");
-#endif
-#endif
-
-    std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
+#if INF_ENGINE_RELEASE <= 2018050000
     std::string prefix = utils::fs::join("intel_models",
                          utils::fs::join(modelName,
                          utils::fs::join(precision, modelName)));
+#endif
+#endif
+
+    initDLDTDataPath();
     std::string xmlPath = findDataFile(prefix + ".xml");
     std::string binPath = findDataFile(prefix + ".bin");
 
@@ -221,49 +204,21 @@ TEST_P(DNNTestOpenVINO, models)
     {
         auto dstIt = cvOutputsMap.find(srcIt.first);
         CV_Assert(dstIt != cvOutputsMap.end());
-        double normInfIE = cvtest::norm(srcIt.second, cv::NORM_INF);
         double normInf = cvtest::norm(srcIt.second, dstIt->second, cv::NORM_INF);
-        double eps = 0;
-        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
-        {
-            double fp16_eps = 1.0/1024;
-            eps = fp16_eps * 1/*ULP*/ * std::max(normInfIE, 1.0);
-        }
-        EXPECT_LE(normInf, eps) << "IE: " << normInfIE;
+        EXPECT_EQ(normInf, 0);
     }
-}
-
-static testing::internal::ParamGenerator<String> intelModels()
-{
-    initDLDTDataPath();
-    std::vector<String> modelsNames;
-
-    std::string path;
-    try
-    {
-        path = findDataDirectory("intel_models", false);
-    }
-    catch (...)
-    {
-        std::cerr << "ERROR: Can't find OpenVINO models. Check INTEL_CVSDK_DIR environment variable (run setup.sh)" << std::endl;
-        return ValuesIn(modelsNames);  // empty list
-    }
-
-    cv::utils::fs::glob_relative(path, "", modelsNames, false, true);
-
-    modelsNames.erase(
-        std::remove_if(modelsNames.begin(), modelsNames.end(),
-                       [&](const String& dir){ return !utils::fs::isDirectory(utils::fs::join(path, dir)); }),
-        modelsNames.end()
-    );
-    CV_Assert(!modelsNames.empty());
-
-    return ValuesIn(modelsNames);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
     DNNTestOpenVINO,
-    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)), intelModels())
+    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+            testing::Values(
+              "age-gender-recognition-retail-0013",
+              "face-person-detection-retail-0002",
+              "head-pose-estimation-adas-0001",
+              "person-detection-retail-0002",
+              "vehicle-detection-adas-0002"
+            ))
 );
 
 }}
