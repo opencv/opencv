@@ -70,16 +70,14 @@ int normHamming(const uchar* a, int n)
     }
 #endif // CV_POPCNT
 
-#if CV_SIMD128
+#if CV_SIMD
     {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i));
-        }
+        v_uint64 t = vx_setzero_u64();
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i)));
         result += v_reduce_sum(t);
     }
-#endif // CV_SIMD128
+#endif // CV_SIMD
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {
@@ -141,16 +139,14 @@ int normHamming(const uchar* a, const uchar* b, int n)
     }
 #endif // CV_POPCNT
 
-#if CV_SIMD128
+#if CV_SIMD
     {
-        v_uint32x4 t = v_setzero_u32();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-        {
-            t += v_popcount(v_load(a + i) ^ v_load(b + i));
-        }
+        v_uint64 t = vx_setzero_u64();
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i) ^ vx_load(b + i)));
         result += v_reduce_sum(t);
     }
-#endif // CV_SIMD128
+#endif // CV_SIMD
 #if CV_ENABLE_UNROLLED
     for(; i <= n - 4; i += 4)
     {
