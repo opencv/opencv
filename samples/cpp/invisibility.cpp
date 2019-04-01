@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     Mat foregroundMask, mask2;
     Mat result1, result2;
     Mat video, element;
-   
+
     float threshold = parser.get<float>("thr");
     float dist;
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     {
         key = waitKey(1);
         cap >> backgroundImage;
-	putText(backgroundImage, "Press any key to grab backgroud or ESC to exit.", Point(10, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
+        putText(backgroundImage, "Press any key to grab backgroud or ESC to exit.", Point(10, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0));
         imshow("Video", backgroundImage);
     }
 
@@ -59,13 +59,13 @@ int main(int argc, char** argv)
     while (key<0)
     {
         result1 = 0;
-	result2 = 0;
+        result2 = 0;
         key = waitKey(1);
         cap >> currentImage;
         absdiff(backgroundImage, currentImage, diffImage);
         foregroundMask = Mat::zeros(diffImage.rows, diffImage.cols, CV_8UC1);
         for(int j=0; j<diffImage.rows; ++j)
-	{
+        {
             for(int i=0; i<diffImage.cols; ++i)
             {
                 Vec3b pix = diffImage.at<cv::Vec3b>(j,i);
