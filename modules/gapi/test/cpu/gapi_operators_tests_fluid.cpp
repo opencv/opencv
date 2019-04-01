@@ -5,7 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "../common/gapi_operators_tests.hpp"
 
 #define CORE_FLUID cv::gapi::core::fluid::kernels()
