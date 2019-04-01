@@ -1637,7 +1637,7 @@ struct Net::Impl
                  preferableTarget == DNN_TARGET_MYRIAD ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
                 for (const std::string& name : {"weights", "biases"})
                 {
                     auto it = ieNode->layer.getParameters().find(name);
