@@ -94,7 +94,7 @@ set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
 ocv_add_perf_tests(${INF_ENGINE_TARGET}
-    FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.cpp"
+    FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.hpp" "${CMAKE_CURRENT_LIST_DIR}/test/test_common.impl.hpp"
     FILES Src ${perf_srcs}
     FILES Include ${perf_hdrs}
 )
