@@ -228,6 +228,7 @@ int stream_size;
     state->strm = strm;
     state->window = Z_NULL;
     state->mode = HEAD;     /* to pass state test in inflateReset2() */
+    state->check = 1L;      /* 1L is the result of adler32() zero length data */
     ret = inflateReset2(strm, windowBits);
     if (ret != Z_OK) {
         ZFREE(strm, state);
