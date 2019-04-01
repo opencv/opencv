@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace cv;
-#define DEBUG printf("> linha %d\n",__LINE__)
+
 string keys =
     "{ help        | | Print help message. }"
     "{ input i     | 0 | Video or camera id.  }"
