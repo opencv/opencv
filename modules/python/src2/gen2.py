@@ -854,6 +854,7 @@ class PythonWrapperGenerator(object):
         self.code_types = StringIO()
         self.code_funcs = StringIO()
         self.code_ns_reg = StringIO()
+        self.code_ns_init = StringIO()
         self.code_type_publish = StringIO()
         self.py_signatures = dict()
         self.class_idx = 0
@@ -994,14 +995,6 @@ class PythonWrapperGenerator(object):
                 self.code_ns_reg.write('    {"%s", static_cast<long>(%s)},\n'%(compat_name, cname))
         self.code_ns_reg.write('    {NULL, 0}\n};\n\n')
 
-    def gen_namespaces_reg(self):
-        self.code_ns_reg.write('static void init_submodules(PyObject * root) \n{\n')
-        for ns_name in sorted(self.namespaces):
-            if ns_name.split('.')[0] == 'cv':
-                wname = normalize_class_name(ns_name)
-                self.code_ns_reg.write('  init_submodule(root, MODULESTR"%s", methods_%s, consts_%s);\n' % (ns_name[2:], wname, wname))
-        self.code_ns_reg.write('};\n')
-
     def gen_enum_reg(self, enum_name):
         name_seg = enum_name.split(".")
         is_enum_class = False
@@ -1134,7 +1127,7 @@ class PythonWrapperGenerator(object):
                 code = func.gen_code(self)
                 self.code_funcs.write(code)
             self.gen_namespace(ns_name)
-        self.gen_namespaces_reg()
+            self.code_ns_init.write('CVPY_MODULE("{}", {});\n'.format(ns_name[2:], normalize_class_name(ns_name)))
 
         # step 4: generate the code for enum types
         enumlist = list(self.enums.values())
@@ -1152,9 +1145,10 @@ class PythonWrapperGenerator(object):
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
         self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
         self.save(output_path, "pyopencv_generated_enums.h", self.code_enums)
-        self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_ns_reg.h", self.code_ns_reg)
-        self.save(output_path, "pyopencv_generated_type_publish.h", self.code_type_publish)
+        self.save(output_path, "pyopencv_generated_types.h", self.code_type_publish)
+        self.save(output_path, "pyopencv_generated_types_content.h", self.code_types)
+        self.save(output_path, "pyopencv_generated_modules.h", self.code_ns_init)
+        self.save(output_path, "pyopencv_generated_modules_content.h", self.code_ns_reg)
         self.save_json(output_path, "pyopencv_signatures.json", self.py_signatures)
 
 if __name__ == "__main__":

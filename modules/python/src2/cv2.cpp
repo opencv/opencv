@@ -1675,17 +1675,17 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
-#define CVPY_TYPE(name, name2) \
-    CVPY_TYPE_DECLARE(name, name2) \
-    CVPY_TYPE_REGISTER_STATIC(name)
 
 #include "pyopencv_generated_enums.h"
 #include "pyopencv_custom_headers.h"
-#include "pyopencv_generated_type_publish.h"
+
+#define CVPY_TYPE(NAME, STORAGE) CVPY_TYPE_DECLARE(NAME, STORAGE) CVPY_TYPE_REGISTER_STATIC(NAME)
 #include "pyopencv_generated_types.h"
+#undef CVPY_TYPE
+
+#include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
-#undef CVPY_TYPE
 
 static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
@@ -1751,18 +1751,21 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 
 }
 
-#include "pyopencv_generated_ns_reg.h"
+#include "pyopencv_generated_modules_content.h"
 
 static bool init_body(PyObject * m)
 {
+#define CVPY_MODULE(NAMESTR, NAME) \
+    init_submodule(m, MODULESTR NAMESTR, methods_##NAME, consts_##NAME)
+#include "pyopencv_generated_modules.h"
+#undef CVPY_MODULE
 
-    init_submodules(m); // from "pyopencv_generated_ns_reg.h"
-
-#define CVPY_TYPE(name, name2) CVPY_TYPE_INIT_STATIC(name, return false)
-#include "pyopencv_generated_type_publish.h"
+#define CVPY_TYPE(NAME, _) CVPY_TYPE_INIT_STATIC(NAME, return false)
+#include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
 
     PyObject* d = PyModule_GetDict(m);
+
 
     PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
 

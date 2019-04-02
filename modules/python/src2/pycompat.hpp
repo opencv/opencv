@@ -102,33 +102,33 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 #endif
 
 
-#define CVPY_TYPE_DECLARE(name, name2) \
-    struct pyopencv_##name##_t \
+#define CVPY_TYPE_DECLARE(NAME, STORAGE) \
+    struct pyopencv_##NAME##_t \
     { \
         PyObject_HEAD \
-        name2 v; \
+        STORAGE v; \
     }; \
 
-#define CVPY_TYPE_REGISTER_STATIC(name) \
-    static PyTypeObject pyopencv_##name##_Type = \
+#define CVPY_TYPE_REGISTER_STATIC(NAME) \
+    static PyTypeObject pyopencv_##NAME##_Type = \
     { \
         CVPY_TYPE_HEAD \
-        MODULESTR"."#name, \
-        sizeof(pyopencv_##name##_t), \
+        MODULESTR"."#NAME, \
+        sizeof(pyopencv_##NAME##_t), \
     };
 
-#define CVPY_TYPE_INIT_STATIC(name, err_code) \
+#define CVPY_TYPE_INIT_STATIC(NAME, ERROR_HANDLER) \
     { \
-        pyopencv_##name##_specials(); \
-        pyopencv_##name##_Type.tp_alloc = PyType_GenericAlloc; \
-        pyopencv_##name##_Type.tp_new = PyType_GenericNew; \
-        pyopencv_##name##_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
-        if (PyType_Ready(&pyopencv_##name##_Type) != 0) \
+        pyopencv_##NAME##_specials(); \
+        pyopencv_##NAME##_Type.tp_alloc = PyType_GenericAlloc; \
+        pyopencv_##NAME##_Type.tp_new = PyType_GenericNew; \
+        pyopencv_##NAME##_Type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
+        if (PyType_Ready(&pyopencv_##NAME##_Type) != 0) \
         { \
-            err_code; \
+            ERROR_HANDLER; \
         } \
-        CVPY_TYPE_INCREF(pyopencv_##name##_Type); \
-        PyModule_AddObject(m, #name, (PyObject *)&pyopencv_##name##_Type); \
+        CVPY_TYPE_INCREF(pyopencv_##NAME##_Type); \
+        PyModule_AddObject(m, #NAME, (PyObject *)&pyopencv_##NAME##_Type); \
     }
 
 
