@@ -120,36 +120,36 @@ public:
     QTimer* timer;
 
 public slots:
-    void createWindow( QString name, int flags = 0 );
-    void destroyWindow(QString name);
+    void createWindow(const QString& name, int flags = 0 );
+    void destroyWindow(const QString& name);
     void destroyAllWindow();
-    void addSlider(QString trackbar_name, QString window_name, void* value, int count, void* on_change);
-    void addSlider2(QString trackbar_name, QString window_name, void* value, int count, void* on_change, void *userdata);
-    void moveWindow(QString name, int x, int y);
-    void resizeWindow(QString name, int width, int height);
-    void showImage(QString name, void* arr);
-    void displayInfo( QString name, QString text, int delayms );
-    void displayStatusBar( QString name, QString text, int delayms );
+    void addSlider(const QString& trackbar_name, const QString& window_name, void* value, int count, void* on_change);
+    void addSlider2(const QString& trackbar_name, const QString& window_name, void* value, int count, void* on_change, void *userdata);
+    void moveWindow(const QString& name, int x, int y);
+    void resizeWindow(const QString& name, int width, int height);
+    void showImage(const QString& name, void* arr);
+    void displayInfo(const QString& name, const QString& text, int delayms );
+    void displayStatusBar(const QString& name, const QString& text, int delayms );
     void timeOut();
-    void toggleFullScreen(QString name, double flags );
-    CvRect getWindowRect(QString name);
-    double isFullScreen(QString name);
-    double getPropWindow(QString name);
-    void setPropWindow(QString name, double flags );
-    void setWindowTitle(QString name, QString title);
-    double getWindowVisible(QString name);
-    double getRatioWindow(QString name);
-    void setRatioWindow(QString name, double arg2 );
-    void saveWindowParameters(QString name);
-    void loadWindowParameters(QString name);
-    void putText(void* arg1, QString text, QPoint org, void* font);
-    void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
+    void toggleFullScreen(const QString& name, double flags );
+    CvRect getWindowRect(const QString& name);
+    double isFullScreen(const QString& name);
+    double getPropWindow(const QString& name);
+    void setPropWindow(const QString& name, double flags );
+    void setWindowTitle(const QString& name, QString title);
+    double getWindowVisible(const QString& name);
+    double getRatioWindow(const QString& name);
+    void setRatioWindow(const QString& name, double arg2 );
+    void saveWindowParameters(const QString& name);
+    void loadWindowParameters(const QString& name);
+    void putText(void* arg1, const QString& text, QPoint org, void* font);
+    void addButton(const QString& button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
     void enablePropertiesButtonEachWindow();
 
-    void setOpenGlDrawCallback(QString name, void* callback, void* userdata);
-    void setOpenGlContext(QString name);
-    void updateWindow(QString name);
-    double isOpenGl(QString name);
+    void setOpenGlDrawCallback(const QString& name, void* callback, void* userdata);
+    void setOpenGlContext(const QString& name);
+    void updateWindow(const QString& name);
+    double isOpenGl(const QString& name);
 
 private:
     int nb_windows;
@@ -171,9 +171,9 @@ class CvButtonbar : public CvBar
 {
     Q_OBJECT
 public:
-    CvButtonbar(QWidget* arg, QString bar_name);
+    CvButtonbar(QWidget* arg, const QString& bar_name);
 
-    void addButton(QString button_name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state);
+    void addButton(const QString& button_name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state);
 
 private:
     void setLabel();
@@ -187,7 +187,7 @@ class CvPushButton : public QPushButton
 {
     Q_OBJECT
 public:
-    CvPushButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
+    CvPushButton(CvButtonbar* par, const QString& button_name, CvButtonCallback call, void* userdata);
 
 private:
     CvButtonbar* myparent;
@@ -204,7 +204,7 @@ class CvCheckBox : public QCheckBox
 {
     Q_OBJECT
 public:
-    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvCheckBox(CvButtonbar* par, const QString& button_name, CvButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
@@ -221,7 +221,7 @@ class CvRadioButton : public QRadioButton
 {
     Q_OBJECT
 public:
-    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvRadioButton(CvButtonbar* par, const QString& button_name, CvButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
@@ -238,8 +238,8 @@ class CvTrackbar :  public CvBar
 {
     Q_OBJECT
 public:
-    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change);
-    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
+    CvTrackbar(CvWindow* parent, const QString& name, int* value, int count, CvTrackbarCallback on_change);
+    CvTrackbar(CvWindow* parent, const QString& name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
 
     QPointer<QSlider> slider;
 
@@ -249,7 +249,7 @@ private slots:
 
 private:
     void setLabel(int myvalue);
-    void create(CvWindow* arg, QString name, int* value, int count);
+    void create(CvWindow* arg, const QString& name, int* value, int count);
     QString createLabel();
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
@@ -273,7 +273,7 @@ class CvWinProperties : public CvWinModel
 {
     Q_OBJECT
 public:
-    CvWinProperties(QString name, QObject* parent);
+    CvWinProperties(const QString& name, QObject* parent);
     ~CvWinProperties();
     QPointer<QBoxLayout> myLayout;
 
@@ -307,15 +307,15 @@ public:
 
     void updateImage(void* arr);
 
-    void displayInfo(QString text, int delayms);
-    void displayStatusBar(QString text, int delayms);
+    void displayInfo(const QString& text, int delayms);
+    void displayStatusBar(const QString& text, int delayms);
 
     void enablePropertiesButton();
 
-    static CvButtonbar* createButtonBar(QString bar_name);
+    static CvButtonbar* createButtonBar(const QString& bar_name);
 
-    static void addSlider(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
-    static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
+    static void addSlider(CvWindow* w, const QString& name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
+    static void addSlider2(CvWindow* w, const QString& name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
     void makeCurrentOpenGlContext();
@@ -494,7 +494,7 @@ public:
 
     void updateImage(const CvArr* arr) CV_OVERRIDE;
 
-    void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
+    void startDisplayInfo(const QString& text, int delayms) CV_OVERRIDE;
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) CV_OVERRIDE;
     void makeCurrentOpenGlContext() CV_OVERRIDE;

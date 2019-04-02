@@ -396,7 +396,7 @@ CV_IMPL void cvStopLoop()
 }
 
 
-static CvWindow* icvFindWindowByName(QString name)
+static CvWindow* icvFindWindowByName(const QString& name)
 {
     CvWindow* window = 0;
 
@@ -424,7 +424,7 @@ static CvWindow* icvFindWindowByName(QString name)
 }
 
 
-static CvBar* icvFindBarByName(QBoxLayout* layout, QString name_bar, typeBar type)
+static CvBar* icvFindBarByName(QBoxLayout* layout, const QString& name_bar, typeBar type)
 {
     if (!layout)
         return NULL;
@@ -838,7 +838,7 @@ GuiReceiver::~GuiReceiver()
 }
 
 
-void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
+void GuiReceiver::putText(void* arr, const QString& text, QPoint org, void* arg2)
 {
     CV_Assert(arr);
 
@@ -869,7 +869,7 @@ void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
 }
 
 
-void GuiReceiver::saveWindowParameters(QString name)
+void GuiReceiver::saveWindowParameters(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -878,7 +878,7 @@ void GuiReceiver::saveWindowParameters(QString name)
 }
 
 
-void GuiReceiver::loadWindowParameters(QString name)
+void GuiReceiver::loadWindowParameters(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -887,7 +887,7 @@ void GuiReceiver::loadWindowParameters(QString name)
 }
 
 
-double GuiReceiver::getRatioWindow(QString name)
+double GuiReceiver::getRatioWindow(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -898,7 +898,7 @@ double GuiReceiver::getRatioWindow(QString name)
 }
 
 
-void GuiReceiver::setRatioWindow(QString name, double arg2)
+void GuiReceiver::setRatioWindow(const QString& name, double arg2)
 {
     QPointer<CvWindow> w = icvFindWindowByName( name.toLatin1().data() );
 
@@ -911,7 +911,7 @@ void GuiReceiver::setRatioWindow(QString name, double arg2)
 }
 
 
-double GuiReceiver::getPropWindow(QString name)
+double GuiReceiver::getPropWindow(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -921,7 +921,7 @@ double GuiReceiver::getPropWindow(QString name)
     return (double) w->getPropWindow();
 }
 
-double GuiReceiver::getWindowVisible(QString name)
+double GuiReceiver::getWindowVisible(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -932,7 +932,7 @@ double GuiReceiver::getWindowVisible(QString name)
 }
 
 
-void GuiReceiver::setPropWindow(QString name, double arg2)
+void GuiReceiver::setPropWindow(const QString& name, double arg2)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -944,7 +944,7 @@ void GuiReceiver::setPropWindow(QString name, double arg2)
     w->setPropWindow(flags);
 }
 
-void GuiReceiver::setWindowTitle(QString name, QString title)
+void GuiReceiver::setWindowTitle(const QString& name, const QString& title)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -960,7 +960,7 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
     w->setWindowTitle(title);
 }
 
-CvRect GuiReceiver::getWindowRect(QString name)
+CvRect GuiReceiver::getWindowRect(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -970,7 +970,7 @@ CvRect GuiReceiver::getWindowRect(QString name)
     return w->getWindowRect();
 }
 
-double GuiReceiver::isFullScreen(QString name)
+double GuiReceiver::isFullScreen(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -981,7 +981,7 @@ double GuiReceiver::isFullScreen(QString name)
 }
 
 
-void GuiReceiver::toggleFullScreen(QString name, double arg2)
+void GuiReceiver::toggleFullScreen(const QString& name, double arg2)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -994,7 +994,7 @@ void GuiReceiver::toggleFullScreen(QString name, double arg2)
 }
 
 
-void GuiReceiver::createWindow(QString name, int flags)
+void GuiReceiver::createWindow(const QString& name, int flags)
 {
     if (!qApp)
         CV_Error(CV_StsNullPtr, "NULL session handler" );
@@ -1017,7 +1017,7 @@ void GuiReceiver::timeOut()
 }
 
 
-void GuiReceiver::displayInfo(QString name, QString text, int delayms)
+void GuiReceiver::displayInfo(const QString& name, const QString& text, int delayms)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1026,7 +1026,7 @@ void GuiReceiver::displayInfo(QString name, QString text, int delayms)
 }
 
 
-void GuiReceiver::displayStatusBar(QString name, QString text, int delayms)
+void GuiReceiver::displayStatusBar(const QString& name, const QString& text, int delayms)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1035,7 +1035,7 @@ void GuiReceiver::displayStatusBar(QString name, QString text, int delayms)
 }
 
 
-void GuiReceiver::showImage(QString name, void* arr)
+void GuiReceiver::showImage(const QString& name, void* arr)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1067,7 +1067,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 }
 
 
-void GuiReceiver::destroyWindow(QString name)
+void GuiReceiver::destroyWindow(const QString& name)
 {
 
     QPointer<CvWindow> w = icvFindWindowByName(name);
@@ -1119,7 +1119,7 @@ void GuiReceiver::destroyAllWindow()
 }
 
 
-void GuiReceiver::moveWindow(QString name, int x, int y)
+void GuiReceiver::moveWindow(const QString& name, int x, int y)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1128,7 +1128,7 @@ void GuiReceiver::moveWindow(QString name, int x, int y)
 }
 
 
-void GuiReceiver::resizeWindow(QString name, int width, int height)
+void GuiReceiver::resizeWindow(const QString& name, int width, int height)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1160,7 +1160,7 @@ void GuiReceiver::enablePropertiesButtonEachWindow()
 }
 
 
-void GuiReceiver::addButton(QString button_name, int button_type, int initial_button_state, void* on_change, void* userdata)
+void GuiReceiver::addButton(const QString& button_name, int button_type, int initial_button_state, void* on_change, void* userdata)
 {
     if (!global_control_panel)
         return;
@@ -1193,7 +1193,7 @@ void GuiReceiver::addButton(QString button_name, int button_type, int initial_bu
 }
 
 
-void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value, int count, void* on_change, void *userdata)
+void GuiReceiver::addSlider2(const QString& bar_name, const QString& window_name, void* value, int count, void* on_change, void *userdata)
 {
     QBoxLayout *layout = NULL;
     QPointer<CvWindow> w;
@@ -1226,7 +1226,7 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
 }
 
 
-void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, int count, void* on_change)
+void GuiReceiver::addSlider(const QString& bar_name, const QString& window_name, void* value, int count, void* on_change)
 {
     QBoxLayout *layout = NULL;
     QPointer<CvWindow> w;
@@ -1265,7 +1265,7 @@ int GuiReceiver::start()
 }
 
 
-void GuiReceiver::setOpenGlDrawCallback(QString name, void* callback, void* userdata)
+void GuiReceiver::setOpenGlDrawCallback(const QString& name, void* callback, void* userdata)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1273,7 +1273,7 @@ void GuiReceiver::setOpenGlDrawCallback(QString name, void* callback, void* user
         w->setOpenGlDrawCallback((CvOpenGlDrawCallback) callback, userdata);
 }
 
-void GuiReceiver::setOpenGlContext(QString name)
+void GuiReceiver::setOpenGlContext(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1281,7 +1281,7 @@ void GuiReceiver::setOpenGlContext(QString name)
         w->makeCurrentOpenGlContext();
 }
 
-void GuiReceiver::updateWindow(QString name)
+void GuiReceiver::updateWindow(const QString& name)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
@@ -1289,7 +1289,7 @@ void GuiReceiver::updateWindow(QString name)
         w->updateGl();
 }
 
-double GuiReceiver::isOpenGl(QString name)
+double GuiReceiver::isOpenGl(const QString& name)
 {
     double result = -1;
 
@@ -1306,7 +1306,7 @@ double GuiReceiver::isOpenGl(QString name)
 // CvTrackbar
 
 
-CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTrackbarCallback2 on_change, void* data)
+CvTrackbar::CvTrackbar(CvWindow* arg, const QString& name, int* value, int _count, CvTrackbarCallback2 on_change, void* data)
 {
     callback = NULL;
     callback2 = on_change;
@@ -1316,7 +1316,7 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTr
 }
 
 
-CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTrackbarCallback on_change)
+CvTrackbar::CvTrackbar(CvWindow* arg, const QString& name, int* value, int _count, CvTrackbarCallback on_change)
 {
     callback = on_change;
     callback2 = NULL;
@@ -1326,7 +1326,7 @@ CvTrackbar::CvTrackbar(CvWindow* arg, QString name, int* value, int _count, CvTr
 }
 
 
-void CvTrackbar::create(CvWindow* arg, QString name, int* value, int _count)
+void CvTrackbar::create(CvWindow* arg, const QString& name, int* value, int _count)
 {
     type = type_CvTrackbar;
     myparent = arg;
@@ -1435,7 +1435,7 @@ void CvTrackbar::setLabel(int myvalue)
 
 
 //here CvButtonbar class
-CvButtonbar::CvButtonbar(QWidget* arg,  QString arg2)
+CvButtonbar::CvButtonbar(QWidget* arg,  const QString& arg2)
 {
     type = type_CvButtonbar;
     myparent = arg;
@@ -1453,7 +1453,7 @@ void CvButtonbar::setLabel()
 }
 
 
-void CvButtonbar::addButton(QString name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state)
+void CvButtonbar::addButton(const QString& name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state)
 {
     QString button_name = name;
 
@@ -1491,7 +1491,7 @@ void CvButtonbar::addButton(QString name, CvButtonCallback call, void* userdata,
 
 
 //buttons here
-CvPushButton::CvPushButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4)
+CvPushButton::CvPushButton(CvButtonbar* arg1, const QString& arg2, CvButtonCallback arg3, void* arg4)
 {
     myparent = arg1;
     button_name = arg2;
@@ -1513,7 +1513,7 @@ void CvPushButton::callCallBack(bool checked)
 }
 
 
-CvCheckBox::CvCheckBox(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
+CvCheckBox::CvCheckBox(CvButtonbar* arg1, const QString& arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
 {
     myparent = arg1;
     button_name = arg2;
@@ -1536,7 +1536,7 @@ void CvCheckBox::callCallBack(bool checked)
 }
 
 
-CvRadioButton::CvRadioButton(CvButtonbar* arg1, QString arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
+CvRadioButton::CvRadioButton(CvButtonbar* arg1, const QString& arg2, CvButtonCallback arg3, void* arg4, int initial_button_state)
 {
     myparent = arg1;
     button_name = arg2;
@@ -1563,7 +1563,7 @@ void CvRadioButton::callCallBack(bool checked)
 
 
 //here CvWinProperties class
-CvWinProperties::CvWinProperties(QString name_paraWindow, QObject* /*parent*/)
+CvWinProperties::CvWinProperties(const QString& name_paraWindow, QObject* /*parent*/)
 {
     //setParent(parent);
     type = type_CvWinProperties;
@@ -1633,7 +1633,7 @@ CvWinProperties::~CvWinProperties()
 // CvWindow
 
 
-CvWindow::CvWindow(QString name, int arg2)
+CvWindow::CvWindow(const QString& name, int arg2)
 {
     type = type_CvWindow;
 
@@ -1837,13 +1837,13 @@ void CvWindow::updateImage(void* arr)
 }
 
 
-void CvWindow::displayInfo(QString text, int delayms)
+void CvWindow::displayInfo(const QString& text, int delayms)
 {
     myView->startDisplayInfo(text, delayms);
 }
 
 
-void CvWindow::displayStatusBar(QString text, int delayms)
+void CvWindow::displayStatusBar(const QString& text, int delayms)
 {
     if (myStatusBar)
         myStatusBar->showMessage(text, delayms);
@@ -1857,7 +1857,7 @@ void CvWindow::enablePropertiesButton()
 }
 
 
-CvButtonbar* CvWindow::createButtonBar(QString name_bar)
+CvButtonbar* CvWindow::createButtonBar(const QString& name_bar)
 {
     QPointer<CvButtonbar> t = new CvButtonbar(global_control_panel, name_bar);
     t->setAlignment(Qt::AlignHCenter);
@@ -1870,7 +1870,7 @@ CvButtonbar* CvWindow::createButtonBar(QString name_bar)
 }
 
 
-void CvWindow::addSlider(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback on_change)
+void CvWindow::addSlider(CvWindow* w, const QString& name, int* value, int count, CvTrackbarCallback on_change)
 {
     QPointer<CvTrackbar> t = new CvTrackbar(w, name, value, count, on_change);
     t->setAlignment(Qt::AlignHCenter);
@@ -1894,7 +1894,7 @@ void CvWindow::addSlider(CvWindow* w, QString name, int* value, int count, CvTra
 }
 
 
-void CvWindow::addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* userdata)
+void CvWindow::addSlider2(CvWindow* w, const QString& name, int* value, int count, CvTrackbarCallback2 on_change, void* userdata)
 {
     QPointer<CvTrackbar> t = new CvTrackbar(w, name, value, count, on_change, userdata);
     t->setAlignment(Qt::AlignHCenter);
@@ -2561,7 +2561,7 @@ void DefaultViewPort::updateImage(const CvArr* arr)
 }
 
 
-void DefaultViewPort::startDisplayInfo(QString text, int delayms)
+void DefaultViewPort::startDisplayInfo(const QString& text, int delayms)
 {
     if (timerDisplay->isActive())
         stopDisplayInfo();
@@ -3203,7 +3203,7 @@ void OpenGlViewPort::updateImage(const CvArr* /*arr*/)
 {
 }
 
-void OpenGlViewPort::startDisplayInfo(QString /*text*/, int /*delayms*/)
+void OpenGlViewPort::startDisplayInfo(const QString& /*text*/, int /*delayms*/)
 {
 }
 
