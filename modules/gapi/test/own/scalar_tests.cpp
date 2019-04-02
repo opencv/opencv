@@ -5,7 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "opencv2/gapi/own/scalar.hpp"
 
 namespace opencv_test
