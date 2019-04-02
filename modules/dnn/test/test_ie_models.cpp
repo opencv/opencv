@@ -178,12 +178,13 @@ TEST_P(DNNTestOpenVINO, models)
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
     std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
+    std::string prefix;
 
 #ifdef INF_ENGINE_RELEASE
 #if INF_ENGINE_RELEASE <= 2018050000
-    std::string prefix = utils::fs::join("intel_models",
-                         utils::fs::join(modelName,
-                         utils::fs::join(precision, modelName)));
+    prefix = utils::fs::join("intel_models",
+             utils::fs::join(modelName,
+             utils::fs::join(precision, modelName)));
 #endif
 #endif
 
