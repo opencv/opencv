@@ -222,6 +222,10 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is disabled in OpenVINO 2019R1");
+#endif
     if (backend == DNN_BACKEND_HALIDE ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))

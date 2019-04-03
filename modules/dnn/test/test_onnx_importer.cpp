@@ -319,7 +319,7 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE targets");
 #endif

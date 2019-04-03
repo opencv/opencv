@@ -21,9 +21,18 @@ static void initDLDTDataPath()
     static bool initialized = false;
     if (!initialized)
     {
+#if INF_ENGINE_RELEASE <= 2018050000
         const char* dldtTestDataPath = getenv("INTEL_CVSDK_DIR");
         if (dldtTestDataPath)
-            cvtest::addDataSearchPath(cv::utils::fs::join(dldtTestDataPath, "deployment_tools"));
+            cvtest::addDataSearchPath(dldtTestDataPath);
+#else
+        const char* omzDataPath = getenv("OPENCV_OPEN_MODEL_ZOO_DATA_PATH");
+        if (omzDataPath)
+            cvtest::addDataSearchPath(omzDataPath);
+        const char* dnnDataPath = getenv("OPENCV_DNN_TEST_DATA_PATH");
+        if (dnnDataPath)
+            cvtest::addDataSearchPath(std::string(dnnDataPath) + "/omz_intel_models");
+#endif
         initialized = true;
     }
 #endif
@@ -32,6 +41,76 @@ static void initDLDTDataPath()
 using namespace cv;
 using namespace cv::dnn;
 using namespace InferenceEngine;
+
+struct OpenVINOModelTestCaseInfo
+{
+    const char* modelPathFP32;
+    const char* modelPathFP16;
+};
+
+static const std::map<std::string, OpenVINOModelTestCaseInfo>& getOpenVINOTestModels()
+{
+    static std::map<std::string, OpenVINOModelTestCaseInfo> g_models {
+#if INF_ENGINE_RELEASE <= 2018050000
+        { "age-gender-recognition-retail-0013", {
+            "deployment_tools/intel_models/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013",
+            "deployment_tools/intel_models/age-gender-recognition-retail-0013/FP16/age-gender-recognition-retail-0013"
+        }},
+        { "face-person-detection-retail-0002", {
+            "deployment_tools/intel_models/face-person-detection-retail-0002/FP32/face-person-detection-retail-0002",
+            "deployment_tools/intel_models/face-person-detection-retail-0002/FP16/face-person-detection-retail-0002"
+        }},
+        { "head-pose-estimation-adas-0001", {
+            "deployment_tools/intel_models/head-pose-estimation-adas-0001/FP32/head-pose-estimation-adas-0001",
+            "deployment_tools/intel_models/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001"
+        }},
+        { "person-detection-retail-0002", {
+            "deployment_tools/intel_models/person-detection-retail-0002/FP32/person-detection-retail-0002",
+            "deployment_tools/intel_models/person-detection-retail-0002/FP16/person-detection-retail-0002"
+        }},
+        { "vehicle-detection-adas-0002", {
+            "deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002",
+            "deployment_tools/intel_models/vehicle-detection-adas-0002/FP16/vehicle-detection-adas-0002"
+        }}
+#else
+        // layout is defined by open_model_zoo/model_downloader
+        // Downloaded using these parameters for Open Model Zoo downloader (2019R1):
+        // ./downloader.py -o ${OPENCV_DNN_TEST_DATA_PATH}/omz_intel_models --cache_dir ${OPENCV_DNN_TEST_DATA_PATH}/.omz_cache/ \
+        //     --name face-person-detection-retail-0002,face-person-detection-retail-0002-fp16,age-gender-recognition-retail-0013,age-gender-recognition-retail-0013-fp16,head-pose-estimation-adas-0001,head-pose-estimation-adas-0001-fp16,person-detection-retail-0002,person-detection-retail-0002-fp16,vehicle-detection-adas-0002,vehicle-detection-adas-0002-fp16
+        { "age-gender-recognition-retail-0013", {
+            "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013",
+            "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013-fp16"
+        }},
+        { "face-person-detection-retail-0002", {
+            "Retail/object_detection/face_pedestrian/rmnet-ssssd-2heads/0002/dldt/face-person-detection-retail-0002",
+            "Retail/object_detection/face_pedestrian/rmnet-ssssd-2heads/0002/dldt/face-person-detection-retail-0002-fp16"
+        }},
+        { "head-pose-estimation-adas-0001", {
+            "Transportation/object_attributes/headpose/vanilla_cnn/dldt/head-pose-estimation-adas-0001",
+            "Transportation/object_attributes/headpose/vanilla_cnn/dldt/head-pose-estimation-adas-0001-fp16"
+        }},
+        { "person-detection-retail-0002", {
+            "Retail/object_detection/pedestrian/hypernet-rfcn/0026/dldt/person-detection-retail-0002",
+            "Retail/object_detection/pedestrian/hypernet-rfcn/0026/dldt/person-detection-retail-0002-fp16"
+        }},
+        { "vehicle-detection-adas-0002", {
+            "Transportation/object_detection/vehicle/mobilenet-reduced-ssd/dldt/vehicle-detection-adas-0002",
+            "Transportation/object_detection/vehicle/mobilenet-reduced-ssd/dldt/vehicle-detection-adas-0002-fp16"
+        }}
+#endif
+    };
+
+    return g_models;
+}
+
+static const std::vector<std::string> getOpenVINOTestModelsList()
+{
+    std::vector<std::string> result;
+    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
+    for (const auto& it : models)
+        result.push_back(it.first);
+    return result;
+}
 
 static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
 {
@@ -172,25 +251,23 @@ void runCV(Target target, const std::string& xmlPath, const std::string& binPath
     }
 }
 
-typedef TestWithParam<tuple<Target, String> > DNNTestOpenVINO;
+typedef TestWithParam<tuple<Target, std::string> > DNNTestOpenVINO;
 TEST_P(DNNTestOpenVINO, models)
 {
+    initDLDTDataPath();
+
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
-    std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
-    std::string prefix;
+    bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
 
-#ifdef INF_ENGINE_RELEASE
-#if INF_ENGINE_RELEASE <= 2018050000
-    prefix = utils::fs::join("intel_models",
-             utils::fs::join(modelName,
-             utils::fs::join(precision, modelName)));
-#endif
-#endif
+    const std::map<std::string, OpenVINOModelTestCaseInfo>& models = getOpenVINOTestModels();
+    const auto it = models.find(modelName);
+    ASSERT_TRUE(it != models.end()) << modelName;
+    OpenVINOModelTestCaseInfo modelInfo = it->second;
+    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
 
-    initDLDTDataPath();
-    std::string xmlPath = findDataFile(prefix + ".xml");
-    std::string binPath = findDataFile(prefix + ".bin");
+    std::string xmlPath = findDataFile(modelPath + ".xml");
+    std::string binPath = findDataFile(modelPath + ".bin");
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
@@ -210,16 +287,12 @@ TEST_P(DNNTestOpenVINO, models)
     }
 }
 
+
 INSTANTIATE_TEST_CASE_P(/**/,
     DNNTestOpenVINO,
     Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
-            testing::Values(
-              "age-gender-recognition-retail-0013",
-              "face-person-detection-retail-0002",
-              "head-pose-estimation-adas-0001",
-              "person-detection-retail-0002",
-              "vehicle-detection-adas-0002"
-            ))
+            testing::ValuesIn(getOpenVINOTestModelsList())
+    )
 );
 
 }}
