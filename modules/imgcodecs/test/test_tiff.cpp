@@ -76,7 +76,7 @@ TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
         // Write sample TIFF file
         FILE* fp = fopen(filename.c_str(), "wb");
         ASSERT_TRUE(fp != NULL);
-        ASSERT_EQ((size_t)1, fwrite(tiff_sample_data, 86, 1, fp));
+        ASSERT_EQ((size_t)1, fwrite(tiff_sample_data[i], 86, 1, fp));
         fclose(fp);
 
         Mat img = imread(filename, IMREAD_UNCHANGED);

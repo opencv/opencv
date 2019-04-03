@@ -25,7 +25,7 @@ Explanation
    [bvlc_googlenet.caffemodel](http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel)
 
    Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
-   [classification_classes_ILSVRC2012.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/classification_classes_ILSVRC2012.txt).
+   [classification_classes_ILSVRC2012.txt](https://github.com/opencv/opencv/blob/master/samples/data/dnn/classification_classes_ILSVRC2012.txt).
 
    Put these files into working dir of this program example.
 

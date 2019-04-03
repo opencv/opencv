@@ -36,10 +36,8 @@ class DummyTask:
     def get(self):
         return self.data
 
-if __name__ == '__main__':
+def main():
     import sys
-
-    print(__doc__)
 
     try:
         fn = sys.argv[1]
@@ -86,4 +84,11 @@ if __name__ == '__main__':
             threaded_mode = not threaded_mode
         if ch == 27:
             break
-cv.destroyAllWindows()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

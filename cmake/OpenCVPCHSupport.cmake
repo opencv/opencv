@@ -261,6 +261,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       )
 
     _PCH_GET_COMPILE_FLAGS(_compile_FLAGS)
+    list(APPEND _compile_FLAGS "${_PCH_include_prefix}\"${_path}\"")
 
     get_target_property(type ${_targetName} TYPE)
     if(type STREQUAL "SHARED_LIBRARY")

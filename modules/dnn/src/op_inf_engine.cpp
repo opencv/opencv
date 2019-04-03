@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
@@ -12,7 +12,13 @@
 #ifdef HAVE_INF_ENGINE
 #include <ie_extension.h>
 #include <ie_plugin_dispatcher.hpp>
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+#include <vpu/vpu_plugin_config.hpp>
+#endif
 #endif  // HAVE_INF_ENGINE
+
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv { namespace dnn {
 
@@ -683,6 +689,64 @@ static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEngineP
     return sharedPlugins;
 }
 
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5) && !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+static bool detectMyriadX_()
+{
+    InferenceEngine::Builder::Network builder("");
+    InferenceEngine::idx_t inpId = builder.addLayer(
+                                   InferenceEngine::Builder::InputLayer().setPort(InferenceEngine::Port({1})));
+
+#if INF_ENGINE_RELEASE <= 2018050000
+    InferenceEngine::idx_t clampId;
+    {
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ClampLayer();
+        auto& blobs = l.getConstantData();
+        auto blob = InferenceEngine::make_shared_blob<int16_t>(
+                        InferenceEngine::Precision::FP16,
+                        InferenceEngine::Layout::C, {1});
+        blob->allocate();
+        blobs[""] = blob;
+        clampId = builder.addLayer({inpId}, l);
+    }
+    builder.addLayer({InferenceEngine::PortInfo(clampId)}, InferenceEngine::Builder::OutputLayer());
+#else
+    InferenceEngine::idx_t clampId = builder.addLayer({inpId}, InferenceEngine::Builder::ClampLayer());
+    builder.addLayer({InferenceEngine::PortInfo(clampId)},
+                      InferenceEngine::Builder::OutputLayer().setPort(InferenceEngine::Port({},
+                      InferenceEngine::Precision::FP16)));
+#endif
+
+    InferenceEngine::CNNNetwork cnn = InferenceEngine::CNNNetwork(
+                                      InferenceEngine::Builder::convertToICNNNetwork(builder.build()));
+
+    InferenceEngine::TargetDevice device = InferenceEngine::TargetDevice::eMYRIAD;
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    {
+        AutoLock lock(getInitializationMutex());
+        auto& sharedPlugins = getSharedPlugins();
+        auto pluginIt = sharedPlugins.find(device);
+        if (pluginIt != sharedPlugins.end()) {
+            enginePtr = pluginIt->second;
+        } else {
+            auto dispatcher = InferenceEngine::PluginDispatcher({""});
+            enginePtr = dispatcher.getSuitablePlugin(device);
+            sharedPlugins[device] = enginePtr;
+        }
+    }
+    auto plugin = InferenceEngine::InferencePlugin(enginePtr);
+    try
+    {
+        auto netExec = plugin.LoadNetwork(cnn, {{InferenceEngine::VPUConfigParams::KEY_VPU_PLATFORM,
+                                                 InferenceEngine::VPUConfigParams::VPU_2480}});
+        auto infRequest = netExec.CreateInferRequest();
+    } catch(...) {
+        return false;
+    }
+    return true;
+}
+#endif // >= 2018R5
+
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
@@ -784,7 +848,11 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R3)
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = const_cast<InferenceEngine::CNNNetwork&>(t_net).getInputShapes();
+#else
     InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+#endif
     InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
     bool equal_flag = true;
     size_t i = 0;
@@ -874,6 +942,60 @@ void resetMyriadDevice()
     getSharedPlugins().erase(InferenceEngine::TargetDevice::eMYRIAD);
 #endif  // HAVE_INF_ENGINE
 }
+
+#ifdef HAVE_INF_ENGINE
+bool isMyriadX()
+{
+     static bool myriadX = getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+     return myriadX;
+}
+
+static std::string getInferenceEngineVPUType_()
+{
+    static std::string param_vpu_type = utils::getConfigurationParameterString("OPENCV_DNN_IE_VPU_TYPE", "");
+    if (param_vpu_type == "")
+    {
+#if defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+        param_vpu_type = OPENCV_DNN_IE_VPU_TYPE_DEFAULT;
+#elif INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        CV_LOG_INFO(NULL, "OpenCV-DNN: running Inference Engine VPU autodetection: Myriad2/X. In case of other accelerator types specify 'OPENCV_DNN_IE_VPU_TYPE' parameter");
+        try {
+            bool isMyriadX_ = detectMyriadX_();
+            if (isMyriadX_)
+            {
+                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+            }
+            else
+            {
+                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2;
+            }
+        }
+        catch (...)
+        {
+            CV_LOG_WARNING(NULL, "OpenCV-DNN: Failed Inference Engine VPU autodetection. Specify 'OPENCV_DNN_IE_VPU_TYPE' parameter.");
+            param_vpu_type.clear();
+        }
+#else
+        CV_LOG_WARNING(NULL, "OpenCV-DNN: VPU auto-detection is not implemented. Consider specifying VPU type via 'OPENCV_DNN_IE_VPU_TYPE' parameter");
+        param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2;
+#endif
+    }
+    CV_LOG_INFO(NULL, "OpenCV-DNN: Inference Engine VPU type='" << param_vpu_type << "'");
+    return param_vpu_type;
+}
+
+cv::String getInferenceEngineVPUType()
+{
+    static cv::String vpu_type = getInferenceEngineVPUType_();
+    return vpu_type;
+}
+#else  // HAVE_INF_ENGINE
+cv::String getInferenceEngineVPUType()
+{
+    CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
+}
+#endif  // HAVE_INF_ENGINE
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

@@ -48,16 +48,35 @@
 
 /**
 @defgroup photo Computational Photography
+
+This module includes photo processing algorithms
 @{
+    @defgroup photo_inpaint Inpainting
     @defgroup photo_denoise Denoising
     @defgroup photo_hdr HDR imaging
 
 This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment,
 camera calibration with multiple exposures and exposure fusion.
 
+    @defgroup photo_decolor Contrast Preserving Decolorization
+
+Useful links:
+
+http://www.cse.cuhk.edu.hk/leojia/projects/color2gray/index.html
+
     @defgroup photo_clone Seamless Cloning
+
+Useful links:
+
+https://www.learnopencv.com/seamless-cloning-using-opencv-python-cpp
+
     @defgroup photo_render Non-Photorealistic Rendering
-    @defgroup photo_c C API
+
+Useful links:
+
+http://www.inf.ufrgs.br/~eslgastal/DomainTransform
+
+https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
 @}
   */
 
@@ -67,24 +86,13 @@ namespace cv
 //! @addtogroup photo
 //! @{
 
+//! @addtogroup photo_inpaint
+//! @{
 //! the inpainting algorithm
 enum
 {
-    INPAINT_NS    = 0, // Navier-Stokes algorithm
-    INPAINT_TELEA = 1 // A. Telea algorithm
-};
-
-enum
-{
-    NORMAL_CLONE = 1,
-    MIXED_CLONE  = 2,
-    MONOCHROME_TRANSFER = 3
-};
-
-enum
-{
-    RECURS_FILTER = 1,
-    NORMCONV_FILTER = 2
+    INPAINT_NS    = 0, //!< Use Navier-Stokes based method
+    INPAINT_TELEA = 1 //!< Use the algorithm proposed by Alexandru Telea @cite Telea04
 };
 
 /** @brief Restores the selected region in an image using the region neighborhood.
@@ -95,9 +103,7 @@ needs to be inpainted.
 @param dst Output image with the same size and type as src .
 @param inpaintRadius Radius of a circular neighborhood of each point inpainted that is considered
 by the algorithm.
-@param flags Inpainting method that could be one of the following:
--   **INPAINT_NS** Navier-Stokes based method [Navier01]
--   **INPAINT_TELEA** Method by Alexandru Telea @cite Telea04 .
+@param flags Inpainting method that could be cv::INPAINT_NS or cv::INPAINT_TELEA
 
 The function reconstructs the selected image area from the pixel near the area boundary. The
 function may be used to remove dust and scratches from a scanned photo, or to remove undesirable
@@ -106,11 +112,13 @@ objects from still images or video. See <http://en.wikipedia.org/wiki/Inpainting
 @note
    -   An example using the inpainting technique can be found at
         opencv_source_code/samples/cpp/inpaint.cpp
-    -   (Python) An example using the inpainting technique can be found at
+   -   (Python) An example using the inpainting technique can be found at
         opencv_source_code/samples/python/inpaint.py
  */
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
         OutputArray dst, double inpaintRadius, int flags );
+
+//! @} photo_inpaint
 
 //! @addtogroup photo_denoise
 //! @{
@@ -678,6 +686,9 @@ CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
 //! @} photo_hdr
 
+//! @addtogroup photo_decolor
+//! @{
+
 /** @brief Transforms a color image to a grayscale image. It is a basic tool in digital printing, stylized
 black-and-white photograph rendering, and in many single channel image processing applications
 @cite CL12 .
@@ -690,8 +701,23 @@ This function is to be applied on color images.
  */
 CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray color_boost);
 
+//! @} photo_decolor
+
 //! @addtogroup photo_clone
 //! @{
+
+
+//! seamlessClone algorithm flags
+enum
+{
+    /** The power of the method is fully expressed when inserting objects with complex outlines into a new background*/
+    NORMAL_CLONE = 1,
+    /** The classic method, color-based selection and alpha masking might be time consuming and often leaves an undesirable
+    halo. Seamless cloning, even averaged with the original image, is not effective. Mixed seamless cloning based on a loose selection proves effective.*/
+    MIXED_CLONE  = 2,
+    /** Monochrome transfer allows the user to easily replace certain features of one object by alternative features.*/
+    MONOCHROME_TRANSFER = 3};
+
 
 /** @example samples/cpp/tutorial_code/photo/seamless_cloning/cloning_demo.cpp
 An example using seamlessClone function
@@ -707,15 +733,7 @@ content @cite PM03 .
 @param mask Input 8-bit 1 or 3-channel image.
 @param p Point in dst image where object is placed.
 @param blend Output image with the same size and type as dst.
-@param flags Cloning method that could be one of the following:
--   **NORMAL_CLONE** The power of the method is fully expressed when inserting objects with
-complex outlines into a new background
--   **MIXED_CLONE** The classic method, color-based selection and alpha masking might be time
-consuming and often leaves an undesirable halo. Seamless cloning, even averaged with the
-original image, is not effective. Mixed seamless cloning based on a loose selection proves
-effective.
--   **MONOCHROME_TRANSFER** Monochrome transfer allows the user to easily replace certain features of
-one object by alternative features.
+@param flags Cloning method that could be cv::NORMAL_CLONE, cv::MIXED_CLONE or cv::MONOCHROME_TRANSFER
  */
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
         OutputArray blend, int flags);
@@ -750,18 +768,16 @@ CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArra
         float alpha = 0.2f, float beta = 0.4f);
 
 /** @brief By retaining only the gradients at edge locations, before integrating with the Poisson solver, one
-washes out the texture of the selected region, giving its contents a flat aspect. Here Canny Edge
-Detector is used.
+washes out the texture of the selected region, giving its contents a flat aspect. Here Canny Edge %Detector is used.
 
 @param src Input 8-bit 3-channel image.
 @param mask Input 8-bit 1 or 3-channel image.
 @param dst Output image with the same size and type as src.
-@param low_threshold Range from 0 to 100.
+@param low_threshold %Range from 0 to 100.
 @param high_threshold Value \> 100.
 @param kernel_size The size of the Sobel kernel to be used.
 
-**NOTE:**
-
+@note
 The algorithm assumes that the color of the source image is close to that of the destination. This
 assumption means that when the colors don't match, the source image color gets tinted toward the
 color of the destination image.
@@ -775,16 +791,21 @@ CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray
 //! @addtogroup photo_render
 //! @{
 
+//! Edge preserving filters
+enum
+{
+    RECURS_FILTER = 1, //!< Recursive Filtering
+    NORMCONV_FILTER = 2 //!< Normalized Convolution Filtering
+};
+
 /** @brief Filtering is the fundamental operation in image and video processing. Edge-preserving smoothing
 filters are used in many different applications @cite EM11 .
 
 @param src Input 8-bit 3-channel image.
 @param dst Output 8-bit 3-channel image.
-@param flags Edge preserving filters:
--   **RECURS_FILTER** = 1
--   **NORMCONV_FILTER** = 2
-@param sigma_s Range between 0 to 200.
-@param sigma_r Range between 0 to 1.
+@param flags Edge preserving filters: cv::RECURS_FILTER or cv::NORMCONV_FILTER
+@param sigma_s %Range between 0 to 200.
+@param sigma_r %Range between 0 to 1.
  */
 CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,
         float sigma_s = 60, float sigma_r = 0.4f);
@@ -793,8 +814,8 @@ CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flag
 
 @param src Input 8-bit 3-channel image.
 @param dst Output image with the same size and type as src.
-@param sigma_s Range between 0 to 200.
-@param sigma_r Range between 0 to 1.
+@param sigma_s %Range between 0 to 200.
+@param sigma_r %Range between 0 to 1.
  */
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
         float sigma_r = 0.15f);
@@ -807,9 +828,9 @@ An example using non-photorealistic line drawing functions
 @param src Input 8-bit 3-channel image.
 @param dst1 Output 8-bit 1-channel image.
 @param dst2 Output image with the same size and type as src.
-@param sigma_s Range between 0 to 200.
-@param sigma_r Range between 0 to 1.
-@param shade_factor Range between 0 to 0.1.
+@param sigma_s %Range between 0 to 200.
+@param sigma_r %Range between 0 to 1.
+@param shade_factor %Range between 0 to 0.1.
  */
 CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst1, OutputArray dst2,
         float sigma_s = 60, float sigma_r = 0.07f, float shade_factor = 0.02f);
@@ -820,8 +841,8 @@ contrast while preserving, or enhancing, high-contrast features.
 
 @param src Input 8-bit 3-channel image.
 @param dst Output image with the same size and type as src.
-@param sigma_s Range between 0 to 200.
-@param sigma_r Range between 0 to 1.
+@param sigma_s %Range between 0 to 200.
+@param sigma_r %Range between 0 to 1.
  */
 CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
         float sigma_r = 0.45f);

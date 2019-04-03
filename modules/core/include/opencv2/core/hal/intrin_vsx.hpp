@@ -11,11 +11,6 @@
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
 
-/**
- * todo: supporting half precision for power9
- * convert instractions xvcvhpsp, xvcvsphp
-**/
-
 namespace cv
 {
 
@@ -258,8 +253,16 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a)                          \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a)                         \
 { vec_st_h8(a.val, ptr); }
 
-#define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
-OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+// working around gcc bug for aligned ld/st
+// if runtime check for vec_ld/st fail we failback to unaligned ld/st
+// https://github.com/opencv/opencv/issues/13211
+#ifdef CV_COMPILER_VSX_BROKEN_ALIGNED
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vsx_ld, vsx_st, vsx_st)
+#else
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+#endif
 
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint8x16,  uchar)
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int8x16,   schar)
@@ -1069,117 +1072,188 @@ inline v_float64x2 v_lut_pairs(const double* tab, const int* idx) { return v_loa
 
 inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_int32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_uint32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[2] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1)
+    };
     return v_float64x2(tab[idx[0]], tab[idx[1]]);
 }
 
 inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
-    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
+    vec_float4 xy0 = vec_ld_l8(tab + vec_extract(idxvec.val, 0));
+    vec_float4 xy1 = vec_ld_l8(tab + vec_extract(idxvec.val, 1));
+    vec_float4 xy2 = vec_ld_l8(tab + vec_extract(idxvec.val, 2));
+    vec_float4 xy3 = vec_ld_l8(tab + vec_extract(idxvec.val, 3));
+    vec_float4 xy02 = vec_mergeh(xy0, xy2); // x0, x2, y0, y2
+    vec_float4 xy13 = vec_mergeh(xy1, xy3); // x1, x3, y1, y3
+    x.val = vec_mergeh(xy02, xy13);
+    y.val = vec_mergel(xy02, xy13);
 }
-
 inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float64x2(tab[idx[0]], tab[idx[1]]);
-    y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+    vec_double2 xy0 = vsx_ld(vec_extract(idxvec.val, 0), tab);
+    vec_double2 xy1 = vsx_ld(vec_extract(idxvec.val, 1), tab);
+    x.val = vec_mergeh(xy0, xy1);
+    y.val = vec_mergel(xy0, xy1);
 }
 
 inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
 {
-    vec_short8 vec0 = vec_mergeh((vec_short8)vec.val, (vec_short8)vec_mergesql(vec.val, vec.val));
-    vec0 = vec_mergeh(vec0, vec_mergesql(vec0, vec0));
-    return v_int8x16(vec_mergeh((vec_char16)vec0, (vec_char16)vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 2, 1, 3, 4, 6, 5, 7, 8, 10, 9, 11, 12, 14, 13, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+
 inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
 {
-    vec_char16 vec0 = (vec_char16)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int8x16(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 4, 1, 5, 2, 6, 3, 7, 8, 12, 9, 13, 10, 14, 11, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
 {
-    vec_short8 vec0 = (vec_short8)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int16x8(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0,1, 4,5, 2,3, 6,7, 8,9, 12,13, 10,11, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+
 inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
 {
-    return v_int16x8(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1, 8,9, 2,3, 10,11, 4,5, 12,13, 6,7, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
 
 inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
 {
-    return v_int32x4(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1,2,3, 8,9,10,11, 4,5,6,7, 12,13,14,15};
+    return v_int32x4(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
-inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec)
+{ return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec)
+{ return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
 
 inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
 {
-    schar CV_DECL_ALIGNED(32) val[16];
-    v_store_aligned(val, vec);
-    return v_int8x16(val[0], val[1], val[2], val[4], val[5], val[6], val[8], val[9], val[10], val[12], val[13], val[14], val[15], val[15], val[15], val[15]);
+    static const vec_uchar16 perm = {0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 15, 15, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 {
-    short CV_DECL_ALIGNED(32) val[8];
-    v_store_aligned(val, vec);
-    return v_int16x8(val[0], val[1], val[2], val[4], val[5], val[6], val[7], val[7]);
+    static const vec_uchar16 perm = {0,1, 2,3, 4,5, 8,9, 10,11, 12,13, 14,15, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
-inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
-inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
-inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec)
+{ return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec)
+{ return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec)
+{ return vec; }
 
 /////// FP16 support ////////
 
-// [TODO] implement these 2 using VSX or universal intrinsics (copy from intrin_sse.cpp and adopt)
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
-    return v_float32x4((float)ptr[0], (float)ptr[1], (float)ptr[2], (float)ptr[3]);
+    vec_ushort8 vf16 = vec_ld_l8((const ushort*)ptr);
+#if CV_VSX3 && defined(vec_extract_fp_from_shorth)
+    return v_float32x4(vec_extract_fp_from_shorth(vf16));
+#elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_float4 vf32;
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    return v_float32x4(vf32);
+#else
+    const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 maxexp = vec_int4_sp(0x7c000000);
+    const vec_float4 deltaf = vec_float4_c(vec_int4_sp(0x38800000));
+
+    vec_int4 bits = vec_int4_c(vec_mergeh(vec_short8_c(z), vec_short8_c(vf16)));
+    vec_int4 e = vec_and(bits, maxexp), sign = vec_and(bits, signmask);
+    vec_int4 t = vec_add(vec_sr(vec_xor(bits, sign), vec_uint4_sp(3)), delta); // ((h & 0x7fff) << 13) + delta
+    vec_int4 zt = vec_int4_c(vec_sub(vec_float4_c(vec_add(t, vec_int4_sp(1 << 23))), deltaf));
+
+    t = vec_add(t, vec_and(delta, vec_cmpeq(maxexp, e)));
+    vec_bint4 zmask = vec_cmpeq(e, z);
+    vec_int4 ft = vec_sel(t, zt, zmask);
+    return v_float32x4(vec_float4_c(vec_or(ft, sign)));
+#endif
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-    float CV_DECL_ALIGNED(32) f[4];
-    v_store_aligned(f, v);
-    ptr[0] = float16_t(f[0]);
-    ptr[1] = float16_t(f[1]);
-    ptr[2] = float16_t(f[2]);
-    ptr[3] = float16_t(f[3]);
+// fixme: Is there any buitin op or intrinsic that cover "xvcvsphp"?
+#if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_ushort8 vf16;
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
+#else
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 rval = vec_int4_sp(0x3f000000);
+
+    vec_int4 t = vec_int4_c(v.val);
+    vec_int4 sign = vec_sra(vec_and(t, signmask), vec_uint4_sp(16));
+    t = vec_and(vec_nor(signmask, signmask), t);
+
+    vec_bint4 finitemask = vec_cmpgt(vec_int4_sp(0x47800000), t);
+    vec_bint4 isnan = vec_cmpgt(t, vec_int4_sp(0x7f800000));
+    vec_int4 naninf = vec_sel(vec_int4_sp(0x7c00), vec_int4_sp(0x7e00), isnan);
+    vec_bint4 tinymask = vec_cmpgt(vec_int4_sp(0x38800000), t);
+    vec_int4 tt = vec_int4_c(vec_add(vec_float4_c(t), vec_float4_c(rval)));
+    tt = vec_sub(tt, rval);
+    vec_int4 odd = vec_and(vec_sr(t, vec_uint4_sp(13)), vec_int4_sp(1));
+    vec_int4 nt = vec_add(t, vec_int4_sp(0xc8000fff));
+    nt = vec_sr(vec_add(nt, odd), vec_uint4_sp(13));
+    t = vec_sel(nt, tt, tinymask);
+    t = vec_sel(naninf, t, finitemask);
+    t = vec_or(t, sign);
+    vec_st_l8(vec_packs(t, t), ptr);
+#endif
 }
 
 inline void v_cleanup() {}

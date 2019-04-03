@@ -276,17 +276,15 @@ public:
     public:
         KMeansDistanceComputer(Distance _distance, const Matrix<ElementType>& _dataset,
             const int _branching, const int* _indices, const Matrix<double>& _dcenters, const size_t _veclen,
-            int* _count, int* _belongs_to, std::vector<DistanceType>& _radiuses, bool& _converged)
+            std::vector<int> &_new_centroids, std::vector<DistanceType> &_sq_dists)
             : distance(_distance)
             , dataset(_dataset)
             , branching(_branching)
             , indices(_indices)
             , dcenters(_dcenters)
             , veclen(_veclen)
-            , count(_count)
-            , belongs_to(_belongs_to)
-            , radiuses(_radiuses)
-            , converged(_converged)
+            , new_centroids(_new_centroids)
+            , sq_dists(_sq_dists)
         {
         }
 
@@ -297,8 +295,8 @@ public:
 
             for( int i = begin; i<end; ++i)
             {
-                DistanceType sq_dist = distance(dataset[indices[i]], dcenters[0], veclen);
-                int new_centroid = 0;
+                DistanceType sq_dist(distance(dataset[indices[i]], dcenters[0], veclen));
+                int new_centroid(0);
                 for (int j=1; j<branching; ++j) {
                     DistanceType new_sq_dist = distance(dataset[indices[i]], dcenters[j], veclen);
                     if (sq_dist>new_sq_dist) {
@@ -306,15 +304,8 @@ public:
                         sq_dist = new_sq_dist;
                     }
                 }
-                if (sq_dist > radiuses[new_centroid]) {
-                    radiuses[new_centroid] = sq_dist;
-                }
-                if (new_centroid != belongs_to[i]) {
-                    CV_XADD(&count[belongs_to[i]], -1);
-                    CV_XADD(&count[new_centroid], 1);
-                    belongs_to[i] = new_centroid;
-                    converged = false;
-                }
+                sq_dists[i] = sq_dist;
+                new_centroids[i] = new_centroid;
             }
         }
 
@@ -325,10 +316,8 @@ public:
         const int* indices;
         const Matrix<double>& dcenters;
         const size_t veclen;
-        int* count;
-        int* belongs_to;
-        std::vector<DistanceType>& radiuses;
-        bool& converged;
+        std::vector<int> &new_centroids;
+        std::vector<DistanceType> &sq_dists;
         KMeansDistanceComputer& operator=( const KMeansDistanceComputer & ) { return *this; }
     };
 
@@ -796,9 +785,26 @@ private:
                 }
             }
 
+            std::vector<int> new_centroids(indices_length);
+            std::vector<DistanceType> sq_dists(indices_length);
+
             // reassign points to clusters
-            KMeansDistanceComputer invoker(distance_, dataset_, branching, indices, dcenters, veclen_, count, belongs_to, radiuses, converged);
+            KMeansDistanceComputer invoker(distance_, dataset_, branching, indices, dcenters, veclen_, new_centroids, sq_dists);
             parallel_for_(cv::Range(0, (int)indices_length), invoker);
+
+            for (int i=0; i < (int)indices_length; ++i) {
+                DistanceType sq_dist(sq_dists[i]);
+                int new_centroid(new_centroids[i]);
+                if (sq_dist > radiuses[new_centroid]) {
+                    radiuses[new_centroid] = sq_dist;
+                }
+                if (new_centroid != belongs_to[i]) {
+                    count[belongs_to[i]]--;
+                    count[new_centroid]++;
+                    belongs_to[i] = new_centroid;
+                    converged = false;
+                }
+            }
 
             for (int i=0; i<branching; ++i) {
                 // if one cluster converges to an empty cluster,

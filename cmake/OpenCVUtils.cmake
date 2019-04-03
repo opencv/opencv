@@ -480,6 +480,44 @@ macro(ocv_check_flag_support lang flag varname base_options)
   ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
 endmacro()
 
+macro(ocv_check_runtime_flag flag result)
+  set(_fname "${ARGN}")
+  if(NOT DEFINED ${result})
+    file(RELATIVE_PATH _rname "${CMAKE_SOURCE_DIR}" "${_fname}")
+    message(STATUS "Performing Runtime Test ${result} (check file: ${_rname})")
+    try_run(exec_return compile_result
+      "${CMAKE_BINARY_DIR}"
+      "${_fname}"
+      CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}" # CMP0056 do this on new CMake
+      COMPILE_DEFINITIONS "${flag}"
+      OUTPUT_VARIABLE OUTPUT)
+
+    if(${compile_result})
+      if(exec_return EQUAL 0)
+        set(${result} 1 CACHE INTERNAL "Runtime Test ${result}")
+        message(STATUS "Performing Runtime Test ${result} - Success")
+      else()
+        message(STATUS "Performing Runtime Test ${result} - Failed(${exec_return})")
+        set(${result} 0 CACHE INTERNAL "Runtime Test ${result}")
+      endif()
+    else()
+      set(${result} 0 CACHE INTERNAL "Runtime Test ${result}")
+      message(STATUS "Performing Runtime Test ${result} - Compiling Failed")
+    endif()
+
+    if(NOT ${result})
+      file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+        "Runtime Test failed:\n"
+        "    source file: '${_fname}'\n"
+        "    check option: '${flag}'\n"
+        "    exec return: ${exec_return}\n"
+        "===== BUILD AND RUNTIME LOG =====\n"
+        "${OUTPUT}\n"
+        "===== END =====\n\n")
+    endif()
+  endif()
+endmacro()
+
 # turns off warnings
 macro(ocv_warnings_disable)
   if(NOT ENABLE_NOISY_WARNINGS)
@@ -784,6 +822,11 @@ function(ocv_output_status msg)
   message(STATUS "${msg}")
   string(REPLACE "\\" "\\\\" msg "${msg}")
   string(REPLACE "\"" "\\\"" msg "${msg}")
+  string(REGEX REPLACE "^\n+|\n+$" "" msg "${msg}")
+  if(msg MATCHES "\n")
+    message(WARNING "String to be inserted to version_string.inc has an unexpected line break: '${msg}'")
+    string(REPLACE "\n" "\\n" msg "${msg}")
+  endif()
   set(OPENCV_BUILD_INFO_STR "${OPENCV_BUILD_INFO_STR}\"${msg}\\n\"\n" CACHE INTERNAL "")
 endfunction()
 

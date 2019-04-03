@@ -676,7 +676,7 @@ public:
 
             int inpCnAll = input.size[1], width = input.size[3], height = input.size[2];
             int inpCn = inpCnAll / ngroups;
-            p.is1x1_ = kernel == Size(0,0) && pad == Size(0, 0);
+            p.is1x1_ = kernel == Size(1,1) && pad == Size(0, 0);
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;

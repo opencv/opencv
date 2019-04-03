@@ -899,7 +899,7 @@ public:
         int count = inputs.rows;
 
         int iter = -1, max_iter = termCrit.maxCount*count;
-        double epsilon = termCrit.epsilon*count;
+        double epsilon = (termCrit.type & CV_TERMCRIT_EPS) ? termCrit.epsilon*count : 0;
 
         int l_count = layer_count();
         int ivcount = layer_sizes[0];
