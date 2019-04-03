@@ -247,7 +247,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     std::vector<Mat> images;
     images_.getMatVector(images);
     CV_Assert(!images.empty());
-    for (int i = 0; i < images.size(); i++)
+    for (size_t i = 0; i < images.size(); i++)
     {
         Size imgSize = images[i].size();
         if (size == Size())
@@ -281,7 +281,6 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
     Mat image0 = images[0];
     int nch = image0.channels();
     CV_Assert(image0.dims == 2);
-    Mat image;
     if (nch == 3 || nch == 4)
     {
         int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
@@ -291,7 +290,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
 
         for(size_t i = 0; i < nimages; i++ )
         {
-            image = images[i];
+            const Mat& image = images[i];
             CV_Assert(image.depth() == blob_.depth());
             nch = image.channels();
             CV_Assert(image.dims == 2 && (nch == 3 || nch == 4));
@@ -313,7 +312,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
 
        for(size_t i = 0; i < nimages; i++ )
        {
-           Mat image = images[i];
+           const Mat& image = images[i];
            CV_Assert(image.depth() == blob_.depth());
            nch = image.channels();
            CV_Assert(image.dims == 2 && (nch == 1));
