@@ -40,3 +40,5 @@ add_backend("ios" WITH_CAP_IOS)
 
 add_backend("dshow" WITH_DSHOW)
 add_backend("msmf" WITH_MSMF)
+
+add_backend("android_mediandk" WITH_ANDROID_MEDIANDK)

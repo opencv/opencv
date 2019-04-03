@@ -1451,115 +1451,82 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
     }
 }
 
-#if CV_SIMD128 && !defined(__aarch64__)
-static inline void
-load3x3Matrix(const float* m, v_float32x4& m0, v_float32x4& m1, v_float32x4& m2, v_float32x4& m3)
-{
-    m0 = v_float32x4(m[0], m[4], m[8], 0);
-    m1 = v_float32x4(m[1], m[5], m[9], 0);
-    m2 = v_float32x4(m[2], m[6], m[10], 0);
-    m3 = v_float32x4(m[3], m[7], m[11], 0);
-}
-#endif
-
-#if CV_SIMD128
-static inline v_int16x8
-v_matmulvec(const v_int16x8 &v0, const v_int16x8 &m0, const v_int16x8 &m1, const v_int16x8 &m2, const v_int32x4 &m3, const int BITS)
-{
-    // v0 : 0 b0 g0 r0 b1 g1 r1 ?
-    v_int32x4 t0 = v_dotprod(v0, m0); // a0 b0 a1 b1
-    v_int32x4 t1 = v_dotprod(v0, m1); // c0 d0 c1 d1
-    v_int32x4 t2 = v_dotprod(v0, m2); // e0 f0 e1 f1
-    v_int32x4 t3 = v_setzero_s32();
-    v_int32x4 s0, s1, s2, s3;
-    v_transpose4x4(t0, t1, t2, t3, s0, s1, s2, s3);
-    s0 = s0 + s1 + m3; // B0 G0 R0 ?
-    s2 = s2 + s3 + m3; // B1 G1 R1 ?
-
-    s0 = s0 >> BITS;
-    s2 = s2 >> BITS;
-
-    v_int16x8 result = v_pack(s0, v_setzero_s32());                    // B0 G0 R0 0 0 0 0 0
-    result = v_reinterpret_as_s16(v_reinterpret_as_s64(result) << 16); // 0 B0 G0 R0 0 0 0 0
-    result = result | v_pack(v_setzero_s32(), s2);                     // 0 B0 G0 R0 B1 G1 R1 0
-    return result;
-}
-#endif
-
 static void
 transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD128
+#if CV_SIMD
     const int BITS = 10, SCALE = 1 << BITS;
     const float MAX_M = (float)(1 << (15 - BITS));
 
-    if( hasSIMD128() && scn == 3 && dcn == 3 &&
-        std::abs(m[0]) < MAX_M && std::abs(m[1]) < MAX_M && std::abs(m[2]) < MAX_M && std::abs(m[3]) < MAX_M*256 &&
-        std::abs(m[4]) < MAX_M && std::abs(m[5]) < MAX_M && std::abs(m[6]) < MAX_M && std::abs(m[7]) < MAX_M*256 &&
-        std::abs(m[8]) < MAX_M && std::abs(m[9]) < MAX_M && std::abs(m[10]) < MAX_M && std::abs(m[11]) < MAX_M*256 )
+    if( scn == 3 && dcn == 3 &&
+        std::abs(m[0]) < MAX_M && std::abs(m[1]) < MAX_M && std::abs(m[ 2]) < MAX_M*256 && std::abs(m[ 3]) < MAX_M*256 &&
+        std::abs(m[4]) < MAX_M && std::abs(m[5]) < MAX_M && std::abs(m[ 6]) < MAX_M*256 && std::abs(m[ 7]) < MAX_M*256 &&
+        std::abs(m[8]) < MAX_M && std::abs(m[9]) < MAX_M && std::abs(m[10]) < MAX_M*256 && std::abs(m[11]) < MAX_M*256 )
     {
         const int nChannels = 3;
-        const int cWidth = v_int16x8::nlanes;
-        // faster fixed-point transformation
-        short m00 = saturate_cast<short>(m[0]*SCALE), m01 = saturate_cast<short>(m[1]*SCALE),
-            m02 = saturate_cast<short>(m[2]*SCALE), m10 = saturate_cast<short>(m[4]*SCALE),
-            m11 = saturate_cast<short>(m[5]*SCALE), m12 = saturate_cast<short>(m[6]*SCALE),
-            m20 = saturate_cast<short>(m[8]*SCALE), m21 = saturate_cast<short>(m[9]*SCALE),
-            m22 = saturate_cast<short>(m[10]*SCALE);
-        int m03 = saturate_cast<int>((m[3]+0.5f)*SCALE), m13 = saturate_cast<int>((m[7]+0.5f)*SCALE ),
-            m23 = saturate_cast<int>((m[11]+0.5f)*SCALE);
 
-        v_int16x8 m0 = v_int16x8(0, m00, m01, m02, m00, m01, m02, 0);
-        v_int16x8 m1 = v_int16x8(0, m10, m11, m12, m10, m11, m12, 0);
-        v_int16x8 m2 = v_int16x8(0, m20, m21, m22, m20, m21, m22, 0);
-        v_int32x4 m3 = v_int32x4(m03, m13, m23, 0);
+        union {
+            short s[6];
+            int p[3];
+        } m16;
+        m16.s[0] = saturate_cast<short>(m[0] * SCALE); m16.s[1] = saturate_cast<short>(m[1] * SCALE);
+        m16.s[2] = saturate_cast<short>(m[4] * SCALE); m16.s[3] = saturate_cast<short>(m[5] * SCALE);
+        m16.s[4] = saturate_cast<short>(m[8] * SCALE); m16.s[5] = saturate_cast<short>(m[9] * SCALE);
+        int m32[] = {saturate_cast<int>(m[ 2] * SCALE), saturate_cast<int>(m[ 3] * SCALE),
+                     saturate_cast<int>(m[ 6] * SCALE), saturate_cast<int>(m[ 7] * SCALE),
+                     saturate_cast<int>(m[10] * SCALE), saturate_cast<int>(m[11] * SCALE)};
+        v_int16 m01 = v_reinterpret_as_s16(vx_setall_s32(m16.p[0]));
+        v_int32 m2 = vx_setall_s32(m32[0]);
+        v_int32 m3 = vx_setall_s32(m32[1]);
+        v_int16 m45 = v_reinterpret_as_s16(vx_setall_s32(m16.p[1]));
+        v_int32 m6 = vx_setall_s32(m32[2]);
+        v_int32 m7 = vx_setall_s32(m32[3]);
+        v_int16 m89 = v_reinterpret_as_s16(vx_setall_s32(m16.p[2]));
+        v_int32 m10 = vx_setall_s32(m32[4]);
+        v_int32 m11 = vx_setall_s32(m32[5]);
         int x = 0;
-
-        for (; x <= (len - cWidth) * nChannels; x += cWidth * nChannels)
+        for (; x <= (len - v_uint8::nlanes) * nChannels; x += v_uint8::nlanes * nChannels)
         {
-            // load 8 pixels
-            v_int16x8 v0 = v_reinterpret_as_s16(v_load_expand(src + x));
-            v_int16x8 v1 = v_reinterpret_as_s16(v_load_expand(src + x + cWidth));
-            v_int16x8 v2 = v_reinterpret_as_s16(v_load_expand(src + x + cWidth * 2));
-            v_int16x8 v3;
+            v_uint8 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_uint8 bgl, bgh;
+            v_zip(b, g, bgl, bgh);
+            v_uint16 rl, rh;
+            v_expand(r, rl, rh);
 
-            // rotate and pack
-            v3 = v_rotate_right<1>(v2);     // 0 b6 g6 r6 b7 g7 r7 0
-            v2 = v_rotate_left <5>(v2, v1); // 0 b4 g4 r4 b5 g5 r5 0
-            v1 = v_rotate_left <3>(v1, v0); // 0 b2 g2 r2 b3 g3 r3 0
-            v0 = v_rotate_left <1>(v0);     // 0 b0 g0 r0 b1 g1 r1 0
-
-            // multiply with matrix and normalize
-            v0 = v_matmulvec(v0, m0, m1, m2, m3, BITS); // 0 B0 G0 R0 B1 G1 R1 0
-            v1 = v_matmulvec(v1, m0, m1, m2, m3, BITS); // 0 B2 G2 R2 B3 G3 R3 0
-            v2 = v_matmulvec(v2, m0, m1, m2, m3, BITS); // 0 B4 G4 R4 B5 G5 R5 0
-            v3 = v_matmulvec(v3, m0, m1, m2, m3, BITS); // 0 B6 G6 R6 B7 G7 R7 0
-
-            // narrow down as uint8x16
-            v_uint8x16 z0 = v_pack_u(v0, v_setzero_s16()); // 0 B0 G0 R0 B1 G1 R1 0 0 0 0 0 0 0 0 0
-            v_uint8x16 z1 = v_pack_u(v1, v_setzero_s16()); // 0 B2 G2 R2 B3 G3 R3 0 0 0 0 0 0 0 0 0
-            v_uint8x16 z2 = v_pack_u(v2, v_setzero_s16()); // 0 B4 G4 R4 B5 G5 R5 0 0 0 0 0 0 0 0 0
-            v_uint8x16 z3 = v_pack_u(v3, v_setzero_s16()); // 0 B6 G6 R6 B7 G7 R7 0 0 0 0 0 0 0 0 0
-
-            // rotate and pack
-            z0 = v_reinterpret_as_u8(v_reinterpret_as_u64(z0) >> 8) | v_reinterpret_as_u8(v_reinterpret_as_u64(z1) << 40);  // B0 G0 R0 B1 G1 R1 B2 G2 0 0 0 0 0 0 0 0
-            z1 = v_reinterpret_as_u8(v_reinterpret_as_u64(z1) >> 24) | v_reinterpret_as_u8(v_reinterpret_as_u64(z2) << 24); // R2 B3 G3 R3 B4 G4 R4 B5 0 0 0 0 0 0 0 0
-            z2 = v_reinterpret_as_u8(v_reinterpret_as_u64(z2) >> 40) | v_reinterpret_as_u8(v_reinterpret_as_u64(z3) << 8);  // G5 R6 B6 G6 R6 B7 G7 R7 0 0 0 0 0 0 0 0
-
-            // store on memory
-            v_store_low(dst + x, z0);
-            v_store_low(dst + x + cWidth, z1);
-            v_store_low(dst + x + cWidth * 2, z2);
+            v_int16 dbl, dbh, dgl, dgh, drl, drh;
+            v_uint16 p0, p2;
+            v_int32 p1, p3;
+            v_expand(bgl, p0, p2);
+            v_expand(v_reinterpret_as_s16(rl), p1, p3);
+            dbl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m01) + p1 *  m2 + m3,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m01) + p3 *  m2 + m3);
+            dgl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m45) + p1 *  m6 + m7,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m45) + p3 *  m6 + m7);
+            drl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m89) + p1 * m10 + m11,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m89) + p3 * m10 + m11);
+            v_expand(bgh, p0, p2);
+            v_expand(v_reinterpret_as_s16(rh), p1, p3);
+            dbh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m01) + p1 *  m2 + m3,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m01) + p3 *  m2 + m3);
+            dgh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m45) + p1 *  m6 + m7,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m45) + p3 *  m6 + m7);
+            drh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m89) + p1 * m10 + m11,
+                                    v_dotprod(v_reinterpret_as_s16(p2), m89) + p3 * m10 + m11);
+            v_store_interleave(dst + x, v_pack_u(dbl, dbh), v_pack_u(dgl, dgh), v_pack_u(drl, drh));
         }
-
+        m32[1] = saturate_cast<int>((m[3] + 0.5f)*SCALE);
+        m32[3] = saturate_cast<int>((m[7] + 0.5f)*SCALE);
+        m32[5] = saturate_cast<int>((m[11] + 0.5f)*SCALE);
         for( ; x < len * nChannels; x += nChannels )
         {
             int v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-            uchar t0 = saturate_cast<uchar>((m00*v0 + m01*v1 + m02*v2 + m03)>>BITS);
-            uchar t1 = saturate_cast<uchar>((m10*v0 + m11*v1 + m12*v2 + m13)>>BITS);
-            uchar t2 = saturate_cast<uchar>((m20*v0 + m21*v1 + m22*v2 + m23)>>BITS);
+            uchar t0 = saturate_cast<uchar>((m16.s[0] * v0 + m16.s[1] * v1 + m32[0] * v2 + m32[1]) >> BITS);
+            uchar t1 = saturate_cast<uchar>((m16.s[2] * v0 + m16.s[3] * v1 + m32[2] * v2 + m32[3]) >> BITS);
+            uchar t2 = saturate_cast<uchar>((m16.s[4] * v0 + m16.s[5] * v1 + m32[4] * v2 + m32[5]) >> BITS);
             dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
         }
+        vx_cleanup();
         return;
     }
 #endif
@@ -1570,64 +1537,65 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
 static void
 transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD128 && !defined(__aarch64__)
-    if( hasSIMD128() && scn == 3 && dcn == 3 )
+#if CV_SIMD && !defined(__aarch64__)
+    if( scn == 3 && dcn == 3 )
     {
-        const int nChannels = 3;
-        const int cWidth = v_float32x4::nlanes;
-        v_int16x8 delta = v_int16x8(0, -32768, -32768, -32768, -32768, -32768, -32768, 0);
-        v_float32x4 m0, m1, m2, m3;
-        load3x3Matrix(m, m0, m1, m2, m3);
-        m3 -= v_float32x4(32768.f, 32768.f, 32768.f, 0.f);
-
         int x = 0;
-        for( ; x <= (len - cWidth) * nChannels; x += cWidth * nChannels )
+#if CV_SIMD_WIDTH > 16
+        v_float32 m0  = vx_setall_f32(m[ 0]);
+        v_float32 m1  = vx_setall_f32(m[ 1]);
+        v_float32 m2  = vx_setall_f32(m[ 2]);
+        v_float32 m3  = vx_setall_f32(m[ 3] - 32768.f);
+        v_float32 m4  = vx_setall_f32(m[ 4]);
+        v_float32 m5  = vx_setall_f32(m[ 5]);
+        v_float32 m6  = vx_setall_f32(m[ 6]);
+        v_float32 m7  = vx_setall_f32(m[ 7] - 32768.f);
+        v_float32 m8  = vx_setall_f32(m[ 8]);
+        v_float32 m9  = vx_setall_f32(m[ 9]);
+        v_float32 m10 = vx_setall_f32(m[10]);
+        v_float32 m11 = vx_setall_f32(m[11] - 32768.f);
+        v_int16 delta = vx_setall_s16(-32768);
+        for (; x <= (len - v_uint16::nlanes)*3; x += v_uint16::nlanes*3)
         {
-            // load 4 pixels
-            v_uint16x8 v0_16 = v_load(src + x);              // b0 g0 r0 b1 g1 r1 b2 g2
-            v_uint16x8 v2_16 = v_load_low(src + x + cWidth * 2); // r2 b3 g3 r3 ?  ?  ?  ?
+            v_uint16 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_uint32 bl, bh, gl, gh, rl, rh;
+            v_expand(b, bl, bh);
+            v_expand(g, gl, gh);
+            v_expand(r, rl, rh);
 
-            // expand to 4 vectors
-            v_uint32x4 v0_32, v1_32, v2_32, v3_32, dummy_32;
-            v_expand(v_rotate_right<3>(v0_16), v1_32, dummy_32);         // b1 g1 r1
-            v_expand(v_rotate_right<1>(v2_16), v3_32, dummy_32);         // b3 g3 r3
-            v_expand(v_rotate_right<6>(v0_16, v2_16), v2_32, dummy_32); // b2 g2 r2
-            v_expand(v0_16, v0_32, dummy_32);                            // b0 g0 r0
-
-            // convert to float32x4
-            v_float32x4 x0 = v_cvt_f32(v_reinterpret_as_s32(v0_32)); // b0 g0 r0
-            v_float32x4 x1 = v_cvt_f32(v_reinterpret_as_s32(v1_32)); // b1 g1 r1
-            v_float32x4 x2 = v_cvt_f32(v_reinterpret_as_s32(v2_32)); // b2 g2 r2
-            v_float32x4 x3 = v_cvt_f32(v_reinterpret_as_s32(v3_32)); // b3 g3 r3
-
-            // multiply and convert back to int32x4
-            v_int32x4 y0, y1, y2, y3;
-            y0 = v_round(v_matmuladd(x0, m0, m1, m2, m3)); // B0 G0 R0
-            y1 = v_round(v_matmuladd(x1, m0, m1, m2, m3)); // B1 G1 R1
-            y2 = v_round(v_matmuladd(x2, m0, m1, m2, m3)); // B2 G2 R2
-            y3 = v_round(v_matmuladd(x3, m0, m1, m2, m3)); // B3 G3 R3
-
-            // narrow down to int16x8
-            v_int16x8 v0 = v_add_wrap(v_pack(v_rotate_left<1>(y0), y1), delta); // 0 B0 G0 R0 B1 G1 R1 0
-            v_int16x8 v2 = v_add_wrap(v_pack(v_rotate_left<1>(y2), y3), delta); // 0 B2 G2 R2 B3 G3 R3 0
-
-            // rotate and pack
-            v0 = v_rotate_right<1>(v0) | v_rotate_left<5>(v2); // B0 G0 R0 B1 G1 R1 B2 G2
-            v2 = v_rotate_right<3>(v2);                        // R2 B3 G3 R3 0  0  0  0
-
-            // store 4 pixels
-            v_store(dst + x, v_reinterpret_as_u16(v0));
-            v_store_low(dst + x + cWidth * 2, v_reinterpret_as_u16(v2));
+            v_int16 db, dg, dr;
+            db = v_add_wrap(v_pack(v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bl)), m0, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gl)), m1, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rl)),  m2,  m3)))),
+                                   v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bh)), m0, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gh)), m1, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rh)),  m2,  m3))))), delta);
+            dg = v_add_wrap(v_pack(v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bl)), m4, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gl)), m5, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rl)),  m6,  m7)))),
+                                   v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bh)), m4, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gh)), m5, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rh)),  m6,  m7))))), delta);
+            dr = v_add_wrap(v_pack(v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bl)), m8, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gl)), m9, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rl)), m10, m11)))),
+                                   v_round(v_muladd(v_cvt_f32(v_reinterpret_as_s32(bh)), m8, v_muladd(v_cvt_f32(v_reinterpret_as_s32(gh)), m9, v_muladd(v_cvt_f32(v_reinterpret_as_s32(rh)), m10, m11))))), delta);
+            v_store_interleave(dst + x, v_reinterpret_as_u16(db), v_reinterpret_as_u16(dg), v_reinterpret_as_u16(dr));
         }
-
-        for( ; x < len * nChannels; x += nChannels )
+#endif
+        v_float32x4 _m0l(m[0], m[4], m[ 8], 0.f);
+        v_float32x4 _m1l(m[1], m[5], m[ 9], 0.f);
+        v_float32x4 _m2l(m[2], m[6], m[10], 0.f);
+        v_float32x4 _m3l(m[3] - 32768.f, m[7] - 32768.f, m[11] - 32768.f, 0.f);
+        v_float32x4 _m0h = v_rotate_left<1>(_m0l);
+        v_float32x4 _m1h = v_rotate_left<1>(_m1l);
+        v_float32x4 _m2h = v_rotate_left<1>(_m2l);
+        v_float32x4 _m3h = v_rotate_left<1>(_m3l);
+        v_int16x8 _delta(0, -32768, -32768, -32768, -32768, -32768, -32768, 0);
+        for( ; x <= len*3 - v_uint16x8::nlanes; x += 3*v_uint16x8::nlanes/4 )
+            v_store(dst + x, v_rotate_right<1>(v_reinterpret_as_u16(v_add_wrap(v_pack(
+                             v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x    ))), _m0h, _m1h, _m2h, _m3h)),
+                             v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x + 3))), _m0l, _m1l, _m2l, _m3l))), _delta))));
+        for( ; x < len * 3; x += 3 )
         {
             float v0 = src[x], v1 = src[x + 1], v2 = src[x + 2];
-            ushort t0 = saturate_cast<ushort>(m[0] * v0 + m[1] * v1 + m[2] * v2 + m[3]);
-            ushort t1 = saturate_cast<ushort>(m[4] * v0 + m[5] * v1 + m[6] * v2 + m[7]);
+            ushort t0 = saturate_cast<ushort>(m[0] * v0 + m[1] * v1 + m[ 2] * v2 + m[ 3]);
+            ushort t1 = saturate_cast<ushort>(m[4] * v0 + m[5] * v1 + m[ 6] * v2 + m[ 7]);
             ushort t2 = saturate_cast<ushort>(m[8] * v0 + m[9] * v1 + m[10] * v2 + m[11]);
             dst[x] = t0; dst[x + 1] = t1; dst[x + 2] = t2;
         }
+        vx_cleanup();
         return;
     }
 #endif
@@ -1638,52 +1606,68 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD128 && !defined(__aarch64__)
-    if( hasSIMD128() )
+#if CV_SIMD && !defined(__aarch64__)
+    int x = 0;
+    if( scn == 3 && dcn == 3 )
     {
-        int x = 0;
-        if( scn == 3 && dcn == 3 )
+        int idx[v_float32::nlanes/2];
+        for( int i = 0; i < v_float32::nlanes/4; i++ )
         {
-            const int cWidth = 3;
-            v_float32x4 m0, m1, m2, m3;
-            load3x3Matrix(m, m0, m1, m2, m3);
-
-            for( ; x < (len - 1)*cWidth; x += cWidth )
-            {
-                v_float32x4 x0 = v_load(src + x);
-                v_float32x4 y0 = v_matmuladd(x0, m0, m1, m2, m3);
-                v_store_low(dst + x, y0);
-                dst[x + 2] = v_combine_high(y0, y0).get0();
-            }
-
-            for( ; x < len*cWidth; x += cWidth )
-            {
-                float v0 = src[x], v1 = src[x+1], v2 = src[x+2];
-                float t0 = saturate_cast<float>(m[0]*v0 + m[1]*v1 + m[2]*v2 + m[3]);
-                float t1 = saturate_cast<float>(m[4]*v0 + m[5]*v1 + m[6]*v2 + m[7]);
-                float t2 = saturate_cast<float>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
-                dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
-            }
-            return;
+            idx[i] = 3*i;
+            idx[i + v_float32::nlanes/4] = 0;
         }
-
-        if( scn == 4 && dcn == 4 )
+        float _m[] = { m[0], m[4], m[ 8], 0.f,
+                       m[1], m[5], m[ 9], 0.f,
+                       m[2], m[6], m[10], 0.f,
+                       m[3], m[7], m[11], 0.f };
+        v_float32 m0 = vx_lut_quads(_m     , idx + v_float32::nlanes/4);
+        v_float32 m1 = vx_lut_quads(_m +  4, idx + v_float32::nlanes/4);
+        v_float32 m2 = vx_lut_quads(_m +  8, idx + v_float32::nlanes/4);
+        v_float32 m3 = vx_lut_quads(_m + 12, idx + v_float32::nlanes/4);
+        for( ; x <= len*3 - v_float32::nlanes; x += 3*v_float32::nlanes/4 )
+            v_store(dst + x, v_pack_triplets(v_matmuladd(vx_lut_quads(src + x, idx), m0, m1, m2, m3)));
+        for( ; x < len*3; x += 3 )
         {
-            const int cWidth = 4;
-            v_float32x4 m0 = v_float32x4(m[0], m[5], m[10], m[15]);
-            v_float32x4 m1 = v_float32x4(m[1], m[6], m[11], m[16]);
-            v_float32x4 m2 = v_float32x4(m[2], m[7], m[12], m[17]);
-            v_float32x4 m3 = v_float32x4(m[3], m[8], m[13], m[18]);
-            v_float32x4 m4 = v_float32x4(m[4], m[9], m[14], m[19]);
-
-            for( ; x < len*cWidth; x += cWidth )
-            {
-                v_float32x4 x0 = v_load(src + x);
-                v_float32x4 y0 = v_matmul(x0, m0, m1, m2, m3) + m4;
-                v_store(dst + x, y0);
-            }
-            return;
+            float v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            float t0 = saturate_cast<float>(m[0]*v0 + m[1]*v1 + m[ 2]*v2 + m[ 3]);
+            float t1 = saturate_cast<float>(m[4]*v0 + m[5]*v1 + m[ 6]*v2 + m[ 7]);
+            float t2 = saturate_cast<float>(m[8]*v0 + m[9]*v1 + m[10]*v2 + m[11]);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
         }
+        vx_cleanup();
+        return;
+    }
+
+    if( scn == 4 && dcn == 4 )
+    {
+#if CV_SIMD_WIDTH > 16
+        int idx[v_float32::nlanes/4];
+        for( int i = 0; i < v_float32::nlanes/4; i++ )
+            idx[i] = 0;
+        float _m[] = { m[4], m[9], m[14], m[19] };
+        v_float32 m0 = vx_lut_quads(m   , idx);
+        v_float32 m1 = vx_lut_quads(m+ 5, idx);
+        v_float32 m2 = vx_lut_quads(m+10, idx);
+        v_float32 m3 = vx_lut_quads(m+15, idx);
+        v_float32 m4 = vx_lut_quads(_m, idx);
+        for( ; x <= len*4 - v_float32::nlanes; x += v_float32::nlanes )
+        {
+            v_float32 v_src = vx_load(src + x);
+            v_store(dst + x, v_reduce_sum4(v_src * m0, v_src * m1, v_src * m2, v_src * m3) + m4);
+        }
+#endif
+        v_float32x4 _m0 = v_load(m     );
+        v_float32x4 _m1 = v_load(m +  5);
+        v_float32x4 _m2 = v_load(m + 10);
+        v_float32x4 _m3 = v_load(m + 15);
+        v_float32x4 _m4(m[4], m[9], m[14], m[19]);
+        for( ; x < len*4; x += v_float32x4::nlanes )
+        {
+            v_float32x4 v_src = v_load(src + x);
+            v_store(dst + x, v_reduce_sum4(v_src * _m0, v_src * _m1, v_src * _m2, v_src * _m3) + _m4);
+        }
+        vx_cleanup();
+        return;
     }
 #endif
 

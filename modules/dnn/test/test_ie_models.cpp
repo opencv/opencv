@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "test_precomp.hpp"
 
@@ -177,34 +177,18 @@ TEST_P(DNNTestOpenVINO, models)
 {
     Target target = (dnn::Target)(int)get<0>(GetParam());
     std::string modelName = get<1>(GetParam());
+    std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
+    std::string prefix;
 
 #ifdef INF_ENGINE_RELEASE
-#if INF_ENGINE_RELEASE <= 2018030000
-    if (target == DNN_TARGET_MYRIAD && (modelName == "landmarks-regression-retail-0001" ||
-                                        modelName == "semantic-segmentation-adas-0001" ||
-                                        modelName == "face-reidentification-retail-0001"))
-        throw SkipTestException("");
-#elif INF_ENGINE_RELEASE == 2018040000
-    if (modelName == "single-image-super-resolution-0034" ||
-        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
-                                         modelName == "landmarks-regression-retail-0009" ||
-                                          modelName == "semantic-segmentation-adas-0001")))
-        throw SkipTestException("");
-#elif INF_ENGINE_RELEASE == 2018050000
-    if (modelName == "single-image-super-resolution-0063" ||
-        modelName == "single-image-super-resolution-1011" ||
-        modelName == "single-image-super-resolution-1021" ||
-        (target == DNN_TARGET_OPENCL_FP16 && modelName == "face-reidentification-retail-0095") ||
-        (target == DNN_TARGET_MYRIAD && (modelName == "license-plate-recognition-barrier-0001" ||
-                                         modelName == "semantic-segmentation-adas-0001")))
-        throw SkipTestException("");
+#if INF_ENGINE_RELEASE <= 2018050000
+    prefix = utils::fs::join("intel_models",
+             utils::fs::join(modelName,
+             utils::fs::join(precision, modelName)));
 #endif
 #endif
 
-    std::string precision = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "FP16" : "FP32";
-    std::string prefix = utils::fs::join("intel_models",
-                         utils::fs::join(modelName,
-                         utils::fs::join(precision, modelName)));
+    initDLDTDataPath();
     std::string xmlPath = findDataFile(prefix + ".xml");
     std::string binPath = findDataFile(prefix + ".bin");
 
@@ -226,37 +210,16 @@ TEST_P(DNNTestOpenVINO, models)
     }
 }
 
-static testing::internal::ParamGenerator<String> intelModels()
-{
-    initDLDTDataPath();
-    std::vector<String> modelsNames;
-
-    std::string path;
-    try
-    {
-        path = findDataDirectory("intel_models", false);
-    }
-    catch (...)
-    {
-        std::cerr << "ERROR: Can't find OpenVINO models. Check INTEL_CVSDK_DIR environment variable (run setup.sh)" << std::endl;
-        return ValuesIn(modelsNames);  // empty list
-    }
-
-    cv::utils::fs::glob_relative(path, "", modelsNames, false, true);
-
-    modelsNames.erase(
-        std::remove_if(modelsNames.begin(), modelsNames.end(),
-                       [&](const String& dir){ return !utils::fs::isDirectory(utils::fs::join(path, dir)); }),
-        modelsNames.end()
-    );
-    CV_Assert(!modelsNames.empty());
-
-    return ValuesIn(modelsNames);
-}
-
 INSTANTIATE_TEST_CASE_P(/**/,
     DNNTestOpenVINO,
-    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)), intelModels())
+    Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
+            testing::Values(
+              "age-gender-recognition-retail-0013",
+              "face-person-detection-retail-0002",
+              "head-pose-estimation-adas-0001",
+              "person-detection-retail-0002",
+              "vehicle-detection-adas-0002"
+            ))
 );
 
 }}

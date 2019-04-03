@@ -328,7 +328,8 @@ namespace util
             util::type_list_index<T, Types...>::value;
 
         if (v.index() == t_index)
-            return reinterpret_cast<T&>(v.memory);
+            return *(T*)(&v.memory);  // workaround for ICC 2019
+            // original code: return reinterpret_cast<T&>(v.memory);
         else
             throw_error(bad_variant_access());
     }
@@ -340,7 +341,8 @@ namespace util
             util::type_list_index<T, Types...>::value;
 
         if (v.index() == t_index)
-            return reinterpret_cast<const T&>(v.memory);
+            return *(const T*)(&v.memory);  // workaround for ICC 2019
+            // original code: return reinterpret_cast<const T&>(v.memory);
         else
             throw_error(bad_variant_access());
     }

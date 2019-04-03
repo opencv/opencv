@@ -918,7 +918,13 @@ int cv::borderInterpolate( int p, int len, int borderType )
 {
     CV_TRACE_FUNCTION_VERBOSE();
 
+    CV_DbgAssert(len > 0);
+
+#ifdef CV_STATIC_ANALYSIS
+    if(p >= 0 && p < len)
+#else
     if( (unsigned)p < (unsigned)len )
+#endif
         ;
     else if( borderType == BORDER_REPLICATE )
         p = p < 0 ? 0 : len - 1;
@@ -934,7 +940,11 @@ int cv::borderInterpolate( int p, int len, int borderType )
             else
                 p = len - 1 - (p - len) - delta;
         }
+#ifdef CV_STATIC_ANALYSIS
+        while(p < 0 || p >= len);
+#else
         while( (unsigned)p >= (unsigned)len );
+#endif
     }
     else if( borderType == BORDER_WRAP )
     {

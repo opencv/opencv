@@ -1,7 +1,6 @@
 # The script detects Intel(R) Inference Engine installation
 #
 # Cache variables:
-# INF_ENGINE_OMP_DIR - directory with OpenMP library to link with (needed by some versions of IE)
 # INF_ENGINE_RELEASE - a number reflecting IE source interface (linked with OpenVINO release)
 #
 # Detect parameters:
@@ -11,8 +10,8 @@
 #    - INF_ENGINE_INCLUDE_DIRS - headers search location
 #    - INF_ENGINE_LIB_DIRS     - library search location
 # 3. OpenVINO location:
-#    - environment variable INTEL_CVSDK_DIR is set to location of OpenVINO installation dir
-#    - INF_ENGINE_PLATFORM - part of name of library directory representing its platform (default ubuntu_16.04)
+#    - environment variable INTEL_OPENVINO_DIR is set to location of OpenVINO installation dir
+#    - INF_ENGINE_PLATFORM - part of name of library directory representing its platform
 #
 # Result:
 # INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
@@ -36,11 +35,13 @@ function(add_custom_ie_build _inc _lib _lib_rel _lib_dbg _msg)
     IMPORTED_IMPLIB_DEBUG "${_lib_dbg}"
     INTERFACE_INCLUDE_DIRECTORIES "${_inc}"
   )
-  find_library(omp_lib iomp5 PATHS "${INF_ENGINE_OMP_DIR}" NO_DEFAULT_PATH)
-  if(NOT omp_lib)
-    message(WARNING "OpenMP for IE have not been found. Set INF_ENGINE_OMP_DIR variable if you experience build errors.")
-  else()
-    set_target_properties(inference_engine PROPERTIES IMPORTED_LINK_INTERFACE_LIBRARIES "${omp_lib}")
+  if(NOT INF_ENGINE_RELEASE VERSION_GREATER "2018050000")
+    find_library(INF_ENGINE_OMP_LIBRARY iomp5 PATHS "${INF_ENGINE_OMP_DIR}" NO_DEFAULT_PATH)
+    if(NOT INF_ENGINE_OMP_LIBRARY)
+      message(WARNING "OpenMP for IE have not been found. Set INF_ENGINE_OMP_DIR variable if you experience build errors.")
+    else()
+      set_target_properties(inference_engine PROPERTIES IMPORTED_LINK_INTERFACE_LIBRARIES "${INF_ENGINE_OMP_LIBRARY}")
+    endif()
   endif()
   set(INF_ENGINE_VERSION "Unknown" CACHE STRING "")
   set(INF_ENGINE_TARGET inference_engine PARENT_SCOPE)
@@ -64,9 +65,17 @@ if(NOT INF_ENGINE_TARGET AND INF_ENGINE_LIB_DIRS AND INF_ENGINE_INCLUDE_DIRS)
   add_custom_ie_build("${ie_custom_inc}" "${ie_custom_lib}" "${ie_custom_lib_rel}" "${ie_custom_lib_dbg}" "INF_ENGINE_{INCLUDE,LIB}_DIRS")
 endif()
 
-set(_loc "$ENV{INTEL_CVSDK_DIR}")
+set(_loc "$ENV{INTEL_OPENVINO_DIR}")
+if(NOT _loc AND DEFINED ENV{INTEL_CVSDK_DIR})
+  set(_loc "$ENV{INTEL_CVSDK_DIR}")  # OpenVINO 2018.x
+endif()
 if(NOT INF_ENGINE_TARGET AND _loc)
-  set(INF_ENGINE_PLATFORM "ubuntu_16.04" CACHE STRING "InferenceEngine platform (library dir)")
+  if(NOT INF_ENGINE_RELEASE VERSION_GREATER "2018050000")
+    set(INF_ENGINE_PLATFORM_DEFAULT "ubuntu_16.04")
+  else()
+    set(INF_ENGINE_PLATFORM_DEFAULT "")
+  endif()
+  set(INF_ENGINE_PLATFORM "${INF_ENGINE_PLATFORM_DEFAULT}" CACHE STRING "InferenceEngine platform (library dir)")
   find_path(ie_custom_env_inc "inference_engine.hpp" PATHS "${_loc}/deployment_tools/inference_engine/include" NO_DEFAULT_PATH)
   find_library(ie_custom_env_lib "inference_engine" PATHS "${_loc}/deployment_tools/inference_engine/lib/${INF_ENGINE_PLATFORM}/intel64" NO_DEFAULT_PATH)
   find_library(ie_custom_env_lib_rel "inference_engine" PATHS "${_loc}/deployment_tools/inference_engine/lib/intel64/Release" NO_DEFAULT_PATH)

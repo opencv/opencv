@@ -214,6 +214,8 @@ bool TiffDecoder::readHeader()
                                   &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
                                   &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
                                   &TiffDecoderBufHelper::map, /*unmap=*/0 );
+            if (!tif)
+                delete buf_helper;
         }
         else
         {

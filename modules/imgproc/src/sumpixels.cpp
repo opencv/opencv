@@ -77,7 +77,7 @@ struct Integral_SIMD<uchar, double, double> {
 #if CV_TRY_AVX512_SKX
         CV_UNUSED(_tiltedstep);
         // TODO:  Add support for 1 channel input (WIP)
-        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && ((cn >= 2) && (cn <= 4))){
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && (cn <= 4)){
             opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
                                                       sqsum, _sqsumstep, width, height, cn);
             return true;
