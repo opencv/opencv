@@ -84,4 +84,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${PNG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(libpng LICENSE README opencv-libpng.patch)
+ocv_install_3rdparty_licenses(libpng LICENSE README)
