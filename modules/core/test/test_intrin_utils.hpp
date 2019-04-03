@@ -686,18 +686,24 @@ template<typename R> struct TheTest
 
     TheTest & test_popcount()
     {
+        typedef typename V_RegTraits<R>::u_reg Ru;
         static unsigned popcountTable[] = {
-            0, 1, 2, 4, 5, 7, 9, 12, 13, 15, 17, 20, 22, 25, 28, 32, 33,
-            35, 37, 40, 42, 45, 48, 52, 54, 57, 60, 64, 67, 71, 75, 80, 81,
-            83, 85, 88, 90, 93, 96, 100, 102, 105, 108, 112, 115, 119, 123,
-            128, 130, 133, 136, 140, 143, 147, 151, 156, 159, 163, 167, 172,
-            176, 181, 186, 192, 193
+            0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, //0x00-0x0f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x10-0x1f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x20-0x2f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x30-0x3f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x40-0x4f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x50-0x5f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x60-0x6f
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0x70-0x7f
+            1                                               //0x80
         };
         Data<R> dataA;
         R a = dataA;
 
-        unsigned resB = (unsigned)v_reduce_sum(v_popcount(a));
-        EXPECT_EQ(popcountTable[R::nlanes], resB);
+        Data<Ru> resB = v_popcount(a);
+        for (int i = 0; i < Ru::nlanes; ++i)
+            EXPECT_EQ(popcountTable[i + 1], resB[i]);
 
         return *this;
     }
