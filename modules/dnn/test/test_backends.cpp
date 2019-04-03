@@ -289,7 +289,7 @@ TEST_P(DNNTestNetwork, OpenFace)
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         throw SkipTestException("Test is disabled for Myriad targets");
-#elif INF_ENGINE_VER_MAJOR_GT(2018050000)
+#elif INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
     )

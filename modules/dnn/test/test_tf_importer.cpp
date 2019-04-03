@@ -140,7 +140,7 @@ TEST_P(Test_TensorFlow_layers, padding)
 
 TEST_P(Test_TensorFlow_layers, padding_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE");
 #endif
@@ -197,7 +197,7 @@ TEST_P(Test_TensorFlow_layers, pooling)
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
     // Reference output values are in range [-0.519531, 0.112976]
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
     )
@@ -241,7 +241,7 @@ TEST_P(Test_TensorFlow_layers, reshape)
 
 TEST_P(Test_TensorFlow_layers, flatten)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE");
 #endif
@@ -257,7 +257,7 @@ TEST_P(Test_TensorFlow_layers, flatten)
 
 TEST_P(Test_TensorFlow_layers, unfused_flatten)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE");
 #endif
@@ -279,7 +279,7 @@ TEST_P(Test_TensorFlow_layers, leaky_relu)
 
 TEST_P(Test_TensorFlow_layers, l2_normalize)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
     )
@@ -587,7 +587,7 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE");
 #endif
