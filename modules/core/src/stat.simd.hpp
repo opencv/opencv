@@ -75,7 +75,7 @@ int normHamming(const uchar* a, int n)
         v_uint64 t = vx_setzero_u64();
         for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
             t += v_popcount(v_reinterpret_as_u64(vx_load(a + i)));
-        result += v_reduce_sum(t);
+        result += (int)v_reduce_sum(t);
     }
 #endif // CV_SIMD
 #if CV_ENABLE_UNROLLED
@@ -144,7 +144,7 @@ int normHamming(const uchar* a, const uchar* b, int n)
         v_uint64 t = vx_setzero_u64();
         for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
             t += v_popcount(v_reinterpret_as_u64(vx_load(a + i) ^ vx_load(b + i)));
-        result += v_reduce_sum(t);
+        result += (int)v_reduce_sum(t);
     }
 #endif // CV_SIMD
 #if CV_ENABLE_UNROLLED
