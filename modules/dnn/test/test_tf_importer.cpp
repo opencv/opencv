@@ -185,6 +185,16 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("mvn_batch_norm_1x1");
 }
 
+TEST_P(Test_TensorFlow_layers, slim_batch_norm)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is disabled for DLIE");
+    // Output values range: [-40.0597, 207.827]
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.041 : default_l1;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.33 : default_lInf;
+    runTensorFlowNet("slim_batch_norm", false, l1, lInf);
+}
+
 TEST_P(Test_TensorFlow_layers, pooling)
 {
     runTensorFlowNet("max_pool_even");
