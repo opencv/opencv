@@ -172,6 +172,8 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
                     continue;
 #ifdef _WIN32
                 std::string libName = "cpu_extension" + suffixes[i] + ".dll";
+#elif defined(__APPLE__)
+                std::string libName = "libcpu_extension" + suffixes[i] + ".dylib";
 #else
                 std::string libName = "libcpu_extension" + suffixes[i] + ".so";
 #endif  // _WIN32
