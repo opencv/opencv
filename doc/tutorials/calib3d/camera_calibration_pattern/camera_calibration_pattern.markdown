@@ -30,4 +30,9 @@ If you want to change unit use -u option (mm inches, px, m)
 
 If you want to change page size use -w and -h options
 
-If you want to create a ChArUco board read tutorial Detection of ChArUco Corners in opencv_contrib tutorial(https://docs.opencv.org/3.4/df/d4a/tutorial_charuco_detection.html)
+@cond HAVE_opencv_aruco
+If you want to create a ChArUco board read @ref tutorial_charuco_detection "tutorial Detection of ChArUco Corners" in opencv_contrib tutorial.
+@endcond
+@cond !HAVE_opencv_aruco
+If you want to create a ChArUco board read tutorial Detection of ChArUco Corners in opencv_contrib tutorial.
+@endcond
