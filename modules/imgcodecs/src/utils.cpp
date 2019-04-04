@@ -42,6 +42,8 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
+namespace cv {
+
 int validateToInt(size_t sz)
 {
     int valueInt = (int)sz;
@@ -56,7 +58,7 @@ int validateToInt(size_t sz)
 
 void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
                                uchar* gray, int gray_step,
-                               CvSize size, int _swap_rb )
+                               Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -75,7 +77,7 @@ void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
 
 void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
                                 ushort* gray, int gray_step,
-                                CvSize size, int ncn, int _swap_rb )
+                                Size size, int ncn, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -94,7 +96,7 @@ void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
 
 void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
                                 uchar* gray, int gray_step,
-                                CvSize size, int _swap_rb )
+                                Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -112,7 +114,7 @@ void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
 
 
 void icvCvt_Gray2BGR_8u_C1C3R( const uchar* gray, int gray_step,
-                               uchar* bgr, int bgr_step, CvSize size )
+                               uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step )
@@ -127,7 +129,7 @@ void icvCvt_Gray2BGR_8u_C1C3R( const uchar* gray, int gray_step,
 
 
 void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
-                              ushort* bgr, int bgr_step, CvSize size )
+                              ushort* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step/sizeof(gray[0]) )
@@ -143,7 +145,7 @@ void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
 
 void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
                                uchar* bgr, int bgr_step,
-                               CvSize size, int _swap_rb )
+                               Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -163,7 +165,7 @@ void icvCvt_BGRA2BGR_8u_C4C3R( const uchar* bgra, int bgra_step,
 
 void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
                               ushort* bgr, int bgr_step,
-                              CvSize size, int _swap_rb )
+                              Size size, int _swap_rb )
 {
     int i;
     int swap_rb = _swap_rb ? 2 : 0;
@@ -182,7 +184,7 @@ void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
 
 
 void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
-                              uchar* rgba, int rgba_step, CvSize size )
+                              uchar* rgba, int rgba_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -200,7 +202,7 @@ void icvCvt_BGRA2RGBA_8u_C4R( const uchar* bgra, int bgra_step,
 }
 
 void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
-                               ushort* rgba, int rgba_step, CvSize size )
+                               ushort* rgba, int rgba_step, Size size )
 {
  int i;
  for( ; size.height--; )
@@ -220,7 +222,7 @@ void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
 
 
 void icvCvt_BGR2RGB_8u_C3R( const uchar* bgr, int bgr_step,
-                            uchar* rgb, int rgb_step, CvSize size )
+                            uchar* rgb, int rgb_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -237,7 +239,7 @@ void icvCvt_BGR2RGB_8u_C3R( const uchar* bgr, int bgr_step,
 
 
 void icvCvt_BGR2RGB_16u_C3R( const ushort* bgr, int bgr_step,
-                             ushort* rgb, int rgb_step, CvSize size )
+                             ushort* rgb, int rgb_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -256,7 +258,7 @@ void icvCvt_BGR2RGB_16u_C3R( const ushort* bgr, int bgr_step,
 typedef unsigned short ushort;
 
 void icvCvt_BGR5552Gray_8u_C2C1R( const uchar* bgr555, int bgr555_step,
-                                  uchar* gray, int gray_step, CvSize size )
+                                  uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step, bgr555 += bgr555_step )
@@ -273,7 +275,7 @@ void icvCvt_BGR5552Gray_8u_C2C1R( const uchar* bgr555, int bgr555_step,
 
 
 void icvCvt_BGR5652Gray_8u_C2C1R( const uchar* bgr565, int bgr565_step,
-                                  uchar* gray, int gray_step, CvSize size )
+                                  uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; gray += gray_step, bgr565 += bgr565_step )
@@ -290,7 +292,7 @@ void icvCvt_BGR5652Gray_8u_C2C1R( const uchar* bgr565, int bgr565_step,
 
 
 void icvCvt_BGR5552BGR_8u_C2C3R( const uchar* bgr555, int bgr555_step,
-                                 uchar* bgr, int bgr_step, CvSize size )
+                                 uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; bgr555 += bgr555_step )
@@ -308,7 +310,7 @@ void icvCvt_BGR5552BGR_8u_C2C3R( const uchar* bgr555, int bgr555_step,
 
 
 void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
-                                 uchar* bgr, int bgr_step, CvSize size )
+                                 uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; bgr565 += bgr565_step )
@@ -326,7 +328,7 @@ void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
 
 
 void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
-                               uchar* bgr, int bgr_step, CvSize size )
+                               uchar* bgr, int bgr_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -346,7 +348,7 @@ void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
 
 
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* cmyk, int cmyk_step,
-                                uchar* gray, int gray_step, CvSize size )
+                                uchar* gray, int gray_step, Size size )
 {
     int i;
     for( ; size.height--; )
@@ -371,7 +373,7 @@ void CvtPaletteToGray( const PaletteEntry* palette, uchar* grayPalette, int entr
     int i;
     for( i = 0; i < entries; i++ )
     {
-        icvCvt_BGR2Gray_8u_C3C1R( (uchar*)(palette + i), 0, grayPalette + i, 0, cvSize(1,1) );
+        icvCvt_BGR2Gray_8u_C3C1R( (uchar*)(palette + i), 0, grayPalette + i, 0, Size(1,1) );
     }
 }
 
@@ -598,6 +600,9 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
     return data;
 }
 
+}  // namespace
+
+using namespace cv;
 
 CV_IMPL void
 cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
@@ -652,7 +657,7 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
         uchar *s = src->data.ptr, *d = dst->data.ptr;
         int s_step = src->step, d_step = dst->step;
         int code = src_cn*10 + dst_cn;
-        CvSize size = {src->cols, src->rows};
+        Size size(src->cols, src->rows);
 
         if( CV_IS_MAT_CONT(src->type & dst->type) )
         {
