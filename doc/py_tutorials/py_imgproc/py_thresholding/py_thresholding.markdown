@@ -18,8 +18,9 @@ The second argument is the threshold value which is used to classify the pixel v
 The third argument is the maximum value which is assigned to pixel values exceeding the threshold.
 OpenCV provides different types of thresholding which is given by the fourth parameter of the function.
 Basic thresholding as described above is done by using the type cv.THRESH_BINARY.
-Other thresholding types are:
+All simple thresholding types are:
 
+-   cv.THRESH_BINARY
 -   cv.THRESH_BINARY_INV
 -   cv.THRESH_TRUNC
 -   cv.THRESH_TOZERO
