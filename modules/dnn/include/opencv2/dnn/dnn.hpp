@@ -385,11 +385,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         /** Returns true if there are no layers in the network. */
         CV_WRAP bool empty() const;
 
-        /** @brief Dump net structure, hyperparameters, backend, target and fusion to dot file
-         *  @param path   path to output file with .dot extension
+        /** @brief Dump net to String
+         *  @returns String with structure, hyperparameters, backend, target and fusion
          *  To see correct backend, target and fusion run after forward().
          */
-        void dumpNet(String path);
+        CV_WRAP String dumpNet();
+        /** @brief Dump net structure, hyperparameters, backend, target and fusion to dot file
+         *  @param path   path to output file with .dot extension
+         *  @see dumpNet()
+         */
+        CV_WRAP void dumpNetToFile(const String& path);
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).

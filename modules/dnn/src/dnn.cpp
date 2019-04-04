@@ -2948,20 +2948,20 @@ int Net::getLayerId(const String &layer)
     return impl->getLayerId(layer);
 }
 
-void Net::dumpNet(String path) {
+String Net::dumpNet()
+{
     CV_Assert(!empty());
-
-    std::ofstream file(path);
-    auto& map = impl->layers;
-    auto prefBackend = impl->preferableBackend;
-    std::vector<std::vector<int>> skippedLayers;
+    std::ostringstream out;
+    std::map<int, LayerData>& map = impl->layers;
+    int prefBackend = impl->preferableBackend;
+    std::vector<std::vector<int> > skippedLayers;
     std::vector<int> skipId;
     std::vector<int> allLayers(map.size(), -1);
     int idPrev = -1;
     Ptr<BackendNode> prevNode;
-    for (auto rit = map.rbegin(); rit != map.rend(); ++rit)
+    for (std::map<int, LayerData>::reverse_iterator rit = map.rbegin(); rit != map.rend(); ++rit)
     {
-        auto itBackend = rit->second.backendNodes.find(prefBackend);
+        std::map<int, Ptr<BackendNode> >::iterator itBackend = rit->second.backendNodes.find(prefBackend);
         if (prefBackend == DNN_BACKEND_OPENCV || itBackend == rit->second.backendNodes.end() ||
             itBackend->second.empty())
         {
@@ -2975,8 +2975,8 @@ void Net::dumpNet(String path) {
                         skipId.push_back(idPrev);
 
                     std::sort(skipId.begin(), skipId.end());
-                    for (int elem : skipId) {
-                        allLayers[elem] = skippedLayers.size();
+                    for (int i = 0; i < skipId.size(); i++) {
+                        allLayers[skipId[i]] = skippedLayers.size();
                     }
                     skippedLayers.push_back(skipId);
                     skipId.clear();
@@ -2990,8 +2990,8 @@ void Net::dumpNet(String path) {
             {
                 skipId.push_back(idPrev);
                 std::sort(skipId.begin(), skipId.end());
-                for (int elem : skipId) {
-                    allLayers[elem] = skippedLayers.size();
+                for (int i = 0; i < skipId.size(); i++) {
+                    allLayers[skipId[i]] = skippedLayers.size();
                 }
                 skippedLayers.push_back(skipId);
                 skipId.clear();
@@ -3000,7 +3000,7 @@ void Net::dumpNet(String path) {
             prevNode = itBackend->second;
         }
     }
-    std::vector<String> colors = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3"};
+    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3"};
     String backend;
     switch (prefBackend) {
         case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
@@ -3008,20 +3008,21 @@ void Net::dumpNet(String path) {
         case DNN_BACKEND_INFERENCE_ENGINE: backend = "DLIE/"; break;
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
     }
-    file << "digraph G {" << '\n';
+    out << "digraph G {" << '\n';
     // Add nodes
-    for (auto it = map.begin(); it != map.end(); ++it)
+    for (std::map<int, LayerData>::iterator it = map.begin(); it != map.end(); ++it)
     {
         String name = it->second.params.name;
         if (allLayers[it->first] == -1 && !name.empty()) {
-            file << "	" << "\"" << name << "\"" << " [label=\"";
-            skipId = { it->first };
+            out << "	" << "\"" << name << "\"" << " [label=\"";
+            skipId.resize(1);
+            skipId[0] = it->first;
         }
         else if (name.empty() || it->first != skippedLayers[allLayers[it->first]][0])
             continue;
         else { // first node in cluster : it->first == skippedLayers[allLayers[it->first]][0]
             int cluster = allLayers[it->first];
-            file << "	" << "\"" << "cluster_" << cluster << "\"" << " [label=\"{";
+            out << "	" << "\"" << "cluster_" << cluster << "\"" << " [label=\"{";
             skipId = skippedLayers[allLayers[it->first]]; // vertices in current cluster
         }
         for (int i = 0; i < skipId.size(); i++)
@@ -3029,112 +3030,119 @@ void Net::dumpNet(String path) {
             LayerParams& lp = map[skipId[i]].params;
             if (!lp.name.empty()) {
                 if (i > 0) {
-                    file << " | ";
+                    out << " | ";
                 }
-                file << lp.name << "\\n" << lp.type << "\\n";
+                out << lp.name << "\\n" << lp.type << "\\n";
                  if (lp.has("kernel_size")) {
-                     auto size = lp.get("kernel_size");
-                     file << "kernel (HxW): " << size << "x" << size << "\\l";
+                     DictValue size = lp.get("kernel_size");
+                     out << "kernel (HxW): " << size << "x" << size << "\\l";
                  } else if (lp.has("kernel_h") && lp.has("kernel_w")) {
-                     auto h = lp.get("kernel_h");
-                     auto w = lp.get("kernel_w");
-                     file << "kernel (HxW): " << h << "x" << w << "\\l";
+                     DictValue h = lp.get("kernel_h");
+                     DictValue w = lp.get("kernel_w");
+                     out << "kernel (HxW): " << h << "x" << w << "\\l";
                  }
                  if (lp.has("stride")) {
-                     auto stride = lp.get("stride");
-                     file << "stride (HxW): " << stride << "x" << stride << "\\l";
+                     DictValue stride = lp.get("stride");
+                     out << "stride (HxW): " << stride << "x" << stride << "\\l";
                  } else if (lp.has("stride_h") && lp.has("stride_w")) {
-                     auto h = lp.get("stride_h");
-                     auto w = lp.get("stride_w");
-                     file << "stride (HxW): " << h << "x" << w << "\\l";
+                     DictValue h = lp.get("stride_h");
+                     DictValue w = lp.get("stride_w");
+                     out << "stride (HxW): " << h << "x" << w << "\\l";
                  }
                  if (lp.has("dilation")) {
-                     auto dilation = lp.get("dilation");
-                     file << "dilation (HxW): " << dilation << "x" << dilation << "\\l";
+                     DictValue dilation = lp.get("dilation");
+                     out << "dilation (HxW): " << dilation << "x" << dilation << "\\l";
                  } else if (lp.has("dilation_h") && lp.has("dilation_w")) {
-                     auto h = lp.get("dilation_h");
-                     auto w = lp.get("dilation_w");
-                     file << "dilation (HxW): " << h << "x" << w << "\\l";
+                     DictValue h = lp.get("dilation_h");
+                     DictValue w = lp.get("dilation_w");
+                     out << "dilation (HxW): " << h << "x" << w << "\\l";
                  }
                  if (lp.has("pad")) {
-                     auto pad = lp.get("pad");
-                     file << "pad (HxW): " << pad << "x" << pad << "x" << pad << "x" << pad << "\\l";
+                     DictValue pad = lp.get("pad");
+                     out << "pad (HxW): " << pad << "x" << pad << "x" << pad << "x" << pad << "\\l";
                  } else if (lp.has("pad_l") && lp.has("pad_t") && lp.has("pad_r") && lp.has("pad_b")) {
-                     auto l = lp.get("pad_l");
-                     auto t = lp.get("pad_t");
-                     auto r = lp.get("pad_r");
-                     auto b = lp.get("pad_b");
-                     file << "pad (LxTxRxB): " << l << "x" << t << "x" << r << "x" << b << "\\l";
+                     DictValue l = lp.get("pad_l");
+                     DictValue t = lp.get("pad_t");
+                     DictValue r = lp.get("pad_r");
+                     DictValue b = lp.get("pad_b");
+                     out << "pad (LxTxRxB): " << l << "x" << t << "x" << r << "x" << b << "\\l";
                  }
                  else if (lp.has("pooled_w") || lp.has("pooled_h")) {
-                     auto h = lp.get("pooled_h");
-                     auto w = lp.get("pooled_w");
-                     file << "pad (HxW): " << h << "x" << w << "\\l";
+                     DictValue h = lp.get("pooled_h");
+                     DictValue w = lp.get("pooled_w");
+                     out << "pad (HxW): " << h << "x" << w << "\\l";
                  }
                  if (lp.has("pool")) {
-                     file << "pool: " << lp.get("pool") << "\\l";
+                     out << "pool: " << lp.get("pool") << "\\l";
                  }
                  if (lp.has("global_pooling")) {
-                     file << "global_pooling: " << lp.get("global_pooling") << "\\l";
+                     out << "global_pooling: " << lp.get("global_pooling") << "\\l";
                  }
                  if (lp.has("group")) {
-                     file << "group: " << lp.get("group") << "\\l";
+                     out << "group: " << lp.get("group") << "\\l";
                  }
                  if (lp.has("num_output")) {
-                     file << "num_output: " << lp.get("num_output") << "\\l";
+                     out << "num_output: " << lp.get("num_output") << "\\l";
                  }
              }
          }
-         file << (!it->second.backendNodes[prefBackend].empty() ? backend : "OCV/");
+         out << (!it->second.backendNodes[prefBackend].empty() ? backend : "OCV/");
          int colorId = 0;
          switch (it->second.layerInstance->preferableTarget) {
-             case DNN_TARGET_CPU: file << "CPU\\n"; colorId = 0; break;
-             case DNN_TARGET_OPENCL: file << "OCL\\n"; colorId = 1; break;
-             case DNN_TARGET_OPENCL_FP16: file << "OCL_FP16\\n"; colorId = 2; break;
-             case DNN_TARGET_MYRIAD: file << "MYRIAD\\n"; colorId = 3; break;
-             case DNN_TARGET_FPGA: file << "FPGA\\n"; colorId = 4; break;
+             case DNN_TARGET_CPU: out << "CPU\\n"; colorId = 0; break;
+             case DNN_TARGET_OPENCL: out << "OCL\\n"; colorId = 1; break;
+             case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16\\n"; colorId = 2; break;
+             case DNN_TARGET_MYRIAD: out << "MYRIAD\\n"; colorId = 3; break;
+             case DNN_TARGET_FPGA: out << "FPGA\\n"; colorId = 4; break;
          }
-         file << ((skipId.size() == 1)? "\" " : " }\" ");
-         file << "fillcolor=\"" << colors[colorId] << "\" ";
-         file << "style=filled ";
-         file << "shape=" << ((skipId.size() == 1)? "box" : "record") << "]" << '\n';
+         out << ((skipId.size() == 1)? "\" " : " }\" ");
+         out << "fillcolor=\"" << colors[colorId] << "\" ";
+         out << "style=filled ";
+         out << "shape=" << ((skipId.size() == 1)? "box" : "record") << "]" << '\n';
     }
-    file << '\n';
+    out << '\n';
     // Add edges
-    for (auto it = map.begin(); it != map.end(); ++it)
+    for (std::map<int, LayerData>::iterator it = map.begin(); it != map.end(); ++it)
     {
         if (allLayers[it->first] == -1)  // node
         {
             for (int i = 0; i < it->second.consumers.size(); i++)
             {
-                auto out = it->second.consumers[i];
+                int outId = it->second.consumers[i].lid;
                 if (it == map.begin() && it->second.consumers.size() > 1) {  // many inputs
-                    file << "	" << "\"" << it->second.name << "_" << i << "\"" << " -> ";
+                    out << "	" << "\"" << it->second.name << "_" << i << "\"" << " -> ";
                 } else {
-                    file << "	" << "\"" << it->second.name << "\"" << " -> ";
+                    out << "	" << "\"" << it->second.name << "\"" << " -> ";
                 }
-                if (allLayers[out.lid] == -1)  // node
-                    file << "\"" << map[out.lid].name << "\"" << '\n';
+                if (allLayers[outId] == -1)  // node
+                    out << "\"" << map[outId].name << "\"" << '\n';
                 else  // cluster
-                    file << "\"" << "cluster_" << allLayers[out.lid] << "\"" << '\n';
+                    out << "\"" << "cluster_" << allLayers[outId] << "\"" << '\n';
             }
         }
         else if (it->first == skippedLayers[allLayers[it->first]].back())  // edges from last layer in cluster
         {
-            for (const auto& out : it->second.consumers)
+            for (int i = 0; i < it->second.consumers.size(); i++)
             {
-                if (allLayers[out.lid] == -1) { // node
-                    file << "	" << "\"" << "cluster_" << allLayers[it->first] << "\"" << " -> ";
-                    file << "\"" << map[out.lid].name << "\"" << '\n';
+                int outId = it->second.consumers[i].lid;
+                if (allLayers[outId] == -1) { // node
+                    out << "	" << "\"" << "cluster_" << allLayers[it->first] << "\"" << " -> ";
+                    out << "\"" << map[outId].name << "\"" << '\n';
                 }
-                else if (allLayers[out.lid] != allLayers[it->first]) { // another cluster
-                    file << "	" << "\"" << "cluster_" << allLayers[it->first] << "\"" << " -> ";
-                    file << "\"" << "cluster_" << allLayers[out.lid] << "\"" << '\n';
+                else if (allLayers[outId] != allLayers[it->first]) { // another cluster
+                    out << "	" << "\"" << "cluster_" << allLayers[it->first] << "\"" << " -> ";
+                    out << "\"" << "cluster_" << allLayers[outId] << "\"" << '\n';
                 }
             }
         }
     }
-    file << "}";
+    out << "}";
+    return out.str();
+}
+
+void Net::dumpNetToFile(const String& path) {
+    std::ofstream file(path.c_str());
+    file << dumpNet();
     file.close();
 }
 
