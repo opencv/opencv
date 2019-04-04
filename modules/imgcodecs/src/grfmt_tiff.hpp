@@ -106,10 +106,8 @@ public:
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
 protected:
-    void* m_tif;
+    cv::Ptr<void> m_tif;
     int normalizeChannelsNumber(int channels) const;
-    bool readData_32FC3(Mat& img);
-    bool readData_32FC1(Mat& img);
     bool m_hdr;
     size_t m_buf_pos;
 
@@ -139,8 +137,7 @@ protected:
                     int count, int value );
 
     bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
-    bool write_32FC3( const Mat& img );
-    bool write_32FC1( const Mat& img );
+    bool write_32FC3_SGILOG(const Mat& img, void* tif);
 
 private:
     TiffEncoder(const TiffEncoder &); // copy disabled
