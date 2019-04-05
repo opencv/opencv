@@ -136,7 +136,7 @@ public slots:
     double isFullScreen(const QString& name);
     double getPropWindow(const QString& name);
     void setPropWindow(const QString& name, double flags );
-    void setWindowTitle(const QString& name, QString title);
+    void setWindowTitle(const QString& name, const QString& title);
     double getWindowVisible(const QString& name);
     double getRatioWindow(const QString& name);
     void setRatioWindow(const QString& name, double arg2 );
@@ -288,7 +288,7 @@ class CvWindow : public CvWinModel
 {
     Q_OBJECT
 public:
-    CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
+    CvWindow(const QString& arg2, int flag = CV_WINDOW_NORMAL);
     ~CvWindow();
 
     void setMouseCallBack(CvMouseCallback m, void* param);
@@ -400,7 +400,7 @@ public:
 
     virtual void updateImage(const CvArr* arr) = 0;
 
-    virtual void startDisplayInfo(QString text, int delayms) = 0;
+    virtual void startDisplayInfo(const QString& text, int delayms) = 0;
 
     virtual void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) = 0;
     virtual void makeCurrentOpenGlContext() = 0;
