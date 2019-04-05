@@ -34,6 +34,7 @@ if(DOXYGEN_FOUND)
   foreach(m ${OPENCV_MODULES_MAIN} ${OPENCV_MODULES_EXTRA})
     list(FIND blacklist ${m} _pos)
     if(${_pos} EQUAL -1)
+      list(APPEND CMAKE_DOXYGEN_ENABLED_SECTIONS "HAVE_opencv_${m}")
       # include folder
       set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
       if(EXISTS "${header_dir}")
@@ -125,6 +126,8 @@ if(DOXYGEN_FOUND)
   # set export variables
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXCLUDE_LIST "${CMAKE_DOXYGEN_EXCLUDE_LIST}")
+  string(REPLACE ";" " " CMAKE_DOXYGEN_ENABLED_SECTIONS "${CMAKE_DOXYGEN_ENABLED_SECTIONS}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXAMPLE_PATH  "${example_path} ; ${paths_doc} ; ${paths_sample}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INCLUDE_ROOTS "${paths_include}")
