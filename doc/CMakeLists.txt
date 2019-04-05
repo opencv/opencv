@@ -40,6 +40,7 @@ if(DOXYGEN_FOUND)
   foreach(m ${OPENCV_MODULES_MAIN} ${OPENCV_MODULES_EXTRA})
     list(FIND blacklist ${m} _pos)
     if(${_pos} EQUAL -1)
+      list(APPEND CMAKE_DOXYGEN_ENABLED_SECTIONS "HAVE_opencv_${m}")
       # include folder
       set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
       if(EXISTS "${header_dir}")
