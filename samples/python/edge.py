@@ -23,9 +23,7 @@ import video
 import sys
 
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     try:
         fn = sys.argv[1]
     except:
@@ -52,4 +50,11 @@ if __name__ == '__main__':
         ch = cv.waitKey(5)
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

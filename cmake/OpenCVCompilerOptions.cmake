@@ -181,12 +181,24 @@ if(CV_GCC OR CV_CLANG)
       string(REPLACE "-ffunction-sections" "" ${flags} "${${flags}}")
       string(REPLACE "-fdata-sections" "" ${flags} "${${flags}}")
     endforeach()
-  elseif(NOT ((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT MSVC)
-    # Remove unreferenced functions: function level linking
-    add_extra_compiler_option(-ffunction-sections)
-    add_extra_compiler_option(-fdata-sections)
-    if(NOT APPLE AND NOT OPENCV_SKIP_GC_SECTIONS)
-      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+  else()
+    if(MSVC)
+      # TODO: Clang/C2 is not supported
+    elseif(((IOS OR ANDROID) AND NOT BUILD_SHARED_LIBS) AND NOT OPENCV_FORCE_FUNCTIONS_SECTIONS)
+      # don't create separate sections for functions/data, reduce package size
+    else()
+      # Remove unreferenced functions: function level linking
+      add_extra_compiler_option(-ffunction-sections)
+      add_extra_compiler_option(-fdata-sections)
+      if(NOT OPENCV_SKIP_GC_SECTIONS)
+        if(APPLE)
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,-dead_strip")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
+        else()
+          set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+          set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+        endif()
+      endif()
     endif()
   endif()
 
@@ -279,6 +291,22 @@ if((CV_GCC OR CV_CLANG)
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
   add_extra_compiler_option(-fvisibility=hidden)
   add_extra_compiler_option(-fvisibility-inlines-hidden)
+endif()
+
+# workaround gcc bug for aligned ld/st
+# https://github.com/opencv/opencv/issues/13211
+if((PPC64LE AND NOT CMAKE_CROSSCOMPILING) OR OPENCV_FORCE_COMPILER_CHECK_VSX_ALIGNED)
+  ocv_check_runtime_flag("${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ALIGNED "${OpenCV_SOURCE_DIR}/cmake/checks/runtime/cpu_vsx_aligned.cpp")
+  if(NOT OPENCV_CHECK_VSX_ALIGNED)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ALIGNED)
+  endif()
+endif()
+# validate inline asm with fixes register number and constraints wa, wd, wf
+if(PPC64LE)
+  ocv_check_compiler_flag(CXX "${CPU_BASELINE_FLAGS}" OPENCV_CHECK_VSX_ASM "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_vsx_asm.cpp")
+  if(NOT OPENCV_CHECK_VSX_ASM)
+    add_extra_compiler_option_force(-DCV_COMPILER_VSX_BROKEN_ASM)
+  endif()
 endif()
 
 # combine all "extra" options

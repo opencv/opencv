@@ -351,23 +351,25 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 
 #include "plugin_api.hpp"
 
-CV_EXTERN_C int cv_domain()
-{
-    return cv::CAP_FFMPEG;
-}
+namespace cv {
 
-CV_EXTERN_C bool cv_open_capture(const char * filename, int, void * &handle)
+static
+CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
 {
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
     if (!filename)
-        return false;
-    cv::CvCapture_FFMPEG_proxy *cap = 0;
+        return CV_ERROR_FAIL;
+    CV_UNUSED(camera_index);
+    CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new cv::CvCapture_FFMPEG_proxy(filename);
+        cap = new CvCapture_FFMPEG_proxy(filename);
         if (cap->isOpened())
         {
-            handle = cap;
-            return true;
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
         }
     }
     catch (...)
@@ -375,94 +377,104 @@ CV_EXTERN_C bool cv_open_capture(const char * filename, int, void * &handle)
     }
     if (cap)
         delete cap;
-    return false;
+    return CV_ERROR_FAIL;
 }
 
-CV_EXTERN_C bool cv_get_cap_prop(void * handle, int prop, double & val)
+static
+CvResult CV_API_CALL cv_capture_release(CvPluginCapture handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
+    CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+    delete instance;
+    return CV_ERROR_OK;
+}
+
+
+static
+CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OUT double* val)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
     try
     {
-        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
-        val = instance->getProperty(prop);
-        return true;
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
     }
     catch (...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_set_cap_prop(void * handle, int prop, double val)
+static
+CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, double val)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
     try
     {
-        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
-        return instance->setProperty(prop, val);
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_grab(void * handle)
+static
+CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
     try
     {
-        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
-        return instance->grabFrame();
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_retrieve(void * handle, int idx, cv_retrieve_cb_t * callback, void * userdata)
+static
+CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
     try
     {
-        cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
-        cv::Mat img;
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        Mat img;
         // TODO: avoid unnecessary copying
-        if (instance->retrieveFrame(idx, img))
-            return callback(img.data, img.step, img.cols, img.rows, img.channels(), userdata);
-        return false;
+        if (instance->retrieveFrame(stream_idx, img))
+            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+        return CV_ERROR_FAIL;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_release_capture(void * handle)
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+                                    CV_OUT CvPluginWriter* handle)
 {
-    if (!handle)
-        return false;
-    cv::CvCapture_FFMPEG_proxy *instance = static_cast<cv::CvCapture_FFMPEG_proxy*>(handle);
-    delete instance;
-    return true;
-}
-
-CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, int width, int height, int isColor, void * &handle)
-{
-    cv::Size sz(width, height);
-    cv::CvVideoWriter_FFMPEG_proxy* wrt = 0;
+    Size sz(width, height);
+    CvVideoWriter_FFMPEG_proxy* wrt = 0;
     try
     {
-        wrt = new cv::CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
+        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
         if(wrt && wrt->isOpened())
         {
-            handle = wrt;
-            return true;
+            *handle = (CvPluginWriter)wrt;
+            return CV_ERROR_OK;
         }
     }
     catch(...)
@@ -470,43 +482,79 @@ CV_EXTERN_C bool cv_open_writer(const char * filename, int fourcc, double fps, i
     }
     if (wrt)
         delete wrt;
-    return false;
+    return CV_ERROR_FAIL;
 }
 
-CV_EXTERN_C bool cv_get_wri_prop(void*, int, double&)
-{
-    return false;
-}
-
-CV_EXTERN_C bool cv_set_wri_prop(void*, int, double)
-{
-    return false;
-}
-
-CV_EXTERN_C bool cv_write(void * handle, const unsigned char * data, int step, int width, int height, int cn)
+static
+CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 {
     if (!handle)
-        return false;
+        return CV_ERROR_FAIL;
+    CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+    delete instance;
+    return CV_ERROR_OK;
+}
+
+static
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+{
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)
+{
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
     try
     {
-        cv::CvVideoWriter_FFMPEG_proxy * instance = static_cast<cv::CvVideoWriter_FFMPEG_proxy*>(handle);
-        cv::Mat img(cv::Size(width, height), CV_MAKETYPE(CV_8U, cn), const_cast<uchar*>(data), step);
+        CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+        Mat img(Size(width, height), CV_MAKETYPE(CV_8U, cn), const_cast<uchar*>(data), step);
         instance->write(img);
-        return true;
+        return CV_ERROR_OK;
     }
     catch(...)
     {
-        return false;
+        return CV_ERROR_FAIL;
     }
 }
 
-CV_EXTERN_C bool cv_release_writer(void * handle)
+static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
 {
-    if (!handle)
-        return false;
-    cv::CvVideoWriter_FFMPEG_proxy * instance = static_cast<cv::CvVideoWriter_FFMPEG_proxy*>(handle);
-    delete instance;
-    return true;
+    {
+        sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "FFmpeg OpenCV Video I/O plugin"
+    },
+    /*  1*/CAP_FFMPEG,
+    /*  2*/cv_capture_open,
+    /*  3*/cv_capture_release,
+    /*  4*/cv_capture_get_prop,
+    /*  5*/cv_capture_set_prop,
+    /*  6*/cv_capture_grab,
+    /*  7*/cv_capture_retrieve,
+    /*  8*/cv_writer_open,
+    /*  9*/cv_writer_release,
+    /* 10*/cv_writer_get_prop,
+    /* 11*/cv_writer_set_prop,
+    /* 12*/cv_writer_write
+};
+
+} // namespace
+
+const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version != 0)
+        return NULL;
+    if (requested_api_version != 0)
+        return NULL;
+    return &cv::plugin_api_v0;
 }
 
 #endif // BUILD_PLUGIN

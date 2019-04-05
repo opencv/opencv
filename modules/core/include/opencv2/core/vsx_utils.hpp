@@ -22,37 +22,37 @@
 
 typedef __vector unsigned char vec_uchar16;
 #define vec_uchar16_set(...) (vec_uchar16){__VA_ARGS__}
-#define vec_uchar16_sp(c)    (__VSX_S16__(vec_uchar16, c))
+#define vec_uchar16_sp(c)    (__VSX_S16__(vec_uchar16, (unsigned char)c))
 #define vec_uchar16_c(v)     ((vec_uchar16)(v))
 #define vec_uchar16_z        vec_uchar16_sp(0)
 
 typedef __vector signed char vec_char16;
 #define vec_char16_set(...) (vec_char16){__VA_ARGS__}
-#define vec_char16_sp(c)    (__VSX_S16__(vec_char16, c))
+#define vec_char16_sp(c)    (__VSX_S16__(vec_char16, (signed char)c))
 #define vec_char16_c(v)     ((vec_char16)(v))
 #define vec_char16_z        vec_char16_sp(0)
 
 typedef __vector unsigned short vec_ushort8;
 #define vec_ushort8_set(...) (vec_ushort8){__VA_ARGS__}
-#define vec_ushort8_sp(c)    (__VSX_S8__(vec_ushort8, c))
+#define vec_ushort8_sp(c)    (__VSX_S8__(vec_ushort8, (unsigned short)c))
 #define vec_ushort8_c(v)     ((vec_ushort8)(v))
 #define vec_ushort8_z        vec_ushort8_sp(0)
 
 typedef __vector signed short vec_short8;
 #define vec_short8_set(...) (vec_short8){__VA_ARGS__}
-#define vec_short8_sp(c)    (__VSX_S8__(vec_short8, c))
+#define vec_short8_sp(c)    (__VSX_S8__(vec_short8, (signed short)c))
 #define vec_short8_c(v)     ((vec_short8)(v))
 #define vec_short8_z        vec_short8_sp(0)
 
 typedef __vector unsigned int vec_uint4;
 #define vec_uint4_set(...) (vec_uint4){__VA_ARGS__}
-#define vec_uint4_sp(c)    (__VSX_S4__(vec_uint4, c))
+#define vec_uint4_sp(c)    (__VSX_S4__(vec_uint4, (unsigned int)c))
 #define vec_uint4_c(v)     ((vec_uint4)(v))
 #define vec_uint4_z        vec_uint4_sp(0)
 
 typedef __vector signed int vec_int4;
 #define vec_int4_set(...)  (vec_int4){__VA_ARGS__}
-#define vec_int4_sp(c)     (__VSX_S4__(vec_int4, c))
+#define vec_int4_sp(c)     (__VSX_S4__(vec_int4, (signed int)c))
 #define vec_int4_c(v)      ((vec_int4)(v))
 #define vec_int4_z         vec_int4_sp(0)
 
@@ -64,13 +64,13 @@ typedef __vector float vec_float4;
 
 typedef __vector unsigned long long vec_udword2;
 #define vec_udword2_set(...) (vec_udword2){__VA_ARGS__}
-#define vec_udword2_sp(c)    (__VSX_S2__(vec_udword2, c))
+#define vec_udword2_sp(c)    (__VSX_S2__(vec_udword2, (unsigned long long)c))
 #define vec_udword2_c(v)     ((vec_udword2)(v))
 #define vec_udword2_z        vec_udword2_sp(0)
 
 typedef __vector signed long long vec_dword2;
 #define vec_dword2_set(...) (vec_dword2){__VA_ARGS__}
-#define vec_dword2_sp(c)    (__VSX_S2__(vec_dword2, c))
+#define vec_dword2_sp(c)    (__VSX_S2__(vec_dword2, (signed long long)c))
 #define vec_dword2_c(v)     ((vec_dword2)(v))
 #define vec_dword2_z        vec_dword2_sp(0)
 
@@ -291,6 +291,8 @@ VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
  *
  * So we're not able to use inline asm and only use built-in functions that CLANG supports
  * and use __builtin_convertvector if clang missng any of vector conversions built-in functions
+ *
+ * todo: clang asm template bug is fixed, need to reconsider the current workarounds.
 */
 
 // convert vector helper

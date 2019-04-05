@@ -691,7 +691,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  endif
 #endif
 #ifndef CV_CONSTEXPR
-#  define CV_CONSTEXPR const
+#  define CV_CONSTEXPR
 #endif
 
 // Integer types portatibility

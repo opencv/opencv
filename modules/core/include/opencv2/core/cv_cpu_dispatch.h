@@ -127,6 +127,10 @@ struct VZeroUpperGuard {
 #ifdef __GNUC__
     __attribute__((always_inline))
 #endif
+    inline VZeroUpperGuard() { _mm256_zeroupper(); }
+#ifdef __GNUC__
+    __attribute__((always_inline))
+#endif
     inline ~VZeroUpperGuard() { _mm256_zeroupper(); }
 };
 #define __CV_AVX_GUARD VZeroUpperGuard __vzeroupper_guard; CV_UNUSED(__vzeroupper_guard);

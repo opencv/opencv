@@ -205,11 +205,14 @@ public:
         for( j = 0; j < vcount; j++ )
         {
             Qfloat t = results[j];
-            Qfloat e = std::exp(std::abs(t));
-            if( t > 0 )
-                results[j] = (Qfloat)((e - 1.)/(e + 1.));
-            else
-                results[j] = (Qfloat)((1. - e)/(1. + e));
+            Qfloat e = std::exp(std::abs(t));          // Inf value is possible here
+            Qfloat r = (Qfloat)((e - 1.) / (e + 1.));  // NaN value is possible here (Inf/Inf or similar)
+            if (cvIsNaN(r))
+                r = std::numeric_limits<Qfloat>::infinity();
+            if (t < 0)
+                r = -r;
+            CV_DbgAssert(!cvIsNaN(r));
+            results[j] = r;
         }
     }
 
@@ -327,7 +330,7 @@ public:
         const Qfloat max_val = (Qfloat)(FLT_MAX*1e-3);
         for( int j = 0; j < vcount; j++ )
         {
-            if( results[j] > max_val )
+            if (!(results[j] <= max_val))  // handle NaNs too
                 results[j] = max_val;
         }
     }
@@ -1949,6 +1952,7 @@ public:
                             const DecisionFunc& df = svm->decision_func[dfi];
                             sum = -df.rho;
                             int sv_count = svm->getSVCount(dfi);
+                            CV_DbgAssert(sv_count > 0);
                             const double* alpha = &svm->df_alpha[df.ofs];
                             const int* sv_index = &svm->df_index[df.ofs];
                             for( k = 0; k < sv_count; k++ )

@@ -5,5 +5,5 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "perf_precomp.hpp"
+#include "../perf_precomp.hpp"
 #include "gapi_imgproc_perf_tests_inl.hpp"

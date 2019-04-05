@@ -148,8 +148,8 @@ TEST_P(Test_Torch_layers, run_reshape_single_sample)
 {
     // Reference output values in range [14.4586, 18.4492].
     runTorchNet("net_reshape_single_sample", "", false, false, true,
-                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.0073 : default_l1,
-                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.025 : default_lInf);
+                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.033 : default_l1,
+                (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.05 : default_lInf);
 }
 
 TEST_P(Test_Torch_layers, run_linear)
@@ -272,9 +272,9 @@ class Test_Torch_nets : public DNNTestLayer {};
 
 TEST_P(Test_Torch_nets, OpenFace_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018050000
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
     checkBackend();
 
@@ -295,8 +295,12 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     net.setInput(inputBlob);
     Mat out = net.forward();
 
+    // Reference output values are in range [-0.17212, 0.263492]
+    // on Myriad problem layer: l4_Pooling - does not use pads_begin
+    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1.5e-3 : 1e-3;
     Mat outRef = readTorchBlob(_tf("net_openface_output.dat"), true);
-    normAssert(out, outRef, "", default_l1, default_lInf);
+    normAssert(out, outRef, "", l1, lInf);
 }
 
 static Mat getSegmMask(const Mat& scores)
@@ -393,7 +397,21 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 //   -model models/instance_norm/feathers.t7
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+#endif
+
     checkBackend();
+
+#if defined(INF_ENGINE_RELEASE)
+#if INF_ENGINE_RELEASE <= 2018050000
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("");
+#endif
+#endif
+
     std::string models[] = {"dnn/fast_neural_style_eccv16_starry_night.t7",
                             "dnn/fast_neural_style_instance_norm_feathers.t7"};
     std::string targets[] = {"dnn/lena_starry_night.png", "dnn/lena_feathers.png"};

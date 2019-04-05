@@ -3,6 +3,13 @@ set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin suppor
 set(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK "ON" CACHE BOOL "Make sure OpenCV version is the same in plugin and host code")
 mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
 
+string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+# Make virtual opencv_videoio_plugins target
+if(NOT TARGET opencv_videoio_plugins)
+  add_custom_target(opencv_videoio_plugins ALL)
+endif()
+
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
@@ -14,7 +21,8 @@ set(videoio_srcs
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_decoder.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/src/backend.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_static.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/container_avi.cpp")
 
 file(GLOB videoio_ext_hdrs
@@ -163,6 +171,12 @@ if(TARGET ocv.3rdparty.cap_ios)
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_photo_camera.mm
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_ios_video_camera.mm)
   list(APPEND tgts ocv.3rdparty.cap_ios)
+endif()
+
+if(TARGET ocv.3rdparty.android_mediandk)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_mediandk.cpp)
+  list(APPEND tgts ocv.3rdparty.android_mediandk)
 endif()
 
 ocv_set_module_sources(HEADERS ${videoio_ext_hdrs} ${videoio_hdrs} SOURCES ${videoio_srcs})

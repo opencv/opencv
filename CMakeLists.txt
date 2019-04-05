@@ -108,6 +108,10 @@ if(POLICY CMP0067)
   cmake_policy(SET CMP0067 NEW)
 endif()
 
+if(POLICY CMP0068)
+  cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
+endif()
+
 include(cmake/OpenCVUtils.cmake)
 ocv_cmake_reset_hooks()
 ocv_check_environment_variables(OPENCV_CMAKE_HOOKS_DIR)
@@ -368,6 +372,9 @@ OCV_OPTION(WITH_OPENCLAMDBLAS "Include AMD OpenCL BLAS library support" ON
 OCV_OPTION(WITH_DIRECTX "Include DirectX support" ON
   VISIBLE_IF WIN32 AND NOT WINRT
   VERIFY HAVE_DIRECTX)
+OCV_OPTION(WITH_OPENCL_D3D11_NV "Include NVIDIA OpenCL D3D11 support" WITH_DIRECTX
+  VISIBLE_IF WIN32 AND NOT WINRT
+  VERIFY HAVE_OPENCL_D3D11_NV)
 OCV_OPTION(WITH_LIBREALSENSE "Include Intel librealsense support" OFF
   VISIBLE_IF NOT WITH_INTELPERC
   VERIFY HAVE_LIBREALSENSE)
@@ -410,6 +417,9 @@ OCV_OPTION(WITH_IMGCODEC_PFM "Include PFM formats support" ON
 OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_QUIRC)
+OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)" (ANDROID_NATIVE_API_LEVEL GREATER 20)
+  VISIBLE_IF ANDROID
+  VERIFY HAVE_ANDROID_MEDIANDK)
 
 # OpenCV build components
 # ===================================================
@@ -712,7 +722,7 @@ if(UNIX)
     CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD)
     if(ANDROID)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
-    elseif(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD|Haiku")
+    elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|NetBSD|DragonFly|OpenBSD|Haiku")
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
@@ -1175,7 +1185,13 @@ status("    3rdparty dependencies:" ${deps_3rdparty})
 # ========================== OpenCV modules ==========================
 status("")
 status("  OpenCV modules:")
-string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD}")
+set(OPENCV_MODULES_BUILD_ST "")
+foreach(the_module ${OPENCV_MODULES_BUILD})
+  if(NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "INTERNAL" OR the_module STREQUAL "opencv_ts")
+    list(APPEND OPENCV_MODULES_BUILD_ST "${the_module}")
+  endif()
+endforeach()
+string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD_ST}")
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_USER_ST  "${OPENCV_MODULES_DISABLED_USER}")
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_AUTO_ST  "${OPENCV_MODULES_DISABLED_AUTO}")
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_FORCE_ST "${OPENCV_MODULES_DISABLED_FORCE}")
@@ -1567,6 +1583,7 @@ if(WITH_OPENCL OR HAVE_OPENCL)
     IF HAVE_OPENCL_SVM THEN "SVM"
     IF HAVE_CLAMDFFT THEN "AMDFFT"
     IF HAVE_CLAMDBLAS THEN "AMDBLAS"
+    IF HAVE_OPENCL_D3D11_NV THEN "NVD3D11"
     ELSE "no extra features")
   status("")
   status("  OpenCL:"     HAVE_OPENCL   THEN   "YES (${opencl_features})" ELSE "NO")

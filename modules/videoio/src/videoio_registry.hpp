@@ -5,8 +5,6 @@
 #ifndef __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
 #define __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
 
-#include "opencv2/videoio.hpp"
-#include "opencv2/videoio/registry.hpp"
 #include "backend.hpp"
 
 namespace cv
@@ -17,7 +15,6 @@ enum BackendMode {
     MODE_CAPTURE_BY_INDEX    = 1 << 0,           //!< device index
     MODE_CAPTURE_BY_FILENAME = 1 << 1,           //!< filename or device path (v4l2)
     MODE_WRITER              = 1 << 4,            //!< writer
-    MODE_DYNAMIC             = 1 << 5,
 
     MODE_CAPTURE_ALL = MODE_CAPTURE_BY_INDEX + MODE_CAPTURE_BY_FILENAME,
 };
@@ -29,26 +26,16 @@ struct VideoBackendInfo {
                       // 0 - disabled (OPENCV_VIDEOIO_PRIORITY_<name> = 0)
                       // >10000 - prioritized list (OPENCV_VIDEOIO_PRIORITY_LIST)
     const char* name;
-    Ptr<IBackend> backendFactory;
+    Ptr<IBackendFactory> backendFactory;
 };
 
-/** @brief Manages list of enabled backends
- */
-class VideoBackendRegistry
-{
-public:
-    typedef std::vector<VideoBackendInfo> BackendsVec;
-protected:
-    BackendsVec enabledBackends;
-    VideoBackendRegistry();
-public:
-    std::string dumpBackends() const;
-    Ptr<IBackend> getBackend(VideoCaptureAPIs api) const;
-    BackendsVec getBackends(int capabilityMask, VideoCaptureAPIs filter = CAP_ANY) const;
-    bool hasBackend(int mask, VideoCaptureAPIs api) const;
+namespace videoio_registry {
 
-    static VideoBackendRegistry& getInstance();
-};
+std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex();
+std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename();
+std::vector<VideoBackendInfo> getAvailableBackends_Writer();
+
+} // namespace
 
 } // namespace
 #endif // __OPENCV_VIDEOIO_VIDEOIO_REGISTRY_HPP__
