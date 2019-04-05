@@ -30,7 +30,7 @@ def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, optimi
         graph_def = TransformGraph(graph_def, [in_node], [out_node], transforms)
     # Serialize
     with tf.gfile.FastGFile(out_graph, 'wb') as f:
-            f.write(graph_def.SerializeToString())
+        f.write(graph_def.SerializeToString())
 
 tf.reset_default_graph()
 tf.Graph().as_default()
@@ -676,6 +676,32 @@ inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
 softmax = tf.contrib.slim.softmax(conv)
 save(inp, softmax, 'slim_softmax')
+################################################################################
+# issue https://github.com/opencv/opencv/issues/14224
+inp_node = 'img_inputs'
+out_node = 'MobileFaceNet/MobileFaceNet/Conv2d_0/add'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('frozen_model.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        for node in graph_def.node:
+            if node.name == inp_node:
+                del node.attr['shape']
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 5, 3], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'slim_batch_norm_in')
+    writeBlob(outputData, 'slim_batch_norm_out')
+
+    graph_def = TransformGraph(graph_def, [inp_node], [out_node], ['fold_constants', 'strip_unused_nodes'])
+    with tf.gfile.FastGFile('slim_batch_norm_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
+
 ################################################################################
 
 # Uncomment to print the final graph.
