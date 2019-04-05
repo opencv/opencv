@@ -906,7 +906,7 @@ OPENCV_HAL_IMPL_AVX512_ROTATE(v_int64x8,   epi64)
 OPENCV_HAL_IMPL_AVX512_ROTATE(v_float32x16,   ps)
 OPENCV_HAL_IMPL_AVX512_ROTATE(v_float64x8,    pd)
 
-////////// Reduce and mask /////////
+////////// Reduce /////////
 
 /** Reduce **/
 #define OPENCV_HAL_IMPL_AVX512_REDUCE(func, ifunc, _Tpvec, sctype, suffix) \
@@ -1015,165 +1015,95 @@ OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int16x32, v_uint16x32, epi16)
 OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int32x16, v_uint32x16, epi32)
 OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int64x8,  v_uint64x8,  epi64)
 
-/** Mask **/
-inline int v_signmask(const v_int8x32& a)
-{ return _mm256_movemask_epi8(a.val); }
-inline int v_signmask(const v_uint8x32& a)
-{ return v_signmask(v_reinterpret_as_s8(a)); }
-
-inline int v_signmask(const v_int16x16& a)
-{
-    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a.val, a.val));
-    return v_signmask(v) & 255;
-}
-inline int v_signmask(const v_uint16x16& a)
-{ return v_signmask(v_reinterpret_as_s16(a)); }
-
-inline int v_signmask(const v_int32x8& a)
-{
-    __m512i a16 = _mm256_packs_epi32(a.val, a.val);
-    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a16, a16));
-    return v_signmask(v) & 15;
-}
-inline int v_signmask(const v_uint32x8& a)
-{ return v_signmask(v_reinterpret_as_s32(a)); }
-
-inline int v_signmask(const v_float32x8& a)
-{ return _mm256_movemask_ps(a.val); }
-inline int v_signmask(const v_float64x4& a)
-{ return _mm256_movemask_pd(a.val); }
-
-/** Checks **/
-#define OPENCV_HAL_IMPL_AVX_CHECK(_Tpvec, and_op, allmask)  \
-    inline bool v_check_all(const _Tpvec& a)                \
-    {                                                       \
-        int mask = v_signmask(v_reinterpret_as_s8(a));      \
-        return and_op(mask, allmask) == allmask;            \
-    }                                                       \
-    inline bool v_check_any(const _Tpvec& a)                \
-    {                                                       \
-        int mask = v_signmask(v_reinterpret_as_s8(a));      \
-        return and_op(mask, allmask) != 0;                  \
-    }
-
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint8x32,  OPENCV_HAL_1ST, -1)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int8x32,   OPENCV_HAL_1ST, -1)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint16x16, OPENCV_HAL_AND, (int)0xaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int16x16,  OPENCV_HAL_AND, (int)0xaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8,  OPENCV_HAL_AND, (int)0x8888)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8,   OPENCV_HAL_AND, (int)0x8888)
-
-#define OPENCV_HAL_IMPL_AVX_CHECK_FLT(_Tpvec, allmask) \
-    inline bool v_check_all(const _Tpvec& a)           \
-    {                                                  \
-        int mask = v_signmask(a);                      \
-        return mask == allmask;                        \
-    }                                                  \
-    inline bool v_check_any(const _Tpvec& a)           \
-    {                                                  \
-        int mask = v_signmask(a);                      \
-        return mask != 0;                              \
-    }
-
-OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float32x8, 255)
-OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float64x4, 15)
-
 
 ////////// Other math /////////
 
 /** Some frequent operations **/
-#define OPENCV_HAL_IMPL_AVX_MULADD(_Tpvec, suffix)                            \
+#define OPENCV_HAL_IMPL_AVX512_MULADD(_Tpvec, suffix)                         \
     inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)    \
-    { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
+    { return _Tpvec(_mm512_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c) \
-    { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
+    { return _Tpvec(_mm512_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
-    { return _Tpvec(_mm256_sqrt_##suffix(x.val)); }                           \
+    { return _Tpvec(_mm512_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
     { return v_fma(a, a, b * b); }                                            \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)               \
-    { return v_sqrt(v_fma(a, a, b*b)); }
+    { return v_sqrt(v_fma(a, a, b * b)); }
 
-OPENCV_HAL_IMPL_AVX_MULADD(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_MULADD(v_float64x4, pd)
+OPENCV_HAL_IMPL_AVX512_MULADD(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX512_MULADD(v_float64x8,  pd)
 
-inline v_int32x8 v_fma(const v_int32x8& a, const v_int32x8& b, const v_int32x8& c)
+inline v_int32x16 v_fma(const v_int32x16& a, const v_int32x16& b, const v_int32x16& c)
+{ return a * b + c; }
+inline v_int32x16 v_muladd(const v_int32x16& a, const v_int32x16& b, const v_int32x16& c)
+{ return v_fma(a, b, c); }
+
+inline v_float32x16 v_invsqrt(const v_float32x16& x)
 {
-    return a * b + c;
+//    v_float32x16 half = x * v512_setall_f32(0.5);
+//    v_float32x16 t  = v_float32x16(_mm512_rsqrt14_ps(x.val));
+//    t *= v512_setall_f32(1.5) - ((t * t) * half);
+//    return t;
+    return v_float32x16(_mm512_rsqrt28_ps(x.val));
 }
 
-inline v_int32x8 v_muladd(const v_int32x8& a, const v_int32x8& b, const v_int32x8& c)
+inline v_float64x8 v_invsqrt(const v_float64x8& x)
 {
-    return v_fma(a, b, c);
-}
-
-inline v_float32x8 v_invsqrt(const v_float32x8& x)
-{
-    v_float32x8 half = x * v512_setall_f32(0.5);
-    v_float32x8 t  = v_float32x8(_mm256_rsqrt_ps(x.val));
-    // todo: _mm256_fnmsub_ps
-    t *= v512_setall_f32(1.5) - ((t * t) * half);
-    return t;
-}
-
-inline v_float64x4 v_invsqrt(const v_float64x4& x)
-{
-    return v512_setall_f64(1.) / v_sqrt(x);
+    return v_float64x8(_mm512_rsqrt28_pd(x.val));
 }
 
 /** Absolute values **/
-#define OPENCV_HAL_IMPL_AVX_ABS(_Tpvec, suffix)         \
-    inline v_u##_Tpvec v_abs(const v_##_Tpvec& x)       \
-    { return v_u##_Tpvec(_mm256_abs_##suffix(x.val)); }
+#define OPENCV_HAL_IMPL_AVX_ABS(_Tpvec, _Tpuvec, suffix) \
+    inline _Tpuvec v_abs(const _Tpvec& x)                \
+    { return _Tpuvec(_mm512_abs_##suffix(x.val)); }
 
-OPENCV_HAL_IMPL_AVX_ABS(int8x32,  epi8)
-OPENCV_HAL_IMPL_AVX_ABS(int16x16, epi16)
-OPENCV_HAL_IMPL_AVX_ABS(int32x8,  epi32)
-
-inline v_float32x8 v_abs(const v_float32x8& x)
-{ return x & v_float32x8(_mm256_castsi256_ps(_mm256_set1_epi32(0x7fffffff))); }
-inline v_float64x4 v_abs(const v_float64x4& x)
-{ return x & v_float64x4(_mm256_castsi256_pd(_mm256_srli_epi64(_mm256_set1_epi64x(-1), 1))); }
+OPENCV_HAL_IMPL_AVX_ABS(v_int8x64,  v_uint8x64,  epi8)
+OPENCV_HAL_IMPL_AVX_ABS(v_int16x32, v_uint16x32, epi16)
+OPENCV_HAL_IMPL_AVX_ABS(v_int32x16, v_uint32x16, epi32)
+OPENCV_HAL_IMPL_AVX_ABS(v_int64x8,  v_uint64x8,  epi64)
+OPENCV_HAL_IMPL_AVX_ABS(v_float32x16, v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX_ABS(v_float64x8, v_float64x8, pd)
 
 /** Absolute difference **/
-inline v_uint8x32 v_absdiff(const v_uint8x32& a, const v_uint8x32& b)
+inline v_uint8x64 v_absdiff(const v_uint8x64& a, const v_uint8x64& b)
 { return v_add_wrap(a - b,  b - a); }
-inline v_uint16x16 v_absdiff(const v_uint16x16& a, const v_uint16x16& b)
+inline v_uint16x32 v_absdiff(const v_uint16x32& a, const v_uint16x32& b)
 { return v_add_wrap(a - b,  b - a); }
-inline v_uint32x8 v_absdiff(const v_uint32x8& a, const v_uint32x8& b)
+inline v_uint32x16 v_absdiff(const v_uint32x16& a, const v_uint32x16& b)
 { return v_max(a, b) - v_min(a, b); }
 
-inline v_uint8x32 v_absdiff(const v_int8x32& a, const v_int8x32& b)
+inline v_uint8x64 v_absdiff(const v_int8x64& a, const v_int8x64& b)
 {
-    v_int8x32 d = v_sub_wrap(a, b);
-    v_int8x32 m = a < b;
+    v_int8x64 d = v_sub_wrap(a, b);
+    v_int8x64 m = a < b;
     return v_reinterpret_as_u8(v_sub_wrap(d ^ m, m));
 }
 
-inline v_uint16x16 v_absdiff(const v_int16x16& a, const v_int16x16& b)
+inline v_uint16x32 v_absdiff(const v_int16x32& a, const v_int16x32& b)
 { return v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))); }
 
-inline v_uint32x8 v_absdiff(const v_int32x8& a, const v_int32x8& b)
+inline v_uint32x16 v_absdiff(const v_int32x16& a, const v_int32x16& b)
 {
-    v_int32x8 d = a - b;
-    v_int32x8 m = a < b;
+    v_int32x16 d = a - b;
+    v_int32x16 m = a < b;
     return v_reinterpret_as_u32((d ^ m) - m);
 }
 
-inline v_float32x8 v_absdiff(const v_float32x8& a, const v_float32x8& b)
+inline v_float32x16 v_absdiff(const v_float32x16& a, const v_float32x16& b)
 { return v_abs(a - b); }
 
-inline v_float64x4 v_absdiff(const v_float64x4& a, const v_float64x4& b)
+inline v_float64x8 v_absdiff(const v_float64x8& a, const v_float64x8& b)
 { return v_abs(a - b); }
 
 /** Saturating absolute difference **/
-inline v_int8x32 v_absdiffs(const v_int8x32& a, const v_int8x32& b)
+inline v_int8x64 v_absdiffs(const v_int8x64& a, const v_int8x64& b)
 {
-    v_int8x32 d = a - b;
-    v_int8x32 m = a < b;
+    v_int8x64 d = a - b;
+    v_int8x64 m = a < b;
     return (d ^ m) - m;
 }
-inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
+inline v_int16x32 v_absdiffs(const v_int16x32& a, const v_int16x32& b)
 { return v_max(a, b) - v_min(a, b); }
 
 ////////// Conversions /////////
@@ -2558,6 +2488,84 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int32x8, int, s32, v_uint32x8, unsign
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_float32x8, float, f32, v_uint32x8, unsigned, u32)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_int64x4, int64, s64, v_uint64x4, uint64, u64)
 OPENCV_HAL_IMPL_AVX_LOADSTORE_INTERLEAVE(v_float64x4, double, f64, v_uint64x4, uint64, u64)
+
+////////// Mask and checks /////////
+
+/** Mask **/
+inline int v_signmask(const v_int8x32& a)
+{
+    return _mm256_movemask_epi8(a.val);
+}
+inline int v_signmask(const v_uint8x32& a)
+{
+    return v_signmask(v_reinterpret_as_s8(a));
+}
+
+inline int v_signmask(const v_int16x16& a)
+{
+    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a.val, a.val));
+    return v_signmask(v) & 255;
+}
+inline int v_signmask(const v_uint16x16& a)
+{
+    return v_signmask(v_reinterpret_as_s16(a));
+}
+
+inline int v_signmask(const v_int32x8& a)
+{
+    __m512i a16 = _mm256_packs_epi32(a.val, a.val);
+    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a16, a16));
+    return v_signmask(v) & 15;
+}
+inline int v_signmask(const v_uint32x8& a)
+{
+    return v_signmask(v_reinterpret_as_s32(a));
+}
+
+inline int v_signmask(const v_float32x8& a)
+{
+    return _mm256_movemask_ps(a.val);
+}
+inline int v_signmask(const v_float64x4& a)
+{
+    return _mm256_movemask_pd(a.val);
+}
+
+/** Checks **/
+#define OPENCV_HAL_IMPL_AVX_CHECK(_Tpvec, and_op, allmask)  \
+    inline bool v_check_all(const _Tpvec& a)                \
+    {                                                       \
+        int mask = v_signmask(v_reinterpret_as_s8(a));      \
+        return and_op(mask, allmask) == allmask;            \
+    }                                                       \
+    inline bool v_check_any(const _Tpvec& a)                \
+    {                                                       \
+        int mask = v_signmask(v_reinterpret_as_s8(a));      \
+        return and_op(mask, allmask) != 0;                  \
+    }
+
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint8x32, OPENCV_HAL_1ST, -1)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int8x32, OPENCV_HAL_1ST, -1)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint16x16, OPENCV_HAL_AND, (int)0xaaaa)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int16x16, OPENCV_HAL_AND, (int)0xaaaa)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8, OPENCV_HAL_AND, (int)0x8888)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8, OPENCV_HAL_AND, (int)0x8888)
+
+#define OPENCV_HAL_IMPL_AVX_CHECK_FLT(_Tpvec, allmask) \
+    inline bool v_check_all(const _Tpvec& a)           \
+    {                                                  \
+        int mask = v_signmask(a);                      \
+        return mask == allmask;                        \
+    }                                                  \
+    inline bool v_check_any(const _Tpvec& a)           \
+    {                                                  \
+        int mask = v_signmask(a);                      \
+        return mask != 0;                              \
+    }
+
+OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float32x8, 255)
+OPENCV_HAL_IMPL_AVX_CHECK_FLT(v_float64x4, 15)
+
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 
