@@ -1109,60 +1109,54 @@ inline v_int16x32 v_absdiffs(const v_int16x32& a, const v_int16x32& b)
 ////////// Conversions /////////
 
 /** Rounding **/
-inline v_int32x8 v_round(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvtps_epi32(a.val)); }
+inline v_int32x16 v_round(const v_float32x16& a)
+{ return v_int32x16(_mm512_cvtps_epi32(a.val)); }
 
-inline v_int32x8 v_round(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvtpd_epi32(a.val))); }
+inline v_int32x16 v_round(const v_float64x8& a)
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvtpd_epi32(a.val))); }
 
-inline v_int32x8 v_round(const v_float64x4& a, const v_float64x4& b)
-{
-    __m256i ai = _mm256_cvtpd_epi32(a.val), bi = _mm256_cvtpd_epi32(b.val);
-    return v_int32x8(_v512_combine(ai, bi));
-}
+inline v_int32x16 v_round(const v_float64x8& a, const v_float64x8& b)
+{ return v_int32x16(_v512_combine(_mm512_cvtpd_epi32(a.val), _mm512_cvtpd_epi32(b.val))); }
 
-inline v_int32x8 v_trunc(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(a.val)); }
+inline v_int32x16 v_trunc(const v_float32x16& a)
+{ return v_int32x16(_mm512_cvttps_epi32(a.val)); }
 
-inline v_int32x8 v_trunc(const v_float64x4& a)
-{ return v_int32x8(_mm256_castsi128_si256(_mm256_cvttpd_epi32(a.val))); }
+inline v_int32x16 v_trunc(const v_float64x8& a)
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvttpd_epi32(a.val))); }
 
-inline v_int32x8 v_floor(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_floor_ps(a.val))); }
+inline v_int32x16 v_floor(const v_float32x16& a)
+{ return v_int32x16(_mm512_cvt_roundps_epi32(a.val, _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC)); }
 
-inline v_int32x8 v_floor(const v_float64x4& a)
-{ return v_trunc(v_float64x4(_mm256_floor_pd(a.val))); }
+inline v_int32x16 v_floor(const v_float64x8& a)
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(a.val))); }
 
-inline v_int32x8 v_ceil(const v_float32x8& a)
-{ return v_int32x8(_mm256_cvttps_epi32(_mm256_ceil_ps(a.val))); }
+inline v_int32x16 v_ceil(const v_float32x16& a)
+{ return v_int32x16(_mm512_cvt_roundps_epi32(a.val, _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC)); }
 
-inline v_int32x8 v_ceil(const v_float64x4& a)
-{ return v_trunc(v_float64x4(_mm256_ceil_pd(a.val))); }
+inline v_int32x16 v_ceil(const v_float64x8& a)
+{ return v_int32x16(_mm512_castsi256_si512(_mm512_cvt_roundpd_epi32(a.val))); }
 
 /** To float **/
-inline v_float32x8 v_cvt_f32(const v_int32x8& a)
-{ return v_float32x8(_mm256_cvtepi32_ps(a.val)); }
+inline v_float32x16 v_cvt_f32(const v_int32x16& a)
+{ return v_float32x16(_mm512_cvtepi32_ps(a.val)); }
 
-inline v_float32x8 v_cvt_f32(const v_float64x4& a)
-{ return v_float32x8(_mm256_castps128_ps256(_mm256_cvtpd_ps(a.val))); }
+inline v_float32x16 v_cvt_f32(const v_float64x8& a)
+{ return v_float32x16(_mm512_cvtpd_pslo(a.val)); }
 
-inline v_float32x8 v_cvt_f32(const v_float64x4& a, const v_float64x4& b)
-{
-    __m256 af = _mm256_cvtpd_ps(a.val), bf = _mm256_cvtpd_ps(b.val);
-    return v_float32x8(_mm256_insertf128_ps(_mm256_castps128_ps256(af), bf, 1));
-}
+inline v_float32x16 v_cvt_f32(const v_float64x8& a, const v_float64x8& b)
+{ return v_float32x8(_v512_combine(_mm512_cvtpd_ps(a.val), _mm512_cvtpd_ps(b.val))); }
 
-inline v_float64x4 v_cvt_f64(const v_int32x8& a)
-{ return v_float64x4(_mm256_cvtepi32_pd(_v512_extract_low(a.val))); }
+inline v_float64x8 v_cvt_f64(const v_int32x16& a)
+{ return v_float64x8(_mm512_cvtepi32_pd(_v512_extract_low(a.val))); }
 
-inline v_float64x4 v_cvt_f64_high(const v_int32x8& a)
-{ return v_float64x4(_mm256_cvtepi32_pd(_v512_extract_high(a.val))); }
+inline v_float64x8 v_cvt_f64_high(const v_int32x16& a)
+{ return v_float64x8(_mm512_cvtepi32_pd(_v512_extract_high(a.val))); }
 
-inline v_float64x4 v_cvt_f64(const v_float32x8& a)
-{ return v_float64x4(_mm256_cvtps_pd(_v512_extract_low(a.val))); }
+inline v_float64x8 v_cvt_f64(const v_float32x16& a)
+{ return v_float64x8(_mm512_cvtps_pd(_v512_extract_low(a.val))); }
 
-inline v_float64x4 v_cvt_f64_high(const v_float32x8& a)
-{ return v_float64x4(_mm256_cvtps_pd(_v512_extract_high(a.val))); }
+inline v_float64x8 v_cvt_f64_high(const v_float32x16& a)
+{ return v_float64x8(_mm512_cvtps_pd(_v512_extract_high(a.val))); }
 
 ////////////// Lookup table access ////////////////////
 
