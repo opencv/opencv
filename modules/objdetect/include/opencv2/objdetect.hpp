@@ -697,7 +697,7 @@ public:
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code
 
@@ -705,8 +705,8 @@ public:
      @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
-                                       OutputArray straight_qrcode = noArray());
+    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
+                                        OutputArray straight_qrcode = noArray());
 protected:
     struct Impl;
     Ptr<Impl> p;
