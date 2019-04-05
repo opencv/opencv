@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
     vector<String> typeAlgoMatch;
     vector<String> fileName;
     // This descriptor are going to be detect and compute
-    typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
-    typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
-    typeDesc.push_back("ORB");      // see http://docs.opencv.org/trunk/de/dbf/classcv_1_1BRISK.html
-    typeDesc.push_back("BRISK");    // see http://docs.opencv.org/trunk/db/d95/classcv_1_1ORB.html
-    // This algorithm would be used to match descriptors see http://docs.opencv.org/trunk/db/d39/classcv_1_1DescriptorMatcher.html#ab5dc5036569ecc8d47565007fa518257
+    typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see https://docs.opencv.org/master/d8/d30/classcv_1_1AKAZE.html
+    typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/master/d8/d30/classcv_1_1AKAZE.html
+    typeDesc.push_back("ORB");      // see http://docs.opencv.org/master/de/dbf/classcv_1_1BRISK.html
+    typeDesc.push_back("BRISK");    // see http://docs.opencv.org/master/db/d95/classcv_1_1ORB.html
+    // This algorithm would be used to match descriptors see http://docs.opencv.org/master/db/d39/classcv_1_1DescriptorMatcher.html#ab5dc5036569ecc8d47565007fa518257
     typeAlgoMatch.push_back("BruteForce");
     typeAlgoMatch.push_back("BruteForce-L1");
     typeAlgoMatch.push_back("BruteForce-Hamming");
