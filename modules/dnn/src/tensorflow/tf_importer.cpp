@@ -657,6 +657,9 @@ static int predictOutputDataLayout(const tensorflow::GraphDef& net,
 
 void TFImporter::populateNet(Net dstNet)
 {
+    if (!netTxt.ByteSize())
+        removePhaseSwitches(netBin);
+
     RemoveIdentityOps(netBin);
     RemoveIdentityOps(netTxt);
 
