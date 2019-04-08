@@ -379,7 +379,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         lInf = 0.035;
     }
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU) {
-        l1 = 4.5e-5;
+        l1 = 4.6e-5;
         lInf = 1.9e-4;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
