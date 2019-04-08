@@ -1160,12 +1160,6 @@ struct Net::Impl
                 continue;
 
             currLayer->unsetAttached();
-
-            Ptr<PoolingLayer> poolingLayer = currLayer.dynamicCast<PoolingLayer>();
-            if( !poolingLayer.empty() )
-            {
-                poolingLayer->computeMaxIdx = true;
-            }
         }
 
         layersTimings.clear();
@@ -2082,30 +2076,11 @@ struct Net::Impl
                     }
                 }
             }
-            // the optimization #2. if there is no layer that takes max pooling layer's computed
-            // max indices (and only some semantical segmentation networks might need this;
-            // many others only take the maximum values), then we switch the max pooling
-            // layer to the faster operating mode.
-            Ptr<PoolingLayer> poolingLayer = ld.layerInstance.dynamicCast<PoolingLayer>();
-            if( !poolingLayer.empty() && !ld.consumers.empty() )
-            {
-                size_t i = 0, nconsumers = ld.consumers.size();
-                for( ; i < nconsumers; i++ )
-                    if( ld.consumers[i].oid > 0 )
-                        break;
-                // if there is no layer that takes the second output pin of the pooling layer
-                // on input then we don't need to compute the indices
-                if( i >= nconsumers )
-                {
-                    poolingLayer->computeMaxIdx = false;
-                    printf_(("\tsimplified pooling layer %s\n", poolingLayer->name.c_str()));
-                }
-            }
 
             if (preferableBackend != DNN_BACKEND_OPENCV)
                 continue;  // Go to the next layer.
 
-            // the optimization #3. if there is concat layer that concatenates channels
+            // the optimization #2. if there is concat layer that concatenates channels
             // from the inputs together (i.e. axis == 1) then we make the inputs of
             // the concat layer to write to the concatenation output buffer
             // (and so we eliminate the concatenation layer, because the channels
