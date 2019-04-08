@@ -1342,20 +1342,25 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
                                               const int16_t* LUT,
                                               v_uint16& outA, v_uint16& outB, v_uint16& outC)
 {
+    const int vsize = v_uint16::nlanes;
+
     // LUT idx of origin pt of cube
     v_uint16 tx = inX >> (lab_base_shift - lab_lut_shift);
     v_uint16 ty = inY >> (lab_base_shift - lab_lut_shift);
     v_uint16 tz = inZ >> (lab_base_shift - lab_lut_shift);
 
     v_uint32 btmp00, btmp01, btmp10, btmp11, btmp20, btmp21;
-    v_int32 baseIdx0, baseIdx1;
+    v_uint32 baseIdx0, baseIdx1;
     // baseIdx = tx*(3*8)+ty*(3*8*LAB_LUT_DIM)+tz*(3*8*LAB_LUT_DIM*LAB_LUT_DIM)
-    // 4 instead of 8, because addresses are casted to int32_t instead of int16_t
-    v_mul_expand(tx, vx_setall_u16(3*4), btmp00, btmp01);
-    v_mul_expand(ty, vx_setall_u16(3*4*LAB_LUT_DIM), btmp10, btmp11);
-    v_mul_expand(tz, vx_setall_u16(3*4*LAB_LUT_DIM*LAB_LUT_DIM), btmp20, btmp21);
-    baseIdx0 = v_reinterpret_as_s32(btmp00 + btmp10 + btmp20);
-    baseIdx1 = v_reinterpret_as_s32(btmp01 + btmp11 + btmp21);
+    v_mul_expand(tx, vx_setall_u16(3*8), btmp00, btmp01);
+    v_mul_expand(ty, vx_setall_u16(3*8*LAB_LUT_DIM), btmp10, btmp11);
+    v_mul_expand(tz, vx_setall_u16(3*8*LAB_LUT_DIM*LAB_LUT_DIM), btmp20, btmp21);
+    baseIdx0 = btmp00 + btmp10 + btmp20;
+    baseIdx1 = btmp01 + btmp11 + btmp21;
+
+    uint32_t CV_DECL_ALIGNED(MAX_ALIGN) vbaseIdx[vsize];
+    v_store_aligned(vbaseIdx + 0*vsize/2, baseIdx0);
+    v_store_aligned(vbaseIdx + 1*vsize/2, baseIdx1);
 
     // fracX, fracY, fracZ are [0; TRILINEAR_BASE)
     const uint16_t bitMask = (1 << trilinear_shift) - 1;
@@ -1365,55 +1370,53 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
     v_uint16 fracZ = (inZ >> (lab_base_shift - 8 - 1)) & bitMaskReg;
 
     // trilinearIdx = 8*x + 8*TRILINEAR_BASE*y + 8*TRILINEAR_BASE*TRILINEAR_BASE*z
-    v_int32 trilinearIdx0, trilinearIdx1;
-    v_int32 fracX0, fracX1, fracY0, fracY1, fracZ0, fracZ1;
-    v_expand(v_reinterpret_as_s16(fracX), fracX0, fracX1);
-    v_expand(v_reinterpret_as_s16(fracY), fracY0, fracY1);
-    v_expand(v_reinterpret_as_s16(fracZ), fracZ0, fracZ1);
-    // shift minus 1, because addresses are casted to int32_t instead of int16_t
-    trilinearIdx0 = (fracX0 << (3-1)) + (fracY0 << (3-1+trilinear_shift)) + (fracZ0 << (3-1+trilinear_shift*2));
-    trilinearIdx1 = (fracX1 << (3-1)) + (fracY1 << (3-1+trilinear_shift)) + (fracZ1 << (3-1+trilinear_shift*2));
+    v_uint32 trilinearIdx0, trilinearIdx1;
+    v_uint32 fracX0, fracX1, fracY0, fracY1, fracZ0, fracZ1;
+    v_expand(fracX, fracX0, fracX1);
+    v_expand(fracY, fracY0, fracY1);
+    v_expand(fracZ, fracZ0, fracZ1);
 
-    v_int32 sa0, sa1, sb0, sb1, sc0, sc1;
-    sa0 = vx_setzero_s32(), sa1 = vx_setzero_s32();
-    sb0 = vx_setzero_s32(), sb1 = vx_setzero_s32();
-    sc0 = vx_setzero_s32(), sc1 = vx_setzero_s32();
+    trilinearIdx0 = (fracX0 << 3) + (fracY0 << (3+trilinear_shift)) + (fracZ0 << (3+trilinear_shift*2));
+    trilinearIdx1 = (fracX1 << 3) + (fracY1 << (3+trilinear_shift)) + (fracZ1 << (3+trilinear_shift*2));
 
-    for(int i = 0; i < 4; i++)
+    uint32_t CV_DECL_ALIGNED(MAX_ALIGN) vtrilinearIdx[vsize];
+    v_store_aligned(vtrilinearIdx + 0*vsize/2, trilinearIdx0);
+    v_store_aligned(vtrilinearIdx + 1*vsize/2, trilinearIdx1);
+
+    uint32_t CV_DECL_ALIGNED(MAX_ALIGN) va[vsize], vb[vsize], vc[vsize];
+    for(int j = 0; j < vsize; j++)
     {
-        v_int16 a0q, a1q, b0q, b1q, c0q, c1q, w0q, w1q;
+        const int16_t* baseLUT = LUT + vbaseIdx[j];
 
-        //load values to interpolate for pix0, pix1,..
-        a0q = v_reinterpret_as_s16(v_lut(((const int32_t*)LUT)+i, baseIdx0));
-        a1q = v_reinterpret_as_s16(v_lut(((const int32_t*)LUT)+i, baseIdx1));
+        v_int16x8 aa, bb, cc;
+        aa = v_load(baseLUT);
+        bb = v_load(baseLUT + 8);
+        cc = v_load(baseLUT + 16);
 
-        b0q = v_reinterpret_as_s16(v_lut(((const int32_t*)(LUT+8))+i, baseIdx0));
-        b1q = v_reinterpret_as_s16(v_lut(((const int32_t*)(LUT+8))+i, baseIdx1));
+        v_int16x8 w = v_load(trilinearLUT + vtrilinearIdx[j]);
 
-        c0q = v_reinterpret_as_s16(v_lut(((const int32_t*)(LUT+16))+i, baseIdx0));
-        c1q = v_reinterpret_as_s16(v_lut(((const int32_t*)(LUT+16))+i, baseIdx1));
-
-        //interpolation weights for pix0, pix1,..
-        w0q = v_reinterpret_as_s16(v_lut(((const int32_t*)trilinearLUT)+i, trilinearIdx0));
-        w1q = v_reinterpret_as_s16(v_lut(((const int32_t*)trilinearLUT)+i, trilinearIdx1));
-
-        sa0 += v_dotprod(a0q, w0q); sa1 += v_dotprod(a1q, w1q);
-        sb0 += v_dotprod(b0q, w0q); sb1 += v_dotprod(b1q, w1q);
-        sc0 += v_dotprod(c0q, w0q); sc1 += v_dotprod(c1q, w1q);
+        va[j] = v_reduce_sum(v_dotprod(aa, w));
+        vb[j] = v_reduce_sum(v_dotprod(bb, w));
+        vc[j] = v_reduce_sum(v_dotprod(cc, w));
     }
-
     v_uint32 a0, a1, b0, b1, c0, c1;
-    v_uint32 descaleShift = vx_setall_u32(1 << (trilinear_shift*3 - 1));
-    a0 = (v_reinterpret_as_u32(sa0) + descaleShift) >> (trilinear_shift*3);
-    a1 = (v_reinterpret_as_u32(sa1) + descaleShift) >> (trilinear_shift*3);
-    b0 = (v_reinterpret_as_u32(sb0) + descaleShift) >> (trilinear_shift*3);
-    b1 = (v_reinterpret_as_u32(sb1) + descaleShift) >> (trilinear_shift*3);
-    c0 = (v_reinterpret_as_u32(sc0) + descaleShift) >> (trilinear_shift*3);
-    c1 = (v_reinterpret_as_u32(sc1) + descaleShift) >> (trilinear_shift*3);
+    a0 = vx_load_aligned(va + 0*vsize/2);
+    a1 = vx_load_aligned(va + 1*vsize/2);
+    b0 = vx_load_aligned(vb + 0*vsize/2);
+    b1 = vx_load_aligned(vb + 1*vsize/2);
+    c0 = vx_load_aligned(vc + 0*vsize/2);
+    c1 = vx_load_aligned(vc + 1*vsize/2);
 
-    outA = v_pack(a0, a1);
-    outB = v_pack(b0, b1);
-    outC = v_pack(c0, c1);
+    // CV_DESCALE
+    const v_uint32 descaleShift = vx_setall_u32(1 << (trilinear_shift*3 - 1));
+    a0 = (a0 + descaleShift) >> (trilinear_shift*3);
+    a1 = (a1 + descaleShift) >> (trilinear_shift*3);
+    b0 = (b0 + descaleShift) >> (trilinear_shift*3);
+    b1 = (b1 + descaleShift) >> (trilinear_shift*3);
+    c0 = (c0 + descaleShift) >> (trilinear_shift*3);
+    c1 = (c1 + descaleShift) >> (trilinear_shift*3);
+
+    outA = v_pack(a0, a1); outB = v_pack(b0, b1); outC = v_pack(c0, c1);
 }
 
 #endif // CV_SIMD
