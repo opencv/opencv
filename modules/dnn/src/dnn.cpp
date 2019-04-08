@@ -3015,8 +3015,8 @@ String Net::dumpNet()
         String name = it->second.params.name;
         if (allLayers[it->first] == -1 && !name.empty()) {
             out << "	" << "\"" << name << "\"" << " [label=\"";
-            skipId.resize(1);
-            skipId[0] = it->first;
+            skipId.clear();
+            skipId.push_back(it->first);
         }
         else if (name.empty() || it->first != skippedLayers[allLayers[it->first]][0])
             continue;
@@ -3102,6 +3102,7 @@ String Net::dumpNet()
     }
     out << '\n';
     // Add edges
+    int inputsSize = impl->netInputLayer->outNames.size();
     for (std::map<int, LayerData>::iterator it = map.begin(); it != map.end(); ++it)
     {
         if (allLayers[it->first] == -1)  // node
@@ -3109,11 +3110,10 @@ String Net::dumpNet()
             for (int i = 0; i < it->second.consumers.size(); i++)
             {
                 int outId = it->second.consumers[i].lid;
-                if (it == map.begin() && it->second.consumers.size() > 1) {  // many inputs
+                if (it == map.begin() && inputsSize > 1)
                     out << "	" << "\"" << it->second.name << "_" << i << "\"" << " -> ";
-                } else {
+                else
                     out << "	" << "\"" << it->second.name << "\"" << " -> ";
-                }
                 if (allLayers[outId] == -1)  // node
                     out << "\"" << map[outId].name << "\"" << '\n';
                 else  // cluster
