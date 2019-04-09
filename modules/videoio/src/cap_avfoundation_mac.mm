@@ -324,6 +324,7 @@ void CvCaptureCAM::stopCaptureDevice() {
 int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
     if (@available(macOS 10.14, *))
     {
         AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
@@ -346,6 +347,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
             return 0;
         }
     }
+#endif
 
     // get capture device
     NSArray *devices = [[AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo]
