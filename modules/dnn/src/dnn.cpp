@@ -2948,7 +2948,7 @@ int Net::getLayerId(const String &layer)
     return impl->getLayerId(layer);
 }
 
-String Net::dumpNet()
+String Net::dump()
 {
     CV_Assert(!empty());
     std::ostringstream out;
@@ -3039,38 +3039,38 @@ String Net::dumpNet()
                  } else if (lp.has("kernel_h") && lp.has("kernel_w")) {
                      DictValue h = lp.get("kernel_h");
                      DictValue w = lp.get("kernel_w");
-                     out << "kernel (HxW): " << h << "x" << w << "\\l";
+                     out << "kernel (HxW): " << h << " x " << w << "\\l";
                  }
                  if (lp.has("stride")) {
                      DictValue stride = lp.get("stride");
-                     out << "stride (HxW): " << stride << "x" << stride << "\\l";
+                     out << "stride (HxW): " << stride << " x " << stride << "\\l";
                  } else if (lp.has("stride_h") && lp.has("stride_w")) {
                      DictValue h = lp.get("stride_h");
                      DictValue w = lp.get("stride_w");
-                     out << "stride (HxW): " << h << "x" << w << "\\l";
+                     out << "stride (HxW): " << h << " x " << w << "\\l";
                  }
                  if (lp.has("dilation")) {
                      DictValue dilation = lp.get("dilation");
-                     out << "dilation (HxW): " << dilation << "x" << dilation << "\\l";
+                     out << "dilation (HxW): " << dilation << " x " << dilation << "\\l";
                  } else if (lp.has("dilation_h") && lp.has("dilation_w")) {
                      DictValue h = lp.get("dilation_h");
                      DictValue w = lp.get("dilation_w");
-                     out << "dilation (HxW): " << h << "x" << w << "\\l";
+                     out << "dilation (HxW): " << h << " x " << w << "\\l";
                  }
                  if (lp.has("pad")) {
                      DictValue pad = lp.get("pad");
-                     out << "pad (HxW): " << pad << "x" << pad << "x" << pad << "x" << pad << "\\l";
+                     out << "pad (LxTxRxB): " << pad << " x " << pad << " x " << pad << " x " << pad << "\\l";
                  } else if (lp.has("pad_l") && lp.has("pad_t") && lp.has("pad_r") && lp.has("pad_b")) {
                      DictValue l = lp.get("pad_l");
                      DictValue t = lp.get("pad_t");
                      DictValue r = lp.get("pad_r");
                      DictValue b = lp.get("pad_b");
-                     out << "pad (LxTxRxB): " << l << "x" << t << "x" << r << "x" << b << "\\l";
+                     out << "pad (LxTxRxB): " << l << " x " << t << " x " << r << " x " << b << "\\l";
                  }
                  else if (lp.has("pooled_w") || lp.has("pooled_h")) {
                      DictValue h = lp.get("pooled_h");
                      DictValue w = lp.get("pooled_w");
-                     out << "pad (HxW): " << h << "x" << w << "\\l";
+                     out << "pad (HxW): " << h << " x " << w << "\\l";
                  }
                  if (lp.has("pool")) {
                      out << "pool: " << lp.get("pool") << "\\l";
@@ -3081,11 +3081,11 @@ String Net::dumpNet()
                  if (lp.has("group")) {
                      out << "group: " << lp.get("group") << "\\l";
                  }
-                 if (lp.has("num_output")) {
-                     out << "num_output: " << lp.get("num_output") << "\\l";
-                 }
              }
          }
+         if (!it->second.outputBlobs.empty())
+             out << "output shapes: " << it->second.outputBlobs[0].size << "\\l";
+
          out << (!it->second.backendNodes[prefBackend].empty() ? backend : "OCV/");
          int colorId = 0;
          switch (it->second.layerInstance->preferableTarget) {
@@ -3140,9 +3140,9 @@ String Net::dumpNet()
     return out.str();
 }
 
-void Net::dumpNetToFile(const String& path) {
+void Net::dumpToFile(const String& path) {
     std::ofstream file(path.c_str());
-    file << dumpNet();
+    file << dump();
     file.close();
 }
 
