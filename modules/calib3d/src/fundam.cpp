@@ -967,7 +967,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i].z != 0.f ? 1.f/sptr[i].z : 1.f;
+                float scale = (std::fabs(sptr[i].z) > FLT_EPSILON) ? 1.f/sptr[i].z : 1.f;
                 dptr[i] = Point2f(sptr[i].x*scale, sptr[i].y*scale);
             }
         }
