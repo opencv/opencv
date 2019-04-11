@@ -3086,10 +3086,11 @@ String Net::dump()
          if (!it->second.outputBlobs.empty())
              out << "output: " << it->second.outputBlobs[0].size << "\\l";
 
-         out << (!it->second.backendNodes[prefBackend].empty() ? backend : "OCV/");
+         Ptr<BackendNode> layerBackend = it->second.backendNodes[prefBackend];
+         out << (!layerBackend.empty() ? backend : "OCV/");
          int colorId = 0;
          switch (it->second.layerInstance->preferableTarget) {
-             case DNN_TARGET_CPU: out << "CPU\\n"; colorId = (backend == "OCV/") ? 0 : 5; break;
+             case DNN_TARGET_CPU: out << "CPU\\n"; colorId = layerBackend.empty() ? 0 : 5; break;
              case DNN_TARGET_OPENCL: out << "OCL\\n"; colorId = 1; break;
              case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16\\n"; colorId = 2; break;
              case DNN_TARGET_MYRIAD: out << "MYRIAD\\n"; colorId = 3; break;
