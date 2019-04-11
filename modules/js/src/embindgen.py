@@ -142,6 +142,8 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches']}
 
+calib3d = {'': ['findHomography']}
+
 def makeWhiteList(module_list):
     wl = {}
     for m in module_list:
@@ -152,7 +154,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])
 
 # Features to be exported
 export_enums = False
