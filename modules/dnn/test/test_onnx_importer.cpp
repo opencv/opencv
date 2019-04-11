@@ -81,6 +81,13 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("convolution");
 }
 
+TEST_P(Test_ONNX_layers, Convolution3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    testONNXModels("conv3d");
+    testONNXModels("conv3d_bias");
+}
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {

@@ -190,18 +190,31 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
     {
         opencv_onnx::AttributeProto attribute_proto = node_proto.attribute(i);
         std::string attribute_name = attribute_proto.name();
-
         if(attribute_name == "kernel_shape")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("kernel_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("kernel_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            if (attribute_proto.ints_size() == 2) {
+                lp.set("kernel_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
+                lp.set("kernel_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            } else {
+                const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
+                std::vector<int32_t> dst(attribute_proto.ints_size());
+                convertInt64ToInt32(src, dst, attribute_proto.ints_size());
+                lp.set("kernel",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+            }
         }
         else if(attribute_name == "strides")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("stride_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("stride_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            if (attribute_proto.ints_size() == 2) {
+                lp.set("stride_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
+                lp.set("stride_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            } else {
+                const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
+                std::vector<int32_t> dst(attribute_proto.ints_size());
+                convertInt64ToInt32(src, dst, attribute_proto.ints_size());
+                lp.set("strides",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+            }
         }
         else if(attribute_name == "pads")
         {
@@ -224,11 +237,18 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             else
             {
                 // Convolution or pooling.
-                CV_Assert(attribute_proto.ints_size() == 4);
-                lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
-                lp.set("pad_l", saturate_cast<int32_t>(attribute_proto.ints(1)));
-                lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
-                lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
+                CV_Assert(attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
+                if (attribute_proto.ints_size() == 4) {
+                    lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
+                    lp.set("pad_l", saturate_cast<int32_t>(attribute_proto.ints(1)));
+                    lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
+                    lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
+                } else {
+                    const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
+                    std::vector<int32_t> dst(attribute_proto.ints_size());
+                    convertInt64ToInt32(src, dst, attribute_proto.ints_size());
+                    lp.set("pads",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+                }
             }
         }
         else if(attribute_name == "auto_pad")
@@ -242,9 +262,16 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if(attribute_name == "dilations")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("dilation_h",  saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("dilation_w",  saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            if (attribute_proto.ints_size() == 2) {
+                lp.set("dilation_h",  saturate_cast<int32_t>(attribute_proto.ints(0)));
+                lp.set("dilation_w",  saturate_cast<int32_t>(attribute_proto.ints(1)));
+            } else {
+                const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
+                std::vector<int32_t> dst(attribute_proto.ints_size());
+                convertInt64ToInt32(src, dst, attribute_proto.ints_size());
+                lp.set("dilations",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+            }
         }
         else if (attribute_proto.has_i())
         {
@@ -575,10 +602,11 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "Conv")
         {
             CV_Assert(node_proto.input_size() >= 2);
-            layerParams.type = "Convolution";
             for (int j = 1; j < node_proto.input_size(); j++) {
                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
+            CV_Assert(!layerParams.blobs.empty());
+            layerParams.type = layerParams.blobs[0].dims == 5 ? "Convolution3D" : "Convolution";
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }

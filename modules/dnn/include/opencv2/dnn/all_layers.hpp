@@ -227,6 +227,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Convolution3DLayer : public Layer
+    {
+    public:
+        DictValue pads, strides, dilations, kernel;
+        String padMode;
+        int numOutput;
+        static Ptr<Convolution3DLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS LRNLayer : public Layer
     {
     public:

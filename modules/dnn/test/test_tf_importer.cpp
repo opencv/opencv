@@ -131,6 +131,11 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("conv_pool_nchw");
 }
 
+TEST_P(Test_TensorFlow_layers, conv3d)
+{
+    runTensorFlowNet("conv3d");
+}
+
 TEST_P(Test_TensorFlow_layers, padding)
 {
     runTensorFlowNet("padding_valid");
