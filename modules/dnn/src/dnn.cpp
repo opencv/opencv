@@ -3000,7 +3000,7 @@ String Net::dump()
             prevNode = itBackend->second;
         }
     }
-    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3"};
+    String colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462"};
     String backend;
     switch (prefBackend) {
         case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
@@ -3035,7 +3035,7 @@ String Net::dump()
                 out << lp.name << "\\n" << lp.type << "\\n";
                  if (lp.has("kernel_size")) {
                      DictValue size = lp.get("kernel_size");
-                     out << "kernel (HxW): " << size << "x" << size << "\\l";
+                     out << "kernel (HxW): " << size << " x " << size << "\\l";
                  } else if (lp.has("kernel_h") && lp.has("kernel_w")) {
                      DictValue h = lp.get("kernel_h");
                      DictValue w = lp.get("kernel_w");
@@ -3084,12 +3084,12 @@ String Net::dump()
              }
          }
          if (!it->second.outputBlobs.empty())
-             out << "output shapes: " << it->second.outputBlobs[0].size << "\\l";
+             out << "output: " << it->second.outputBlobs[0].size << "\\l";
 
          out << (!it->second.backendNodes[prefBackend].empty() ? backend : "OCV/");
          int colorId = 0;
          switch (it->second.layerInstance->preferableTarget) {
-             case DNN_TARGET_CPU: out << "CPU\\n"; colorId = 0; break;
+             case DNN_TARGET_CPU: out << "CPU\\n"; colorId = (backend == "OCV/") ? 0 : 5; break;
              case DNN_TARGET_OPENCL: out << "OCL\\n"; colorId = 1; break;
              case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16\\n"; colorId = 2; break;
              case DNN_TARGET_MYRIAD: out << "MYRIAD\\n"; colorId = 3; break;
