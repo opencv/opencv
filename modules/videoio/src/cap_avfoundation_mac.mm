@@ -325,24 +325,27 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
 #if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
-    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
-    if (status == AVAuthorizationStatusDenied)
+    if (@available(macOS 10.14, *))
     {
-        fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
-                        "command in same terminal to reset application authorization status, "
-                        "either modify 'System Preferences -> Security & Privacy -> Camera' "
-                        "settings for your application.\n");
-        [localpool drain];
-        return 0;
-    }
-    else if (status != AVAuthorizationStatusAuthorized)
-    {
-        fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
-        // TODO: doesn't work via ssh
-        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
-        // we do not wait for completion
-        [localpool drain];
-        return 0;
+        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        if (status == AVAuthorizationStatusDenied)
+        {
+            fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
+                            "command in same terminal to reset application authorization status, "
+                            "either modify 'System Preferences -> Security & Privacy -> Camera' "
+                            "settings for your application.\n");
+            [localpool drain];
+            return 0;
+        }
+        else if (status != AVAuthorizationStatusAuthorized)
+        {
+            fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+            // TODO: doesn't work via ssh
+            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+            // we do not wait for completion
+            [localpool drain];
+            return 0;
+        }
     }
 #endif
 
