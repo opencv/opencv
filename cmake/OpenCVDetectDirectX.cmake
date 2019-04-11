@@ -22,4 +22,9 @@ if(WIN32)
   set(HAVE_D3D11 ON)
   set(HAVE_D3D10 ON)
   set(HAVE_D3D9 ON)
+
+  if(HAVE_OPENCL AND WITH_OPENCL_D3D11_NV AND EXISTS "${OPENCL_INCLUDE_DIR}/CL/cl_d3d11_ext.h")
+    set(HAVE_OPENCL_D3D11_NV ON)
+  endif()
+
 endif()
