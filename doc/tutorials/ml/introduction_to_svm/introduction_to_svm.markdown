@@ -94,8 +94,6 @@ the weight vector \f$\beta\f$ and the bias \f$\beta_{0}\f$ of the optimal hyperp
 Source Code
 -----------
 
-@note The following code has been implemented with OpenCV 3.0 classes and functions. An equivalent version of the code using OpenCV 2.4 can be found in [this page.](http://docs.opencv.org/2.4/doc/tutorials/ml/introduction_to_svm/introduction_to_svm.html#introductiontosvms)
-
 @add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ml/introduction_to_svm/introduction_to_svm.cpp)

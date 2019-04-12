@@ -42,8 +42,7 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
-namespace cv
-{
+namespace cv {
 
 int validateToInt(size_t step);
 
@@ -139,6 +138,6 @@ CV_INLINE bool  isBigEndian( void )
     return (((const int*)"\0\x1\x2\x3\x4\x5\x6\x7")[0] & 255) != 0;
 }
 
-}
+}  // namespace
 
 #endif/*_UTILS_H_*/

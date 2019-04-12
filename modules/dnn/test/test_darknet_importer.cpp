@@ -267,7 +267,7 @@ public:
 
 TEST_P(Test_Darknet_nets, YoloVoc)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("Test is disabled");
 #endif
