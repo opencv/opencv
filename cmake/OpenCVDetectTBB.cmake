@@ -29,8 +29,10 @@ function(ocv_tbb_cmake_guess _found)
       message(STATUS "Found TBB (cmake): ${_lib}")
       get_target_property(_inc TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
       ocv_tbb_read_version("${_inc}")
-      add_library(tbb INTERFACE)
-      target_link_libraries(tbb INTERFACE TBB::tbb)
+      add_library(tbb INTERFACE IMPORTED)
+      set_target_properties(tbb PROPERTIES
+        INTERFACE_LINK_LIBRARIES TBB::tbb
+      )
       set(${_found} TRUE PARENT_SCOPE)
     endif()
 endfunction()
