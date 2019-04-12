@@ -130,7 +130,7 @@ void InfEngineBackendNet::init(int targetId)
         for (int id : unconnectedLayersIds)
         {
             InferenceEngine::Builder::OutputLayer outLayer("myconv1");
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
             // Inference Engine determines network precision by ports.
             InferenceEngine::Precision p = (targetId == DNN_TARGET_MYRIAD ||
                                             targetId == DNN_TARGET_OPENCL_FP16) ?
@@ -188,7 +188,7 @@ void InfEngineBackendNet::init(int targetId)
 
 void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     // Add weights to network and connect them after input blobs.
     std::map<std::string, InferenceEngine::Parameter>& params = layer.getParameters();
     std::vector<int> blobsIds;
@@ -229,7 +229,7 @@ void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
     CV_Assert(layers.insert({layerName, id}).second);
     unconnectedLayersIds.insert(id);
 
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     // By default, all the weights are connected to last ports ids.
     for (int i = 0; i < blobsIds.size(); ++i)
     {
@@ -784,6 +784,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
                         continue;
     #ifdef _WIN32
                     std::string libName = "cpu_extension" + suffixes[i] + ".dll";
+    #elif defined(__APPLE__)
+                    std::string libName = "libcpu_extension" + suffixes[i] + ".dylib";
     #else
                     std::string libName = "libcpu_extension" + suffixes[i] + ".so";
     #endif  // _WIN32
@@ -903,7 +905,7 @@ InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
 void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
                      InferenceEngine::Builder::Layer& l)
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     l.getParameters()[name] = data;
 #else
     l.addConstantData(name, data);
