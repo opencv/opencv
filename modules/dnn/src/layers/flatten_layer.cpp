@@ -105,6 +105,16 @@ public:
         return true;
     }
 
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        int numAxes = inputs[0].dims;
+        _startAxis = clamp(_startAxis, numAxes);
+        _endAxis = clamp(_endAxis, numAxes);
+    }
+
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
     {
