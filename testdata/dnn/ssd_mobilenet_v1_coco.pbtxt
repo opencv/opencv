@@ -1088,6 +1088,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_1/BoxEncodingPredictor/BiasAdd"
@@ -1146,6 +1147,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_0/BoxEncodingPredictor/BiasAdd"
@@ -1280,6 +1282,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_2/BoxEncodingPredictor/BiasAdd"
@@ -1448,6 +1451,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_3/BoxEncodingPredictor/BiasAdd"
@@ -1588,6 +1592,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_4/BoxEncodingPredictor/BiasAdd"
@@ -1684,6 +1689,7 @@ node {
       }
     }
   }
+  attr { key: "loc_pred_transposed" value { b: true } }
 }
 node {
   name: "BoxPredictor_5/BoxEncodingPredictor/BiasAdd"
@@ -2223,5 +2229,4 @@ node {
   attr { key: "code_type" value { s: "CENTER_SIZE" } }
   attr { key: "keep_top_k" value { i: 100 } }
   attr { key: "confidence_threshold" value { f: 0.01 } }
-  attr { key: "loc_pred_transposed" value { b: true } }
 }
