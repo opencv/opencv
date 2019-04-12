@@ -55,16 +55,16 @@ void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCap
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
 
-VideoCapture::VideoCapture()
+VideoCapture::VideoCapture() : throwOnFail(false)
 {}
 
-VideoCapture::VideoCapture(const String& filename, int apiPreference)
+VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(filename, apiPreference);
 }
 
-VideoCapture::VideoCapture(int index, int apiPreference)
+VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference);
@@ -112,10 +112,13 @@ bool VideoCapture::open(const String& filename, int apiPreference)
                             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): can't create capture", info.name));
                     }
                 } catch(const cv::Exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", info.name, e.what()));
                 } catch (const std::exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", info.name, e.what()));
                 } catch(...) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", info.name));
                 }
             }
@@ -126,6 +129,10 @@ bool VideoCapture::open(const String& filename, int apiPreference)
             }
         }
     }
+
+    if (throwOnFail)
+        CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
+
     return false;
 }
 
@@ -176,10 +183,13 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
                             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): can't create capture", info.name));
                     }
                 } catch(const cv::Exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n", info.name, e.what()));
                 } catch (const std::exception& e) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n", info.name, e.what()));
                 } catch(...) {
+                    if(throwOnFail && apiPreference != CAP_ANY) throw;
                     CV_LOG_ERROR(NULL, cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n", info.name));
                 }
             }
@@ -190,6 +200,10 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
             }
         }
     }
+
+    if(throwOnFail)
+        CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
+
     return false;
 }
 
@@ -216,15 +230,22 @@ void VideoCapture::release()
 bool VideoCapture::grab()
 {
     CV_INSTRUMENT_REGION();
-    return !icap.empty() ? icap->grabFrame() : false;
+    bool ret = !icap.empty() ? icap->grabFrame() : false;
+    if (!ret && throwOnFail)
+        CV_Error(Error::StsError, "");
+    return ret;
 }
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     CV_INSTRUMENT_REGION();
+
+    bool ret = false;
     if (!icap.empty())
-        return icap->retrieveFrame(channel, image);
-    return false;
+        ret = icap->retrieveFrame(channel, image);
+    if (!ret && throwOnFail)
+        CV_Error_(Error::StsError, ("could not retrieve channel %d", channel));
+    return ret;
 }
 
 bool VideoCapture::read(OutputArray image)
@@ -277,7 +298,10 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
-    return !icap.empty() ? icap->setProperty(propId, value) : false;
+    bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    if (!ret && throwOnFail)
+        CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
+    return ret;
 }
 
 double VideoCapture::get(int propId) const
