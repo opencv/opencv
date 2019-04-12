@@ -159,8 +159,8 @@ public:
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         ieLayer.setType("Flatten");
-        ieLayer.getParameters()["axis"] = _startAxis;
-        ieLayer.getParameters()["end_axis"] = _endAxis;
+        ieLayer.getParameters()["axis"] = (size_t)_startAxis;
+        ieLayer.getParameters()["end_axis"] = _endAxis;  // Do not cast to size_t because it might be negative.
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
