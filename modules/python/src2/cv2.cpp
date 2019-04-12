@@ -92,7 +92,7 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
-    std::underlying_type<TYPE>::type underlying = 0;                                                  \
+    int underlying = 0;                                                  \
                                                                                                       \
     if (!pyopencv_to(dst, underlying, name)) return false;                                            \
     src = static_cast<TYPE>(underlying);                                                              \
@@ -103,7 +103,7 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 template<>                                                                                            \
 PyObject* pyopencv_from(const TYPE& src)                                                              \
 {                                                                                                     \
-    return pyopencv_from(static_cast<std::underlying_type<TYPE>::type>(src));                         \
+    return pyopencv_from(static_cast<int>(src));                         \
 }
 
 #include "pyopencv_generated_include.h"
@@ -847,6 +847,40 @@ bool pyopencv_to(PyObject* obj, Range& r, const char* name)
     CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
+    while (PySequence_Check(obj))
+    {
+        PyObject *fi = PySequence_Fast(obj, name);
+        if (fi == NULL)
+            break;
+        if (2 != PySequence_Fast_GET_SIZE(fi))
+        {
+            failmsg("Range value for argument '%s' is longer than 2", name);
+            Py_DECREF(fi);
+            return false;
+        }
+        {
+            PyObject *item = PySequence_Fast_GET_ITEM(fi, 0);
+            if (PyInt_Check(item)) {
+                r.start = (int)PyInt_AsLong(item);
+            } else {
+                failmsg("Range.start value for argument '%s' is not integer", name);
+                Py_DECREF(fi);
+                break;
+            }
+        }
+        {
+            PyObject *item = PySequence_Fast_GET_ITEM(fi, 1);
+            if (PyInt_Check(item)) {
+                r.end = (int)PyInt_AsLong(item);
+            } else {
+                failmsg("Range.end value for argument '%s' is not integer", name);
+                Py_DECREF(fi);
+                break;
+            }
+        }
+        Py_DECREF(fi);
+        return true;
+    }
     if(PyObject_Size(obj) == 0)
     {
         r = Range::all();
@@ -1708,7 +1742,7 @@ static PyMethodDef special_methods[] = {
 struct ConstDef
 {
     const char * name;
-    long val;
+    long long val;
 };
 
 static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
@@ -1747,7 +1781,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
   }
   for (ConstDef * c = consts; c->name != NULL; ++c)
   {
-    PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
+    PyDict_SetItemString(d, c->name, PyLong_FromLongLong(c->val));
   }
 
 }

@@ -789,9 +789,9 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #endif
 
 #ifdef __CV_AVX_GUARD
-#define CV_INSTRUMENT_REGION(); __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
 #else
-#define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_();
 #endif
 
 namespace cv {
@@ -864,6 +864,10 @@ Passed subdirectories are used in LIFO order.
 @note Implementation is not thread-safe.
 */
 CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir);
+
+/** @brief Return location of OpenCV libraries or current executable
+ */
+CV_EXPORTS std::string getBinLocation();
 
 //! @}
 

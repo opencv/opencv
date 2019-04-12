@@ -162,24 +162,6 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
                Mat(cv::Size(224, 224), CV_32FC3));
 }
 
-PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_coco)
-{
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-    processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt", "",
-               Mat(cv::Size(368, 368), CV_32FC3));
-}
-
-PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi)
-{
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
-    processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt", "",
-               Mat(cv::Size(368, 368), CV_32FC3));
-}
-
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     if (backend == DNN_BACKEND_HALIDE ||
@@ -203,6 +185,11 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "ssd_inception_v2_coco_2017_11_17.pbtxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
@@ -219,11 +206,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
 {
-    if (backend == DNN_BACKEND_HALIDE
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-        || (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-#endif
-    )
+    if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     processNet("dnn/frozen_east_text_detection.pb", "", "", Mat(cv::Size(320, 320), CV_32FC3));
 }
@@ -239,6 +222,10 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is disabled in OpenVINO 2019R1");
+#endif
     if (backend == DNN_BACKEND_HALIDE ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))

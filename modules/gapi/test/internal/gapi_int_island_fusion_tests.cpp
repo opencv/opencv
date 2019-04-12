@@ -5,10 +5,10 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "compiler/transactions.hpp"
 
-#include "gapi_mock_kernels.hpp"
+#include "../gapi_mock_kernels.hpp"
 
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"

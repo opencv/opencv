@@ -177,8 +177,6 @@ pattern (every view is described by several 3D-2D point correspondences).
         opencv_source_code/samples/cpp/calibration.cpp
     -   A calibration sample in order to do 3D reconstruction can be found at
         opencv_source_code/samples/cpp/build3dmodel.cpp
-    -   A calibration sample of an artificially generated camera and chessboard patterns can be
-        found at opencv_source_code/samples/cpp/calibration_artificial.cpp
     -   A calibration example on stereo calibration can be found at
         opencv_source_code/samples/cpp/stereo_calib.cpp
     -   A calibration example on stereo matching can be found at
@@ -280,7 +278,7 @@ enum { CALIB_NINTRINSIC          = 18,
        // for stereo rectification
        CALIB_ZERO_DISPARITY      = 0x00400,
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< for stereoCalibrate
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22)  //!< for stereoCalibrate
      };
 
 //! the algorithm for finding fundamental matrix
@@ -290,6 +288,14 @@ enum { FM_7POINT = 1, //!< 7-point algorithm
        FM_RANSAC = 8  //!< RANSAC algorithm. It needs at least 15 points. 7-point algorithm is used.
      };
 
+enum HandEyeCalibrationMethod
+{
+    CALIB_HAND_EYE_TSAI         = 0, //!< A New Technique for Fully Autonomous and Efficient 3D Robotics Hand/Eye Calibration @cite Tsai89
+    CALIB_HAND_EYE_PARK         = 1, //!< Robot Sensor Calibration: Solving AX = XB on the Euclidean Group @cite Park94
+    CALIB_HAND_EYE_HORAUD       = 2, //!< Hand-eye Calibration @cite Horaud95
+    CALIB_HAND_EYE_ANDREFF      = 3, //!< On-line Hand-Eye Calibration @cite Andreff99
+    CALIB_HAND_EYE_DANIILIDIS   = 4  //!< Hand-Eye Calibration Using Dual Quaternions @cite Daniilidis98
+};
 
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.
@@ -1568,6 +1574,139 @@ CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray 
                                             Size imageSize, double alpha, Size newImgSize = Size(),
                                             CV_OUT Rect* validPixROI = 0,
                                             bool centerPrincipalPoint = false);
+
+/** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
+
+@param[in] R_gripper2base Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the gripper frame to the robot base frame (\f$_{}^{b}\textrm{T}_g\f$).
+This is a vector (`vector<Mat>`) that contains the rotation matrices for all the transformations
+from gripper frame to robot base frame.
+@param[in] t_gripper2base Translation part extracted from the homogeneous matrix that transforms a point
+expressed in the gripper frame to the robot base frame (\f$_{}^{b}\textrm{T}_g\f$).
+This is a vector (`vector<Mat>`) that contains the translation vectors for all the transformations
+from gripper frame to robot base frame.
+@param[in] R_target2cam Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the target frame to the camera frame (\f$_{}^{c}\textrm{T}_t\f$).
+This is a vector (`vector<Mat>`) that contains the rotation matrices for all the transformations
+from calibration target frame to camera frame.
+@param[in] t_target2cam Rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the target frame to the camera frame (\f$_{}^{c}\textrm{T}_t\f$).
+This is a vector (`vector<Mat>`) that contains the translation vectors for all the transformations
+from calibration target frame to camera frame.
+@param[out] R_cam2gripper Estimated rotation part extracted from the homogeneous matrix that transforms a point
+expressed in the camera frame to the gripper frame (\f$_{}^{g}\textrm{T}_c\f$).
+@param[out] t_cam2gripper Estimated translation part extracted from the homogeneous matrix that transforms a point
+expressed in the camera frame to the gripper frame (\f$_{}^{g}\textrm{T}_c\f$).
+@param[in] method One of the implemented Hand-Eye calibration method, see cv::HandEyeCalibrationMethod
+
+The function performs the Hand-Eye calibration using various methods. One approach consists in estimating the
+rotation then the translation (separable solutions) and the following methods are implemented:
+  - R. Tsai, R. Lenz A New Technique for Fully Autonomous and Efficient 3D Robotics Hand/EyeCalibration \cite Tsai89
+  - F. Park, B. Martin Robot Sensor Calibration: Solving AX = XB on the Euclidean Group \cite Park94
+  - R. Horaud, F. Dornaika Hand-Eye Calibration \cite Horaud95
+
+Another approach consists in estimating simultaneously the rotation and the translation (simultaneous solutions),
+with the following implemented method:
+  - N. Andreff, R. Horaud, B. Espiau On-line Hand-Eye Calibration \cite Andreff99
+  - K. Daniilidis Hand-Eye Calibration Using Dual Quaternions \cite Daniilidis98
+
+The following picture describes the Hand-Eye calibration problem where the transformation between a camera ("eye")
+mounted on a robot gripper ("hand") has to be estimated.
+
+![](pics/hand-eye_figure.png)
+
+The calibration procedure is the following:
+  - a static calibration pattern is used to estimate the transformation between the target frame
+  and the camera frame
+  - the robot gripper is moved in order to acquire several poses
+  - for each pose, the homogeneous transformation between the gripper frame and the robot base frame is recorded using for
+  instance the robot kinematics
+\f[
+    \begin{bmatrix}
+    X_b\\
+    Y_b\\
+    Z_b\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{b}\textrm{R}_g & _{}^{b}\textrm{t}_g \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_g\\
+    Y_g\\
+    Z_g\\
+    1
+    \end{bmatrix}
+\f]
+  - for each pose, the homogeneous transformation between the calibration target frame and the camera frame is recorded using
+  for instance a pose estimation method (PnP) from 2D-3D point correspondences
+\f[
+    \begin{bmatrix}
+    X_c\\
+    Y_c\\
+    Z_c\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{c}\textrm{R}_t & _{}^{c}\textrm{t}_t \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_t\\
+    Y_t\\
+    Z_t\\
+    1
+    \end{bmatrix}
+\f]
+
+The Hand-Eye calibration procedure returns the following homogeneous transformation
+\f[
+    \begin{bmatrix}
+    X_g\\
+    Y_g\\
+    Z_g\\
+    1
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+    _{}^{g}\textrm{R}_c & _{}^{g}\textrm{t}_c \\
+    0_{1 \times 3} & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+    X_c\\
+    Y_c\\
+    Z_c\\
+    1
+    \end{bmatrix}
+\f]
+
+This problem is also known as solving the \f$\mathbf{A}\mathbf{X}=\mathbf{X}\mathbf{B}\f$ equation:
+\f[
+    \begin{align*}
+    ^{b}{\textrm{T}_g}^{(1)} \hspace{0.2em} ^{g}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(1)} &=
+    \hspace{0.1em} ^{b}{\textrm{T}_g}^{(2)} \hspace{0.2em} ^{g}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(2)} \\
+
+    (^{b}{\textrm{T}_g}^{(2)})^{-1} \hspace{0.2em} ^{b}{\textrm{T}_g}^{(1)} \hspace{0.2em} ^{g}\textrm{T}_c &=
+    \hspace{0.1em} ^{g}\textrm{T}_c \hspace{0.2em} ^{c}{\textrm{T}_t}^{(2)} (^{c}{\textrm{T}_t}^{(1)})^{-1} \\
+
+    \textrm{A}_i \textrm{X} &= \textrm{X} \textrm{B}_i \\
+    \end{align*}
+\f]
+
+\note
+Additional information can be found on this [website](http://campar.in.tum.de/Chair/HandEyeCalibration).
+\note
+A minimum of 2 motions with non parallel rotation axes are necessary to determine the hand-eye transformation.
+So at least 3 different poses are required, but it is strongly recommended to use many more poses.
+
+ */
+CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
+                                    InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
+                                    OutputArray R_cam2gripper, OutputArray t_cam2gripper,
+                                    HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
 
 /** @brief Converts points from Euclidean to homogeneous space.
 

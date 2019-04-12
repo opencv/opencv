@@ -226,6 +226,7 @@ make & enjoy!
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <limits>
 
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
@@ -240,6 +241,14 @@ make & enjoy!
 // https://github.com/opencv/opencv/issues/13335
 #ifndef V4L2_CID_ISO_SENSITIVITY
 #define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
+#endif
+
+// https://github.com/opencv/opencv/issues/13929
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT (V4L2_CID_MPEG_BASE+364)
+#endif
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH (V4L2_CID_MPEG_BASE+365)
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
@@ -538,7 +547,9 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
 
 void CvCaptureCAM_V4L::v4l2_create_frame()
 {
-    CvSize size = {form.fmt.pix.width, form.fmt.pix.height};
+    CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+    CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+    CvSize size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
@@ -1792,9 +1803,11 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         if (bool(value)) {
             convert_rgb = convertableToRgb();
             return convert_rgb;
+        }else{
+            convert_rgb = false;
+            releaseFrame();
+            return true;
         }
-        convert_rgb = false;
-        return true;
     case cv::CAP_PROP_FOURCC:
     {
         if (palette == static_cast<__u32>(value))
@@ -1930,28 +1943,28 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     return &frame;
 }
 
-} // end namespace cv
-
-CvCapture* cvCreateCameraCapture_V4L( int index )
+Ptr<IVideoCapture> create_V4L_capture_cam(int index)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open(index))
-        return capture;
+    if (capture->open(index))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
 
-CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open( deviceName ))
-        return capture;
+    if (capture->open(filename.c_str()))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
+
+} // cv::
 
 #endif

@@ -290,7 +290,7 @@ public:
                 weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
                 l.getParameters()["channel_shared"] = blobs[0].total() == 1;
             }
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
             l.getParameters()["weights"] = weights;
 #else
             l.addConstantData("weights", weights);

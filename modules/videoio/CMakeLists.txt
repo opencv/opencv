@@ -1,3 +1,15 @@
+set(VIDEOIO_PLUGIN_LIST "" CACHE STRING "List of videoio backends to be compiled as plugins (ffmpeg, gstreamer)")
+set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin support")
+set(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK "ON" CACHE BOOL "Make sure OpenCV version is the same in plugin and host code")
+mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
+
+string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+# Make virtual opencv_videoio_plugins target
+if(NOT TARGET opencv_videoio_plugins)
+  add_custom_target(opencv_videoio_plugins ALL)
+endif()
+
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
@@ -9,6 +21,8 @@ set(videoio_srcs
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_decoder.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/src/backend_static.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/container_avi.cpp")
 
 file(GLOB videoio_ext_hdrs
@@ -86,9 +100,15 @@ if(TARGET ocv.3rdparty.dc1394_2)
   list(APPEND tgts ocv.3rdparty.dc1394_2)
 endif()
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
+
 if(TARGET ocv.3rdparty.gstreamer)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
-  list(APPEND tgts ocv.3rdparty.gstreamer)
+  if("gstreamer" IN_LIST VIDEOIO_PLUGIN_LIST)
+    ocv_create_builtin_videoio_plugin("opencv_videoio_gstreamer" ocv.3rdparty.gstreamer "cap_gstreamer.cpp")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_gstreamer.cpp)
+    list(APPEND tgts ocv.3rdparty.gstreamer)
+  endif()
 endif()
 
 if(TARGET ocv.3rdparty.v4l)
@@ -107,9 +127,13 @@ if(TARGET ocv.3rdparty.ximea)
 endif()
 
 if(TARGET ocv.3rdparty.ffmpeg)
-  list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
-  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
-  list(APPEND tgts ocv.3rdparty.ffmpeg)
+  if("ffmpeg" IN_LIST VIDEOIO_PLUGIN_LIST)
+    ocv_create_builtin_videoio_plugin("opencv_videoio_ffmpeg" ocv.3rdparty.ffmpeg "cap_ffmpeg.cpp")
+  else()
+    list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
+    list(APPEND tgts ocv.3rdparty.ffmpeg)
+  endif()
 endif()
 
 if(TARGET ocv.3rdparty.pvapi)
@@ -149,11 +173,25 @@ if(TARGET ocv.3rdparty.cap_ios)
   list(APPEND tgts ocv.3rdparty.cap_ios)
 endif()
 
+if(TARGET ocv.3rdparty.android_mediandk)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_mediandk.cpp)
+  list(APPEND tgts ocv.3rdparty.android_mediandk)
+endif()
+
 ocv_set_module_sources(HEADERS ${videoio_ext_hdrs} ${videoio_hdrs} SOURCES ${videoio_srcs})
 ocv_module_include_directories()
 ocv_create_module()
 ocv_add_accuracy_tests(${tgts})
 ocv_add_perf_tests(${tgts})
+
+if(VIDEOIO_ENABLE_PLUGINS)
+  ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)
+endif()
+
+if(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
+  ocv_target_compile_definitions(${the_module} PRIVATE STRICT_PLUGIN_CHECK)
+endif()
 
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
 

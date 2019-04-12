@@ -38,6 +38,9 @@ CV_EXPORTS_W std::vector<VideoCaptureAPIs> getStreamBackends();
 /** @brief Returns list of available backends which works via `cv::VideoWriter()` */
 CV_EXPORTS_W std::vector<VideoCaptureAPIs> getWriterBackends();
 
+/** @brief Returns true if backend is available */
+CV_EXPORTS bool hasBackend(VideoCaptureAPIs api);
+
 //! @}
 }} // namespace
 

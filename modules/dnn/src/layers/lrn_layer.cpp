@@ -91,9 +91,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return bias == 1;
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
     }
 
@@ -393,10 +394,13 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+        float alphaSize = alpha;
+        if (!normBySize)
+            alphaSize *= (type == SPATIAL_NRM ? size*size : size);
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::NormLayer ieLayer(name);
         ieLayer.setSize(size);
-        ieLayer.setAlpha(alpha);
+        ieLayer.setAlpha(alphaSize);
         ieLayer.setBeta(beta);
         ieLayer.setAcrossMaps(type == CHANNEL_NRM);
 
@@ -413,7 +417,7 @@ public:
         ieLayer->_size = size;
         ieLayer->_k = (int)bias;
         ieLayer->_beta = beta;
-        ieLayer->_alpha = alpha;
+        ieLayer->_alpha = alphaSize;
         ieLayer->_isAcrossMaps = (type == CHANNEL_NRM);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif

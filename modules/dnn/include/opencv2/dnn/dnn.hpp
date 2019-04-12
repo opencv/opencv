@@ -955,13 +955,6 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
-    /** @brief Release a Myriad device is binded by OpenCV.
-     *
-     * Single Myriad device cannot be shared across multiple processes which uses
-     * Inference Engine's Myriad plugin.
-     */
-    CV_EXPORTS_W void resetMyriadDevice();
-
 //! @}
 CV__DNN_INLINE_NS_END
 }
@@ -969,5 +962,8 @@ CV__DNN_INLINE_NS_END
 
 #include <opencv2/dnn/layer.hpp>
 #include <opencv2/dnn/dnn.inl.hpp>
+
+/// @deprecated Include this header directly from application. Automatic inclusion will be removed
+#include <opencv2/dnn/utils/inference_engine.hpp>
 
 #endif  /* OPENCV_DNN_DNN_HPP */
