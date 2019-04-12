@@ -309,13 +309,13 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
         {
             dimC = 1; dimY = 2; dimX = 3;
         }
-        else if (layout == DATA_LAYOUT_NHWC)
-        {
-            dimY = 1; dimX = 2; dimC = 3;
-        }
-        else  //  NDHWC
+        else if (layout == DATA_LAYOUT_NDHWC)
         {
             dimD = 1; dimY = 2; dimX = 3; dimC = 4;
+        }
+        else
+        {
+            dimY = 1; dimX = 2; dimC = 3;
         }
         if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
@@ -359,13 +359,13 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
         {
             dimC = 1; dimY = 2; dimX = 3;
         }
-        else if (layout == DATA_LAYOUT_NHWC)
-        {
-            dimY = 1; dimX = 2; dimC = 3;
-        }
-        else // NDHWC
+        else if (layout == DATA_LAYOUT_NDHWC)
         {
             dimD = 1; dimY = 2; dimX = 3; dimC = 4;
+        }
+        else
+        {
+            dimY = 1; dimX = 2; dimC = 3;
         }
         if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)

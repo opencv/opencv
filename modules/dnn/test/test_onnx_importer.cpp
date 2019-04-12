@@ -83,7 +83,7 @@ TEST_P(Test_ONNX_layers, Convolution)
 
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
         throw SkipTestException("");
     testONNXModels("conv3d");
     testONNXModels("conv3d_bias");

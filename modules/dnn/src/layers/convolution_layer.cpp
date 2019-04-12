@@ -1847,13 +1847,17 @@ public:
 
     Convolution3DLayerImpl(const LayerParams &params) {
         setParamsFrom(params);
+
         CV_Assert(params.has("kernel"));
         CV_Assert(params.get("kernel").size() == 3);
         kernel = params.get("kernel");
 
-        if (!params.has("pads") && padMode.empty()) {
+        if (params.has("pad_mode")) {
+            padMode = params.get<String>("pad_mode");
+        }
+        else if (!params.has("pads")) {
             int dst[] = {0, 0, 0};
-            pads = DictValue::arrayInt(&dst[0], 3);
+            pads = DictValue::arrayInt(dst, 3);
         } else {
             CV_Assert(params.get("pads").size() == 3 || params.get("pads").size() == 6);
             pads = params.get("pads");
@@ -1863,22 +1867,19 @@ public:
         }
         if (!params.has("strides")) {
             int dst[] = {1, 1, 1};
-            strides = DictValue::arrayInt(&dst[0], 3);
+            strides = DictValue::arrayInt(dst, 3);
         } else {
             CV_Assert(params.get("strides").size() == 3);
             strides = params.get("strides");
         }
-
         if (!params.has("dilations")) {
             int dst[] = {1, 1, 1};
-            dilations = DictValue::arrayInt(&dst[0], 3);
+            dilations = DictValue::arrayInt(dst, 3);
         } else {
             CV_Assert(params.get("dilations").size() == 3);
             dilations = params.get("dilations");
         }
-        if (params.has("pad_mode")) {
-            padMode =  params.get<String>("pad_mode");
-        }
+
         numOutput = params.get<int>("num_output");
         ngroups = params.get<int>("group", 1);
         CV_Assert(numOutput % ngroups == 0);
@@ -1948,6 +1949,24 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr)
     {
         CV_Assert(!blobs.empty());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        if (padMode == "VALID")
+        {
+            int dst[] = {0, 0, 0};
+            pads = DictValue::arrayInt(dst, 3);
+        }
+        else if (padMode == "SAME")
+        {
+            std::vector<int> dst(6);
+            for (int i = 0; i < pads.size() / 2; i++) {
+                dst[i] = dst[i + 3] = std::max(0, (outputs[0].size[i + 2] - 1) * strides.get<int>(i) +
+                                        (dilations.get<int>(i) * (kernel.get<int>(i) - 1) + 1) - inputs[0].size[i + 2] ) / 2;
+            }
+            pads = DictValue::arrayInt(&dst[0], 6);
+        }
     }
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

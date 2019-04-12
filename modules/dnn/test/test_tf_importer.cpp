@@ -131,8 +131,10 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("conv_pool_nchw");
 }
 
-TEST_P(Test_TensorFlow_layers, conv3d)
+TEST_P(Test_TensorFlow_layers, Convolution3D)
 {
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
     runTensorFlowNet("conv3d");
 }
 
