@@ -112,6 +112,8 @@ TEST(Test_Caffe, read_googlenet)
 typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
+    Target targetId = get<1>(GetParam());
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     bool readFromMemory = get<0>(GetParam());
     Net net;
     {
@@ -132,7 +134,6 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         ASSERT_FALSE(net.empty());
     }
 
-    int targetId = get<1>(GetParam());
     const float l1 = 1e-5;
     const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
 
@@ -151,9 +152,9 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
                         Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)));
 
-#if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_2GB);
     Net net;
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
@@ -179,10 +180,10 @@ TEST(Reproducibility_FCN, Accuracy)
 
     normAssert(ref, out);
 }
-#endif
 
 TEST(Reproducibility_SSD, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     Net net;
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
@@ -264,10 +265,11 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD,
 typedef testing::TestWithParam<Target> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
 {
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
-    int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -330,6 +332,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1,
 
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
@@ -375,6 +378,7 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 // https://github.com/richzhang/colorization
 TEST_P(Test_Caffe_nets, Colorization)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     checkBackend();
 
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
@@ -405,6 +409,7 @@ TEST_P(Test_Caffe_nets, Colorization)
 
 TEST_P(Test_Caffe_nets, DenseNet_121)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
     const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
@@ -520,6 +525,8 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
 
 TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("Test is disabled for DLIE OpenCL targets");  // very slow
@@ -536,6 +543,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 
 TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
@@ -547,6 +555,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 
 TEST_P(Test_Caffe_nets, RFCN)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_2GB));
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
