@@ -561,12 +561,6 @@ TEST_P(ReLU, Accuracy)
     float negativeSlope = get<0>(GetParam());
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE
-            && negativeSlope < 0
-    )
-        throw SkipTestException("Test is disabled");
-#endif
 
     LayerParams lp;
     lp.set("negative_slope", negativeSlope);
@@ -589,13 +583,6 @@ TEST_P(NoParamActivation, Accuracy)
     LayerParams lp;
     lp.type = get<0>(GetParam());
     lp.name = "testLayer";
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE
-            && lp.type == "AbsVal"
-    )
-        throw SkipTestException("Test is disabled");
-#endif
-
     testInPlaceActivation(lp, backendId, targetId);
 }
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, NoParamActivation, Combine(
