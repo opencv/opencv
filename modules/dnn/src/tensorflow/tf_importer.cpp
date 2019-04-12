@@ -291,10 +291,10 @@ void setDilations(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported dilations");
 
-        std::vector<int> dilations = {static_cast<int>(val.list().i(dimD)),
-                                      static_cast<int>(val.list().i(dimY)),
-                                      static_cast<int>(val.list().i(dimX))};
-        layerParams.set("dilations",  DictValue::arrayInt(&dilations[0], dilations.size()));
+        int dilations[] = {static_cast<int>(val.list().i(dimD)),
+                           static_cast<int>(val.list().i(dimY)),
+                           static_cast<int>(val.list().i(dimX))};
+        layerParams.set("dilations",  DictValue::arrayInt(dilations, 3));
     }
 }
 
@@ -321,10 +321,10 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported strides");
         if (layout == DATA_LAYOUT_NDHWC) {
-            std::vector<int> strides = {static_cast<int>(val.list().i(dimD)),
-                                     static_cast<int>(val.list().i(dimY)),
-                                     static_cast<int>(val.list().i(dimX))};
-            layerParams.set("strides",  DictValue::arrayInt(&strides[0], strides.size()));
+            int strides[] = {static_cast<int>(val.list().i(dimD)),
+                             static_cast<int>(val.list().i(dimY)),
+                             static_cast<int>(val.list().i(dimX))};
+            layerParams.set("strides",  DictValue::arrayInt(strides, 3));
         }
         else
         {
@@ -372,10 +372,10 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             CV_Error(Error::StsError, "Unsupported ksize");
 
         if (layout == DATA_LAYOUT_NDHWC) {
-            std::vector<int> kernel = {static_cast<int>(val.list().i(dimD)),
-                                     static_cast<int>(val.list().i(dimY)),
-                                     static_cast<int>(val.list().i(dimX))};
-            layerParams.set("kernel",  DictValue::arrayInt(&kernel[0], kernel.size()));
+            int kernel[] = {static_cast<int>(val.list().i(dimD)),
+                            static_cast<int>(val.list().i(dimY)),
+                            static_cast<int>(val.list().i(dimX))};
+            layerParams.set("kernel",  DictValue::arrayInt(kernel, 3));
         }
         else
         {
@@ -988,8 +988,8 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("kernel_w", layerParams.blobs[0].size[3]);
             }
             else if (layerParams.blobs[0].dims == 5) {
-                std::vector<int> kernel = {layerParams.blobs[0].size[2], layerParams.blobs[0].size[3], layerParams.blobs[0].size[4]};
-                layerParams.set("kernel",  DictValue::arrayInt(&kernel[0], kernel.size()));
+                int kernel[] = {layerParams.blobs[0].size[2], layerParams.blobs[0].size[3], layerParams.blobs[0].size[4]};
+                layerParams.set("kernel",  DictValue::arrayInt(kernel, 3));
                 setDilations(layerParams, layer);
             }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
