@@ -78,6 +78,7 @@ TEST(Test_Darknet, read_yolo_voc)
 
 TEST(Test_Darknet, read_yolo_voc_stream)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
     Mat ref;
     Mat sample = imread(_tf("dog416.png"));
     Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
@@ -267,6 +268,8 @@ public:
 
 TEST_P(Test_Darknet_nets, YoloVoc)
 {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("Test is disabled");
@@ -305,6 +308,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
@@ -339,6 +344,8 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
 
 TEST_P(Test_Darknet_nets, YOLOv3)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
