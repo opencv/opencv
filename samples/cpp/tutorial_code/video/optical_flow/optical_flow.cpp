@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 
-int main(int argc, char* argv[])
+int main()
 {
     VideoCapture capture("slow_traffic_small.mp4");
     if (!capture.isOpened()){
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         calcOpticalFlowPyrLK(old_gray, frame_gray, p0, p1, status, err, Size(15,15), 2, criteria);
 
         vector<Point2f> good_new;
-        for(int i = 0; i < p0.size(); i++)
+        for(uint i = 0; i < p0.size(); i++)
         {
             // Select good points
             if(status[i] == 1) {

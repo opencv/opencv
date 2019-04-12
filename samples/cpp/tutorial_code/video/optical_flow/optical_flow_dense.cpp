@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 
-int main(int argc, char* argv[])
+int main()
 {
     VideoCapture capture("vtest.avi");
     if (!capture.isOpened()){
