@@ -40,6 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include "opencv2/core/core_c.h"
 
 #include <ctype.h>
@@ -741,7 +743,7 @@ void checkIppStatus()
     }
 }
 
-static bool checkTestData = false;
+static bool checkTestData = cv::utils::getConfigurationParameterBool("OPENCV_TEST_REQUIRE_DATA", false);
 bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
@@ -828,16 +830,16 @@ void testTearDown()
 
 void parseCustomOptions(int argc, char **argv)
 {
-    const char * const command_line_keys =
+    const string command_line_keys = string(
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
         "{ test_seed          |809564   |seed for random numbers generator }"
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
-        "{ test_require_data  |false    |fail on missing non-required test data instead of skip}"
+        "{ test_require_data  |") + (checkTestData ? "true" : "false") + string("|fail on missing non-required test data instead of skip (env:OPENCV_TEST_REQUIRE_DATA)}"
         CV_TEST_TAGS_PARAMS
         "{ h   help           |false    |print help info                          }"
-    ;
+    );
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
     if (parser.get<bool>("help"))
@@ -860,7 +862,8 @@ void parseCustomOptions(int argc, char **argv)
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
-    checkTestData = parser.get<bool>("test_require_data");
+    if (parser.has("test_require_data"))
+        checkTestData = parser.get<bool>("test_require_data");
 
     activateTestTags(parser);
 }
