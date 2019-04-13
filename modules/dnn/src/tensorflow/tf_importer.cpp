@@ -1509,8 +1509,8 @@ void TFImporter::populateNet(Net dstNet)
                 if (layerParams.blobs.size() == 2)
                     CV_Error(Error::StsNotImplemented, "Cannot determine number "
                              "of parameters for batch normalization layer.");
-                mean = Mat::zeros(1, layerParams.blobs[3].total(), CV_32F);
-                std = Mat::ones(1, layerParams.blobs[3].total(), CV_32F);
+                mean = Mat::zeros(1, layerParams.blobs[2].total(), CV_32F);
+                std = Mat::ones(1, layerParams.blobs[2].total(), CV_32F);
 
                 // Add an extra layer: Mean-Variance normalization
                 LayerParams mvnParams;

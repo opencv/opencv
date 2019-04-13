@@ -1,5 +1,7 @@
 #include "precomp.hpp"
 
+#include "ts_tags.hpp"
+
 #include <map>
 #include <iostream>
 #include <fstream>
@@ -999,6 +1001,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
         "{ skip_unstable                 |false    |skip unstable tests }"
+
+        CV_TEST_TAGS_PARAMS
     ;
 
     cv::CommandLineParser args(argc, argv, command_line_keys);
@@ -1144,6 +1148,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         perf_validation_enabled = true;
         ::testing::AddGlobalTestEnvironment(new PerfValidationEnvironment());
     }
+
+    activateTestTags(args);
 
     if (!args.check())
     {
@@ -1869,14 +1875,15 @@ void TestBase::SetUp()
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
     times.clear();
+    metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
 }
 
 void TestBase::TearDown()
 {
     if (metrics.terminationReason == performance_metrics::TERM_SKIP_TEST)
     {
-        LOGI("\tTest was skipped");
-        GTEST_SUCCEED() << "Test was skipped";
+        //LOGI("\tTest was skipped");
+        //GTEST_SUCCEED() << "Test was skipped";
     }
     else
     {
@@ -1975,6 +1982,7 @@ std::string TestBase::getDataPath(const std::string& relativePath)
 
 void TestBase::RunPerfTestBody()
 {
+    metrics.clear();
     try
     {
 #ifdef CV_COLLECT_IMPL_DATA
@@ -1990,7 +1998,7 @@ void TestBase::RunPerfTestBody()
     catch(const SkipTestException&)
     {
         metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
-        return;
+        throw;
     }
     catch(const PerfSkipTestException&)
     {

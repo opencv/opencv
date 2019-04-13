@@ -141,7 +141,7 @@ public:
 #ifdef HAVE_OPENCL
         poolOp.release();
 #endif
-        computeMaxIdx = type == MAX;
+        computeMaxIdx = type == MAX && outputs.size() == 2;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
