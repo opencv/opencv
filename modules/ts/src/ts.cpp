@@ -91,10 +91,30 @@
 
 #include "opencv2/core/opencl/opencl_info.hpp"
 
+#include "opencv2/core/utils/allocator_stats.hpp"
+namespace cv { namespace ocl {
+cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics();
+}}
 #endif // HAVE_OPENCL
 
-#include "opencv2/core/utility.hpp"
+#include "opencv2/core/utils/allocator_stats.hpp"
+namespace cv {
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics();
+}
+
 #include "opencv_tests_config.hpp"
+
+#include "ts_tags.hpp"
+
+#if defined(__GNUC__) && defined(__linux__)
+extern "C" {
+size_t malloc_peak(void) __attribute__((weak));
+void malloc_reset_peak(void) __attribute__((weak));
+} // extern "C"
+#else // stubs
+static size_t (*malloc_peak)(void) = 0;
+static void (*malloc_reset_peak)(void) = 0;
+#endif
 
 namespace opencv_test {
 bool required_opencv_test_namespace = false;  // compilation check for non-refactored tests
@@ -726,6 +746,85 @@ bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
 
+
+static size_t memory_usage_base = 0;
+static uint64_t memory_usage_base_opencv = 0;
+#ifdef HAVE_OPENCL
+static uint64_t memory_usage_base_opencl = 0;
+#endif
+
+void testSetUp()
+{
+    cv::ipp::setIppStatus(0);
+    cv::theRNG().state = cvtest::param_seed;
+    cv::setNumThreads(cvtest::testThreads);
+    if (malloc_peak)  // if memory profiler is available
+    {
+        malloc_reset_peak();
+        memory_usage_base = malloc_peak(); // equal to malloc_current()
+    }
+    {
+        cv::utils::AllocatorStatisticsInterface& ocv_stats = cv::getAllocatorStatistics();
+        ocv_stats.resetPeakUsage();
+        memory_usage_base_opencv = ocv_stats.getCurrentUsage();
+    }
+#ifdef HAVE_OPENCL
+    {
+        cv::utils::AllocatorStatisticsInterface& ocl_stats = cv::ocl::getOpenCLAllocatorStatistics();
+        ocl_stats.resetPeakUsage();
+        memory_usage_base_opencl = ocl_stats.getCurrentUsage();
+    }
+#endif
+    checkTestTags();
+}
+
+void testTearDown()
+{
+    ::cvtest::checkIppStatus();
+    uint64_t memory_usage = 0;
+    uint64_t ocv_memory_usage = 0, ocv_peak = 0;
+    if (malloc_peak)  // if memory profiler is available
+    {
+        size_t peak = malloc_peak();
+        memory_usage = peak - memory_usage_base;
+        CV_LOG_INFO(NULL, "Memory_usage (malloc): " << memory_usage << " (base=" << memory_usage_base << ")");
+    }
+    {
+        // core/src/alloc.cpp: #define OPENCV_ALLOC_ENABLE_STATISTICS
+        // handle large buffers via fastAlloc()
+        // (not always accurate on heavy 3rdparty usage, like protobuf)
+        cv::utils::AllocatorStatisticsInterface& ocv_stats = cv::getAllocatorStatistics();
+        ocv_peak = ocv_stats.getPeakUsage();
+        ocv_memory_usage = ocv_peak - memory_usage_base_opencv;
+        CV_LOG_INFO(NULL, "Memory_usage (OpenCV): " << ocv_memory_usage << " (base=" << memory_usage_base_opencv << "  current=" << ocv_stats.getCurrentUsage() << ")");
+        if (memory_usage == 0)  // external profiler has higher priority (and accuracy)
+            memory_usage = ocv_memory_usage;
+    }
+#ifdef HAVE_OPENCL
+    uint64_t ocl_memory_usage = 0, ocl_peak = 0;
+    {
+        cv::utils::AllocatorStatisticsInterface& ocl_stats = cv::ocl::getOpenCLAllocatorStatistics();
+        ocl_peak = ocl_stats.getPeakUsage();
+        ocl_memory_usage = ocl_peak - memory_usage_base_opencl;
+        CV_LOG_INFO(NULL, "Memory_usage (OpenCL): " << ocl_memory_usage << " (base=" << memory_usage_base_opencl << "  current=" << ocl_stats.getCurrentUsage() << ")");
+        ::testing::Test::RecordProperty("ocl_memory_usage",
+                cv::format("%llu", (unsigned long long)ocl_memory_usage));
+    }
+#else
+    uint64_t ocl_memory_usage = 0;
+#endif
+    if (malloc_peak      // external memory profiler is available
+        || ocv_peak > 0  // or enabled OpenCV builtin allocation statistics
+    )
+    {
+        CV_LOG_INFO(NULL, "Memory usage total: " << (memory_usage + ocl_memory_usage));
+        ::testing::Test::RecordProperty("memory_usage",
+                cv::format("%llu", (unsigned long long)memory_usage));
+        ::testing::Test::RecordProperty("total_memory_usage",
+                cv::format("%llu", (unsigned long long)(memory_usage + ocl_memory_usage)));
+    }
+}
+
 void parseCustomOptions(int argc, char **argv)
 {
     const char * const command_line_keys =
@@ -735,7 +834,9 @@ void parseCustomOptions(int argc, char **argv)
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
         "{ test_require_data  |false    |fail on missing non-required test data instead of skip}"
-        "{ h   help           |false    |print help info                          }";
+        CV_TEST_TAGS_PARAMS
+        "{ h   help           |false    |print help info                          }"
+    ;
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
     if (parser.get<bool>("help"))
@@ -759,8 +860,9 @@ void parseCustomOptions(int argc, char **argv)
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
     checkTestData = parser.get<bool>("test_require_data");
-}
 
+    activateTestTags(parser);
+}
 
 static bool isDirectory(const std::string& path)
 {

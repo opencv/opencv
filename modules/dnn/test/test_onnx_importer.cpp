@@ -217,6 +217,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 class Test_ONNX_nets : public Test_ONNX_layers {};
 TEST_P(Test_ONNX_nets, Alexnet)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     const String model =  _tf("models/alexnet.onnx");
 
     Net net = readNetFromONNX(model);
@@ -270,31 +271,30 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     testONNXModels("caffenet", pb);
 }
 
 TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+
     // Reference output values are in range [-4.992, -1.161]
     testONNXModels("rcnn_ilsvrc13", pb, 0.0045);
 }
 
-#ifdef OPENCV_32BIT_CONFIGURATION
-TEST_P(Test_ONNX_nets, DISABLED_VGG16)  // memory usage >2Gb
-#else
 TEST_P(Test_ONNX_nets, VGG16)
-#endif
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
+
     // output range: [-69; 72], after Softmax [0; 0.96]
     testONNXModels("vgg16", pb, default_l1, default_lInf, true);
 }
 
-#ifdef OPENCV_32BIT_CONFIGURATION
-TEST_P(Test_ONNX_nets, DISABLED_VGG16_bn)  // memory usage >2Gb
-#else
 TEST_P(Test_ONNX_nets, VGG16_bn)
-#endif
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
+
     // output range: [-16; 27], after Softmax [0; 0.67]
     const double lInf = (target == DNN_TARGET_MYRIAD) ? 0.038 : default_lInf;
     testONNXModels("vgg16-bn", pb, default_l1, lInf, true);
@@ -302,23 +302,30 @@ TEST_P(Test_ONNX_nets, VGG16_bn)
 
 TEST_P(Test_ONNX_nets, ZFNet)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     testONNXModels("zfnet512", pb);
 }
 
 TEST_P(Test_ONNX_nets, ResNet18v1)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
     // output range: [-16; 22], after Softmax [0, 0.51]
     testONNXModels("resnet18v1", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
     // output range: [-67; 75], after Softmax [0, 0.98]
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 {
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("Test is disabled for DLIE targets");
@@ -334,6 +341,8 @@ TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
 
 TEST_P(Test_ONNX_nets, TinyYolov2)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
     if (cvtest::skipUnstableTests)
         throw SkipTestException("Skip unstable test");
 #if defined(INF_ENGINE_RELEASE)
@@ -347,6 +356,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     )
         throw SkipTestException("Test is disabled for MyriadX");
 #endif
+
     // output range: [-11; 8]
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
@@ -367,6 +377,7 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
          (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
@@ -379,7 +390,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         lInf = 0.035;
     }
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU) {
-        l1 = 4.5e-5;
+        l1 = 4.6e-5;
         lInf = 1.9e-4;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
@@ -419,6 +430,8 @@ TEST_P(Test_ONNX_nets, Inception_v2)
 
 TEST_P(Test_ONNX_nets, DenseNet121)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
     // output range: [-87; 138], after Softmax [0; 1]
     testONNXModels("densenet121", pb, default_l1, default_lInf, true);
 }
