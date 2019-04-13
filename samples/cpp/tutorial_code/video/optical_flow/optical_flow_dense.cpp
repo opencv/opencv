@@ -37,15 +37,16 @@ int main()
         Mat magnitude, angle, magn_norm;
         cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
         normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
-        angle = angle / 360.0 * 255.0;
+        angle *= ((1.f / 360.f) * (180.f / 255.f));
 
         //build hsv image
-        Mat _hsv[3], hsv, bgr;
+        Mat _hsv[3], hsv, hsv8, bgr;
         _hsv[0] = angle;
         _hsv[1] = Mat::ones(angle.size(), CV_32F);
         _hsv[2] = magn_norm;
         merge(_hsv, 3, hsv);
-        cvtColor(hsv, bgr, COLOR_HSV2BGR);
+        hsv.convertTo(hsv8, CV_8U, 255.0);
+        cvtColor(hsv8, bgr, COLOR_HSV2BGR);
 
         imshow("frame2", bgr);
 
