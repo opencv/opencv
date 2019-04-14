@@ -4903,7 +4903,7 @@ Point LineIterator::pos() const
 {
     Point p;
     p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
+    p.x = (int)(((ptr - ptr0) - (long)p.y*step)/elemSize);
     return p;
 }
 
