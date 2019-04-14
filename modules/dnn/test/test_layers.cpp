@@ -1453,4 +1453,88 @@ TEST(Layer_Test_Convolution, relu_fusion)
     normAssert(input, output);
 }
 
+// Check fuse convolution and relu wherein skip eltwise
+TEST(Layers_Test_Subnet, convolutionx2_eltwise_scalex2_relu)
+{
+    Net net;
+    int id_conv[2];
+    int weightsShape[] = {1, 1, 3, 3};
+    Mat weights(4, &weightsShape[0], CV_32F/*, Scalar(2)*/);
+    randu(weights, 0.0, 1.0);
+
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv_1";
+
+        lp.blobs.push_back(weights.clone());
+        id_conv[0] = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id_conv[0], 0);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 1);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv_2";
+
+        lp.blobs.push_back(weights.clone());
+        id_conv[1] = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id_conv[1], 0);
+    }
+
+    int eltwise_id;
+    {
+        LayerParams lp;
+        lp.type = "Eltwise";
+        lp.name = "testLayer";
+        lp.set("operation", "sum");
+
+        eltwise_id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(id_conv[0], 0, eltwise_id, 0);
+        net.connect(id_conv[1], 0, eltwise_id, 1);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale_1";
+        lp.blobs.push_back(Mat(Size(1, 1), CV_32F, Scalar(2)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale_2";
+        lp.blobs.push_back(Mat(Size(1, 1), CV_32F, Scalar(2)));
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    {
+        LayerParams lp;
+        lp.type = "ReLU";
+        lp.name = "testReLU";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    int sz[] = {1, 1, 3, 3};
+    Mat input(4, &sz[0], CV_32F, Scalar(1));
+
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat output = net.forward();
+
+    int sz_ref[] = {1, 1, 1, 1};
+    Mat ref(4, &sz_ref[0], CV_32F, sum(weights) * 8);
+    normAssert(output, ref);
+}
+
 }} // namespace

@@ -121,6 +121,37 @@ public:
         return false;
     }
 
+    virtual bool tryFuse(std::vector< Ptr<dnn::Layer> >& bottoms, Ptr<dnn::Layer>& top) CV_OVERRIDE
+    {
+        std::string currLayerType = bottoms[0]->type;
+        for (int i = 1; i < bottoms.size(); i++)
+        {
+            // Either all input layers are fusing or nothing.
+            if (currLayerType != bottoms[i]->type) { return false; }
+        }
+
+        std::vector< Ptr<dnn::Layer> > fakeInputs;
+        bool isFused = bottoms[0]->tryFuse(fakeInputs, top);
+        if (isFused)
+        {
+            Mat w, b;
+            top->getScaleShift(w, b);
+            if (!w.empty())
+            {
+                LayerParams weights_lp;
+                weights_lp.blobs.push_back(w);
+                Ptr<Layer> weightsLayer = ScaleLayer::create(weights_lp);
+                weightsLayer->finalize(std::vector<Mat>(1), std::vector<Mat>(1));
+                for (size_t i = 1; i < bottoms.size(); i++)
+                {
+                    CV_Assert(bottoms[i]->tryFuse(bottoms, weightsLayer));
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     class EltwiseInvoker : public ParallelLoopBody
     {
     public:

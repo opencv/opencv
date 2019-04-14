@@ -166,9 +166,9 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
+    virtual bool tryFuse(std::vector< Ptr<dnn::Layer> >& bottoms, Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
-        return func.tryFuse(top);
+        return func.tryFuse(bottoms, top);
     }
 
     void getScaleShift(Mat& scale_, Mat& shift_) const CV_OVERRIDE
@@ -371,7 +371,7 @@ struct ReLUFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -487,7 +487,7 @@ struct ReLU6Functor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -568,7 +568,7 @@ struct TanHFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -649,7 +649,7 @@ struct SigmoidFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -731,7 +731,7 @@ struct ELUFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -817,7 +817,7 @@ struct AbsValFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -876,7 +876,7 @@ struct BNLLFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -1008,7 +1008,7 @@ struct PowerFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>& top)
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >& bottoms, Ptr<dnn::Layer>& top)
     {
         if (power != 1.0f && shift != 0.0f)
             return false;
@@ -1157,7 +1157,7 @@ struct ChannelsPReLUFunctor
 #endif
 #endif  // HAVE_INF_ENGINE
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
