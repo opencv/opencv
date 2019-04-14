@@ -325,10 +325,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /**
          * @brief Try to fuse current layer with a next one
+         * @param[in] bottoms Previous layers to be fused.
          * @param[in] top Next layer to be fused.
          * @returns True if fusion was performed.
          */
-        virtual bool tryFuse(Ptr<Layer>& top);
+        virtual bool tryFuse(std::vector< Ptr<Layer> >& bottoms, Ptr<Layer>& top);
 
         /**
          * @brief Returns parameters of layers with channel-wise multiplication and addition.

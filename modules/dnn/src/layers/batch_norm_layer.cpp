@@ -102,7 +102,7 @@ public:
         shift = bias_;
     }
 
-    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    virtual bool tryFuse(std::vector< Ptr<Layer> >& bottoms, Ptr<Layer>& top) CV_OVERRIDE
     {
         Mat w, b;
         top->getScaleShift(w, b);

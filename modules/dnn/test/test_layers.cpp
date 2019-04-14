@@ -1583,6 +1583,129 @@ TEST(Layer_Test_Convolution, relu_fusion)
     normAssert(input, output);
 }
 
+// Check fuse convolution and relu wherein skip eltwise
+typedef testing::TestWithParam< tuple<Backend, Target> > Layers_Test_Subnet;
+TEST_P(Layers_Test_Subnet, convolutionx2_eltwise_scalex2_relu)
+{
+    Net net, net_wo_fuse;
+    int id_conv[2], id_conv_wo_fuse[2];
+    int weightsShape[] = {1, 1, 3, 3};
+
+    Mat conv_mat_1(4, &weightsShape[0], CV_32F);
+    Mat conv_mat_2(4, &weightsShape[0], CV_32F);
+    randu(conv_mat_1, Scalar(0), Scalar(1));
+    randu(conv_mat_2, Scalar(0), Scalar(1));
+
+    Mat scale_mat_1(Size(1, 1), CV_32F);
+    Mat scale_mat_2(Size(1, 1), CV_32F);
+    randu(scale_mat_1, Scalar(0), Scalar(1));
+    randu(scale_mat_2, Scalar(0), Scalar(1));
+
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 3);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv_1";
+
+        lp.blobs.push_back(conv_mat_1);
+
+        id_conv[0] = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id_conv[0], 0);
+
+        id_conv_wo_fuse[0] = net_wo_fuse.addLayer(lp.name, lp.type, lp);
+        net_wo_fuse.connect(0, 0, id_conv_wo_fuse[0], 0);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 3);
+        lp.set("bias_term", false);
+        lp.type = "Convolution";
+        lp.name = "testConv_2";
+
+        lp.blobs.push_back(conv_mat_2);
+
+        id_conv[1] = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id_conv[1], 0);
+
+        id_conv_wo_fuse[1] = net_wo_fuse.addLayer(lp.name, lp.type, lp);
+        net_wo_fuse.connect(0, 0, id_conv_wo_fuse[1], 0);
+    }
+
+    int eltwise_id, eltwise_id_wo_fuse;
+    {
+        LayerParams lp;
+        lp.type = "Eltwise";
+        lp.name = "testLayer";
+        lp.set("operation", "sum");
+
+        eltwise_id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(id_conv[0], 0, eltwise_id, 0);
+        net.connect(id_conv[1], 0, eltwise_id, 1);
+
+        eltwise_id_wo_fuse = net_wo_fuse.addLayer(lp.name, lp.type, lp);
+        net_wo_fuse.connect(id_conv_wo_fuse[0], 0, eltwise_id_wo_fuse, 0);
+        net_wo_fuse.connect(id_conv_wo_fuse[1], 0, eltwise_id_wo_fuse, 1);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale_1";
+
+        lp.blobs.push_back(scale_mat_1);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net_wo_fuse.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    {
+        LayerParams lp;
+        lp.set("bias_term", false);
+        lp.type = "Scale";
+        lp.name = "testScale_2";
+
+        lp.blobs.push_back(scale_mat_2);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net_wo_fuse.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    {
+        LayerParams lp;
+        lp.type = "ReLU";
+        lp.name = "testReLU";
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net_wo_fuse.addLayerToPrev(lp.name, lp.type, lp);
+    }
+
+    int sz[] = {1, 1, 12, 12};
+    Mat input(4, &sz[0], CV_32F);
+    randu(input, Scalar(0), Scalar(1));
+
+    Backend backendId = get<0>(GetParam());
+    Target  targetId  = get<1>(GetParam());
+
+    net.setInput(input);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat output = net.forward();
+
+    net_wo_fuse.setInput(input);
+    net_wo_fuse.setPreferableBackend(backendId);
+    net_wo_fuse.setPreferableTarget(targetId);
+    net_wo_fuse.enableFusion(false);
+    Mat result = net_wo_fuse.forward();
+
+    const double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 3.1e-4 : 1e-5;
+    const double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 9.1e-4 : 1e-4;
+    normAssert(output, result, "", l1, lInf);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layers_Test_Subnet, dnnBackendsAndTargets());
+
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
 TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
 {

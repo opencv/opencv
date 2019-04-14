@@ -2210,7 +2210,14 @@ struct Net::Impl
                 while (nextData)
                 {
                     Ptr<Layer> nextLayer = nextData->layerInstance;
-                    if (currLayer->tryFuse(nextLayer))
+                    std::vector< Ptr<Layer> > baseInputs;
+                    std::set<int>::iterator it;
+                    for (it = ld.inputLayersId.begin(); it != ld.inputLayersId.end(); ++it)
+                    {
+                        baseInputs.push_back(layers[*it].layerInstance);
+                    }
+
+                    if (currLayer->tryFuse(baseInputs, nextLayer))
                     {
                         printf_(("\tfused with %s\n", nextLayer->name.c_str()));
                         nextData->skip = true;
@@ -4177,7 +4184,7 @@ Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 }
 
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
-bool Layer::tryFuse(Ptr<Layer>&) { return false; }
+bool Layer::tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 void Layer::getScaleShift(Mat& scale, Mat& shift) const
 {
     scale = Mat();

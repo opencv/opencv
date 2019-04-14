@@ -169,9 +169,9 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
+    virtual bool tryFuse(std::vector< Ptr<dnn::Layer> >& bottoms, Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
-        return func.tryFuse(top);
+        return func.tryFuse(bottoms, top);
     }
 
     void getScaleShift(Mat& scale_, Mat& shift_) const CV_OVERRIDE
@@ -376,7 +376,7 @@ struct ReLUFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -486,7 +486,7 @@ struct ReLU6Functor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -565,7 +565,7 @@ struct TanHFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -645,7 +645,7 @@ struct SwishFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -731,7 +731,7 @@ struct MishFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -811,7 +811,7 @@ struct SigmoidFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -892,7 +892,7 @@ struct ELUFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -977,7 +977,7 @@ struct AbsValFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -1057,7 +1057,7 @@ struct BNLLFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
@@ -1183,7 +1183,7 @@ struct PowerFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    bool tryFuse(Ptr<dnn::Layer>& top)
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >& bottoms, Ptr<dnn::Layer>& top)
     {
         if (power != 1.0f && shift != 0.0f)
             return false;
@@ -1330,8 +1330,7 @@ struct ChannelsPReLUFunctor
     }
 #endif  // HAVE_DNN_NGRAPH
 
-
-    bool tryFuse(Ptr<dnn::Layer>&) { return false; }
+    bool tryFuse(std::vector< Ptr<dnn::Layer> >&, Ptr<dnn::Layer>&) { return false; }
 
     void getScaleShift(Mat&, Mat&) const {}
 
