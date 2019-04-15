@@ -1350,7 +1350,7 @@ struct InRange_SIMD<uchar>
             v_uint8 low = vx_load(src2 + x);
             v_uint8 high = vx_load(src3 + x);
 
-            v_store(dst + x, (values >= low) & (high >= values));
+            v_store(dst + x, v_uint8::fromMask((values >= low) & (high >= values)));
         }
         vx_cleanup();
         return x;
@@ -1372,7 +1372,7 @@ struct InRange_SIMD<schar>
             v_int8 low = vx_load(src2 + x);
             v_int8 high = vx_load(src3 + x);
 
-            v_store((schar*)(dst + x), (values >= low) & (high >= values));
+            v_store(dst + x, v_uint8::fromMask((values >= low) & (high >= values)));
         }
         vx_cleanup();
         return x;
@@ -1398,7 +1398,10 @@ struct InRange_SIMD<ushort>
             v_uint16 low2 = vx_load(src2 + x + v_uint16::nlanes);
             v_uint16 high2 = vx_load(src3 + x + v_uint16::nlanes);
 
-            v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store(dst + x, v_uint8::fromMask(v_pack(
+                (values1 >= low1) & (high1 >= values1),
+                (values2 >= low2) & (high2 >= values2)
+            )));
         }
         vx_cleanup();
         return x;
@@ -1424,7 +1427,10 @@ struct InRange_SIMD<short>
             v_int16 low2 = vx_load(src2 + x + v_int16::nlanes);
             v_int16 high2 = vx_load(src3 + x + v_int16::nlanes);
 
-            v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store(dst + x, v_uint8::fromMask(v_pack(
+                (values1 >= low1) & (high1 >= values1),
+                (values2 >= low2) & (high2 >= values2)
+            )));
         }
         vx_cleanup();
         return x;
@@ -1450,7 +1456,10 @@ struct InRange_SIMD<int>
             v_int32 low2 = vx_load(src2 + x + v_int32::nlanes);
             v_int32 high2 = vx_load(src3 + x + v_int32::nlanes);
 
-            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_uint16::fromMask(v_pack(
+                (values1 >= low1) & (high1 >= values1),
+                (values2 >= low2) & (high2 >= values2)
+            )));
         }
         vx_cleanup();
         return x;
@@ -1476,7 +1485,10 @@ struct InRange_SIMD<float>
             v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
             v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
 
-            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32((values1 >= low1) & (high1 >= values1)), v_reinterpret_as_u32((values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_uint16::fromMask(v_pack(
+                (values1 >= low1) & (high1 >= values1),
+                (values2 >= low2) & (high2 >= values2)
+            )));
         }
         vx_cleanup();
         return x;

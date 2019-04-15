@@ -464,7 +464,7 @@ struct RGB2XYZ_i<ushort>
             v_int16 ymr, ymg, ymb;
             v_int16 zmr, zmg, zmb;
 
-            v_int16 mr = sr < zero, mg = sg < zero, mb = sb < zero;
+            v_int16 mr = v_int16::fromMask(sr < zero), mg = v_int16::fromMask(sg < zero), mb = v_int16::fromMask(sb < zero);
 
             xmb = mb & vc0;
             xmg = mg & vc1;
@@ -850,7 +850,7 @@ struct XYZ2RGB_i<ushort>
             sz = v_reinterpret_as_s16(z);
 
             // fixing 16bit signed multiplication
-            v_int16 mx = sx < zero, my = sy < zero, mz = sz < zero;
+            v_int16 mx = v_int16::fromMask(sx < zero), my = v_int16::fromMask(sy < zero), mz = v_int16::fromMask(sz < zero);
 
             v_int16 bmx, bmy, bmz;
             v_int16 gmx, gmy, gmz;
@@ -1979,7 +1979,7 @@ struct RGB2Lab_f
                 for (int k = 0; k < nrepeats; k++)
                 {
                     // 7.787f = (29/3)^3/(29*4), 0.008856f = (6/29)^3, 903.3 = (29/3)^3
-                    v_float32 mask = Y[k] > (vx_setall_f32(0.008856f));
+                    v_maskf32 mask = Y[k] > (vx_setall_f32(0.008856f));
                     v_float32 v116 = vx_setall_f32(116.f), vm16 = vx_setall_f32(-16.f);
                     L[k] = v_select(mask, v_fma(v116, FY[k], vm16), vx_setall_f32(903.3f)*Y[k]);
                     a[k] = vx_setall_f32(500.f) * (FX[k] - FY[k]);
@@ -2091,7 +2091,7 @@ struct Lab2RGBfloat
             }
 
             v_float32 x[nrepeats], y[nrepeats], z[nrepeats], fy[nrepeats];
-            v_float32 limask[nrepeats];
+            v_maskf32 limask[nrepeats];
             v_float32 vlThresh = vx_setall_f32(lThresh);
             for(int k = 0; k < nrepeats; k++)
             {
@@ -2139,7 +2139,7 @@ struct Lab2RGBfloat
                 for (int j = 0; j < 2; j++)
                 {
                     v_float32 f = fxz[k*2+j];
-                    v_float32 fmask = f <= vfTresh;
+                    v_maskf32 fmask = f <= vfTresh;
                     v_float32 flo = (f - v16_116) * vinv7787;
                     v_float32 fhi = f*f*f;
                     fxz[k*2+j] = v_select(fmask, flo, fhi);

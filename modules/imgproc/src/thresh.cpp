@@ -203,7 +203,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
-                v0 = thresh_u < v0;
+                v0 = v_uint8::fromMask(thresh_u < v0);
                 v0 = v0 & maxval16;
                 v_store( dst + j, v0 );
             }
@@ -217,7 +217,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
-                v0 = v0 <= thresh_u;
+                v0 = v_uint8::fromMask(v0 <= thresh_u);
                 v0 = v0 & maxval16;
                 v_store( dst + j, v0 );
             }
@@ -244,7 +244,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
-                v0 = ( thresh_u < v0 ) & v0;
+                v0 = v_uint8::fromMask( thresh_u < v0 ) & v0;
                 v_store( dst + j, v0 );
             }
         }
@@ -257,7 +257,7 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
-                v0 = ( v0 <= thresh_u ) & v0;
+                v0 = v_uint8::fromMask( v0 <= thresh_u ) & v0;
                 v_store( dst + j, v0 );
             }
         }
@@ -366,8 +366,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
                 v_uint16 v0, v1;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + v_uint16::nlanes);
-                v0 = thresh_u < v0;
-                v1 = thresh_u < v1;
+                v0 = v_uint16::fromMask(thresh_u < v0);
+                v1 = v_uint16::fromMask(thresh_u < v1);
                 v0 = v0 & maxval16;
                 v1 = v1 & maxval16;
                 v_store(dst + j, v0);
@@ -376,7 +376,7 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             if (j <= roi.width - v_uint16::nlanes)
             {
                 v_uint16 v0 = vx_load(src + j);
-                v0 = thresh_u < v0;
+                v0 = v_uint16::fromMask(thresh_u < v0);
                 v0 = v0 & maxval16;
                 v_store(dst + j, v0);
                 j += v_uint16::nlanes;
@@ -396,8 +396,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
                 v_uint16 v0, v1;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + v_uint16::nlanes);
-                v0 = v0 <= thresh_u;
-                v1 = v1 <= thresh_u;
+                v0 = v_uint16::fromMask(v0 <= thresh_u);
+                v1 = v_uint16::fromMask(v1 <= thresh_u);
                 v0 = v0 & maxval16;
                 v1 = v1 & maxval16;
                 v_store(dst + j, v0);
@@ -406,8 +406,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             if (j <= roi.width - v_uint16::nlanes)
             {
                 v_uint16 v0 = vx_load(src + j);
-                v0 = v0 <= thresh_u;
-                v0 = v0 & maxval16;
+                v0 = v_uint16::fromMask(v0 <= thresh_u);
+                v0 = v_uint16::fromMask(v0 & maxval16);
                 v_store(dst + j, v0);
                 j += v_uint16::nlanes;
             }
@@ -453,15 +453,15 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
                 v_uint16 v0, v1;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + v_uint16::nlanes);
-                v0 = (thresh_u < v0) & v0;
-                v1 = (thresh_u < v1) & v1;
+                v0 = v_uint16::fromMask(thresh_u < v0) & v0;
+                v1 = v_uint16::fromMask(thresh_u < v1) & v1;
                 v_store(dst + j, v0);
                 v_store(dst + j + v_uint16::nlanes, v1);
             }
             if (j <= roi.width - v_uint16::nlanes)
             {
                 v_uint16 v0 = vx_load(src + j);
-                v0 = (thresh_u < v0) & v0;
+                v0 = v_uint16::fromMask(thresh_u < v0) & v0;
                 v_store(dst + j, v0);
                 j += v_uint16::nlanes;
             }
@@ -480,15 +480,15 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
                 v_uint16 v0, v1;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + v_uint16::nlanes);
-                v0 = (v0 <= thresh_u) & v0;
-                v1 = (v1 <= thresh_u) & v1;
+                v0 = v_uint16::fromMask(v0 <= thresh_u) & v0;
+                v1 = v_uint16::fromMask(v1 <= thresh_u) & v1;
                 v_store(dst + j, v0);
                 v_store(dst + j + v_uint16::nlanes, v1);
             }
             if (j <= roi.width - v_uint16::nlanes)
             {
                 v_uint16 v0 = vx_load(src + j);
-                v0 = (v0 <= thresh_u) & v0;
+                v0 = v_uint16::fromMask(v0 <= thresh_u) & v0;
                 v_store(dst + j, v0);
                 j += v_uint16::nlanes;
             }
@@ -587,8 +587,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 v_int16 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_int16::nlanes );
-                v0 = thresh8 < v0;
-                v1 = thresh8 < v1;
+                v0 = v_int16::fromMask(thresh8 < v0);
+                v1 = v_int16::fromMask(thresh8 < v1);
                 v0 = v0 & maxval8;
                 v1 = v1 & maxval8;
                 v_store( dst + j, v0 );
@@ -597,7 +597,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             if( j <= roi.width - v_int16::nlanes )
             {
                 v_int16 v0 = vx_load( src + j );
-                v0 = thresh8 < v0;
+                v0 = v_int16::fromMask(thresh8 < v0);
                 v0 = v0 & maxval8;
                 v_store( dst + j, v0 );
                 j += v_int16::nlanes;
@@ -617,8 +617,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 v_int16 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_int16::nlanes );
-                v0 = v0 <= thresh8;
-                v1 = v1 <= thresh8;
+                v0 = v_int16::fromMask(v0 <= thresh8);
+                v1 = v_int16::fromMask(v1 <= thresh8);
                 v0 = v0 & maxval8;
                 v1 = v1 & maxval8;
                 v_store( dst + j, v0 );
@@ -627,7 +627,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             if( j <= roi.width - v_int16::nlanes )
             {
                 v_int16 v0 = vx_load( src + j );
-                v0 = v0 <= thresh8;
+                v0 = v_int16::fromMask(v0 <= thresh8);
                 v0 = v0 & maxval8;
                 v_store( dst + j, v0 );
                 j += v_int16::nlanes;
@@ -674,15 +674,15 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 v_int16 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_int16::nlanes );
-                v0 = ( thresh8 < v0 ) & v0;
-                v1 = ( thresh8 < v1 ) & v1;
+                v0 = v_int16::fromMask( thresh8 < v0 ) & v0;
+                v1 = v_int16::fromMask( thresh8 < v1 ) & v1;
                 v_store( dst + j, v0 );
                 v_store( dst + j + v_int16::nlanes, v1 );
             }
             if( j <= roi.width - v_int16::nlanes )
             {
                 v_int16 v0 = vx_load( src + j );
-                v0 = ( thresh8 < v0 ) & v0;
+                v0 = v_int16::fromMask( thresh8 < v0 ) & v0;
                 v_store( dst + j, v0 );
                 j += v_int16::nlanes;
             }
@@ -701,15 +701,15 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
                 v_int16 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_int16::nlanes );
-                v0 = ( v0 <= thresh8 ) & v0;
-                v1 = ( v1 <= thresh8 ) & v1;
+                v0 = v_int16::fromMask( v0 <= thresh8 ) & v0;
+                v1 = v_int16::fromMask( v1 <= thresh8 ) & v1;
                 v_store( dst + j, v0 );
                 v_store( dst + j + v_int16::nlanes, v1 );
             }
             if( j <= roi.width - v_int16::nlanes )
             {
                 v_int16 v0 = vx_load( src + j );
-                v0 = ( v0 <= thresh8 ) & v0;
+                v0 = v_int16::fromMask( v0 <= thresh8 ) & v0;
                 v_store( dst + j, v0 );
                 j += v_int16::nlanes;
             }
@@ -793,8 +793,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     v_float32 v0, v1;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + v_float32::nlanes );
-                    v0 = thresh4 < v0;
-                    v1 = thresh4 < v1;
+                    v0 = v_float32::fromMask(thresh4 < v0);
+                    v1 = v_float32::fromMask(thresh4 < v1);
                     v0 = v0 & maxval4;
                     v1 = v1 & maxval4;
                     v_store( dst + j, v0 );
@@ -803,7 +803,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 if( j <= roi.width - v_float32::nlanes )
                 {
                     v_float32 v0 = vx_load( src + j );
-                    v0 = thresh4 < v0;
+                    v0 = v_float32::fromMask(thresh4 < v0);
                     v0 = v0 & maxval4;
                     v_store( dst + j, v0 );
                     j += v_float32::nlanes;
@@ -823,8 +823,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     v_float32 v0, v1;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + v_float32::nlanes );
-                    v0 = v0 <= thresh4;
-                    v1 = v1 <= thresh4;
+                    v0 = v_float32::fromMask(v0 <= thresh4);
+                    v1 = v_float32::fromMask(v1 <= thresh4);
                     v0 = v0 & maxval4;
                     v1 = v1 & maxval4;
                     v_store( dst + j, v0 );
@@ -833,7 +833,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 if( j <= roi.width - v_float32::nlanes )
                 {
                     v_float32 v0 = vx_load( src + j );
-                    v0 = v0 <= thresh4;
+                    v0 = v_float32::fromMask(v0 <= thresh4);
                     v0 = v0 & maxval4;
                     v_store( dst + j, v0 );
                     j += v_float32::nlanes;
@@ -880,15 +880,15 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     v_float32 v0, v1;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + v_float32::nlanes );
-                    v0 = ( thresh4 < v0 ) & v0;
-                    v1 = ( thresh4 < v1 ) & v1;
+                    v0 = v_float32::fromMask( thresh4 < v0 ) & v0;
+                    v1 = v_float32::fromMask( thresh4 < v1 ) & v1;
                     v_store( dst + j, v0 );
                     v_store( dst + j + v_float32::nlanes, v1 );
                 }
                 if( j <= roi.width - v_float32::nlanes )
                 {
                     v_float32 v0 = vx_load( src + j );
-                    v0 = ( thresh4 < v0 ) & v0;
+                    v0 = v_float32::fromMask( thresh4 < v0 ) & v0;
                     v_store( dst + j, v0 );
                     j += v_float32::nlanes;
                 }
@@ -907,15 +907,15 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                     v_float32 v0, v1;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + v_float32::nlanes );
-                    v0 = ( v0 <= thresh4 ) & v0;
-                    v1 = ( v1 <= thresh4 ) & v1;
+                    v0 = v_float32::fromMask( v0 <= thresh4 ) & v0;
+                    v1 = v_float32::fromMask( v1 <= thresh4 ) & v1;
                     v_store( dst + j, v0 );
                     v_store( dst + j + v_float32::nlanes, v1 );
                 }
                 if( j <= roi.width - v_float32::nlanes )
                 {
                     v_float32 v0 = vx_load( src + j );
-                    v0 = ( v0 <= thresh4 ) & v0;
+                    v0 = v_float32::fromMask( v0 <= thresh4 ) & v0;
                     v_store( dst + j, v0 );
                     j += v_float32::nlanes;
                 }
@@ -964,8 +964,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 v_float64 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_float64::nlanes );
-                v0 = thresh2 < v0;
-                v1 = thresh2 < v1;
+                v0 = v_float64::fromMask(thresh2 < v0);
+                v1 = v_float64::fromMask(thresh2 < v1);
                 v0 = v0 & maxval2;
                 v1 = v1 & maxval2;
                 v_store( dst + j, v0 );
@@ -974,7 +974,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             if( j <= roi.width - v_float64::nlanes )
             {
                 v_float64 v0 = vx_load( src + j );
-                v0 = thresh2 < v0;
+                v0 = v_float64::fromMask(thresh2 < v0);
                 v0 = v0 & maxval2;
                 v_store( dst + j, v0 );
                 j += v_float64::nlanes;
@@ -994,8 +994,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 v_float64 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_float64::nlanes );
-                v0 = v0 <= thresh2;
-                v1 = v1 <= thresh2;
+                v0 = v_float64::fromMask(v0 <= thresh2);
+                v1 = v_float64::fromMask(v1 <= thresh2);
                 v0 = v0 & maxval2;
                 v1 = v1 & maxval2;
                 v_store( dst + j, v0 );
@@ -1004,7 +1004,7 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             if( j <= roi.width - v_float64::nlanes )
             {
                 v_float64 v0 = vx_load( src + j );
-                v0 = v0 <= thresh2;
+                v0 = v_float64::fromMask(v0 <= thresh2);
                 v0 = v0 & maxval2;
                 v_store( dst + j, v0 );
                 j += v_float64::nlanes;
@@ -1051,15 +1051,15 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 v_float64 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_float64::nlanes );
-                v0 = ( thresh2 < v0 ) & v0;
-                v1 = ( thresh2 < v1 ) & v1;
+                v0 = v_float64::fromMask( thresh2 < v0 ) & v0;
+                v1 = v_float64::fromMask( thresh2 < v1 ) & v1;
                 v_store( dst + j, v0 );
                 v_store( dst + j + v_float64::nlanes, v1 );
             }
             if( j <= roi.width - v_float64::nlanes )
             {
                 v_float64 v0 = vx_load( src + j );
-                v0 = ( thresh2 < v0 ) & v0;
+                v0 = v_float64::fromMask( thresh2 < v0 ) & v0;
                 v_store( dst + j, v0 );
                 j += v_float64::nlanes;
             }
@@ -1078,15 +1078,15 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
                 v_float64 v0, v1;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + v_float64::nlanes );
-                v0 = ( v0 <= thresh2 ) & v0;
-                v1 = ( v1 <= thresh2 ) & v1;
+                v0 = v_float64::fromMask( v0 <= thresh2 ) & v0;
+                v1 = v_float64::fromMask( v1 <= thresh2 ) & v1;
                 v_store( dst + j, v0 );
                 v_store( dst + j + v_float64::nlanes, v1 );
             }
             if( j <= roi.width - v_float64::nlanes )
             {
                 v_float64 v0 = vx_load( src + j );
-                v0 = ( v0 <= thresh2 ) & v0;
+                v0 = v_float64::fromMask( v0 <= thresh2 ) & v0;
                 v_store( dst + j, v0 );
                 j += v_float64::nlanes;
             }

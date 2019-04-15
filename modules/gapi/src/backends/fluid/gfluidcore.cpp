@@ -1522,12 +1522,12 @@ static void run_inrange3(uchar out[], const uchar in[], int width,
         v_uint8x16 i0, i1, i2;
         v_load_deinterleave(&in[3*w], i0, i1, i2);
 
-        v_uint8x16 o;
+        v_mask8x16 o;
         o = (i0 >= v_setall_u8(lower[0])) & (i0 <= v_setall_u8(upper[0])) &
             (i1 >= v_setall_u8(lower[1])) & (i1 <= v_setall_u8(upper[1])) &
             (i2 >= v_setall_u8(lower[2])) & (i2 <= v_setall_u8(upper[2]));
 
-        v_store(&out[w], o);
+        v_store(&out[w], v_uint8x16::fromMask(o));
     }
 #endif
 
@@ -1646,14 +1646,13 @@ static void run_select_row3(int width, uchar out[], uchar in1[], uchar in2[], uc
     {
         v_uint8x16 a1, b1, c1;
         v_uint8x16 a2, b2, c2;
-        v_uint8x16 mask;
+        v_mask8x16 mask;
         v_uint8x16 a, b, c;
 
         v_load_deinterleave(&in1[3*w], a1, b1, c1);
         v_load_deinterleave(&in2[3*w], a2, b2, c2);
 
-        mask = v_load(&in3[w]);
-        mask = mask != v_setzero_u8();
+        mask = v_load(&in3[w]) != v_setzero_u8();
 
         a = v_select(mask, a1, a2);
         b = v_select(mask, b1, b2);

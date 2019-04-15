@@ -492,14 +492,14 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                 usad8 += u1;
                 vsad8 += v1;
 
-                v_int16x8 mask = minsad8 > usad8;
+                v_int16x8 mask = v_int16x8::fromMask(minsad8 > usad8);
                 minsad8 = v_min(minsad8, usad8);
                 mind8 = v_max(mind8, (mask& d8));
 
                 v_store(sad + d, v_reinterpret_as_u16(usad8));
                 v_store(sad + d + 8, v_reinterpret_as_u16(vsad8));
 
-                mask = minsad8 > vsad8;
+                mask = v_int16x8::fromMask(minsad8 > vsad8);
                 minsad8 = v_min(minsad8, vsad8);
 
                 d8 = d8 + dd_8;
@@ -531,7 +531,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                 v_int32x4 d1 = v_setall_s32(mind-1), d2 = v_setall_s32(mind+1);
                 v_int32x4 dd_4 = v_setall_s32(4);
                 v_int32x4 d4 = v_int32x4(0,1,2,3);
-                v_int32x4 mask4;
+                v_mask32x4 mask4;
 
                 for( d = 0; d < ndisp; d += 8 )
                 {
@@ -825,7 +825,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     v_store(sad + d, usad4);
                     v_store(sad + d + 4, vsad4);
 
-                    v_int32x4 mask = minsad4 > usad4;
+                    v_mask32x4 mask = minsad4 > usad4;
                     minsad4 = v_min(minsad4, usad4);
                     mind4 = v_select(mask, d4, mind4);
                     d4 += dd_4;

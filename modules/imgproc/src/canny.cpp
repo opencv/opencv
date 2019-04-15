@@ -559,10 +559,10 @@ public:
                     v_int32x4 v_m3 = v_load_aligned((const int*)(_mag_a + j + 8));
                     v_int32x4 v_m4 = v_load_aligned((const int*)(_mag_a + j + 12));
 
-                    v_int32x4 v_cmp1 = v_m1 > v_low;
-                    v_int32x4 v_cmp2 = v_m2 > v_low;
-                    v_int32x4 v_cmp3 = v_m3 > v_low;
-                    v_int32x4 v_cmp4 = v_m4 > v_low;
+                    v_mask32x4 v_cmp1 = v_m1 > v_low;
+                    v_mask32x4 v_cmp2 = v_m2 > v_low;
+                    v_mask32x4 v_cmp3 = v_m3 > v_low;
+                    v_mask32x4 v_cmp4 = v_m4 > v_low;
 
                     v_m1 = v_load_aligned((const int*)(_mag_a + j + 16));
                     v_m2 = v_load_aligned((const int*)(_mag_a + j + 20));
@@ -572,15 +572,15 @@ public:
                     v_store_aligned((signed char*)(_pmap + j), v_one);
                     v_store_aligned((signed char*)(_pmap + j + 16), v_one);
 
-                    v_int16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
-                    v_int16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
+                    v_mask16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
+                    v_mask16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
 
                     v_cmp1 = v_m1 > v_low;
                     v_cmp2 = v_m2 > v_low;
                     v_cmp3 = v_m3 > v_low;
                     v_cmp4 = v_m4 > v_low;
 
-                    v_int8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
+                    v_mask8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
 
                     v_cmp80 = v_pack(v_cmp1, v_cmp2);
                     v_cmp81 = v_pack(v_cmp3, v_cmp4);
@@ -648,15 +648,15 @@ public:
 
                     v_store_aligned((signed char*)(_pmap + j), v_one);
 
-                    v_int32x4 v_cmp1 = v_m1 > v_low;
-                    v_int32x4 v_cmp2 = v_m2 > v_low;
-                    v_int32x4 v_cmp3 = v_m3 > v_low;
-                    v_int32x4 v_cmp4 = v_m4 > v_low;
+                    v_mask32x4 v_cmp1 = v_m1 > v_low;
+                    v_mask32x4 v_cmp2 = v_m2 > v_low;
+                    v_mask32x4 v_cmp3 = v_m3 > v_low;
+                    v_mask32x4 v_cmp4 = v_m4 > v_low;
 
-                    v_int16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
-                    v_int16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
+                    v_mask16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
+                    v_mask16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
 
-                    v_int8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
+                    v_mask8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
                     unsigned int mask = v_signmask(v_cmp);
 
                     if (mask)

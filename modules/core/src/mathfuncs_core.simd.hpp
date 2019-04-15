@@ -725,7 +725,7 @@ void log32f( const float *_x, float *y, int n )
 
         yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        v_float32 delta = v_reinterpret_as_f32(h0 == vx_setall_s32(510)) & vshift;
+        v_float32 delta = v_float32::fromMask(h0 == vx_setall_s32(510)) & vshift;
         xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
 
         v_float32 zf0 = v_fma(xf0, vA0, vA1);
@@ -801,7 +801,7 @@ void log64f( const double *x, double *y, int n )
         v_lut_deinterleave(logTab, idx, yf0, xf0);
 
         yf0 = v_fma(v_cvt_f64(yi0), vln2, yf0);
-        v_float64 delta = v_cvt_f64(idx == vx_setall_s32(510))*vx_setall_f64(1./512);
+        v_float64 delta = v_cvt_f64(v_int32::fromMask(idx == vx_setall_s32(510))) * vx_setall_f64(1./512);
         xf0 = v_fma(v_reinterpret_as_f64(xi0) - vx_setall_f64(1.), xf0, delta);
 
         v_float64 xq = xf0*xf0;

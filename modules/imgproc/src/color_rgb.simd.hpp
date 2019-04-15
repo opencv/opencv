@@ -224,7 +224,7 @@ struct RGB5x52RGB
                 a0 = t0 >> 15;
                 a1 = t1 >> 15;
                 a = v_pack(a0, a1);
-                a = a != vz;
+                a = v_uint8::fromMask(a != vz);
             }
             g = v_pack(g0, g1);
             r = v_pack(r0, r1);
@@ -324,8 +324,8 @@ struct RGB2RGB5x5
 
             b0 = b0 >> 3;
             b1 = b1 >> 3;
-            a0 = (a0 != vz) << 15;
-            a1 = (a1 != vz) << 15;
+            a0 = v_uint16::fromMask(a0 != vz) << 15;
+            a1 = v_uint16::fromMask(a1 != vz) << 15;
 
             if(gb == 6)
             {
@@ -802,9 +802,9 @@ struct RGB2Gray<ushort>
 
             // fixing 16bit signed multiplication
             v_int16 mr, mg, mb;
-            mr = (sr < z) & r2y;
-            mg = (sg < z) & g2y;
-            mb = (sb < z) & b2y;
+            mr = v_int16::fromMask(sr < z) & r2y;
+            mg = v_int16::fromMask(sg < z) & g2y;
+            mb = v_int16::fromMask(sb < z) & b2y;
             v_int16 fixmul = v_add_wrap(mr, v_add_wrap(mg, mb)) << fix_shift;
 
             v_int32 sy0 = (v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y)) >> shift;
@@ -870,6 +870,7 @@ struct RGBA2mRGBA<uchar>
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
+        v_mask8 vmask = v_mask8::from(amask);
         v_uint16 vh = vx_setall_u16(half_val+1);
 
         // processing 4 registers per loop cycle is about 10% faster
@@ -914,7 +915,7 @@ struct RGBA2mRGBA<uchar>
                 d[j] = v_pack(m[j], m[j+4]);
 
             for(int j = 0; j < 4; j++)
-                d[j] = v_select(amask, a[j], d[j]);
+                d[j] = v_select(vmask, a[j], d[j]);
 
             for(int j = 0; j < 4; j++)
                 v_store(dst + j*vsize, d[j]);
@@ -976,6 +977,7 @@ struct mRGBA2RGBA<uchar>
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
+        v_mask8 vmask = v_mask8::from(amask);
         v_uint8 vmax = vx_setall_u8(max_val);
 
         for( ; i <= n-vsize/4;
@@ -1054,11 +1056,11 @@ struct mRGBA2RGBA<uchar>
 
             // if a == 0 then d = 0
             v_uint8 am;
-            am = a != vx_setzero_u8();
+            am = v_uint8::fromMask(a != vx_setzero_u8());
             d = d & am;
 
             // put alpha values
-            d = v_select(amask, a, d);
+            d = v_select(vmask, a, d);
 
             v_store(dst, d);
         }

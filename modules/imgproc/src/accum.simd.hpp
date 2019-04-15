@@ -322,8 +322,7 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint8 v_mask = v_uint8::fromMask(v_0 != vx_load(mask + x));
                 v_uint8 v_src = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint16 v_src0, v_src1;
@@ -343,8 +342,7 @@ void acc_simd_(const uchar* src, float* dst, const uchar* mask, int len, int cn)
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint8 v_mask = v_uint8::fromMask(v_0 != vx_load(mask + x));
                 v_uint8 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + (x * cn), v_src0, v_src1, v_src2);
                 v_src0 = v_src0 & v_mask;
@@ -424,8 +422,7 @@ void acc_simd_(const ushort* src, float* dst, const uchar* mask, int len, int cn
             v_uint16 v_0 = vx_setall_u16(0);
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint32 v_src0, v_src1;
@@ -440,8 +437,7 @@ void acc_simd_(const ushort* src, float* dst, const uchar* mask, int len, int cn
             v_uint16 v_0 = vx_setall_u16(0);
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
                 v_src0 = v_src0 & v_mask;
@@ -500,7 +496,7 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
     }
     else
     {
-        v_float32 v_0 = vx_setzero_f32();
+        v_uint32 v_0 = vx_setzero_u32();
         if (cn == 1)
         {
             for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
@@ -508,8 +504,8 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
                 v_uint16 v_masku16 = vx_load_expand(mask + x);
                 v_uint32 v_masku320, v_masku321;
                 v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_masku320 == v_reinterpret_as_u32(v_0)));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_masku321 == v_reinterpret_as_u32(v_0)));
+                v_float32 v_mask0 = v_float32::fromMask(v_masku320 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_masku321 != v_0);
 
                 v_store(dst + x, vx_load(dst + x) + (vx_load(src + x) & v_mask0));
                 v_store(dst + x + step, vx_load(dst + x + step) + (vx_load(src + x + step) & v_mask1));
@@ -522,8 +518,8 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
                 v_uint16 v_masku16 = vx_load_expand(mask + x);
                 v_uint32 v_masku320, v_masku321;
                 v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_masku320 == v_reinterpret_as_u32(v_0)));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_masku321 == v_reinterpret_as_u32(v_0)));
+                v_float32 v_mask0 = v_float32::fromMask(v_masku320 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_masku321 != v_0);
 
                 v_float32 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
@@ -612,8 +608,7 @@ void acc_simd_(const uchar* src, double* dst, const uchar* mask, int len, int cn
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint8 v_mask = v_uint8::fromMask(vx_load(mask + x) != v_0);
                 v_uint8 v_src  = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint16 v_int0, v_int1;
@@ -664,8 +659,7 @@ void acc_simd_(const uchar* src, double* dst, const uchar* mask, int len, int cn
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint8 v_mask = v_uint8::fromMask(v_0 != vx_load(mask + x));
                 v_uint8 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + (x * cn), v_src0, v_src1, v_src2);
                 v_src0 = v_src0 & v_mask;
@@ -785,8 +779,7 @@ void acc_simd_(const ushort* src, double* dst, const uchar* mask, int len, int c
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src  = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint32 v_int0, v_int1;
@@ -817,8 +810,7 @@ void acc_simd_(const ushort* src, double* dst, const uchar* mask, int len, int c
         {
             for ( ; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
                 v_src0 = v_src0 & v_mask;
@@ -904,8 +896,8 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float32 v_src = vx_load(src + x);
                 v_float64 v_src0 = v_cvt_f64(v_src) & v_mask0;
@@ -922,8 +914,8 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float32 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
@@ -986,8 +978,8 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float64 v_src0 = vx_load(src + x);
                 v_float64 v_src1 = vx_load(src + x + step);
@@ -1003,8 +995,8 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float64 v_src00, v_src10, v_src20, v_src01, v_src11, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
@@ -1065,8 +1057,7 @@ void accSqr_simd_(const uchar* src, float* dst, const uchar* mask, int len, int 
         {
             for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint8 v_mask = v_uint8::fromMask(v_0 != vx_load(mask + x));
                 v_uint8 v_src = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint16 v_src0, v_src1;
@@ -1088,8 +1079,7 @@ void accSqr_simd_(const uchar* src, float* dst, const uchar* mask, int len, int 
         {
             for ( ; x <= len - cVectorWidth ; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint8 v_mask = v_uint8::fromMask(v_0 != vx_load(mask + x));
 
                 v_uint8 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
@@ -1186,8 +1176,8 @@ void accSqr_simd_(const ushort* src, float* dst, const uchar* mask, int len, int
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask0, v_mask1;
                 v_expand(v_mask16, v_mask0, v_mask1);
-                v_mask0 = ~(v_mask0 == v_0);
-                v_mask1 = ~(v_mask1 == v_0);
+                v_mask0 = v_uint32::fromMask(v_mask0 != v_0);
+                v_mask1 = v_uint32::fromMask(v_mask1 != v_0);
                 v_uint16 v_src = vx_load(src + x);
                 v_uint32 v_src0, v_src1;
                 v_expand(v_src, v_src0, v_src1);
@@ -1209,8 +1199,8 @@ void accSqr_simd_(const ushort* src, float* dst, const uchar* mask, int len, int
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask0, v_mask1;
                 v_expand(v_mask16, v_mask0, v_mask1);
-                v_mask0 = ~(v_mask0 == v_0);
-                v_mask1 = ~(v_mask1 == v_0);
+                v_mask0 = v_uint32::fromMask(v_mask0 != v_0);
+                v_mask1 = v_uint32::fromMask(v_mask1 != v_0);
 
                 v_uint16 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
@@ -1293,8 +1283,8 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask_0, v_mask_1;
                 v_expand(v_mask16, v_mask_0, v_mask_1);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask_1 == v_0));
+                v_float32 v_mask0 = v_float32::fromMask(v_mask_0 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_mask_1 != v_0);
                 v_float32 v_src0 = vx_load(src + x);
                 v_float32 v_src1 = vx_load(src + x + step);
                 v_src0 = v_src0 & v_mask0;
@@ -1311,8 +1301,8 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask_0, v_mask_1;
                 v_expand(v_mask16, v_mask_0, v_mask_1);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask_1 == v_0));
+                v_float32 v_mask0 = v_float32::fromMask(v_mask_0 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_mask_1 != v_0);
 
                 v_float32 v_src00, v_src10, v_src20, v_src01, v_src11, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
@@ -1389,8 +1379,7 @@ void accSqr_simd_(const uchar* src, double* dst, const uchar* mask, int len, int
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src = vx_load_expand(src + x);
                 v_uint16 v_int = v_src & v_mask;
 
@@ -1429,8 +1418,7 @@ void accSqr_simd_(const uchar* src, double* dst, const uchar* mask, int len, int
                 v_uint16 v_int1 = v_expand_low(v_src1);
                 v_uint16 v_int2 = v_expand_low(v_src2);
 
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_int0 = v_int0 & v_mask;
                 v_int1 = v_int1 & v_mask;
                 v_int2 = v_int2 & v_mask;
@@ -1530,8 +1518,7 @@ void accSqr_simd_(const ushort* src, double* dst, const uchar* mask, int len, in
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src = vx_load(src + x);
                 v_src = v_src & v_mask;
                 v_uint32 v_int_0, v_int_1;
@@ -1565,8 +1552,7 @@ void accSqr_simd_(const ushort* src, double* dst, const uchar* mask, int len, in
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
                 v_src0 = v_src0 & v_mask;
@@ -1666,8 +1652,7 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint32 v_mask = vx_load_expand_q(mask + x);;
-                v_mask = ~(v_mask == v_0);
+                v_uint32 v_mask = v_uint32::fromMask(vx_load_expand_q(mask + x) != v_0);
                 v_float32 v_src = vx_load(src + x);
                 v_src = v_src & v_reinterpret_as_f32(v_mask);
                 v_float64 v_src0 = v_cvt_f64(v_src);
@@ -1681,8 +1666,7 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint32 v_mask = v_uint32::fromMask(vx_load_expand_q(mask + x) != v_0);
 
                 v_float32 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
@@ -1756,8 +1740,8 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
                 v_float64 v_src0 = vx_load(src + x);
                 v_float64 v_src1 = vx_load(src + x + step);
                 v_src0 = v_src0 & v_mask0;
@@ -1773,8 +1757,8 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float64 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
@@ -1842,8 +1826,7 @@ void accProd_simd_(const uchar* src1, const uchar* src2, float* dst, const uchar
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint8 v_mask = v_uint8::fromMask(vx_load(mask + x) != v_0);
                 v_uint8 v_1src = vx_load(src1 + x);
                 v_uint8 v_2src = vx_load(src2 + x);
                 v_1src = v_1src & v_mask;
@@ -1866,8 +1849,7 @@ void accProd_simd_(const uchar* src1, const uchar* src2, float* dst, const uchar
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint8 v_mask = vx_load(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint8 v_mask = v_uint8::fromMask(vx_load(mask + x) != v_0);
                 v_uint8 v_1src0, v_1src1, v_1src2, v_2src0, v_2src1, v_2src2;
                 v_load_deinterleave(src1 + x * cn, v_1src0, v_1src1, v_1src2);
                 v_load_deinterleave(src2 + x * cn, v_2src0, v_2src1, v_2src2);
@@ -1955,8 +1937,7 @@ void accProd_simd_(const ushort* src1, const ushort* src2, float* dst, const uch
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint16 v_mask = v_uint16::fromMask(v_0 != vx_load_expand(mask + x));
 
                 v_uint16 v_1src = vx_load(src1 + x) & v_mask;
                 v_uint16 v_2src = vx_load(src2 + x) & v_mask;
@@ -1978,8 +1959,7 @@ void accProd_simd_(const ushort* src1, const ushort* src2, float* dst, const uch
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_0 == v_mask);
+                v_uint16 v_mask = v_uint16::fromMask(v_0 != vx_load_expand(mask + x));
 
                 v_uint16 v_1src0, v_1src1, v_1src2, v_2src0, v_2src1, v_2src2;
                 v_load_deinterleave(src1 + x * cn, v_1src0, v_1src1, v_1src2);
@@ -2069,8 +2049,8 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
             {
                 v_uint32 v_mask32_0 = vx_load_expand_q(mask + x);
                 v_uint32 v_mask32_1 = vx_load_expand_q(mask + x + step);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask32_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask32_1 == v_0));
+                v_float32 v_mask0 = v_float32::fromMask(v_mask32_0 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_mask32_1 != v_0);
 
                 v_store(dst + x, vx_load(dst + x) + ((vx_load(src1 + x) * vx_load(src2 + x)) & v_mask0));
                 v_store(dst + x + step, vx_load(dst + x + step) + ((vx_load(src1 + x + step) * vx_load(src2 + x + step)) & v_mask1));
@@ -2082,8 +2062,8 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
             {
                 v_uint32 v_mask32_0 = vx_load_expand_q(mask + x);
                 v_uint32 v_mask32_1 = vx_load_expand_q(mask + x + step);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask32_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask32_1 == v_0));
+                v_float32 v_mask0 = v_float32::fromMask(v_mask32_0 != v_0);
+                v_float32 v_mask1 = v_float32::fromMask(v_mask32_1 != v_0);
 
                 v_float32 v_1src00, v_1src01, v_1src10, v_1src11, v_1src20, v_1src21;
                 v_float32 v_2src00, v_2src01, v_2src10, v_2src11, v_2src20, v_2src21;
@@ -2152,8 +2132,7 @@ void accProd_simd_(const uchar* src1, const uchar* src2, double* dst, const ucha
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_1int = vx_load_expand(src1 + x) & v_mask;
                 v_uint16 v_2int = vx_load_expand(src2 + x) & v_mask;
 
@@ -2197,8 +2176,7 @@ void accProd_simd_(const uchar* src1, const uchar* src2, double* dst, const ucha
                 v_uint16 v_2int1 = v_expand_low(v_2src1);
                 v_uint16 v_2int2 = v_expand_low(v_2src2);
 
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_1int0 = v_1int0 & v_mask;
                 v_1int1 = v_1int1 & v_mask;
                 v_1int2 = v_1int2 & v_mask;
@@ -2292,8 +2270,7 @@ void accProd_simd_(const ushort* src1, const ushort* src2, double* dst, const uc
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_1src = vx_load(src1 + x);
                 v_uint16 v_2src = vx_load(src2 + x);
                 v_1src = v_1src & v_mask;
@@ -2328,8 +2305,7 @@ void accProd_simd_(const ushort* src1, const ushort* src2, double* dst, const uc
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint16 v_mask = vx_load_expand(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint16 v_mask = v_uint16::fromMask(vx_load_expand(mask + x) != v_0);
                 v_uint16 v_1src0, v_1src1, v_1src2, v_2src0, v_2src1, v_2src2;
                 v_load_deinterleave(src1 + x * cn, v_1src0, v_1src1, v_1src2);
                 v_load_deinterleave(src2 + x * cn, v_2src0, v_2src1, v_2src2);
@@ -2446,8 +2422,7 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint32 v_mask = v_uint32::fromMask(vx_load_expand_q(mask + x) != v_0);
                 v_float32 v_1src = vx_load(src1 + x);
                 v_float32 v_2src = vx_load(src2 + x);
                 v_1src = v_1src & v_reinterpret_as_f32(v_mask);
@@ -2466,8 +2441,7 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
         {
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
-                v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_uint32 v_mask = v_uint32::fromMask(vx_load_expand_q(mask + x) != v_0);
                 v_float32 v_1src0, v_1src1, v_1src2, v_2src0, v_2src1, v_2src2;
                 v_load_deinterleave(src1 + x * cn, v_1src0, v_1src1, v_1src2);
                 v_load_deinterleave(src2 + x * cn, v_2src0, v_2src1, v_2src2);
@@ -2542,8 +2516,8 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float64 v_src00 = vx_load(src1 + x);
                 v_float64 v_src01 = vx_load(src1 + x + step);
@@ -2561,8 +2535,8 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_float64::fromMask(v_masku640 != v_0);
+                v_float64 v_mask1 = v_float64::fromMask(v_masku641 != v_0);
 
                 v_float64 v_1src00, v_1src01, v_1src10, v_1src11, v_1src20, v_1src21;
                 v_float64 v_2src00, v_2src01, v_2src10, v_2src11, v_2src20, v_2src21;
