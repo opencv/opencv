@@ -61,6 +61,7 @@ template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab
 }
 
 #if CV_SIMD
+
 template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v_float32& x, const _Tp* tab, int n)
 {
     using namespace cv;
@@ -69,11 +70,32 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v
     ix = ix << 2;
 
     v_float32 t[4];
-    for(int i = 0; i < 4; i++)
-        t[i] = v_lut(tab + i, ix);
+    // assume that v_float32::nlanes == v_int32::nlanes
+    if(v_float32::nlanes == 4)
+    {
+#if (!CV_SIMD256 && !CV_SIMD512)
+        int32_t CV_DECL_ALIGNED(MAX_ALIGN) idx[4];
+        v_store_aligned(idx, ix);
+        v_float32x4 tt[4];
+        tt[0] = v_load(tab + idx[0]);
+        tt[1] = v_load(tab + idx[1]);
+        tt[2] = v_load(tab + idx[2]);
+        tt[3] = v_load(tab + idx[3]);
+        v_transpose4x4(tt[0], tt[1], tt[2], tt[3],
+                        t[0],  t[1],  t[2],  t[3]);
+#endif
+    }
+    else
+    {
+        t[0] = v_lut(tab + 0, ix);
+        t[1] = v_lut(tab + 1, ix);
+        t[2] = v_lut(tab + 2, ix);
+        t[3] = v_lut(tab + 3, ix);
+    }
 
     return v_fma(v_fma(v_fma(t[3], xx, t[2]), xx, t[1]), xx, t[0]);
 }
+
 #endif
 
 namespace cv
