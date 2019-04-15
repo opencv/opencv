@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<opencv_ml_knn>
+  <format>3</format>
+  <is_classifier>1</is_classifier>
+  <default_k>10</default_k>
+  <samples type_id="opencv-matrix">
+    <rows>3</rows>
+    <cols>2</cols>
+    <dt>f</dt>
+    <data>
+      1. 1. 3. 3. 10. 5.</data></samples>
+  <responses type_id="opencv-matrix">
+    <rows>3</rows>
+    <cols>1</cols>
+    <dt>f</dt>
+    <data>
+      0. 1. 2.</data></responses></opencv_ml_knn>
+</opencv_storage>
