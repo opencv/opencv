@@ -181,17 +181,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                     assert (planes.length == 3);
                     assert (image.getFormat() == mPreviewFormat);
 
-                    // see also https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
-                    // Y plane (0) non-interleaved => stride == 1; U/V plane interleaved => stride == 2
-                    assert (planes[0].getPixelStride() == 1);
-                    assert (planes[1].getPixelStride() == 2);
-                    assert (planes[2].getPixelStride() == 2);
-
-                    ByteBuffer y_plane = planes[0].getBuffer();
-                    ByteBuffer uv_plane = planes[1].getBuffer();
-                    Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane);
-                    Mat uv_mat = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane);
-                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(y_mat, uv_mat, w, h);
+                    JavaCamera2Frame tempFrame = new JavaCamera2Frame(image);
                     deliverAndDrawFrame(tempFrame);
                     tempFrame.release();
                     image.close();
@@ -334,50 +324,87 @@ public class JavaCamera2View extends CameraBridgeViewBase {
     private class JavaCamera2Frame implements CvCameraViewFrame {
         @Override
         public Mat gray() {
-            return mYuvFrameData.submat(0, mHeight, 0, mWidth);
+            Image.Plane[] planes = mImage.getPlanes();
+            int w = mImage.getWidth();
+            int h = mImage.getHeight();
+            ByteBuffer y_plane = planes[0].getBuffer();
+            mGray = new Mat(h, w, CvType.CV_8UC1, y_plane);
+            return mGray;
         }
 
         @Override
         public Mat rgba() {
-            if (mPreviewFormat == ImageFormat.NV21)
-                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21, 4);
-            else if (mPreviewFormat == ImageFormat.YV12)
-                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2RGB_I420, 4); // COLOR_YUV2RGBA_YV12 produces inverted colors
-            else if (mPreviewFormat == ImageFormat.YUV_420_888) {
-                assert (mUVFrameData != null);
-                Imgproc.cvtColorTwoPlane(mYuvFrameData, mUVFrameData, mRgba, Imgproc.COLOR_YUV2RGBA_NV21);
-            } else
-                throw new IllegalArgumentException("Preview Format can be NV21 or YV12");
+            Image.Plane[] planes = mImage.getPlanes();
+            int w = mImage.getWidth();
+            int h = mImage.getHeight();
+            int chromaPixelStride = planes[1].getPixelStride();
 
-            return mRgba;
+
+            if (chromaPixelStride == 2) { // Chroma channels are interleaved
+                ByteBuffer y_plane = planes[0].getBuffer();
+                ByteBuffer uv_plane = planes[1].getBuffer();
+                Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane);
+                Mat uv_mat = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane);
+                Imgproc.cvtColorTwoPlane(y_mat, uv_mat, mRgba, Imgproc.COLOR_YUV2RGBA_NV21);
+                return mRgba;
+            } else { // Chroma channels are not interleaved
+                byte[] yuv_bytes = new byte[w*(h+h/2)];
+                ByteBuffer y_plane = planes[0].getBuffer();
+                ByteBuffer u_plane = planes[1].getBuffer();
+                ByteBuffer v_plane = planes[2].getBuffer();
+
+                y_plane.get(yuv_bytes, 0, w*h);
+
+                int chromaRowStride = planes[1].getRowStride();
+                int chromaRowPadding = chromaRowStride - w/2;
+
+                int offset = w*h;
+                if (chromaRowPadding == 0){
+                    // When the row stride of the chroma channels equals their width, we can copy
+                    // the entire channels in one go
+                    u_plane.get(yuv_bytes, offset, w*h/4);
+                    offset += w*h/4;
+                    v_plane.get(yuv_bytes, offset, w*h/4);
+                } else {
+                    // When not equal, we need to copy the channels row by row
+                    for (int i = 0; i < h/2; i++){
+                        u_plane.get(yuv_bytes, offset, w/2);
+                        offset += w/2;
+                        if (i < h/2-1){
+                            u_plane.position(u_plane.position() + chromaRowPadding);
+                        }
+                    }
+                    for (int i = 0; i < h/2; i++){
+                        v_plane.get(yuv_bytes, offset, w/2);
+                        offset += w/2;
+                        if (i < h/2-1){
+                            v_plane.position(v_plane.position() + chromaRowPadding);
+                        }
+                    }
+                }
+
+                Mat yuv_mat = new Mat(h+h/2, w, CvType.CV_8UC1);
+                yuv_mat.put(0, 0, yuv_bytes);
+                Imgproc.cvtColor(yuv_mat, mRgba, Imgproc.COLOR_YUV2RGBA_I420, 4);
+                return mRgba;
+            }
         }
 
-        public JavaCamera2Frame(Mat Yuv420sp, int width, int height) {
-            super();
-            mWidth = width;
-            mHeight = height;
-            mYuvFrameData = Yuv420sp;
-            mUVFrameData = null;
-            mRgba = new Mat();
-        }
 
-        public JavaCamera2Frame(Mat Y, Mat UV, int width, int height) {
+        public JavaCamera2Frame(Image image) {
             super();
-            mWidth = width;
-            mHeight = height;
-            mYuvFrameData = Y;
-            mUVFrameData = UV;
+            mImage = image;
             mRgba = new Mat();
+            mGray = new Mat();
         }
 
         public void release() {
             mRgba.release();
+            mGray.release();
         }
 
-        private Mat mYuvFrameData;
-        private Mat mUVFrameData;
+        private Image mImage;
         private Mat mRgba;
-        private int mWidth;
-        private int mHeight;
+        private Mat mGray;
     };
 }
