@@ -701,7 +701,7 @@ endfunction()
 
 # Usage: ocv_append_build_options(HIGHGUI FFMPEG)
 macro(ocv_append_build_options var_prefix pkg_prefix)
-  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS)
+  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS LINK_LIBRARIES)
     if(${pkg_prefix}_${suffix})
       list(APPEND ${var_prefix}_${suffix} ${${pkg_prefix}_${suffix}})
       list(REMOVE_DUPLICATES ${var_prefix}_${suffix})
@@ -739,7 +739,9 @@ macro(ocv_check_modules define)
     endif()
     unset(${define}_${__modname}_FOUND)
   endforeach()
-  pkg_check_modules(${define} ${ARGN})
+  if(COMMAND pkg_check_modules)
+    pkg_check_modules(${define} ${ARGN})
+  endif()
   if(${define}_FOUND)
     set(HAVE_${define} 1)
   endif()
@@ -753,28 +755,46 @@ macro(ocv_check_modules define)
       set(${define}_${__modname}_FOUND 1)
     endif()
   endforeach()
-endmacro()
-
-
-# Macro that checks if module has been installed.
-# After it adds module to build and define
-# constants passed as second arg
-macro(CHECK_MODULE module_name define cv_module)
-  set(${define} 0)
-  if(PKG_CONFIG_FOUND)
-    set(ALIAS               ALIASOF_${module_name})
-    set(ALIAS_FOUND                 ${ALIAS}_FOUND)
-    set(ALIAS_INCLUDE_DIRS   ${ALIAS}_INCLUDE_DIRS)
-    set(ALIAS_LIBRARY_DIRS   ${ALIAS}_LIBRARY_DIRS)
-    set(ALIAS_LIBRARIES         ${ALIAS}_LIBRARIES)
-
-    PKG_CHECK_MODULES(${ALIAS} ${module_name})
-    if(${ALIAS_FOUND})
-      set(${define} 1)
-      ocv_append_build_options(${cv_module} ${ALIAS})
+  if(${define}_FOUND AND ${define}_LIBRARIES)
+    if(${define}_LINK_LIBRARIES_XXXXX)  # CMake 3.12+: https://gitlab.kitware.com/cmake/cmake/merge_requests/2068
+      set(${define}_LIBRARIES "${${define}_LINK_LIBRARIES}" CACHE INTERNAL "")
+    else()
+      unset(_libs)          # absolute paths
+      unset(_libs_paths)  # -L args
+      foreach(flag ${${define}_LDFLAGS})
+        if(flag MATCHES "^-L(.*)")
+          list(APPEND _libs_paths ${CMAKE_MATCH_1})
+        elseif(IS_ABSOLUTE "${flag}")
+          list(APPEND _libs "${flag}")
+        elseif(flag MATCHES "^-l(.*)")
+          set(_lib "${CMAKE_MATCH_1}")
+          if(_libs_paths)
+            find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib}
+                         HINTS ${_libs_paths} NO_DEFAULT_PATH)
+          endif()
+          find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib})
+          mark_as_advanced(pkgcfg_lib_${define}_${_lib})
+          if(pkgcfg_lib_${define}_${_lib})
+            list(APPEND _libs "${pkgcfg_lib_${define}_${_lib}}")
+          else()
+            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manualy")
+            list(APPEND _libs "${_lib}")
+          endif()
+        else()
+          # -pthread
+          #message(WARNING "ocv_check_modules(${define}): unknown LDFLAG '${flag}'")
+        endif()
+      endforeach()
+      set(${define}_LINK_LIBRARIES "${_libs}")
+      set(${define}_LIBRARIES "${_libs}" CACHE INTERNAL "")
+      unset(_lib)
+      unset(_libs)
+      unset(_libs_paths)
     endif()
   endif()
 endmacro()
+
+
 
 if(NOT DEFINED CMAKE_ARGC) # Guard CMake standalone invocations
 
@@ -1290,11 +1310,12 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
   endif()
 endmacro()
 
+# TODO remove this
 # read single version info from the pkg file
-macro(ocv_parse_pkg LIBNAME PKG_PATH SCOPE)
+macro(ocv_parse_pkg ver_varname LIBNAME PKG_PATH)
   if(EXISTS "${PKG_PATH}/${LIBNAME}.pc")
     file(STRINGS "${PKG_PATH}/${LIBNAME}.pc" line_to_parse REGEX "^Version:[ \t]+[0-9.]*.*$" LIMIT_COUNT 1)
-    STRING(REGEX REPLACE ".*Version: ([^ ]+).*" "\\1" ALIASOF_${LIBNAME}_VERSION "${line_to_parse}" )
+    STRING(REGEX REPLACE ".*Version: ([^ ]+).*" "\\1" ${ver_varname} "${line_to_parse}" )
   endif()
 endmacro()
 
