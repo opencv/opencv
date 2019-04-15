@@ -1,5 +1,5 @@
 /**
-  @file invisibility.cpp 
+  @file invisibility.cpp
   @author Alessandro de Oliveira Faria (A.K.A. CABELO)
   @brief Example of the invisibility effect, using subtraction techniques and masks. This file is part of OpenCV project, It is subject to the license terms in the LICENSE file found in the top-level directory of this distribution and at http://opencv.org/license.html
   @date Apr 10, 2019
