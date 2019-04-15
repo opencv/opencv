@@ -47,7 +47,7 @@ static int countNonZero8u( const uchar* src, int len )
             v_uint8 v_sum8 = vx_setzero_u8();
             int k = j;
             for (; k < std::min(len0, j + 255 * v_uint8::nlanes); k += v_uint8::nlanes)
-                v_sum8 += v_one & (vx_load(src + k) == v_zero);
+                v_sum8 += v_one & v_uint8::fromMask(vx_load(src + k) == v_zero);
             v_uint16 part1, part2;
             v_expand(v_sum8, part1, part2);
             v_sum16 += part1 + part2;
@@ -84,7 +84,11 @@ static int countNonZero16u( const ushort* src, int len )
             v_int8 v_sum8 = vx_setzero_s8();
             int k = j;
             for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
-                v_sum8 += v_one & v_pack(v_reinterpret_as_s16(vx_load(src + k) == v_zero), v_reinterpret_as_s16(vx_load(src + k + v_uint16::nlanes) == v_zero));
+                v_sum8 += v_one & v_int8::fromMask(v_pack(
+                    vx_load(src + k) == v_zero,
+                    vx_load(src + k + v_uint16::nlanes) == v_zero
+                ));
+
             v_int16 part1, part2;
             v_expand(v_sum8, part1, part2);
             v_sum16 += part1 + part2;
@@ -119,10 +123,11 @@ static int countNonZero32s( const int* src, int len )
             v_int8 v_sum8 = vx_setzero_s8();
             int k = j;
             for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
-                v_sum8 += v_one & v_pack(
-                    v_pack(vx_load(src + k                    ) == v_zero, vx_load(src + k +   v_int32::nlanes) == v_zero),
-                    v_pack(vx_load(src + k + 2*v_int32::nlanes) == v_zero, vx_load(src + k + 3*v_int32::nlanes) == v_zero)
-                );
+                v_sum8 += v_one & v_int8::fromMask(v_pack(
+                    vx_load(src + k                    ) == v_zero, vx_load(src + k +   v_int32::nlanes) == v_zero,
+                    vx_load(src + k + 2*v_int32::nlanes) == v_zero, vx_load(src + k + 3*v_int32::nlanes) == v_zero
+                ));
+
             v_int16 part1, part2;
             v_expand(v_sum8, part1, part2);
             v_sum16 += part1 + part2;
@@ -157,10 +162,11 @@ static int countNonZero32f( const float* src, int len )
             v_int8 v_sum8 = vx_setzero_s8();
             int k = j;
             for (; k < std::min(len0, j + 127 * v_int8::nlanes); k += v_int8::nlanes)
-                v_sum8 += v_one & v_pack(
-                    v_pack(v_reinterpret_as_s32(vx_load(src + k                      ) == v_zero), v_reinterpret_as_s32(vx_load(src + k +   v_float32::nlanes) == v_zero)),
-                    v_pack(v_reinterpret_as_s32(vx_load(src + k + 2*v_float32::nlanes) == v_zero), v_reinterpret_as_s32(vx_load(src + k + 3*v_float32::nlanes) == v_zero))
-                );
+                v_sum8 += v_one & v_int8::fromMask(v_pack(
+                    vx_load(src + k                      ) == v_zero, vx_load(src + k +   v_float32::nlanes) == v_zero,
+                    vx_load(src + k + 2*v_float32::nlanes) == v_zero, vx_load(src + k + 3*v_float32::nlanes) == v_zero
+                ));
+
             v_int16 part1, part2;
             v_expand(v_sum8, part1, part2);
             v_sum16 += part1 + part2;

@@ -316,9 +316,9 @@ struct RGB2YCrCb_i<ushort>
 
             // fixing 16bit signed multiplication
             v_int16 mr, mg, mb;
-            mr = (sr < z) & r2y;
-            mg = (sg < z) & g2y;
-            mb = (sb < z) & b2y;
+            mr = v_int16::fromMask(sr < z) & r2y;
+            mg = v_int16::fromMask(sg < z) & g2y;
+            mb = v_int16::fromMask(sb < z) & b2y;
             v_int16 fixmul = v_add_wrap(mr, v_add_wrap(mg, mb)) << fix_shift;
 
             v_int32 ssy0 = (v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y)) >> shift;

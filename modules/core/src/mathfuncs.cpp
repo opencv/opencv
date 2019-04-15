@@ -1622,7 +1622,7 @@ void patchNaNs( InputOutputArray _a, double _val )
         for ( ; j + cWidth <= len; j += cWidth)
         {
             v_int32 v_src = vx_load(tptr + j);
-            v_int32 v_cmp_mask = v_mask2 < (v_src & v_mask1);
+            v_mask32 v_cmp_mask = v_mask2 < (v_src & v_mask1);
             v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
             v_store(tptr + j, v_dst);
         }

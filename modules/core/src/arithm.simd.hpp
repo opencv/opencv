@@ -580,7 +580,8 @@ void not8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2, uch
 template<typename T1, typename Tvec>
 struct op_cmplt
 {
-    static inline Tvec r(const Tvec& a, const Tvec& b)
+    typedef typename V_Traits<Tvec>::v_mask Tmvec;
+    static inline Tmvec r(const Tvec& a, const Tvec& b)
     { return a < b; }
     static inline uchar r(T1 a, T1 b)
     { return (uchar)-(int)(a < b); }
@@ -589,7 +590,8 @@ struct op_cmplt
 template<typename T1, typename Tvec>
 struct op_cmple
 {
-    static inline Tvec r(const Tvec& a, const Tvec& b)
+    typedef typename V_Traits<Tvec>::v_mask Tmvec;
+    static inline Tmvec r(const Tvec& a, const Tvec& b)
     { return a <= b; }
     static inline uchar r(T1 a, T1 b)
     { return (uchar)-(int)(a <= b); }
@@ -598,7 +600,8 @@ struct op_cmple
 template<typename T1, typename Tvec>
 struct op_cmpeq
 {
-    static inline Tvec r(const Tvec& a, const Tvec& b)
+    typedef typename V_Traits<Tvec>::v_mask Tmvec;
+    static inline Tmvec r(const Tvec& a, const Tvec& b)
     { return a == b; }
     static inline uchar r(T1 a, T1 b)
     { return (uchar)-(int)(a == b); }
@@ -607,7 +610,8 @@ struct op_cmpeq
 template<typename T1, typename Tvec>
 struct op_cmpne
 {
-    static inline Tvec r(const Tvec& a, const Tvec& b)
+    typedef typename V_Traits<Tvec>::v_mask Tmvec;
+    static inline Tmvec r(const Tvec& a, const Tvec& b)
     { return a != b; }
     static inline uchar r(T1 a, T1 b)
     { return (uchar)-(int)(a != b); }
@@ -632,7 +636,7 @@ struct cmp_loader_n<sizeof(uchar), OP, T1, Tvec>
     {
         Tvec a = vx_load(src1);
         Tvec b = vx_load(src2);
-        v_store(dst, v_reinterpret_as_u8(op::r(a, b)));
+        v_store(dst, v_uint8::fromMask(op::r(a, b)));
     }
 };
 
@@ -644,9 +648,9 @@ struct cmp_loader_n<sizeof(ushort), OP, T1, Tvec>
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
-        Tvec c0 = op::r(vx_load(src1), vx_load(src2));
-        Tvec c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
-        v_store(dst, v_pack_b(v_reinterpret_as_u16(c0), v_reinterpret_as_u16(c1)));
+        v_mask16 c0 = op::r(vx_load(src1), vx_load(src2));
+        v_mask16 c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
+        v_store(dst, v_uint8::fromMask(v_pack(c0, c1)));
     }
 };
 
@@ -658,11 +662,11 @@ struct cmp_loader_n<sizeof(unsigned), OP, T1, Tvec>
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
-        v_uint32 c0 = v_reinterpret_as_u32(op::r(vx_load(src1), vx_load(src2)));
-        v_uint32 c1 = v_reinterpret_as_u32(op::r(vx_load(src1 + step), vx_load(src2 + step)));
-        v_uint32 c2 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
-        v_uint32 c3 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
-        v_store(dst, v_pack_b(c0, c1, c2, c3));
+        v_mask32 c0 = op::r(vx_load(src1), vx_load(src2));
+        v_mask32 c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
+        v_mask32 c2 = op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2));
+        v_mask32 c3 = op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3));
+        v_store(dst, v_uint8::fromMask(v_pack(c0, c1, c2, c3)));
     }
 };
 
@@ -674,16 +678,16 @@ struct cmp_loader_n<sizeof(double), OP, T1, Tvec>
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
-        v_uint64 c0 = v_reinterpret_as_u64(op::r(vx_load(src1), vx_load(src2)));
-        v_uint64 c1 = v_reinterpret_as_u64(op::r(vx_load(src1 + step), vx_load(src2 + step)));
-        v_uint64 c2 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
-        v_uint64 c3 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
+        v_mask64 c0 = op::r(vx_load(src1), vx_load(src2));
+        v_mask64 c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
+        v_mask64 c2 = op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2));
+        v_mask64 c3 = op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3));
 
-        v_uint64 c4 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 4), vx_load(src2 + step * 4)));
-        v_uint64 c5 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 5), vx_load(src2 + step * 5)));
-        v_uint64 c6 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 6), vx_load(src2 + step * 6)));
-        v_uint64 c7 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 7), vx_load(src2 + step * 7)));
-        v_store(dst, v_pack_b(c0, c1, c2, c3, c4, c5, c6, c7));
+        v_mask64 c4 = op::r(vx_load(src1 + step * 4), vx_load(src2 + step * 4));
+        v_mask64 c5 = op::r(vx_load(src1 + step * 5), vx_load(src2 + step * 5));
+        v_mask64 c6 = op::r(vx_load(src1 + step * 6), vx_load(src2 + step * 6));
+        v_mask64 c7 = op::r(vx_load(src1 + step * 7), vx_load(src2 + step * 7));
+        v_store(dst, v_uint8::fromMask(v_pack(c0, c1, c2, c3, c4, c5, c6, c7)));
     }
 };
 

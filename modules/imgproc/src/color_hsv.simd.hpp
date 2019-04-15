@@ -121,11 +121,11 @@ struct RGB2HSV_f
         v_float32x4 v_diff = v_max_rgb - v_min_rgb;
         v_float32x4 v_s = v_diff / (v_abs(v_max_rgb) + v_eps);
 
-        v_float32x4 v_r_eq_max = v_r == v_max_rgb;
-        v_float32x4 v_g_eq_max = v_g == v_max_rgb;
+        v_mask32x4 v_r_eq_max = v_r == v_max_rgb;
+        v_mask32x4 v_g_eq_max = v_g == v_max_rgb;
         v_float32x4 v_h = v_select(v_r_eq_max, v_g - v_b,
                           v_select(v_g_eq_max, v_b - v_r, v_r - v_g));
-        v_float32x4 v_res = v_select(v_r_eq_max, (v_g < v_b) & v_setall_f32(360.0f),
+        v_float32x4 v_res = v_select(v_r_eq_max, v_float32x4::fromMask(v_g < v_b) & v_setall_f32(360.0f),
                             v_select(v_g_eq_max, v_setall_f32(120.0f), v_setall_f32(240.0f)));
         v_float32x4 v_rev_diff = v_setall_f32(60.0f) / (v_diff + v_eps);
         v_r = v_muladd(v_h, v_rev_diff, v_res) * v_setall_f32(hscale);
@@ -252,26 +252,26 @@ inline void HSV2RGB_simd(v_float32x4& v_h, v_float32x4& v_s, v_float32x4& v_v, f
     v_sector = v_pre_sector - (v_sector * v_six);
 
     v_float32x4 v_two = v_setall_f32(2.0f);
-    v_h = v_tab1 & (v_sector < v_two);
-    v_h = v_h | (v_tab3 & (v_sector == v_two));
+    v_h = v_tab1 & v_float32x4::fromMask(v_sector < v_two);
+    v_h = v_h | (v_tab3 & v_float32x4::fromMask(v_sector == v_two));
     v_float32x4 v_three = v_setall_f32(3.0f);
-    v_h = v_h | (v_tab0 & (v_sector == v_three));
+    v_h = v_h | (v_tab0 & v_float32x4::fromMask(v_sector == v_three));
     v_float32x4 v_four = v_setall_f32(4.0f);
-    v_h = v_h | (v_tab0 & (v_sector == v_four));
-    v_h = v_h | (v_tab2 & (v_sector > v_four));
+    v_h = v_h | (v_tab0 & v_float32x4::fromMask(v_sector == v_four));
+    v_h = v_h | (v_tab2 & v_float32x4::fromMask(v_sector > v_four));
 
-    v_s = v_tab3 & (v_sector < v_one);
-    v_s = v_s | (v_tab0 & (v_sector == v_one));
-    v_s = v_s | (v_tab0 & (v_sector == v_two));
-    v_s = v_s | (v_tab2 & (v_sector == v_three));
-    v_s = v_s | (v_tab1 & (v_sector > v_three));
+    v_s = v_tab3 & v_float32x4::fromMask(v_sector < v_one);
+    v_s = v_s | (v_tab0 & v_float32x4::fromMask(v_sector == v_one));
+    v_s = v_s | (v_tab0 & v_float32x4::fromMask(v_sector == v_two));
+    v_s = v_s | (v_tab2 & v_float32x4::fromMask(v_sector == v_three));
+    v_s = v_s | (v_tab1 & v_float32x4::fromMask(v_sector > v_three));
 
-    v_v = v_tab0 & (v_sector < v_one);
-    v_v = v_v | (v_tab2 & (v_sector == v_one));
-    v_v = v_v | (v_tab1 & (v_sector == v_two));
-    v_v = v_v | (v_tab1 & (v_sector == v_three));
-    v_v = v_v | (v_tab3 & (v_sector == v_four));
-    v_v = v_v | (v_tab0 & (v_sector > v_four));
+    v_v = v_tab0 & v_float32x4::fromMask(v_sector < v_one);
+    v_v = v_v | (v_tab2 & v_float32x4::fromMask(v_sector == v_one));
+    v_v = v_v | (v_tab1 & v_float32x4::fromMask(v_sector == v_two));
+    v_v = v_v | (v_tab1 & v_float32x4::fromMask(v_sector == v_three));
+    v_v = v_v | (v_tab3 & v_float32x4::fromMask(v_sector == v_four));
+    v_v = v_v | (v_tab0 & v_float32x4::fromMask(v_sector > v_four));
 }
 #endif
 
@@ -524,16 +524,16 @@ struct RGB2HLS_f
 
         v_float32x4 v_s = v_diff / v_select(v_l < v_half, v_sum, v_setall_f32(2.0f) - v_sum);
 
-        v_float32x4 v_r_eq_max = v_max_rgb == v_r;
-        v_float32x4 v_g_eq_max = v_max_rgb == v_g;
+        v_mask32x4 v_r_eq_max = v_max_rgb == v_r;
+        v_mask32x4 v_g_eq_max = v_max_rgb == v_g;
         v_float32x4 v_h = v_select(v_r_eq_max, v_g - v_b,
                           v_select(v_g_eq_max, v_b - v_r, v_r - v_g));
-        v_float32x4 v_res = v_select(v_r_eq_max, (v_g < v_b) & v_setall_f32(360.0f),
+        v_float32x4 v_res = v_select(v_r_eq_max, v_float32x4::fromMask(v_g < v_b) & v_setall_f32(360.0f),
                             v_select(v_g_eq_max, v_setall_f32(120.0f), v_setall_f32(240.0f)));
         v_float32x4 v_rev_diff = v_setall_f32(60.0f) / v_diff;
         v_h = v_muladd(v_h, v_rev_diff, v_res) * v_hscale;
 
-        v_float32x4 v_diff_gt_eps = v_diff > v_setall_f32(FLT_EPSILON);
+        v_float32x4 v_diff_gt_eps = v_float32x4::fromMask(v_diff > v_setall_f32(FLT_EPSILON));
         v_r = v_diff_gt_eps & v_h;
         v_g = v_l;
         v_b = v_diff_gt_eps & v_s;
@@ -847,7 +847,7 @@ struct HLS2RGB_f
     {
         v_float32x4 v_one = v_setall_f32(1.0f);
 
-        v_float32x4 v_l_le_half = v_l <= v_setall_f32(0.5f);
+        v_mask32x4 v_l_le_half = v_l <= v_setall_f32(0.5f);
         v_float32x4 v_ls = v_l * v_s;
         v_float32x4 v_elem0 = v_select(v_l_le_half, v_ls, v_s - v_ls);
 

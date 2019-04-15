@@ -123,7 +123,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             v_int8x16 x2 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[2*quarterPatternSize]), delta));
                             v_int8x16 x3 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[3*quarterPatternSize]), delta));
 
-                            v_int8x16 m0, m1;
+                            v_mask8x16 m0, m1;
                             m0 = (v0 < x0) & (v0 < x1);
                             m1 = (x0 < v1) & (x1 < v1);
                             m0 = m0 | ((v0 < x1) & (v0 < x2));
@@ -151,11 +151,11 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             for( k = 0; k < N; k++ )
                             {
                                 v_int8x16 x = v_reinterpret_as_s8(v_load((ptr + pixel[k])) ^ delta);
-                                m0 = v0 < x;
-                                m1 = x < v1;
+                                v_int8x16 mm0 = v_int8x16::fromMask(v0 < x);
+                                v_int8x16 mm1 = v_int8x16::fromMask(x < v1);
 
-                                c0 = v_sub_wrap(c0, m0) & m0;
-                                c1 = v_sub_wrap(c1, m1) & m1;
+                                c0 = v_sub_wrap(c0, mm0) & mm0;
+                                c1 = v_sub_wrap(c1, mm1) & mm1;
 
                                 max0 = v_max(max0, v_reinterpret_as_u8(c0));
                                 max1 = v_max(max1, v_reinterpret_as_u8(c1));

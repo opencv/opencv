@@ -1147,8 +1147,8 @@ public:
                         v_uint8x16 v_edge1 = v_load(edgeData + x);
                         v_uint8x16 v_edge2 = v_load(edgeData + x + 16);
 
-                        v_uint8x16 v_cmp1 = (v_edge1 == v_zero);
-                        v_uint8x16 v_cmp2 = (v_edge2 == v_zero);
+                        v_mask8x16 v_cmp1 = (v_edge1 == v_zero);
+                        v_mask8x16 v_cmp2 = (v_edge2 == v_zero);
 
                         unsigned int mask1 = v_signmask(v_cmp1);
                         unsigned int mask2 = v_signmask(v_cmp2);
@@ -1525,7 +1525,7 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointList>::filterCircles(const Po
             v_float32x4 v_dy = v_y - v_curCenterY;
 
             v_float32x4 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
-            v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
+            v_mask32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
             unsigned int mask = v_signmask(vmask);
             if (mask)
             {
@@ -1586,15 +1586,14 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointSet>::filterCircles(const Poi
             float CV_DECL_ALIGNED(16) rbuf[4];
             for (; x <= xOuter.end - 4; x += numSIMDPoints)
             {
-                v_uint32x4 v_mask = v_load_expand_q(ptr + x);
-                v_mask = v_mask != v_zero_u32;
+                v_mask32x4 v_mask = v_load_expand_q(ptr + x) != v_zero_u32;
 
                 v_float32x4 v_x = v_cvt_f32(v_setall_s32(x));
                 v_float32x4 v_dx = v_x - v_curCenterX_0123;
 
                 v_float32x4 v_r2 = (v_dx * v_dx) + v_dy2;
-                v_float32x4 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2) & v_reinterpret_as_f32(v_mask);
-                unsigned int mask = v_signmask(vmask);
+                v_mask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2) & v_mask;
+                unsigned int mask = v_signmask(v_mask);
                 if (mask)
                 {
                     v_store_aligned(rbuf, v_r2);

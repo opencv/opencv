@@ -705,7 +705,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                                 L0 = L0 + v_load(Sp + d);
                                 v_store(Sp + d, L0);
 
-                                v_int16x8 mask = _minS > L0;
+                                v_int16x8 mask = v_int16x8::fromMask(_minS > L0);
                                 _minS = v_min(_minS, L0);
                                 _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
                                 _d8 += _8;
@@ -721,7 +721,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                             minS = std::min(v_reduce_min(min32L), v_reduce_min(min32H));
 
                             v_int16x8 ss = v_setall_s16((short)minS);
-                            v_uint16x8 minMask = v_reinterpret_as_u16(ss == _minS);
+                            v_uint16x8 minMask = v_uint16x8::fromMask(ss == _minS);
                             v_uint16x8 minBit = minMask & v_LSB;
 
                             v_uint32x4 minBitL, minBitH;
@@ -761,7 +761,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                             for( d = 0; d < D; d+= 8 )
                             {
                                 v_int16x8 L0 = v_load(Sp + d);
-                                v_int16x8 mask = L0 < _minS;
+                                v_int16x8 mask = v_int16x8::fromMask(L0 < _minS);
                                 _minS = v_min( L0, _minS );
                                 _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
                                 _d8 = _d8 + _8;
@@ -769,7 +769,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                             v_int32x4 _d0, _d1;
                             v_expand(_minS, _d0, _d1);
                             minS = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
-                            v_int16x8 v_mask = v_setall_s16((short)minS) == _minS;
+                            v_int16x8 v_mask = v_int16x8::fromMask(v_setall_s16((short)minS) == _minS);
 
                             _bestDisp = (_bestDisp & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
                             v_expand(_bestDisp, _d0, _d1);
@@ -1309,7 +1309,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
 
                         Sval = Sval + L;
 
-                        v_int16x8 mask = Sval < _minS;
+                        v_int16x8 mask = v_int16x8::fromMask(Sval < _minS);
                         _minS = v_min( Sval, _minS );
                         _bestDisp = _bestDisp ^ ((_bestDisp ^ _d8) & mask);
                         _d8 = _d8 + _8;
@@ -1324,7 +1324,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                     v_int32x4 _d0, _d1;
                     v_expand(_minS, _d0, _d1);
                     minS = (int)std::min(v_reduce_min(_d0), v_reduce_min(_d1));
-                    v_int16x8 v_mask = v_setall_s16((short)minS) == _minS;
+                    v_int16x8 v_mask = v_int16x8::fromMask(v_setall_s16((short)minS) == _minS);
 
                     _bestDisp = (_bestDisp & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
                     v_expand(_bestDisp, _d0, _d1);
@@ -1721,7 +1721,7 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
 inline short min_pos(const v_int16x8& val, const v_int16x8& pos, const short min_val)
 {
     v_int16x8 v_min = v_setall_s16(min_val);
-    v_int16x8 v_mask = v_min == val;
+    v_int16x8 v_mask = v_int16x8::fromMask(v_min == val);
     v_int16x8 v_pos = (pos & v_mask) | (v_setall_s16(SHRT_MAX) & ~v_mask);
 
     return v_reduce_min(v_pos);
@@ -1884,7 +1884,7 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
 
             // track disparity value with the minimum cost:
             min_sum_cost_reg = v_min(min_sum_cost_reg,res);
-            min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (loop_idx - min_sum_pos_reg));
+            min_sum_pos_reg = min_sum_pos_reg + (v_int16x8::fromMask(min_sum_cost_reg == res) & (loop_idx - min_sum_pos_reg));
             loop_idx = loop_idx+eight_reg;
 
             //update src:
@@ -1906,7 +1906,7 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
 
         min_sum_cost_reg = v_min(min_sum_cost_reg,res);
         min_cost = v_reduce_min(min_sum_cost_reg);
-        min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (loop_idx - min_sum_pos_reg));
+        min_sum_pos_reg = min_sum_pos_reg + (v_int16x8::fromMask(min_sum_cost_reg == res) & (loop_idx - min_sum_pos_reg));
         optimal_disp = min_pos(min_sum_cost_reg,min_sum_pos_reg, min_cost);
     }
     else
@@ -2021,7 +2021,8 @@ void SGBM3WayMainLoop::operator () (const Range& range) const
                     v_int16x8 d2 = v_setall_s16((short)(best_d+1));
                     v_int16x8 eight_reg = v_setall_s16(8);
                     v_int16x8 cur_d(0,1,2,3,4,5,6,7);
-                    v_int16x8 mask,cost1,cost2;
+                    v_int16x8 cost1,cost2;
+                    v_mask16x8 mask;
 
                     for( d = 0; d < D; d+=16 )
                     {
