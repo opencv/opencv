@@ -408,13 +408,15 @@ void ONNXImporter::populateNet(Net dstNet)
 
         if (layer_type == "MaxPool")
         {
-            layerParams.type = "Pooling";
+            layerParams.type = (layerParams.has("kernel") && layerParams.get("kernel").size() == 3) ?
+                                "Pooling3D" : "Pooling";
             layerParams.set("pool", "MAX");
             layerParams.set("ceil_mode", isCeilMode(layerParams));
         }
         else if (layer_type == "AveragePool")
         {
-            layerParams.type = "Pooling";
+            layerParams.type = (layerParams.has("kernel") && layerParams.get("kernel").size() == 3) ?
+                                "Pooling3D" : "Pooling";
             layerParams.set("pool", "AVE");
             layerParams.set("ceil_mode", isCeilMode(layerParams));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");

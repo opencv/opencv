@@ -219,6 +219,20 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
     runTensorFlowNet("ave_pool_same");
 }
 
+TEST_P(Test_TensorFlow_layers, MaxPooling3D)
+{
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    runTensorFlowNet("max_pool3d");
+}
+
+TEST_P(Test_TensorFlow_layers, AvePooling3D)
+{
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    runTensorFlowNet("ave_pool3d");
+}
+
 TEST_P(Test_TensorFlow_layers, deconvolution)
 {
     runTensorFlowNet("deconvolution");

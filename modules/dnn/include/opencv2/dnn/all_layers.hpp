@@ -272,6 +272,23 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Pooling3DLayer : public Layer
+    {
+    public:
+        int type;
+        DictValue kernel, strides, pads;
+        bool globalPooling;
+        String padMode;
+        bool ceilMode;
+        // If true for average pooling with padding, divide an every output region
+        // by a whole kernel area. Otherwise exclude zero padded values and divide
+        // by number of real values.
+        bool avePoolPaddedArea;
+
+        static Ptr<Pooling3DLayer> create(const LayerParams& params);
+    };
+
+
     class CV_EXPORTS SoftmaxLayer : public Layer
     {
     public:

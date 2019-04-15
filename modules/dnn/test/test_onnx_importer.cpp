@@ -144,6 +144,20 @@ TEST_P(Test_ONNX_layers, AveragePooling)
     testONNXModels("average_pooling");
 }
 
+TEST_P(Test_ONNX_layers, MaxPooling3D)
+{
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    testONNXModels("max_pool3d");
+}
+
+TEST_P(Test_ONNX_layers, AvePooling3D)
+{
+    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    testONNXModels("ave_pool3d");
+}
+
 TEST_P(Test_ONNX_layers, BatchNormalization)
 {
     testONNXModels("batch_norm");

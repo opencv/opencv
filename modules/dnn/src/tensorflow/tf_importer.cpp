@@ -1363,7 +1363,7 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, inp, id, ii - from);
             }
         }
-        else if (type == "MaxPool")
+        else if (type == "MaxPool" || type == "MaxPool3D")
         {
             layerParams.set("pool", "max");
 
@@ -1371,12 +1371,13 @@ void TFImporter::populateNet(Net dstNet)
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
 
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layerParams.type = (type == "MaxPool3D") ? "Pooling3D" : "Pooling";
+            int id = dstNet.addLayer(name, layerParams.type, layerParams);
             layer_id[name] = id;
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
-        else if (type == "AvgPool")
+        else if (type == "AvgPool" || type == "AvgPool3D")
         {
             layerParams.set("pool", "ave");
             layerParams.set("ave_pool_padded_area", false);
@@ -1385,7 +1386,8 @@ void TFImporter::populateNet(Net dstNet)
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
 
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layerParams.type = (type == "AvgPool3D") ? "Pooling3D" : "Pooling";
+            int id = dstNet.addLayer(name, layerParams.type, layerParams);
             layer_id[name] = id;
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());

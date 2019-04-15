@@ -1890,7 +1890,7 @@ public:
         return blobs.size() >= 2;
     }
 
-    virtual bool supportBackend(int backendId)
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
         if (INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5) && backendId == DNN_BACKEND_INFERENCE_ENGINE)
@@ -1902,7 +1902,7 @@ public:
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(blobs.size() != 0);
         CV_Assert(blobs[0].dims == 5);
@@ -1946,7 +1946,7 @@ public:
         return false;
     }
 
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr)
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
         std::vector<Mat> inputs, outputs;
@@ -2033,7 +2033,7 @@ public:
         return Ptr<BackendNode>();
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_Error(Error::StsNotImplemented, "Convolution3D layer is not supported on OCV backend");
     }
