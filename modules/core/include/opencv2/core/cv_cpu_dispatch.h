@@ -71,6 +71,14 @@
 #  include <immintrin.h>
 #  define CV_AVX 1
 #endif
+#ifdef CV_CPU_COMPILE_XOP
+#  ifdef _MSC_VER
+#    include <ammintrin.h>
+#  else
+#    include <x86intrin.h>
+#  endif
+#  define CV_XOP 1
+#endif
 #ifdef CV_CPU_COMPILE_FP16
 #  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM)
 #    include <arm_neon.h>
@@ -195,6 +203,9 @@ struct VZeroUpperGuard {
 #endif
 #ifndef CV_POPCNT
 #  define CV_POPCNT 0
+#endif
+#ifndef CV_XOP
+#  define CV_XOP 0
 #endif
 #ifndef CV_AVX
 #  define CV_AVX 0

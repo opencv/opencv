@@ -357,6 +357,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512VBMI] = "AVX512VBMI";
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
 
+        g_hwFeatureNames[CPU_XOP] = "XOP";
+
         g_hwFeatureNames[CPU_NEON] = "NEON";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
@@ -397,6 +399,7 @@ struct HWFeatures
             have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
             have[CV_CPU_AVX]    = (cpuid_data[2] & (1<<28)) != 0;
             have[CV_CPU_FP16]   = (cpuid_data[2] & (1<<29)) != 0;
+            have[CV_CPU_XOP]    = (cpuid_data[2] & (1<<11)) != 0;
 
             // make the second call to the cpuid command in order to get
             // information about extended features like AVX2

@@ -250,6 +250,8 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX_512VBMI      20
 #define CV_CPU_AVX_512VL        21
 
+#define CV_CPU_XOP              99
+
 #define CV_CPU_NEON             100
 
 #define CV_CPU_VSX              200
@@ -288,6 +290,7 @@ enum CpuFeatures {
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
 
+    CPU_XOP             = 99, //!< https://en.wikipedia.org/wiki/XOP_instruction_set
     CPU_NEON            = 100,
 
     CPU_VSX             = 200,

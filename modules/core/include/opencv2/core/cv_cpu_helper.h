@@ -168,6 +168,27 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_AVX(fn, args, mode, ...)  CV_CPU_CALL_AVX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_XOP
+#  define CV_TRY_XOP 1
+#  define CV_CPU_FORCE_XOP 1
+#  define CV_CPU_HAS_SUPPORT_XOP 1
+#  define CV_CPU_CALL_XOP(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_XOP_(fn, args) return (opt_XOP::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_XOP
+#  define CV_TRY_XOP 1
+#  define CV_CPU_FORCE_XOP 0
+#  define CV_CPU_HAS_SUPPORT_XOP (cv::checkHardwareSupport(CV_CPU_XOP))
+#  define CV_CPU_CALL_XOP(fn, args) if (CV_CPU_HAS_SUPPORT_XOP) return (opt_XOP::fn args)
+#  define CV_CPU_CALL_XOP_(fn, args) if (CV_CPU_HAS_SUPPORT_XOP) return (opt_XOP::fn args)
+#else
+#  define CV_TRY_XOP 0
+#  define CV_CPU_FORCE_XOP 0
+#  define CV_CPU_HAS_SUPPORT_XOP 0
+#  define CV_CPU_CALL_XOP(fn, args)
+#  define CV_CPU_CALL_XOP_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_XOP(fn, args, mode, ...)  CV_CPU_CALL_XOP(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_FP16
 #  define CV_TRY_FP16 1
 #  define CV_CPU_FORCE_FP16 1

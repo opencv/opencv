@@ -131,12 +131,17 @@ CV__IMPL_INTRIN_TRAITS(double, __CV_V_FLOAT64, __CV_V_MASK64, __CV_V_FLOAT64, __
 /** Value reordering **/
 
 // Expansion
+#if CV_SSE2
+template<typename Tvec, typename Twvec>
+void v_expand(const Tvec& a, Twvec& b0, Twvec& b1);
+#else
 void v_expand(const __CV_V_UINT8&,  __CV_V_UINT16&, __CV_V_UINT16&);
 void v_expand(const __CV_V_INT8&,   __CV_V_INT16&,  __CV_V_INT16&);
 void v_expand(const __CV_V_UINT16&, __CV_V_UINT32&, __CV_V_UINT32&);
 void v_expand(const __CV_V_INT16&,  __CV_V_INT32&,  __CV_V_INT32&);
 void v_expand(const __CV_V_UINT32&, __CV_V_UINT64&, __CV_V_UINT64&);
 void v_expand(const __CV_V_INT32&,  __CV_V_INT64&,  __CV_V_INT64&);
+#endif
 
 // Low Expansion
 __CV_V_UINT16 v_expand_low(const __CV_V_UINT8&);
@@ -154,12 +159,18 @@ __CV_V_UINT64 v_expand_high(const __CV_V_UINT32&);
 __CV_V_INT64  v_expand_high(const __CV_V_INT32&);
 
 // Load & Low Expansion
+ // Load & Low Expansion
+#if CV_SSE2
+template<typename Tp>
+typename V128_Traits<Tp>::v_w v_load_expand(const Tp* ptr);
+#else
 __CV_V_UINT16 __CV_VX(load_expand)(const uchar*);
 __CV_V_INT16  __CV_VX(load_expand)(const schar*);
 __CV_V_UINT32 __CV_VX(load_expand)(const ushort*);
 __CV_V_INT32  __CV_VX(load_expand)(const short*);
 __CV_V_UINT64 __CV_VX(load_expand)(const uint*);
 __CV_V_INT64  __CV_VX(load_expand)(const int*);
+#endif // CV_SSE2
 
 // Load lower 8-bit and expand into 32-bit
 __CV_V_UINT32 __CV_VX(load_expand_q)(const uchar*);
