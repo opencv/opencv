@@ -148,8 +148,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #include "opencv2/core/hal/intrin_forward.hpp"
 
 #if CV_SSE2
-#include "opencv2/core/hal/intrin_sse_em.hpp"
-#include "opencv2/core/hal/intrin_sse.hpp"
+#include "opencv2/core/hal/sse/sse.hpp"
 
 #elif CV_NEON
 
