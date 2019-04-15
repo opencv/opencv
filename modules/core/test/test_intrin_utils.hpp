@@ -405,7 +405,7 @@ template<typename R> struct TheTest
     // v_expand and v_load_expand
     TheTest & test_expand()
     {
-        typedef typename V_RegTraits<R>::w_reg Rx2;
+        typedef typename V_Traits<R>::v_twice Rx2;
         Data<R> dataA;
         R a = dataA;
 
@@ -434,7 +434,7 @@ template<typename R> struct TheTest
 
     TheTest & test_expand_q()
     {
-        typedef typename V_RegTraits<R>::q_reg Rx4;
+        typedef typename V_Traits<R>::v_quad Rx4;
         Data<R> data;
         Data<Rx4> out = vx_load_expand_q(data.d);
         const int n = Rx4::nlanes;
@@ -518,7 +518,7 @@ template<typename R> struct TheTest
 
     TheTest & test_mul_expand()
     {
-        typedef typename V_RegTraits<R>::w_reg Rx2;
+        typedef typename V_Traits<R>::v_twice Rx2;
         Data<R> dataA, dataB(2);
         R a = dataA, b = dataB;
         Rx2 c, d;
@@ -539,7 +539,7 @@ template<typename R> struct TheTest
 
     TheTest & test_abs()
     {
-        typedef typename V_RegTraits<R>::u_reg Ru;
+        typedef typename V_Traits<R>::v_unsigned Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA, dataB(10);
         R a = dataA, b = dataB;
@@ -606,7 +606,7 @@ template<typename R> struct TheTest
 
     TheTest & test_dot_prod()
     {
-        typedef typename V_RegTraits<R>::w_reg Rx2;
+        typedef typename V_Traits<R>::v_twice Rx2;
         typedef typename Rx2::lane_type w_type;
 
         Data<R> dataA, dataB(2);
@@ -704,7 +704,7 @@ template<typename R> struct TheTest
 
     TheTest & test_absdiff()
     {
-        typedef typename V_RegTraits<R>::u_reg Ru;
+        typedef typename V_Traits<R>::v_unsigned Ru;
         typedef typename Ru::lane_type u_type;
         Data<R> dataA(std::numeric_limits<LaneType>::max()),
                 dataB(std::numeric_limits<LaneType>::min());
@@ -772,8 +772,8 @@ template<typename R> struct TheTest
 
     TheTest & test_mask()
     {
-        typedef typename V_RegTraits<R>::int_reg int_reg;
-        typedef typename V_RegTraits<int_reg>::u_reg uint_reg;
+        typedef typename V_Traits<R>::v_signed int_reg;
+        typedef typename V_Traits<int_reg>::v_unsigned uint_reg;
         typedef typename int_reg::lane_type int_type;
         typedef typename uint_reg::lane_type uint_type;
 
@@ -820,7 +820,7 @@ template<typename R> struct TheTest
     TheTest & test_pack()
     {
         SCOPED_TRACE(s);
-        typedef typename V_RegTraits<R>::w_reg Rx2;
+        typedef typename V_Traits<R>::v_twice Rx2;
         typedef typename Rx2::lane_type w_type;
         Data<Rx2> dataA, dataB;
         dataA += std::numeric_limits<LaneType>::is_signed ? -10 : 10;
@@ -858,9 +858,9 @@ template<typename R> struct TheTest
     TheTest & test_pack_u()
     {
         SCOPED_TRACE(s);
-        //typedef typename V_RegTraits<LaneType>::w_type LaneType_w;
-        typedef typename V_RegTraits<R>::w_reg R2;
-        typedef typename V_RegTraits<R2>::int_reg Ri2;
+        //typedef typename V_Traits<LaneType>::w_type LaneType_w;
+        typedef typename V_Traits<R>::v_twice R2;
+        typedef typename V_Traits<R2>::v_signed Ri2;
         typedef typename Ri2::lane_type w_type;
 
         Data<Ri2> dataA, dataB;
@@ -1068,7 +1068,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_math()
     {
-        typedef typename V_RegTraits<R>::round_reg Ri;
+        typedef typename V_Traits<R>::v_round Ri;
         Data<R> data1, data2, data3;
         data1 *= 1.1;
         data2 += 10;

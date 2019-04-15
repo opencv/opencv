@@ -20,6 +20,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #elif CV__SIMD_FORWARD == 256
 // 256
 #define __CV_VX(fun)   v256_##fun
+#define __CV_VX_T(fun) V256_##fun
 #define __CV_V_UINT8   v_uint8x32
 #define __CV_V_INT8    v_int8x32
 #define __CV_V_UINT16  v_uint16x16
@@ -30,6 +31,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define __CV_V_INT64   v_int64x4
 #define __CV_V_FLOAT32 v_float32x8
 #define __CV_V_FLOAT64 v_float64x4
+#define __CV_V_MASK8   v_mask8x32
+#define __CV_V_MASK16  v_mask16x16
+#define __CV_V_MASK32  v_mask32x8
+#define __CV_V_MASK64  v_mask64x4
 struct v_uint8x32;
 struct v_int8x32;
 struct v_uint16x16;
@@ -40,9 +45,14 @@ struct v_uint64x4;
 struct v_int64x4;
 struct v_float32x8;
 struct v_float64x4;
+struct v_mask8x32;
+struct v_mask16x16;
+struct v_mask32x8;
+struct v_mask64x4;
 #else
 // 128
 #define __CV_VX(fun)   v_##fun
+#define __CV_VX_T(fun) V128_##fun
 #define __CV_V_UINT8   v_uint8x16
 #define __CV_V_INT8    v_int8x16
 #define __CV_V_UINT16  v_uint16x8
@@ -53,6 +63,12 @@ struct v_float64x4;
 #define __CV_V_INT64   v_int64x2
 #define __CV_V_FLOAT32 v_float32x4
 #define __CV_V_FLOAT64 v_float64x2
+#define __CV_V_MASK8   v_mask8x16
+#define __CV_V_MASK16  v_mask16x8
+#define __CV_V_MASK32  v_mask32x4
+#define __CV_V_MASK64  v_mask64x2
+
+#ifndef CV_SIMD128_CPP
 struct v_uint8x16;
 struct v_int8x16;
 struct v_uint16x8;
@@ -63,7 +79,54 @@ struct v_uint64x2;
 struct v_int64x2;
 struct v_float32x4;
 struct v_float64x2;
+struct v_mask8x16;
+struct v_mask16x8;
+struct v_mask32x4;
+struct v_mask64x2;
 #endif
+
+#endif
+
+/** Traits **/
+template<typename T>
+struct __CV_VX_T(Traits)
+{};
+
+#define CV__IMPL_INTRIN_TRAITS(_c, _v, _v_m, _v_u, _v_s, _v_w, _v_q, _v_r)   \
+    CV__IMPL_INTRIN_TRAITS_(_c, _c, _v, _v_m, _v_u, _v_s, _v_w, _v_q, _v_r)  \
+    CV__IMPL_INTRIN_TRAITS_(_v, _c, _v, _v_m, _v_u, _v_s, _v_w, _v_q, _v_r)
+
+#define CV__IMPL_INTRIN_TRAITS_(_t, _c, _v, _v_m, _v_u, _v_s, _v_w, _v_q, _v_r) \
+    template<>                                                                  \
+    struct __CV_VX_T(Traits)<_t>                                                \
+    {                                                                           \
+        typedef _c c;                                                           \
+        typedef _v v;                                                           \
+        typedef _v_m v_mask;                                                    \
+        typedef _v_u v_unsigned;                                                \
+        typedef _v_s v_signed;                                                  \
+        typedef _v_w v_wide;                                                    \
+        typedef _v_w v_twice;                                                   \
+        typedef _v_q v_quad;                                                    \
+        typedef _v_r v_round;                                                   \
+        enum { nlanes = (CV__SIMD_FORWARD / 8) / sizeof(_c) };                  \
+    };
+
+CV__IMPL_INTRIN_TRAITS(uchar,  __CV_V_UINT8,   __CV_V_MASK8,  __CV_V_UINT8,   __CV_V_INT8,  __CV_V_UINT16,  __CV_V_UINT32, void)
+CV__IMPL_INTRIN_TRAITS(schar,  __CV_V_INT8,    __CV_V_MASK8,  __CV_V_UINT8,   __CV_V_INT8,  __CV_V_INT16,   __CV_V_INT32,  void)
+CV__IMPL_INTRIN_TRAITS(ushort, __CV_V_UINT16,  __CV_V_MASK16, __CV_V_UINT16,  __CV_V_INT16, __CV_V_UINT32,  __CV_V_UINT64, void)
+CV__IMPL_INTRIN_TRAITS(short,  __CV_V_INT16,   __CV_V_MASK16, __CV_V_UINT16,  __CV_V_INT16, __CV_V_INT32,   __CV_V_INT64,  void)
+CV__IMPL_INTRIN_TRAITS(uint,   __CV_V_UINT32,  __CV_V_MASK32, __CV_V_UINT32,  __CV_V_INT32, __CV_V_UINT64,  void,          void)
+CV__IMPL_INTRIN_TRAITS(int,    __CV_V_INT32,   __CV_V_MASK32, __CV_V_UINT32,  __CV_V_INT32, __CV_V_INT64,   void,          void)
+CV__IMPL_INTRIN_TRAITS(uint64, __CV_V_UINT64,  __CV_V_MASK64, __CV_V_UINT64,  __CV_V_INT64, void,           void,          void)
+CV__IMPL_INTRIN_TRAITS(int64,  __CV_V_INT64,   __CV_V_MASK64, __CV_V_UINT64,  __CV_V_INT64, void,           void,          void)
+CV__IMPL_INTRIN_TRAITS(float,  __CV_V_FLOAT32, __CV_V_MASK32, __CV_V_FLOAT32, __CV_V_INT32, __CV_V_FLOAT64, void,  __CV_V_INT32)
+CV__IMPL_INTRIN_TRAITS(double, __CV_V_FLOAT64, __CV_V_MASK64, __CV_V_FLOAT64, __CV_V_INT64, void,           void,  __CV_V_INT32)
+
+#undef CV__IMPL_INTRIN_TRAITS
+#undef CV__IMPL_INTRIN_TRAITS_
+
+#ifndef CV_SIMD128_CPP
 
 /** Value reordering **/
 
@@ -74,6 +137,7 @@ void v_expand(const __CV_V_UINT16&, __CV_V_UINT32&, __CV_V_UINT32&);
 void v_expand(const __CV_V_INT16&,  __CV_V_INT32&,  __CV_V_INT32&);
 void v_expand(const __CV_V_UINT32&, __CV_V_UINT64&, __CV_V_UINT64&);
 void v_expand(const __CV_V_INT32&,  __CV_V_INT64&,  __CV_V_INT64&);
+
 // Low Expansion
 __CV_V_UINT16 v_expand_low(const __CV_V_UINT8&);
 __CV_V_INT16  v_expand_low(const __CV_V_INT8&);
@@ -88,6 +152,7 @@ __CV_V_UINT32 v_expand_high(const __CV_V_UINT16&);
 __CV_V_INT32  v_expand_high(const __CV_V_INT16&);
 __CV_V_UINT64 v_expand_high(const __CV_V_UINT32&);
 __CV_V_INT64  v_expand_high(const __CV_V_INT32&);
+
 // Load & Low Expansion
 __CV_V_UINT16 __CV_VX(load_expand)(const uchar*);
 __CV_V_INT16  __CV_VX(load_expand)(const schar*);
@@ -95,6 +160,7 @@ __CV_V_UINT32 __CV_VX(load_expand)(const ushort*);
 __CV_V_INT32  __CV_VX(load_expand)(const short*);
 __CV_V_UINT64 __CV_VX(load_expand)(const uint*);
 __CV_V_INT64  __CV_VX(load_expand)(const int*);
+
 // Load lower 8-bit and expand into 32-bit
 __CV_V_UINT32 __CV_VX(load_expand_q)(const uchar*);
 __CV_V_INT32  __CV_VX(load_expand_q)(const schar*);
@@ -137,9 +203,12 @@ void v_mul_expand(const __CV_V_UINT32&, const __CV_V_UINT32&, __CV_V_UINT64&, __
 void v_mul_expand(const __CV_V_INT32&,  const __CV_V_INT32&,  __CV_V_INT64&,  __CV_V_INT64&);
 #endif
 
+#endif // CV_SIMD128_CPP
+
 /** Cleanup **/
 #undef CV__SIMD_FORWARD
 #undef __CV_VX
+#undef __CV_VX_T
 #undef __CV_V_UINT8
 #undef __CV_V_INT8
 #undef __CV_V_UINT16
@@ -150,6 +219,10 @@ void v_mul_expand(const __CV_V_INT32&,  const __CV_V_INT32&,  __CV_V_INT64&,  __
 #undef __CV_V_INT64
 #undef __CV_V_FLOAT32
 #undef __CV_V_FLOAT64
+#undef __CV_V_MASK8
+#undef __CV_V_MASK16
+#undef __CV_V_MASK32
+#undef __CV_V_MASK64
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

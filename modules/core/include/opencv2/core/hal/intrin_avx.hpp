@@ -117,6 +117,10 @@ struct v_uint8x32
     }
     v_uint8x32() : val(_mm256_setzero_si256()) {}
     uchar get0() const { return (uchar)_v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_uint8x32 fromMask(const Tmvec& a)
+    { return v_uint8x32(a.val); }
 };
 
 struct v_int8x32
@@ -141,6 +145,10 @@ struct v_int8x32
     }
     v_int8x32() : val(_mm256_setzero_si256()) {}
     schar get0() const { return (schar)_v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_int8x32 fromMask(const Tmvec& a)
+    { return v_int8x32(a.val); }
 };
 
 struct v_uint16x16
@@ -161,6 +169,10 @@ struct v_uint16x16
     }
     v_uint16x16() : val(_mm256_setzero_si256()) {}
     ushort get0() const { return (ushort)_v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_uint16x16 fromMask(const Tmvec& a)
+    { return v_uint16x16(a.val); }
 };
 
 struct v_int16x16
@@ -180,6 +192,10 @@ struct v_int16x16
     }
     v_int16x16() : val(_mm256_setzero_si256()) {}
     short get0() const { return (short)_v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_int16x16 fromMask(const Tmvec& a)
+    { return v_int16x16(a.val); }
 };
 
 struct v_uint32x8
@@ -197,6 +213,10 @@ struct v_uint32x8
     }
     v_uint32x8() : val(_mm256_setzero_si256()) {}
     unsigned get0() const { return (unsigned)_v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_uint32x8 fromMask(const Tmvec& a)
+    { return v_uint32x8(a.val); }
 };
 
 struct v_int32x8
@@ -213,6 +233,10 @@ struct v_int32x8
     }
     v_int32x8() : val(_mm256_setzero_si256()) {}
     int get0() const { return _v_cvtsi256_si32(val); }
+
+    template<typename Tmvec>
+    static inline v_int32x8 fromMask(const Tmvec& a)
+    { return v_int32x8(a.val); }
 };
 
 struct v_float32x8
@@ -229,6 +253,10 @@ struct v_float32x8
     }
     v_float32x8() : val(_mm256_setzero_ps()) {}
     float get0() const { return _mm_cvtss_f32(_mm256_castps256_ps128(val)); }
+
+    template<typename Tmvec>
+    static inline v_float32x8 fromMask(const Tmvec& a)
+    { return v_float32x8(_mm256_castsi256_ps(a.val)); }
 };
 
 struct v_uint64x4
@@ -251,6 +279,10 @@ struct v_uint64x4
         return (unsigned)a | ((uint64)(unsigned)b << 32);
     #endif
     }
+
+    template<typename Tmvec>
+    static inline v_uint64x4 fromMask(const Tmvec& a)
+    { return v_uint64x4(a.val); }
 };
 
 struct v_int64x4
@@ -274,6 +306,10 @@ struct v_int64x4
         return (int64)((unsigned)a | ((uint64)(unsigned)b << 32));
     #endif
     }
+
+    template<typename Tmvec>
+    static inline v_int64x4 fromMask(const Tmvec& a)
+    { return v_int64x4(a.val); }
 };
 
 struct v_float64x4
@@ -287,7 +323,68 @@ struct v_float64x4
     { val = _mm256_setr_pd(v0, v1, v2, v3); }
     v_float64x4() : val(_mm256_setzero_pd()) {}
     double get0() const { return _mm_cvtsd_f64(_mm256_castpd256_pd128(val)); }
+
+    template<typename Tmvec>
+    static inline v_float64x4 fromMask(const Tmvec& a)
+    { return v_float64x4(_mm256_castsi256_pd(a.val)); }
 };
+
+struct v_mask8x32
+{
+    __m256i val;
+
+    v_mask8x32()
+    {}
+    explicit v_mask8x32(const __m256i& v) : val(v)
+    {}
+    template<typename Tvec>
+    static inline v_mask8x32 from(const Tvec& a)
+    { return v_mask8x32(a.val); }
+};
+
+struct v_mask16x16
+{
+    __m256i val;
+
+    v_mask16x16()
+    {}
+    explicit v_mask16x16(const __m256i& v) : val(v)
+    {}
+    template<typename Tvec>
+    static inline v_mask16x16 from(const Tvec& a)
+    { return v_mask16x16(a.val); }
+};
+
+struct v_mask32x8
+{
+    __m256i val;
+
+    v_mask32x8()
+    {}
+    explicit v_mask32x8(const __m256i& v) : val(v)
+    {}
+    template<typename Tvec>
+    static inline v_mask32x8 from(const Tvec& a)
+    { return v_mask32x8(a.val); }
+    static inline v_mask32x8 from(const v_float32x8& a)
+    { return v_mask32x8(_mm256_castps_si256(a.val)); }
+};
+
+struct v_mask64x4
+{
+    __m256i val;
+
+    v_mask64x4()
+    {}
+    explicit v_mask64x4(const __m256i& v) : val(v)
+    {}
+    template<typename Tvec>
+    static inline v_mask64x4 from(const Tvec& a)
+    { return v_mask64x4(a.val); }
+    static inline v_mask64x4 from(const v_float64x4& a)
+    { return v_mask64x4(_mm256_castpd_si256(a.val)); }
+};
+
 
 //////////////// Load and store operations ///////////////
 
@@ -835,75 +932,83 @@ OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_int64x4,    si256, _mm256_set1_epi64x(-1))
 OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float32x8,  ps,    _mm256_castsi256_ps(_mm256_set1_epi32(-1)))
 OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_float64x4,  pd,    _mm256_castsi256_pd(_mm256_set1_epi32(-1)))
 
-/** Select **/
-#define OPENCV_HAL_IMPL_AVX_SELECT(_Tpvec, suffix)                               \
-    inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_blendv_##suffix(b.val, a.val, mask.val)); }
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_mask8x32,  si256, _mm256_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_mask16x16, si256, _mm256_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_mask32x8,  si256, _mm256_set1_epi32(-1))
+OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_mask64x4,  si256, _mm256_set1_epi32(-1))
 
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint8x32,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int8x32,   epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint16x16, epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int16x16,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_uint32x8,  epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_int32x8,   epi8)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_SELECT(v_float64x4, pd)
+/** Select **/
+#define OPENCV_HAL_IMPL_AVX_SELECT(_Tpvec, _Tpmvec) \
+    inline _Tpvec v_select(const _Tpmvec& mask, const _Tpvec& a, const _Tpvec& b) \
+    { return _Tpvec(_mm256_blendv_epi8(b.val, a.val, mask.val)); }
+
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint8x32,  v_mask8x32)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int8x32,   v_mask8x32)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint16x16, v_mask16x16)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int16x16,  v_mask16x16)
+OPENCV_HAL_IMPL_AVX_SELECT(v_uint32x8,  v_mask32x8)
+OPENCV_HAL_IMPL_AVX_SELECT(v_int32x8,   v_mask32x8)
+
+inline v_float32x8 v_select(const v_mask32x8& mask, const v_float32x8& a, const v_float32x8& b)
+{ return v_float32x8(_mm256_blendv_ps(b.val, a.val, _mm256_castsi256_ps(mask.val))); }
+inline v_float64x4 v_select(const v_mask64x4& mask, const v_float64x4& a, const v_float64x4& b)
+{ return v_float64x4(_mm256_blendv_pd(b.val, a.val, _mm256_castsi256_pd(mask.val))); }
 
 /** Comparison **/
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                     \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b)  \
+#define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec, _Tpmvec)            \
+    inline _Tpmvec operator != (const _Tpvec& a, const _Tpvec& b) \
     { return ~(a == b); }                                         \
-    inline _Tpvec operator <  (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpmvec operator <  (const _Tpvec& a, const _Tpvec& b) \
     { return b > a; }                                             \
-    inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpmvec operator >= (const _Tpvec& a, const _Tpvec& b) \
     { return ~(a < b); }                                          \
-    inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpmvec operator <= (const _Tpvec& a, const _Tpvec& b) \
     { return b >= a; }
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, sbit)   \
-    inline _Tpuvec operator == (const _Tpuvec& a, const _Tpuvec& b)      \
-    { return _Tpuvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpuvec operator > (const _Tpuvec& a, const _Tpuvec& b)       \
+#define OPENCV_HAL_IMPL_AVX_CMP_OP_INT(_Tpuvec, _Tpsvec, _Tpmvec, suffix, sbit)   \
+    inline _Tpmvec operator == (const _Tpuvec& a, const _Tpuvec& b)      \
+    { return _Tpmvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
+    inline _Tpmvec operator > (const _Tpuvec& a, const _Tpuvec& b)       \
     {                                                                    \
         __m256i smask = _mm256_set1_##suffix(sbit);                      \
-        return _Tpuvec(_mm256_cmpgt_##suffix(                            \
+        return _Tpmvec(_mm256_cmpgt_##suffix(                            \
                        _mm256_xor_si256(a.val, smask),                   \
                        _mm256_xor_si256(b.val, smask)));                 \
     }                                                                    \
-    inline _Tpsvec operator == (const _Tpsvec& a, const _Tpsvec& b)      \
-    { return _Tpsvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpsvec operator > (const _Tpsvec& a, const _Tpsvec& b)       \
-    { return _Tpsvec(_mm256_cmpgt_##suffix(a.val, b.val)); }             \
-    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpuvec)                               \
-    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpsvec)
+    inline _Tpmvec operator == (const _Tpsvec& a, const _Tpsvec& b)      \
+    { return _Tpmvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
+    inline _Tpmvec operator > (const _Tpsvec& a, const _Tpsvec& b)       \
+    { return _Tpmvec(_mm256_cmpgt_##suffix(a.val, b.val)); }             \
+    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpuvec, _Tpmvec)                      \
+    OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpsvec, _Tpmvec)
 
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint8x32,  v_int8x32,  epi8,  (char)-128)
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint16x16, v_int16x16, epi16, (short)-32768)
-OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint32x8,  v_int32x8,  epi32, (int)0x80000000)
+OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint8x32,  v_int8x32,  v_mask8x32,  epi8,  (char)-128)
+OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint16x16, v_int16x16, v_mask16x16, epi16, (short)-32768)
+OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint32x8,  v_int32x8,  v_mask32x8,  epi32, (int)0x80000000)
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(_Tpvec)                 \
-    inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_cmpeq_epi64(a.val, b.val)); }         \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+#define OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(_Tpvec, _Tpmvec)         \
+    inline _Tpmvec operator == (const _Tpvec& a, const _Tpvec& b) \
+    { return _Tpmvec(_mm256_cmpeq_epi64(a.val, b.val)); }         \
+    inline _Tpmvec operator != (const _Tpvec& a, const _Tpvec& b) \
     { return ~(a == b); }
 
-OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_uint64x4)
-OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
+OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_uint64x4, v_mask64x4)
+OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4,  v_mask64x4)
 
-#define OPENCV_HAL_IMPL_AVX_CMP_FLT(bin_op, imm8, _Tpvec, suffix)    \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
-    { return _Tpvec(_mm256_cmp_##suffix(a.val, b.val, imm8)); }
+#define OPENCV_HAL_IMPL_AVX_CMP_FLT(bin_op, imm8, _Tpvec, _Tpmvec, suffix) \
+    inline _Tpmvec operator bin_op (const _Tpvec& a, const _Tpvec& b)      \
+    { return _Tpmvec(_mm256_cast##suffix##_si256(_mm256_cmp_##suffix(a.val, b.val, imm8))); }
 
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(_Tpvec, suffix)               \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(==, _CMP_EQ_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(!=, _CMP_NEQ_OQ, _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(<,  _CMP_LT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(>,  _CMP_GT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(<=, _CMP_LE_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(>=, _CMP_GE_OQ,  _Tpvec, suffix)
+#define OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(_Tpvec, _Tpmvec, suffix)           \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(==, _CMP_EQ_OQ,  _Tpvec, _Tpmvec, suffix) \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(!=, _CMP_NEQ_OQ, _Tpvec, _Tpmvec, suffix) \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(<,  _CMP_LT_OQ,  _Tpvec, _Tpmvec, suffix) \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(>,  _CMP_GT_OQ,  _Tpvec, _Tpmvec, suffix) \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(<=, _CMP_LE_OQ,  _Tpvec, _Tpmvec, suffix) \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(>=, _CMP_GE_OQ,  _Tpvec, _Tpmvec, suffix)
 
-OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float32x8, ps)
-OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float64x4, pd)
+OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float32x8, v_mask32x8, ps)
+OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float64x4, v_mask64x4, pd)
 
 inline v_float32x8 v_not_nan(const v_float32x8& a)
 { return v_float32x8(_mm256_cmp_ps(a.val, a.val, _CMP_ORD_Q)); }
@@ -1166,7 +1271,7 @@ inline unsigned v_reduce_sad(const v_uint32x8& a, const v_uint32x8& b)
 }
 inline unsigned v_reduce_sad(const v_int32x8& a, const v_int32x8& b)
 {
-    v_int32x8 m = a < b;
+    v_int32x8 m = v_int32x8::fromMask(a < b);
     return v_reduce_sum(v_reinterpret_as_u32(((a - b) ^ m) - m));
 }
 inline float v_reduce_sad(const v_float32x8& a, const v_float32x8& b)
@@ -1200,7 +1305,9 @@ OPENCV_HAL_IMPL_AVX_POPCOUNT(v_int32x8)
 inline int v_signmask(const v_int8x32& a)
 { return _mm256_movemask_epi8(a.val); }
 inline int v_signmask(const v_uint8x32& a)
-{ return v_signmask(v_reinterpret_as_s8(a)); }
+{ return _mm256_movemask_epi8(a.val); }
+inline int v_signmask(const v_mask8x32& a)
+{ return _mm256_movemask_epi8(a.val); }
 
 inline int v_signmask(const v_int16x16& a)
 {
@@ -1209,6 +1316,8 @@ inline int v_signmask(const v_int16x16& a)
 }
 inline int v_signmask(const v_uint16x16& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
+inline int v_signmask(const v_mask16x16& a)
+{ return v_signmask(v_int16x16(a.val)); }
 
 inline int v_signmask(const v_int32x8& a)
 {
@@ -1218,6 +1327,8 @@ inline int v_signmask(const v_int32x8& a)
 }
 inline int v_signmask(const v_uint32x8& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
+inline int v_signmask(const v_mask32x8& a)
+{ return v_signmask(v_int32x8(a.val)); }
 
 inline int v_signmask(const v_float32x8& a)
 { return _mm256_movemask_ps(a.val); }
@@ -1327,7 +1438,7 @@ inline v_uint32x8 v_absdiff(const v_uint32x8& a, const v_uint32x8& b)
 inline v_uint8x32 v_absdiff(const v_int8x32& a, const v_int8x32& b)
 {
     v_int8x32 d = v_sub_wrap(a, b);
-    v_int8x32 m = a < b;
+    v_int8x32 m = v_int8x32::fromMask(a < b);
     return v_reinterpret_as_u8(v_sub_wrap(d ^ m, m));
 }
 
@@ -1337,7 +1448,7 @@ inline v_uint16x16 v_absdiff(const v_int16x16& a, const v_int16x16& b)
 inline v_uint32x8 v_absdiff(const v_int32x8& a, const v_int32x8& b)
 {
     v_int32x8 d = a - b;
-    v_int32x8 m = a < b;
+    v_int32x8 m = v_int32x8::fromMask(a < b);
     return v_reinterpret_as_u32((d ^ m) - m);
 }
 
@@ -1351,7 +1462,7 @@ inline v_float64x4 v_absdiff(const v_float64x4& a, const v_float64x4& b)
 inline v_int8x32 v_absdiffs(const v_int8x32& a, const v_int8x32& b)
 {
     v_int8x32 d = a - b;
-    v_int8x32 m = a < b;
+    v_int8x32 m = v_int8x32::fromMask(a < b);
     return (d ^ m) - m;
 }
 inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
@@ -1707,6 +1818,28 @@ OPENCV_HAL_IMPL_AVX_EXPAND(v_int32x8,   v_int64x4,   int,      _mm256_cvtepi32_e
 OPENCV_HAL_IMPL_AVX_EXPAND_Q(v_uint32x8, uchar, _mm256_cvtepu8_epi32)
 OPENCV_HAL_IMPL_AVX_EXPAND_Q(v_int32x8,  schar, _mm256_cvtepi8_epi32)
 
+#define OPENCV_HAL_IMPL_AVX_EXPAND_MASK(_Tpmvec, _Tpwmvec, suffix)     \
+    inline void v_expand(const _Tpmvec& a, _Tpwmvec& b0, _Tpwmvec& b1) \
+    {                                                                  \
+        __m256i a1 = _v256_shuffle_odd_64(a.val);                      \
+        b0.val = _mm256_unpacklo_##suffix(a1, a1);                     \
+        b1.val = _mm256_unpackhi_##suffix(a1, a1);                     \
+    }                                                                  \
+    inline _Tpwmvec v_expand_low(const _Tpmvec& a)                     \
+    {                                                                  \
+        __m256i a1 = _v256_shuffle_odd_64(a.val);                      \
+        return _Tpwmvec(_mm256_unpacklo_##suffix(a1, a1));             \
+    }                                                                  \
+    inline _Tpwmvec v_expand_high(const _Tpmvec& a)                    \
+    {                                                                  \
+        __m256i a1 = _v256_shuffle_odd_64(a.val);                      \
+        return _Tpwmvec(_mm256_unpackhi_##suffix(a1, a1));             \
+    }
+
+OPENCV_HAL_IMPL_AVX_EXPAND_MASK(v_mask8x32,  v_mask16x16, epi8)
+OPENCV_HAL_IMPL_AVX_EXPAND_MASK(v_mask16x16, v_mask32x8,  epi16)
+OPENCV_HAL_IMPL_AVX_EXPAND_MASK(v_mask32x8,  v_mask64x4,  epi32)
+
 /* pack */
 // 16
 inline v_int8x32 v_pack(const v_int16x16& a, const v_int16x16& b)
@@ -1902,26 +2035,32 @@ void v_rshr_pack_store(int* ptr, const v_int64x4& a)
     v_pack_store(ptr, (a + delta) >> n);
 }
 
-// pack boolean
-inline v_uint8x32 v_pack_b(const v_uint16x16& a, const v_uint16x16& b)
+// pack mask
+inline v_mask8x32 v_pack(const v_mask16x16& a, const v_mask16x16& b)
 {
     __m256i ab = _mm256_packs_epi16(a.val, b.val);
-    return v_uint8x32(_v256_shuffle_odd_64(ab));
+    return v_mask8x32(_v256_shuffle_odd_64(ab));
 }
 
-inline v_uint8x32 v_pack_b(const v_uint32x8& a, const v_uint32x8& b,
-                           const v_uint32x8& c, const v_uint32x8& d)
+inline v_mask16x16 v_pack(const v_mask32x8& a, const v_mask32x8& b)
+{
+    __m256i ab = _mm256_packs_epi32(a.val, b.val);
+    return v_mask16x16(_v256_shuffle_odd_64(ab));
+}
+
+inline v_mask8x32 v_pack(const v_mask32x8& a, const v_mask32x8& b,
+                         const v_mask32x8& c, const v_mask32x8& d)
 {
     __m256i ab = _mm256_packs_epi32(a.val, b.val);
     __m256i cd = _mm256_packs_epi32(c.val, d.val);
 
     __m256i abcd = _v256_shuffle_odd_64(_mm256_packs_epi16(ab, cd));
-    return v_uint8x32(_mm256_shuffle_epi32(abcd, _MM_SHUFFLE(3, 1, 2, 0)));
+    return v_mask8x32(_mm256_shuffle_epi32(abcd, _MM_SHUFFLE(3, 1, 2, 0)));
 }
 
-inline v_uint8x32 v_pack_b(const v_uint64x4& a, const v_uint64x4& b, const v_uint64x4& c,
-                           const v_uint64x4& d, const v_uint64x4& e, const v_uint64x4& f,
-                           const v_uint64x4& g, const v_uint64x4& h)
+inline v_mask8x32 v_pack(const v_mask64x4& a, const v_mask64x4& b, const v_mask64x4& c,
+                         const v_mask64x4& d, const v_mask64x4& e, const v_mask64x4& f,
+                         const v_mask64x4& g, const v_mask64x4& h)
 {
     __m256i ab = _mm256_packs_epi32(a.val, b.val);
     __m256i cd = _mm256_packs_epi32(c.val, d.val);
@@ -1933,7 +2072,7 @@ inline v_uint8x32 v_pack_b(const v_uint64x4& a, const v_uint64x4& b, const v_uin
     __m256i pkall = _v256_shuffle_odd_64(_mm256_packs_epi16(abcd, efgh));
 
     __m256i rev = _mm256_alignr_epi8(pkall, pkall, 8);
-    return v_uint8x32(_mm256_unpacklo_epi16(pkall, rev));
+    return v_mask8x32(_mm256_unpacklo_epi16(pkall, rev));
 }
 
 /* Recombine */
