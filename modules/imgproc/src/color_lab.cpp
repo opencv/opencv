@@ -1968,68 +1968,126 @@ struct Lab2RGBfloat
 
 #if CV_SIMD
         const int vsize = v_float32::nlanes;
+        const int nrepeats = vsize == 4 ? 2 : 1;
         v_float32 v16_116 = vx_setall_f32(16.0f / 116.0f);
-        v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
-        v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
-        v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
-        for( ; i <= n-vsize;
-             i += vsize, src += 3*vsize, dst += dcn*vsize)
+        for( ; i <= n-vsize*nrepeats;
+               i += vsize*nrepeats, src += 3*vsize*nrepeats, dst += dcn*vsize*nrepeats)
         {
-            v_float32 li, ai, bi;
-            v_load_deinterleave(src, li, ai, bi);
-
-            v_float32 x, y, z, fy;
-            v_float32 ylo, yhi, fylo, fyhi;
-            v_float32 limask = li <= vx_setall_f32(lThresh);
-            // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
-            ylo = li * vx_setall_f32(1.f/903.3f);
-            fylo = vx_setall_f32(7.787f) * ylo + v16_116;
-            fyhi = (li + vx_setall_f32(16.0f)) * vx_setall_f32(1.f/116.0f);
-            yhi = fyhi * fyhi * fyhi;
-
-            y  = v_select(limask, ylo,  yhi);
-            fy = v_select(limask, fylo, fyhi);
-
-            v_float32 fxz[2];
-            fxz[0] = v_fma(ai, vx_setall_f32( 1.f/500.0f), fy);
-            fxz[1] = v_fma(bi, vx_setall_f32(-1.f/200.0f), fy);
-
-            v_float32 vfTresh = vx_setall_f32(fThresh);
-            for (int j = 0; j < 2; j++)
+            v_float32 li[nrepeats], ai[nrepeats], bi[nrepeats];
+            for(int k = 0; k < nrepeats; k++)
             {
-                v_float32 f = fxz[j];
-                v_float32 fmask = f <= vfTresh;
-                v_float32 flo = (f - v16_116) * vx_setall_f32(1.f/7.787f);
-                v_float32 fhi = f*f*f;
-                fxz[j] = v_select(fmask, flo, fhi);
+                v_load_deinterleave(src + k*3*vsize, li[k], ai[k], bi[k]);
             }
 
-            x = fxz[0], z = fxz[1];
+            v_float32 x[nrepeats], y[nrepeats], z[nrepeats], fy[nrepeats];
+            v_float32 limask[nrepeats];
+            v_float32 vlThresh = vx_setall_f32(lThresh);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                limask[k] = li[k] <= vlThresh;
+            }
+            v_float32 ylo[nrepeats], yhi[nrepeats], fylo[nrepeats], fyhi[nrepeats];
+            // 903.3 = (29/3)^3, 7.787 = (29/3)^3/(29*4)
+            v_float32 vinv903 = vx_setall_f32(1.f/903.3f);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                ylo[k] = li[k] * vinv903;
+            }
+            v_float32 v7787 = vx_setall_f32(7.787f);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                fylo[k] = v_fma(v7787, ylo[k], v16_116);
+            }
+            v_float32 v16 = vx_setall_f32(16.0f), vinv116 = vx_setall_f32(1.f/116.0f);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                fyhi[k] = (li[k] + v16) * vinv116;
+            }
+            for(int k = 0; k < nrepeats; k++)
+            {
+                yhi[k] = fyhi[k] * fyhi[k] * fyhi[k];
+            }
+            for(int k = 0; k < nrepeats; k++)
+            {
+                y[k]  = v_select(limask[k], ylo[k],  yhi[k]);
+                fy[k] = v_select(limask[k], fylo[k], fyhi[k]);
+            }
 
-            v_float32 ro, bo, go;
-            ro = v_fma(vc0, x, v_fma(vc1, y, vc2 * z));
-            go = v_fma(vc3, x, v_fma(vc4, y, vc5 * z));
-            bo = v_fma(vc6, x, v_fma(vc7, y, vc8 * z));
+            v_float32 fxz[nrepeats*2];
+            v_float32 vpinv500 = vx_setall_f32( 1.f/500.f);
+            v_float32 vninv200 = vx_setall_f32(-1.f/200.f);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                fxz[k*2+0] = v_fma(ai[k], vpinv500, fy[k]);
+                fxz[k*2+1] = v_fma(bi[k], vninv200, fy[k]);
+            }
+            v_float32 vfTresh = vx_setall_f32(fThresh);
+            v_float32 vinv7787 = vx_setall_f32(1.f/7.787f);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    v_float32 f = fxz[k*2+j];
+                    v_float32 fmask = f <= vfTresh;
+                    v_float32 flo = (f - v16_116) * vinv7787;
+                    v_float32 fhi = f*f*f;
+                    fxz[k*2+j] = v_select(fmask, flo, fhi);
+                }
+            }
+            for(int k = 0; k < nrepeats; k++)
+            {
+                x[k] = fxz[k*2+0], z[k] = fxz[k*2+1];
+            }
+            v_float32 ro[nrepeats], go[nrepeats], bo[nrepeats];
+            v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
+            v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
+            v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
+            for(int k = 0; k < nrepeats; k++)
+            {
+                ro[k] = v_fma(vc0, x[k], v_fma(vc1, y[k], vc2 * z[k]));
+                go[k] = v_fma(vc3, x[k], v_fma(vc4, y[k], vc5 * z[k]));
+                bo[k] = v_fma(vc6, x[k], v_fma(vc7, y[k], vc8 * z[k]));
+            }
             v_float32 one = vx_setall_f32(1.f), zero = vx_setzero_f32();
-            ro = v_max(zero, v_min(ro, one));
-            go = v_max(zero, v_min(go, one));
-            bo = v_max(zero, v_min(bo, one));
+            for(int k = 0; k < nrepeats; k++)
+            {
+                ro[k] = v_max(zero, v_min(ro[k], one));
+                go[k] = v_max(zero, v_min(go[k], one));
+                bo[k] = v_max(zero, v_min(bo[k], one));
+            }
 
             if (gammaTab)
             {
                 v_float32 vgscale = vx_setall_f32(gscale);
-                ro = splineInterpolate(ro * vgscale, gammaTab, GAMMA_TAB_SIZE);
-                go = splineInterpolate(go * vgscale, gammaTab, GAMMA_TAB_SIZE);
-                bo = splineInterpolate(bo * vgscale, gammaTab, GAMMA_TAB_SIZE);
+                for(int k = 0; k < nrepeats; k++)
+                {
+                    ro[k] *= vgscale;
+                    go[k] *= vgscale;
+                    bo[k] *= vgscale;
+                }
+
+                for(int k = 0; k < nrepeats; k++)
+                {
+                    ro[k] = splineInterpolate(ro[k], gammaTab, GAMMA_TAB_SIZE);
+                    go[k] = splineInterpolate(go[k], gammaTab, GAMMA_TAB_SIZE);
+                    bo[k] = splineInterpolate(bo[k], gammaTab, GAMMA_TAB_SIZE);
+                }
             }
 
             if(dcn == 4)
             {
-                v_store_interleave(dst, ro, go, bo, vx_setall_f32(alpha));
+                v_float32 valpha = vx_setall_f32(alpha);
+                for(int k = 0; k < nrepeats; k++)
+                {
+                    v_store_interleave(dst + 4*vsize*k, ro[k], go[k], bo[k], valpha);
+                }
             }
             else // dcn == 3
             {
-                v_store_interleave(dst, ro, go, bo);
+                for(int k = 0; k < nrepeats; k++)
+                {
+                    v_store_interleave(dst + 3*vsize*k, ro[k], go[k], bo[k]);
+                }
             }
         }
 
