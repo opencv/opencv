@@ -1679,7 +1679,7 @@ static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 #include "pyopencv_generated_enums.h"
 #include "pyopencv_custom_headers.h"
 
-#define CVPY_TYPE(NAME, STORAGE) CVPY_TYPE_DECLARE(NAME, STORAGE) CVPY_TYPE_REGISTER_STATIC(NAME)
+#define CVPY_TYPE(NAME, STORAGE, SNAME) CVPY_TYPE_DECLARE(NAME, STORAGE, SNAME)
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
 
@@ -1760,7 +1760,7 @@ static bool init_body(PyObject * m)
 #include "pyopencv_generated_modules.h"
 #undef CVPY_MODULE
 
-#define CVPY_TYPE(NAME, _) CVPY_TYPE_INIT_STATIC(NAME, return false)
+#define CVPY_TYPE(NAME, _1, _2) CVPY_TYPE_INIT_STATIC(NAME, return false)
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
 

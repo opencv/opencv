@@ -17,14 +17,14 @@ ignored_arg_types = ["RNG*"]
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
 
 gen_template_check_self = Template("""    $cname* _self_ = NULL;
-    if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+    if(PyObject_TypeCheck(self, pyopencv_${name}_TypePtr))
         _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
     if (!_self_)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
 """)
 
 gen_template_check_self_algo = Template("""    $cname* _self_ = NULL;
-    if(PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+    if(PyObject_TypeCheck(self, pyopencv_${name}_TypePtr))
         _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
     if (!_self_)
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
@@ -50,42 +50,6 @@ gen_template_func_body = Template("""$code_decl
     }
 """)
 
-gen_template_simple_type_decl = Template("""
-
-//==================================================================================================
-// ${name} (simple)
-
-static void pyopencv_${name}_dealloc(PyObject* self)
-{
-    ((pyopencv_${name}_t*)self)->v.${cname}::~${sname}();
-    PyObject_Del(self);
-}
-
-template<>
-struct PyOpenCV_Converter< ${cname} >
-{
-    static PyObject* from(const ${cname}& r)
-    {
-        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-        new (&m->v) ${cname}(r); //Copy constructor
-        return (PyObject*)m;
-    }
-
-    static bool to(PyObject* src, ${cname}& dst, const char* name)
-    {
-        if(!src || src == Py_None)
-            return true;
-        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
-        {
-            dst = ((pyopencv_${name}_t*)src)->v;
-            return true;
-        }
-        failmsg("Expected ${cname} for argument '%%s'", name);
-        return false;
-    }
-};
-""")
-
 gen_template_mappable = Template("""
     {
         ${mappable} _src;
@@ -98,32 +62,22 @@ gen_template_mappable = Template("""
 
 gen_template_type_decl = Template("""
 //==================================================================================================
-// ${name}
-
-static void pyopencv_${name}_dealloc(PyObject* self)
-{
-    ((pyopencv_${name}_t*)self)->v.release();
-    PyObject_Del(self);
-}
+// ${name} (${cname})
 
 template<>
-struct PyOpenCV_Converter< Ptr<${cname}> >
+struct PyOpenCV_Converter< ${cname} >
 {
-    static PyObject* from(const Ptr<${cname}>& r)
+    static PyObject* from(const ${cname}& r)
     {
-        pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-        new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
-        m->v = r;
-        return (PyObject*)m;
+        return pyopencv_${name}_Instance(r);
     }
-
-    static bool to(PyObject* src, Ptr<${cname}>& dst, const char* name)
+    static bool to(PyObject* src, ${cname}& dst, const char* name)
     {
         if(!src || src == Py_None)
             return true;
-        if(PyObject_TypeCheck(src, &pyopencv_${name}_Type))
+        if(PyObject_TypeCheck(src, pyopencv_${name}_TypePtr))
         {
-            dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
+            dst = ((pyopencv_${name}_t*)src)->v;
             return true;
         }
         ${mappable_code}
@@ -151,13 +105,6 @@ gen_template_type_impl = Template("""
 //==================================================================================================
 // ${name} (impl)
 
-static PyObject* pyopencv_${name}_repr(PyObject* self)
-{
-    char str[1000];
-    sprintf(str, "<$wname %p>", self);
-    return PyString_FromString(str);
-}
-
 ${getset_code}
 
 static PyGetSetDef pyopencv_${name}_getseters[] =
@@ -175,12 +122,12 @@ ${methods_inits}
 
 static void pyopencv_${name}_specials(void)
 {
-    pyopencv_${name}_Type.tp_base = ${baseptr};
-    pyopencv_${name}_Type.tp_dealloc = pyopencv_${name}_dealloc;
-    pyopencv_${name}_Type.tp_repr = pyopencv_${name}_repr;
-    pyopencv_${name}_Type.tp_getset = pyopencv_${name}_getseters;
-    pyopencv_${name}_Type.tp_init = (initproc)${constructor};
-    pyopencv_${name}_Type.tp_methods = pyopencv_${name}_methods;${extra_specials}
+    pyopencv_${name}_TypePtr->tp_base = ${baseptr};
+    pyopencv_${name}_TypePtr->tp_dealloc = pyopencv_${name}_dealloc;
+    pyopencv_${name}_TypePtr->tp_repr = pyopencv_${name}_repr;
+    pyopencv_${name}_TypePtr->tp_getset = pyopencv_${name}_getseters;
+    pyopencv_${name}_TypePtr->tp_init = (initproc)${constructor};
+    pyopencv_${name}_TypePtr->tp_methods = pyopencv_${name}_methods;${extra_specials}
 }
 """)
 
@@ -357,7 +304,7 @@ class ClassInfo(object):
 
         baseptr = "NULL"
         if self.base and self.base in all_classes:
-            baseptr = "&pyopencv_" + all_classes[self.base].name + "_Type"
+            baseptr = "pyopencv_" + all_classes[self.base].name + "_TypePtr"
 
         constructor_name = "0"
         if self.constructor is not None:
@@ -1088,17 +1035,17 @@ class PythonWrapperGenerator(object):
         classlist.sort()
         for name, classinfo in classlist:
             if classinfo.ismap:
-                self.code_types.write(gen_template_map_type_cvt.substitute(name=name, cname=classinfo.cname))
+                self.code_types.write(gen_template_map_type_cvt.substitute(name=classinfo.name, cname=classinfo.cname))
             else:
-                if classinfo.issimple:
-                    templ = gen_template_simple_type_decl
-                else:
-                    templ = gen_template_type_decl
                 mappable_code = "\n".join([
                                       gen_template_mappable.substitute(cname=classinfo.cname, mappable=mappable)
                                           for mappable in classinfo.mappables])
-                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname, sname=classinfo.sname,
-                                      cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname), mappable_code=mappable_code))
+                code = gen_template_type_decl.substitute(
+                    name=classinfo.name,
+                    cname=classinfo.cname if classinfo.issimple else "Ptr<{}>".format(classinfo.cname),
+                    mappable_code=mappable_code
+                )
+                self.code_types.write(code)
 
         # register classes in the same order as they have been declared.
         # this way, base classes will be registered in Python before their derivatives.
@@ -1110,11 +1057,11 @@ class PythonWrapperGenerator(object):
             self.code_types.write(code)
             if classinfo.ismap:
                 continue
-            if classinfo.issimple:
-                self.code_type_publish.write("CVPY_TYPE({}, {});\n".format(classinfo.name, classinfo.cname))
-            else:
-                cname1 = "cv::Algorithm" if classinfo.isalgorithm else classinfo.cname
-                self.code_type_publish.write("CVPY_TYPE({}, Ptr<{}>);\n".format(classinfo.name, cname1))
+            self.code_type_publish.write("CVPY_TYPE({}, {}, {});\n".format(
+                classinfo.name,
+                classinfo.cname if classinfo.issimple else "Ptr<{}>".format(classinfo.cname),
+                classinfo.sname if classinfo.issimple else "Ptr<{}>".format(classinfo.cname))
+            )
 
 
         # step 3: generate the code for all the global functions
