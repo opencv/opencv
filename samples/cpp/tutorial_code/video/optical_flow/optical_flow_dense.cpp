@@ -10,7 +10,7 @@ using namespace std;
 
 int main()
 {
-    VideoCapture capture("vtest.avi");
+    VideoCapture capture(samples::findFile("vtest.avi"));
     if (!capture.isOpened()){
         //error in opening the video input
         cerr << "Unable to open file!" << endl;

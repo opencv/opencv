@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-cap = cv.VideoCapture("vtest.avi")
+cap = cv.VideoCapture(cv.samples.findFile("vtest.avi"))
 ret, frame1 = cap.read()
 prvs = cv.cvtColor(frame1,cv.COLOR_BGR2GRAY)
 hsv = np.zeros_like(frame1)
