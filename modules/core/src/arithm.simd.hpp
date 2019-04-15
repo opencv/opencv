@@ -946,7 +946,7 @@ struct scalar_loader_n<sizeof(uchar), OP, T1, T2, Tvec>
 template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
 struct scalar_loader_n<sizeof(ushort), OP, T1, T2, Tvec>
 {
-    typedef typename V_RegTraits<Tvec>::w_reg Twvec;
+    typedef typename V_Traits<Tvec>::v_twice Twvec;
     typedef OP<T1, T2, Tvec> op;
 
     static inline void l(const T1* src1, const T1* src2, const T2* scalar, T1* dst)
