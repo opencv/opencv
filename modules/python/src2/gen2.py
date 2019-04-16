@@ -16,20 +16,12 @@ ignored_arg_types = ["RNG*"]
 
 pass_by_val_types = ["Point*", "Point2f*", "Rect*", "String*", "double*", "float*", "int*"]
 
-gen_template_check_self = Template("""    $cname* _self_ = NULL;
-    if(PyObject_TypeCheck(self, pyopencv_${name}_TypePtr))
-        _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
-    if (!_self_)
+gen_template_check_self = Template("""
+    ${cname} * self1 = 0;
+    if (!pyopencv_${name}_getp(self, self1))
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
+    ${pname} _self_ = ${cvt}(self1);
 """)
-
-gen_template_check_self_algo = Template("""    $cname* _self_ = NULL;
-    if(PyObject_TypeCheck(self, pyopencv_${name}_TypePtr))
-        _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
-    if (!_self_)
-        return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
-""")
-
 gen_template_call_constructor_prelude = Template("""new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
         if(self) """)
 
@@ -75,9 +67,10 @@ struct PyOpenCV_Converter< ${cname} >
     {
         if(!src || src == Py_None)
             return true;
-        if(PyObject_TypeCheck(src, pyopencv_${name}_TypePtr))
+        ${cname} * dst_;
+        if (pyopencv_${name}_getp(src, dst_))
         {
-            dst = ((pyopencv_${name}_t*)src)->v;
+            dst = *dst_;
             return true;
         }
         ${mappable_code}
@@ -563,7 +556,7 @@ class FuncInfo(object):
         code = "%s\n{\n" % (proto,)
         code += "    using namespace %s;\n\n" % self.namespace.replace('.', '::')
 
-        selfinfo = ClassInfo("")
+        selfinfo = None
         ismethod = self.classname != "" and not self.isconstructor
         # full name is needed for error diagnostic in PyArg_ParseTupleAndKeywords
         fullname = self.name
@@ -571,14 +564,13 @@ class FuncInfo(object):
         if self.classname:
             selfinfo = all_classes[self.classname]
             if not self.isconstructor:
-                amp = "&" if selfinfo.issimple else ""
-                if self.is_static:
-                    pass
-                elif selfinfo.isalgorithm:
-                    code += gen_template_check_self_algo.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
-                else:
-                    get = "" if selfinfo.issimple else ".get()"
-                    code += gen_template_check_self.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp, get=get)
+                if not self.is_static:
+                    code += gen_template_check_self.substitute(
+                        name=selfinfo.name,
+                        cname=selfinfo.cname if selfinfo.issimple else "Ptr<{}>".format(selfinfo.cname),
+                        pname=(selfinfo.cname + '*') if selfinfo.issimple else "Ptr<{}>".format(selfinfo.cname),
+                        cvt='' if selfinfo.issimple else '*'
+                    )
                 fullname = selfinfo.wname + "." + fullname
 
         all_code_variants = []

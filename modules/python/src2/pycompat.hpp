@@ -115,6 +115,15 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
         sizeof(pyopencv_##NAME##_t), \
     }; \
     static PyTypeObject * pyopencv_##NAME##_TypePtr = &pyopencv_##NAME##_TypeXXX; \
+    static bool pyopencv_##NAME##_getp(PyObject * self, STORAGE * & dst) \
+    { \
+        if (PyObject_TypeCheck(self, pyopencv_##NAME##_TypePtr)) \
+        { \
+            dst = &(((pyopencv_##NAME##_t*)self)->v); \
+            return true; \
+        } \
+        return false; \
+    } \
     static PyObject * pyopencv_##NAME##_Instance(const STORAGE &r) \
     { \
         pyopencv_##NAME##_t *m = PyObject_NEW(pyopencv_##NAME##_t, pyopencv_##NAME##_TypePtr); \
