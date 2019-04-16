@@ -1,2 +1,6 @@
 set(the_description "2D Features Framework")
-ocv_define_module(features2d opencv_imgproc OPTIONAL opencv_flann opencv_highgui WRAP java python js)
+set(debug_modules "")
+if(DEBUG_opencv_features2d)
+  list(APPEND debug_modules opencv_highgui)
+endif()
+ocv_define_module(features2d opencv_imgproc ${debug_modules} OPTIONAL opencv_flann WRAP java python js)

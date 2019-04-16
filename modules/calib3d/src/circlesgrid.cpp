@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+
+ // Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CIRCLES
 
 #ifdef DEBUG_CIRCLES
