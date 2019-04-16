@@ -179,6 +179,9 @@ namespace GModel
         , ActiveBackends
         >;
 
+    // FIXME:
+    // Export a single class, not a bunch of functions inside a namespace
+
     // User should initialize graph before using it
     // GAPI_EXPORTS for tests
     GAPI_EXPORTS void init (Graph& g);
