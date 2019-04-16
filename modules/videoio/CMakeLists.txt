@@ -233,8 +233,8 @@ if(IOS)
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
 endif()
 
-if(UNIX)
-  #these variables are set by CHECK_MODULE macro
+if(TRUE)
+  # these variables are set by 'ocv_append_build_options(VIDEOIO ...)'
   foreach(P ${VIDEOIO_INCLUDE_DIRS})
     ocv_include_directories(${P})
   endforeach()
