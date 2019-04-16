@@ -1769,3 +1769,22 @@ macro(ocv_git_describe var_name path)
     set(${var_name} "unknown")
   endif()
 endmacro()
+
+
+# ocv_update_file(filepath content [VERBOSE])
+# - write content to file
+# - will not change modification time in case when file already exists and content has not changed
+function(ocv_update_file filepath content)
+  if(EXISTS "${filepath}")
+    file(READ "${filepath}" actual_content)
+  else()
+    set(actual_content "")
+  endif()
+  if("${actual_content}" STREQUAL "${content}")
+    if(";${ARGN};" MATCHES ";VERBOSE;")
+      message(STATUS "${filepath} contains the same content")
+    endif()
+  else()
+    file(WRITE "${filepath}" "${content}")
+  endif()
+endfunction()

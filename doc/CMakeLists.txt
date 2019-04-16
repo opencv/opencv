@@ -15,7 +15,7 @@ if(DOXYGEN_FOUND)
 
   # not documented modules list
   set(blacklist "${DOXYGEN_BLACKLIST}")
-  list(APPEND blacklist "ts" "java_bindings_generator" "java" "python_bindings_generator" "python2" "python3" "js" "world")
+  list(APPEND blacklist "ts" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
 
@@ -38,8 +38,18 @@ if(DOXYGEN_FOUND)
   set(refs_extra)
   set(deps)
   foreach(m ${OPENCV_MODULES_MAIN} ${OPENCV_MODULES_EXTRA})
+    set(the_module "${m}")
+    if(NOT the_module MATCHES "^opencv_")
+      set(the_module "opencv_${m}")
+    endif()
     list(FIND blacklist ${m} _pos)
+    if(NOT EXISTS "${OPENCV_MODULE_${the_module}_LOCATION}/include"
+        AND NOT EXISTS "${OPENCV_MODULE_${the_module}_LOCATION}/doc"
+    )
+      set(_pos -2)  # blacklist
+    endif()
     if(${_pos} EQUAL -1)
+      list(APPEND CMAKE_DOXYGEN_ENABLED_SECTIONS "HAVE_opencv_${m}")
       # include folder
       set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
       if(EXISTS "${header_dir}")

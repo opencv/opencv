@@ -97,9 +97,7 @@ I1 = gI1;       // Download, gI1.download(I1) will work too
 @endcode
 Once you have your data up in the GPU memory you may call GPU enabled functions of OpenCV. Most of
 the functions keep the same name just as on the CPU, with the difference that they only accept
-*GpuMat* inputs. A full list of these you will find in the documentation: [online
-here](http://docs.opencv.org/modules/gpu/doc/gpu.html) or the OpenCV reference manual that comes
-with the source code.
+*GpuMat* inputs.
 
 Another thing to keep in mind is that not for all channel numbers you can make efficient algorithms
 on the GPU. Generally, I found that the input images for the GPU images need to be either one or

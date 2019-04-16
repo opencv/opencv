@@ -401,6 +401,10 @@ bool  TiffDecoder::readData( Mat& img )
                     (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
                 tile_height0 = m_height;
 
+            CV_Assert((int)tile_width0 > 0 && (int)tile_width0 < std::numeric_limits<int>::max());
+            CV_Assert((int)tile_height0 > 0 && (int)tile_height0 < std::numeric_limits<int>::max());
+            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * (bpp / bitsPerByte) < (CV_BIG_UINT(1) << 30)) && "TIFF tile size is too large: >= 1Gb");
+
             if (dst_bpp == 8)
             {
                 // we will use TIFFReadRGBA* functions, so allocate temporary buffer for 32bit RGBA

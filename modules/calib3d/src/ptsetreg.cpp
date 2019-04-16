@@ -833,6 +833,13 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
         to.convertTo(tmp2, CV_32FC2);
         to = tmp2;
     }
+    else
+    {
+        // avoid changing of inputs in compressElems() call
+        from = from.clone();
+        to = to.clone();
+    }
+
     // convert to N x 1 vectors
     from = from.reshape(2, count);
     to = to.reshape(2, count);
@@ -900,6 +907,13 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
         to.convertTo(tmp2, CV_32FC2);
         to = tmp2;
     }
+    else
+    {
+        // avoid changing of inputs in compressElems() call
+        from = from.clone();
+        to = to.clone();
+    }
+
     // convert to N x 1 vectors
     from = from.reshape(2, count);
     to = to.reshape(2, count);
