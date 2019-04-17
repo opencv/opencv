@@ -6,7 +6,7 @@
 #pragma warning(disable:5033)  // 'register' is no longer a supported storage class
 #endif
 
-#define CVPY_DYNAMIC_INIT
+// #define CVPY_DYNAMIC_INIT
 // #define Py_DEBUG
 
 #if defined(CVPY_DYNAMIC_INIT) && !defined(Py_DEBUG)
