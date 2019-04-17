@@ -90,8 +90,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
-        //!< Intel's Inference Engine computational backend.
-        DNN_BACKEND_INFERENCE_ENGINE,
+        DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
         DNN_BACKEND_OPENCV
     };
 
@@ -105,8 +104,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
-        //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
-        DNN_TARGET_FPGA
+        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();

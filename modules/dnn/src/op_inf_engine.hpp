@@ -209,6 +209,7 @@ private:
 
         InferenceEngine::InferRequest req;
         std::vector<std::promise<Mat> > outProms;
+        std::vector<std::string> outsNames;
         bool isReady;
     };
 

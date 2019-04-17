@@ -848,9 +848,11 @@ void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Pt
     auto outs = infEngineWrappers(outsWrappers);
     outProms.clear();
     outProms.resize(outs.size());
+    outsNames.resize(outs.size());
     for (int i = 0; i < outs.size(); ++i)
     {
         outs[i]->promPtr = &outProms[i];
+        outsNames[i] = outs[i]->dataPtr->name;
     }
 }
 
@@ -906,22 +908,27 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
         // Set promises to output blobs wrappers.
         reqWrapper->makePromises(outBlobsWrappers);
 
-        reqWrapper->req.SetCompletionCallback<std::function<void(InferenceEngine::InferRequest, InferenceEngine::StatusCode)> >(
-            [=](InferenceEngine::InferRequest infRequest, InferenceEngine::StatusCode status)
+        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
+        infRequestPtr->SetUserData(reqWrapper.get(), 0);
+
+        infRequestPtr->SetCompletionCallback({
+            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
             {
                 CV_Assert(status == InferenceEngine::StatusCode::OK);
 
-                int i = 0;
-                for (const auto& it : cnn.getOutputsInfo())
+                InfEngineReqWrapper* wrapper;
+                request->GetUserData((void**)&wrapper, 0);
+                CV_Assert(wrapper);
+
+                for (int i = 0; i < wrapper->outProms.size(); ++i)
                 {
-                    const std::string& name = it.first;
-                    Mat m = infEngineBlobToMat(infRequest.GetBlob(name));
-                    reqWrapper->outProms[i].set_value(m.clone());
-                    i += 1;
+                    const std::string& name = wrapper->outsNames[i];
+                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
+                    wrapper->outProms[i].set_value(m.clone());
                 }
-                reqWrapper->isReady = true;
+                wrapper->isReady = true;
             }
-        );
+        });
 
         reqWrapper->isReady = false;
         reqWrapper->req.StartAsync();
