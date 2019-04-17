@@ -21,7 +21,7 @@
 #include "api/gnode_priv.hpp"   // FIXME: why it is here?
 #include "api/gproto_priv.hpp"  // FIXME: why it is here?
 #include "api/gcall_priv.hpp"   // FIXME: why it is here?
-#include "api/gapi_priv.hpp"    // FIXME: why it is here?
+
 #include "api/gbackend_priv.hpp" // Backend basic API (newInstance, etc)
 
 #include "compiler/gmodel.hpp"

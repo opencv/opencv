@@ -31,7 +31,7 @@ file(GLOB gapi_ext_hdrs
 
 set(gapi_srcs
     # Front-end part
-    src/api/gapi_priv.cpp
+    src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
     src/api/gscalar.cpp
