@@ -53,8 +53,7 @@ gen_template_mappable = Template("""
 """)
 
 gen_template_type_decl = Template("""
-//==================================================================================================
-// ${name} (${cname})
+// Converter (${name})
 
 template<>
 struct PyOpenCV_Converter< ${cname} >
@@ -83,6 +82,7 @@ struct PyOpenCV_Converter< ${cname} >
 
 gen_template_map_type_cvt = Template("""
 template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name);
+
 """)
 
 gen_template_set_prop_from_map = Template("""
@@ -95,33 +95,26 @@ gen_template_set_prop_from_map = Template("""
     }""")
 
 gen_template_type_impl = Template("""
-//==================================================================================================
-// ${name} (impl)
+// GetSet (${name})
 
 ${getset_code}
+
+// Methods (${name})
+
+${methods_code}
+
+// Tables (${name})
 
 static PyGetSetDef pyopencv_${name}_getseters[] =
 {${getset_inits}
     {NULL}  /* Sentinel */
 };
 
-${methods_code}
-
 static PyMethodDef pyopencv_${name}_methods[] =
 {
 ${methods_inits}
     {NULL,          NULL}
 };
-
-static void pyopencv_${name}_specials(void)
-{
-    pyopencv_${name}_TypePtr->tp_base = ${baseptr};
-    pyopencv_${name}_TypePtr->tp_dealloc = pyopencv_${name}_dealloc;
-    pyopencv_${name}_TypePtr->tp_repr = pyopencv_${name}_repr;
-    pyopencv_${name}_TypePtr->tp_getset = pyopencv_${name}_getseters;
-    pyopencv_${name}_TypePtr->tp_init = (initproc)${constructor};
-    pyopencv_${name}_TypePtr->tp_methods = pyopencv_${name}_methods;${extra_specials}
-}
 """)
 
 
@@ -295,20 +288,29 @@ class ClassInfo(object):
             methods_code.write(m.gen_code(codegen))
             methods_inits.write(m.get_tab_entry())
 
-        baseptr = "NULL"
+        code = gen_template_type_impl.substitute(name=self.name, wname=self.wname, cname=self.cname,
+            getset_code=getset_code.getvalue(), getset_inits=getset_inits.getvalue(),
+            methods_code=methods_code.getvalue(), methods_inits=methods_inits.getvalue())
+
+        return code
+
+    def gen_def(self, codegen):
+        all_classes = codegen.classes
+        baseptr = "NoBase"
         if self.base and self.base in all_classes:
-            baseptr = "pyopencv_" + all_classes[self.base].name + "_TypePtr"
+            baseptr = all_classes[self.base].name
 
         constructor_name = "0"
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        code = gen_template_type_impl.substitute(name=self.name, wname=self.wname, cname=self.cname,
-            getset_code=getset_code.getvalue(), getset_inits=getset_inits.getvalue(),
-            methods_code=methods_code.getvalue(), methods_inits=methods_inits.getvalue(),
-            baseptr=baseptr, constructor=constructor_name, extra_specials="")
-
-        return code
+        return "CVPY_TYPE({}, {}, {}, {}, {});\n".format(
+            self.name,
+            self.cname if self.issimple else "Ptr<{}>".format(self.cname),
+            self.sname if self.issimple else "Ptr<{}>".format(self.cname),
+            baseptr,
+            constructor_name
+        )
 
 
 def handle_ptr(tp):
@@ -1026,6 +1028,10 @@ class PythonWrapperGenerator(object):
         classlist = list(self.classes.items())
         classlist.sort()
         for name, classinfo in classlist:
+            self.code_types.write("//{}\n".format(80*"="))
+            self.code_types.write("// {} ({})\n".format(name, 'Map' if classinfo.ismap else 'Generic'))
+            self.code_types.write("//{}\n".format(80*"="))
+            self.code_types.write(classinfo.gen_code(self))
             if classinfo.ismap:
                 self.code_types.write(gen_template_map_type_cvt.substitute(name=classinfo.name, cname=classinfo.cname))
             else:
@@ -1045,15 +1051,9 @@ class PythonWrapperGenerator(object):
         classlist1.sort()
 
         for decl_idx, name, classinfo in classlist1:
-            code = classinfo.gen_code(self)
-            self.code_types.write(code)
             if classinfo.ismap:
                 continue
-            self.code_type_publish.write("CVPY_TYPE({}, {}, {});\n".format(
-                classinfo.name,
-                classinfo.cname if classinfo.issimple else "Ptr<{}>".format(classinfo.cname),
-                classinfo.sname if classinfo.issimple else "Ptr<{}>".format(classinfo.cname))
-            )
+            self.code_type_publish.write(classinfo.gen_def(self))
 
 
         # step 3: generate the code for all the global functions

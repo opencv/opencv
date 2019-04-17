@@ -93,6 +93,76 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 
 //==================================================================================================
 
+#define CV_PY_FN_WITH_KW_(fn, flags) (PyCFunction)(void*)(PyCFunctionWithKeywords)(fn), (flags) | METH_VARARGS | METH_KEYWORDS
+#define CV_PY_FN_NOARGS_(fn, flags) (PyCFunction)(fn), (flags) | METH_NOARGS
+
+#define CV_PY_FN_WITH_KW(fn) CV_PY_FN_WITH_KW_(fn, 0)
+#define CV_PY_FN_NOARGS(fn) CV_PY_FN_NOARGS_(fn, 0)
+
+#define CV_PY_TO_CLASS(TYPE)                                                                          \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    Ptr<TYPE> ptr;                                                                                    \
+                                                                                                      \
+    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    src = *ptr;                                                                                       \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_CLASS(TYPE)                                                                        \
+template<>                                                                                            \
+PyObject* pyopencv_from(const TYPE& src)                                                              \
+{                                                                                                     \
+    Ptr<TYPE> ptr(new TYPE());                                                                        \
+                                                                                                      \
+    *ptr = src;                                                                                       \
+    return pyopencv_from(ptr);                                                                        \
+}
+
+#define CV_PY_TO_CLASS_PTR(TYPE)                                                                      \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE*& src, const char* name)                                         \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    Ptr<TYPE> ptr;                                                                                    \
+                                                                                                      \
+    if (!pyopencv_to(dst, ptr, name)) return false;                                                   \
+    src = ptr;                                                                                        \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_CLASS_PTR(TYPE)                                                                    \
+static PyObject* pyopencv_from(TYPE*& src)                                                            \
+{                                                                                                     \
+    return pyopencv_from(Ptr<TYPE>(src));                                                             \
+}
+
+#define CV_PY_TO_ENUM(TYPE)                                                                           \
+template<>                                                                                            \
+bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                                          \
+{                                                                                                     \
+    if (!dst || dst == Py_None)                                                                       \
+        return true;                                                                                  \
+    int underlying = 0;                                                  \
+                                                                                                      \
+    if (!pyopencv_to(dst, underlying, name)) return false;                                            \
+    src = static_cast<TYPE>(underlying);                                                              \
+    return true;                                                                                      \
+}
+
+#define CV_PY_FROM_ENUM(TYPE)                                                                         \
+template<>                                                                                            \
+PyObject* pyopencv_from(const TYPE& src)                                                              \
+{                                                                                                     \
+    return pyopencv_from(static_cast<int>(src));                         \
+}
+
+//==================================================================================================
+
 #if PY_MAJOR_VERSION >= 3
 #define CVPY_TYPE_HEAD PyVarObject_HEAD_INIT(&PyType_Type, 0)
 #define CVPY_TYPE_INCREF(T) Py_INCREF(T)
@@ -143,9 +213,14 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
     }
 
 
-#define CVPY_TYPE_INIT_STATIC(NAME, ERROR_HANDLER) \
+#define CVPY_TYPE_INIT_STATIC(NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
     { \
-        pyopencv_##NAME##_specials(); \
+        pyopencv_##NAME##_TypePtr->tp_base = pyopencv_##BASE##_TypePtr; \
+        pyopencv_##NAME##_TypePtr->tp_dealloc = pyopencv_##NAME##_dealloc; \
+        pyopencv_##NAME##_TypePtr->tp_repr = pyopencv_##NAME##_repr; \
+        pyopencv_##NAME##_TypePtr->tp_getset = pyopencv_##NAME##_getseters; \
+        pyopencv_##NAME##_TypePtr->tp_init = (initproc) CONSTRUCTOR; \
+        pyopencv_##NAME##_TypePtr->tp_methods = pyopencv_##NAME##_methods; \
         pyopencv_##NAME##_TypePtr->tp_alloc = PyType_GenericAlloc; \
         pyopencv_##NAME##_TypePtr->tp_new = PyType_GenericNew; \
         pyopencv_##NAME##_TypePtr->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
@@ -154,6 +229,86 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
             ERROR_HANDLER; \
         } \
         CVPY_TYPE_INCREF(pyopencv_##NAME##_TypePtr); \
+        PyModule_AddObject(m, #NAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
+    }
+
+//==================================================================================================
+
+#define CVPY_TYPE_DECLARE_DYNAMIC(NAME, STORAGE, SNAME) \
+    struct pyopencv_##NAME##_t \
+    { \
+        PyObject_HEAD \
+        STORAGE v; \
+    }; \
+    static PyObject * pyopencv_##NAME##_TypePtr = 0; \
+    static bool pyopencv_##NAME##_getp(PyObject * self, STORAGE * & dst) \
+    { \
+        if (PyObject_TypeCheck(self, (PyTypeObject*)pyopencv_##NAME##_TypePtr)) \
+        { \
+            dst = &(((pyopencv_##NAME##_t*)self)->v); \
+            return true; \
+        } \
+        return false; \
+    } \
+    static PyObject * pyopencv_##NAME##_Instance(const STORAGE &r) \
+    { \
+        pyopencv_##NAME##_t *m = PyObject_New(pyopencv_##NAME##_t, (PyTypeObject*)pyopencv_##NAME##_TypePtr); \
+        new (&(m->v)) STORAGE(r); \
+        return (PyObject*)m; \
+    } \
+    static void pyopencv_##NAME##_dealloc(PyObject* self) \
+    { \
+        ((pyopencv_##NAME##_t*)self)->v.STORAGE::~SNAME(); \
+        PyObject_Del(self); \
+    } \
+    static PyObject* pyopencv_##NAME##_repr(PyObject* self) \
+    { \
+        char str[1000]; \
+        sprintf(str, "<"#NAME" %p>", self); \
+        return PyString_FromString(str); \
+    } \
+    static PyType_Slot pyopencv_##NAME##_Slots[] =  \
+    { \
+        {Py_tp_dealloc, 0}, \
+        {Py_tp_repr, 0}, \
+        {Py_tp_getset, 0}, \
+        {Py_tp_init, 0}, \
+        {Py_tp_methods, 0}, \
+        {Py_tp_alloc, 0}, \
+        {Py_tp_new, 0}, \
+        {0, 0} \
+    }; \
+    static PyType_Spec pyopencv_##NAME##_Spec = \
+    { \
+        MODULESTR"."#NAME, \
+        sizeof(pyopencv_##NAME##_t), \
+        0, \
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, \
+        pyopencv_##NAME##_Slots  \
+    };
+
+#define CVPY_TYPE_INIT_DYNAMIC(NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
+    { \
+        pyopencv_##NAME##_Slots[0].pfunc /*tp_dealloc*/ = (void*)pyopencv_##NAME##_dealloc; \
+        pyopencv_##NAME##_Slots[1].pfunc /*tp_repr*/ = (void*)pyopencv_##NAME##_repr; \
+        pyopencv_##NAME##_Slots[2].pfunc /*tp_getset*/ = (void*)pyopencv_##NAME##_getseters; \
+        pyopencv_##NAME##_Slots[3].pfunc /*tp_init*/ = (void*) CONSTRUCTOR; \
+        pyopencv_##NAME##_Slots[4].pfunc /*tp_methods*/ = pyopencv_##NAME##_methods; \
+        pyopencv_##NAME##_Slots[5].pfunc /*tp_alloc*/ = (void*)PyType_GenericAlloc; \
+        pyopencv_##NAME##_Slots[6].pfunc /*tp_new*/ = (void*)PyType_GenericNew; \
+        PyObject * bases = 0; \
+        if (pyopencv_##BASE##_TypePtr) \
+            bases = PyTuple_Pack(1, pyopencv_##BASE##_TypePtr); \
+        pyopencv_##NAME##_TypePtr = PyType_FromSpecWithBases(&pyopencv_##NAME##_Spec, bases); \
+        if (!pyopencv_##NAME##_TypePtr) \
+        { \
+            printf("Failed to init: " #NAME ", base (" #BASE ")" "\n"); \
+            ERROR_HANDLER; \
+        } \
+        else \
+        { \
+            printf("Init: " #NAME ", base (" #BASE ") -> %p" "\n", pyopencv_##NAME##_TypePtr); \
+        } \
         PyModule_AddObject(m, #NAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
     }
 
