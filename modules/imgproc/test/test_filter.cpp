@@ -536,11 +536,9 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SobelTest::run_func()
 {
-    cvSobel( test_array[inplace ? OUTPUT : INPUT][0],
-             test_array[OUTPUT][0], dx, dy, _aperture_size );
-    /*cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
+    cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
                test_mat[OUTPUT][0], test_mat[OUTPUT][0].depth(),
-               dx, dy, _aperture_size, 1, 0, border );*/
+               dx, dy, _aperture_size, 1, 0, border );
 }
 
 
@@ -655,8 +653,9 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_LaplaceTest::run_func()
 {
-    cvLaplace( test_array[inplace ? OUTPUT : INPUT][0],
-               test_array[OUTPUT][0], _aperture_size );
+    cv::Laplacian( test_mat[inplace ? OUTPUT : INPUT][0],
+                   test_mat[OUTPUT][0],test_mat[OUTPUT][0].depth(),
+                   _aperture_size, 1, 0, cv::BORDER_REPLICATE );
 }
 
 
