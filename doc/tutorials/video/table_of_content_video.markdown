@@ -14,3 +14,5 @@ tracking and foreground extractions.
 
     We will learn how to extract foreground masks from both videos and sequences of images and
     to show them.
+
+-   @subpage tutorial_meanshift
