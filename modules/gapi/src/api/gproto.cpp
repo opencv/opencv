@@ -12,7 +12,7 @@
 #include "opencv2/gapi/garg.hpp"
 #include "opencv2/gapi/gproto.hpp"
 
-#include "api/gapi_priv.hpp"
+#include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"
 
 // FIXME: it should be a visitor!

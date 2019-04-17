@@ -21,12 +21,13 @@
 
 #include <ade/util/zip_range.hpp>   // util::indexed
 
-#include "api/gapi_priv.hpp"    // GOrigin
+#include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"  // descriptor_of and other GProtoArg-related
 #include "api/gcall_priv.hpp"
 #include "api/gnode_priv.hpp"
 
 #include "compiler/gmodelbuilder.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace {
 
@@ -187,7 +188,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
 
 
 cv::gimpl::GModelBuilder::GModelBuilder(ade::Graph &g)
-    : m_g(g)
+    : m_g(g), m_gm(g)
 {
 }
 
@@ -212,7 +213,7 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
             if (proto::is_dynamic(in_arg))
             {
                 ade::NodeHandle data_h = put_DataNode(proto::origin_of(in_arg));
-                cv::gimpl::GModel::linkIn(m_g, call_h, data_h, in_port);
+                cv::gimpl::GModel::linkIn(m_gm, call_h, data_h, in_port);
             }
         }
     }
@@ -228,7 +229,7 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
         if (prod.shape() == cv::GNode::NodeShape::CALL)
         {
             ade::NodeHandle call_h = put_OpNode(prod);
-            cv::gimpl::GModel::linkOut(m_g, call_h, data_h, origin.port);
+            cv::gimpl::GModel::linkOut(m_gm, call_h, data_h, origin.port);
         }
     }
 
@@ -236,16 +237,17 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
     for (const auto &arg : ins)
     {
         ade::NodeHandle nh = put_DataNode(proto::origin_of(arg));
-        m_g.metadata(nh).get<Data>().storage = Data::Storage::INPUT;
+        m_gm.metadata(nh).get<Data>().storage = Data::Storage::INPUT;
     }
     for (const auto &arg : outs)
     {
         ade::NodeHandle nh = put_DataNode(proto::origin_of(arg));
-        m_g.metadata(nh).get<Data>().storage = Data::Storage::OUTPUT;
+        m_gm.metadata(nh).get<Data>().storage = Data::Storage::OUTPUT;
     }
 
     // And, finally, store data object layout in meta
-    m_g.metadata().set(Layout{m_graph_data});
+    GModel::LayoutGraph lg(m_g);
+    lg.metadata().set(Layout{m_graph_data});
 
     // After graph is generated, specify which data objects are actually
     // computation entry/exit points.
@@ -262,7 +264,7 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
         for (const auto &arg : proto)
         {
             ade::NodeHandle nh = put_DataNode(proto::origin_of(arg));
-            const auto &desc = m_g.metadata(nh).get<Data>();
+            const auto &desc = m_gm.metadata(nh).get<Data>();
             //These extra empty {} are to please GCC (-Wmissing-field-initializers)
             slots.first.push_back(RcDesc{desc.rc, desc.shape, {}});
             slots.second.push_back(nh);
@@ -284,7 +286,7 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_OpNode(const cv::GNode &node)
     {
         GAPI_Assert(node.shape() == GNode::NodeShape::CALL);
         const auto &call_p = node.call().priv();
-        auto nh = cv::gimpl::GModel::mkOpNode(m_g, call_p.m_k, call_p.m_args, node_p.m_island);
+        auto nh = cv::gimpl::GModel::mkOpNode(m_gm, call_p.m_k, call_p.m_args, node_p.m_island);
         m_graph_ops[&node_p] = nh;
         return nh;
     }
@@ -297,7 +299,7 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_DataNode(const GOrigin &origin)
     const auto it = m_graph_data.find(origin);
     if (it == m_graph_data.end())
     {
-        auto nh = cv::gimpl::GModel::mkDataNode(m_g, origin);
+        auto nh = cv::gimpl::GModel::mkDataNode(m_gm, origin);
         m_graph_data[origin] = nh;
         return nh;
     }

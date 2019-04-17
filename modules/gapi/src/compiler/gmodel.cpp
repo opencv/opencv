@@ -18,6 +18,8 @@
 #include "api/gnode_priv.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
+#include "api/gorigin.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace cv { namespace gimpl {
 
@@ -34,9 +36,9 @@ ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::
 
 ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
 {
-    ade::NodeHandle op_h = g.createNode();
+    ade::NodeHandle data_h = g.createNode();
     const auto id = g.metadata().get<DataObjectCounter>().GetNewId(origin.shape);
-    g.metadata(op_h).set(NodeType{NodeType::DATA});
+    g.metadata(data_h).set(NodeType{NodeType::DATA});
 
     GMetaArg meta;
     Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
@@ -46,10 +48,24 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
         auto value = value_of(origin);
         meta       = descr_of(value);
         storage    = Data::Storage::CONST;
-        g.metadata(op_h).set(ConstValue{value});
+        g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(op_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
-    return op_h;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
+    return data_h;
+}
+
+ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
+{
+    ade::NodeHandle data_h = g.createNode();
+    g.metadata(data_h).set(NodeType{NodeType::DATA});
+
+    const auto id = g.metadata().get<DataObjectCounter>().GetNewId(shape);
+    GMetaArg meta;
+    HostCtor ctor;
+    Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
+
+    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    return data_h;
 }
 
 void GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t in_port)
@@ -169,7 +185,7 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
     }
 }
 
-ade::NodeHandle GModel::detail::dataNodeOf(const ConstGraph &g, const GOrigin &origin)
+ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {
     // FIXME: Does it still work with graph transformations, e.g. redirectWriter()??
     return g.metadata().get<Layout>().object_nodes.at(origin);

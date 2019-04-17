@@ -8,7 +8,7 @@
 #include "precomp.hpp"
 #include <ade/util/assert.hpp>
 
-#include "api/gapi_priv.hpp"
+#include "api/gorigin.hpp"
 #include "api/gnode_priv.hpp"
 
 cv::GOrigin::GOrigin(GShape s,

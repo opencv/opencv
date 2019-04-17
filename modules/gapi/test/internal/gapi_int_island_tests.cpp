@@ -9,6 +9,7 @@
 
 #include "compiler/gmodel.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace opencv_test
 {
