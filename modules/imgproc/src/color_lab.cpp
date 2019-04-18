@@ -1,4 +1,4 @@
-// This file is part of OpenCV project.
+﻿// This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
@@ -2884,31 +2884,35 @@ struct Luv2RGBfloat
              i += vsize*nrepeats, src += vsize*3*nrepeats, dst += dcn*vsize*nrepeats)
         {
             v_float32 L[nrepeats], u[nrepeats], v[nrepeats];
-
             for (int k = 0; k < nrepeats; k++)
             {
                 v_load_deinterleave(src + k*vsize*3, L[k], u[k], v[k]);
             }
 
-            v_float32 R[nrepeats], G[nrepeats], B[nrepeats];
+            v_float32 X[nrepeats], Y[nrepeats], Z[nrepeats];
+
+            v_float32 v16 = vx_setall_f32(16.f);
+            v_float32 v116inv = vx_setall_f32(1.f/116.f);
+            v_float32 v903inv = vx_setall_f32(1.0f/903.296296f); //(3./29.)^3
             for (int k = 0; k < nrepeats; k++)
             {
                 v_float32 Ylo, Yhi;
-                v_float32 v16 = vx_setall_f32(16.f);
-                v_float32 v116inv = vx_setall_f32(1.f/116.f);
-                v_float32 v903inv = vx_setall_f32(1.0f/903.296296f); //(3./29.)^3
+
                 // ((L + 16)/116)^3
                 Ylo = (L[k] + v16) * v116inv;
                 Ylo = Ylo*Ylo*Ylo;
                 // L*(3./29.)^3
                 Yhi = L[k] * v903inv;
 
-                v_float32 X, Y, Z;
                 // Y = (L <= 8) ? Y0 : Y1;
-                Y = v_select(L[k] >= vx_setall_f32(8.f), Ylo, Yhi);
+                Y[k] = v_select(L[k] >= vx_setall_f32(8.f), Ylo, Yhi);
+            }
 
+            v_float32 v4inv = vx_setall_f32(0.25f), v3 = vx_setall_f32(3.f);
+            for(int k = 0; k < nrepeats; k++)
+            {
                 v_float32 up, vp;
-                v_float32 v4inv = vx_setall_f32(0.25f), v3 = vx_setall_f32(3.f);
+
                 // up = 3*(u + L*_un);
                 up = v3*(v_fma(L[k], vx_setall_f32(_un), u[k]));
                 // vp = 0.25/(v + L*_vn);
@@ -2918,33 +2922,46 @@ struct Luv2RGBfloat
                 vp = v_max(vx_setall_f32(-0.25f), v_min(v4inv, vp));
 
                 //X = 3*up*vp; // (*Y) is done later
-                X = v3*up*vp;
+                X[k] = v3*up*vp;
                 //Z = ((12*13*L - up)*vp - 5); // (*Y) is done later
                 // xor flips the sign, works like unary minus
-                Z = v_fma(v_fma(L[k], vx_setall_f32(12.f*13.f), (vx_setall_f32(-0.f) ^ up)), vp, vx_setall_f32(-5.f));
+                Z[k] = v_fma(v_fma(L[k], vx_setall_f32(12.f*13.f), (vx_setall_f32(-0.f) ^ up)), vp, vx_setall_f32(-5.f));
+            }
 
-                v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
-                v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
-                v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
+            v_float32 R[nrepeats], G[nrepeats], B[nrepeats];
+            v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
+            v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
+            v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
+            for(int k = 0; k < nrepeats; k++)
+            {
                 // R = (X*C0 + C1 + Z*C2)*Y; // here (*Y) is done
-                R[k] = v_fma(Z, vc2, v_fma(X, vc0, vc1))*Y;
-                G[k] = v_fma(Z, vc5, v_fma(X, vc3, vc4))*Y;
-                B[k] = v_fma(Z, vc8, v_fma(X, vc6, vc7))*Y;
+                R[k] = v_fma(Z[k], vc2, v_fma(X[k], vc0, vc1))*Y[k];
+                G[k] = v_fma(Z[k], vc5, v_fma(X[k], vc3, vc4))*Y[k];
+                B[k] = v_fma(Z[k], vc8, v_fma(X[k], vc6, vc7))*Y[k];
+            }
 
-                v_float32 vzero = vx_setzero_f32(), v1 = vx_setall_f32(1.f);
+            v_float32 vzero = vx_setzero_f32(), v1 = vx_setall_f32(1.f);
+            for(int k = 0; k < nrepeats; k++)
+            {
                 R[k] = v_min(v_max(R[k], vzero), v1);
                 G[k] = v_min(v_max(G[k], vzero), v1);
                 B[k] = v_min(v_max(B[k], vzero), v1);
             }
 
-            for(int k = 0; k < nrepeats; k++)
+            if(gammaTab)
             {
-                if(gammaTab)
+                v_float32 vgscale = vx_setall_f32(gscale);
+                for(int k = 0; k < nrepeats; k++)
                 {
-                    v_float32 vgscale = vx_setall_f32(gscale);
-                    R[k] = splineInterpolate(R[k]*vgscale, gammaTab, GAMMA_TAB_SIZE);
-                    G[k] = splineInterpolate(G[k]*vgscale, gammaTab, GAMMA_TAB_SIZE);
-                    B[k] = splineInterpolate(B[k]*vgscale, gammaTab, GAMMA_TAB_SIZE);
+                    R[k] *= vgscale;
+                    G[k] *= vgscale;
+                    B[k] *= vgscale;
+                }
+                for(int k = 0; k < nrepeats; k++)
+                {
+                    R[k] = splineInterpolate(R[k], gammaTab, GAMMA_TAB_SIZE);
+                    G[k] = splineInterpolate(G[k], gammaTab, GAMMA_TAB_SIZE);
+                    B[k] = splineInterpolate(B[k], gammaTab, GAMMA_TAB_SIZE);
                 }
             }
             for(int k = 0; k < nrepeats; k++)
