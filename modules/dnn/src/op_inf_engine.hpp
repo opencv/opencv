@@ -264,7 +264,7 @@ public:
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
-    std::promise<Mat>* promPtr;
+    std::future<Mat> futureMat;
 };
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);

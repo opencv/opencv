@@ -2579,8 +2579,7 @@ struct Net::Impl
         CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE);
 
         Ptr<InfEngineBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<InfEngineBackendWrapper>();
-        CV_Assert(wrapper->promPtr);
-        return wrapper->promPtr->get_future();
+        return std::move(wrapper->futureMat);
 #else
         CV_Error(Error::StsNotImplemented, "DNN_BACKEND_INFERENCE_ENGINE backend is required");
 #endif

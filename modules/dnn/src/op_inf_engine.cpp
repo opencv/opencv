@@ -317,7 +317,6 @@ InfEngineBackendWrapper::InfEngineBackendWrapper(int targetId, const cv::Mat& m)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToInfEngineBlob(m, estimateLayout(m));
-    promPtr = nullptr;
 }
 
 InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
@@ -331,7 +330,6 @@ InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
                                   srcData->layout)
     );
     blob = ieWrapper->blob;
-    promPtr = nullptr;
 }
 
 Ptr<BackendWrapper> InfEngineBackendWrapper::create(Ptr<BackendWrapper> wrapper)
@@ -851,7 +849,7 @@ void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Pt
     outsNames.resize(outs.size());
     for (int i = 0; i < outs.size(); ++i)
     {
-        outs[i]->promPtr = &outProms[i];
+        outs[i]->futureMat = outProms[i].get_future();
         outsNames[i] = outs[i]->dataPtr->name;
     }
 }
@@ -872,7 +870,14 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
     if (reqWrapper.empty())
     {
         reqWrapper = Ptr<InfEngineReqWrapper>(new InfEngineReqWrapper());
-        reqWrapper->req = netExec.CreateInferRequest();
+        try
+        {
+            reqWrapper->req = netExec.CreateInferRequest();
+        }
+        catch (const std::exception& ex)
+        {
+            CV_Error(Error::StsAssert, format("Failed to initialize Inference Engine backend: %s", ex.what()));
+        }
         infRequests.push_back(reqWrapper);
 
         InferenceEngine::BlobMap inpBlobs, outBlobs;
@@ -892,6 +897,37 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
         }
         reqWrapper->req.SetInput(inpBlobs);
         reqWrapper->req.SetOutput(outBlobs);
+
+        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
+        infRequestPtr->SetUserData(reqWrapper.get(), 0);
+
+        infRequestPtr->SetCompletionCallback({
+            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
+            {
+                InfEngineReqWrapper* wrapper;
+                request->GetUserData((void**)&wrapper, 0);
+                CV_Assert(wrapper);
+
+                for (int i = 0; i < wrapper->outProms.size(); ++i)
+                {
+                    const std::string& name = wrapper->outsNames[i];
+                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
+
+                    if (status == InferenceEngine::StatusCode::OK)
+                        wrapper->outProms[i].set_value(m.clone());
+                    else
+                    {
+                        try {
+                            std::runtime_error e("Async request failed");
+                            wrapper->outProms[i].set_exception(std::make_exception_ptr(e));
+                        } catch(...) {
+                            CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                        }
+                    }
+                }
+                wrapper->isReady = true;
+            }
+        });
     }
     if (isAsync)
     {
@@ -907,28 +943,6 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
 
         // Set promises to output blobs wrappers.
         reqWrapper->makePromises(outBlobsWrappers);
-
-        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
-        infRequestPtr->SetUserData(reqWrapper.get(), 0);
-
-        infRequestPtr->SetCompletionCallback({
-            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
-            {
-                CV_Assert(status == InferenceEngine::StatusCode::OK);
-
-                InfEngineReqWrapper* wrapper;
-                request->GetUserData((void**)&wrapper, 0);
-                CV_Assert(wrapper);
-
-                for (int i = 0; i < wrapper->outProms.size(); ++i)
-                {
-                    const std::string& name = wrapper->outsNames[i];
-                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
-                    wrapper->outProms[i].set_value(m.clone());
-                }
-                wrapper->isReady = true;
-            }
-        });
 
         reqWrapper->isReady = false;
         reqWrapper->req.StartAsync();
