@@ -2186,7 +2186,7 @@ struct Lab2RGBinteger
 
     Lab2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* _whitept, bool srgb )
-    : dstcn(_dstcn)
+    : dstcn(_dstcn), issRGB(srgb)
     {
         softdouble whitePt[3];
         for(int i = 0; i < 3; i++)
@@ -2209,8 +2209,6 @@ struct Lab2RGBinteger
             coeffs[i+3]             = cvRound(lshift*c[1]*whitePt[i]);
             coeffs[i+(blueIdx^2)*3] = cvRound(lshift*c[2]*whitePt[i]);
         }
-
-        tab = srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
     // L, a, b should be in their natural range
@@ -2250,9 +2248,20 @@ struct Lab2RGBinteger
         go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
         bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
 
-        ro = tab[ro];
-        go = tab[go];
-        bo = tab[bo];
+        if(issRGB)
+        {
+            ushort* tab = sRGBInvGammaTab_b;
+            ro = tab[ro];
+            go = tab[go];
+            bo = tab[bo];
+        }
+        else
+        {
+            // rgb = (rgb*255) >> inv_gamma_shift
+            ro = ((ro << 8) - ro) >> inv_gamma_shift;
+            go = ((go << 8) - go) >> inv_gamma_shift;
+            bo = ((bo << 8) - bo) >> inv_gamma_shift;
+        }
     }
 
 #if CV_SIMD
@@ -2270,14 +2279,11 @@ struct Lab2RGBinteger
         // LabToYF_b[i*2  ] = y;   // 0 <= y <= BASE
         // LabToYF_b[i*2+1] = ify; // 2260 <= ify <= BASE
         v_int32 yf[4];
-        for(int k = 0; k < 4; k++)
-        {
-            yf[k] = v_lut((const int*)LabToYF_b, lq[k]);
-        }
         v_int32 ify[4];
         v_int32 mask16 = vx_setall_s32(0xFFFF);
         for(int k = 0; k < 4; k++)
         {
+            yf[k] = v_lut((const int*)LabToYF_b, lq[k]);
             y[k]   = yf[k] & mask16;
             ify[k] = v_reinterpret_as_s32(v_reinterpret_as_u32(yf[k]) >> 16);
         }
@@ -2338,6 +2344,8 @@ struct Lab2RGBinteger
     {
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
+        bool srgb = issRGB;
+        ushort* tab = sRGBInvGammaTab_b;
         i = 0;
 
 #if CV_SIMD
@@ -2380,19 +2388,40 @@ struct Lab2RGBinteger
                     bq[k] = v_max(z, v_min(up, bq[k]));
                 }
 
-                // [RRR... , GGG... , BBB...]
-                int32_t CV_DECL_ALIGNED(MAX_ALIGN) vidx[vsize*3];
-                for (int k = 0; k < 4; k++)
-                    v_store_aligned(vidx + 0*vsize + k*vsize/4, rq[k]);
-                for (int k = 0; k < 4; k++)
-                    v_store_aligned(vidx + 1*vsize + k*vsize/4, gq[k]);
-                for (int k = 0; k < 4; k++)
-                    v_store_aligned(vidx + 2*vsize + k*vsize/4, bq[k]);
-
                 v_uint16 rgb[6];
-                for(int k = 0; k < 6; k++)
+                if(srgb)
                 {
-                    rgb[k] = vx_lut(tab, vidx + k*vsize/2);
+                    // [RRR... , GGG... , BBB...]
+                    int32_t CV_DECL_ALIGNED(MAX_ALIGN) vidx[vsize*3];
+                    for (int k = 0; k < 4; k++)
+                        v_store_aligned(vidx + 0*vsize + k*vsize/4, rq[k]);
+                    for (int k = 0; k < 4; k++)
+                        v_store_aligned(vidx + 1*vsize + k*vsize/4, gq[k]);
+                    for (int k = 0; k < 4; k++)
+                        v_store_aligned(vidx + 2*vsize + k*vsize/4, bq[k]);
+
+                    rgb[0] = vx_lut(tab, vidx + 0*vsize/2);
+                    rgb[1] = vx_lut(tab, vidx + 1*vsize/2);
+                    rgb[2] = vx_lut(tab, vidx + 2*vsize/2);
+                    rgb[3] = vx_lut(tab, vidx + 3*vsize/2);
+                    rgb[4] = vx_lut(tab, vidx + 4*vsize/2);
+                    rgb[5] = vx_lut(tab, vidx + 5*vsize/2);
+                }
+                else
+                {
+                    // rgb = (rgb*255) >> inv_gamma_shift
+                    for(int k = 0; k < 4; k++)
+                    {
+                        rq[k] = ((rq[k] << 8) - rq[k]) >> inv_gamma_shift;
+                        gq[k] = ((gq[k] << 8) - gq[k]) >> inv_gamma_shift;
+                        bq[k] = ((bq[k] << 8) - bq[k]) >> inv_gamma_shift;
+                    }
+                    rgb[0] = v_reinterpret_as_u16(v_pack(rq[0], rq[1]));
+                    rgb[1] = v_reinterpret_as_u16(v_pack(rq[2], rq[3]));
+                    rgb[2] = v_reinterpret_as_u16(v_pack(gq[0], gq[1]));
+                    rgb[3] = v_reinterpret_as_u16(v_pack(gq[2], gq[3]));
+                    rgb[4] = v_reinterpret_as_u16(v_pack(bq[0], bq[1]));
+                    rgb[5] = v_reinterpret_as_u16(v_pack(bq[2], bq[3]));
                 }
 
                 v_uint16 R0, R1, G0, G1, B0, B1;
@@ -2430,7 +2459,7 @@ struct Lab2RGBinteger
 
     int dstcn;
     int coeffs[9];
-    ushort* tab;
+    bool issRGB;
 };
 
 
