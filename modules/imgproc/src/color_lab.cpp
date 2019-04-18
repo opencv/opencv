@@ -1405,8 +1405,9 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
     v_store_aligned(vtrilinearIdx + 0*vsize/2, trilinearIdx0);
     v_store_aligned(vtrilinearIdx + 1*vsize/2, trilinearIdx1);
 
+    v_uint32 a0, a1, b0, b1, c0, c1;
+
     uint32_t CV_DECL_ALIGNED(MAX_ALIGN) va[vsize], vb[vsize], vc[vsize];
-    vx_cleanup();
     for(int j = 0; j < vsize; j++)
     {
         const int16_t* baseLUT = LUT + vbaseIdx[j];
@@ -1422,8 +1423,7 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
         vb[j] = v_reduce_sum(v_dotprod(bb, w));
         vc[j] = v_reduce_sum(v_dotprod(cc, w));
     }
-    vx_cleanup();
-    v_uint32 a0, a1, b0, b1, c0, c1;
+
     a0 = vx_load_aligned(va + 0*vsize/2);
     a1 = vx_load_aligned(va + 1*vsize/2);
     b0 = vx_load_aligned(vb + 0*vsize/2);
