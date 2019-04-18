@@ -3304,7 +3304,7 @@ struct Luv2RGBinteger
     // whitept is fixed for int calculations
     Luv2RGBinteger( int _dstcn, int blueIdx, const float* _coeffs,
                     const float* /*_whitept*/, bool _srgb )
-    : dstcn(_dstcn)
+    : dstcn(_dstcn), issRGB(_srgb)
     {
         initLabTabs();
 
@@ -3322,8 +3322,6 @@ struct Luv2RGBinteger
             coeffs[i+3]             = cvRound(lshift*c[1]);
             coeffs[i+(blueIdx^2)*3] = cvRound(lshift*c[2]);
         }
-
-        tab = _srgb ? sRGBInvGammaTab_b : linearInvGammaTab_b;
     }
 
     // L, u, v should be in their natural range
@@ -3365,9 +3363,20 @@ struct Luv2RGBinteger
         go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
         bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
 
-        ro = tab[ro];
-        go = tab[go];
-        bo = tab[bo];
+        if(issRGB)
+        {
+            ushort* tab = sRGBInvGammaTab_b;
+            ro = tab[ro];
+            go = tab[go];
+            bo = tab[bo];
+        }
+        else
+        {
+            // rgb = (rgb*255) >> inv_gamma_shift
+            ro = ((ro << 8) - ro) >> inv_gamma_shift;
+            go = ((go << 8) - go) >> inv_gamma_shift;
+            bo = ((bo << 8) - bo) >> inv_gamma_shift;
+        }
     }
 
     inline void processLuvToXYZ(const v_uint8& lv, const v_uint8& uv, const v_uint8& vv,
@@ -3484,6 +3493,8 @@ struct Luv2RGBinteger
     {
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
+        ushort* tab = sRGBInvGammaTab_b;
+        bool srgb = issRGB;
 
         i = 0;
 
@@ -3566,23 +3577,43 @@ struct Luv2RGBinteger
                     i_rgb[k+4*2] = (v_dotprod(xy[k], cbxy) + v_dotprod(zd[k], cbz1) + fm[2]) >> shift;
                 }
 
-                // limit indices in table and then substitute
-                // ro = tab[ro]; go = tab[go]; bo = tab[bo];
-                v_int32 z32 = vx_setzero_s32();
-                v_int32 tabsz = vx_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
-                // [rr.., gg.., bb..]
-                int32_t CV_DECL_ALIGNED(MAX_ALIGN) rgbshifts[3*vsize];
-                for(int k = 0; k < 12; k++)
-                {
-                    v_int32 rgbs = v_max(z32, v_min(tabsz, i_rgb[k]));
-                    v_store_aligned(rgbshifts + k*vsize/4, rgbs);
-                }
-
                 // [rrggbb]
                 v_uint16 u_rgbvec[6];
-                for(int k = 0; k < 6; k++)
+
+                // limit indices in table and then substitute
+                v_int32 z32 = vx_setzero_s32();
+                v_int32 tabsz = vx_setall_s32((int)INV_GAMMA_TAB_SIZE-1);
+                for(int k = 0; k < 12; k++)
                 {
-                    u_rgbvec[k] = vx_lut(tab, rgbshifts + k*vsize/2);
+                    i_rgb[k] = v_max(z32, v_min(tabsz, i_rgb[k]));
+                }
+
+                // ro = tab[ro]; go = tab[go]; bo = tab[bo];
+                if(srgb)
+                {
+                    // [rr.., gg.., bb..]
+                    int32_t CV_DECL_ALIGNED(MAX_ALIGN) rgbshifts[3*vsize];
+                    for(int k = 0; k < 12; k++)
+                    {
+                        v_store_aligned(rgbshifts + k*vsize/4, i_rgb[k]);
+                    }
+                    for(int k = 0; k < 6; k++)
+                    {
+                        u_rgbvec[k] = vx_lut(tab, rgbshifts + k*vsize/2);
+                    }
+                }
+                else
+                {
+                    // rgb = (rgb*255) >> inv_gamma_shift
+                    for(int k = 0; k < 12; k++)
+                    {
+                        i_rgb[k] = ((i_rgb[k] << 8) - i_rgb[k]) >> inv_gamma_shift;
+                    }
+
+                    for(int k = 0; k < 6; k++)
+                    {
+                        u_rgbvec[k] = v_reinterpret_as_u16(v_pack(i_rgb[k*2+0], i_rgb[k*2+1]));
+                    }
                 }
 
                 v_uint8 u8_b, u8_g, u8_r;
@@ -3619,7 +3650,7 @@ struct Luv2RGBinteger
 
     int dstcn;
     int coeffs[9];
-    ushort* tab;
+    bool issRGB;
 };
 
 
