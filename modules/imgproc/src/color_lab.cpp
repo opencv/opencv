@@ -2691,56 +2691,85 @@ struct RGB2Luvfloat
 
 #if CV_SIMD
         const int vsize = v_float32::nlanes;
-        for( ; i <= n-vsize;
-             i+= vsize, src += scn*vsize, dst += 3*vsize)
+        const int nrepeats = vsize == 4 ? 2 : 1;
+        for( ; i <= n-vsize*nrepeats;
+             i+= vsize*nrepeats, src += scn*vsize*nrepeats, dst += 3*vsize*nrepeats)
         {
-            v_float32 R, G, B, A;
+            v_float32 R[nrepeats], G[nrepeats], B[nrepeats], A;
             if(scn == 4)
             {
-                v_load_deinterleave(src, R, G, B, A);
+                for (int k = 0; k < nrepeats; k++)
+                {
+                    v_load_deinterleave(src + k*4*vsize, R[k], G[k], B[k], A);
+                }
             }
             else // scn == 3
             {
-                v_load_deinterleave(src, R, G, B);
+                for (int k = 0; k < nrepeats; k++)
+                {
+                    v_load_deinterleave(src + k*3*vsize, R[k], G[k], B[k]);
+                }
             }
 
             v_float32 zero = vx_setzero_f32(), one = vx_setall_f32(1.f);
-            R = v_min(v_max(R, zero), one);
-            G = v_min(v_max(G, zero), one);
-            B = v_min(v_max(B, zero), one);
+            for (int k = 0; k < nrepeats; k++)
+            {
+                R[k] = v_min(v_max(R[k], zero), one);
+                G[k] = v_min(v_max(G[k], zero), one);
+                B[k] = v_min(v_max(B[k], zero), one);
+            }
 
             if(gammaTab)
             {
                 v_float32 vgscale = vx_setall_f32(gscale);
-                R = splineInterpolate(R*vgscale, gammaTab, GAMMA_TAB_SIZE);
-                G = splineInterpolate(G*vgscale, gammaTab, GAMMA_TAB_SIZE);
-                B = splineInterpolate(B*vgscale, gammaTab, GAMMA_TAB_SIZE);
+                for (int k = 0; k < nrepeats; k++)
+                {
+                    R[k] *= vgscale;
+                    G[k] *= vgscale;
+                    B[k] *= vgscale;
+                }
+
+                for (int k = 0; k < nrepeats; k++)
+                {
+                    R[k] = splineInterpolate(R[k], gammaTab, GAMMA_TAB_SIZE);
+                    G[k] = splineInterpolate(G[k], gammaTab, GAMMA_TAB_SIZE);
+                    B[k] = splineInterpolate(B[k], gammaTab, GAMMA_TAB_SIZE);
+                }
             }
 
-            v_float32 X, Y, Z;
+            v_float32 X[nrepeats], Y[nrepeats], Z[nrepeats];
             v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
             v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
             v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
-            X = v_fma(R, vc0, v_fma(G, vc1, B*vc2));
-            Y = v_fma(R, vc3, v_fma(G, vc4, B*vc5));
-            Z = v_fma(R, vc6, v_fma(G, vc7, B*vc8));
+            for (int k = 0; k < nrepeats; k++)
+            {
+                X[k] = v_fma(R[k], vc0, v_fma(G[k], vc1, B[k]*vc2));
+                Y[k] = v_fma(R[k], vc3, v_fma(G[k], vc4, B[k]*vc5));
+                Z[k] = v_fma(R[k], vc6, v_fma(G[k], vc7, B[k]*vc8));
+            }
 
-            v_float32 L, u, v;
+            v_float32 L[nrepeats], u[nrepeats], v[nrepeats];
+            v_float32 vmun = vx_setall_f32(-un), vmvn = vx_setall_f32(-vn);
+            for (int k = 0; k < nrepeats; k++)
+            {
+                L[k] = splineInterpolate(Y[k]*vx_setall_f32(LabCbrtTabScale), LabCbrtTab, LAB_CBRT_TAB_SIZE);
+                // L = 116.f*L - 16.f;
+                L[k] = v_fma(L[k], vx_setall_f32(116.f), vx_setall_f32(-16.f));
 
-            L = splineInterpolate(Y*vx_setall_f32(LabCbrtTabScale), LabCbrtTab, LAB_CBRT_TAB_SIZE);
-            // L = 116.f*L - 16.f;
-            L = v_fma(L, vx_setall_f32(116.f), vx_setall_f32(-16.f));
+                v_float32 d;
+                // d = (4*13) / max(X + 15 * Y + 3 * Z, FLT_EPSILON)
+                d = v_fma(Y[k], vx_setall_f32(15.f), v_fma(Z[k], vx_setall_f32(3.f), X[k]));
+                d = vx_setall_f32(4.f*13.f) / v_max(d, vx_setall_f32(FLT_EPSILON));
+                // u = L*(X*d - un)
+                u[k] = L[k]*v_fma(X[k], d, vmun);
+                // v = L*((9*0.25f)*Y*d - vn);
+                v[k] = L[k]*v_fma(vx_setall_f32(9.f*0.25f)*Y[k], d, vmvn);
+            }
 
-            v_float32 d;
-            // d = (4*13) / max(X + 15 * Y + 3 * Z, FLT_EPSILON)
-            d = v_fma(Y, vx_setall_f32(15.f), v_fma(Z, vx_setall_f32(3.f), X));
-            d = vx_setall_f32(4.f*13.f) / v_max(d, vx_setall_f32(FLT_EPSILON));
-            // u = L*(X*d - un)
-            u = L*v_fma(X, d, vx_setall_f32(-un));
-            // v = L*((9*0.25f)*Y*d - vn);
-            v = L*v_fma(vx_setall_f32(9.f*0.25f)*Y, d, vx_setall_f32(-vn));
-
-            v_store_interleave(dst, L, u, v);
+            for (int k = 0; k < nrepeats; k++)
+            {
+                v_store_interleave(dst + k*3*vsize, L[k], u[k], v[k]);
+            }
         }
         vx_cleanup();
 #endif
