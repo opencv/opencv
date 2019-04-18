@@ -19,7 +19,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #error "1024-long ops not implemented yet"
 #elif CV__SIMD_FORWARD == 512
 // 512
-#define __CV_VX(fun)   v256_##fun
+#define __CV_VX(fun)   v512_##fun
 #define __CV_V_UINT8   v_uint8x64
 #define __CV_V_INT8    v_int8x64
 #define __CV_V_UINT16  v_uint16x32
