@@ -1987,7 +1987,7 @@ struct Lab2RGBfloat
 
 #if CV_SIMD
         const int vsize = v_float32::nlanes;
-        const int nrepeats = vsize == 4 ? 2 : 1;
+        const int nrepeats = 2;
         v_float32 v16_116 = vx_setall_f32(16.0f / 116.0f);
         for( ; i <= n-vsize*nrepeats;
                i += vsize*nrepeats, src += 3*vsize*nrepeats, dst += dcn*vsize*nrepeats)
