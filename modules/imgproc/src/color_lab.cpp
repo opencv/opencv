@@ -2344,13 +2344,14 @@ struct Lab2RGBinteger
     {
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
-        bool srgb = issRGB;
-        ushort* tab = sRGBInvGammaTab_b;
+
         i = 0;
 
 #if CV_SIMD
         if(enablePackedLab)
         {
+            bool srgb = issRGB;
+            ushort* tab = sRGBInvGammaTab_b;
             const int vsize = v_uint8::nlanes;
             v_uint8 valpha = vx_setall_u8(alpha);
             v_int32 vc[9];
@@ -3510,14 +3511,14 @@ struct Luv2RGBinteger
     {
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
-        ushort* tab = sRGBInvGammaTab_b;
-        bool srgb = issRGB;
 
         i = 0;
 
 #if CV_SIMD
         if(enablePackedLuv2RGB)
         {
+            ushort* tab = sRGBInvGammaTab_b;
+            bool srgb = issRGB;
             static const int vsize = v_uint8::nlanes;
             const int descaleShift = 1 << (shift-1);
             v_int16 vdescale = vx_setall_s16(descaleShift);
