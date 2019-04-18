@@ -210,7 +210,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
-        Size kernel, stride, pad, dilation, adjustPad;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad, dilation, adjustPad;
+        std::vector<int> kernel_size, strides, pads, dilations;
         String padMode;
         int numOutput;
     };
@@ -225,15 +226,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
-    };
-
-    class CV_EXPORTS Convolution3DLayer : public Layer
-    {
-    public:
-        DictValue pads, strides, dilations, kernel;
-        String padMode;
-        int numOutput;
-        static Ptr<Convolution3DLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS LRNLayer : public Layer
@@ -252,9 +244,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         int type;
-        Size kernel, stride;
-        int pad_l, pad_t, pad_r, pad_b;
+        std::vector<int> kernel_size, strides, pads;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride;
         CV_DEPRECATED_EXTERNAL Size pad;
+        CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;
@@ -271,23 +264,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
-
-    class CV_EXPORTS Pooling3DLayer : public Layer
-    {
-    public:
-        int type;
-        DictValue kernel, strides, pads;
-        bool globalPooling;
-        String padMode;
-        bool ceilMode;
-        // If true for average pooling with padding, divide an every output region
-        // by a whole kernel area. Otherwise exclude zero padded values and divide
-        // by number of real values.
-        bool avePoolPaddedArea;
-
-        static Ptr<Pooling3DLayer> create(const LayerParams& params);
-    };
-
 
     class CV_EXPORTS SoftmaxLayer : public Layer
     {

@@ -66,63 +66,69 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        int pad_t = 0, pad_l = 0, pad_r = 0, pad_b = 0;
-        getConvolutionKernelParams(params, kernel.height, kernel.width, pad_t,
-                                   pad_l, pad_b, pad_r, stride.height, stride.width, dilation.height,
-                                   dilation.width, padMode);
 
-        if (pad_t != pad_b || pad_l != pad_r)
-            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
-
-        pad.width = pad_l;
-        pad.height = pad_t;
+        getConvolutionKernelParams(params, kernel_size, pads, strides, dilations, padMode);
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
-
-        adjustPad.height = params.get<int>("adj_h", 0);
-        adjustPad.width = params.get<int>("adj_w", 0);
-
         CV_Assert(numOutput % ngroups == 0);
-        CV_Assert(adjustPad.width < stride.width &&
-                  adjustPad.height < stride.height);
 
+        if (kernel_size.size() == 2) {
+            kernel = Size(kernel_size[1], kernel_size[0]);
+            stride = Size(strides[1], strides[0]);
+            for (int i = 0; i < pads.size() / 2; i++) {
+                if (pads[i] != pads[i + pads.size() / 2])
+                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+            }
+            pad = Size(pads[1], pads[0]);
+            dilation = Size(dilations[1], dilations[0]);
+
+            adjustPad.height = params.get<int>("adj_h", 0);
+            adjustPad.width = params.get<int>("adj_w", 0);
+            CV_Assert(adjustPad.width < stride.width &&
+                      adjustPad.height < stride.height);
+        }
         newWeightAndBias = false;
     }
 
-    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-
         CV_Assert(inputs.size() > 0);
 
-        CV_Assert(blobs.size() >= 1 && blobs.size() <= 2);
-        CV_Assert(blobs[0].dims == 4 && blobs[0].size[3] == kernel.width && blobs[0].size[2] == kernel.height);
-
-        const Mat &input = inputs[0];
-        CV_Assert(input.dims == 4 && (input.type() == CV_32F || input.type() == CV_64F || input.type() == CV_16S));
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            CV_Assert(inputs[i].type() == input.type());
-            CV_Assert(inputs[i].dims == 4 && inputs[i].size[1] == input.size[1]);
-            CV_Assert(inputs[i].size[2] == input.size[2] && inputs[i].size[3] == input.size[3]);
+        CV_Assert(blobs.size() == 1 || blobs.size() == 2);
+        CV_Assert(inputs[0].dims == outputs[0].dims && (blobs[0].dims == 4 || blobs[0].dims == 5));
+        for (int i = 2; i < blobs[0].dims; i++) {
+            CV_Assert(blobs[0].size[i] == kernel_size[i - 2]);
         }
 
-        Size outSize = Size(outputs[0].size[3], outputs[0].size[2]);
+        const Mat &input = inputs[0];
+        CV_Assert((input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_64F || input.type() == CV_16S));
+        for (int i = 0; i < inputs.size(); i++)
+        {
+            CV_Assert(inputs[i].type() == input.type());
+            CV_Assert((inputs[i].dims == 4 || inputs[i].dims == 5) && inputs[i].size[1] == input.size[1]);
+            for (int j = 0; j < inputs[i].dims; j++) {
+                CV_Assert(inputs[i].size[j] == input.size[j]);
+            }
+        }
 
-        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
-
-        getConvPoolPaddings(Size(input.size[3], input.size[2]), outSize,
-                kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
-
-
-        if (pad_t != pad_b || pad_l != pad_r)
-            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
-
-        pad.width = pad_l;
-        pad.height = pad_t;
+        std::vector<int> inpShape;
+        std::vector<int> outShape;
+        for (int i = 2; i < inputs[0].dims; i++) {
+            inpShape.push_back(inputs[0].size[i]);
+            outShape.push_back(outputs[0].size[i]);
+        }
+        getConvPoolPaddings(inpShape, outShape, kernel_size, strides, padMode, dilations, pads);
+        if (pads.size() == 4) {
+            for (int i = 0; i < pads.size() / 2; i++) {
+                if (pads[i] != pads[i + pads.size() / 2])
+                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
+            }
+            pad = Size(pads[1], pads[0]);
+        }
     }
 
     bool hasBias() const
@@ -133,9 +139,9 @@ public:
     virtual MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const = 0;
     bool is1x1() const
     {
-        return (kernel.height == 1 && kernel.width == 1) &&
-        (stride.height == 1 && stride.width == 1) &&
-        (dilation.height == 1 && dilation.width == 1);
+        return (kernel_size.back() == 1 && kernel_size[kernel_size.size() - 2] == 1) &&
+               (strides.back() == 1 && strides[strides.size() - 2] == 1) &&
+               (dilations.back() == 1 && dilations[dilations.size() - 2] == 1);
     }
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
@@ -237,12 +243,14 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
+            if (kernel_size.size() == 3)
+                return preferableTarget == DNN_TARGET_CPU;
             return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4) ||
                    (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
         }
         else
 #endif
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+            return (kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -256,21 +264,23 @@ public:
 
         internals.clear();
 
-        int inpCn = inputs[0][1];
-        int inpH = inputs[0][2];
-        int inpW = inputs[0][3];
+        CV_Assert(inputs.size() != 0);
+        std::vector<int> inpShape;
+        for (int i = 2; i < inputs[0].size(); i++) {
+            inpShape.push_back(inputs[0][i]);
+        }
 
+        std::vector<int> outShape;
         int outCn = blobs[0].size[0];
-        Size out;
-
+        int inpCn = inputs[0][1];
         if (padMode.empty())
         {
-            out.height = (inpH + 2 * pad.height - (dilation.height * (kernel.height - 1) + 1)) / stride.height + 1;
-            out.width = (inpW + 2 * pad.width - (dilation.width * (kernel.width - 1) + 1)) / stride.width + 1;
+            for (int i = 0; i < inpShape.size(); i++)
+                outShape.push_back((inpShape[i] + pads[i] + pads[i + pads.size() / 2] - dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
         }
         else
         {
-            getConvPoolOutParams(Size(inpW, inpH), kernel, stride, padMode, dilation, out);
+            getConvPoolOutParams(inpShape, kernel_size, strides, padMode, dilations, outShape);
         }
 
         int ngroups = inpCn / blobs[0].size[1];
@@ -279,9 +289,13 @@ public:
                      "be multiple of %d but got %d", blobs[0].size[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        int dims[] = {inputs[0][0], outCn, out.height, out.width};
-        outputs.resize(inputs.size(), shape(dims, 4));
-
+        std::vector<int> dims;
+        dims.push_back(inputs[0][0]);
+        dims.push_back(outCn);
+        for (int i = 0; i < outShape.size(); i++) {
+           dims.push_back(outShape[i]);
+        }
+        outputs.resize(inputs.size(), shape(&dims[0], dims.size()));
         return false;
     }
 
@@ -451,25 +465,28 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        CV_Assert(input->dims.size() == 4);
+        CV_Assert(input->dims.size() == 4 || input->dims.size() == 5);
 
-        const int inpCn = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+        const int inpCn = input->dims[input->dims.size() - 2];  // NOTE: input->dims are reversed (whcn or whdcn)
         const int outCn = blobs[0].size[0];
         const int inpGroupCn = blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
-        auto ieWeights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);
+        InferenceEngine::Layout layout = (input->dims.size() == 4) ? InferenceEngine::Layout::OIHW :
+                                                                     InferenceEngine::Layout::NCDHW;
+
+        auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
         if (newWeightAndBias)
         {
             if (weightsMat.isContinuous())
             {
                 Mat fusedWeights = weightsMat.reshape(1, blobs[0].dims, blobs[0].size);
-                ieWeights = wrapToInfEngineBlob(fusedWeights, InferenceEngine::Layout::OIHW);
+                ieWeights = wrapToInfEngineBlob(fusedWeights, layout);
             }
             else
             {
                 ieWeights = InferenceEngine::make_shared_blob<float>(
-                                    InferenceEngine::Precision::FP32, InferenceEngine::Layout::OIHW,
+                                    InferenceEngine::Precision::FP32, layout,
                                     ieWeights->dims());
                 ieWeights->allocate();
 
@@ -488,11 +505,11 @@ public:
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
-        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
-        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
-        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
-        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setKernel(std::vector<size_t>(kernel_size.begin(), kernel_size.end()));
+        ieLayer.setStrides(std::vector<size_t>(strides.begin(), strides.end()));
+        ieLayer.setDilation(std::vector<size_t>(dilations.begin(), dilations.end()));
+        ieLayer.setPaddingsBegin(std::vector<size_t>(pads.begin(), pads.begin() + pads.size() / 2));
+        ieLayer.setPaddingsEnd(std::vector<size_t>(pads.begin() + pads.size() / 2, pads.end()));
         ieLayer.setGroup((size_t)group);
         ieLayer.setOutDepth((size_t)outCn);
 
@@ -1084,6 +1101,10 @@ public:
                stride.width, stride.height, dilation.width, dilation.height);*/
         CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
                     outputs.size() == 1, inputs[0].data != outputs[0].data);
+
+        if (inputs[0].dims == 5) {
+            CV_Error(Error::StsNotImplemented, "Convolution3D layer is not supported on OCV backend");
+        }
 
         int ngroups = inputs[0].size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
@@ -1835,210 +1856,6 @@ public:
     }
 };
 
-class Convolution3DLayerImpl : public Convolution3DLayer
-{
-public:
-    Mat weightsMat;
-    std::vector<float> biasvec;
-    String padMode;
-    DictValue pads, strides, dilations, kernel;
-    int numOutput;
-    int ngroups;
-
-    Convolution3DLayerImpl(const LayerParams &params) {
-        setParamsFrom(params);
-
-        CV_Assert(params.has("kernel"));
-        CV_Assert(params.get("kernel").size() == 3);
-        kernel = params.get("kernel");
-
-        if (params.has("pad_mode")) {
-            padMode = params.get<String>("pad_mode");
-        }
-        else if (!params.has("pads")) {
-            int dst[] = {0, 0, 0};
-            pads = DictValue::arrayInt(dst, 3);
-        } else {
-            CV_Assert(params.get("pads").size() == 3 || params.get("pads").size() == 6);
-            pads = params.get("pads");
-            if (pads.size() == 6 && (pads.get<int>(0) != pads.get<int>(3) ||
-                pads.get<int>(1) != pads.get<int>(4) || pads.get<int>(2) != pads.get<int>(5)))
-                CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution3D layer");
-        }
-        if (!params.has("strides")) {
-            int dst[] = {1, 1, 1};
-            strides = DictValue::arrayInt(dst, 3);
-        } else {
-            CV_Assert(params.get("strides").size() == 3);
-            strides = params.get("strides");
-        }
-        if (!params.has("dilations")) {
-            int dst[] = {1, 1, 1};
-            dilations = DictValue::arrayInt(dst, 3);
-        } else {
-            CV_Assert(params.get("dilations").size() == 3);
-            dilations = params.get("dilations");
-        }
-
-        numOutput = params.get<int>("num_output");
-        ngroups = params.get<int>("group", 1);
-        CV_Assert(numOutput % ngroups == 0);
-    }
-
-    bool hasBias() const
-    {
-        return blobs.size() >= 2;
-    }
-
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-#ifdef HAVE_INF_ENGINE
-        if (INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5) && backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return preferableTarget == DNN_TARGET_CPU;
-#endif
-        return false;
-    }
-
-    bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                         const int requiredOutputs,
-                         std::vector<MatShape> &outputs,
-                         std::vector<MatShape> &internals) const CV_OVERRIDE
-    {
-        CV_Assert(blobs.size() != 0);
-        CV_Assert(blobs[0].dims == 5);
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)blobs[0].size[0]);
-        CV_Assert(numOutput == blobs[0].size[0]);
-        CV_Assert(inputs.size() == (size_t)1);
-        internals.clear();
-
-        std::vector<int> dims(5);
-        dims[0] = inputs[0][0];
-        dims[1] = numOutput;
-
-        if (padMode.empty())
-        {
-            for (int i = 2; i < dims.size(); i++)
-                dims[i] = (inputs[0][i] + 2 * pads.get<int>(i - 2) - dilations.get<int>(i - 2) *
-                          (kernel.get<int>(i - 2) - 1) - 1) / strides.get<int>(i - 2) + 1;
-        }
-        else if (padMode == "VALID")
-        {
-            for (int i = 2; i < dims.size(); i++)
-                dims[i] = (inputs[0][i] - dilations.get<int>(i - 2) * (kernel.get<int>(i - 2) - 1) - 1 +
-                          strides.get<int>(i - 2)) / strides.get<int>(i - 2);
-        }
-        else if (padMode == "SAME")
-        {
-            for (int i = 2; i < dims.size(); i++)
-                dims[i] = (inputs[0][i] - 1 + strides.get<int>(i - 2)) / strides.get<int>(i - 2);
-        }
-        else
-            CV_Error(Error::StsError, "Unsupported padding mode");
-
-        int inpCn = inputs[0][1];
-        CV_Assert(ngroups ==  inpCn / blobs[0].size[1]);
-        if (ngroups == 0 || ngroups * blobs[0].size[1] != inpCn)
-            CV_Error(Error::StsError, format("Number of input channels should "
-                     "be multiple of %d but got %d", blobs[0].size[1], inpCn));
-        CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && numOutput % ngroups == 0);
-
-        outputs.resize(inputs.size(), shape(&dims[0], dims.size()));
-        return false;
-    }
-
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
-    {
-        CV_Assert(!blobs.empty());
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        if (padMode == "VALID")
-        {
-            int dst[] = {0, 0, 0};
-            pads = DictValue::arrayInt(dst, 3);
-        }
-        else if (padMode == "SAME")
-        {
-            std::vector<int> dst(6);
-            for (int i = 0; i < pads.size() / 2; i++) {
-                dst[i] = dst[i + 3] = std::max(0, (outputs[0].size[i + 2] - 1) * strides.get<int>(i) +
-                                        (dilations.get<int>(i) * (kernel.get<int>(i) - 1) + 1) - inputs[0].size[i + 2] ) / 2;
-            }
-            pads = DictValue::arrayInt(&dst[0], 6);
-        }
-    }
-
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_INF_ENGINE
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        CV_Assert(input->dims.size() == 5);
-
-        const int inpCn = input->dims[3];  // NOTE: input->dims are reversed (whdcn)
-        const int outCn = blobs[0].size[0];
-        const int inpGroupCn = blobs[0].size[1];
-        const int group = inpCn / inpGroupCn;
-        weightsMat = blobs[0];
-
-        auto ieWeights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::NCDHW);
-
-        if (weightsMat.isContinuous())
-        {
-            Mat fusedWeights = weightsMat.reshape(1, blobs[0].dims, blobs[0].size);
-            ieWeights = wrapToInfEngineBlob(fusedWeights, InferenceEngine::Layout::NCDHW);
-        }
-        else
-        {
-            ieWeights = InferenceEngine::make_shared_blob<float>(
-                                InferenceEngine::Precision::FP32, InferenceEngine::Layout::NCDHW,
-                                ieWeights->dims());
-            ieWeights->allocate();
-
-            Mat newWeights = infEngineBlobToMat(ieWeights).reshape(1, outCn);
-            Mat fusedWeights = weightsMat.colRange(0, newWeights.cols);
-            fusedWeights.copyTo(newWeights);
-        }
-
-        InferenceEngine::Blob::Ptr ieBiases;
-        if (hasBias())
-        {
-            biasvec = blobs[1];
-            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
-            ieBiases = wrapToInfEngineBlob(biasesMat, {(size_t)outCn}, InferenceEngine::Layout::C);
-        }
-
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
-
-        ieLayer.setKernel({(size_t)kernel.get<int>(0), (size_t)kernel.get<int>(1), (size_t)kernel.get<int>(2)});
-        ieLayer.setStrides({(size_t)strides.get<int>(0), (size_t)strides.get<int>(1), (size_t)strides.get<int>(2)});
-        ieLayer.setDilation({(size_t)dilations.get<int>(0), (size_t)dilations.get<int>(1), (size_t)dilations.get<int>(2)});
-        ieLayer.setPaddingsBegin({(size_t)pads.get<int>(0), (size_t)pads.get<int>(1), (size_t)pads.get<int>(2)});
-        ieLayer.setPaddingsEnd({(size_t)pads.get<int>(0), (size_t)pads.get<int>(1), (size_t)pads.get<int>(2)});
-        ieLayer.setGroup((size_t)group);
-        ieLayer.setOutDepth((size_t)outCn);
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        addConstantData("weights", ieWeights, l);
-        if (ieBiases)
-            addConstantData("biases", ieBiases, l);
-
-        if (!padMode.empty())
-            l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
-    }
-
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, "Convolution3D layer is not supported on OCV backend");
-    }
-};
-
 Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 {
     Ptr<ConvolutionLayerImpl> l(new ConvolutionLayerImpl(params));
@@ -2048,11 +1865,6 @@ Ptr<BaseConvolutionLayer> ConvolutionLayer::create(const LayerParams &params)
 Ptr<BaseConvolutionLayer> DeconvolutionLayer::create(const LayerParams &params)
 {
     return Ptr<BaseConvolutionLayer>(new DeConvolutionLayerImpl(params));
-}
-
-Ptr<Convolution3DLayer> Convolution3DLayer::create(const LayerParams &params)
-{
-    return Ptr<Convolution3DLayer>(new Convolution3DLayerImpl(params));
 }
 
 }

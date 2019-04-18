@@ -279,25 +279,6 @@ static inline int getDataLayout(const std::string& layerName,
     return it != data_layouts.end() ? it->second : DATA_LAYOUT_UNKNOWN;
 }
 
-void setDilations(LayerParams &layerParams, const tensorflow::NodeDef &layer)
-{
-    if (hasLayerAttr(layer, "dilations"))
-    {
-        const tensorflow::AttrValue& val = getLayerAttr(layer, "dilations");
-        int layout = getDataLayout(layer);
-        CV_Assert(layout == DATA_LAYOUT_NDHWC);
-        int dimD = 1, dimY = 2, dimX = 3, dimC = 4;
-        if (val.list().i_size() != 5 ||
-            val.list().i(0) != 1 || val.list().i(dimC) != 1)
-            CV_Error(Error::StsError, "Unsupported dilations");
-
-        int dilations[] = {static_cast<int>(val.list().i(dimD)),
-                           static_cast<int>(val.list().i(dimY)),
-                           static_cast<int>(val.list().i(dimX))};
-        layerParams.set("dilations",  DictValue::arrayInt(dilations, 3));
-    }
-}
-
 void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "strides"))
@@ -324,7 +305,7 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             int strides[] = {static_cast<int>(val.list().i(dimD)),
                              static_cast<int>(val.list().i(dimY)),
                              static_cast<int>(val.list().i(dimX))};
-            layerParams.set("strides",  DictValue::arrayInt(strides, 3));
+            layerParams.set("stride",  DictValue::arrayInt(strides, 3));
         }
         else
         {
@@ -375,7 +356,7 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
             int kernel[] = {static_cast<int>(val.list().i(dimD)),
                             static_cast<int>(val.list().i(dimY)),
                             static_cast<int>(val.list().i(dimX))};
-            layerParams.set("kernel",  DictValue::arrayInt(kernel, 3));
+            layerParams.set("kernel_size",  DictValue::arrayInt(kernel, 3));
         }
         else
         {
@@ -982,16 +963,9 @@ void TFImporter::populateNet(Net dstNet)
             {
                 layerParams.blobs[0] = sharedWeightsIt->second;
             }
+            Mat weights = layerParams.blobs[0];
+            layerParams.set("kernel_size",  DictValue::arrayInt(&weights.size[2], weights.dims - 2));
 
-            if (layerParams.blobs[0].dims == 4) {
-                layerParams.set("kernel_h", layerParams.blobs[0].size[2]);
-                layerParams.set("kernel_w", layerParams.blobs[0].size[3]);
-            }
-            else if (layerParams.blobs[0].dims == 5) {
-                int kernel[] = {layerParams.blobs[0].size[2], layerParams.blobs[0].size[3], layerParams.blobs[0].size[4]};
-                layerParams.set("kernel",  DictValue::arrayInt(kernel, 3));
-                setDilations(layerParams, layer);
-            }
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
 
             setStrides(layerParams, layer);
@@ -1006,8 +980,7 @@ void TFImporter::populateNet(Net dstNet)
                 ExcludeLayer(net, next_layers[0].second, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
             }
-
-            layerParams.type = type == "Conv3D" ? "Convolution3D" : "Convolution";
+            layerParams.type = "Convolution";
             int id = dstNet.addLayer(name, layerParams.type, layerParams);
             layer_id[name] = id;
 
@@ -1370,8 +1343,7 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
-
-            layerParams.type = (type == "MaxPool3D") ? "Pooling3D" : "Pooling";
+            layerParams.type = "Pooling";
             int id = dstNet.addLayer(name, layerParams.type, layerParams);
             layer_id[name] = id;
 
@@ -1381,12 +1353,10 @@ void TFImporter::populateNet(Net dstNet)
         {
             layerParams.set("pool", "ave");
             layerParams.set("ave_pool_padded_area", false);
-
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
-
-            layerParams.type = (type == "AvgPool3D") ? "Pooling3D" : "Pooling";
+            layerParams.type = "Pooling";
             int id = dstNet.addLayer(name, layerParams.type, layerParams);
             layer_id[name] = id;
 

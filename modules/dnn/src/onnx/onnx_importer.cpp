@@ -200,7 +200,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
                 std::vector<int32_t> dst(attribute_proto.ints_size());
                 convertInt64ToInt32(src, dst, attribute_proto.ints_size());
-                lp.set("kernel",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+                lp.set("kernel_size",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
             }
         }
         else if(attribute_name == "strides")
@@ -213,7 +213,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
                 std::vector<int32_t> dst(attribute_proto.ints_size());
                 convertInt64ToInt32(src, dst, attribute_proto.ints_size());
-                lp.set("strides",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+                lp.set("stride",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
             }
         }
         else if(attribute_name == "pads")
@@ -247,7 +247,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                     const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
                     std::vector<int32_t> dst(attribute_proto.ints_size());
                     convertInt64ToInt32(src, dst, attribute_proto.ints_size());
-                    lp.set("pads",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+                    lp.set("pad",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
                 }
             }
         }
@@ -270,7 +270,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
                 std::vector<int32_t> dst(attribute_proto.ints_size());
                 convertInt64ToInt32(src, dst, attribute_proto.ints_size());
-                lp.set("dilations",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+                lp.set("dilation",  DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
             }
         }
         else if (attribute_proto.has_i())
@@ -405,18 +405,15 @@ void ONNXImporter::populateNet(Net dstNet)
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
 
-
         if (layer_type == "MaxPool")
         {
-            layerParams.type = (layerParams.has("kernel") && layerParams.get("kernel").size() == 3) ?
-                                "Pooling3D" : "Pooling";
+            layerParams.type = "Pooling";
             layerParams.set("pool", "MAX");
             layerParams.set("ceil_mode", isCeilMode(layerParams));
         }
         else if (layer_type == "AveragePool")
         {
-            layerParams.type = (layerParams.has("kernel") && layerParams.get("kernel").size() == 3) ?
-                                "Pooling3D" : "Pooling";
+            layerParams.type = "Pooling";
             layerParams.set("pool", "AVE");
             layerParams.set("ceil_mode", isCeilMode(layerParams));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
@@ -608,7 +605,7 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
             CV_Assert(!layerParams.blobs.empty());
-            layerParams.type = layerParams.blobs[0].dims == 5 ? "Convolution3D" : "Convolution";
+            layerParams.type = "Convolution";
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
             layerParams.set("bias_term", node_proto.input_size() == 3);
         }
