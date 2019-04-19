@@ -859,7 +859,80 @@ OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_float64x8,  _mm512_min_pd)
 OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float64x8,  _mm512_max_pd)
 
 /** Rotate **/
-#define OPENCV_HAL_IMPL_AVX512_ROTATE(_Tpvec, suffix)                                                                                    \
+template<int imm>
+inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
+{
+    if (imm == 0) return a;
+    if (imm == 64) return b;
+    if (imm >= 128) return v_int8x64();
+    return v_int8x64(_mm512_permutex2var_epi8(b.val,
+           _v512_set_epi8(0x7f - imm,0x7e - imm,0x7d - imm,0x7c - imm,0x7b - imm,0x7a - imm,0x79 - imm,0x78 - imm,
+                          0x77 - imm,0x76 - imm,0x75 - imm,0x74 - imm,0x73 - imm,0x72 - imm,0x71 - imm,0x70 - imm,
+                          0x6f - imm,0x6e - imm,0x6d - imm,0x6c - imm,0x6b - imm,0x6a - imm,0x69 - imm,0x68 - imm,
+                          0x67 - imm,0x66 - imm,0x65 - imm,0x64 - imm,0x63 - imm,0x62 - imm,0x61 - imm,0x60 - imm,
+                          0x5f - imm,0x5e - imm,0x5d - imm,0x5c - imm,0x5b - imm,0x5a - imm,0x59 - imm,0x58 - imm,
+                          0x57 - imm,0x56 - imm,0x55 - imm,0x54 - imm,0x53 - imm,0x52 - imm,0x51 - imm,0x50 - imm,
+                          0x4f - imm,0x4e - imm,0x4d - imm,0x4c - imm,0x4b - imm,0x4a - imm,0x49 - imm,0x48 - imm,
+                          0x47 - imm,0x46 - imm,0x45 - imm,0x44 - imm,0x43 - imm,0x42 - imm,0x41 - imm,0x40 - imm), a.val));
+}
+template<int imm>
+inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
+{
+    if (imm == 0) return a;
+    if (imm == 64) return b;
+    if (imm >= 128) return v_int8x64();
+    return v_int8x64(_mm512_permutex2var_epi8(a.val,
+           _v512_set_epi8(0x3f + imm,0x3e + imm,0x3d + imm,0x3c + imm,0x3b + imm,0x3a + imm,0x39 + imm,0x38 + imm,
+                          0x37 + imm,0x36 + imm,0x35 + imm,0x34 + imm,0x33 + imm,0x32 + imm,0x31 + imm,0x30 + imm,
+                          0x2f + imm,0x2e + imm,0x2d + imm,0x2c + imm,0x2b + imm,0x2a + imm,0x29 + imm,0x28 + imm,
+                          0x27 + imm,0x26 + imm,0x25 + imm,0x24 + imm,0x23 + imm,0x22 + imm,0x21 + imm,0x20 + imm,
+                          0x1f + imm,0x1e + imm,0x1d + imm,0x1c + imm,0x1b + imm,0x1a + imm,0x19 + imm,0x18 + imm,
+                          0x17 + imm,0x16 + imm,0x15 + imm,0x14 + imm,0x13 + imm,0x12 + imm,0x11 + imm,0x10 + imm,
+                          0x0f + imm,0x0e + imm,0x0d + imm,0x0c + imm,0x0b + imm,0x0a + imm,0x09 + imm,0x08 + imm,
+                          0x07 + imm,0x06 + imm,0x05 + imm,0x04 + imm,0x03 + imm,0x02 + imm,0x01 + imm,0x00 + imm), b.val));
+}
+template<int imm>
+inline v_int8x64 v_rotate_left(const v_int8x64& a)
+{
+    if (imm == 0) return a;
+    if (imm >= 64) return v_int8x64();
+    return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF << imm,
+           _v512_set_epi8(0x3f - imm,0x3e - imm,0x3d - imm,0x3c - imm,0x3b - imm,0x3a - imm,0x39 - imm,0x38 - imm,
+                          0x37 - imm,0x36 - imm,0x35 - imm,0x34 - imm,0x33 - imm,0x32 - imm,0x31 - imm,0x30 - imm,
+                          0x2f - imm,0x2e - imm,0x2d - imm,0x2c - imm,0x2b - imm,0x2a - imm,0x29 - imm,0x28 - imm,
+                          0x27 - imm,0x26 - imm,0x25 - imm,0x24 - imm,0x23 - imm,0x22 - imm,0x21 - imm,0x20 - imm,
+                          0x1f - imm,0x1e - imm,0x1d - imm,0x1c - imm,0x1b - imm,0x1a - imm,0x19 - imm,0x18 - imm,
+                          0x17 - imm,0x16 - imm,0x15 - imm,0x14 - imm,0x13 - imm,0x12 - imm,0x11 - imm,0x10 - imm,
+                          0x0f - imm,0x0e - imm,0x0d - imm,0x0c - imm,0x0b - imm,0x0a - imm,0x09 - imm,0x08 - imm,
+                          0x07 - imm,0x06 - imm,0x05 - imm,0x04 - imm,0x03 - imm,0x02 - imm,0x01 - imm,0x00 - imm), a.val));
+}
+template<int imm>
+inline v_int8x64 v_rotate_right(const v_int8x64& a)
+{
+    if (imm == 0) return a;
+    if (imm >= 64) return v_int8x64();
+    return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF >> imm,
+           _v512_set_epi8(0x3f + imm,0x3e + imm,0x3d + imm,0x3c + imm,0x3b + imm,0x3a + imm,0x39 + imm,0x38 + imm,
+                          0x37 + imm,0x36 + imm,0x35 + imm,0x34 + imm,0x33 + imm,0x32 + imm,0x31 + imm,0x30 + imm,
+                          0x2f + imm,0x2e + imm,0x2d + imm,0x2c + imm,0x2b + imm,0x2a + imm,0x29 + imm,0x28 + imm,
+                          0x27 + imm,0x26 + imm,0x25 + imm,0x24 + imm,0x23 + imm,0x22 + imm,0x21 + imm,0x20 + imm,
+                          0x1f + imm,0x1e + imm,0x1d + imm,0x1c + imm,0x1b + imm,0x1a + imm,0x19 + imm,0x18 + imm,
+                          0x17 + imm,0x16 + imm,0x15 + imm,0x14 + imm,0x13 + imm,0x12 + imm,0x11 + imm,0x10 + imm,
+                          0x0f + imm,0x0e + imm,0x0d + imm,0x0c + imm,0x0b + imm,0x0a + imm,0x09 + imm,0x08 + imm,
+                          0x07 + imm,0x06 + imm,0x05 + imm,0x04 + imm,0x03 + imm,0x02 + imm,0x01 + imm,0x00 + imm), a.val));
+}
+
+#define OPENCV_HAL_IMPL_AVX512_ROTATE_PM(_Tpvec, suffix)                                                                                 \
+template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                          \
+{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }    \
+template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                         \
+{ return v_reinterpret_as_##suffix(v_rotate_right<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }   \
+template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                           \
+{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a))); }                            \
+template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                          \
+{ return v_reinterpret_as_##suffix(v_rotate_right<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a))); }
+
+#define OPENCV_HAL_IMPL_AVX512_ROTATE_EC(_Tpvec, suffix)                                                                                 \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                                            \
 {                                                                                                                                        \
@@ -868,15 +941,6 @@ inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                   
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
     return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << SHIFT2, b), -1 << imm, a));                           \
-  /*const _Tpvec::lane_type idx[] = { 0x00+SHIFT2,0x01+SHIFT2,0x02+SHIFT2,0x03+SHIFT2,0x04+SHIFT2,0x05+SHIFT2,0x06+SHIFT2,0x07+SHIFT2,   \
-                                      0x08+SHIFT2,0x09+SHIFT2,0x0a+SHIFT2,0x0b+SHIFT2,0x0c+SHIFT2,0x0d+SHIFT2,0x0e+SHIFT2,0x0f+SHIFT2,   \
-                                      0x10+SHIFT2,0x11+SHIFT2,0x12+SHIFT2,0x13+SHIFT2,0x14+SHIFT2,0x15+SHIFT2,0x16+SHIFT2,0x17+SHIFT2,   \
-                                      0x18+SHIFT2,0x19+SHIFT2,0x1a+SHIFT2,0x1b+SHIFT2,0x1c+SHIFT2,0x1d+SHIFT2,0x1e+SHIFT2,0x1f+SHIFT2,   \
-                                      0x20+SHIFT2,0x21+SHIFT2,0x22+SHIFT2,0x23+SHIFT2,0x24+SHIFT2,0x25+SHIFT2,0x26+SHIFT2,0x27+SHIFT2,   \
-                                      0x28+SHIFT2,0x29+SHIFT2,0x2a+SHIFT2,0x2b+SHIFT2,0x2c+SHIFT2,0x2d+SHIFT2,0x2e+SHIFT2,0x2f+SHIFT2,   \
-                                      0x30+SHIFT2,0x31+SHIFT2,0x32+SHIFT2,0x33+SHIFT2,0x34+SHIFT2,0x35+SHIFT2,0x36+SHIFT2,0x37+SHIFT2,   \
-                                      0x38+SHIFT2,0x39+SHIFT2,0x3a+SHIFT2,0x3b+SHIFT2,0x3c+SHIFT2,0x3d+SHIFT2,0x3e+SHIFT2,0x3f+SHIFT2 }; \
-    return _Tpvec(_mm512_permutex2var_##suffix(b, _mm512_load_si512(idx), a));*/                                                         \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                           \
@@ -886,15 +950,6 @@ inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                  
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
     return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << imm, a.val), -1 << SHIFT2, b.val));                   \
-  /*const _Tpvec::lane_type idx[] = { 0x00+imm,0x01+imm,0x02+imm,0x03+imm,0x04+imm,0x05+imm,0x06+imm,0x07+imm,                           \
-                                      0x08+imm,0x09+imm,0x0a+imm,0x0b+imm,0x0c+imm,0x0d+imm,0x0e+imm,0x0f+imm,                           \
-                                      0x10+imm,0x11+imm,0x12+imm,0x13+imm,0x14+imm,0x15+imm,0x16+imm,0x17+imm,                           \
-                                      0x18+imm,0x19+imm,0x1a+imm,0x1b+imm,0x1c+imm,0x1d+imm,0x1e+imm,0x1f+imm,                           \
-                                      0x20+imm,0x21+imm,0x22+imm,0x23+imm,0x24+imm,0x25+imm,0x26+imm,0x27+imm,                           \
-                                      0x28+imm,0x29+imm,0x2a+imm,0x2b+imm,0x2c+imm,0x2d+imm,0x2e+imm,0x2f+imm,                           \
-                                      0x30+imm,0x31+imm,0x32+imm,0x33+imm,0x34+imm,0x35+imm,0x36+imm,0x37+imm,                           \
-                                      0x38+imm,0x39+imm,0x3a+imm,0x3b+imm,0x3c+imm,0x3d+imm,0x3e+imm,0x3f+imm };                         \
-    return _Tpvec(_mm512_permutex2var_##suffix(a, _mm512_load_si512(idx), b));*/                                                         \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                             \
@@ -913,20 +968,15 @@ inline _Tpvec v_rotate_right(const _Tpvec& a)                                   
     return _Tpvec(_mm512_maskz_compress_##suffix(-1 << imm, a.val));                                                                     \
 }
 
-#define OPENCV_HAL_IMPL_AVX_ROTATE(_Tpvec)                                  \
-    OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_left,  _Tpvec, OPENCV_HAL_NOP) \
-    OPENCV_HAL_IMPL_AVX_ROTATE_CAST(v_rotate_right, _Tpvec, OPENCV_HAL_NOP)
-
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint8x64,   epi8)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_int8x64,    epi8)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint16x32, epi16)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_int16x32,  epi16)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint32x16, epi32)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_int32x16,  epi32)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_uint64x8,  epi64)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_int64x8,   epi64)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_float32x16,   ps)
-OPENCV_HAL_IMPL_AVX512_ROTATE(v_float64x8,    pd)
+OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_uint8x64,   u8)
+OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_uint16x32,  u16)
+OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_int16x32,   s16)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_uint32x16,  epi32)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_int32x16,   epi32)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_uint64x8,   epi64)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_int64x8,    epi64)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float64x8,  pd)
 
 ////////// Reduce /////////
 
