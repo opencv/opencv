@@ -44,11 +44,14 @@
 
 #include <vector>
 #include <opencv2/core.hpp>
+#ifdef CV_CXX11
+#include <future>
+#endif
 
 #if !defined CV_DOXYGEN && !defined CV_STATIC_ANALYSIS && !defined CV_DNN_DONT_ADD_EXPERIMENTAL_NS
-#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v11 {
+#define CV__DNN_EXPERIMENTAL_NS_BEGIN namespace experimental_dnn_34_v12 {
 #define CV__DNN_EXPERIMENTAL_NS_END }
-namespace cv { namespace dnn { namespace experimental_dnn_34_v11 { } using namespace experimental_dnn_34_v11; }}
+namespace cv { namespace dnn { namespace experimental_dnn_34_v12 { } using namespace experimental_dnn_34_v12; }}
 #else
 #define CV__DNN_EXPERIMENTAL_NS_BEGIN
 #define CV__DNN_EXPERIMENTAL_NS_END
@@ -64,6 +67,18 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
     typedef std::vector<int> MatShape;
 
+#if defined(CV_CXX11) || defined(CV_DOXYGEN)
+    typedef std::future<Mat> AsyncMat;
+#else
+    // Just a workaround for bindings.
+    struct AsyncMat
+    {
+        Mat get() { return Mat(); }
+        void wait() const {}
+        size_t wait_for(size_t milliseconds) const { CV_UNUSED(milliseconds); return -1; }
+    };
+#endif
+
     /**
      * @brief Enum of computation backends supported by layers.
      * @see Net::setPreferableBackend
@@ -75,7 +90,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,
+        DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
         DNN_BACKEND_OPENCV
     };
 
@@ -89,8 +104,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
-        //! FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
-        DNN_TARGET_FPGA
+        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -461,6 +475,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @details By default runs forward pass for the whole network.
          */
         CV_WRAP Mat forward(const String& outputName = String());
+
+        /** @brief Runs forward pass to compute output of layer with name @p outputName.
+         *  @param outputName name for layer which output is needed to get
+         *  @details By default runs forward pass for the whole network.
+         *
+         *  This is an asynchronous version of forward(const String&).
+         *  dnn::DNN_BACKEND_INFERENCE_ENGINE backend is required.
+         */
+        CV_WRAP AsyncMat forwardAsync(const String& outputName = String());
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputBlobs contains all output blobs for specified layer.
