@@ -168,7 +168,6 @@ void InfEngineBackendNet::init(int targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-        inpBlobs[name] = blobIt->second;
         it.second->setPrecision(blobIt->second->precision());
     }
     for (const auto& it : cnn.getOutputsInfo())
@@ -176,7 +175,6 @@ void InfEngineBackendNet::init(int targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-        outBlobs[name] = blobIt->second;
         it.second->setPrecision(blobIt->second->precision());  // Should be always FP32
     }
 
@@ -286,6 +284,24 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::La
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
     return wrapToInfEngineBlob(m, reversedShape, layout);
+}
+
+InferenceEngine::Blob::Ptr cloneBlob(const InferenceEngine::Blob::Ptr& blob)
+{
+    InferenceEngine::Precision precision = blob->precision();
+    InferenceEngine::Blob::Ptr copy;
+    if (precision == InferenceEngine::Precision::FP32)
+    {
+        copy = InferenceEngine::make_shared_blob<float>(precision, blob->layout(), blob->dims());
+    }
+    else if (precision == InferenceEngine::Precision::U8)
+    {
+        copy = InferenceEngine::make_shared_blob<uint8_t>(precision, blob->layout(), blob->dims());
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    copy->allocate();
+    return copy;
 }
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr)
@@ -800,9 +816,6 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         plugin = InferenceEngine::InferencePlugin(enginePtr);
 
         netExec = plugin.LoadNetwork(net, {});
-        infRequest = netExec.CreateInferRequest();
-        infRequest.SetInput(inpBlobs);
-        infRequest.SetOutput(outBlobs);
     }
     catch (const std::exception& ex)
     {
@@ -828,9 +841,116 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     }
 }
 
-void InfEngineBackendNet::forward()
+void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Ptr<BackendWrapper> >& outsWrappers)
 {
-    infRequest.Infer();
+    auto outs = infEngineWrappers(outsWrappers);
+    outProms.clear();
+    outProms.resize(outs.size());
+    outsNames.resize(outs.size());
+    for (int i = 0; i < outs.size(); ++i)
+    {
+        outs[i]->futureMat = outProms[i].get_future();
+        outsNames[i] = outs[i]->dataPtr->name;
+    }
+}
+
+void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                                  bool isAsync)
+{
+    // Look for finished requests.
+    Ptr<InfEngineReqWrapper> reqWrapper;
+    for (auto& wrapper : infRequests)
+    {
+        if (wrapper->isReady)
+        {
+            reqWrapper = wrapper;
+            break;
+        }
+    }
+    if (reqWrapper.empty())
+    {
+        reqWrapper = Ptr<InfEngineReqWrapper>(new InfEngineReqWrapper());
+        try
+        {
+            reqWrapper->req = netExec.CreateInferRequest();
+        }
+        catch (const std::exception& ex)
+        {
+            CV_Error(Error::StsAssert, format("Failed to initialize Inference Engine backend: %s", ex.what()));
+        }
+        infRequests.push_back(reqWrapper);
+
+        InferenceEngine::BlobMap inpBlobs, outBlobs;
+        for (const auto& it : cnn.getInputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            CV_Assert(blobIt != allBlobs.end());
+            inpBlobs[name] = isAsync ? cloneBlob(blobIt->second) : blobIt->second;
+        }
+        for (const auto& it : cnn.getOutputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            CV_Assert(blobIt != allBlobs.end());
+            outBlobs[name] = isAsync ? cloneBlob(blobIt->second) : blobIt->second;
+        }
+        reqWrapper->req.SetInput(inpBlobs);
+        reqWrapper->req.SetOutput(outBlobs);
+
+        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
+        infRequestPtr->SetUserData(reqWrapper.get(), 0);
+
+        infRequestPtr->SetCompletionCallback({
+            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
+            {
+                InfEngineReqWrapper* wrapper;
+                request->GetUserData((void**)&wrapper, 0);
+                CV_Assert(wrapper);
+
+                for (int i = 0; i < wrapper->outProms.size(); ++i)
+                {
+                    const std::string& name = wrapper->outsNames[i];
+                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
+
+                    if (status == InferenceEngine::StatusCode::OK)
+                        wrapper->outProms[i].set_value(m.clone());
+                    else
+                    {
+                        try {
+                            std::runtime_error e("Async request failed");
+                            wrapper->outProms[i].set_exception(std::make_exception_ptr(e));
+                        } catch(...) {
+                            CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                        }
+                    }
+                }
+                wrapper->isReady = true;
+            }
+        });
+    }
+    if (isAsync)
+    {
+        // Copy actual data to infer request's input blobs.
+        for (const auto& it : cnn.getInputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            Mat srcMat = infEngineBlobToMat(blobIt->second);
+            Mat dstMat = infEngineBlobToMat(reqWrapper->req.GetBlob(name));
+            srcMat.copyTo(dstMat);
+        }
+
+        // Set promises to output blobs wrappers.
+        reqWrapper->makePromises(outBlobsWrappers);
+
+        reqWrapper->isReady = false;
+        reqWrapper->req.StartAsync();
+    }
+    else
+    {
+        reqWrapper->req.Infer();
+    }
 }
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
@@ -920,14 +1040,15 @@ bool haveInfEngine()
 #endif  // HAVE_INF_ENGINE
 }
 
-void forwardInfEngine(Ptr<BackendNode>& node)
+void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                      Ptr<BackendNode>& node, bool isAsync)
 {
     CV_Assert(haveInfEngine());
 #ifdef HAVE_INF_ENGINE
     CV_Assert(!node.empty());
     Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
     CV_Assert(!ieNode.empty());
-    ieNode->net->forward();
+    ieNode->net->forward(outBlobsWrappers, isAsync);
 #endif  // HAVE_INF_ENGINE
 }
 
