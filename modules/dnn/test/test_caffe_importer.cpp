@@ -405,6 +405,7 @@ TEST_P(Test_Caffe_nets, Colorization)
         l1 = 0.6; lInf = 15;
     }
     normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_Caffe_nets, DenseNet_121)
@@ -436,6 +437,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
         l1 = 0.11; lInf = 0.5;
     }
     normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST(Test_Caffe, multiple_inputs)
