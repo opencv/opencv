@@ -1,3 +1,7 @@
+if(COMMAND ocv_cmake_dump_vars)  # include guard
+  return()
+endif()
+
 include(CMakeParseArguments)
 
 # Debugging function
@@ -1111,15 +1115,6 @@ function(ocv_convert_to_lib_name var)
   set(${var} ${tmp} PARENT_SCOPE)
 endfunction()
 
-if(MSVC AND BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
-  if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
-    option(INSTALL_PDB "Add install PDB rules" ON)
-  elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
-    option(INSTALL_PDB "Add install PDB rules" OFF)
-  endif()
-endif()
 
 # add install command
 function(ocv_install_target)
@@ -1152,6 +1147,18 @@ function(ocv_install_target)
 
   if(MSVC)
     set(__target "${ARGV0}")
+
+    # don't move this into global scope of this file: compiler settings (like MSVC variable) are not available during processing
+    if(BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
+      if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
+        option(INSTALL_PDB "Add install PDB rules" ON)
+      elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
+        option(INSTALL_PDB "Add install PDB rules" OFF)
+      endif()
+    endif()
+
     if(INSTALL_PDB AND NOT INSTALL_IGNORE_PDB
         AND NOT OPENCV_${__target}_PDB_SKIP
     )
@@ -1196,7 +1203,7 @@ function(ocv_install_target)
           endif()
 
 #          message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
-          if("${__target_type}" STREQUAL "SHARED_LIBRARY")
+          if("${__target_type}" STREQUAL "SHARED_LIBRARY" OR "${__target_type}" STREQUAL "MODULE_LIBRARY")
             install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
                 COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
           else()
