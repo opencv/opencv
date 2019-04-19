@@ -965,16 +965,41 @@ inline double v_reduce_sad(const v_float64x8& a, const v_float64x8& b)
 { return v_reduce_sum((a - b) & v_float64x8(_mm512_castsi512_pd(_mm512_set1_epi64(0x7fffffffffffffff)))); }
 
 /** Popcount **/
-#define OPENCV_HAL_IMPL_AVX512_POPCOUNT(_Tpvec, _Tpuvec, suffix) \
-    inline _Tpuvec v_popcount(const _Tpvec& a)                   \
-    { return _Tpuvec(_mm512_popcnt_##suffix(a.val)); }           \
-    inline _Tpuvec v_popcount(const _Tpuvec& a)                  \
-    { return _Tpuvec(_mm512_popcnt_##suffix(a.val)); }
+inline v_uint8x64 v_popcount(const v_int8x64& a)
+{
+#ifdef _mm512_popcnt_epi8
+    return v_uint8x64(_mm512_popcnt_epi8(a.val));
+#else
+    __m512i _popcnt_table0 = _mm512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
+                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
+                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
+                                             4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0);
+    __m512i _popcnt_table1 = _mm512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
+                                             6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
+                                             6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
+                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1);
+    return v_uint8x64(_mm512_sub_epi8(_mm512_permutex2var_epi8(_popcnt_table0, a.val, _popcnt_table1), _mm512_movm_epi8(_mm512_movepi8_mask(a.val))));
+#endif
+}
+inline v_uint16x32 v_popcount(const v_int16x32& a)
+{
+#ifdef _mm512_popcnt_epi16
+    return v_uint16x32(_mm512_popcnt_epi16(a.val));
+#else
+    return v_uint16x32(_mm512_or_si512(                  _mm512_popcnt_epi32(_mm512_cvtepu16_epi32(_v512_extract_low (a.val))),
+                                       _mm512_slli_epi32(_mm512_popcnt_epi32(_mm512_cvtepu16_epi32(_v512_extract_high(a.val))),16)));
+#endif
+}
+inline v_uint32x16 v_popcount(const v_int32x16& a)
+{ return v_uint32x16(_mm512_popcnt_epi32(a.val)); }
+inline v_uint64x8 v_popcount(const v_int64x8& a)
+{ return v_uint64x8(_mm512_popcnt_epi64(a.val)); }
 
-OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int8x64,  v_uint8x64,  epi8)
-OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int16x32, v_uint16x32, epi16)
-OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int32x16, v_uint32x16, epi32)
-OPENCV_HAL_IMPL_AVX512_POPCOUNT(v_int64x8,  v_uint64x8,  epi64)
+
+inline v_uint8x64  v_popcount(const v_uint8x64&  a) { return v_popcount(v_reinterpret_as_s8 (a)); }
+inline v_uint16x32 v_popcount(const v_uint16x32& a) { return v_popcount(v_reinterpret_as_s16(a)); }
+inline v_uint32x16 v_popcount(const v_uint32x16& a) { return v_popcount(v_reinterpret_as_s32(a)); }
+inline v_uint64x8  v_popcount(const v_uint64x8&  a) { return v_popcount(v_reinterpret_as_s64(a)); }
 
 
 ////////// Other math /////////
