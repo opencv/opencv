@@ -755,6 +755,7 @@ static uint64_t memory_usage_base_opencl = 0;
 
 void testSetUp()
 {
+    fflush(stdout); fflush(stderr);
     cv::ipp::setIppStatus(0);
     cv::theRNG().state = cvtest::param_seed;
     cv::setNumThreads(cvtest::testThreads);

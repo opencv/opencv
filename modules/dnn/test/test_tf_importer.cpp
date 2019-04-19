@@ -637,6 +637,17 @@ TEST_P(Test_TensorFlow_layers, softmax)
     runTensorFlowNet("slim_softmax");
 }
 
+TEST_P(Test_TensorFlow_layers, slim_softmax_v2)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+    runTensorFlowNet("slim_softmax_v2");
+}
+
 TEST_P(Test_TensorFlow_layers, relu6)
 {
     runTensorFlowNet("keras_relu6");
@@ -652,6 +663,44 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+}
+
+TEST_P(Test_TensorFlow_layers, squeeze)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+    int inpShapes[][4] = {{1, 3, 4, 2}, {1, 3, 1, 2}, {1, 3, 4, 1}, {1, 3, 4, 1}};  // TensorFlow's shape (NHWC)
+    int outShapes[][3] = {{3, 4, 2}, {1, 3, 2}, {1, 3, 4}, {1, 3, 4}};
+    int squeeze_dims[] = {0, 2, 3, -1};
+    for (int i = 0; i < 4; ++i)
+    {
+        SCOPED_TRACE(format("i=%d", i));
+        std::string pbtxt =
+            "node { name: \"input\" op: \"Placeholder\""
+            "attr { key: \"data_format\" value { s: \"NHWC\" } } }"
+            "node { name: \"squeeze\" op: \"Squeeze\" input: \"input\""
+              "attr { key: \"squeeze_dims\" value { list { i:" + format("%d", squeeze_dims[i]) + "}}}}";
+        Net net = readNetFromTensorflow(0, 0, pbtxt.c_str(), pbtxt.size());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        Mat tfInp(4, &inpShapes[i][0], CV_32F);
+        randu(tfInp, -1, 1);
+
+        // NHWC to NCHW
+        CV_Assert(inpShapes[i][0] == 1);
+        std::swap(inpShapes[i][2], inpShapes[i][3]);
+        std::swap(inpShapes[i][1], inpShapes[i][2]);
+        Mat cvInp = tfInp.reshape(1, tfInp.total() / inpShapes[i][1]).t();
+        cvInp = cvInp.reshape(1, 4, &inpShapes[i][0]);
+
+        net.setInput(cvInp);
+        Mat out = net.forward();
+        normAssert(tfInp.reshape(1, 3, &outShapes[i][0]), out, "", default_l1, default_lInf);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, dnnBackendsAndTargets());

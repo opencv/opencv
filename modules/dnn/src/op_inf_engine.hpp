@@ -15,14 +15,6 @@
 #include "opencv2/dnn/utils/inference_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-#include <inference_engine.hpp>
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic pop
-#endif
 
 #define INF_ENGINE_RELEASE_2018R3 2018030000
 #define INF_ENGINE_RELEASE_2018R4 2018040000
@@ -37,10 +29,30 @@
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
+
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#pragma GCC visibility push(default)
+#endif
+
+#include <inference_engine.hpp>
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 #include <ie_builders.hpp>
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#pragma GCC visibility pop
+#endif
+
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
 #endif
 
 #endif  // HAVE_INF_ENGINE

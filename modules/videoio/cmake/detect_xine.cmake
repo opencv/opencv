@@ -1,8 +1,5 @@
 if(NOT HAVE_XINE AND PKG_CONFIG_FOUND)
-  pkg_check_modules(XINE libxine QUIET)
-  if(XINE_FOUND)
-    set(HAVE_XINE TRUE)
-  endif()
+  ocv_check_modules(XINE libxine QUIET)
 endif()
 
 if(HAVE_XINE)

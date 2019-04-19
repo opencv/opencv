@@ -1,5 +1,6 @@
 #=============================================
 # build with OpenCV
+include("${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake")
 
 function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
 
