@@ -12,9 +12,6 @@
 #ifdef HAVE_INF_ENGINE
 #include <ie_extension.h>
 #include <ie_plugin_dispatcher.hpp>
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-#include <vpu/vpu_plugin_config.hpp>
-#endif
 #endif  // HAVE_INF_ENGINE
 
 #include <opencv2/core/utils/configuration.private.hpp>
@@ -737,8 +734,7 @@ static bool detectMyriadX_()
     auto plugin = InferenceEngine::InferencePlugin(enginePtr);
     try
     {
-        auto netExec = plugin.LoadNetwork(cnn, {{InferenceEngine::VPUConfigParams::KEY_VPU_PLATFORM,
-                                                 InferenceEngine::VPUConfigParams::VPU_2480}});
+        auto netExec = plugin.LoadNetwork(cnn, {{"VPU_PLATFORM", "VPU_2480"}});
         auto infRequest = netExec.CreateInferRequest();
     } catch(...) {
         return false;

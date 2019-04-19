@@ -646,6 +646,30 @@ public:
     }
 };
 
+class SoftMaxSlimV2Subgraph : public Subgraph
+{
+public:
+    SoftMaxSlimV2Subgraph()
+    {
+        int input = addNodeToMatch("");
+        int shape = addNodeToMatch("Shape", input);
+        int shape_2 = addNodeToMatch("Shape", input);
+        int rank = addNodeToMatch("Const");
+        int y = addNodeToMatch("Const");
+        int sub = addNodeToMatch("Sub", rank, y);
+        int begin = addNodeToMatch("Pack", sub);
+        int size = addNodeToMatch("Const");
+        int slice = addNodeToMatch("Slice", shape, begin, size);
+        int values = addNodeToMatch("Const");
+        int axis = addNodeToMatch("Const");
+        int concat = addNodeToMatch("ConcatV2", values, slice, axis);
+        int reshape = addNodeToMatch("Reshape", input, concat);
+        int softmax = addNodeToMatch("Softmax", reshape);
+        addNodeToMatch("Reshape", softmax, shape_2);
+        setFusedNode("Softmax", input);
+    }
+};
+
 void simplifySubgraphs(tensorflow::GraphDef& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
@@ -663,6 +687,7 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new UpsamplingKerasSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ReshapeAsShapeSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxSlimSubgraph()));
+    subgraphs.push_back(Ptr<Subgraph>(new SoftMaxSlimV2Subgraph()));
 
     int numNodes = net.node_size();
     std::vector<int> matchedNodesIds;
