@@ -9,22 +9,22 @@
 #define CV_SIMD512_64F 1
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
-#ifndef  _mm512_set_epi8
-#define _mm512_set_epi8(a63, a62, a61, a60, a59, a58, a57, a56, a55, a54, a53, a52, a51, a50, a49, a48, \
-                        a47, a46, a45, a44, a43, a42, a41, a40, a39, a38, a37, a36, a35, a34, a33, a32, \
-                        a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
+#define _v512_set_epi64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((a7),(a6),(a5),(a4),(a3),(a2),(a1),(a0))
+#define _v512_set_epi32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
+        _v512_set_epi64(((a15)<<32)|(a14), ((a13)<<32)|(a12), ((a11)<<32)|(a10), (( a9)<<32)|( a8), (( a7)<<32)|( a6), (( a5)<<32)|( a4), (( a3)<<32)|( a2), (( a1)<<32)|( a0))
+#define _v512_set_epi16(a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
                         a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
-        _mm512_set_epi32(((a63)<<24)|((a62)<<16)|((a61)<<8)|(a60),((a59)<<24)|((a58)<<16)|((a57)<<8)|(a56),((a55)<<24)|((a54)<<16)|((a53)<<8)|(a52),((a51)<<24)|((a50)<<16)|((a49)<<8)|(a48), \
-                         ((a47)<<24)|((a46)<<16)|((a45)<<8)|(a44),((a43)<<24)|((a42)<<16)|((a41)<<8)|(a40),((a39)<<24)|((a38)<<16)|((a37)<<8)|(a36),((a35)<<24)|((a34)<<16)|((a33)<<8)|(a32), \
-                         ((a31)<<24)|((a30)<<16)|((a29)<<8)|(a28),((a27)<<24)|((a26)<<16)|((a25)<<8)|(a24),((a23)<<24)|((a22)<<16)|((a21)<<8)|(a20),((a19)<<24)|((a18)<<16)|((a17)<<8)|(a16), \
-                         ((a15)<<24)|((a14)<<16)|((a13)<<8)|(a12),((a11)<<24)|((a10)<<16)|(( a9)<<8)|( a8),(( a7)<<24)|(( a6)<<16)|(( a5)<<8)|( a4),(( a3)<<24)|(( a2)<<16)|(( a1)<<8)|( a0))
-#endif
-#ifndef  _mm512_set_epi16
-#define _mm512_set_epi16(a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
-                         a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
-        _mm512_set_epi32(((a31)<<16)|(a30), ((a29)<<16)|(a28), ((a27)<<16)|(a26), ((a25)<<16)|(a24), ((a23)<<16)|(a22), ((a21)<<16)|(a20), ((a19)<<16)|(a18), ((a17)<<16)|(a16), \
-                         ((a15)<<16)|(a14), ((a13)<<16)|(a12), ((a11)<<16)|(a10), (( a9)<<16)|( a8), (( a7)<<16)|( a6), (( a5)<<16)|( a4), (( a3)<<16)|( a2), (( a1)<<16)|( a0))
-#endif
+        _v512_set_epi32(((a31)<<16)|(a30), ((a29)<<16)|(a28), ((a27)<<16)|(a26), ((a25)<<16)|(a24), ((a23)<<16)|(a22), ((a21)<<16)|(a20), ((a19)<<16)|(a18), ((a17)<<16)|(a16), \
+                        ((a15)<<16)|(a14), ((a13)<<16)|(a12), ((a11)<<16)|(a10), (( a9)<<16)|( a8), (( a7)<<16)|( a6), (( a5)<<16)|( a4), (( a3)<<16)|( a2), (( a1)<<16)|( a0))
+#define _v512_set_epi8(a63, a62, a61, a60, a59, a58, a57, a56, a55, a54, a53, a52, a51, a50, a49, a48, \
+                       a47, a46, a45, a44, a43, a42, a41, a40, a39, a38, a37, a36, a35, a34, a33, a32, \
+                       a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
+                       a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
+        _v512_set_epi32(((a63)<<24)|((a62)<<16)|((a61)<<8)|(a60),((a59)<<24)|((a58)<<16)|((a57)<<8)|(a56),((a55)<<24)|((a54)<<16)|((a53)<<8)|(a52),((a51)<<24)|((a50)<<16)|((a49)<<8)|(a48), \
+                        ((a47)<<24)|((a46)<<16)|((a45)<<8)|(a44),((a43)<<24)|((a42)<<16)|((a41)<<8)|(a40),((a39)<<24)|((a38)<<16)|((a37)<<8)|(a36),((a35)<<24)|((a34)<<16)|((a33)<<8)|(a32), \
+                        ((a31)<<24)|((a30)<<16)|((a29)<<8)|(a28),((a27)<<24)|((a26)<<16)|((a25)<<8)|(a24),((a23)<<24)|((a22)<<16)|((a21)<<8)|(a20),((a19)<<24)|((a18)<<16)|((a17)<<8)|(a16), \
+                        ((a15)<<24)|((a14)<<16)|((a13)<<8)|(a12),((a11)<<24)|((a10)<<16)|(( a9)<<8)|( a8),(( a7)<<24)|(( a6)<<16)|(( a5)<<8)|( a4),(( a3)<<24)|(( a2)<<16)|(( a1)<<8)|( a0))
+
 #ifndef _mm512_cvtpd_pslo
 #ifdef _mm512_zextsi256_si512
 #define _mm512_cvtpd_pslo(a) _mm512_zextps256_ps512(_mm512_cvtpd_ps(a))
@@ -112,14 +112,14 @@ struct v_uint8x64
                uchar v56, uchar v57, uchar v58, uchar v59,
                uchar v60, uchar v61, uchar v62, uchar v63)
     {
-        val = _mm512_set_epi8((char)v63, (char)v62, (char)v61, (char)v60, (char)v59, (char)v58, (char)v57, (char)v56,
-                              (char)v55, (char)v54, (char)v53, (char)v52, (char)v51, (char)v50, (char)v49, (char)v48,
-                              (char)v47, (char)v46, (char)v45, (char)v44, (char)v43, (char)v42, (char)v41, (char)v40,
-                              (char)v39, (char)v38, (char)v37, (char)v36, (char)v35, (char)v34, (char)v33, (char)v32,
-                              (char)v31, (char)v30, (char)v29, (char)v28, (char)v27, (char)v26, (char)v25, (char)v24,
-                              (char)v23, (char)v22, (char)v21, (char)v20, (char)v19, (char)v18, (char)v17, (char)v16,
-                              (char)v15, (char)v14, (char)v13, (char)v12, (char)v11, (char)v10, (char)v9,  (char)v8,
-                              (char)v7,  (char)v6,  (char)v5,  (char)v4,  (char)v3,  (char)v2,  (char)v1,  (char)v0);
+        val = _v512_set_epi8((char)v63, (char)v62, (char)v61, (char)v60, (char)v59, (char)v58, (char)v57, (char)v56,
+                             (char)v55, (char)v54, (char)v53, (char)v52, (char)v51, (char)v50, (char)v49, (char)v48,
+                             (char)v47, (char)v46, (char)v45, (char)v44, (char)v43, (char)v42, (char)v41, (char)v40,
+                             (char)v39, (char)v38, (char)v37, (char)v36, (char)v35, (char)v34, (char)v33, (char)v32,
+                             (char)v31, (char)v30, (char)v29, (char)v28, (char)v27, (char)v26, (char)v25, (char)v24,
+                             (char)v23, (char)v22, (char)v21, (char)v20, (char)v19, (char)v18, (char)v17, (char)v16,
+                             (char)v15, (char)v14, (char)v13, (char)v12, (char)v11, (char)v10, (char)v9,  (char)v8,
+                             (char)v7,  (char)v6,  (char)v5,  (char)v4,  (char)v3,  (char)v2,  (char)v1,  (char)v0);
     }
     v_uint8x64() : val(_mm512_setzero_si512()) {}
     uchar get0() const { return (uchar)_v_cvtsi512_si32(val); }
@@ -149,10 +149,10 @@ struct v_int8x64
               schar v56, schar v57, schar v58, schar v59,
               schar v60, schar v61, schar v62, schar v63)
     {
-        val = _mm512_set_epi8(v63, v62, v61, v60, v59, v58, v57, v56, v55, v54, v53, v52, v51, v50, v49, v48,
-                              v47, v46, v45, v44, v43, v42, v41, v40, v39, v38, v37, v36, v35, v34, v33, v32,
-                              v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
-                              v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
+        val = _v512_set_epi8(v63, v62, v61, v60, v59, v58, v57, v56, v55, v54, v53, v52, v51, v50, v49, v48,
+                             v47, v46, v45, v44, v43, v42, v41, v40, v39, v38, v37, v36, v35, v34, v33, v32,
+                             v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
+                             v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
     v_int8x64() : val(_mm512_setzero_si512()) {}
     schar get0() const { return (schar)_v_cvtsi512_si32(val); }
@@ -174,10 +174,10 @@ struct v_uint16x32
                 ushort v24, ushort v25, ushort v26, ushort v27,
                 ushort v28, ushort v29, ushort v30, ushort v31)
     {
-        val = _mm512_set_epi16((short)v31, (short)v30, (short)v29, (short)v28, (short)v27, (short)v26, (short)v25, (short)v24,
-                               (short)v23, (short)v22, (short)v21, (short)v20, (short)v19, (short)v18, (short)v17, (short)v16,
-                               (short)v15, (short)v14, (short)v13, (short)v12, (short)v11, (short)v10, (short)v9,  (short)v8,
-                               (short)v7,  (short)v6,  (short)v5,  (short)v4,  (short)v3,  (short)v2,  (short)v1,  (short)v0);
+        val = _v512_set_epi16((short)v31, (short)v30, (short)v29, (short)v28, (short)v27, (short)v26, (short)v25, (short)v24,
+                              (short)v23, (short)v22, (short)v21, (short)v20, (short)v19, (short)v18, (short)v17, (short)v16,
+                              (short)v15, (short)v14, (short)v13, (short)v12, (short)v11, (short)v10, (short)v9,  (short)v8,
+                              (short)v7,  (short)v6,  (short)v5,  (short)v4,  (short)v3,  (short)v2,  (short)v1,  (short)v0);
     }
     v_uint16x32() : val(_mm512_setzero_si512()) {}
     ushort get0() const { return (ushort)_v_cvtsi512_si32(val); }
@@ -195,8 +195,8 @@ struct v_int16x32
                short v16, short v17, short v18, short v19, short v20, short v21, short v22, short v23,
                short v24, short v25, short v26, short v27, short v28, short v29, short v30, short v31)
     {
-        val = _mm512_set_epi16(v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
-                               v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
+        val = _v512_set_epi16(v31, v30, v29, v28, v27, v26, v25, v24, v23, v22, v21, v20, v19, v18, v17, v16,
+                              v15, v14, v13, v12, v11, v10, v9,  v8,  v7,  v6,  v5,  v4,  v3,  v2,  v1,  v0);
     }
     v_int16x32() : val(_mm512_setzero_si512()) {}
     short get0() const { return (short)_v_cvtsi512_si32(val); }
@@ -468,36 +468,97 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
 }
 
 /* Recombine & ZIP */
-#define OPENCV_HAL_IMPL_AVX512_ZIP(_Tpvec, suffix)                                             \
-    inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)                              \
-    { return _Tpvec(_v512_combine(_v512_extract_low(a.val), _v512_extract_low(b.val))); }      \
-    inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)                             \
-    { return _Tpvec(_v512_insert(b.val, _v512_extract_high(a.val))); }                         \
-    inline void v_recombine(const _Tpvec& a, const _Tpvec& b,                                  \
-                                  _Tpvec& c, _Tpvec& d)                                        \
-    {                                                                                          \
-        c.val = _v512_combine(_v512_extract_low(a.val),_v512_extract_low(b.val));              \
-        d.val = _v512_insert(b.val,_v512_extract_high(a.val));                                 \
-    }                                                                                          \
-    inline void v_zip(const _Tpvec& a, const _Tpvec& b,                                        \
-                            _Tpvec& ab0, _Tpvec& ab1)                                          \
-    {                                                                                          \
-        ab0.val = _mm512_maskz_expand_##suffix(0x55555555, a.val);                             \
-        ab1.val = _mm512_maskz_expand_##suffix(0x55555555 << _Tpvec::nlanes/2, a.val);         \
-        ab0.val = _mm512_mask_expand_##suffix(ab0.val, 0xAAAAAAAA, b.val);                     \
-        ab1.val = _mm512_mask_expand_##suffix(ab1.val, 0xAAAAAAAA << _Tpvec::nlanes/2, b.val); \
+inline v_int8x64 v_zip_low(const v_int8x64& a, const v_int8x64& b)
+{
+    __m512i mask0 = _v512_set_epi8( 95,  31,  94,  30,  93,  29,  92,  28,  91,  27,  90,  26,  89,  25,  88,  24,
+                                    87,  23,  86,  22,  85,  21,  84,  20,  83,  19,  82,  18,  81,  17,  80,  16,
+                                    79,  15,  78,  14,  77,  13,  76,  12,  75,  11,  74,  10,  73,   9,  72,   8,
+                                    71,   7,  70,   6,  69,   5,  68,   4,  67,   3,  66,   2,  65,   1,  64,   0);
+    return v_int8x64(_mm512_permutex2var_epi8(a.val, mask0, b.val));
+}
+inline v_int8x64 v_zip_high(const v_int8x64& a, const v_int8x64& b)
+{
+    __m512i mask1 = _v512_set_epi8(127,  63, 126,  62, 125,  61, 124,  60, 123,  59, 122,  58, 121,  57, 120,  56,
+                                   119,  55, 118,  54, 117,  53, 116,  52, 115,  51, 114,  50, 113,  49, 112,  48,
+                                   111,  47, 110,  46, 109,  45, 108,  44, 107,  43, 106,  42, 105,  41, 104,  40,
+                                   103,  39, 102,  38, 101,  37, 100,  36,  99,  35,  98,  34,  97,  33,  96,  32);
+    return v_int8x64(_mm512_permutex2var_epi8(a.val, mask1, b.val));
+}
+inline v_int16x32 v_zip_low(const v_int16x32& a, const v_int16x32& b)
+{
+    __m512i mask0 = _v512_set_epi16(47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
+                                    39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0);
+    return v_int16x32(_mm512_permutex2var_epi16(a.val, mask0, b.val));
+}
+inline v_int16x32 v_zip_high(const v_int16x32& a, const v_int16x32& b)
+{
+    __m512i mask1 = _v512_set_epi16(63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
+                                    55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16);
+    return v_int16x32(_mm512_permutex2var_epi16(a.val, mask1, b.val));
+}
+inline v_int32x16 v_zip_low(const v_int32x16& a, const v_int32x16& b)
+{
+    __m512i mask0 = _v512_set_epi32(23, 7, 22, 6, 21, 5, 20, 4, 19, 3, 18, 2, 17, 1, 16, 0);
+    return v_int32x16(_mm512_permutex2var_epi32(a.val, mask0, b.val));
+}
+inline v_int32x16 v_zip_high(const v_int32x16& a, const v_int32x16& b)
+{
+    __m512i mask1 = _v512_set_epi32(31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8);
+    return v_int32x16(_mm512_permutex2var_epi32(a.val, mask1, b.val));
+}
+inline v_int64x8 v_zip_low(const v_int64x8& a, const v_int64x8& b)
+{
+    __m512i mask0 = _v512_set_epi64(11, 3, 10, 2, 9, 1, 8, 0);
+    return v_int64x8(_mm512_permutex2var_epi64(a.val, mask0, b.val));
+}
+inline v_int64x8 v_zip_high(const v_int64x8& a, const v_int64x8& b)
+{
+    __m512i mask1 = _v512_set_epi64(15, 7, 14, 6, 13, 5, 12, 4);
+    return v_int64x8(_mm512_permutex2var_epi64(a.val, mask1, b.val));
+}
+
+inline v_uint8x64   v_zip_low (const v_uint8x64&   a, const v_uint8x64&   b) { return v_reinterpret_as_u8 (v_zip_low (v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }
+inline v_uint8x64   v_zip_high(const v_uint8x64&   a, const v_uint8x64&   b) { return v_reinterpret_as_u8 (v_zip_high(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }
+inline v_uint16x32  v_zip_low (const v_uint16x32&  a, const v_uint16x32&  b) { return v_reinterpret_as_u16(v_zip_low (v_reinterpret_as_s16(a), v_reinterpret_as_s16(b))); }
+inline v_uint16x32  v_zip_high(const v_uint16x32&  a, const v_uint16x32&  b) { return v_reinterpret_as_u16(v_zip_high(v_reinterpret_as_s16(a), v_reinterpret_as_s16(b))); }
+inline v_uint32x16  v_zip_low (const v_uint32x16&  a, const v_uint32x16&  b) { return v_reinterpret_as_u32(v_zip_low (v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
+inline v_uint32x16  v_zip_high(const v_uint32x16&  a, const v_uint32x16&  b) { return v_reinterpret_as_u32(v_zip_high(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
+inline v_uint64x8   v_zip_low (const v_uint64x8&   a, const v_uint64x8&   b) { return v_reinterpret_as_u64(v_zip_low (v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
+inline v_uint64x8   v_zip_high(const v_uint64x8&   a, const v_uint64x8&   b) { return v_reinterpret_as_u64(v_zip_high(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
+inline v_float32x16 v_zip_low (const v_float32x16& a, const v_float32x16& b) { return v_reinterpret_as_f32(v_zip_low (v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
+inline v_float32x16 v_zip_high(const v_float32x16& a, const v_float32x16& b) { return v_reinterpret_as_f32(v_zip_high(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
+inline v_float64x8  v_zip_low (const v_float64x8&  a, const v_float64x8&  b) { return v_reinterpret_as_f64(v_zip_low (v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
+inline v_float64x8  v_zip_high(const v_float64x8&  a, const v_float64x8&  b) { return v_reinterpret_as_f64(v_zip_high(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
+
+#define OPENCV_HAL_IMPL_AVX512_ZIP(_Tpvec, suffix)                                        \
+    inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)                         \
+    { return _Tpvec(_v512_combine(_v512_extract_low(a.val), _v512_extract_low(b.val))); } \
+    inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)                        \
+    { return _Tpvec(_v512_insert(b.val, _v512_extract_high(a.val))); }                    \
+    inline void v_recombine(const _Tpvec& a, const _Tpvec& b,                             \
+                                  _Tpvec& c, _Tpvec& d)                                   \
+    {                                                                                     \
+        c.val = _v512_combine(_v512_extract_low(a.val),_v512_extract_low(b.val));         \
+        d.val = _v512_insert(b.val,_v512_extract_high(a.val));                            \
+    }                                                                                     \
+    inline void v_zip(const _Tpvec& a, const _Tpvec& b,                                   \
+                            _Tpvec& ab0, _Tpvec& ab1)                                     \
+    {                                                                                     \
+        ab0 = v_zip_low(a, b);                                                            \
+        ab1 = v_zip_high(a, b);                                                           \
     }
 
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint8x64, epi8)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int8x64, epi8)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint16x32, epi16)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int16x32, epi16)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint32x16, epi32)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int32x16, epi32)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint64x8, epi64)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int64x8, epi64)
+
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint8x64,   epi8)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int8x64,    epi8)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint16x32,  epi16)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int16x32,   epi16)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint32x16,  epi32)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int32x16,   epi32)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_uint64x8,   epi64)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_int64x8,    epi64)
 OPENCV_HAL_IMPL_AVX512_ZIP(v_float32x16, ps)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_float64x8, pd)
+OPENCV_HAL_IMPL_AVX512_ZIP(v_float64x8,  pd)
 
 ////////// Arithmetic, bitwise and comparison operations /////////
 
@@ -970,14 +1031,14 @@ inline v_uint8x64 v_popcount(const v_int8x64& a)
 #ifdef _mm512_popcnt_epi8
     return v_uint8x64(_mm512_popcnt_epi8(a.val));
 #else
-    __m512i _popcnt_table0 = _mm512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
-                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
-                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
-                                             4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0);
-    __m512i _popcnt_table1 = _mm512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
-                                             6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
-                                             6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
-                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1);
+    __m512i _popcnt_table0 = _v512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
+                                            5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
+                                            5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
+                                            4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0);
+    __m512i _popcnt_table1 = _v512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
+                                            6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
+                                            6, 5, 5, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 3, 3, 2,
+                                            5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1);
     return v_uint8x64(_mm512_sub_epi8(_mm512_permutex2var_epi8(_popcnt_table0, a.val, _popcnt_table1), _mm512_movm_epi8(_mm512_movepi8_mask(a.val))));
 #endif
 }
@@ -1303,29 +1364,29 @@ inline v_float32x16 v_interleave_pairs(const v_float32x16& vec) { return v_reint
 
 inline v_int8x64 v_pack_triplets(const v_int8x64& vec)
 {
-    return v_int8x64(_mm512_permutexvar_epi32(_mm512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
-                                                               0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000),
+    return v_int8x64(_mm512_permutexvar_epi32(_v512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
+                                                              0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000),
                                               _mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0xffffff0f, 0x0e0d0c0a, 0x09080605, 0x04020100))));
 }
 inline v_uint8x64 v_pack_triplets(const v_uint8x64& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x32 v_pack_triplets(const v_int16x32& vec)
 {
-    return v_int16x32(_mm512_permutexvar_epi16(_mm512_set_epi64(0x001f001f001f001f, 0x001f001f001f001f, 0x001e001d001c001a, 0x0019001800160015,
-                                                                0x0014001200110010, 0x000e000d000c000a, 0x0009000800060005, 0x0004000200010000), vec.val));
+    return v_int16x32(_mm512_permutexvar_epi16(_v512_set_epi64(0x001f001f001f001f, 0x001f001f001f001f, 0x001e001d001c001a, 0x0019001800160015,
+                                                               0x0014001200110010, 0x000e000d000c000a, 0x0009000800060005, 0x0004000200010000), vec.val));
 }
 inline v_uint16x32 v_pack_triplets(const v_uint16x32& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
 inline v_int32x16 v_pack_triplets(const v_int32x16& vec)
 {
-    return v_int32x16(_mm512_permutexvar_epi32(_mm512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
-                                                                0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000), vec.val));
+    return v_int32x16(_mm512_permutexvar_epi32(_v512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
+                                                               0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000), vec.val));
 }
 inline v_uint32x16 v_pack_triplets(const v_uint32x16& vec) { return v_reinterpret_as_u32(v_pack_triplets(v_reinterpret_as_s32(vec))); }
 inline v_float32x16 v_pack_triplets(const v_float32x16& vec)
 {
-    return v_float32x16(_mm512_permutexvar_ps(_mm512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
-                                                               0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000), vec.val));
+    return v_float32x16(_mm512_permutexvar_ps(_v512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
+                                                              0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000), vec.val));
 }
 
 ////////// Matrix operations /////////
@@ -1418,7 +1479,7 @@ OPENCV_HAL_IMPL_AVX512_EXPAND_Q(v_int32x16,  schar, _mm512_cvtepi8_epi32)
 /* pack */
 // 16
 inline v_int8x64 v_pack(const v_int16x32& a, const v_int16x32& b)
-{ return v_int8x64(_mm512_permutexvar_epi64(_mm512_set_epi64(7,5,3,1,6,4,2,0), _mm512_packs_epi16(a.val, b.val))); }
+{ return v_int8x64(_mm512_permutexvar_epi64(_v512_set_epi64(7,5,3,1,6,4,2,0), _mm512_packs_epi16(a.val, b.val))); }
 
 inline v_uint8x64 v_pack(const v_uint16x32& a, const v_uint16x32& b)
 {
@@ -1428,7 +1489,7 @@ inline v_uint8x64 v_pack(const v_uint16x32& a, const v_uint16x32& b)
 
 inline v_uint8x64 v_pack_u(const v_int16x32& a, const v_int16x32& b)
 {
-    return v_uint8x64(_mm512_permutexvar_epi64(_mm512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packus_epi16(a.val, b.val)));
+    return v_uint8x64(_mm512_permutexvar_epi64(_v512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packus_epi16(a.val, b.val)));
 }
 
 inline void v_pack_store(schar* ptr, const v_int16x32& a)
@@ -1489,7 +1550,7 @@ void v_rshr_pack_store(schar* ptr, const v_int16x32& a)
 
 // 32
 inline v_int16x32 v_pack(const v_int32x16& a, const v_int32x16& b)
-{ return v_int16x32(_mm512_permutexvar_epi64(_mm512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packs_epi32(a.val, b.val))); }
+{ return v_int16x32(_mm512_permutexvar_epi64(_v512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packs_epi32(a.val, b.val))); }
 
 inline v_uint16x32 v_pack(const v_uint32x16& a, const v_uint32x16& b)
 { 
@@ -1498,7 +1559,7 @@ inline v_uint16x32 v_pack(const v_uint32x16& a, const v_uint32x16& b)
 }
 
 inline v_uint16x32 v_pack_u(const v_int32x16& a, const v_int32x16& b)
-{ return v_uint16x32(_mm512_permutexvar_epi64(_mm512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packus_epi32(a.val, b.val))); }
+{ return v_uint16x32(_mm512_permutexvar_epi64(_v512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packus_epi32(a.val, b.val))); }
 
 inline void v_pack_store(short* ptr, const v_int32x16& a)
 { v_store_low(ptr, v_pack(a, a)); }
@@ -1600,7 +1661,7 @@ void v_rshr_pack_store(int* ptr, const v_int64x8& a)
 
 // pack boolean
 inline v_uint8x64 v_pack_b(const v_uint16x32& a, const v_uint16x32& b)
-{ return v_uint8x64(_mm512_permutexvar_epi64(_mm512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packs_epi16(a.val, b.val))); }
+{ return v_uint8x64(_mm512_permutexvar_epi64(_v512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packs_epi16(a.val, b.val))); }
 
 inline v_uint8x64 v_pack_b(const v_uint32x16& a, const v_uint32x16& b,
                            const v_uint32x16& c, const v_uint32x16& d)
@@ -1608,7 +1669,7 @@ inline v_uint8x64 v_pack_b(const v_uint32x16& a, const v_uint32x16& b,
     __m512i ab = _mm512_packs_epi32(a.val, b.val);
     __m512i cd = _mm512_packs_epi32(c.val, d.val);
 
-    return v_uint8x64(_mm512_permutexvar_epi32(_mm512_set_epi32(15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0), _mm512_packs_epi16(ab, cd)));
+    return v_uint8x64(_mm512_permutexvar_epi32(_v512_set_epi32(15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0), _mm512_packs_epi16(ab, cd)));
 }
 
 inline v_uint8x64 v_pack_b(const v_uint64x8& a, const v_uint64x8& b, const v_uint64x8& c,
@@ -1623,8 +1684,8 @@ inline v_uint8x64 v_pack_b(const v_uint64x8& a, const v_uint64x8& b, const v_uin
     __m512i abcd = _mm512_packs_epi32(ab, cd);
     __m512i efgh = _mm512_packs_epi32(ef, gh);
 
-    return v_uint8x64(_mm512_permutexvar_epi16(_mm512_set_epi16(31, 23, 15, 7, 30, 22, 14, 6, 29, 21, 13, 5, 28, 20, 12, 4,
-                                                                27, 19, 11, 3, 26, 18, 10, 2, 25, 17,  9, 1, 24, 16,  8, 0), _mm512_packs_epi16(abcd, efgh)));
+    return v_uint8x64(_mm512_permutexvar_epi16(_v512_set_epi16(31, 23, 15, 7, 30, 22, 14, 6, 29, 21, 13, 5, 28, 20, 12, 4,
+                                                               27, 19, 11, 3, 26, 18, 10, 2, 25, 17,  9, 1, 24, 16,  8, 0), _mm512_packs_epi16(abcd, efgh)));
 }
 
 /* Recombine */
@@ -1654,14 +1715,14 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& a, v_uint8x64& b 
 {
     __m512i ab0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i ab1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
-    __m512i mask0 = _mm512_set_epi8( 126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
-                                      94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
-                                      62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
-                                      30,  28,  26,  24,  22,  20,  18,  16,  14,  12,  10,   8,   6,   4,  2,  0 );
-    __m512i mask1 = _mm512_set_epi8( 127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99, 97,
-                                      95,  93,  91,  89,  87,  85,  83,  81,  79,  77,  75,  73,  71,  69, 67, 65,
-                                      63,  61,  59,  57,  55,  53,  51,  49,  47,  45,  43,  41,  39,  37, 35, 33,
-                                      31,  29,  27,  25,  23,  21,  19,  17,  15,  13,  11,   9,   7,   5,  3,  1 );
+    __m512i mask0 = _v512_set_epi8( 126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
+                                     94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
+                                     62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
+                                     30,  28,  26,  24,  22,  20,  18,  16,  14,  12,  10,   8,   6,   4,  2,  0 );
+    __m512i mask1 = _v512_set_epi8( 127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99, 97,
+                                     95,  93,  91,  89,  87,  85,  83,  81,  79,  77,  75,  73,  71,  69, 67, 65,
+                                     63,  61,  59,  57,  55,  53,  51,  49,  47,  45,  43,  41,  39,  37, 35, 33,
+                                     31,  29,  27,  25,  23,  21,  19,  17,  15,  13,  11,   9,   7,   5,  3,  1 );
     a = v_uint8x64(_mm512_permutex2var_epi8(ab0, mask0, ab1));
     b = v_uint8x64(_mm512_permutex2var_epi8(ab0, mask1, ab1));
 }
@@ -1670,10 +1731,10 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& a, v_uint16x32&
 {
     __m512i ab0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i ab1 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
-    __m512i mask0 = _mm512_set_epi16( 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
-                                      30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,  8,  6,  4,  2,  0 );
-    __m512i mask1 = _mm512_set_epi16( 63, 61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33,
-                                      31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11,  9,  7,  5,  3,  1 );
+    __m512i mask0 = _v512_set_epi16( 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
+                                     30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,  8,  6,  4,  2,  0 );
+    __m512i mask1 = _v512_set_epi16( 63, 61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33,
+                                     31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11,  9,  7,  5,  3,  1 );
     a = v_uint16x32(_mm512_permutex2var_epi16(ab0, mask0, ab1));
     b = v_uint16x32(_mm512_permutex2var_epi16(ab0, mask1, ab1));
 }
@@ -1682,8 +1743,8 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& a, v_uint32x1
 {
     __m512i ab0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i ab1 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
-    __m512i mask0 = _mm512_set_epi32( 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0 );
-    __m512i mask1 = _mm512_set_epi32( 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1 );
+    __m512i mask0 = _v512_set_epi32( 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0 );
+    __m512i mask1 = _v512_set_epi32( 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1 );
     a = v_uint32x16(_mm512_permutex2var_epi32(ab0, mask0, ab1));
     b = v_uint32x16(_mm512_permutex2var_epi32(ab0, mask1, ab1));
 }
@@ -1692,8 +1753,8 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& a, v_uint64x8& b
 {
     __m512i ab0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i ab1 = _mm512_loadu_si512((const __m512i*)(ptr + 8));
-    __m512i mask0 = _mm512_set_epi64( 14, 12, 10, 8, 6, 4, 2, 0 );
-    __m512i mask1 = _mm512_set_epi64( 15, 13, 11, 9, 7, 5, 3, 1 );
+    __m512i mask0 = _v512_set_epi64( 14, 12, 10, 8, 6, 4, 2, 0 );
+    __m512i mask1 = _v512_set_epi64( 15, 13, 11, 9, 7, 5, 3, 1 );
     a = v_uint64x8(_mm512_permutex2var_epi64(ab0, mask0, ab1));
     b = v_uint64x8(_mm512_permutex2var_epi64(ab0, mask1, ab1));
 }
@@ -1704,17 +1765,17 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
     __m512i bgr2 = _mm512_loadu_si512((const __m512i*)(ptr + 128));
 
-    __m512i mask0 = _mm512_set_epi8( 126, 123, 120, 117, 114, 111, 108, 105, 102, 99, 96, 93, 90, 87, 84, 81,
-                                      78,  75,  72,  69,  66,  63,  60,  57,  54, 51, 48, 45, 42, 39, 36, 33,
-                                      30,  27,  24,  21,  18,  15,  12,   9,   6,  3,  0, 62, 59, 56, 53, 50,
-                                      47,  44,  41,  38,  35,  32,  29,  26,  23, 20, 17, 14, 11,  8,  5,  2 );
+    __m512i mask0 = _v512_set_epi8( 126, 123, 120, 117, 114, 111, 108, 105, 102, 99, 96, 93, 90, 87, 84, 81,
+                                     78,  75,  72,  69,  66,  63,  60,  57,  54, 51, 48, 45, 42, 39, 36, 33,
+                                     30,  27,  24,  21,  18,  15,  12,   9,   6,  3,  0, 62, 59, 56, 53, 50,
+                                     47,  44,  41,  38,  35,  32,  29,  26,  23, 20, 17, 14, 11,  8,  5,  2 );
     __m512i r0b01 = _mm512_permutex2var_epi8(bgr0, mask0, bgr1);
     __m512i b1g12 = _mm512_permutex2var_epi8(bgr1, mask0, bgr2);
     __m512i r12b2 = _mm512_permutex2var_epi8(bgr1,
-                    _mm512_set_epi8( 125, 122, 119, 116, 113, 110, 107, 104, 101,  98,  95,  92,  89,  86,  83, 80,
-                                      77,  74,  71,  68,  65, 127, 124, 121, 118, 115, 112, 109, 106, 103, 100, 97,
-                                      94,  91,  88,  85,  82,  79,  76,  73,  70,  67,  64,  61,  58,  55,  52, 49,
-                                      46,  43,  40,  37,  34,  31,  28,  25,  22,  19,  16,  13,  10,   7,   4,  1 ), bgr2);
+                    _v512_set_epi8( 125, 122, 119, 116, 113, 110, 107, 104, 101,  98,  95,  92,  89,  86,  83, 80,
+                                     77,  74,  71,  68,  65, 127, 124, 121, 118, 115, 112, 109, 106, 103, 100, 97,
+                                     94,  91,  88,  85,  82,  79,  76,  73,  70,  67,  64,  61,  58,  55,  52, 49,
+                                     46,  43,  40,  37,  34,  31,  28,  25,  22,  19,  16,  13,  10,   7,   4,  1 ), bgr2);
     b = v_uint16x32(_mm512_mask_compress_epi8(r12b2, 0xffffffffffe00000, r0b01));
     g = v_uint16x32(_mm512_mask_compress_epi8(b1g12, 0x2492492492492492, bgr0));
     r = v_uint16x32(_mm512_mask_expand_epi8(r0b01, 0xffffffffffe00000, r12b2));
@@ -1726,16 +1787,16 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32&
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
     __m512i bgr2 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
 
-    __m512i mask0 = _mm512_set_epi16( 61, 58, 55, 52, 49, 46, 43, 40, 37, 34, 63, 60, 57, 54, 51, 48,
-                                      45, 42, 39, 36, 33, 30, 27, 24, 21, 18, 15, 12,  9,  6,  3,  0 );
+    __m512i mask0 = _v512_set_epi16( 61, 58, 55, 52, 49, 46, 43, 40, 37, 34, 63, 60, 57, 54, 51, 48,
+                                     45, 42, 39, 36, 33, 30, 27, 24, 21, 18, 15, 12,  9,  6,  3,  0 );
     __m512i b01g1 = _mm512_permutex2var_epi16(bgr0, mask0, bgr1);
     __m512i r12b2 = _mm512_permutex2var_epi16(bgr1, mask0, bgr2);
     __m512i g20r0 = _mm512_permutex2var_epi16(bgr2, mask0, bgr0);
 
     b = v_uint16x32(_mm512_mask_blend_epi32(0x001f, b01g1, r12b2));
     g = v_uint16x32(_mm512_alignr_epi32(r12b2, g20r0, 11));
-    r = v_uint16x32(_mm512_permutex2var_epi16(bgr1, _mm512_set_epi16( 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 29, 26, 23, 20, 17,
-                                                                      14, 11,  8,  5,  2, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43 ), g20r0));
+    r = v_uint16x32(_mm512_permutex2var_epi16(bgr1, _v512_set_epi16( 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 29, 26, 23, 20, 17,
+                                                                     14, 11,  8,  5,  2, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43 ), g20r0));
 }
 
 inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x16& g, v_uint32x16& r )
@@ -1744,14 +1805,14 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x1
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
     __m512i bgr2 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
 
-    __m512i mask0 = _mm512_set_epi32( 29, 26, 23, 20, 17, 30, 27, 24, 21, 18, 15, 12, 9, 6, 3, 0 );
+    __m512i mask0 = _v512_set_epi32( 29, 26, 23, 20, 17, 30, 27, 24, 21, 18, 15, 12, 9, 6, 3, 0 );
     __m512i b01r1 = _mm512_permutex2var_epi32(bgr0, mask0, bgr1);
     __m512i g12b2 = _mm512_permutex2var_epi32(bgr1, mask0, bgr2);
     __m512i r20g0 = _mm512_permutex2var_epi32(bgr2, mask0, bgr0);
 
     b = v_uint32x16(_mm512_mask_blend_epi32(0x001f, b01r1, g12b2));
     g = v_uint32x16(_mm512_alignr_epi32(g12b2, r20g0, 11));
-    r = v_uint32x16(_mm512_permutex2var_epi32(bgr1, _mm512_set_epi32( 26, 25, 24, 23, 22, 13, 10, 7, 4, 1, 21, 20, 19, 18, 17, 16 ), r20g0));
+    r = v_uint32x16(_mm512_permutex2var_epi32(bgr1, _v512_set_epi32( 26, 25, 24, 23, 22, 13, 10, 7, 4, 1, 21, 20, 19, 18, 17, 16 ), r20g0));
 }
 
 inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g, v_uint64x8& r )
@@ -1760,14 +1821,14 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 8));
     __m512i bgr2 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
 
-    __m512i mask0 = _mm512_set_epi64( 13, 10, 15, 12, 9, 6, 3, 0 );
+    __m512i mask0 = _v512_set_epi64( 13, 10, 15, 12, 9, 6, 3, 0 );
     __m512i b01g1 = _mm512_permutex2var_epi64(bgr0, mask0, bgr1);
     __m512i r12b2 = _mm512_permutex2var_epi64(bgr1, mask0, bgr2);
     __m512i g20r0 = _mm512_permutex2var_epi64(bgr2, mask0, bgr0);
 
     b = v_uint64x8(_mm512_mask_blend_epi64(0x03, b01g1, r12b2));
     r = v_uint64x8(_mm512_alignr_epi64(r12b2, g20r0, 6));
-    g = v_uint64x8(_mm512_permutex2var_epi64(bgr1, _mm512_set_epi64( 10, 9, 8, 5, 2, 13, 12, 11 ), g20r0));
+    g = v_uint64x8(_mm512_permutex2var_epi64(bgr1, _v512_set_epi64( 10, 9, 8, 5, 2, 13, 12, 11 ), g20r0));
 }
 
 inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g, v_uint8x64& r, v_uint8x64& a )
@@ -1777,14 +1838,14 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i bgra2 = _mm512_loadu_si512((const __m512i*)(ptr + 128));
     __m512i bgra3 = _mm512_loadu_si512((const __m512i*)(ptr + 192));
 
-    __m512i mask0 = _mm512_set_epi8( 126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
-                                      94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
-                                      62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
-                                      30,  28,  26,  24,  22,  20,  18,  16,  14,  12,  10,   8,   6,   4,  2,  0 );
-    __m512i mask1 = _mm512_set_epi8( 127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99, 97,
-                                      95,  93,  91,  89,  87,  85,  83,  81,  79,  77,  75,  73,  71,  69, 67, 65,
-                                      63,  61,  59,  57,  55,  53,  51,  49,  47,  45,  43,  41,  39,  37, 35, 33,
-                                      31,  29,  27,  25,  23,  21,  19,  17,  15,  13,  11,   9,   7,   5,  3,  1 );
+    __m512i mask0 = _v512_set_epi8( 126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
+                                     94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
+                                     62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
+                                     30,  28,  26,  24,  22,  20,  18,  16,  14,  12,  10,   8,   6,   4,  2,  0 );
+    __m512i mask1 = _v512_set_epi8( 127, 125, 123, 121, 119, 117, 115, 113, 111, 109, 107, 105, 103, 101, 99, 97,
+                                     95,  93,  91,  89,  87,  85,  83,  81,  79,  77,  75,  73,  71,  69, 67, 65,
+                                     63,  61,  59,  57,  55,  53,  51,  49,  47,  45,  43,  41,  39,  37, 35, 33,
+                                     31,  29,  27,  25,  23,  21,  19,  17,  15,  13,  11,   9,   7,   5,  3,  1 );
 
     __m512i br01 = _mm512_permutex2var_epi8(bgra0, mask0, bgra1);
     __m512i ga01 = _mm512_permutex2var_epi8(bgra0, mask1, bgra1);
@@ -1804,10 +1865,10 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32&
     __m512i bgra2 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
     __m512i bgra3 = _mm512_loadu_si512((const __m512i*)(ptr + 96));
 
-    __m512i mask0 = _mm512_set_epi16( 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
-                                      30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,  8,  6,  4,  2,  0 );
-    __m512i mask1 = _mm512_set_epi16( 63, 61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33,
-                                      31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11,  9,  7,  5,  3,  1 );
+    __m512i mask0 = _v512_set_epi16( 62, 60, 58, 56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
+                                     30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,  8,  6,  4,  2,  0 );
+    __m512i mask1 = _v512_set_epi16( 63, 61, 59, 57, 55, 53, 51, 49, 47, 45, 43, 41, 39, 37, 35, 33,
+                                     31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11,  9,  7,  5,  3,  1 );
 
     __m512i br01 = _mm512_permutex2var_epi16(bgra0, mask0, bgra1);
     __m512i ga01 = _mm512_permutex2var_epi16(bgra0, mask1, bgra1);
@@ -1827,8 +1888,8 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x1
     __m512i bgra2 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
     __m512i bgra3 = _mm512_loadu_si512((const __m512i*)(ptr + 48));
 
-    __m512i mask0 = _mm512_set_epi32( 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0 );
-    __m512i mask1 = _mm512_set_epi32( 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1 );
+    __m512i mask0 = _v512_set_epi32( 30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0 );
+    __m512i mask1 = _v512_set_epi32( 31, 29, 27, 25, 23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1 );
 
     __m512i br01 = _mm512_permutex2var_epi32(bgra0, mask0, bgra1);
     __m512i ga01 = _mm512_permutex2var_epi32(bgra0, mask1, bgra1);
@@ -1848,8 +1909,8 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
     __m512i bgra2 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
     __m512i bgra3 = _mm512_loadu_si512((const __m512i*)(ptr + 24));
 
-    __m512i mask0 = _mm512_set_epi64( 14, 12, 10, 8, 6, 4, 2, 0 );
-    __m512i mask1 = _mm512_set_epi64( 15, 13, 11, 9, 7, 5, 3, 1 );
+    __m512i mask0 = _v512_set_epi64( 14, 12, 10, 8, 6, 4, 2, 0 );
+    __m512i mask1 = _v512_set_epi64( 15, 13, 11, 9, 7, 5, 3, 1 );
 
     __m512i br01 = _mm512_permutex2var_epi64(bgra0, mask0, bgra1);
     __m512i ga01 = _mm512_permutex2var_epi64(bgra0, mask1, bgra1);
@@ -1867,122 +1928,94 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
 inline void v_store_interleave( uchar* ptr, const v_uint8x64& x, const v_uint8x64& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi8(  95,  31,  94,  30,  93,  29,  92,  28,  91,  27,  90,  26,  89,  25,  88,  24,
-                                      87,  23,  86,  22,  85,  21,  84,  20,  83,  19,  82,  18,  81,  17,  80,  16,
-                                      79,  15,  78,  14,  77,  13,  76,  12,  75,  11,  74,  10,  73,   9,  72,   8,
-                                      71,   7,  70,   6,  69,   5,  68,   4,  67,   3,  66,   2,  65,   1,  64,   0 );
-    __m512i mask1 = _mm512_set_epi8( 127,  63, 126,  62, 125,  61, 124,  60, 123,  59, 122,  58, 121,  57, 120,  56,
-                                     119,  55, 118,  54, 117,  53, 116,  52, 115,  51, 114,  50, 113,  49, 112,  48,
-                                     111,  47, 110,  46, 109,  45, 108,  44, 107,  43, 106,  42, 105,  41, 104,  40,
-                                     103,  39, 102,  38, 101,  37, 100,  36,  99,  35,  98,  34,  97,  33,  96,  32 );
-    __m512i xy0 = _mm512_permutex2var_epi8(x.val, mask0, y.val);
-    __m512i xy1 = _mm512_permutex2var_epi8(x.val, mask1, y.val);
-
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, xy0);
-        _mm512_stream_si512((__m512i*)(ptr + 64), xy1);
+        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_stream_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, xy0);
-        _mm512_store_si512((__m512i*)(ptr + 64), xy1);
+        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_store_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, xy0);
-        _mm512_storeu_si512((__m512i*)(ptr + 64), xy1);
+        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_storeu_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
     }
 }
 
 inline void v_store_interleave( ushort* ptr, const v_uint16x32& x, const v_uint16x32& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi16( 47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
-                                      39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0 );
-    __m512i mask1 = _mm512_set_epi16( 63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
-                                      55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16 );
-    __m512i xy0 = _mm512_permutex2var_epi16(x.val, mask0, y.val);
-    __m512i xy1 = _mm512_permutex2var_epi16(x.val, mask1, y.val);
-
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, xy0);
-        _mm512_stream_si512((__m512i*)(ptr + 32), xy1);
+        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_stream_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, xy0);
-        _mm512_store_si512((__m512i*)(ptr + 32), xy1);
+        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_store_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, xy0);
-        _mm512_storeu_si512((__m512i*)(ptr + 32), xy1);
+        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_storeu_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
     }
 }
 
 inline void v_store_interleave( unsigned* ptr, const v_uint32x16& x, const v_uint32x16& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi32( 23,  7, 22,  6, 21,  5, 20,  4, 19,  3, 18,  2, 17, 1, 16, 0 );
-    __m512i mask1 = _mm512_set_epi32( 31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8 );
-    __m512i xy0 = _mm512_permutex2var_epi32(x.val, mask0, y.val);
-    __m512i xy1 = _mm512_permutex2var_epi32(x.val, mask1, y.val);
-
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, xy0);
-        _mm512_stream_si512((__m512i*)(ptr + 16), xy1);
+        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_stream_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, xy0);
-        _mm512_store_si512((__m512i*)(ptr + 16), xy1);
+        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_store_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, xy0);
-        _mm512_storeu_si512((__m512i*)(ptr + 16), xy1);
+        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_storeu_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
     }
 }
 
 inline void v_store_interleave( uint64* ptr, const v_uint64x8& x, const v_uint64x8& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi64( 11, 3, 10, 2,  9, 1,  8, 0 );
-    __m512i mask1 = _mm512_set_epi64( 15, 7, 14, 6, 13, 5, 12, 4 );
-    __m512i xy0 = _mm512_permutex2var_epi64(x.val, mask0, y.val);
-    __m512i xy1 = _mm512_permutex2var_epi64(x.val, mask1, y.val);
-
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, xy0);
-        _mm512_stream_si512((__m512i*)(ptr + 8), xy1);
+        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_stream_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, xy0);
-        _mm512_store_si512((__m512i*)(ptr + 8), xy1);
+        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_store_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, xy0);
-        _mm512_storeu_si512((__m512i*)(ptr + 8), xy1);
+        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
+        _mm512_storeu_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
     }
 }
 
 inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x64& g, const v_uint8x64& r,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi8( 106, 127,  63, 105, 126,  62, 104, 125,  61, 103, 124,  60, 102, 123,  59, 101,
-                                     122,  58, 100, 121,  57,  99, 120,  56,  98, 119,  55,  97, 118,  54,  96, 117,
-                                      53,  95, 116,  52,  94, 115,  51,  93, 114,  50,  92, 113,  49,  91, 112,  48,
-                                      90, 111,  47,  89, 110,  46,  88, 109,  45,  87, 108,  44,  86, 107,  43,  85 );
-    __m512i mask1 = _mm512_set_epi8( 127,  42, 105, 126,  41, 104, 125,  40, 103, 124,  39, 102, 123,  38, 101, 122,
-                                      37, 100, 121,  36,  99, 120,  35,  98, 119,  34,  97, 118,  33,  96, 117,  32,
-                                      95, 116,  31,  94, 115,  30,  93, 114,  29,  92, 113,  28,  91, 112,  27,  90,
-                                     111,  26,  89, 110,  25,  88, 109,  24,  87, 108,  23,  86, 107,  22,  85, 106 );
+    __m512i mask0 = _v512_set_epi8( 106, 127,  63, 105, 126,  62, 104, 125,  61, 103, 124,  60, 102, 123,  59, 101,
+                                    122,  58, 100, 121,  57,  99, 120,  56,  98, 119,  55,  97, 118,  54,  96, 117,
+                                     53,  95, 116,  52,  94, 115,  51,  93, 114,  50,  92, 113,  49,  91, 112,  48,
+                                     90, 111,  47,  89, 110,  46,  88, 109,  45,  87, 108,  44,  86, 107,  43,  85 );
+    __m512i mask1 = _v512_set_epi8( 127,  42, 105, 126,  41, 104, 125,  40, 103, 124,  39, 102, 123,  38, 101, 122,
+                                     37, 100, 121,  36,  99, 120,  35,  98, 119,  34,  97, 118,  33,  96, 117,  32,
+                                     95, 116,  31,  94, 115,  30,  93, 114,  29,  92, 113,  28,  91, 112,  27,  90,
+                                    111,  26,  89, 110,  25,  88, 109,  24,  87, 108,  23,  86, 107,  22,  85, 106 );
     __m512i g1b2g2 = _mm512_permutex2var_epi8(b.val, mask0, g.val);
     __m512i r2r1b1 = _mm512_permutex2var_epi8(b.val, mask1, r.val);
 
@@ -2013,10 +2046,10 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
 inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint16x32& g, const v_uint16x32& r,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi16( 21, 52, 31, 20, 51, 30, 19, 50, 29, 18, 49, 28, 17, 48, 27, 16,
-                                      47, 26, 15, 46, 25, 14, 45, 24, 13, 44, 23, 12, 43, 22, 11, 42 );
-    __m512i mask1 = _mm512_set_epi16( 63, 31, 20, 62, 30, 19, 61, 29, 18, 60, 28, 17, 59, 27, 16, 58,
-                                      26, 15, 57, 25, 14, 56, 24, 13, 55, 23, 12, 54, 22, 11, 53, 21 );
+    __m512i mask0 = _v512_set_epi16( 21, 52, 31, 20, 51, 30, 19, 50, 29, 18, 49, 28, 17, 48, 27, 16,
+                                     47, 26, 15, 46, 25, 14, 45, 24, 13, 44, 23, 12, 43, 22, 11, 42 );
+    __m512i mask1 = _v512_set_epi16( 63, 31, 20, 62, 30, 19, 61, 29, 18, 60, 28, 17, 59, 27, 16, 58,
+                                     26, 15, 57, 25, 14, 56, 24, 13, 55, 23, 12, 54, 22, 11, 53, 21 );
     __m512i r1b1b2 = _mm512_permutex2var_epi16(b.val, mask0, r.val);
     __m512i g2r2g1 = _mm512_permutex2var_epi16(g.val, mask1, r.val);
 
@@ -2047,8 +2080,8 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
 inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uint32x16& g, const v_uint32x16& r,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi32( 26, 31, 15, 25, 30, 14, 24, 29, 13, 23, 28, 12, 22, 27, 11, 21 );
-    __m512i mask1 = _mm512_set_epi32( 31, 10, 25, 30,  9, 24, 29,  8, 23, 28,  7, 22, 27,  6, 21, 26 );
+    __m512i mask0 = _v512_set_epi32( 26, 31, 15, 25, 30, 14, 24, 29, 13, 23, 28, 12, 22, 27, 11, 21 );
+    __m512i mask1 = _v512_set_epi32( 31, 10, 25, 30,  9, 24, 29,  8, 23, 28,  7, 22, 27,  6, 21, 26 );
     __m512i g1b2g2 = _mm512_permutex2var_epi32(b.val, mask0, g.val);
     __m512i r2r1b1 = _mm512_permutex2var_epi32(b.val, mask1, r.val);
 
@@ -2079,8 +2112,8 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uin
 inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64x8& g, const v_uint64x8& r,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi64(  5, 12,  7,  4, 11,  6,  3, 10 );
-    __m512i mask1 = _mm512_set_epi64( 15,  7,  4, 14,  6,  3, 13,  5 );
+    __m512i mask0 = _v512_set_epi64(  5, 12,  7,  4, 11,  6,  3, 10 );
+    __m512i mask1 = _v512_set_epi64( 15,  7,  4, 14,  6,  3, 13,  5 );
     __m512i r1b1b2 = _mm512_permutex2var_epi64(b.val, mask0, r.val);
     __m512i g2r2g1 = _mm512_permutex2var_epi64(g.val, mask1, r.val);
 
@@ -2112,14 +2145,14 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
                                 const v_uint8x64& r, const v_uint8x64& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi8(  95, 31,  94, 30,  93, 29,  92, 28,  91, 27,  90, 26,  89, 25,  88, 24,
-                                      87, 23,  86, 22,  85, 21,  84, 20,  83, 19,  82, 18,  81, 17,  80, 16,
-                                      79, 15,  78, 14,  77, 13,  76, 12,  75, 11,  74, 10,  73,  9,  72,  8,
-                                      71,  7,  70,  6,  69,  5,  68,  4,  67,  3,  66,  2,  65,  1,  64,  0 );
-    __m512i mask1 = _mm512_set_epi8( 127, 63, 126, 62, 125, 61, 124, 60, 123, 59, 122, 58, 121, 57, 120, 56,
-                                     119, 55, 118, 54, 117, 53, 116, 52, 115, 51, 114, 50, 113, 49, 112, 48,
-                                     111, 47, 110, 46, 109, 45, 108, 44, 107, 43, 106, 42, 105, 41, 104, 40,
-                                     103, 39, 102, 38, 101, 37, 100, 36,  99, 35,  98, 34,  97, 33,  96, 32 );
+    __m512i mask0 = _v512_set_epi8(  95, 31,  94, 30,  93, 29,  92, 28,  91, 27,  90, 26,  89, 25,  88, 24,
+                                     87, 23,  86, 22,  85, 21,  84, 20,  83, 19,  82, 18,  81, 17,  80, 16,
+                                     79, 15,  78, 14,  77, 13,  76, 12,  75, 11,  74, 10,  73,  9,  72,  8,
+                                     71,  7,  70,  6,  69,  5,  68,  4,  67,  3,  66,  2,  65,  1,  64,  0 );
+    __m512i mask1 = _v512_set_epi8( 127, 63, 126, 62, 125, 61, 124, 60, 123, 59, 122, 58, 121, 57, 120, 56,
+                                    119, 55, 118, 54, 117, 53, 116, 52, 115, 51, 114, 50, 113, 49, 112, 48,
+                                    111, 47, 110, 46, 109, 45, 108, 44, 107, 43, 106, 42, 105, 41, 104, 40,
+                                    103, 39, 102, 38, 101, 37, 100, 36,  99, 35,  98, 34,  97, 33,  96, 32 );
 
     __m512i br01 = _mm512_permutex2var_epi8(b.val, mask0, r.val);
     __m512i br23 = _mm512_permutex2var_epi8(b.val, mask1, r.val);
@@ -2158,10 +2191,10 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
                                 const v_uint16x32& r, const v_uint16x32& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi16( 47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
-                                      39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0 );
-    __m512i mask1 = _mm512_set_epi16( 63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
-                                      55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16 );
+    __m512i mask0 = _v512_set_epi16( 47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
+                                     39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0 );
+    __m512i mask1 = _v512_set_epi16( 63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
+                                     55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16 );
 
     __m512i br01 = _mm512_permutex2var_epi16(b.val, mask0, r.val);
     __m512i br23 = _mm512_permutex2var_epi16(b.val, mask1, r.val);
@@ -2200,8 +2233,8 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uin
                                 const v_uint32x16& r, const v_uint32x16& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _mm512_set_epi32( 23,  7, 22,  6, 21,  5, 20,  4, 19,  3, 18,  2, 17, 1, 16, 0 );
-    __m512i mask1 = _mm512_set_epi32( 31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8 );
+    __m512i mask0 = _v512_set_epi32( 23,  7, 22,  6, 21,  5, 20,  4, 19,  3, 18,  2, 17, 1, 16, 0 );
+    __m512i mask1 = _v512_set_epi32( 31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8 );
 
     __m512i br01 = _mm512_permutex2var_epi32(b.val, mask0, r.val);
     __m512i br23 = _mm512_permutex2var_epi32(b.val, mask1, r.val);
@@ -2241,8 +2274,8 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     
-    __m512i mask0 = _mm512_set_epi64( 11, 3, 10, 2,  9, 1,  8, 0 );
-    __m512i mask1 = _mm512_set_epi64( 15, 7, 14, 6, 13, 5, 12, 4 );
+    __m512i mask0 = _v512_set_epi64( 11, 3, 10, 2,  9, 1,  8, 0 );
+    __m512i mask1 = _v512_set_epi64( 15, 7, 14, 6, 13, 5, 12, 4 );
 
     __m512i br01 = _mm512_permutex2var_epi64(b.val, mask0, r.val);
     __m512i br23 = _mm512_permutex2var_epi64(b.val, mask1, r.val);
