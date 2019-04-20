@@ -5,9 +5,9 @@
   @date Apr 10, 2019
 */
 
-#include "opencv4/opencv2/opencv.hpp">
-#include <opencv4/opencv2/imgproc/imgproc.hpp>
-#include <opencv4/opencv2/highgui/highgui.hpp>
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace std;
 using namespace cv;
