@@ -15,7 +15,7 @@ using namespace cv;
 string keys =
     "{ help        | | Print help message. }"
     "{ input i     | 0 | Video or camera id.  }"
-    "{ thr         | 20 | Threshold background. }";
+    "{ thr         | 40 | Threshold background. }";
 
 int main(int argc, char** argv)
 {
