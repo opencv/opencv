@@ -401,9 +401,14 @@ bool  TiffDecoder::readData( Mat& img )
                     (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
                 tile_height0 = m_height;
 
-            CV_Assert((int)tile_width0 > 0 && (int)tile_width0 < std::numeric_limits<int>::max());
-            CV_Assert((int)tile_height0 > 0 && (int)tile_height0 < std::numeric_limits<int>::max());
-            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * (bpp / bitsPerByte) < (CV_BIG_UINT(1) << 30)) && "TIFF tile size is too large: >= 1Gb");
+            const int TILE_MAX_WIDTH = (1 << 24);
+            const int TILE_MAX_HEIGHT = (1 << 24);
+            CV_Assert((int)tile_width0 > 0 && (int)tile_width0 <= TILE_MAX_WIDTH);
+            CV_Assert((int)tile_height0 > 0 && (int)tile_height0 <= TILE_MAX_HEIGHT);
+            const uint64_t MAX_TILE_SIZE = (CV_BIG_UINT(1) << 30);
+            CV_CheckLE((int)ncn, 4, "");
+            CV_CheckLE((int)bpp, 64, "");
+            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte)) < MAX_TILE_SIZE) && "TIFF tile size is too large: >= 1Gb");
 
             if (dst_bpp == 8)
             {
