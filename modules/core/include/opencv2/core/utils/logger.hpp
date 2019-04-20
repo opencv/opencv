@@ -47,13 +47,10 @@ CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char
 
 } // namespace
 
-struct CV_EXPORTS LogTagAuto
+struct LogTagAuto
     : public LogTag
 {
-    const char* name;
-    LogLevel level;
-
-    LogTagAuto(const char* _name, LogLevel _level)
+    inline LogTagAuto(const char* _name, LogLevel _level)
         : LogTag(_name, _level)
     {
         registerLogTag(this);
@@ -149,27 +146,6 @@ struct CV_EXPORTS LogTagAuto
 #if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
 # undef CV_LOG_VERBOSE
 # define CV_LOG_VERBOSE(tag, v, ...)
-#endif
-
-#if 0
-#define CV_LOG_FATAL(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_FATAL) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_FATAL, ss.str().c_str()); break; }
-#define CV_LOG_ERROR(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_ERROR) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_ERROR, ss.str().c_str()); break; }
-#define CV_LOG_WARNING(tag, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_WARNING) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_WARNING, ss.str().c_str()); break; }
-#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_INFO
-#define CV_LOG_INFO(tag, ...)
-#else
-#define CV_LOG_INFO(tag, ...)    for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_INFO) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_INFO, ss.str().c_str()); break; }
-#endif
-#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_DEBUG
-#define CV_LOG_DEBUG(tag, ...)
-#else
-#define CV_LOG_DEBUG(tag, ...)   for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_DEBUG) break; std::stringstream ss; ss << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_DEBUG, ss.str().c_str()); break; }
-#endif
-#if CV_LOG_STRIP_LEVEL <= CV_LOG_LEVEL_VERBOSE
-#define CV_LOG_VERBOSE(tag, v, ...)
-#else
-#define CV_LOG_VERBOSE(tag, v, ...) for(;;) { if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_VERBOSE) break; std::stringstream ss; ss << "[VERB" << v << ":" << cv::utils::getThreadID() << "] " << __VA_ARGS__; cv::utils::logging::internal::writeLogMessage(cv::utils::logging::LOG_LEVEL_VERBOSE, ss.str().c_str()); break; }
-#endif
 #endif
 
 }}} // namespace

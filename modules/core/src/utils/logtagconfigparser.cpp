@@ -193,63 +193,88 @@ void LogTagConfigParser::parseWildcard(const std::string& name, LogLevel level)
 std::pair<LogLevel, bool> LogTagConfigParser::parseLogLevel(const std::string& s)
 {
     const auto falseDontCare = std::make_pair(LOG_LEVEL_VERBOSE, false);
+    const auto make_parsed_result = [](LogLevel lev) -> std::pair<LogLevel, bool>
+    {
+        return std::make_pair(lev, true);
+    };
     const size_t len = s.length();
     if (len >= 1u)
     {
-        std::pair<LogLevel, bool> result = falseDontCare;
-        // Fast classification based on first character.
-        // Tentative; need check remaining string.
-        char c = (char)std::toupper(s[0]);
+        const char c = (char)std::toupper(s[0]);
         switch (c)
         {
-        case 'S':
-            result.first = LOG_LEVEL_SILENT;
-            result.second = (len == 1u || len == 6u);
-            break;
-        case 'F':
-            result.first = LOG_LEVEL_FATAL;
-            result.second = (len == 1u || len == 5u);
-            break;
-        case 'E':
-            result.first = LOG_LEVEL_ERROR;
-            result.second = (len == 1u || len == 5u);
-            break;
-        case 'W':
-            result.first = LOG_LEVEL_WARNING;
-            result.second = (len == 1u || len == 4u || len == 7u);
-            break;
-        case 'I':
-            result.first = LOG_LEVEL_INFO;
-            result.second = (len == 1u || len == 4u);
+        case '0':
+            if (len == 1u)
+            {
+                return make_parsed_result(LOG_LEVEL_SILENT);
+            }
             break;
         case 'D':
-            result.first = LOG_LEVEL_DEBUG;
-            result.second = (len == 1u || len == 5u);
+            if (len == 1u ||
+                (len == 5u && cv::toUpperCase(s) == "DEBUG"))
+            {
+                return make_parsed_result(LOG_LEVEL_DEBUG);
+            }
+            if ((len == 7u && cv::toUpperCase(s) == "DISABLE") ||
+                (len == 8u && cv::toUpperCase(s) == "DISABLED"))
+            {
+                return make_parsed_result(LOG_LEVEL_SILENT);
+            }
+            break;
+        case 'E':
+            if (len == 1u ||
+                (len == 5u && cv::toUpperCase(s) == "ERROR"))
+            {
+                return make_parsed_result(LOG_LEVEL_ERROR);
+            }
+            break;
+        case 'F':
+            if (len == 1u ||
+                (len == 5u && cv::toUpperCase(s) == "FATAL"))
+            {
+                return make_parsed_result(LOG_LEVEL_FATAL);
+            }
+            break;
+        case 'I':
+            if (len == 1u ||
+                (len == 4u && cv::toUpperCase(s) == "INFO"))
+            {
+                return make_parsed_result(LOG_LEVEL_INFO);
+            }
+            break;
+        case 'O':
+            if (len == 3u && cv::toUpperCase(s) == "OFF")
+            {
+                return make_parsed_result(LOG_LEVEL_SILENT);
+            }
+            break;
+        case 'S':
+            if (len == 1u ||
+                (len == 6u && cv::toUpperCase(s) == "SILENT"))
+            {
+                return make_parsed_result(LOG_LEVEL_SILENT);
+            }
             break;
         case 'V':
-            result.first = LOG_LEVEL_VERBOSE;
-            result.second = (len == 1u || len == 7u);
+            if (len == 1u ||
+                (len == 7u && cv::toUpperCase(s) == "VERBOSE"))
+            {
+                return make_parsed_result(LOG_LEVEL_VERBOSE);
+            }
+            break;
+        case 'W':
+            if (len == 1u ||
+                (len == 4u && cv::toUpperCase(s) == "WARN") ||
+                (len == 7u && cv::toUpperCase(s) == "WARNING") ||
+                (len == 8u && cv::toUpperCase(s) == "WARNINGS"))
+            {
+                return make_parsed_result(LOG_LEVEL_WARNING);
+            }
             break;
         default:
             break;
         }
-        if (len == 1u)
-        {
-            return result;
-        }
-        if (!result.second)
-        {
-            return falseDontCare;
-        }
-        std::string upper = s;
-        std::transform(upper.begin(), upper.end(), upper.begin(),
-            [](char arg) -> char { return (char)toupper(arg); });
-        if (upper == "SILENT" || upper == "FATAL" || upper == "ERROR" ||
-            upper == "WARNING" || upper == "WARN" || upper == "INFO" ||
-            upper == "DEBUG" || upper == "VERBOSE")
-        {
-            return result;
-        }
+        // fall through
     }
     return falseDontCare;
 }

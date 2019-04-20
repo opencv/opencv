@@ -12,12 +12,12 @@ namespace cv {
 namespace utils {
 namespace logging {
 
-struct CV_EXPORTS LogTag
+struct LogTag
 {
     const char* name;
     LogLevel level;
 
-    constexpr LogTag(const char* _name, LogLevel _level)
+    inline constexpr LogTag(const char* _name, LogLevel _level)
         : name(_name)
         , level(_level)
     {}

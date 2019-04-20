@@ -22,7 +22,7 @@ struct LogTagConfig
     bool hasPrefixWildcard;
     bool hasSuffixWildcard;
 
-    explicit LogTagConfig()
+    LogTagConfig()
         : namePart()
         , level()
         , isGlobal()
@@ -31,7 +31,7 @@ struct LogTagConfig
     {
     }
 
-    explicit LogTagConfig(const std::string& _namePart, LogLevel _level, bool _isGlobal = false,
+    LogTagConfig(const std::string& _namePart, LogLevel _level, bool _isGlobal = false,
         bool _hasPrefixWildcard = false, bool _hasSuffixWildcard = false)
         : namePart(_namePart)
         , level(_level)
