@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     Mat video, element;
 
     float threshold = parser.get<float>("thr");
-    float dist;
+    int dist;
 
     int camId = parser.get<int>("input");
     int key = -1;
