@@ -47,7 +47,7 @@ area and try to implement them.
 Additional Resources
 --------------------
 
--#  [Histograms of Oriented Gradients Video](www.youtube.com/watch?v=0Zib1YEE4LU‎)
+-#  [Histograms of Oriented Gradients Video](https://www.youtube.com/watch?v=0Zib1YEE4LU)
 
 Exercises
 ---------
