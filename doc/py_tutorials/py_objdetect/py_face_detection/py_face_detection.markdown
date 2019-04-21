@@ -90,9 +90,11 @@ Here we will deal with detection. OpenCV already contains many pre-trained class
 eyes, smiles, etc. Those XML files are stored in the opencv/data/haarcascades/ folder. Let's create a
 face and eye detector with OpenCV.
 
+
 First we need to load the required XML classifiers. Then load our input image (or video) in
 grayscale mode.
-@code{.py}
+
+```
 import numpy as np
 import cv2 as cv
 
@@ -101,11 +103,13 @@ eye_cascade = cv.CascadeClassifier('haarcascade_eye.xml')
 
 img = cv.imread('sachin.jpg')
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-@endcode
+```
+
 Now we find the faces in the image. If faces are found, it returns the positions of detected faces
 as Rect(x,y,w,h). Once we get these locations, we can create a ROI for the face and apply eye
 detection on this ROI (since eyes are always on the face !!! ).
-@code{.py}
+
+```
 faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 for (x,y,w,h) in faces:
     cv.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
@@ -118,15 +122,18 @@ for (x,y,w,h) in faces:
 cv.imshow('img',img)
 cv.waitKey(0)
 cv.destroyAllWindows()
-@endcode
+```
+
 Result looks like below:
 
 ![image](images/face.jpg)
+
 
 Additional Resources
 --------------------
 
 -#  Video Lecture on [Face Detection and Tracking](https://www.youtube.com/watch?v=WfdYYNamHZ8)
+
 -#  An interesting interview regarding Face Detection by [Adam
     Harvey](https://web.archive.org/web/20171204220159/http://www.makematics.com/research/viola-jones/)
 
