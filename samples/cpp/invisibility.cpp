@@ -72,7 +72,7 @@ int main(int argc, char** argv)
             {
                 Vec3b pix = diffImage.at<cv::Vec3b>(j,i);
                 dist = (pix[0]*pix[0] + pix[1]*pix[1] + pix[2]*pix[2]);
-                dist = sqrt(dist);
+                dist = (int)sqrt(dist);
                 if(dist>threshold)
                 {
                     foregroundMask.at<unsigned char>(j,i) = 255;
