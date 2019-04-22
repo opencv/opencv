@@ -31,14 +31,13 @@ struct GlobalLoggingInitStruct
 {
 public:
 #if defined NDEBUG
-    static constexpr bool m_isDebugBuild = false;
+    static const bool m_isDebugBuild = false;
 #else
-    static constexpr bool m_isDebugBuild = true;
+    static const bool m_isDebugBuild = true;
 #endif
 
 public:
-    static constexpr LogLevel m_defaultUnconfiguredGlobalLevel =
-        m_isDebugBuild ? LOG_LEVEL_DEBUG : LOG_LEVEL_WARNING;
+    static LogLevel m_defaultUnconfiguredGlobalLevel;
 
 public:
     LogTagManager logTagManager;
@@ -74,6 +73,11 @@ private:
         }
     }
 };
+
+LogLevel GlobalLoggingInitStruct::m_defaultUnconfiguredGlobalLevel = GlobalLoggingInitStruct::m_isDebugBuild
+                ? LOG_LEVEL_DEBUG
+                : LOG_LEVEL_WARNING;
+
 
 // Static dynamic initialization guard function for the combined struct
 // just defined above

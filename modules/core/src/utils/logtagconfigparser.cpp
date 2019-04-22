@@ -145,7 +145,7 @@ void LogTagConfigParser::parseNameAndLevel(const std::string& s)
 
 void LogTagConfigParser::parseWildcard(const std::string& name, LogLevel level)
 {
-    constexpr size_t npos = std::string::npos;
+    const size_t npos = std::string::npos;
     const size_t len = name.length();
     if (len == 0u)
     {

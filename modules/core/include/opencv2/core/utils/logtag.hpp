@@ -17,7 +17,7 @@ struct LogTag
     const char* name;
     LogLevel level;
 
-    inline constexpr LogTag(const char* _name, LogLevel _level)
+    inline LogTag(const char* _name, LogLevel _level)
         : name(_name)
         , level(_level)
     {}
