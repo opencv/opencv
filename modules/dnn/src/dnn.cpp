@@ -1043,6 +1043,7 @@ struct Net::Impl
         lastLayerId = 0;
         netWasAllocated = false;
         fusion = true;
+        isAsync = false;
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
         skipInfEngineInit = false;
@@ -1064,6 +1065,7 @@ struct Net::Impl
 
     bool netWasAllocated;
     bool fusion;
+    bool isAsync;
     std::vector<int64> layersTimings;
     Mat output_blob;
 
@@ -2321,6 +2323,9 @@ struct Net::Impl
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
             if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
+                if (isAsync)
+                    CV_Error(Error::StsNotImplemented, "Default implementation fallbacks in asynchronous mode");
+
                 if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
                 {
                     std::vector<UMat> umat_inputBlobs = OpenCLBackendWrapper::getUMatVector(ld.inputBlobsWrappers);
@@ -2476,7 +2481,7 @@ struct Net::Impl
                 }
                 else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
                 {
-                    forwardInfEngine(node);
+                    forwardInfEngine(ld.outputBlobsWrappers, node, isAsync);
                 }
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
@@ -2533,15 +2538,6 @@ struct Net::Impl
 
         //forward itself
         forwardLayer(ld);
-    }
-
-    void forwardAll()
-    {
-        CV_TRACE_FUNCTION();
-
-        MapIdToLayerData::reverse_iterator last_layer = layers.rbegin();
-        CV_Assert(last_layer != layers.rend());
-        forwardToLayer(last_layer->second, true);
     }
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
@@ -2634,6 +2630,42 @@ struct Net::Impl
     {
         return getBlob(getPinByAlias(outputName));
     }
+
+#ifdef CV_CXX11
+    std::future<Mat> getBlobAsync(const LayerPin& pin)
+    {
+        CV_TRACE_FUNCTION();
+#ifdef HAVE_INF_ENGINE
+        if (!pin.valid())
+            CV_Error(Error::StsObjectNotFound, "Requested blob not found");
+
+        LayerData &ld = layers[pin.lid];
+        if ((size_t)pin.oid >= ld.outputBlobs.size())
+        {
+            CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
+                                           "the #%d was requested", ld.name.c_str(),
+                                           (int)ld.outputBlobs.size(), (int)pin.oid));
+        }
+        if (preferableTarget != DNN_TARGET_CPU)
+        {
+            CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
+            // Transfer data to CPU if it's require.
+            ld.outputBlobsWrappers[pin.oid]->copyToHost();
+        }
+        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE);
+
+        Ptr<InfEngineBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<InfEngineBackendWrapper>();
+        return std::move(wrapper->futureMat);
+#else
+        CV_Error(Error::StsNotImplemented, "DNN_BACKEND_INFERENCE_ENGINE backend is required");
+#endif
+    }
+
+    std::future<Mat> getBlobAsync(String outputName)
+    {
+        return getBlobAsync(getPinByAlias(outputName));
+    }
+#endif  // CV_CXX11
 };
 
 Net::Net() : impl(new Net::Impl)
@@ -2755,6 +2787,31 @@ Mat Net::forward(const String& outputName)
     impl->forwardToLayer(impl->getLayerData(layerName));
 
     return impl->getBlob(layerName);
+}
+
+AsyncMat Net::forwardAsync(const String& outputName)
+{
+    CV_TRACE_FUNCTION();
+#ifdef CV_CXX11
+    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
+        CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
+
+    String layerName = outputName;
+
+    if (layerName.empty())
+        layerName = getLayerNames().back();
+
+    std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
+    impl->setUpNet(pins);
+
+    impl->isAsync = true;
+    impl->forwardToLayer(impl->getLayerData(layerName));
+    impl->isAsync = false;
+
+    return impl->getBlobAsync(layerName);
+#else
+    CV_Error(Error::StsNotImplemented, "Asynchronous forward without C++11");
+#endif  // CV_CXX11
 }
 
 void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)

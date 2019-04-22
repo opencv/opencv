@@ -302,7 +302,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
 if [ -n \"$VERBOSE\" ]; then
   tail -n1 \$0
 fi
-${_command} -D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>, -D>
+${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
 ")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
     ADD_CUSTOM_COMMAND(
