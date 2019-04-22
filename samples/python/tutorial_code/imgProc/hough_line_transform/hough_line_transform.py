@@ -6,8 +6,8 @@ gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 edges = cv.Canny(gray,50,150,apertureSize = 3)
 
 lines = cv.HoughLines(edges,1,np.pi/180,200)
-for line in lines:
-    rho,theta = line[0]
+for line in lines[0]:
+    rho,theta = line
     a = np.cos(theta)
     b = np.sin(theta)
     x0 = a*rho
