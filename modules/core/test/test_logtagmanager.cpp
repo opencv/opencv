@@ -23,18 +23,18 @@ using LogTag = cv::utils::logging::LogTag;
 using LogTagManager = cv::utils::logging::LogTagManager;
 
 // Value to initialize log tag constructors
-static constexpr const LogLevel constTestLevelBegin = cv::utils::logging::LOG_LEVEL_SILENT;
+static const LogLevel constTestLevelBegin = cv::utils::logging::LOG_LEVEL_SILENT;
 
 // Value to be set as part of test (to simulate runtime changes)
-static constexpr const LogLevel constTestLevelChanged = cv::utils::logging::LOG_LEVEL_VERBOSE;
+static const LogLevel constTestLevelChanged = cv::utils::logging::LOG_LEVEL_VERBOSE;
 
 // An alternate value to initialize log tag constructors,
 // for test cases where two distinct initialization values are needed.
-static constexpr const LogLevel constTestLevelAltBegin = cv::utils::logging::LOG_LEVEL_FATAL;
+static const LogLevel constTestLevelAltBegin = cv::utils::logging::LOG_LEVEL_FATAL;
 
 // An alternate value to be set as part of test (to simulate runtime changes),
 // for test cases where two distinct runtime set values are needed.
-static constexpr const LogLevel constTestLevelAltChanged = cv::utils::logging::LOG_LEVEL_DEBUG;
+static const LogLevel constTestLevelAltChanged = cv::utils::logging::LOG_LEVEL_DEBUG;
 
 // Enums for specifying which LogTagManager method to call.
 // Used in parameterized tests.
@@ -153,7 +153,7 @@ protected:
     LogTag* m_actualGlobalLogTag;
 
 protected:
-    static constexpr const char* m_globalTagName = "global";
+    static const char* const m_globalTagName;
 
 public:
     LogTagManagerGlobalSmokeTest()
@@ -162,6 +162,9 @@ public:
     {
     }
 };
+
+const char* const LogTagManagerGlobalSmokeTest::m_globalTagName = "global";
+
 
 TEST_F(LogTagManagerGlobalSmokeTest, AfterCtorCanGetGlobalWithoutAssign)
 {
@@ -217,7 +220,7 @@ protected:
     LogTag m_something;
 
 protected:
-    static constexpr const char* m_somethingTagName = "something";
+    static const char* const m_somethingTagName;
 
 public:
     LogTagManagerNonGlobalSmokeTest()
@@ -226,6 +229,9 @@ public:
     {
     }
 };
+
+const char* const LogTagManagerNonGlobalSmokeTest::m_somethingTagName = "something";
+
 
 TEST_F(LogTagManagerNonGlobalSmokeTest, CanAssignTagAndThenGet)
 {
@@ -332,11 +338,11 @@ protected:
     LogTag tagOurs;
 
 protected:
-    static constexpr const char* strSour = "sour";
-    static constexpr const char* strSop = "sop";
-    static constexpr const char* strSoursop = "soursop";
-    static constexpr const char* strSourDotSop = "sour.sop";
-    static constexpr const char* strOurs = "ours";
+    static const char* const strSour; // = "sour";
+    static const char* const strSop; // = "sop";
+    static const char* const strSoursop; // = "soursop";
+    static const char* const strSourDotSop; // = "sour.sop";
+    static const char* const strOurs; // = "ours";
 
 public:
     LogTagManagerSubstrNonConfusionFixture()
@@ -383,6 +389,13 @@ public:
         }
     }
 };
+
+const char* const LogTagManagerSubstrNonConfusionFixture::strSour = "sour";
+const char* const LogTagManagerSubstrNonConfusionFixture::strSop = "sop";
+const char* const LogTagManagerSubstrNonConfusionFixture::strSoursop = "soursop";
+const char* const LogTagManagerSubstrNonConfusionFixture::strSourDotSop = "sour.sop";
+const char* const LogTagManagerSubstrNonConfusionFixture::strOurs = "ours";
+
 
 INSTANTIATE_TEST_CASE_P(
     LogTagManagerSubstrNonConfusionTest,
@@ -482,14 +495,14 @@ protected:
     LogTag m_coconutDotPineapple;
 
 protected:
-    static constexpr const char* strApple = "apple";
-    static constexpr const char* strBanana = "banana";
-    static constexpr const char* strCoconut = "coconut";
-    static constexpr const char* strOrange = "orange";
-    static constexpr const char* strPineapple = "pineapple";
-    static constexpr const char* strBananaDotOrange = "banana.orange";
-    static constexpr const char* strBananaDotPineapple = "banana.pineapple";
-    static constexpr const char* strCoconutDotPineapple = "coconut.pineapple";
+    static const char* const strApple; // = "apple";
+    static const char* const strBanana; // = "banana";
+    static const char* const strCoconut; // = "coconut";
+    static const char* const strOrange; // = "orange";
+    static const char* const strPineapple; // = "pineapple";
+    static const char* const strBananaDotOrange; // = "banana.orange";
+    static const char* const strBananaDotPineapple; // = "banana.pineapple";
+    static const char* const strCoconutDotPineapple; // = "coconut.pineapple";
 
 public:
     LogTagManagerNamePartNonConfusionFixture()
@@ -542,7 +555,7 @@ protected:
         // Each row ("config") specifies the tag name specifier used to call setLevelByFirstPart().
         // Each column ("target") specifies whether an actual tag with the "target"
         // name would have its log level changed because of the call to setLevelByFirstPart().
-        static constexpr const bool expectedResultUsingFirstPart[5][8] =
+        static const bool expectedResultUsingFirstPart[5][8] =
         {
             /*byFirstPart(apple)*/ { true, false, false, false, false, false, false, false },
             /*byFirstPart(banana)*/ { false, true, false, false, false, true, true, false },
@@ -555,7 +568,7 @@ protected:
         // Each row ("config") specifies the tag name specifier used to call setLevelByAnyPart().
         // Each column ("target") specifies whether an actual tag with the "target"
         // name would have its log level changed because of the call to setLevelByAnyPart().
-        static constexpr const bool expectedResultUsingAnyPart[5][8] =
+        static const bool expectedResultUsingAnyPart[5][8] =
         {
             /*byAnyPart(apple)*/ { true, false, false, false, false, false, false, false },
             /*byAnyPart(banana)*/ { false, true, false, false, false, true, true, false },
@@ -577,6 +590,16 @@ protected:
         }
     }
 };
+
+const char* const LogTagManagerNamePartNonConfusionFixture::strApple = "apple";
+const char* const LogTagManagerNamePartNonConfusionFixture::strBanana = "banana";
+const char* const LogTagManagerNamePartNonConfusionFixture::strCoconut = "coconut";
+const char* const LogTagManagerNamePartNonConfusionFixture::strOrange = "orange";
+const char* const LogTagManagerNamePartNonConfusionFixture::strPineapple = "pineapple";
+const char* const LogTagManagerNamePartNonConfusionFixture::strBananaDotOrange = "banana.orange";
+const char* const LogTagManagerNamePartNonConfusionFixture::strBananaDotPineapple = "banana.pineapple";
+const char* const LogTagManagerNamePartNonConfusionFixture::strCoconutDotPineapple = "coconut.pineapple";
+
 
 INSTANTIATE_TEST_CASE_P(
     LogTagManagerNamePartNonConfusionTest,
