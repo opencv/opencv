@@ -270,7 +270,7 @@ private:
     static bool internal_isNamePartMatch(MatchingScope scope, size_t matchingPos);
 
 private:
-    static constexpr const char* m_globalName = "global";
+    static const char* m_globalName;
 
 private:
     mutable MutexType m_mutex;
