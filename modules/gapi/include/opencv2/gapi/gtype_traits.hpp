@@ -79,6 +79,7 @@ namespace detail
     template<typename T> struct GTypeOf;
 #if !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
+    template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
