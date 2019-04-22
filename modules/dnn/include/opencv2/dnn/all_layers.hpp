@@ -211,7 +211,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         CV_DEPRECATED_EXTERNAL Size kernel, stride, pad, dilation, adjustPad;
-        std::vector<int> kernel_size, strides, pads, dilations;
+        std::vector<size_t> kernel_size, strides, dilations;
+        std::vector<size_t> pads_begin, pads_end;
         String padMode;
         int numOutput;
     };
@@ -244,9 +245,9 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         int type;
-        std::vector<int> kernel_size, strides, pads;
-        CV_DEPRECATED_EXTERNAL Size kernel, stride;
-        CV_DEPRECATED_EXTERNAL Size pad;
+        std::vector<size_t> kernel_size, strides;
+        std::vector<size_t> pads_begin, pads_end;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad;
         CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
         bool globalPooling;
         bool computeMaxIdx;

@@ -56,7 +56,7 @@ std::string makeName(const std::string& str1, const std::string& str2)
     return str1 + str2;
 }
 bool getParameter(const LayerParams &params, const std::string& nameBase, const std::string& nameAll,
-                  std::vector<int>& parameter, bool hasDefault = false, const int& defaultValue = 0)
+                  std::vector<size_t>& parameter, bool hasDefault = false, const int& defaultValue = 0)
 {
     std::string nameH = makeName(nameBase, std::string("_h"));
     std::string nameW = makeName(nameBase, std::string("_w"));
@@ -66,6 +66,7 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
 
     if (params.has(nameH) && params.has(nameW))
     {
+        CV_Assert(params.get<int>(nameH) >= 0 && params.get<int>(nameW) >= 0);
         parameter.push_back(params.get<int>(nameH));
         parameter.push_back(params.get<int>(nameW));
         return true;
@@ -75,8 +76,10 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
         if (params.has(nameAll_))
         {
             DictValue param = params.get(nameAll_);
-            for (int i = 0; i < param.size(); i++)
+            for (int i = 0; i < param.size(); i++) {
+                CV_Assert(param.get<int>(i) >= 0);
                 parameter.push_back(param.get<int>(i));
+            }
             if (parameter.size() == 1) {
                 parameter.push_back(parameter.back());
             }
@@ -95,7 +98,7 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
     }
 }
 
-void getKernelSize(const LayerParams &params, std::vector<int>& kernel)
+void getKernelSize(const LayerParams &params, std::vector<size_t>& kernel)
 {
       if (!util::getParameter(params, "kernel", "kernel_size", kernel))
       {
@@ -106,18 +109,25 @@ void getKernelSize(const LayerParams &params, std::vector<int>& kernel)
       }
 }
 
-void getStrideAndPadding(const LayerParams &params, std::vector<int>& pads, std::vector<int>& strides, cv::String& padMode)
+void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
+                         std::vector<size_t>& strides, cv::String& padMode)
 {
     if (params.has("pad_l") && params.has("pad_t") && params.has("pad_r") && params.has("pad_b")) {
-        pads.push_back(params.get<int>("pad_t"));
-        pads.push_back(params.get<int>("pad_l"));
-        pads.push_back(params.get<int>("pad_b"));
-        pads.push_back(params.get<int>("pad_r"));
+        CV_Assert(params.get<int>("pad_t") >= 0 && params.get<int>("pad_l") >= 0 &&
+                  params.get<int>("pad_b") >= 0 && params.get<int>("pad_r") >= 0);
+        pads_begin.push_back(params.get<int>("pad_t"));
+        pads_begin.push_back(params.get<int>("pad_l"));
+        pads_end.push_back(params.get<int>("pad_b"));
+        pads_end.push_back(params.get<int>("pad_r"));
     }
     else {
-        util::getParameter(params, "pad", "pad", pads, true, 0);
-        if (pads.size() < 4) {
-            pads.insert(pads.end(), pads.begin(), pads.end());
+        util::getParameter(params, "pad", "pad", pads_begin, true, 0);
+        if (pads_begin.size() == 2 || pads_begin.size() == 3)
+            pads_end = pads_begin;
+        else
+        {
+            pads_end = std::vector<size_t>(pads_begin.begin() + pads_begin.size() / 2, pads_begin.end());
+            pads_begin.resize(pads_begin.size() / 2);
         }
     }
     util::getParameter(params, "stride", "stride", strides, true, 1);
@@ -126,18 +136,16 @@ void getStrideAndPadding(const LayerParams &params, std::vector<int>& pads, std:
     if (params.has("pad_mode"))
         padMode = params.get<String>("pad_mode");
 
-
-    for (int i = 0; i < pads.size(); i++)
-        CV_Assert(pads[i] >= 0);
     for (int i = 0; i < strides.size(); i++)
         CV_Assert(strides[i] > 0);
 }
 }
 
-void getPoolingKernelParams(const LayerParams &params, std::vector<int>& kernel, bool &globalPooling,
-                            std::vector<int>& pads, std::vector<int>& strides, cv::String &padMode)
+void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, bool &globalPooling,
+                            std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
+                            std::vector<size_t>& strides, cv::String &padMode)
 {
-    util::getStrideAndPadding(params, pads, strides, padMode);
+    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
     if (globalPooling)
@@ -146,8 +154,8 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<int>& kernel,
         {
             CV_Error(cv::Error::StsBadArg, "In global_pooling mode, kernel_size (or kernel_h and kernel_w) cannot be specified");
         }
-        for (int i = 0; i < pads.size(); i++) {
-            if (pads[i] != 0)
+        for (int i = 0; i < pads_begin.size(); i++) {
+            if (pads_begin[i] != 0 || pads_end[i] != 0)
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pads must be = 0");
         }
         for (int i = 0; i < strides.size(); i++) {
@@ -158,35 +166,19 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<int>& kernel,
     else
     {
         util::getKernelSize(params, kernel);
-        if (strides.size() == kernel.size() - 1) {
-            strides.push_back(strides.back());
-        }
-        if (pads.size() == 2 * kernel.size() - 2) {
-            pads.push_back(pads.back());
-            pads.push_back(pads.back());
-        }
-        CV_Assert(kernel.size() == strides.size() && kernel.size() == pads.size() / 2);
+        CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() && pads_begin.size() == pads_end.size());
     }
 }
 
-void getConvolutionKernelParams(const LayerParams &params, std::vector<int>& kernel, std::vector<int>& pads,
-                                std::vector<int>& strides, std::vector<int>& dilations, cv::String &padMode)
+void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
+                                std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations, cv::String &padMode)
 {
     util::getKernelSize(params, kernel);
-    util::getStrideAndPadding(params, pads, strides, padMode);
+    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     util::getParameter(params, "dilation", "dilation", dilations, true, 1);
 
-    if (dilations.size() == kernel.size() - 1) {
-        dilations.push_back(dilations.back());
-    }
-    if (strides.size() == kernel.size() - 1) {
-        strides.push_back(strides.back());
-    }
-    if (pads.size() == 2 * kernel.size() - 2) {
-        pads.push_back(pads.back());
-        pads.push_back(pads.back());
-    }
-    CV_Assert(kernel.size() == strides.size() && kernel.size() == pads.size() / 2 && kernel.size() == dilations.size());
+    CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() &&
+              pads_begin.size() == pads_end.size() && kernel.size() == dilations.size());
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
 }
@@ -200,14 +192,14 @@ void getConvolutionKernelParams(const LayerParams &params, std::vector<int>& ker
 // We pad Pr/2 on the left and Pr - Pr/2 on the right, Pc/2 on the top
 // and Pc - Pc/2 on the bottom.  When Pr or Pc is odd, this means
 // we pad more on the right and bottom than on the top and left.
-void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<int>& kernel,
-                          const std::vector<int>& stride, const String &padMode,
-                          const std::vector<int>& dilation, std::vector<int>& out)
+void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& stride, const String &padMode,
+                          const std::vector<size_t>& dilation, std::vector<int>& out)
 {
     if (padMode == "VALID")
     {
         for (int i = 0; i < inp.size(); i++)
-            out.push_back((inp[i] - dilation[i] * (kernel[i] - 1) - 1 + stride[i]) / stride[i] );
+            out.push_back((inp[i] - dilation[i] * (kernel[i] - 1) - 1 + stride[i]) / stride[i]);
     }
     else if (padMode == "SAME")
     {
@@ -238,16 +230,22 @@ void getConvPoolPaddings(const Size& inp, const Size& out,
 }
 
 void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
-                         const std::vector<int>& kernel, const std::vector<int>& stride,
-                         const String &padMode, const std::vector<int>& dilation, std::vector<int>& pads)
+                         const std::vector<size_t>& kernel, const std::vector<size_t>& strides,
+                         const String &padMode, const std::vector<size_t>& dilation,
+                         std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
-    CV_Assert(pads.size() / 2 == kernel.size());
+    CV_Assert(pads_begin.size() == pads_end.size() && pads_begin.size() == kernel.size());
     if (padMode == "VALID")
-        std::fill(pads.begin(), pads.end(), 0);
+    {
+        std::fill(pads_begin.begin(), pads_begin.end(), 0);
+        std::fill(pads_end.begin(), pads_end.end(), 0);
+    }
     else if (padMode == "SAME")
     {
-        for (int i = 0; i < kernel.size(); i++)
-            pads[i] = pads[i + pads.size() / 2] = std::max(0, (out[i] - 1) * stride[i] + (dilation[i] * (kernel[i] - 1) + 1) - inp[i]) / 2;
+        for (int i = 0; i < pads_begin.size(); i++) {
+            int pad = ((out[i] - 1) * strides[i] + (dilation[i] * (kernel[i] - 1) + 1) - inp[i]) / 2;
+            pads_begin[i] = pads_end[i] = std::max(0, pad);
+        }
     }
 }
 

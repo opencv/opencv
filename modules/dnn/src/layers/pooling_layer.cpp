@@ -87,18 +87,17 @@ public:
             else
                 CV_Error(Error::StsBadArg, "Unknown pooling type \"" + pool + "\"");
 
-            getPoolingKernelParams(params, kernel_size, globalPooling, pads, strides, padMode);
+            getPoolingKernelParams(params, kernel_size, globalPooling, pads_begin, pads_end, strides, padMode);
             if (kernel_size.size() == 2) {
                 kernel = Size(kernel_size[1], kernel_size[0]);
                 stride = Size(strides[1], strides[0]);
-                pad = Size(pads[1], pads[0]);
+                pad = Size(pads_begin[1], pads_begin[0]);
 
-                pad_t = pads[0];
-                pad_l = pads[1];
-                pad_b = pads[2];
-                pad_r = pads[3];
+                pad_t = pads_begin[0];
+                pad_l = pads_begin[1];
+                pad_b = pads_end[0];
+                pad_r = pads_end[1];
             }
-
         }
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
@@ -139,15 +138,15 @@ public:
             out.push_back(outputs[0].size[i]);
         }
         if (globalPooling) {
-            kernel = {inp[1], inp[0]};
-            kernel_size = inp;
+            kernel = Size(inp[1], inp[0]);
+            kernel_size = std::vector<size_t>(inp.begin(), inp.end());
         }
-        getConvPoolPaddings(inp, out, kernel_size, strides, padMode, std::vector<int>(kernel_size.size(), 1), pads);
-        if (pads.size() == 4) {
-            pad_t = pads[0];
-            pad_l = pads[1];
-            pad_b = pads[2];
-            pad_r = pads[3];
+        getConvPoolPaddings(inp, out, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), pads_begin, pads_end);
+        if (pads_begin.size() == 2) {
+            pad_t = pads_begin[0];
+            pad_l = pads_begin[1];
+            pad_b = pads_end[0];
+            pad_r = pads_end[1];
         }
 
 #ifdef HAVE_OPENCL
@@ -284,10 +283,10 @@ public:
         {
             InferenceEngine::Builder::PoolingLayer ieLayer(name);
 
-            ieLayer.setKernel(std::vector<size_t>(kernel_size.begin(), kernel_size.end()));
-            ieLayer.setStrides(std::vector<size_t>(strides.begin(), strides.end()));
-            ieLayer.setPaddingsBegin(std::vector<size_t>(pads.begin(), pads.begin() + pads.size() / 2));
-            ieLayer.setPaddingsEnd(std::vector<size_t>(pads.begin() + pads.size() / 2, pads.end()));
+            ieLayer.setKernel(kernel_size);
+            ieLayer.setStrides(strides);
+            ieLayer.setPaddingsBegin(pads_begin);
+            ieLayer.setPaddingsEnd(pads_end);
 
             ieLayer.setPoolingType(type == MAX ?
                                    InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
@@ -949,24 +948,25 @@ public:
         else if (padMode.empty())
         {
             for (int i = 0; i < inpShape.size(); i++) {
-                float dst = (float)(inpShape[i] + pads[i] + pads[i + pads.size() / 2] - kernel_size[i]) / strides[i];
+                float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - kernel_size[i]) / strides[i];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
-            if ((pads.size() == 4 && (pads[2] || pads[3])) || (pads.size() == 6 && (pads[3] || pads[4] || pads[5])))
+            if ((pads_end.size() == 2 && (pads_end[0] || pads_end[1])) ||
+                (pads_end.size() == 3 && (pads_end[0] || pads_end[1] || pads_end[2])))
             {
                 // If we have padding, ensure that the last pooling starts strictly
                 // inside the image (instead of at the padding); otherwise clip the last.
                 for (int i = 0; i < outShape.size(); i++) {
-                    if ((outShape[i] - 1) * strides[i] >= inpShape[i] + pads[i + pads.size() / 2]) {
+                    if ((outShape[i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
                         --outShape[i];
-                        CV_Assert((outShape[i] - 1) * strides[i] < inpShape[i] + pads[i + pads.size() / 2]);
+                        CV_Assert((outShape[i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
                     }
                 }
             }
         }
         else
         {
-            getConvPoolOutParams(inpShape, kernel_size, strides, padMode, std::vector<int>(kernel_size.size(), 1), outShape);
+            getConvPoolOutParams(inpShape, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), outShape);
         }
         std::vector<int> dims;
         dims.push_back(inputs[0][0]);

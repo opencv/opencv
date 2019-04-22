@@ -59,23 +59,24 @@ namespace cv
 {
 namespace dnn
 {
-void getConvolutionKernelParams(const LayerParams &params, std::vector<int>& kernel, std::vector<int>& pads,
-                                std::vector<int>& strides, std::vector<int>& dilations, cv::String &padMode);
+void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
+                                std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations, cv::String &padMode);
 
-void getPoolingKernelParams(const LayerParams &params, std::vector<int>& kernel, bool &globalPooling,
-                            std::vector<int>& pads, std::vector<int>& strides, cv::String &padMode);
+void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, bool &globalPooling,
+                            std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end, std::vector<size_t>& strides, cv::String &padMode);
 
-void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<int>& kernel,
-                          const std::vector<int>& stride, const String &padMode,
-                          const std::vector<int>& dilation, std::vector<int>& out);
+void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& stride, const String &padMode,
+                          const std::vector<size_t>& dilation, std::vector<int>& out);
 
 void getConvPoolPaddings(const Size& inp, const Size& out,
                          const Size &kernel, const Size &stride,
                          const String &padMode, const Size &dilation, int &padT, int &padL, int &padB, int &padR);
 
  void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
-                          const std::vector<int>& kernel, const std::vector<int>& stride,
-                          const String &padMode, const std::vector<int>& dilation, std::vector<int>& pads);
+                          const std::vector<size_t>& kernel, const std::vector<size_t>& strides,
+                          const String &padMode, const std::vector<size_t>& dilation,
+                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
 }
 }
 

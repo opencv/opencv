@@ -980,8 +980,7 @@ void TFImporter::populateNet(Net dstNet)
                 ExcludeLayer(net, next_layers[0].second, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
             }
-            layerParams.type = "Convolution";
-            int id = dstNet.addLayer(name, layerParams.type, layerParams);
+            int id = dstNet.addLayer(name, "Convolution", layerParams);
             layer_id[name] = id;
 
             // one input only
@@ -1343,8 +1342,7 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
-            layerParams.type = "Pooling";
-            int id = dstNet.addLayer(name, layerParams.type, layerParams);
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
