@@ -83,6 +83,10 @@ public:
             pad = Size(pads_begin[1], pads_begin[0]);
             dilation = Size(dilations[1], dilations[0]);
 
+            adjust_pads.resize(2);
+            adjust_pads[0] = params.get<int>("adj_h", 0);
+            adjust_pads[1] = params.get<int>("adj_w", 0);
+
             adjustPad.height = params.get<int>("adj_h", 0);
             adjustPad.width = params.get<int>("adj_w", 0);
             CV_Assert(adjustPad.width < stride.width &&
@@ -1176,7 +1180,10 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
+            if (kernel_size.size() == 3)
+                return (INF_ENGINE_RELEASE >= 2018050000 && preferableTarget == DNN_TARGET_CPU);
+
+            if (INF_ENGINE_RELEASE >= 2018050000 && (adjust_pads[0] || adjust_pads[1]))
                 return false;
 
             const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
@@ -1186,12 +1193,12 @@ public:
                 return preferableTarget == DNN_TARGET_CPU;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                return dilation.width == 1 && dilation.height == 1;
+                return dilations.back() == 1 && dilations[dilations.size() - 2] == 1;
             return true;
         }
         else
 #endif  // HAVE_INF_ENGINE
-            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+            return kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1203,24 +1210,26 @@ public:
         CV_Assert(inputs.size() != 0);
 
         int inpCn = inputs[0][1];
-        int inpH = inputs[0][2];
-        int inpW = inputs[0][3];
+        std::vector<int> inpShape;
+        for (int i = 2; i < inputs[0].size(); i++) {
+            inpShape.push_back(inputs[0][i]);
+        }
 
-        int outH = -1, outW = -1;
+        std::vector<int> outShape;
         if (padMode.empty())
         {
-            outH = stride.height * (inpH - 1) + kernel.height - 2 * pad.height + adjustPad.height;
-            outW = stride.width * (inpW - 1) + kernel.width - 2 * pad.width + adjustPad.width;
+            for (int i = 0; i < inpShape.size(); i++)
+                outShape.push_back(strides[i] * (inpShape[i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
         }
         else if (padMode == "VALID")
         {
-            outH = stride.height * (inpH - 1) + kernel.height + adjustPad.height;
-            outW = stride.width * (inpW - 1) + kernel.width + adjustPad.width;
+            for (int i = 0; i < inpShape.size(); i++)
+                outShape.push_back(strides[i] * (inpShape[i] - 1) + kernel_size[i] + adjust_pads[i]);
         }
         else if (padMode == "SAME")
         {
-            outH = stride.height * (inpH - 1) + 1 + adjustPad.height;
-            outW = stride.width * (inpW - 1) + 1 + adjustPad.width;
+            for (int i = 0; i < inpShape.size(); i++)
+                outShape.push_back(strides[i] * (inpShape[i] - 1) + 1 + adjust_pads[i]);
         }
         else
             CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
@@ -1233,8 +1242,11 @@ public:
         CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
         CV_Assert(blobs[0].size[0] == inpCn);
 
-        int dims[] = {inputs[0][0], outCn, outH, outW};
-        outputs.resize(inputs.size(), shape(dims, 4));
+        std::vector<int> dims;
+        dims.push_back(inputs[0][0]);
+        dims.push_back(outCn);
+        dims.insert(dims.end(), outShape.begin(), outShape.end());
+        outputs.resize(inputs.size(), shape(&dims[0], dims.size()));
 
         if (!is1x1())
             internals.push_back(computeColRowShape(inputs[0], outputs[0]));
@@ -1250,16 +1262,20 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        int pad_t = pad.height, pad_l = pad.width, pad_b = pad.height, pad_r = pad.width;
-        getConvPoolPaddings(Size(outputs[0].size[3], outputs[0].size[2]),
-                            Size(inputs[0].size[3], inputs[0].size[2]),
-                            kernel, stride, padMode, dilation, pad_t, pad_l, pad_b, pad_r);
-
-        if (pad_t != pad_b || pad_l != pad_r)
-            CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
-
-        pad.width = pad_l;
-        pad.height = pad_t;
+         std::vector<int> inpShape;
+         std::vector<int> outShape;
+         for (int i = 2; i < inputs[0].dims; i++) {
+           inpShape.push_back(inputs[0].size[i]);
+           outShape.push_back(outputs[0].size[i]);
+         }
+         getConvPoolPaddings(outShape, inpShape, kernel_size, strides, padMode, dilations, pads_begin, pads_end);
+         if (pads_begin.size() == 2) {
+            for (int i = 0; i < pads_begin.size(); i++) {
+                if (pads_begin[i] != pads_end[i])
+                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in deconvolution layer");
+            }
+            pad = Size(pads_begin[1], pads_begin[0]);
+        }
 
         weightsMultipliers.assign(numOutput, 1.0);
         if (weightsMat.empty())
@@ -1779,11 +1795,11 @@ public:
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
 
-        ieLayer.setKernel({(size_t)kernel.height, (size_t)kernel.width});
-        ieLayer.setStrides({(size_t)stride.height, (size_t)stride.width});
-        ieLayer.setDilation({(size_t)dilation.height, (size_t)dilation.width});
-        ieLayer.setPaddingsBegin({(size_t)pad.height, (size_t)pad.width});
-        ieLayer.setPaddingsEnd({(size_t)pad.height, (size_t)pad.width});
+        ieLayer.setKernel(kernel_size);
+        ieLayer.setStrides(strides);
+        ieLayer.setDilation(dilations);
+        ieLayer.setPaddingsBegin(pads_begin);
+        ieLayer.setPaddingsEnd(pads_end);
         ieLayer.setGroup((size_t)group);
         ieLayer.setOutDepth((size_t)numOutput);
 

@@ -211,6 +211,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         CV_DEPRECATED_EXTERNAL Size kernel, stride, pad, dilation, adjustPad;
+        std::vector<size_t> adjust_pads;
         std::vector<size_t> kernel_size, strides, dilations;
         std::vector<size_t> pads_begin, pads_end;
         String padMode;

@@ -166,6 +166,10 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     else
     {
         util::getKernelSize(params, kernel);
+        if (pads_begin.size() == kernel.size() - 1 && pads_end.size() == kernel.size() - 1) {
+            pads_begin.push_back(pads_begin.back());
+            pads_end.push_back(pads_end.back());
+        }
         CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() && pads_begin.size() == pads_end.size());
     }
 }
@@ -176,6 +180,14 @@ void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& 
     util::getKernelSize(params, kernel);
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     util::getParameter(params, "dilation", "dilation", dilations, true, 1);
+
+    if (pads_begin.size() == kernel.size() - 1 && pads_end.size() == kernel.size() - 1) {
+        pads_begin.push_back(pads_begin.back());
+        pads_end.push_back(pads_end.back());
+    }
+    if (dilations.size() == kernel.size() - 1) {
+        dilations.push_back(dilations.back());
+    }
 
     CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() &&
               pads_begin.size() == pads_end.size() && kernel.size() == dilations.size());
