@@ -112,8 +112,16 @@ GMetaArgs GAPI_EXPORTS descr_of(const GRunArgs &args);
 
 // Transform run-time operation result argument into metadata extracted from that argument
 // Used to compare the metadata, which generated at compile time with the metadata result operation in run time
-GMetaArg  GAPI_EXPORTS descr_of(const GRunArgP& argp);
+GMetaArg GAPI_EXPORTS descr_of(const GRunArgP& argp);
 
+// Checks if run-time computation argument can be described by metadata
+bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArg&  arg);
+bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
+
+// Checks if run-time computation result argument can be described by metadata.
+// Used to check if the metadata generated at compile time
+// coincides with output arguments passed to computation in cpu and ocl backends
+bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
 
 } // namespace cv
 
