@@ -2684,19 +2684,6 @@ inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
     return v_float64x2(_mm_cvtps_pd(_mm_movehl_ps(a.val, a.val)));
 }
 
-#if CV_FP16
-inline v_float32x4 v128_load_fp16_f32(const short* ptr)
-{
-    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
-}
-
-inline void v_store_fp16(short* ptr, const v_float32x4& a)
-{
-    __m128i fp16_value = _mm_cvtps_ph(a.val, 0);
-    _mm_storel_epi64((__m128i*)ptr, fp16_value);
-}
-#endif
-
 ////////////// Lookup table access ////////////////////
 
 inline v_int8x16 v_lut(const schar* tab, const int* idx)
@@ -2956,6 +2943,9 @@ inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
 
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
+#if CV_FP16
+    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
+#else
     const __m128i z = _mm_setzero_si128(), delta = _mm_set1_epi32(0x38000000);
     const __m128i signmask = _mm_set1_epi32(0x80000000), maxexp = _mm_set1_epi32(0x7c000000);
     const __m128 deltaf = _mm_castsi128_ps(_mm_set1_epi32(0x38800000));
@@ -2968,10 +2958,15 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     __m128i zmask = _mm_cmpeq_epi32(e, z);
     __m128i ft = v_select_si128(zmask, zt, t);
     return v_float32x4(_mm_castsi128_ps(_mm_or_si128(ft, sign)));
+#endif
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
+#if CV_FP16
+    __m128i fp16_value = _mm_cvtps_ph(v.val, 0);
+    _mm_storel_epi64((__m128i*)ptr, fp16_value);
+#else
     const __m128i signmask = _mm_set1_epi32(0x80000000);
     const __m128i rval = _mm_set1_epi32(0x3f000000);
 
@@ -2993,6 +2988,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     t = _mm_or_si128(t, sign);
     t = _mm_packs_epi32(t, t);
     _mm_storel_epi64((__m128i*)ptr, t);
+#endif
 }
 
 inline void v_cleanup() {}
