@@ -48,11 +48,14 @@ int main() {
         cvtColor(frame, hsv, COLOR_BGR2HSV);
         calcBackProject(&hsv, 1, channels, roi_hist, dst, range);
 
-        // apply meanshift to get the new location
-        meanShift(dst, track_window, term_crit);
+        // apply camshift to get the new location
+        RotatedRect rot_rect = CamShift(dst, track_window, term_crit);
 
         // Draw it on image
-        rectangle(frame, track_window, 255, 2);
+        Point2f points[4];
+        rot_rect.points(points);
+        for (int i = 0; i < 4; i++)
+            line(frame, points[i], points[(i+1)%4], 255, 2);
         imshow("img2", frame);
 
         int keyboard = waitKey(30);
