@@ -41,7 +41,7 @@ int main() {
     TermCriteria term_crit(TermCriteria::EPS | TermCriteria::COUNT, 10, 1);
 
     while(true){
-        Mat frame, hsv, dst;
+        Mat hsv, dst;
         capture >> frame;
         if (frame.empty())
             break;
