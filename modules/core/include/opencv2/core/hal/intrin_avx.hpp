@@ -431,19 +431,6 @@ inline v_float64x4 v_reinterpret_as_f64(const v_float64x4& a)
 inline v_float64x4 v_reinterpret_as_f64(const v_float32x8& a)
 { return v_float64x4(_mm256_castps_pd(a.val)); }
 
-#if CV_FP16
-inline v_float32x8 v256_load_fp16_f32(const short* ptr)
-{
-    return v_float32x8(_mm256_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
-}
-
-inline void v_store_fp16(short* ptr, const v_float32x8& a)
-{
-    __m128i fp16_value = _mm256_cvtps_ph(a.val, 0);
-    _mm_store_si128((__m128i*)ptr, fp16_value);
-}
-#endif
-
 /* Recombine */
 /*#define OPENCV_HAL_IMPL_AVX_COMBINE(_Tpvec, perm)                    \
     inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)    \
@@ -1400,7 +1387,7 @@ inline v_float32x8 v_cvt_f32(const v_float64x4& a)
 inline v_float32x8 v_cvt_f32(const v_float64x4& a, const v_float64x4& b)
 {
     __m128 af = _mm256_cvtpd_ps(a.val), bf = _mm256_cvtpd_ps(b.val);
-    return v_float32x8(_mm256_insertf128_ps(_mm256_castps128_ps256(af), bf, 1));
+    return v_float32x8(_v256_combine(af, bf));
 }
 
 inline v_float64x4 v_cvt_f64(const v_int32x8& a)
@@ -1474,7 +1461,7 @@ inline v_int32x8 v256_lut_pairs(const int* tab, const int* idx)
 }
 inline v_int32x8 v256_lut_quads(const int* tab, const int* idx)
 {
-    return v_int32x8(_mm256_insertf128_si256(_mm256_castsi128_si256(_mm_loadu_si128((const __m128i*)(tab + idx[0]))), _mm_loadu_si128((const __m128i*)(tab + idx[1])), 0x1));
+    return v_int32x8(_v256_combine(_mm_loadu_si128((const __m128i*)(tab + idx[0])), _mm_loadu_si128((const __m128i*)(tab + idx[1]))));
 }
 inline v_uint32x8 v256_lut(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v256_lut((const int *)tab, idx)); }
 inline v_uint32x8 v256_lut_pairs(const unsigned* tab, const int* idx) { return v_reinterpret_as_u32(v256_lut_pairs((const int *)tab, idx)); }
@@ -1490,7 +1477,7 @@ inline v_int64x4 v256_lut(const int64* tab, const int* idx)
 }
 inline v_int64x4 v256_lut_pairs(const int64* tab, const int* idx)
 {
-    return v_int64x4(_mm256_insertf128_si256(_mm256_castsi128_si256(_mm_loadu_si128((const __m128i*)(tab + idx[0]))), _mm_loadu_si128((const __m128i*)(tab + idx[1])), 0x1));
+    return v_int64x4(_v256_combine(_mm_loadu_si128((const __m128i*)(tab + idx[0])), _mm_loadu_si128((const __m128i*)(tab + idx[1]))));
 }
 inline v_uint64x4 v256_lut(const uint64* tab, const int* idx) { return v_reinterpret_as_u64(v256_lut((const int64 *)tab, idx)); }
 inline v_uint64x4 v256_lut_pairs(const uint64* tab, const int* idx) { return v_reinterpret_as_u64(v256_lut_pairs((const int64 *)tab, idx)); }
@@ -1506,7 +1493,7 @@ inline v_float64x4 v256_lut(const double* tab, const int* idx)
 {
     return v_float64x4(_mm256_i32gather_pd(tab, _mm_loadu_si128((const __m128i*)idx), 8));
 }
-inline v_float64x4 v256_lut_pairs(const double* tab, const int* idx) { return v_float64x4(_mm256_insertf128_pd(_mm256_castpd128_pd256(_mm_loadu_pd(tab + idx[0])), _mm_loadu_pd(tab + idx[1]), 0x1)); }
+inline v_float64x4 v256_lut_pairs(const double* tab, const int* idx) { return v_float64x4(_v256_combine(_mm_loadu_pd(tab + idx[0]), _mm_loadu_pd(tab + idx[1]))); }
 
 inline v_int32x8 v_lut(const int* tab, const v_int32x8& idxvec)
 {
