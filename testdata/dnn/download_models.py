@@ -445,13 +445,13 @@ models = [
     Model(
         name='VGG16 (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16/vgg16.tar.gz',
-        sha='7c02db88b2191457155f0ccca1d755e3e18604bf',
+        sha='39bc0f689388a32227d804e97ea9f562467ed863',
         filename='vgg16.tar.gz'),
     Model(
         name='VGG16 (ONNX)',
         archive='vgg16.tar.gz',
         member='vgg16/vgg16.onnx',
-        sha='d2833339fae2e5256698ee923731fd9a523fb747',
+        sha='effed6f2bbe6c3a2f7705da4c0002ec6250827dd',
         filename='onnx/models/vgg16.onnx'),
     Model(
         name='VGG16 (ONNX)',
@@ -468,13 +468,13 @@ models = [
     Model(
         name='VGG16_bn (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16-bn/vgg16-bn.tar.gz',
-        sha='9dee2249f6336d19d7f6a0149a26825ec458dbf3',
+        sha='60f4685aed632d2ce3b137017cf44ae1a5c55459',
         filename='vgg16-bn.tar.gz'),
     Model(
         name='VGG16_bn (ONNX)',
         archive='vgg16-bn.tar.gz',
         member='vgg16-bn/vgg16-bn.onnx',
-        sha='dfcd3df92498416171e47b771a7c31de98558872',
+        sha='e282e2137f1317d03ca1f2702e9cfddaf847e44d',
         filename='onnx/models/vgg16-bn.onnx'),
     Model(
         name='VGG16_bn (ONNX)',
@@ -491,13 +491,13 @@ models = [
     Model(
         name='ResNet-18v1 (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet18v1/resnet18v1.tar.gz',
-        sha='83235d56d0b9118cb389f477bb45ddbfbb4e5c66',
+        sha='d132be4857d024de9caa21fd5300dee7c063bc35',
         filename='resnet18v1.tar.gz'),
     Model(
         name='ResNet-18v1 (ONNX)',
         archive='resnet18v1.tar.gz',
         member='resnet18v1/resnet18v1.onnx',
-        sha='5a9c94d32be17baf96653a6d2f732339b48835a0',
+        sha='9d96d7142c5ce43aa61ce67124b8eb5530afff4c',
         filename='onnx/models/resnet18v1.onnx'),
     Model(
         name='ResNet-18v1 (ONNX)',
@@ -514,13 +514,13 @@ models = [
     Model(
         name='ResNet-50v1 (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet50v1/resnet50v1.tar.gz',
-        sha='268df7b647c2ee522d85b4fb033b76a1e295c881',
+        sha='a4ac2da7e0024d61fdb80481496ba966b48b9fea',
         filename='resnet50v1.tar.gz'),
     Model(
         name='ResNet-50v1 (ONNX)',
         archive='resnet50v1.tar.gz',
         member='resnet50v1/resnet50v1.onnx',
-        sha='da4e9405da74deac8b7ff07038ed165f41065b44',
+        sha='06aa26c6de448e11c64cd80cf06f5ab01de2ec9b',
         filename='onnx/models/resnet50v1.onnx'),
     Model(
         name='ResNet-50v1 (ONNX)',
@@ -640,13 +640,13 @@ models = [
     Model(
         name='LResNet100E-IR (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/arcface/resnet100/resnet100.tar.gz',
-        sha='537760f73256599acf40587528b291345c96c8c2',
+        sha='b1178813b705d9d44ed806aa442f0b1cb11aea0a',
         filename='resnet100.tar.gz'),
     Model(
         name='LResNet100E-IR (ONNX)',
         archive='resnet100.tar.gz',
         member='resnet100/resnet100.onnx',
-        sha='549bad59f620791c58a22363d74db765dd13fa54',
+        sha='d307e426cf55cddf9f9292b5ffabb474eec93638',
         filename='onnx/models/LResNet100E_IR.onnx'),
     Model(
         name='LResNet100E-IR (ONNX)',
