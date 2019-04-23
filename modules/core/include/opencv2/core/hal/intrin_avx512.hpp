@@ -11,19 +11,26 @@
 
 #define _v512_set_epi64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((a7),(a6),(a5),(a4),(a3),(a2),(a1),(a0))
 #define _v512_set_epi32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
-        _v512_set_epi64(((a15)<<32)|(a14), ((a13)<<32)|(a12), ((a11)<<32)|(a10), (( a9)<<32)|( a8), (( a7)<<32)|( a6), (( a5)<<32)|( a4), (( a3)<<32)|( a2), (( a1)<<32)|( a0))
+        _v512_set_epi64(((int64)(a15)<<32)|(int64)(a14), ((int64)(a13)<<32)|(int64)(a12), ((int64)(a11)<<32)|(int64)(a10), ((int64)( a9)<<32)|(int64)( a8), \
+                        ((int64)( a7)<<32)|(int64)( a6), ((int64)( a5)<<32)|(int64)( a4), ((int64)( a3)<<32)|(int64)( a2), ((int64)( a1)<<32)|(int64)( a0))
 #define _v512_set_epi16(a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
                         a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
-        _v512_set_epi32(((a31)<<16)|(a30), ((a29)<<16)|(a28), ((a27)<<16)|(a26), ((a25)<<16)|(a24), ((a23)<<16)|(a22), ((a21)<<16)|(a20), ((a19)<<16)|(a18), ((a17)<<16)|(a16), \
-                        ((a15)<<16)|(a14), ((a13)<<16)|(a12), ((a11)<<16)|(a10), (( a9)<<16)|( a8), (( a7)<<16)|( a6), (( a5)<<16)|( a4), (( a3)<<16)|( a2), (( a1)<<16)|( a0))
+        _v512_set_epi32(((int)(a31)<<16)|(int)(a30), ((int)(a29)<<16)|(int)(a28), ((int)(a27)<<16)|(int)(a26), ((int)(a25)<<16)|(int)(a24), \
+                        ((int)(a23)<<16)|(int)(a22), ((int)(a21)<<16)|(int)(a20), ((int)(a19)<<16)|(int)(a18), ((int)(a17)<<16)|(int)(a16), \
+                        ((int)(a15)<<16)|(int)(a14), ((int)(a13)<<16)|(int)(a12), ((int)(a11)<<16)|(int)(a10), ((int)( a9)<<16)|(int)( a8), \
+                        ((int)( a7)<<16)|(int)( a6), ((int)( a5)<<16)|(int)( a4), ((int)( a3)<<16)|(int)( a2), ((int)( a1)<<16)|(int)( a0))
 #define _v512_set_epi8(a63, a62, a61, a60, a59, a58, a57, a56, a55, a54, a53, a52, a51, a50, a49, a48, \
                        a47, a46, a45, a44, a43, a42, a41, a40, a39, a38, a37, a36, a35, a34, a33, a32, \
                        a31, a30, a29, a28, a27, a26, a25, a24, a23, a22, a21, a20, a19, a18, a17, a16, \
                        a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
-        _v512_set_epi32(((a63)<<24)|((a62)<<16)|((a61)<<8)|(a60),((a59)<<24)|((a58)<<16)|((a57)<<8)|(a56),((a55)<<24)|((a54)<<16)|((a53)<<8)|(a52),((a51)<<24)|((a50)<<16)|((a49)<<8)|(a48), \
-                        ((a47)<<24)|((a46)<<16)|((a45)<<8)|(a44),((a43)<<24)|((a42)<<16)|((a41)<<8)|(a40),((a39)<<24)|((a38)<<16)|((a37)<<8)|(a36),((a35)<<24)|((a34)<<16)|((a33)<<8)|(a32), \
-                        ((a31)<<24)|((a30)<<16)|((a29)<<8)|(a28),((a27)<<24)|((a26)<<16)|((a25)<<8)|(a24),((a23)<<24)|((a22)<<16)|((a21)<<8)|(a20),((a19)<<24)|((a18)<<16)|((a17)<<8)|(a16), \
-                        ((a15)<<24)|((a14)<<16)|((a13)<<8)|(a12),((a11)<<24)|((a10)<<16)|(( a9)<<8)|( a8),(( a7)<<24)|(( a6)<<16)|(( a5)<<8)|( a4),(( a3)<<24)|(( a2)<<16)|(( a1)<<8)|( a0))
+        _v512_set_epi32(((int)(a63)<<24)|((int)(a62)<<16)|((int)(a61)<<8)|(int)(a60),((int)(a59)<<24)|((int)(a58)<<16)|((int)(a57)<<8)|(int)(a56), \
+                        ((int)(a55)<<24)|((int)(a54)<<16)|((int)(a53)<<8)|(int)(a52),((int)(a51)<<24)|((int)(a50)<<16)|((int)(a49)<<8)|(int)(a48), \
+                        ((int)(a47)<<24)|((int)(a46)<<16)|((int)(a45)<<8)|(int)(a44),((int)(a43)<<24)|((int)(a42)<<16)|((int)(a41)<<8)|(int)(a40), \
+                        ((int)(a39)<<24)|((int)(a38)<<16)|((int)(a37)<<8)|(int)(a36),((int)(a35)<<24)|((int)(a34)<<16)|((int)(a33)<<8)|(int)(a32), \
+                        ((int)(a31)<<24)|((int)(a30)<<16)|((int)(a29)<<8)|(int)(a28),((int)(a27)<<24)|((int)(a26)<<16)|((int)(a25)<<8)|(int)(a24), \
+                        ((int)(a23)<<24)|((int)(a22)<<16)|((int)(a21)<<8)|(int)(a20),((int)(a19)<<24)|((int)(a18)<<16)|((int)(a17)<<8)|(int)(a16), \
+                        ((int)(a15)<<24)|((int)(a14)<<16)|((int)(a13)<<8)|(int)(a12),((int)(a11)<<24)|((int)(a10)<<16)|((int)( a9)<<8)|(int)( a8), \
+                        ((int)( a7)<<24)|((int)( a6)<<16)|((int)( a5)<<8)|(int)( a4),((int)( a3)<<24)|((int)( a2)<<16)|((int)( a1)<<8)|(int)( a0))
 
 #ifndef _mm512_cvtpd_pslo
 #ifdef _mm512_zextsi256_si512
@@ -940,7 +947,7 @@ inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                   
     if (imm == 0) return a;                                                                                                              \
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << SHIFT2, b), -1 << imm, a));                           \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(0xFFFF << SHIFT2, b), 0xFFFF << imm, a));                   \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                           \
@@ -949,7 +956,7 @@ inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                  
     if (imm == 0) return a;                                                                                                              \
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(-1 << imm, a.val), -1 << SHIFT2, b.val));                   \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(0xFFFF << imm, a.val), 0xFFFF << SHIFT2, b.val));           \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                             \
@@ -957,7 +964,7 @@ inline _Tpvec v_rotate_left(const _Tpvec& a)                                    
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
     if (imm == 0) return a;                                                                                                              \
     if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_expand_##suffix(-1 << imm, a.val));                                                                       \
+    return _Tpvec(_mm512_maskz_expand_##suffix(0xFFFF << imm, a.val));                                                                   \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                            \
@@ -965,7 +972,7 @@ inline _Tpvec v_rotate_right(const _Tpvec& a)                                   
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
     if (imm == 0) return a;                                                                                                              \
     if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_compress_##suffix(-1 << imm, a.val));                                                                     \
+    return _Tpvec(_mm512_maskz_compress_##suffix(0xFFFF << imm, a.val));                                                                 \
 }
 
 OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_uint8x64,   u8)
