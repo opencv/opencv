@@ -10,6 +10,7 @@
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
 #define CV_USE_VBMIPERMUTE 0
+#define CV_USE_ERRECIP 0
 
 #define _v512_set_epi64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((a7),(a6),(a5),(a4),(a3),(a2),(a1),(a0))
 #define _v512_set_epi32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
@@ -1166,16 +1167,26 @@ inline v_int32x16 v_muladd(const v_int32x16& a, const v_int32x16& b, const v_int
 
 inline v_float32x16 v_invsqrt(const v_float32x16& x)
 {
-//    v_float32x16 half = x * v512_setall_f32(0.5);
-//    v_float32x16 t  = v_float32x16(_mm512_rsqrt14_ps(x.val));
-//    t *= v512_setall_f32(1.5) - ((t * t) * half);
-//    return t;
+#if CV_USE_ERRECIP
     return v_float32x16(_mm512_rsqrt28_ps(x.val));
+#else
+    v_float32x16 half = x * v512_setall_f32(0.5);
+    v_float32x16 t  = v_float32x16(_mm512_rsqrt14_ps(x.val));
+    t *= v512_setall_f32(1.5) - ((t * t) * half);
+    return t;
+#endif
 }
 
 inline v_float64x8 v_invsqrt(const v_float64x8& x)
 {
+#if CV_USE_ERRECIP
     return v_float64x8(_mm512_rsqrt28_pd(x.val));
+#else
+    v_float64x8 half = x * v512_setall_f64(0.5);
+    v_float64x8 t = v_float64x8(_mm512_rsqrt14_pd(x.val));
+    t *= v512_setall_f64(1.5) - ((t * t) * half);
+    return t;
+#endif
 }
 
 /** Absolute values **/
