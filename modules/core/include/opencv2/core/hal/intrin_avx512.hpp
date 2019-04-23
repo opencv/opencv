@@ -1167,7 +1167,16 @@ OPENCV_HAL_IMPL_AVX512_ABS(v_int16x32,   v_uint16x32,  epi16)
 OPENCV_HAL_IMPL_AVX512_ABS(v_int32x16,   v_uint32x16,  epi32)
 OPENCV_HAL_IMPL_AVX512_ABS(v_int64x8,    v_uint64x8,   epi64)
 OPENCV_HAL_IMPL_AVX512_ABS(v_float32x16, v_float32x16,    ps)
-OPENCV_HAL_IMPL_AVX512_ABS(v_float64x8,  v_float64x8,     pd)
+
+inline v_float64x8 v_abs(const v_float64x8& x)
+{
+#if defined __GNUC__ && (__GNUC__ < 7 || (__GNUC__ == 7 && __GNUC_MINOR__ <= 3))
+    // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87467
+    return v_float64x8(_mm512_abs_pd(_mm512_castpd_ps(x.val)));
+#else
+    return v_float64x8(_mm512_abs_pd(x.val));
+#endif
+}
 
 /** Absolute difference **/
 inline v_uint8x64 v_absdiff(const v_uint8x64& a, const v_uint8x64& b)
