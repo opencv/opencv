@@ -9,6 +9,8 @@
 #define CV_SIMD512_64F 1
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
+#define CV_USE_VBMIPERMUTE 0
+
 #define _v512_set_epi64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((a7),(a6),(a5),(a4),(a3),(a2),(a1),(a0))
 #define _v512_set_epi32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
         _v512_set_epi64(((int64)(a15)<<32)|(int64)(a14), ((int64)(a13)<<32)|(int64)(a12), ((int64)(a11)<<32)|(int64)(a10), ((int64)( a9)<<32)|(int64)( a8), \
@@ -475,69 +477,94 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
 }
 
 /* Recombine & ZIP */
-inline v_int8x64 v_zip_low(const v_int8x64& a, const v_int8x64& b)
+inline void v_zip(const v_int8x64& a, const v_int8x64& b, v_int8x64& ab0, v_int8x64& ab1)
 {
+#if CV_USE_VBMIPERMUTE
     __m512i mask0 = _v512_set_epi8( 95,  31,  94,  30,  93,  29,  92,  28,  91,  27,  90,  26,  89,  25,  88,  24,
                                     87,  23,  86,  22,  85,  21,  84,  20,  83,  19,  82,  18,  81,  17,  80,  16,
                                     79,  15,  78,  14,  77,  13,  76,  12,  75,  11,  74,  10,  73,   9,  72,   8,
                                     71,   7,  70,   6,  69,   5,  68,   4,  67,   3,  66,   2,  65,   1,  64,   0);
-    return v_int8x64(_mm512_permutex2var_epi8(a.val, mask0, b.val));
-}
-inline v_int8x64 v_zip_high(const v_int8x64& a, const v_int8x64& b)
-{
+    ab0 = v_int8x64(_mm512_permutex2var_epi8(a.val, mask0, b.val));
     __m512i mask1 = _v512_set_epi8(127,  63, 126,  62, 125,  61, 124,  60, 123,  59, 122,  58, 121,  57, 120,  56,
                                    119,  55, 118,  54, 117,  53, 116,  52, 115,  51, 114,  50, 113,  49, 112,  48,
                                    111,  47, 110,  46, 109,  45, 108,  44, 107,  43, 106,  42, 105,  41, 104,  40,
                                    103,  39, 102,  38, 101,  37, 100,  36,  99,  35,  98,  34,  97,  33,  96,  32);
-    return v_int8x64(_mm512_permutex2var_epi8(a.val, mask1, b.val));
+    ab1 = v_int8x64(_mm512_permutex2var_epi8(a.val, mask1, b.val));
+#else
+    __m512i low  = _mm512_unpacklo_epi8(a.val, b.val);
+    __m512i high = _mm512_unpackhi_epi8(a.val, b.val);
+    ab0 = v_int8x64(_mm512_permutex2var_epi64(low, _v512_set_epi64(11, 10, 3, 2,  9,  8, 1, 0), high));
+    ab1 = v_int8x64(_mm512_permutex2var_epi64(low, _v512_set_epi64(15, 14, 7, 6, 13, 12, 5, 4), high));
+#endif
 }
-inline v_int16x32 v_zip_low(const v_int16x32& a, const v_int16x32& b)
+inline void v_zip(const v_int16x32& a, const v_int16x32& b, v_int16x32& ab0, v_int16x32& ab1)
 {
     __m512i mask0 = _v512_set_epi16(47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
                                     39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0);
-    return v_int16x32(_mm512_permutex2var_epi16(a.val, mask0, b.val));
-}
-inline v_int16x32 v_zip_high(const v_int16x32& a, const v_int16x32& b)
-{
+    ab0 = v_int16x32(_mm512_permutex2var_epi16(a.val, mask0, b.val));
     __m512i mask1 = _v512_set_epi16(63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
                                     55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16);
-    return v_int16x32(_mm512_permutex2var_epi16(a.val, mask1, b.val));
+    ab1 = v_int16x32(_mm512_permutex2var_epi16(a.val, mask1, b.val));
 }
-inline v_int32x16 v_zip_low(const v_int32x16& a, const v_int32x16& b)
+inline void v_zip(const v_int32x16& a, const v_int32x16& b, v_int32x16& ab0, v_int32x16& ab1)
 {
     __m512i mask0 = _v512_set_epi32(23, 7, 22, 6, 21, 5, 20, 4, 19, 3, 18, 2, 17, 1, 16, 0);
-    return v_int32x16(_mm512_permutex2var_epi32(a.val, mask0, b.val));
-}
-inline v_int32x16 v_zip_high(const v_int32x16& a, const v_int32x16& b)
-{
+    ab0 = v_int32x16(_mm512_permutex2var_epi32(a.val, mask0, b.val));
     __m512i mask1 = _v512_set_epi32(31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8);
-    return v_int32x16(_mm512_permutex2var_epi32(a.val, mask1, b.val));
+    ab1 = v_int32x16(_mm512_permutex2var_epi32(a.val, mask1, b.val));
 }
-inline v_int64x8 v_zip_low(const v_int64x8& a, const v_int64x8& b)
+inline void v_zip(const v_int64x8& a, const v_int64x8& b, v_int64x8& ab0, v_int64x8& ab1)
 {
     __m512i mask0 = _v512_set_epi64(11, 3, 10, 2, 9, 1, 8, 0);
-    return v_int64x8(_mm512_permutex2var_epi64(a.val, mask0, b.val));
-}
-inline v_int64x8 v_zip_high(const v_int64x8& a, const v_int64x8& b)
-{
+    ab0 = v_int64x8(_mm512_permutex2var_epi64(a.val, mask0, b.val));
     __m512i mask1 = _v512_set_epi64(15, 7, 14, 6, 13, 5, 12, 4);
-    return v_int64x8(_mm512_permutex2var_epi64(a.val, mask1, b.val));
+    ab1 = v_int64x8(_mm512_permutex2var_epi64(a.val, mask1, b.val));
 }
 
-inline v_uint8x64   v_zip_low (const v_uint8x64&   a, const v_uint8x64&   b) { return v_reinterpret_as_u8 (v_zip_low (v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }
-inline v_uint8x64   v_zip_high(const v_uint8x64&   a, const v_uint8x64&   b) { return v_reinterpret_as_u8 (v_zip_high(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }
-inline v_uint16x32  v_zip_low (const v_uint16x32&  a, const v_uint16x32&  b) { return v_reinterpret_as_u16(v_zip_low (v_reinterpret_as_s16(a), v_reinterpret_as_s16(b))); }
-inline v_uint16x32  v_zip_high(const v_uint16x32&  a, const v_uint16x32&  b) { return v_reinterpret_as_u16(v_zip_high(v_reinterpret_as_s16(a), v_reinterpret_as_s16(b))); }
-inline v_uint32x16  v_zip_low (const v_uint32x16&  a, const v_uint32x16&  b) { return v_reinterpret_as_u32(v_zip_low (v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
-inline v_uint32x16  v_zip_high(const v_uint32x16&  a, const v_uint32x16&  b) { return v_reinterpret_as_u32(v_zip_high(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
-inline v_uint64x8   v_zip_low (const v_uint64x8&   a, const v_uint64x8&   b) { return v_reinterpret_as_u64(v_zip_low (v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
-inline v_uint64x8   v_zip_high(const v_uint64x8&   a, const v_uint64x8&   b) { return v_reinterpret_as_u64(v_zip_high(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
-inline v_float32x16 v_zip_low (const v_float32x16& a, const v_float32x16& b) { return v_reinterpret_as_f32(v_zip_low (v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
-inline v_float32x16 v_zip_high(const v_float32x16& a, const v_float32x16& b) { return v_reinterpret_as_f32(v_zip_high(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b))); }
-inline v_float64x8  v_zip_low (const v_float64x8&  a, const v_float64x8&  b) { return v_reinterpret_as_f64(v_zip_low (v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
-inline v_float64x8  v_zip_high(const v_float64x8&  a, const v_float64x8&  b) { return v_reinterpret_as_f64(v_zip_high(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b))); }
+inline void v_zip(const v_uint8x64&  a, const v_uint8x64&  b, v_uint8x64& ab0, v_uint8x64& ab1)
+{
+    v_int8x64 i0, i1;
+    v_zip(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b), i0, i1);
+    ab0 = v_reinterpret_as_u8(i0);
+    ab1 = v_reinterpret_as_u8(i1);
+}
+inline void v_zip(const v_uint16x32&  a, const v_uint16x32&  b, v_uint16x32& ab0, v_uint16x32& ab1)
+{
+    v_int16x32 i0, i1;
+    v_zip(v_reinterpret_as_s16(a), v_reinterpret_as_s16(b), i0, i1);
+    ab0 = v_reinterpret_as_u16(i0);
+    ab1 = v_reinterpret_as_u16(i1);
+}
+inline void v_zip(const v_uint32x16&  a, const v_uint32x16&  b, v_uint32x16& ab0, v_uint32x16& ab1)
+{
+    v_int32x16 i0, i1;
+    v_zip(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b), i0, i1);
+    ab0 = v_reinterpret_as_u32(i0);
+    ab1 = v_reinterpret_as_u32(i1);
+}
+inline void v_zip(const v_uint64x8&  a, const v_uint64x8&  b, v_uint64x8& ab0, v_uint64x8& ab1)
+{
+    v_int64x8 i0, i1;
+    v_zip(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b), i0, i1);
+    ab0 = v_reinterpret_as_u64(i0);
+    ab1 = v_reinterpret_as_u64(i1);
+}
+inline void v_zip(const v_float32x16&  a, const v_float32x16&  b, v_float32x16& ab0, v_float32x16& ab1)
+{
+    v_int32x16 i0, i1;
+    v_zip(v_reinterpret_as_s32(a), v_reinterpret_as_s32(b), i0, i1);
+    ab0 = v_reinterpret_as_f32(i0);
+    ab1 = v_reinterpret_as_f32(i1);
+}
+inline void v_zip(const v_float64x8&  a, const v_float64x8&  b, v_float64x8& ab0, v_float64x8& ab1)
+{
+    v_int64x8 i0, i1;
+    v_zip(v_reinterpret_as_s64(a), v_reinterpret_as_s64(b), i0, i1);
+    ab0 = v_reinterpret_as_f64(i0);
+    ab1 = v_reinterpret_as_f64(i1);
+}
 
-#define OPENCV_HAL_IMPL_AVX512_ZIP(_Tpvec, suffix)                                        \
+#define OPENCV_HAL_IMPL_AVX512_COMBINE(_Tpvec, suffix)                                    \
     inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b)                         \
     { return _Tpvec(_v512_combine(_v512_extract_low(a.val), _v512_extract_low(b.val))); } \
     inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b)                        \
@@ -547,25 +574,19 @@ inline v_float64x8  v_zip_high(const v_float64x8&  a, const v_float64x8&  b) { r
     {                                                                                     \
         c.val = _v512_combine(_v512_extract_low(a.val),_v512_extract_low(b.val));         \
         d.val = _v512_insert(b.val,_v512_extract_high(a.val));                            \
-    }                                                                                     \
-    inline void v_zip(const _Tpvec& a, const _Tpvec& b,                                   \
-                            _Tpvec& ab0, _Tpvec& ab1)                                     \
-    {                                                                                     \
-        ab0 = v_zip_low(a, b);                                                            \
-        ab1 = v_zip_high(a, b);                                                           \
     }
 
 
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint8x64,   epi8)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int8x64,    epi8)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint16x32,  epi16)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int16x32,   epi16)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint32x16,  epi32)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int32x16,   epi32)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_uint64x8,   epi64)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_int64x8,    epi64)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_float32x16, ps)
-OPENCV_HAL_IMPL_AVX512_ZIP(v_float64x8,  pd)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_uint8x64,   epi8)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_int8x64,    epi8)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_uint16x32,  epi16)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_int16x32,   epi16)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_uint32x16,  epi32)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_int32x16,   epi32)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_uint64x8,   epi64)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_int64x8,    epi64)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX512_COMBINE(v_float64x8,  pd)
 
 ////////// Arithmetic, bitwise and comparison operations /////////
 
@@ -2012,80 +2033,88 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
 inline void v_store_interleave( uchar* ptr, const v_uint8x64& x, const v_uint8x64& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
+    v_uint8x64 low, high;
+    v_zip(x, y, low, high);
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_stream_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
+        _mm512_stream_si512((__m512i*)ptr, low.val);
+        _mm512_stream_si512((__m512i*)(ptr + 64), high.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_store_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
+        _mm512_store_si512((__m512i*)ptr, low.val);
+        _mm512_store_si512((__m512i*)(ptr + 64), high.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_storeu_si512((__m512i*)(ptr + 64), v_zip_high(x, y).val);
+        _mm512_storeu_si512((__m512i*)ptr, low.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 64), high.val);
     }
 }
 
 inline void v_store_interleave( ushort* ptr, const v_uint16x32& x, const v_uint16x32& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
+    v_uint16x32 low, high;
+    v_zip(x, y, low, high);
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_stream_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
+        _mm512_stream_si512((__m512i*)ptr, low.val);
+        _mm512_stream_si512((__m512i*)(ptr + 32), high.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_store_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
+        _mm512_store_si512((__m512i*)ptr, low.val);
+        _mm512_store_si512((__m512i*)(ptr + 32), high.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_storeu_si512((__m512i*)(ptr + 32), v_zip_high(x, y).val);
+        _mm512_storeu_si512((__m512i*)ptr, low.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 32), high.val);
     }
 }
 
 inline void v_store_interleave( unsigned* ptr, const v_uint32x16& x, const v_uint32x16& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
+    v_uint32x16 low, high;
+    v_zip(x, y, low, high);
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_stream_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
+        _mm512_stream_si512((__m512i*)ptr, low.val);
+        _mm512_stream_si512((__m512i*)(ptr + 16), high.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_store_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
+        _mm512_store_si512((__m512i*)ptr, low.val);
+        _mm512_store_si512((__m512i*)(ptr + 16), high.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_storeu_si512((__m512i*)(ptr + 16), v_zip_high(x, y).val);
+        _mm512_storeu_si512((__m512i*)ptr, low.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 16), high.val);
     }
 }
 
 inline void v_store_interleave( uint64* ptr, const v_uint64x8& x, const v_uint64x8& y,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
+    v_uint64x8 low, high;
+    v_zip(x, y, low, high);
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_stream_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
+        _mm512_stream_si512((__m512i*)ptr, low.val);
+        _mm512_stream_si512((__m512i*)(ptr + 8), high.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_store_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
+        _mm512_store_si512((__m512i*)ptr, low.val);
+        _mm512_store_si512((__m512i*)(ptr + 8), high.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, v_zip_low(x, y).val);
-        _mm512_storeu_si512((__m512i*)(ptr + 8), v_zip_high(x, y).val);
+        _mm512_storeu_si512((__m512i*)ptr, low.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 8), high.val);
     }
 }
 
@@ -2237,45 +2266,33 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
                                 const v_uint8x64& r, const v_uint8x64& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _v512_set_epi8(  95, 31,  94, 30,  93, 29,  92, 28,  91, 27,  90, 26,  89, 25,  88, 24,
-                                     87, 23,  86, 22,  85, 21,  84, 20,  83, 19,  82, 18,  81, 17,  80, 16,
-                                     79, 15,  78, 14,  77, 13,  76, 12,  75, 11,  74, 10,  73,  9,  72,  8,
-                                     71,  7,  70,  6,  69,  5,  68,  4,  67,  3,  66,  2,  65,  1,  64,  0 );
-    __m512i mask1 = _v512_set_epi8( 127, 63, 126, 62, 125, 61, 124, 60, 123, 59, 122, 58, 121, 57, 120, 56,
-                                    119, 55, 118, 54, 117, 53, 116, 52, 115, 51, 114, 50, 113, 49, 112, 48,
-                                    111, 47, 110, 46, 109, 45, 108, 44, 107, 43, 106, 42, 105, 41, 104, 40,
-                                    103, 39, 102, 38, 101, 37, 100, 36,  99, 35,  98, 34,  97, 33,  96, 32 );
-
-    __m512i br01 = _mm512_permutex2var_epi8(b.val, mask0, r.val);
-    __m512i br23 = _mm512_permutex2var_epi8(b.val, mask1, r.val);
-    __m512i ga01 = _mm512_permutex2var_epi8(g.val, mask0, a.val);
-    __m512i ga23 = _mm512_permutex2var_epi8(g.val, mask1, a.val);
-
-    __m512i bgra0 = _mm512_permutex2var_epi8(br01, mask0, ga01);
-    __m512i bgra1 = _mm512_permutex2var_epi8(br01, mask1, ga01);
-    __m512i bgra2 = _mm512_permutex2var_epi8(br23, mask0, ga23);
-    __m512i bgra3 = _mm512_permutex2var_epi8(br23, mask1, ga23);
+    v_uint8x64 br01, br23, ga01, ga23;
+    v_zip(b, r, br01, br23);
+    v_zip(g, a, ga01, ga23);
+    v_uint8x64 bgra0, bgra1, bgra2, bgra3;
+    v_zip(br01, ga01, bgra0, bgra1);
+    v_zip(br23, ga23, bgra2, bgra3);
 
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, bgra0);
-        _mm512_stream_si512((__m512i*)(ptr + 64), bgra1);
-        _mm512_stream_si512((__m512i*)(ptr + 128), bgra2);
-        _mm512_stream_si512((__m512i*)(ptr + 192), bgra3);
+        _mm512_stream_si512((__m512i*)ptr, bgra0.val);
+        _mm512_stream_si512((__m512i*)(ptr + 64), bgra1.val);
+        _mm512_stream_si512((__m512i*)(ptr + 128), bgra2.val);
+        _mm512_stream_si512((__m512i*)(ptr + 192), bgra3.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, bgra0);
-        _mm512_store_si512((__m512i*)(ptr + 64), bgra1);
-        _mm512_store_si512((__m512i*)(ptr + 128), bgra2);
-        _mm512_store_si512((__m512i*)(ptr + 192), bgra3);
+        _mm512_store_si512((__m512i*)ptr, bgra0.val);
+        _mm512_store_si512((__m512i*)(ptr + 64), bgra1.val);
+        _mm512_store_si512((__m512i*)(ptr + 128), bgra2.val);
+        _mm512_store_si512((__m512i*)(ptr + 192), bgra3.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, bgra0);
-        _mm512_storeu_si512((__m512i*)(ptr + 64), bgra1);
-        _mm512_storeu_si512((__m512i*)(ptr + 128), bgra2);
-        _mm512_storeu_si512((__m512i*)(ptr + 192), bgra3);
+        _mm512_storeu_si512((__m512i*)ptr, bgra0.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 64), bgra1.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 128), bgra2.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 192), bgra3.val);
     }
 }
 
@@ -2283,41 +2300,33 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
                                 const v_uint16x32& r, const v_uint16x32& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _v512_set_epi16( 47, 15, 46, 14, 45, 13, 44, 12, 43, 11, 42, 10, 41,  9, 40,  8,
-                                     39,  7, 38,  6, 37,  5, 36,  4, 35,  3, 34,  2, 33,  1, 32,  0 );
-    __m512i mask1 = _v512_set_epi16( 63, 31, 62, 30, 61, 29, 60, 28, 59, 27, 58, 26, 57, 25, 56, 24,
-                                     55, 23, 54, 22, 53, 21, 52, 20, 51, 19, 50, 18, 49, 17, 48, 16 );
-
-    __m512i br01 = _mm512_permutex2var_epi16(b.val, mask0, r.val);
-    __m512i br23 = _mm512_permutex2var_epi16(b.val, mask1, r.val);
-    __m512i ga01 = _mm512_permutex2var_epi16(g.val, mask0, a.val);
-    __m512i ga23 = _mm512_permutex2var_epi16(g.val, mask1, a.val);
-
-    __m512i bgra0 = _mm512_permutex2var_epi16(br01, mask0, ga01);
-    __m512i bgra1 = _mm512_permutex2var_epi16(br01, mask1, ga01);
-    __m512i bgra2 = _mm512_permutex2var_epi16(br23, mask0, ga23);
-    __m512i bgra3 = _mm512_permutex2var_epi16(br23, mask1, ga23);
+    v_uint16x32 br01, br23, ga01, ga23;
+    v_zip(b, r, br01, br23);
+    v_zip(g, a, ga01, ga23);
+    v_uint16x32 bgra0, bgra1, bgra2, bgra3;
+    v_zip(br01, ga01, bgra0, bgra1);
+    v_zip(br23, ga23, bgra2, bgra3);
 
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, bgra0);
-        _mm512_stream_si512((__m512i*)(ptr + 32), bgra1);
-        _mm512_stream_si512((__m512i*)(ptr + 64), bgra2);
-        _mm512_stream_si512((__m512i*)(ptr + 96), bgra3);
+        _mm512_stream_si512((__m512i*)ptr, bgra0.val);
+        _mm512_stream_si512((__m512i*)(ptr + 32), bgra1.val);
+        _mm512_stream_si512((__m512i*)(ptr + 64), bgra2.val);
+        _mm512_stream_si512((__m512i*)(ptr + 96), bgra3.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, bgra0);
-        _mm512_store_si512((__m512i*)(ptr + 32), bgra1);
-        _mm512_store_si512((__m512i*)(ptr + 64), bgra2);
-        _mm512_store_si512((__m512i*)(ptr + 96), bgra3);
+        _mm512_store_si512((__m512i*)ptr, bgra0.val);
+        _mm512_store_si512((__m512i*)(ptr + 32), bgra1.val);
+        _mm512_store_si512((__m512i*)(ptr + 64), bgra2.val);
+        _mm512_store_si512((__m512i*)(ptr + 96), bgra3.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, bgra0);
-        _mm512_storeu_si512((__m512i*)(ptr + 32), bgra1);
-        _mm512_storeu_si512((__m512i*)(ptr + 64), bgra2);
-        _mm512_storeu_si512((__m512i*)(ptr + 96), bgra3);
+        _mm512_storeu_si512((__m512i*)ptr, bgra0.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 32), bgra1.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 64), bgra2.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 96), bgra3.val);
     }
 }
 
@@ -2325,39 +2334,33 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uin
                                 const v_uint32x16& r, const v_uint32x16& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    __m512i mask0 = _v512_set_epi32( 23,  7, 22,  6, 21,  5, 20,  4, 19,  3, 18,  2, 17, 1, 16, 0 );
-    __m512i mask1 = _v512_set_epi32( 31, 15, 30, 14, 29, 13, 28, 12, 27, 11, 26, 10, 25, 9, 24, 8 );
-
-    __m512i br01 = _mm512_permutex2var_epi32(b.val, mask0, r.val);
-    __m512i br23 = _mm512_permutex2var_epi32(b.val, mask1, r.val);
-    __m512i ga01 = _mm512_permutex2var_epi32(g.val, mask0, a.val);
-    __m512i ga23 = _mm512_permutex2var_epi32(g.val, mask1, a.val);
-
-    __m512i bgra0 = _mm512_permutex2var_epi32(br01, mask0, ga01);
-    __m512i bgra1 = _mm512_permutex2var_epi32(br01, mask1, ga01);
-    __m512i bgra2 = _mm512_permutex2var_epi32(br23, mask0, ga23);
-    __m512i bgra3 = _mm512_permutex2var_epi32(br23, mask1, ga23);
+    v_uint32x16 br01, br23, ga01, ga23;
+    v_zip(b, r, br01, br23);
+    v_zip(g, a, ga01, ga23);
+    v_uint32x16 bgra0, bgra1, bgra2, bgra3;
+    v_zip(br01, ga01, bgra0, bgra1);
+    v_zip(br23, ga23, bgra2, bgra3);
 
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, bgra0);
-        _mm512_stream_si512((__m512i*)(ptr + 16), bgra1);
-        _mm512_stream_si512((__m512i*)(ptr + 32), bgra2);
-        _mm512_stream_si512((__m512i*)(ptr + 48), bgra3);
+        _mm512_stream_si512((__m512i*)ptr, bgra0.val);
+        _mm512_stream_si512((__m512i*)(ptr + 16), bgra1.val);
+        _mm512_stream_si512((__m512i*)(ptr + 32), bgra2.val);
+        _mm512_stream_si512((__m512i*)(ptr + 48), bgra3.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, bgra0);
-        _mm512_store_si512((__m512i*)(ptr + 16), bgra1);
-        _mm512_store_si512((__m512i*)(ptr + 32), bgra2);
-        _mm512_store_si512((__m512i*)(ptr + 48), bgra3);
+        _mm512_store_si512((__m512i*)ptr, bgra0.val);
+        _mm512_store_si512((__m512i*)(ptr + 16), bgra1.val);
+        _mm512_store_si512((__m512i*)(ptr + 32), bgra2.val);
+        _mm512_store_si512((__m512i*)(ptr + 48), bgra3.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, bgra0);
-        _mm512_storeu_si512((__m512i*)(ptr + 16), bgra1);
-        _mm512_storeu_si512((__m512i*)(ptr + 32), bgra2);
-        _mm512_storeu_si512((__m512i*)(ptr + 48), bgra3);
+        _mm512_storeu_si512((__m512i*)ptr, bgra0.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 16), bgra1.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 32), bgra2.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 48), bgra3.val);
     }
 }
 
@@ -2365,40 +2368,33 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64
                                 const v_uint64x8& r, const v_uint64x8& a,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-    
-    __m512i mask0 = _v512_set_epi64( 11, 3, 10, 2,  9, 1,  8, 0 );
-    __m512i mask1 = _v512_set_epi64( 15, 7, 14, 6, 13, 5, 12, 4 );
-
-    __m512i br01 = _mm512_permutex2var_epi64(b.val, mask0, r.val);
-    __m512i br23 = _mm512_permutex2var_epi64(b.val, mask1, r.val);
-    __m512i ga01 = _mm512_permutex2var_epi64(g.val, mask0, a.val);
-    __m512i ga23 = _mm512_permutex2var_epi64(g.val, mask1, a.val);
-
-    __m512i bgra0 = _mm512_permutex2var_epi64(br01, mask0, ga01);
-    __m512i bgra1 = _mm512_permutex2var_epi64(br01, mask1, ga01);
-    __m512i bgra2 = _mm512_permutex2var_epi64(br23, mask0, ga23);
-    __m512i bgra3 = _mm512_permutex2var_epi64(br23, mask1, ga23);
+    v_uint64x8 br01, br23, ga01, ga23;
+    v_zip(b, r, br01, br23);
+    v_zip(g, a, ga01, ga23);
+    v_uint64x8 bgra0, bgra1, bgra2, bgra3;
+    v_zip(br01, ga01, bgra0, bgra1);
+    v_zip(br23, ga23, bgra2, bgra3);
 
     if( mode == hal::STORE_ALIGNED_NOCACHE )
     {
-        _mm512_stream_si512((__m512i*)ptr, bgra0);
-        _mm512_stream_si512((__m512i*)(ptr + 8), bgra1);
-        _mm512_stream_si512((__m512i*)(ptr + 16), bgra2);
-        _mm512_stream_si512((__m512i*)(ptr + 24), bgra3);
+        _mm512_stream_si512((__m512i*)ptr, bgra0.val);
+        _mm512_stream_si512((__m512i*)(ptr + 8), bgra1.val);
+        _mm512_stream_si512((__m512i*)(ptr + 16), bgra2.val);
+        _mm512_stream_si512((__m512i*)(ptr + 24), bgra3.val);
     }
     else if( mode == hal::STORE_ALIGNED )
     {
-        _mm512_store_si512((__m512i*)ptr, bgra0);
-        _mm512_store_si512((__m512i*)(ptr + 8), bgra1);
-        _mm512_store_si512((__m512i*)(ptr + 16), bgra2);
-        _mm512_store_si512((__m512i*)(ptr + 24), bgra3);
+        _mm512_store_si512((__m512i*)ptr, bgra0.val);
+        _mm512_store_si512((__m512i*)(ptr + 8), bgra1.val);
+        _mm512_store_si512((__m512i*)(ptr + 16), bgra2.val);
+        _mm512_store_si512((__m512i*)(ptr + 24), bgra3.val);
     }
     else
     {
-        _mm512_storeu_si512((__m512i*)ptr, bgra0);
-        _mm512_storeu_si512((__m512i*)(ptr + 8), bgra1);
-        _mm512_storeu_si512((__m512i*)(ptr + 16), bgra2);
-        _mm512_storeu_si512((__m512i*)(ptr + 24), bgra3);
+        _mm512_storeu_si512((__m512i*)ptr, bgra0.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 8), bgra1.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 16), bgra2.val);
+        _mm512_storeu_si512((__m512i*)(ptr + 24), bgra3.val);
     }
 }
 
