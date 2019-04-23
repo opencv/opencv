@@ -53,7 +53,6 @@ struct RGB2HSV_b
 
         int hr = hrange;
         const int* hdiv_table = hr == 180 ? hdiv_table180 : hdiv_table256;
-        n *= 3;
 
         if( !initialized )
         {
@@ -67,7 +66,142 @@ struct RGB2HSV_b
             initialized = true;
         }
 
-        for( i = 0; i < n; i += 3, src += scn )
+        i = 0;
+
+#if CV_SIMD
+        const int vsize = v_uint8::nlanes;
+        for ( ; i <= n - vsize;
+              i += vsize, src += scn*vsize, dst += 3*vsize)
+        {
+            v_uint8 b, g, r;
+            if(scn == 4)
+            {
+                v_uint8 a;
+                v_load_deinterleave(src, b, g, r, a);
+            }
+            else
+            {
+                v_load_deinterleave(src, b, g, r);
+            }
+
+            if(bidx)
+                swap(b, r);
+
+            v_uint8 h, s, v;
+            v_uint8 vmin;
+            v = v_max(b, v_max(g, r));
+            vmin = v_min(b, v_min(g, r));
+
+            v_uint8 diff, vr, vg;
+            diff = v - vmin;
+            v_uint8 v255 = vx_setall_u8(0xff), vz = vx_setzero_u8();
+            vr = v_select(v == r, v255, vz);
+            vg = v_select(v == g, v255, vz);
+
+            // sdiv = sdiv_table[v]
+            v_int32 sdiv[4];
+            v_uint16 vd[2];
+            v_expand(v, vd[0], vd[1]);
+            v_int32 vq[4];
+            v_expand(v_reinterpret_as_s16(vd[0]), vq[0], vq[1]);
+            v_expand(v_reinterpret_as_s16(vd[1]), vq[2], vq[3]);
+            {
+                int32_t CV_DECL_ALIGNED(MAX_ALIGN) storevq[vsize];
+                for (int k = 0; k < 4; k++)
+                {
+                    v_store_aligned(storevq + k*vsize/4, vq[k]);
+                }
+
+                for(int k = 0; k < 4; k++)
+                {
+                    sdiv[k] = vx_lut(sdiv_table, storevq + k*vsize/4);
+                }
+            }
+
+            // hdiv = hdiv_table[diff]
+            v_int32 hdiv[4];
+            v_uint16 diffd[2];
+            v_expand(diff, diffd[0], diffd[1]);
+            v_int32 diffq[4];
+            v_expand(v_reinterpret_as_s16(diffd[0]), diffq[0], diffq[1]);
+            v_expand(v_reinterpret_as_s16(diffd[1]), diffq[2], diffq[3]);
+            {
+                int32_t CV_DECL_ALIGNED(MAX_ALIGN) storediffq[vsize];
+                for (int k = 0; k < 4; k++)
+                {
+                    v_store_aligned(storediffq + k*vsize/4, diffq[k]);
+                }
+
+                for (int k = 0; k < 4; k++)
+                {
+                    hdiv[k] = vx_lut((int32_t*)hdiv_table, storediffq + k*vsize/4);
+                }
+            }
+
+            // s = (diff * sdiv + (1 << (hsv_shift-1))) >> hsv_shift;
+            v_int32 sq[4];
+            v_int32 vdescale = vx_setall_s32(1 << (hsv_shift-1));
+            for (int k = 0; k < 4; k++)
+            {
+                sq[k] = (diffq[k]*sdiv[k] + vdescale) >> hsv_shift;
+            }
+            v_int16 sd[2];
+            sd[0] = v_pack(sq[0], sq[1]);
+            sd[1] = v_pack(sq[2], sq[3]);
+            s = v_pack_u(sd[0], sd[1]);
+
+            // expand all to 16 bits
+            v_uint16 bdu[2], gdu[2], rdu[2];
+            v_expand(b, bdu[0], bdu[1]);
+            v_expand(g, gdu[0], gdu[1]);
+            v_expand(r, rdu[0], rdu[1]);
+            v_int16 bd[2], gd[2], rd[2];
+            bd[0] = v_reinterpret_as_s16(bdu[0]);
+            bd[1] = v_reinterpret_as_s16(bdu[1]);
+            gd[0] = v_reinterpret_as_s16(gdu[0]);
+            gd[1] = v_reinterpret_as_s16(gdu[1]);
+            rd[0] = v_reinterpret_as_s16(rdu[0]);
+            rd[1] = v_reinterpret_as_s16(rdu[1]);
+
+            v_int16 vrd[2], vgd[2];
+            v_expand(v_reinterpret_as_s8(vr), vrd[0], vrd[1]);
+            v_expand(v_reinterpret_as_s8(vg), vgd[0], vgd[1]);
+            v_int16 diffsd[2];
+            diffsd[0] = v_reinterpret_as_s16(diffd[0]);
+            diffsd[1] = v_reinterpret_as_s16(diffd[1]);
+
+            v_int16 hd[2];
+            // h before division
+            for (int k = 0; k < 2; k++)
+            {
+                v_int16 gb = gd[k] - bd[k];
+                v_int16 br = bd[k] - rd[k] + (diffsd[k] << 1);
+                v_int16 rg = rd[k] - gd[k] + (diffsd[k] << 2);
+                hd[k] = (vrd[k] & gb) + ((~vrd[k]) & ((vgd[k] & br) + ((~vgd[k]) & rg)));
+            }
+
+            // h div and fix
+            v_int32 hq[4];
+            v_expand(hd[0], hq[0], hq[1]);
+            v_expand(hd[1], hq[2], hq[3]);
+            for(int k = 0; k < 4; k++)
+            {
+                hq[k] = (hq[k]*hdiv[k] + vdescale) >> hsv_shift;
+            }
+            hd[0] = v_pack(hq[0], hq[1]);
+            hd[1] = v_pack(hq[2], hq[3]);
+            v_int16 vhr = vx_setall_s16(hr);
+            v_int16 vzd = vx_setzero_s16();
+            hd[0] += v_select(hd[0] < vzd, vhr, vzd);
+            hd[1] += v_select(hd[1] < vzd, vhr, vzd);
+            h = v_pack_u(hd[0], hd[1]);
+
+            v_store_interleave(dst, h, s, v);
+        }
+
+#endif
+
+        for( ; i < n; i++, src += scn, dst += 3 )
         {
             int b = src[bidx], g = src[1], r = src[bidx^2];
             int h, s, v = b;
@@ -89,9 +223,9 @@ struct RGB2HSV_b
             h = (h * hdiv_table[diff] + (1 << (hsv_shift-1))) >> hsv_shift;
             h += h < 0 ? hr : 0;
 
-            dst[i] = saturate_cast<uchar>(h);
-            dst[i+1] = (uchar)s;
-            dst[i+2] = (uchar)v;
+            dst[0] = saturate_cast<uchar>(h);
+            dst[1] = (uchar)s;
+            dst[2] = (uchar)v;
         }
     }
 
