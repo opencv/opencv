@@ -44,6 +44,9 @@ def writeBlob(data, name):
     if data.ndim == 4:
         # NHWC->NCHW
         np.save(name + '.npy', data.transpose(0, 3, 1, 2).astype(np.float32))
+    elif data.ndim == 5:
+        # NDHWC->NCDHW
+        np.save(name + '.npy', data.transpose(0, 4, 1, 2, 3).astype(np.float32))
     else:
         # Save raw data.
         np.save(name + '.npy', data.astype(np.float32))
@@ -725,6 +728,10 @@ with tf.Session(graph=tf.Graph()) as localSession:
     with tf.gfile.FastGFile('slim_softmax_v2_net.pb', 'wb') as f:
         f.write(graph_def.SerializeToString())
 
+inp = tf.placeholder(tf.float32, [1, 4, 6, 5, 3], 'input') # NDHWC format
+conv3d = tf.layers.conv3d(inputs=inp, filters=2, kernel_size=[2, 3, 4], use_bias=True, padding='same')
+save(inp, conv3d, 'conv3d')
+################################################################################
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
 #     graph_def = tf.GraphDef()
