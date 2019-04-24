@@ -849,7 +849,7 @@ CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, Out
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
 
 //! finds subpixel-accurate positions of the chessboard corners
-CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
+CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
 
 /** @brief Renders the detected chessboard corners.
 
