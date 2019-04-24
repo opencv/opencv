@@ -623,6 +623,14 @@ void ONNXImporter::populateNet(Net dstNet)
                     layerParams.set("adj_h", (outH - kernelH) % strideY);
                 }
             }
+            else if (layerParams.has("output_padding"))
+            {
+                const DictValue& adj_pad = layerParams.get("output_padding");
+                if (adj_pad.size() != 2)
+                    CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
+                layerParams.set("adj_w", adj_pad.get<int>(1));
+                layerParams.set("adj_h", adj_pad.get<int>(0));
+            }
         }
         else if (layer_type == "Transpose")
         {
