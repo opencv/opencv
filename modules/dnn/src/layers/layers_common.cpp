@@ -80,9 +80,6 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
                 CV_Assert(param.get<int>(i) >= 0);
                 parameter.push_back(param.get<int>(i));
             }
-            if (parameter.size() == 1) {
-                parameter.push_back(parameter.back());
-            }
             return true;
         }
         else
@@ -90,10 +87,9 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
             if (hasDefault)
             {
                 parameter.push_back(defaultValue);
-                parameter.push_back(defaultValue);
                 return true;
             }
-                return false;
+            return false;
         }
     }
 }
@@ -104,6 +100,9 @@ void getKernelSize(const LayerParams &params, std::vector<size_t>& kernel)
       {
          CV_Error(cv::Error::StsBadArg, "kernel_size (or kernel_h and kernel_w) not specified");
       }
+
+      if (kernel.size() == 1)
+          kernel.resize(2, kernel[0]);
       for (int i = 0; i < kernel.size(); i++) {
           CV_Assert(kernel[i] > 0);
       }
@@ -122,7 +121,7 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     }
     else {
         util::getParameter(params, "pad", "pad", pads_begin, true, 0);
-        if (pads_begin.size() == 2 || pads_begin.size() == 3)
+        if (pads_begin.size() < 4)
             pads_end = pads_begin;
         else
         {
@@ -162,15 +161,20 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
             if (strides[i] != 1)
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, strides must be = 1");
         }
+        CV_Assert_N(pads_begin.size() == pads_end.size(), strides.size() == 1 || strides.size() == 2);
+        // GlobalPooling supported only for 4D input
+        pads_begin.resize(2, pads_begin[0]);
+        pads_end.resize(2, pads_end[0]);
+        strides.resize(2, strides[0]);
     }
     else
     {
         util::getKernelSize(params, kernel);
-        if (pads_begin.size() == kernel.size() - 1 && pads_end.size() == kernel.size() - 1) {
-            pads_begin.push_back(pads_begin.back());
-            pads_end.push_back(pads_end.back());
-        }
-        CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() && pads_begin.size() == pads_end.size());
+        CV_Assert_N(kernel.size() == strides.size() || strides.size() == 1,
+                    pads_begin.size() == pads_end.size());
+        strides.resize(kernel.size(), strides[0]);
+        pads_begin.resize(kernel.size(), pads_begin[0]);
+        pads_end.resize(kernel.size(), pads_end[0]);
     }
 }
 
@@ -181,16 +185,13 @@ void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& 
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     util::getParameter(params, "dilation", "dilation", dilations, true, 1);
 
-    if (pads_begin.size() == kernel.size() - 1 && pads_end.size() == kernel.size() - 1) {
-        pads_begin.push_back(pads_begin.back());
-        pads_end.push_back(pads_end.back());
-    }
-    if (dilations.size() == kernel.size() - 1) {
-        dilations.push_back(dilations.back());
-    }
-
-    CV_Assert(kernel.size() == strides.size() && kernel.size() == pads_begin.size() &&
-              pads_begin.size() == pads_end.size() && kernel.size() == dilations.size());
+     CV_Assert_N(kernel.size() == strides.size() || strides.size() == 1,
+                 pads_begin.size() == pads_end.size(),
+                 kernel.size() == dilations.size() || dilations.size() == 1);
+    strides.resize(kernel.size(), strides[0]);
+    dilations.resize(kernel.size(), dilations[0]);
+    pads_begin.resize(kernel.size(), pads_begin[0]);
+    pads_end.resize(kernel.size(), pads_end[0]);
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
 }
@@ -222,30 +223,14 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
         CV_Error(Error::StsError, "Unsupported padding mode");
 }
 
-void getConvPoolPaddings(const Size& inp, const Size& out,
-                         const Size &kernel, const Size &stride,
-                         const String &padMode, const Size &dilation, int &padT, int &padL, int &padB, int &padR)
-{
-    if (padMode == "VALID")
-    {
-        padT = padL = padB = padR = 0;
-    }
-    else if (padMode == "SAME")
-    {
-        int Ph = std::max(0, (out.height - 1) * stride.height + (dilation.height * (kernel.height - 1) + 1) - inp.height);
-        int Pw = std::max(0, (out.width - 1) * stride.width + (dilation.width * (kernel.width - 1) + 1) - inp.width);
-        // For odd values of total padding, add more padding at the 'right'
-        // side of the given dimension.
-        padT = padB = Ph / 2;
-        padL = padR = Pw / 2;
-    }
-}
-
 void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
                          const std::vector<size_t>& kernel, const std::vector<size_t>& strides,
                          const String &padMode, const std::vector<size_t>& dilation,
                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
+    CV_Assert_N(kernel.size() == pads_begin.size() || pads_begin.size() == 1, pads_begin.size() == pads_end.size());
+    pads_begin.resize(kernel.size(), pads_begin[0]);
+    pads_end.resize(kernel.size(), pads_end[0]);
     CV_Assert(pads_begin.size() == pads_end.size() && pads_begin.size() == kernel.size());
     if (padMode == "VALID")
     {
@@ -255,7 +240,7 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& ou
     else if (padMode == "SAME")
     {
         for (int i = 0; i < pads_begin.size(); i++) {
-            int pad = ((out[i] - 1) * strides[i] + (dilation[i] * (kernel[i] - 1) + 1) - inp[i]) / 2;
+            int pad = ((out[i] - 1) * strides[i] + dilation[i] * (kernel[i] - 1) + 1 - inp[i]) / 2;
             pads_begin[i] = pads_end[i] = std::max(0, pad);
         }
     }

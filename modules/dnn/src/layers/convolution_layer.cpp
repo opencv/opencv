@@ -66,7 +66,6 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-
         getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode);
 
         numOutput = params.get<int>("num_output");
@@ -83,12 +82,11 @@ public:
             pad = Size(pads_begin[1], pads_begin[0]);
             dilation = Size(dilations[1], dilations[0]);
 
-            adjust_pads.resize(2);
-            adjust_pads[0] = params.get<int>("adj_h", 0);
-            adjust_pads[1] = params.get<int>("adj_w", 0);
+            adjust_pads.push_back(params.get<int>("adj_h", 0));
+            adjust_pads.push_back(params.get<int>("adj_w", 0));
 
-            adjustPad.height = params.get<int>("adj_h", 0);
-            adjustPad.width = params.get<int>("adj_w", 0);
+            adjustPad.height = adjust_pads[0];
+            adjustPad.width = adjust_pads[1];
             CV_Assert(adjustPad.width < stride.width &&
                       adjustPad.height < stride.height);
         }
@@ -103,9 +101,10 @@ public:
         CV_Assert(inputs.size() > 0);
 
         CV_Assert(blobs.size() == 1 || blobs.size() == 2);
-        CV_Assert(inputs[0].dims == outputs[0].dims && (blobs[0].dims == 4 || blobs[0].dims == 5));
-        for (int i = 2; i < blobs[0].dims; i++) {
-            CV_Assert(blobs[0].size[i] == kernel_size[i - 2]);
+        CV_Assert(inputs[0].dims == outputs[0].dims);
+        CV_Assert(blobs[0].dims == kernel_size.size() + 2);
+        for (int i = 0; i < kernel_size.size(); i++) {
+            CV_Assert(blobs[0].size[i + 2] == kernel_size[i]);
         }
 
         const Mat &input = inputs[0];
@@ -143,9 +142,9 @@ public:
     virtual MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const = 0;
     bool is1x1() const
     {
-        return (kernel_size.back() == 1 && kernel_size[kernel_size.size() - 2] == 1) &&
-               (strides.back() == 1 && strides[strides.size() - 2] == 1) &&
-               (dilations.back() == 1 && dilations[dilations.size() - 2] == 1);
+        return (kernel.height == 1 && kernel.width == 1) &&
+               (stride.height == 1 && stride.width == 1) &&
+               (dilation.height == 1 && dilation.width == 1);
     }
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
@@ -1181,7 +1180,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (kernel_size.size() == 3)
-                return (INF_ENGINE_RELEASE >= 2018050000 && preferableTarget == DNN_TARGET_CPU);
+                return false;
 
             if (INF_ENGINE_RELEASE >= 2018050000 && (adjust_pads[0] || adjust_pads[1]))
                 return false;

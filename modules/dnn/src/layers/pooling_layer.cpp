@@ -102,12 +102,16 @@ public:
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
             type = ROI;
+            pads_begin.resize(1, 0);
+            pads_end.resize(1, 0);
             pooledSize.width = params.get<uint32_t>("pooled_w", 1);
             pooledSize.height = params.get<uint32_t>("pooled_h", 1);
         }
         else if (params.has("output_dim") && params.has("group_size"))
         {
             type = PSROI;
+            pads_begin.resize(1, 0);
+            pads_end.resize(1, 0);
             pooledSize.width = params.get<int>("group_size");
             pooledSize.height = pooledSize.width;
             psRoiOutChannels = params.get<int>("output_dim");
