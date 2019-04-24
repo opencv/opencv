@@ -198,7 +198,7 @@ struct RGB2HSV_b
 
             v_store_interleave(dst, h, s, v);
         }
-
+        vx_cleanup();
 #endif
 
         for( ; i < n; i++, src += scn, dst += 3 )
@@ -294,6 +294,7 @@ struct RGB2HSV_f
 
             v_store_interleave(dst + i, h, s, v);
         }
+        vx_cleanup();
 #endif
 
         for( ; i < n; i += 3, src += scn )
@@ -332,30 +333,36 @@ struct RGB2HSV_f
 };
 
 
-#if CV_SIMD128
-inline void HSV2RGB_simd(v_float32x4& v_h, v_float32x4& v_s, v_float32x4& v_v, float hscale)
+#if CV_SIMD
+inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32& v,
+                         v_float32& b, v_float32& g, v_float32& r, float hscale)
 {
-    v_h = v_h * v_setall_f32(hscale);
-    v_float32x4 v_pre_sector = v_cvt_f32(v_trunc(v_h));
-    v_h = v_h - v_pre_sector;
-    v_float32x4 v_tab0 = v_v;
-    v_float32x4 v_one = v_setall_f32(1.0f);
-    v_float32x4 v_tab1 = v_v * (v_one - v_s);
-    v_float32x4 v_tab2 = v_v * (v_one - (v_s * v_h));
-    v_float32x4 v_tab3 = v_v * (v_one - (v_s * (v_one - v_h)));
+    v_float32 v_h = h;
+    v_float32 v_s = s;
+    v_float32 v_v = v;
 
-    v_float32x4 v_one_sixth = v_setall_f32(1.0f / 6.0f);
-    v_float32x4 v_sector = v_pre_sector * v_one_sixth;
+    v_h = v_h * vx_setall_f32(hscale);
+
+    v_float32 v_pre_sector = v_cvt_f32(v_trunc(v_h));
+    v_h = v_h - v_pre_sector;
+    v_float32 v_tab0 = v_v;
+    v_float32 v_one = vx_setall_f32(1.0f);
+    v_float32 v_tab1 = v_v * (v_one - v_s);
+    v_float32 v_tab2 = v_v * (v_one - (v_s * v_h));
+    v_float32 v_tab3 = v_v * (v_one - (v_s * (v_one - v_h)));
+
+    v_float32 v_one_sixth = vx_setall_f32(1.0f / 6.0f);
+    v_float32 v_sector = v_pre_sector * v_one_sixth;
     v_sector = v_cvt_f32(v_trunc(v_sector));
-    v_float32x4 v_six = v_setall_f32(6.0f);
+    v_float32 v_six = vx_setall_f32(6.0f);
     v_sector = v_pre_sector - (v_sector * v_six);
 
-    v_float32x4 v_two = v_setall_f32(2.0f);
+    v_float32 v_two = vx_setall_f32(2.0f);
     v_h = v_tab1 & (v_sector < v_two);
     v_h = v_h | (v_tab3 & (v_sector == v_two));
-    v_float32x4 v_three = v_setall_f32(3.0f);
+    v_float32 v_three = vx_setall_f32(3.0f);
     v_h = v_h | (v_tab0 & (v_sector == v_three));
-    v_float32x4 v_four = v_setall_f32(4.0f);
+    v_float32 v_four = vx_setall_f32(4.0f);
     v_h = v_h | (v_tab0 & (v_sector == v_four));
     v_h = v_h | (v_tab2 & (v_sector > v_four));
 
@@ -371,15 +378,18 @@ inline void HSV2RGB_simd(v_float32x4& v_h, v_float32x4& v_s, v_float32x4& v_v, f
     v_v = v_v | (v_tab1 & (v_sector == v_three));
     v_v = v_v | (v_tab3 & (v_sector == v_four));
     v_v = v_v | (v_tab0 & (v_sector > v_four));
+
+    b = v_h;
+    g = v_s;
+    r = v_v;
 }
 #endif
 
 
-inline void HSV2RGB_native(const float* src, float* dst, const float hscale, const int bidx)
+inline void HSV2RGB_native(float h, float s, float v,
+                           float& b, float& g, float& r,
+                           const float hscale)
 {
-    float h = src[0], s = src[1], v = src[2];
-    float b, g, r;
-
     if( s == 0 )
         b = g = r = v;
     else
@@ -389,10 +399,7 @@ inline void HSV2RGB_native(const float* src, float* dst, const float hscale, con
         float tab[4];
         int sector;
         h *= hscale;
-        if( h < 0 )
-            do h += 6; while( h < 0 );
-        else if( h >= 6 )
-            do h -= 6; while( h >= 6 );
+        h = fmod(h, 6.f);
         sector = cvFloor(h);
         h -= sector;
         if( (unsigned)sector >= 6u )
@@ -410,10 +417,6 @@ inline void HSV2RGB_native(const float* src, float* dst, const float hscale, con
         g = tab[sector_data[sector][1]];
         r = tab[sector_data[sector][2]];
     }
-
-    dst[bidx] = b;
-    dst[1] = g;
-    dst[bidx^2] = r;
 }
 
 
@@ -422,63 +425,56 @@ struct HSV2RGB_f
     typedef float channel_type;
 
     HSV2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
-        #if CV_SIMD128
-        hasSIMD = hasSIMD128();
-        #endif
-    }
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange)
+    { }
 
     void operator()(const float* src, float* dst, int n) const
     {
         int i = 0, bidx = blueIdx, dcn = dstcn;
+        float alpha = ColorChannel<float>::max();
+        float hs = hscale;
         n *= 3;
 
-        if (dcn == 3)
+#if CV_SIMD
+        const int vsize = v_float32::nlanes;
+        v_float32 valpha = vx_setall_f32(alpha);
+        for (; i <= n - vsize*3; i += vsize*3, dst += dcn * vsize)
         {
-            #if CV_SIMD128
-            if (hasSIMD)
+            v_float32 h, s, v, b, g, r;
+            v_load_deinterleave(src + i, h, s, v);
+
+            HSV2RGB_simd(h, s, v, b, g, r, hs);
+
+            if(bidx)
+                swap(b, r);
+
+            if(dcn == 4)
             {
-                for (; i <= n - 12; i += 12, dst += dcn * 4)
-                {
-                    v_float32x4 v_src[3];
-                    v_load_deinterleave(src + i, v_src[0], v_src[1], v_src[2]);
-                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
-                    v_store_interleave(dst, v_src[bidx], v_src[1], v_src[bidx^2]);
-                }
+                v_store_interleave(dst, b, g, r, valpha);
             }
-            #endif
-            for( ; i < n; i += 3, dst += dcn )
+            else // dcn == 3
             {
-                HSV2RGB_native(src + i, dst, hscale, bidx);
+                v_store_interleave(dst, b, g, r);
             }
-        } else { // dcn == 4
-            float alpha = ColorChannel<float>::max();
-            #if CV_SIMD128
-            if (hasSIMD)
-            {
-                for (; i <= n - 12; i += 12, dst += dcn * 4)
-                {
-                    v_float32x4 v_src[3];
-                    v_load_deinterleave(src + i, v_src[0], v_src[1], v_src[2]);
-                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
-                    v_float32x4 v_a = v_setall_f32(alpha);
-                    v_store_interleave(dst, v_src[bidx], v_src[1], v_src[bidx^2], v_a);
-                }
-            }
-            #endif
-            for( ; i < n; i += 3, dst += dcn )
-            {
-                HSV2RGB_native(src + i, dst, hscale, bidx);
+        }
+        vx_cleanup();
+#endif
+        for( ; i < n; i += 3, dst += dcn )
+        {
+            float h = src[i + 0], s = src[i + 1], v = src[i + 2];
+            float b, g, r;
+            HSV2RGB_native(h, s, v, b, g, r, hs);
+
+            dst[bidx] = b;
+            dst[1] = g;
+            dst[bidx^2] = r;
+            if(dcn == 4)
                 dst[3] = alpha;
-            }
         }
     }
 
     int dstcn, blueIdx;
     float hscale;
-    #if CV_SIMD128
-    bool hasSIMD;
-    #endif
 };
 
 
@@ -488,100 +484,99 @@ struct HSV2RGB_b
 
     HSV2RGB_b(int _dstcn, int _blueIdx, int _hrange)
     : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.0f / _hrange)
-    {
-        #if CV_SIMD128
-        hasSIMD = hasSIMD128();
-        #endif
-    }
+    { }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         int j = 0, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
-        #if CV_SIMD128
-        if (hasSIMD)
+#if CV_SIMD
+        const int vsize = v_float32::nlanes;
+
+        for (j = 0; j <= (n - vsize*4) * 3; j += 3 * 4 * vsize, dst += dcn * 4 * vsize)
         {
-            for (j = 0; j <= (n - 16) * 3; j += 48, dst += dcn * 16)
+            v_uint8 h_b, s_b, v_b;
+            v_uint16 h_w[2], s_w[2], v_w[2];
+            v_uint32 h_u[4], s_u[4], v_u[4];
+            v_load_deinterleave(src + j, h_b, s_b, v_b);
+            v_expand(h_b, h_w[0], h_w[1]);
+            v_expand(s_b, s_w[0], s_w[1]);
+            v_expand(v_b, v_w[0], v_w[1]);
+            v_expand(h_w[0], h_u[0], h_u[1]);
+            v_expand(h_w[1], h_u[2], h_u[3]);
+            v_expand(s_w[0], s_u[0], s_u[1]);
+            v_expand(s_w[1], s_u[2], s_u[3]);
+            v_expand(v_w[0], v_u[0], v_u[1]);
+            v_expand(v_w[1], v_u[2], v_u[3]);
+
+            v_int32 b_i[4], g_i[4], r_i[4];
+            v_float32 v_coeff0 = vx_setall_f32(1.0f / 255.0f);
+            v_float32 v_coeff1 = vx_setall_f32(255.0f);
+
+            for( int k = 0; k < 4; k++ )
             {
-                v_uint8x16 h_b, s_b, v_b;
-                v_uint16x8 h_w[2], s_w[2], v_w[2];
-                v_uint32x4 h_u[4], s_u[4], v_u[4];
-                v_load_deinterleave(src + j, h_b, s_b, v_b);
-                v_expand(h_b, h_w[0], h_w[1]);
-                v_expand(s_b, s_w[0], s_w[1]);
-                v_expand(v_b, v_w[0], v_w[1]);
-                v_expand(h_w[0], h_u[0], h_u[1]);
-                v_expand(h_w[1], h_u[2], h_u[3]);
-                v_expand(s_w[0], s_u[0], s_u[1]);
-                v_expand(s_w[1], s_u[2], s_u[3]);
-                v_expand(v_w[0], v_u[0], v_u[1]);
-                v_expand(v_w[1], v_u[2], v_u[3]);
+                v_float32 h = v_cvt_f32(v_reinterpret_as_s32(h_u[k]));
+                v_float32 s = v_cvt_f32(v_reinterpret_as_s32(s_u[k]));
+                v_float32 v = v_cvt_f32(v_reinterpret_as_s32(v_u[k]));
 
-                v_int32x4 b_i[4], g_i[4], r_i[4];
-                v_float32x4 v_coeff0 = v_setall_f32(1.0f / 255.0f);
-                v_float32x4 v_coeff1 = v_setall_f32(255.0f);
+                s *= v_coeff0;
+                v *= v_coeff0;
+                v_float32 b, g, r;
+                HSV2RGB_simd(h, s, v, b, g, r, hscale);
 
-                for( int k = 0; k < 4; k++ )
-                {
-                    v_float32x4 v_src[3];
-                    v_src[0] = v_cvt_f32(v_reinterpret_as_s32(h_u[k]));
-                    v_src[1] = v_cvt_f32(v_reinterpret_as_s32(s_u[k]));
-                    v_src[2] = v_cvt_f32(v_reinterpret_as_s32(v_u[k]));
+                b *= v_coeff1;
+                g *= v_coeff1;
+                r *= v_coeff1;
+                b_i[k] = v_trunc(b);
+                g_i[k] = v_trunc(g);
+                r_i[k] = v_trunc(r);
+            }
 
-                    v_src[1] *= v_coeff0;
-                    v_src[2] *= v_coeff0;
-                    HSV2RGB_simd(v_src[0], v_src[1], v_src[2], hscale);
+            v_uint16 r_w[2], g_w[2], b_w[2];
+            v_uint8 r_b, g_b, b_b;
 
-                    v_src[0] *= v_coeff1;
-                    v_src[1] *= v_coeff1;
-                    v_src[2] *= v_coeff1;
-                    b_i[k] = v_trunc(v_src[0]);
-                    g_i[k] = v_trunc(v_src[1]);
-                    r_i[k] = v_trunc(v_src[2]);
-                }
+            r_w[0] = v_pack_u(r_i[0], r_i[1]);
+            r_w[1] = v_pack_u(r_i[2], r_i[3]);
+            r_b = v_pack(r_w[0], r_w[1]);
+            g_w[0] = v_pack_u(g_i[0], g_i[1]);
+            g_w[1] = v_pack_u(g_i[2], g_i[3]);
+            g_b = v_pack(g_w[0], g_w[1]);
+            b_w[0] = v_pack_u(b_i[0], b_i[1]);
+            b_w[1] = v_pack_u(b_i[2], b_i[3]);
+            b_b = v_pack(b_w[0], b_w[1]);
 
-                v_uint16x8 r_w[2], g_w[2], b_w[2];
-                v_uint8x16 r_b, g_b, b_b;
-
-                r_w[0] = v_pack_u(r_i[0], r_i[1]);
-                r_w[1] = v_pack_u(r_i[2], r_i[3]);
-                r_b = v_pack(r_w[0], r_w[1]);
-                g_w[0] = v_pack_u(g_i[0], g_i[1]);
-                g_w[1] = v_pack_u(g_i[2], g_i[3]);
-                g_b = v_pack(g_w[0], g_w[1]);
-                b_w[0] = v_pack_u(b_i[0], b_i[1]);
-                b_w[1] = v_pack_u(b_i[2], b_i[3]);
-                b_b = v_pack(b_w[0], b_w[1]);
-
-                if( dcn == 3 )
-                {
-                    if( blueIdx == 0 )
-                        v_store_interleave(dst, b_b, g_b, r_b);
-                    else
-                        v_store_interleave(dst, r_b, g_b, b_b);
-                }
+            if( dcn == 3 )
+            {
+                if( blueIdx == 0 )
+                    v_store_interleave(dst, b_b, g_b, r_b);
                 else
-                {
-                    v_uint8x16 alpha_b = v_setall_u8(alpha);
-                    if( blueIdx == 0 )
-                        v_store_interleave(dst, b_b, g_b, r_b, alpha_b);
-                    else
-                        v_store_interleave(dst, r_b, g_b, b_b, alpha_b);
-                }
+                    v_store_interleave(dst, r_b, g_b, b_b);
+            }
+            else
+            {
+                v_uint8 alpha_b = vx_setall_u8(alpha);
+                if( blueIdx == 0 )
+                    v_store_interleave(dst, b_b, g_b, r_b, alpha_b);
+                else
+                    v_store_interleave(dst, r_b, g_b, b_b, alpha_b);
             }
         }
+        vx_cleanup();
         #endif
+
         for( ; j < n * 3; j += 3, dst += dcn )
         {
-            float buf[6];
-            buf[0] = src[j];
-            buf[1] = src[j+1] * (1.0f / 255.0f);
-            buf[2] = src[j+2] * (1.0f / 255.0f);
-            HSV2RGB_native(buf, buf + 3, hscale, blueIdx);
-            dst[0] = saturate_cast<uchar>(buf[3] * 255.0f);
-            dst[1] = saturate_cast<uchar>(buf[4] * 255.0f);
-            dst[2] = saturate_cast<uchar>(buf[5] * 255.0f);
+            float h, s, v, b, g, r;
+            h = src[j];
+            s = src[j+1] * (1.0f / 255.0f);
+            v = src[j+2] * (1.0f / 255.0f);
+            HSV2RGB_native(h, s, v, b, g, r, hscale);
+
+            dst[blueIdx]   = saturate_cast<uchar>(b * 255.0f);
+            dst[1]         = saturate_cast<uchar>(g * 255.0f);
+            dst[blueIdx^2] = saturate_cast<uchar>(r * 255.0f);
+
             if( dcn == 4 )
                 dst[3] = alpha;
         }
@@ -590,9 +585,6 @@ struct HSV2RGB_b
     int dstcn;
     int blueIdx;
     float hscale;
-    #if CV_SIMD128
-    bool hasSIMD;
-    #endif
 };
 
 
