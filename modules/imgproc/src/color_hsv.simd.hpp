@@ -242,27 +242,27 @@ struct RGB2HSV_f
     { }
 
     #if CV_SIMD
-    inline void process(v_float32& v_r, v_float32& v_g,
-                        v_float32& v_b, float hscale) const
+    inline void process(const v_float32& v_r, const v_float32& v_g, const v_float32& v_b,
+                        v_float32& v_h, v_float32& v_s, v_float32& v_v,
+                        float hscale) const
     {
         v_float32 v_min_rgb = v_min(v_min(v_r, v_g), v_b);
         v_float32 v_max_rgb = v_max(v_max(v_r, v_g), v_b);
 
         v_float32 v_eps = vx_setall_f32(FLT_EPSILON);
         v_float32 v_diff = v_max_rgb - v_min_rgb;
-        v_float32 v_s = v_diff / (v_abs(v_max_rgb) + v_eps);
+        v_s = v_diff / (v_abs(v_max_rgb) + v_eps);
 
         v_float32 v_r_eq_max = v_r == v_max_rgb;
         v_float32 v_g_eq_max = v_g == v_max_rgb;
-        v_float32 v_h = v_select(v_r_eq_max, v_g - v_b,
-                        v_select(v_g_eq_max, v_b - v_r, v_r - v_g));
+        v_h = v_select(v_r_eq_max, v_g - v_b,
+              v_select(v_g_eq_max, v_b - v_r, v_r - v_g));
         v_float32 v_res = v_select(v_r_eq_max, (v_g < v_b) & vx_setall_f32(360.0f),
                           v_select(v_g_eq_max, vx_setall_f32(120.0f), vx_setall_f32(240.0f)));
         v_float32 v_rev_diff = vx_setall_f32(60.0f) / (v_diff + v_eps);
-        v_r = v_muladd(v_h, v_rev_diff, v_res) * vx_setall_f32(hscale);
+        v_h = v_muladd(v_h, v_rev_diff, v_res) * vx_setall_f32(hscale);
 
-        v_g = v_s;
-        v_b = v_max_rgb;
+        v_v = v_max_rgb;
     }
     #endif
 
@@ -274,65 +274,27 @@ struct RGB2HSV_f
 
 #if CV_SIMD
         const int vsize = v_float32::nlanes;
-
-        //TODO: put under one loop
-        if (scn == 3)
+        for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
         {
-            if (bidx)
+            v_float32 r, g, b, a;
+            if(scn == 4)
             {
-                for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
-                {
-                    v_float32 v_r;
-                    v_float32 v_g;
-                    v_float32 v_b;
-                    v_load_deinterleave(src, v_r, v_g, v_b);
-                    process(v_r, v_g, v_b, hscale);
-                    v_store_interleave(dst + i, v_r, v_g, v_b);
-                }
+                v_load_deinterleave(src, r, g, b, a);
             }
-            else
+            else // scn == 3
             {
-                for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
-                {
-                    v_float32 v_r;
-                    v_float32 v_g;
-                    v_float32 v_b;
-                    v_load_deinterleave(src, v_r, v_g, v_b);
-                    process(v_b, v_g, v_r, hscale);
-                    v_store_interleave(dst + i, v_b, v_g, v_r);
-                }
+                v_load_deinterleave(src, r, g, b);
             }
+
+            if(bidx)
+                swap(b, r);
+
+            v_float32 h, s, v;
+            process(b, g, r, h, s, v, hscale);
+
+            v_store_interleave(dst + i, h, s, v);
         }
-        else
-        { // scn == 4
-            if (bidx)
-            {
-                for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
-                {
-                    v_float32 v_r;
-                    v_float32 v_g;
-                    v_float32 v_b;
-                    v_float32 v_a;
-                    v_load_deinterleave(src, v_r, v_g, v_b, v_a);
-                    process(v_r, v_g, v_b, hscale);
-                    v_store_interleave(dst + i, v_r, v_g, v_b);
-                }
-            }
-            else
-            {
-                for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
-                {
-                    v_float32 v_r;
-                    v_float32 v_g;
-                    v_float32 v_b;
-                    v_float32 v_a;
-                    v_load_deinterleave(src, v_r, v_g, v_b, v_a);
-                    process(v_b, v_g, v_r, hscale);
-                    v_store_interleave(dst + i, v_b, v_g, v_r);
-                }
-            }
-        }
-        #endif
+#endif
 
         for( ; i < n; i += 3, src += scn )
         {
