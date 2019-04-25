@@ -1229,10 +1229,12 @@ inline v_float64x8 v_invsqrt(const v_float64x8& x)
 #if CV_USE_ERRECIP
     return v_float64x8(_mm512_rsqrt28_pd(x.val));
 #else
-    v_float64x8 half = x * v512_setall_f64(0.5);
-    v_float64x8 t = v_float64x8(_mm512_rsqrt14_pd(x.val));
-    t *= v512_setall_f64(1.5) - ((t * t) * half);
-    return t;
+    return v512_setall_f64(1.) / v_sqrt(x);
+//    v_float64x8 half = x * v512_setall_f64(0.5);
+//    v_float64x8 t = v_float64x8(_mm512_rsqrt14_pd(x.val));
+//    t *= v512_setall_f64(1.5) - ((t * t) * half);
+//    t *= v512_setall_f64(1.5) - ((t * t) * half);
+//    return t;
 #endif
 }
 
