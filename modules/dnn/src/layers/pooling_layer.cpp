@@ -955,16 +955,13 @@ public:
                 float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - kernel_size[i]) / strides[i];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
-            if ((pads_end.size() == 2 && (pads_end[0] || pads_end[1])) ||
-                (pads_end.size() == 3 && (pads_end[0] || pads_end[1] || pads_end[2])))
-            {
-                // If we have padding, ensure that the last pooling starts strictly
-                // inside the image (instead of at the padding); otherwise clip the last.
-                for (int i = 0; i < outShape.size(); i++) {
-                    if ((outShape[i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
-                        --outShape[i];
-                        CV_Assert((outShape[i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
-                    }
+
+            // If we have padding, ensure that the last pooling starts strictly
+            // inside the image (instead of at the padding); otherwise clip the last.
+            for (int i = 0; i < outShape.size(); i++) {
+                if (pads_end[i] && (outShape[i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
+                    --outShape[i];
+                    CV_Assert((outShape[i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
                 }
             }
         }

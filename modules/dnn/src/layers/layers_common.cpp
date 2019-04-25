@@ -96,16 +96,14 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
 
 void getKernelSize(const LayerParams &params, std::vector<size_t>& kernel)
 {
-      if (!util::getParameter(params, "kernel", "kernel_size", kernel))
-      {
-         CV_Error(cv::Error::StsBadArg, "kernel_size (or kernel_h and kernel_w) not specified");
-      }
+    if (!util::getParameter(params, "kernel", "kernel_size", kernel))
+        CV_Error(cv::Error::StsBadArg, "kernel_size (or kernel_h and kernel_w) not specified");
 
-      if (kernel.size() == 1)
-          kernel.resize(2, kernel[0]);
-      for (int i = 0; i < kernel.size(); i++) {
-          CV_Assert(kernel[i] > 0);
-      }
+    if (kernel.size() == 1)
+        kernel.resize(2, kernel[0]);
+
+    for (int i = 0; i < kernel.size(); i++)
+        CV_Assert(kernel[i] > 0);
 }
 
 void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
@@ -128,6 +126,7 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
             pads_end = std::vector<size_t>(pads_begin.begin() + pads_begin.size() / 2, pads_begin.end());
             pads_begin.resize(pads_begin.size() / 2);
         }
+        CV_Assert(pads_begin.size() == pads_end.size());
     }
     util::getParameter(params, "stride", "stride", strides, true, 1);
 
@@ -138,6 +137,11 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     for (int i = 0; i < strides.size(); i++)
         CV_Assert(strides[i] > 0);
 }
+
+void checkSize(size_t expected_size, std::vector<size_t>& param) {
+    CV_Assert(param.size() >= 1 && param.size() <= expected_size);
+    param.resize(expected_size, param[0]);
+}
 }
 
 void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, bool &globalPooling,
@@ -147,6 +151,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
+    int size = 2;
     if (globalPooling)
     {
         if(params.has("kernel_h") || params.has("kernel_w") || params.has("kernel_size"))
@@ -161,21 +166,15 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
             if (strides[i] != 1)
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, strides must be = 1");
         }
-        CV_Assert_N(pads_begin.size() == pads_end.size(), strides.size() == 1 || strides.size() == 2);
-        // GlobalPooling supported only for 4D input
-        pads_begin.resize(2, pads_begin[0]);
-        pads_end.resize(2, pads_end[0]);
-        strides.resize(2, strides[0]);
     }
     else
     {
         util::getKernelSize(params, kernel);
-        CV_Assert_N(kernel.size() == strides.size() || strides.size() == 1,
-                    pads_begin.size() == pads_end.size());
-        strides.resize(kernel.size(), strides[0]);
-        pads_begin.resize(kernel.size(), pads_begin[0]);
-        pads_end.resize(kernel.size(), pads_end[0]);
+        size = kernel.size();
     }
+    util::checkSize(size, pads_begin);
+    util::checkSize(size, pads_end);
+    util::checkSize(size, strides);
 }
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
@@ -185,13 +184,11 @@ void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& 
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     util::getParameter(params, "dilation", "dilation", dilations, true, 1);
 
-     CV_Assert_N(kernel.size() == strides.size() || strides.size() == 1,
-                 pads_begin.size() == pads_end.size(),
-                 kernel.size() == dilations.size() || dilations.size() == 1);
-    strides.resize(kernel.size(), strides[0]);
-    dilations.resize(kernel.size(), dilations[0]);
-    pads_begin.resize(kernel.size(), pads_begin[0]);
-    pads_end.resize(kernel.size(), pads_end[0]);
+    util::checkSize(kernel.size(), pads_begin);
+    util::checkSize(kernel.size(), pads_end);
+    util::checkSize(kernel.size(), strides);
+    util::checkSize(kernel.size(), dilations);
+
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
 }

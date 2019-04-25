@@ -1182,7 +1182,7 @@ public:
             if (kernel_size.size() == 3)
                 return false;
 
-            if (INF_ENGINE_RELEASE >= 2018050000 && (adjust_pads[0] || adjust_pads[1]))
+            if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
                 return false;
 
             const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
@@ -1192,7 +1192,7 @@ public:
                 return preferableTarget == DNN_TARGET_CPU;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                return dilations.back() == 1 && dilations[dilations.size() - 2] == 1;
+                return dilation.height == 1 && dilation.width == 1;
             return true;
         }
         else
@@ -1208,44 +1208,36 @@ public:
         CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
         CV_Assert(inputs.size() != 0);
 
-        int inpCn = inputs[0][1];
-        std::vector<int> inpShape;
-        for (int i = 2; i < inputs[0].size(); i++) {
-            inpShape.push_back(inputs[0][i]);
-        }
-
+        int outCn = numOutput;
         std::vector<int> outShape;
+        outShape.push_back(inputs[0][0]);  // batch
+        outShape.push_back(outCn);
         if (padMode.empty())
         {
-            for (int i = 0; i < inpShape.size(); i++)
-                outShape.push_back(strides[i] * (inpShape[i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
+            for (int i = 0; i < kernel_size.size(); i++)
+                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
         }
         else if (padMode == "VALID")
         {
-            for (int i = 0; i < inpShape.size(); i++)
-                outShape.push_back(strides[i] * (inpShape[i] - 1) + kernel_size[i] + adjust_pads[i]);
+            for (int i = 0; i < kernel_size.size(); i++)
+                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + kernel_size[i] + adjust_pads[i]);
         }
         else if (padMode == "SAME")
         {
-            for (int i = 0; i < inpShape.size(); i++)
-                outShape.push_back(strides[i] * (inpShape[i] - 1) + 1 + adjust_pads[i]);
+            for (int i = 0; i < kernel_size.size(); i++)
+                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + 1 + adjust_pads[i]);
         }
         else
             CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-        int outCn = numOutput;
-
         CV_Assert(outCn % blobs[0].size[1] == 0);
         int ngroups = outCn / blobs[0].size[1];
 
+        int inpCn = inputs[0][1];
         CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
         CV_Assert(blobs[0].size[0] == inpCn);
 
-        std::vector<int> dims;
-        dims.push_back(inputs[0][0]);
-        dims.push_back(outCn);
-        dims.insert(dims.end(), outShape.begin(), outShape.end());
-        outputs.resize(inputs.size(), shape(&dims[0], dims.size()));
+        outputs.resize(1, outShape);
 
         if (!is1x1())
             internals.push_back(computeColRowShape(inputs[0], outputs[0]));

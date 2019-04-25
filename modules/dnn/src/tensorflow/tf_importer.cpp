@@ -1342,6 +1342,7 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
+
             int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
 
