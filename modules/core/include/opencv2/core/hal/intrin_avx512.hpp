@@ -1002,35 +1002,39 @@ template<int imm>                                                               
 inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                                            \
 {                                                                                                                                        \
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
     if (imm == 0) return a;                                                                                                              \
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(0xFFFF << SHIFT2, b), 0xFFFF << imm, a));                   \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << SHIFT2)&MASK, b), (MASK << imm)&MASK, a));         \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                           \
 {                                                                                                                                        \
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
     if (imm == 0) return a;                                                                                                              \
     if (imm == _Tpvec::nlanes) return b;                                                                                                 \
     if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix(0xFFFF << imm, a.val), 0xFFFF << SHIFT2, b.val));           \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << imm)&MASK, a.val), (MASK << SHIFT2)&MASK, b.val)); \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                             \
 {                                                                                                                                        \
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
     if (imm == 0) return a;                                                                                                              \
     if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_expand_##suffix(0xFFFF << imm, a.val));                                                                   \
+    return _Tpvec(_mm512_maskz_expand_##suffix((MASK << imm)&MASK, a.val));                                                              \
 }                                                                                                                                        \
 template<int imm>                                                                                                                        \
 inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                            \
 {                                                                                                                                        \
     enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
+    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
     if (imm == 0) return a;                                                                                                              \
     if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_compress_##suffix(0xFFFF << imm, a.val));                                                                 \
+    return _Tpvec(_mm512_maskz_compress_##suffix((MASK << imm)&MASK, a.val));                                                            \
 }
 
 OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_uint8x64,   u8)
