@@ -23,7 +23,7 @@ rectangle, named "C1_o". But if you find the centroid of the points inside that 
 get the point "C1_r" (marked in small blue circle) which is the real centroid of window. Surely
 they don't match. So move your window such that circle of the new window matches with previous
 centroid. Again find the new centroid. Most probably, it won't match. So move it again, and continue
-the iterations such that center of window and its centroid falls on the same location (or with a
+the iterations such that center of window and its centroid falls on the same location (or within a
 small desired error). So finally what you obtain is a window with maximum pixel distribution. It is
 marked with green circle, named "C2". As you can see in image, it has maximum number of points. The
 whole process is demonstrated on a static image below:
