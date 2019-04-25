@@ -272,6 +272,13 @@ bool TiffDecoder::readHeader()
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
+            
+            if ( photometric == PHOTOMETRIC_RGB ) {
+	            uint32 *palR, *palG, *palB;
+	            if( 1 == TIFFGetField(tif, TIFFTAG_COLORMAP, &palR, &palG, &palB) ) {
+		            photometric = PHOTOMETRIC_PALETTE;
+	            }
+            }
             uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
             CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
