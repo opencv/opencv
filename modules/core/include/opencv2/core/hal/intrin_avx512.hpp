@@ -1482,23 +1482,23 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x16& idxvec, v_fl
 
 inline v_int8x64 v_interleave_pairs(const v_int8x64& vec)
 {
-    return v_int8x64(_mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0x0f0d0e0c, 0x0b090a08, 0x07050604, 0x03010200)));
+    return v_int8x64(_mm512_shuffle_epi8(vec.val, _mm512_set4_epi32(0x0f0d0e0c, 0x0b090a08, 0x07050604, 0x03010200)));
 }
 inline v_uint8x64 v_interleave_pairs(const v_uint8x64& vec) { return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
 inline v_int8x64 v_interleave_quads(const v_int8x64& vec)
 {
-    return v_int8x64(_mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0x0f0b0e0a, 0x0d090c08, 0x07030602, 0x05010400)));
+    return v_int8x64(_mm512_shuffle_epi8(vec.val, _mm512_set4_epi32(0x0f0b0e0a, 0x0d090c08, 0x07030602, 0x05010400)));
 }
 inline v_uint8x64 v_interleave_quads(const v_uint8x64& vec) { return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x32 v_interleave_pairs(const v_int16x32& vec)
 {
-    return v_int16x32(_mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0x0f0e0b0a, 0x0d0c0908, 0x07060302, 0x05040100)));
+    return v_int16x32(_mm512_shuffle_epi8(vec.val, _mm512_set4_epi32(0x0f0e0b0a, 0x0d0c0908, 0x07060302, 0x05040100)));
 }
 inline v_uint16x32 v_interleave_pairs(const v_uint16x32& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
 inline v_int16x32 v_interleave_quads(const v_int16x32& vec)
 {
-    return v_int16x32(_mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0x0f0e0706, 0x0d0c0504, 0x0b0a0302, 0x09080100)));
+    return v_int16x32(_mm512_shuffle_epi8(vec.val, _mm512_set4_epi32(0x0f0e0706, 0x0d0c0504, 0x0b0a0302, 0x09080100)));
 }
 inline v_uint16x32 v_interleave_quads(const v_uint16x32& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
 
@@ -1513,7 +1513,7 @@ inline v_int8x64 v_pack_triplets(const v_int8x64& vec)
 {
     return v_int8x64(_mm512_permutexvar_epi32(_v512_set_epi64(0x0000000f0000000f, 0x0000000f0000000f, 0x0000000e0000000d, 0x0000000c0000000a,
                                                               0x0000000900000008, 0x0000000600000005, 0x0000000400000002, 0x0000000100000000),
-                                              _mm512_shuffle_epi8(vec.val, _mm512_setr4_epi32(0xffffff0f, 0x0e0d0c0a, 0x09080605, 0x04020100))));
+                                              _mm512_shuffle_epi8(vec.val, _mm512_set4_epi32(0xffffff0f, 0x0e0d0c0a, 0x09080605, 0x04020100))));
 }
 inline v_uint8x64 v_pack_triplets(const v_uint8x64& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
