@@ -906,9 +906,9 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
                           0x47 - imm,0x46 - imm,0x45 - imm,0x44 - imm,0x43 - imm,0x42 - imm,0x41 - imm,0x40 - imm), a.val));
 #else
     enum { SHIFT2 = 64 - imm };
-    __m512i pre = _mm512_alignr_epi32(b.val, a.val, SHIFT2 / 4);
+    __m512i pre = _mm512_alignr_epi32(a.val, b.val, SHIFT2 / 4);
     if (SHIFT2 % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, SHIFT2 % 4), _mm512_slli_epi32(_mm512_alignr_epi32(b.val, a.val, SHIFT2 / 4 + 1), 4 - SHIFT2 % 4)));
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (SHIFT2 % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(a.val, b.val, SHIFT2 / 4 + 1), (4 - SHIFT2 % 4)*8)));
     else
         return v_int8x64(pre);
 #endif
@@ -932,7 +932,7 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
 #else
     __m512i pre = _mm512_alignr_epi32(b.val, a.val, imm / 4);
     if (imm % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, imm % 4), _mm512_slli_epi32(_mm512_alignr_epi32(b.val, a.val, imm / 4 + 1), 4 - imm % 4)));
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(b.val, a.val, imm / 4 + 1), (4 - imm % 4)*8)));
     else
         return v_int8x64(pre);
 #endif
@@ -955,9 +955,9 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a)
 #else
     enum { SHIFT2 = 64 - imm };
     __m512i zero = _mm512_setzero_si512();
-    __m512i pre = _mm512_alignr_epi32(zero, a.val, SHIFT2 / 4);
+    __m512i pre = _mm512_alignr_epi32(a.val, zero, SHIFT2 / 4);
     if (SHIFT2 % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, SHIFT2 % 4), _mm512_slli_epi32(_mm512_alignr_epi32(zero, a.val, SHIFT2 / 4 + 1), 4 - SHIFT2 % 4)));
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (SHIFT2 % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(a.val, zero, SHIFT2 / 4 + 1), (4 - SHIFT2 % 4)*8)));
     else
         return v_int8x64(pre);
 #endif
@@ -981,7 +981,7 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a)
     __m512i zero = _mm512_setzero_si512();
     __m512i pre = _mm512_alignr_epi32(zero, a.val, imm / 4);
     if (imm % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, imm % 4), _mm512_slli_epi32(_mm512_alignr_epi32(zero, a.val, imm / 4 + 1), 4 - imm % 4)));
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(zero, a.val, imm / 4 + 1), (4 - imm % 4)*8)));
     else
         return v_int8x64(pre);
 #endif
