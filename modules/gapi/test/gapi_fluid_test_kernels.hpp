@@ -14,6 +14,7 @@ namespace cv
 {
 namespace gapi_test_kernels
 {
+using cv::gapi::core::GMat3;
 
 G_TYPED_KERNEL(TAddSimple, <GMat(GMat, GMat)>, "test.fluid.add_simple") {
     static cv::GMatDesc outMeta(cv::GMatDesc a, cv::GMatDesc) {
@@ -84,6 +85,12 @@ G_TYPED_KERNEL(TId7x7, <GMat(GMat)>, "test.fluid.identity7x7") {
     }
 };
 
+G_TYPED_KERNEL(TMerge3_4lpi, <GMat(GMat,GMat,GMat)>, "test.fluid.merge3_4lpi") {
+    static GMatDesc outMeta(GMatDesc in, GMatDesc, GMatDesc) {
+        return in.withType(in.depth, 3);
+    }
+};
+
 G_TYPED_KERNEL(TPlusRow0, <GMat(GMat)>, "test.fluid.plus_row0") {
     static cv::GMatDesc outMeta(cv::GMatDesc a) {
         return a;
@@ -96,6 +103,17 @@ G_TYPED_KERNEL(TSum2MatsAndScalar, <GMat(GMat,GScalar,GMat)>, "test.fluid.sum_2_
         return in;
     }
 };
+
+G_TYPED_KERNEL_M(TSplit3_4lpi, <GMat3(GMat)>, "test.fluid.split3_4lpi") {
+    static std::tuple<GMatDesc, GMatDesc, GMatDesc> outMeta(GMatDesc in) {
+        const auto out_depth = in.depth;
+        const auto out_desc  = in.withType(out_depth, 1);
+        return std::make_tuple(out_desc, out_desc, out_desc);
+    }
+};
+
+GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3);
+std::tuple<GMat, GMat, GMat> split3_4lpi(const GMat& src);
 
 extern cv::gapi::GKernelPackage fluidTestPackage;
 
