@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 set(OpenCV_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../..")
 set(WITH_FFMPEG ON)
 set(OPENCV_FFMPEG_SKIP_BUILD_CHECK ON)
-include("${OpenCV_SOURCE_DIR}/modules/videoio/cmake/plugin.cmake")
+include("${OpenCV_SOURCE_DIR}/modules/videoio/cmake/plugin_standalone.cmake")
 ocv_create_videoio_plugin("opencv_videoio_ffmpeg" "ocv.3rdparty.ffmpeg" "FFmpeg" "cap_ffmpeg.cpp")
 
 message(STATUS "FFMPEG_libavcodec_VERSION=${FFMPEG_libavcodec_VERSION}")
