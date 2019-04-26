@@ -307,7 +307,7 @@ class ClassInfo(object):
         return "CVPY_TYPE({}, {}, {}, {}, {});\n".format(
             self.name,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
-            self.sname if self.issimple else "Ptr<{}>".format(self.cname),
+            self.sname if self.issimple else "Ptr",
             baseptr,
             constructor_name
         )
