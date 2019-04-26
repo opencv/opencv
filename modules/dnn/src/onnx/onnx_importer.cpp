@@ -196,6 +196,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
     {
         opencv_onnx::AttributeProto attribute_proto = node_proto.attribute(i);
         std::string attribute_name = attribute_proto.name();
+
         if(attribute_name == "kernel_shape")
         {
             CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
@@ -360,6 +361,7 @@ void ONNXImporter::populateNet(Net dstNet)
 
         std::string layer_type = node_proto.op_type();
         layerParams.type = layer_type;
+
 
         if (layer_type == "MaxPool")
         {
@@ -573,16 +575,17 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
+
             if (layerParams.has("output_shape"))
             {
                 const DictValue& outShape = layerParams.get("output_shape");
+
                 if (outShape.size() != 4)
                     CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
 
                 DictValue stride = layerParams.get("stride");
                 const int strideY = stride.getIntValue(0);
                 const int strideX = stride.getIntValue(1);
-
                 const int outH = outShape.getIntValue(2);
                 const int outW = outShape.getIntValue(3);
 

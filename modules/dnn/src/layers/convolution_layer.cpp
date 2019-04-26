@@ -98,6 +98,7 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
         CV_Assert(inputs.size() > 0);
 
         CV_Assert(blobs.size() == 1 || blobs.size() == 2);
@@ -268,13 +269,13 @@ public:
         internals.clear();
 
         CV_Assert(inputs.size() != 0);
-        std::vector<int> inpShape;
-        for (int i = 2; i < inputs[0].size(); i++) {
-            inpShape.push_back(inputs[0][i]);
-        }
+        std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
 
-        std::vector<int> outShape;
         int outCn = blobs[0].size[0];
+        std::vector<int> outShape;
+        outShape.push_back(inputs[0][0]);
+        outShape.push_back(outCn);
+
         int inpCn = inputs[0][1];
         if (padMode.empty())
         {
@@ -292,11 +293,8 @@ public:
                      "be multiple of %d but got %d", blobs[0].size[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        std::vector<int> dims;
-        dims.push_back(inputs[0][0]);
-        dims.push_back(outCn);
-        dims.insert(dims.end(), outShape.begin(), outShape.end());
-        outputs.resize(inputs.size(), shape(&dims[0], dims.size()));
+        outputs.resize(1, outShape);
+
         return false;
     }
 
@@ -1192,7 +1190,7 @@ public:
                 return preferableTarget == DNN_TARGET_CPU;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                return dilation.height == 1 && dilation.width == 1;
+                return dilation.width == 1 && dilation.height == 1;
             return true;
         }
         else

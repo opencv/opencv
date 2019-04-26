@@ -55,6 +55,7 @@ std::string makeName(const std::string& str1, const std::string& str2)
 {
     return str1 + str2;
 }
+
 bool getParameter(const LayerParams &params, const std::string& nameBase, const std::string& nameAll,
                   std::vector<size_t>& parameter, bool hasDefault = false, const int& defaultValue = 0)
 {
@@ -151,7 +152,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
-    int size = 2;
+
     if (globalPooling)
     {
         if(params.has("kernel_h") || params.has("kernel_w") || params.has("kernel_size"))
@@ -168,10 +169,9 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
         }
     }
     else
-    {
         util::getKernelSize(params, kernel);
-        size = kernel.size();
-    }
+
+    int size = std::max(kernel.size(), (size_t)2);
     util::checkSize(size, pads_begin);
     util::checkSize(size, pads_end);
     util::checkSize(size, strides);
@@ -228,7 +228,7 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& ou
     CV_Assert_N(kernel.size() == pads_begin.size() || pads_begin.size() == 1, pads_begin.size() == pads_end.size());
     pads_begin.resize(kernel.size(), pads_begin[0]);
     pads_end.resize(kernel.size(), pads_end[0]);
-    CV_Assert(pads_begin.size() == pads_end.size() && pads_begin.size() == kernel.size());
+
     if (padMode == "VALID")
     {
         std::fill(pads_begin.begin(), pads_begin.end(), 0);

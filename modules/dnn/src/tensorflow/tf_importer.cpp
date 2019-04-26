@@ -487,6 +487,7 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT ||
               tensor.dtype() == tensorflow::DT_HALF);
     CV_Assert(dims == 4 || dims == 5);
+
     int out_c, input_c, depth, height, width;
     if (dims == 4)
     {
@@ -980,6 +981,7 @@ void TFImporter::populateNet(Net dstNet)
                 ExcludeLayer(net, next_layers[0].second, 0, false);
                 layers_to_ignore.insert(next_layers[0].first);
             }
+
             int id = dstNet.addLayer(name, "Convolution", layerParams);
             layer_id[name] = id;
 
@@ -1355,8 +1357,8 @@ void TFImporter::populateNet(Net dstNet)
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
-            layerParams.type = "Pooling";
-            int id = dstNet.addLayer(name, layerParams.type, layerParams);
+
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());

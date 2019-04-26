@@ -135,6 +135,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert(!inputs.empty());
+
         std::vector<int> inp;
         std::vector<int> out;
         for (int i = 2; i < inputs[0].dims; i++) {
@@ -145,6 +146,7 @@ public:
             kernel = Size(inp[1], inp[0]);
             kernel_size = std::vector<size_t>(inp.begin(), inp.end());
         }
+
         getConvPoolPaddings(inp, out, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), pads_begin, pads_end);
         if (pads_begin.size() == 2) {
             pad_t = pads_begin[0];
@@ -178,7 +180,7 @@ public:
             return false;
 #endif
         }
-        return (kernel_size.size() != 3) && (backendId == DNN_BACKEND_OPENCV ||
+        return (kernel_size.empty() || kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
                (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))));
     }
@@ -935,12 +937,12 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() != 0);
-        std::vector<int> inpShape;
-        for (int i = 2; i < inputs[0].size(); i++)
-            inpShape.push_back(inputs[0][i]);
 
-        std::vector<int> outShape;
-        if (globalPooling) {
+        std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
+        std::vector<int> outShape(inputs[0].begin(), inputs[0].begin() + 2);
+
+        if (globalPooling)
+        {
             outShape.push_back(1);
             outShape.push_back(1);
         }
@@ -951,17 +953,17 @@ public:
         }
         else if (padMode.empty())
         {
-            for (int i = 0; i < inpShape.size(); i++) {
+            for (int i = 0; i < kernel_size.size(); i++) {
                 float dst = (float)(inpShape[i] + pads_begin[i] + pads_end[i] - kernel_size[i]) / strides[i];
                 outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
             }
 
             // If we have padding, ensure that the last pooling starts strictly
             // inside the image (instead of at the padding); otherwise clip the last.
-            for (int i = 0; i < outShape.size(); i++) {
-                if (pads_end[i] && (outShape[i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
-                    --outShape[i];
-                    CV_Assert((outShape[i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
+            for (int i = 0; i < pads_end.size(); i++) {
+                if (pads_end[i] && (outShape[2 + i] - 1) * strides[i] >= inpShape[i] + pads_end[i]) {
+                    --outShape[2 + i];
+                    CV_Assert((outShape[2 + i] - 1) * strides[i] < inpShape[i] + pads_end[i]);
                 }
             }
         }
@@ -969,28 +971,23 @@ public:
         {
             getConvPoolOutParams(inpShape, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), outShape);
         }
-        std::vector<int> dims;
-        dims.push_back(inputs[0][0]);
-        dims.push_back(inputs[0][1]);
-        for (int i = 0; i < outShape.size(); i++) {
-            dims.push_back(outShape[i]);
-        }
         if (type == ROI)
         {
             CV_Assert(inputs.size() == 2);
-            dims[0] = inputs[1][0];  // Number of proposals;
+            outShape[0] = inputs[1][0];  // Number of proposals;
         }
         else if (type == PSROI)
         {
             CV_Assert(inputs.size() == 2);
             CV_Assert(psRoiOutChannels * pooledSize.width * pooledSize.height == inputs[0][1]);
-            dims[0] = inputs[1][0];  // Number of proposals;
-            dims[1] = psRoiOutChannels;
+            outShape[0] = inputs[1][0];  // Number of proposals;
+            outShape[1] = psRoiOutChannels;
         }
         int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
         CV_Assert(numOutputs == 1 || (numOutputs == 2 && type == MAX));
 
-        outputs.assign(numOutputs, shape(&dims[0], dims.size()));
+        outputs.assign(numOutputs, outShape);
+
         return false;
     }
 
