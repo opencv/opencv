@@ -770,6 +770,10 @@ inline
 Mat::~Mat()
 {
     release();
+#ifdef CV_CXX11
+    if (customDeallocator)
+        customDeallocator();
+#endif
     if( step.p != step.buf )
         fastFree(step.p);
 }

@@ -55,6 +55,7 @@
 
 #ifdef CV_CXX11
 #include <type_traits>
+#include <functional>
 #endif
 
 namespace cv
@@ -2089,6 +2090,17 @@ public:
     template<typename _Tp, typename Functor> void forEach(const Functor& operation);
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
+
+    /** @brief A user defined deallocator.
+
+    The customDeallocator will be called when this object goes out of scope (Mat's destructor is called).
+    This is useful when Mat() is constructed with a user's data that requires special care for deallocating.
+
+    customDeallocator has to be a function pointer, a function object or a lambda(C++11).
+     */
+#ifdef CV_CXX11
+    std::function<void()> customDeallocator;
+#endif
 
 #ifdef CV_CXX_MOVE_SEMANTICS
     Mat(Mat&& m);

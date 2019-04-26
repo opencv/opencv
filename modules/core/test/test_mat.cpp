@@ -1366,6 +1366,75 @@ TEST(Core_Mat, regression_9507)
     EXPECT_EQ(25u, m2.total());
 }
 
+const unsigned int nElems = 8;
+unsigned char* testDataGlobal = nullptr;
+static void customDeallocatorFunc()
+{
+    delete[] testDataGlobal;
+    testDataGlobal = nullptr;
+}
+
+TEST(Core_Mat_customDeallocator, freeFunction)
+{
+    testDataGlobal = new unsigned char[nElems];
+    cv::Mat* m = new Mat(nElems, 1, CV_8UC1, testDataGlobal);
+    m->customDeallocator = customDeallocatorFunc;
+    EXPECT_NE (testDataGlobal, nullptr);
+    delete m;
+    EXPECT_EQ (testDataGlobal, nullptr);
+}
+
+struct CustomDeallocatorStruct
+{
+    void operator() ()
+    {
+        customDeallocatorFunc();
+    }
+};
+
+TEST(Core_Mat_customDeallocator, functionObject_1)
+{
+    testDataGlobal = new unsigned char[nElems];
+    cv::Mat* m = new Mat(nElems, 1, CV_8UC1, testDataGlobal);
+    m->customDeallocator = CustomDeallocatorStruct();
+    EXPECT_NE (testDataGlobal, nullptr);
+    delete m;
+    EXPECT_EQ (testDataGlobal, nullptr);
+}
+
+class CustomDeallocatorClass
+{
+public:
+    void customDeallocator()
+    {
+        customDeallocatorFunc();
+    }
+};
+
+TEST(Core_Mat_customDeallocator, functionObject_2)
+{
+    testDataGlobal = new unsigned char[nElems];
+    cv::Mat* m = new Mat(nElems, 1, CV_8UC1, testDataGlobal);
+    CustomDeallocatorClass deallocator;
+    m->customDeallocator = std::bind( &CustomDeallocatorClass::customDeallocator, &deallocator);
+    EXPECT_NE (testDataGlobal, nullptr);
+    delete m;
+    EXPECT_EQ (testDataGlobal, nullptr);
+}
+
+TEST(Core_Mat_customDeallocator, lambda)
+{
+    testDataGlobal = new unsigned char[nElems];
+    cv::Mat* m = new Mat(nElems, 1, CV_8UC1, testDataGlobal);
+    m->customDeallocator = []() {
+        customDeallocatorFunc();
+    };
+
+    EXPECT_NE (testDataGlobal, nullptr);
+    delete m;
+    EXPECT_EQ (testDataGlobal, nullptr);
+}
+
 #endif // CXX11
 
 TEST(Core_InputArray, empty)
