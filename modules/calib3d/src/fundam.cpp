@@ -910,7 +910,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
 }
 
 static inline double scaleFor(double x){
-    return (std::fabs(x) > std::numeric_limits<double>::epsilon()) ? 1./x : 1.;
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
 }
 static inline float scaleFor(float x){
     return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
