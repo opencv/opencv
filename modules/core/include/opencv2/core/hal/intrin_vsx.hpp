@@ -763,7 +763,7 @@ inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
 inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
 {
     vec_ushort8 ad = vec_absd(a.val, b.val);
-    VSX_UNUSED(vec_int4) sum = vec_sums(vec_int4_c(vec_unpackhu(ad)), vec_int4_c(vec_unpacklu(ad)));
+    VSX_UNUSED(vec_int4) sum = vec_sums(vec_int4_c(vec_unpackhu(ad)) + vec_int4_c(vec_unpacklu(ad)), vec_int4_z);
     return (unsigned)vec_extract(sum, 3);
 }
 inline unsigned v_reduce_sad(const v_int16x8& a, const v_int16x8& b)
