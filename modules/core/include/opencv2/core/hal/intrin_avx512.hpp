@@ -889,31 +889,6 @@ OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float64x8,  _mm512_max_pd)
 
 /** Rotate **/
 template<int imm>
-inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
-{
-    if (imm == 0) return a;
-    if (imm == 64) return b;
-    if (imm >= 128) return v_int8x64();
-#if CV_USE_VBMIPERMUTE
-    return v_int8x64(_mm512_permutex2var_epi8(b.val,
-           _v512_set_epi8(0x7f - imm,0x7e - imm,0x7d - imm,0x7c - imm,0x7b - imm,0x7a - imm,0x79 - imm,0x78 - imm,
-                          0x77 - imm,0x76 - imm,0x75 - imm,0x74 - imm,0x73 - imm,0x72 - imm,0x71 - imm,0x70 - imm,
-                          0x6f - imm,0x6e - imm,0x6d - imm,0x6c - imm,0x6b - imm,0x6a - imm,0x69 - imm,0x68 - imm,
-                          0x67 - imm,0x66 - imm,0x65 - imm,0x64 - imm,0x63 - imm,0x62 - imm,0x61 - imm,0x60 - imm,
-                          0x5f - imm,0x5e - imm,0x5d - imm,0x5c - imm,0x5b - imm,0x5a - imm,0x59 - imm,0x58 - imm,
-                          0x57 - imm,0x56 - imm,0x55 - imm,0x54 - imm,0x53 - imm,0x52 - imm,0x51 - imm,0x50 - imm,
-                          0x4f - imm,0x4e - imm,0x4d - imm,0x4c - imm,0x4b - imm,0x4a - imm,0x49 - imm,0x48 - imm,
-                          0x47 - imm,0x46 - imm,0x45 - imm,0x44 - imm,0x43 - imm,0x42 - imm,0x41 - imm,0x40 - imm), a.val));
-#else
-    enum { SHIFT2 = 64 - imm };
-    __m512i pre = _mm512_alignr_epi32(a.val, b.val, SHIFT2 / 4);
-    if (SHIFT2 % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (SHIFT2 % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(a.val, b.val, SHIFT2 / 4 + 1), (4 - SHIFT2 % 4)*8)));
-    else
-        return v_int8x64(pre);
-#endif
-}
-template<int imm>
 inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
 {
     if (imm == 0) return a;
@@ -930,36 +905,41 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
                           0x0f + imm,0x0e + imm,0x0d + imm,0x0c + imm,0x0b + imm,0x0a + imm,0x09 + imm,0x08 + imm,
                           0x07 + imm,0x06 + imm,0x05 + imm,0x04 + imm,0x03 + imm,0x02 + imm,0x01 + imm,0x00 + imm), b.val));
 #else
-    __m512i pre = _mm512_alignr_epi32(b.val, a.val, imm / 4);
+    __m512i pre = _mm512_alignr_epi32(b.val, a.val, imm/4);
     if (imm % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(b.val, a.val, imm / 4 + 1), (4 - imm % 4)*8)));
+    {
+        __m512i post;
+        if (imm/4 < 15)
+            post = _mm512_alignr_epi32(b.val, a.val, imm/4 + 1);
+        else if (imm/4 == 15)
+            post = b.val;
+        else
+            post = _mm512_alignr_epi32(_mm512_setzero_si512(), b.val, imm/4 - 15);
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(post, (4 - imm % 4)*8)));
+    }
     else
         return v_int8x64(pre);
 #endif
 }
 template<int imm>
-inline v_int8x64 v_rotate_left(const v_int8x64& a)
+inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
 {
     if (imm == 0) return a;
-    if (imm >= 64) return v_int8x64();
+    if (imm == 64) return b;
+    if (imm >= 128) return v_int8x64();
 #if CV_USE_VBMIPERMUTE
-    return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF << imm,
-           _v512_set_epi8(0x3f - imm,0x3e - imm,0x3d - imm,0x3c - imm,0x3b - imm,0x3a - imm,0x39 - imm,0x38 - imm,
-                          0x37 - imm,0x36 - imm,0x35 - imm,0x34 - imm,0x33 - imm,0x32 - imm,0x31 - imm,0x30 - imm,
-                          0x2f - imm,0x2e - imm,0x2d - imm,0x2c - imm,0x2b - imm,0x2a - imm,0x29 - imm,0x28 - imm,
-                          0x27 - imm,0x26 - imm,0x25 - imm,0x24 - imm,0x23 - imm,0x22 - imm,0x21 - imm,0x20 - imm,
-                          0x1f - imm,0x1e - imm,0x1d - imm,0x1c - imm,0x1b - imm,0x1a - imm,0x19 - imm,0x18 - imm,
-                          0x17 - imm,0x16 - imm,0x15 - imm,0x14 - imm,0x13 - imm,0x12 - imm,0x11 - imm,0x10 - imm,
-                          0x0f - imm,0x0e - imm,0x0d - imm,0x0c - imm,0x0b - imm,0x0a - imm,0x09 - imm,0x08 - imm,
-                          0x07 - imm,0x06 - imm,0x05 - imm,0x04 - imm,0x03 - imm,0x02 - imm,0x01 - imm,0x00 - imm), a.val));
+    return v_int8x64(_mm512_permutex2var_epi8(b.val,
+           _v512_set_epi8(0x7f - imm,0x7e - imm,0x7d - imm,0x7c - imm,0x7b - imm,0x7a - imm,0x79 - imm,0x78 - imm,
+                          0x77 - imm,0x76 - imm,0x75 - imm,0x74 - imm,0x73 - imm,0x72 - imm,0x71 - imm,0x70 - imm,
+                          0x6f - imm,0x6e - imm,0x6d - imm,0x6c - imm,0x6b - imm,0x6a - imm,0x69 - imm,0x68 - imm,
+                          0x67 - imm,0x66 - imm,0x65 - imm,0x64 - imm,0x63 - imm,0x62 - imm,0x61 - imm,0x60 - imm,
+                          0x5f - imm,0x5e - imm,0x5d - imm,0x5c - imm,0x5b - imm,0x5a - imm,0x59 - imm,0x58 - imm,
+                          0x57 - imm,0x56 - imm,0x55 - imm,0x54 - imm,0x53 - imm,0x52 - imm,0x51 - imm,0x50 - imm,
+                          0x4f - imm,0x4e - imm,0x4d - imm,0x4c - imm,0x4b - imm,0x4a - imm,0x49 - imm,0x48 - imm,
+                          0x47 - imm,0x46 - imm,0x45 - imm,0x44 - imm,0x43 - imm,0x42 - imm,0x41 - imm,0x40 - imm), a.val));
 #else
-    enum { SHIFT2 = 64 - imm };
-    __m512i zero = _mm512_setzero_si512();
-    __m512i pre = _mm512_alignr_epi32(a.val, zero, SHIFT2 / 4);
-    if (SHIFT2 % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (SHIFT2 % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(a.val, zero, SHIFT2 / 4 + 1), (4 - SHIFT2 % 4)*8)));
-    else
-        return v_int8x64(pre);
+    if (imm < 64) return v_rotate_right<64 - imm>(b, a);
+    else return v_rotate_right<128 - imm>(v512_setzero_s8(), b);
 #endif
 }
 template<int imm>
@@ -978,12 +958,26 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a)
                           0x0f + imm,0x0e + imm,0x0d + imm,0x0c + imm,0x0b + imm,0x0a + imm,0x09 + imm,0x08 + imm,
                           0x07 + imm,0x06 + imm,0x05 + imm,0x04 + imm,0x03 + imm,0x02 + imm,0x01 + imm,0x00 + imm), a.val));
 #else
-    __m512i zero = _mm512_setzero_si512();
-    __m512i pre = _mm512_alignr_epi32(zero, a.val, imm / 4);
-    if (imm % 4)
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(_mm512_alignr_epi32(zero, a.val, imm / 4 + 1), (4 - imm % 4)*8)));
-    else
-        return v_int8x64(pre);
+    return v_rotate_right<imm>(a, v512_setzero_s8());
+#endif
+}
+template<int imm>
+inline v_int8x64 v_rotate_left(const v_int8x64& a)
+{
+    if (imm == 0) return a;
+    if (imm >= 64) return v_int8x64();
+#if CV_USE_VBMIPERMUTE
+    return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF << imm,
+           _v512_set_epi8(0x3f - imm,0x3e - imm,0x3d - imm,0x3c - imm,0x3b - imm,0x3a - imm,0x39 - imm,0x38 - imm,
+                          0x37 - imm,0x36 - imm,0x35 - imm,0x34 - imm,0x33 - imm,0x32 - imm,0x31 - imm,0x30 - imm,
+                          0x2f - imm,0x2e - imm,0x2d - imm,0x2c - imm,0x2b - imm,0x2a - imm,0x29 - imm,0x28 - imm,
+                          0x27 - imm,0x26 - imm,0x25 - imm,0x24 - imm,0x23 - imm,0x22 - imm,0x21 - imm,0x20 - imm,
+                          0x1f - imm,0x1e - imm,0x1d - imm,0x1c - imm,0x1b - imm,0x1a - imm,0x19 - imm,0x18 - imm,
+                          0x17 - imm,0x16 - imm,0x15 - imm,0x14 - imm,0x13 - imm,0x12 - imm,0x11 - imm,0x10 - imm,
+                          0x0f - imm,0x0e - imm,0x0d - imm,0x0c - imm,0x0b - imm,0x0a - imm,0x09 - imm,0x08 - imm,
+                          0x07 - imm,0x06 - imm,0x05 - imm,0x04 - imm,0x03 - imm,0x02 - imm,0x01 - imm,0x00 - imm), a.val));
+#else
+    return v_rotate_right<64 - imm>(v512_setzero_s8(), a);
 #endif
 }
 
