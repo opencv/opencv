@@ -49,6 +49,11 @@ cv::GMat cv::GCall::yield(int output)
     return cv::GMat(m_priv->m_node, output);
 }
 
+cv::GMatP cv::GCall::yieldP(int output)
+{
+    return cv::GMatP(m_priv->m_node, output);
+}
+
 cv::GScalar cv::GCall::yieldScalar(int output)
 {
     return cv::GScalar(m_priv->m_node, output);
