@@ -22,7 +22,7 @@ namespace wip {
     GAPI_EXPORTS void                async(GCompiled& gcmpld, std::function<void(std::exception_ptr)>&& callback, GRunArgs &&ins, GRunArgsP &&outs);
     GAPI_EXPORTS std::future<void>   async(GCompiled& gcmpld, GRunArgs &&ins, GRunArgsP &&outs);
 } // namespace gapi
-} // namespace expreimental
+} // namespace wip
 } // namespace cv
 
 #endif // OPENCV_GAPI_GCOMPILED_ASYNC_HPP
