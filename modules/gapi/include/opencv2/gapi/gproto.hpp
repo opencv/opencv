@@ -34,6 +34,7 @@ namespace cv {
 // directly.
 using GProtoArg = util::variant
     < GMat
+    , GMatP
     , GScalar
     , detail::GArrayU // instead of GArray<T>
     >;
