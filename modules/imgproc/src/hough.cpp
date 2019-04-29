@@ -1355,6 +1355,8 @@ static void GetCircleCenters(const std::vector<int> &centers, std::vector<Vec4f>
 template<typename T>
 static void RemoveOverlaps(std::vector<T>& circles, float minDist)
 {
+    if (circles.size() <= 1u)
+        return;
     float minDist2 = minDist * minDist;
     size_t endIdx = 1;
     for (size_t i = 1; i < circles.size(); ++i)
