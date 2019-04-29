@@ -654,6 +654,13 @@ TEST_P(Test_TensorFlow_layers, relu6)
     runTensorFlowNet("keras_relu6", /*hasText*/ true);
 }
 
+TEST_P(Test_TensorFlow_layers, subpixel)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    runTensorFlowNet("subpixel");
+}
+
 TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
 {
     runTensorFlowNet("keras_mobilenet_head");
