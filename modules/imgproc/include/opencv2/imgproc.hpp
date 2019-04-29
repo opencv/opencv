@@ -3116,9 +3116,9 @@ point coordinates out of the normalized distorted point coordinates ("normalized
 coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-
-@param src Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
-@param dst Output ideal point coordinates after undistortion and reverse perspective
+@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
+vector\<Point2f\> ).
+@param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
 transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
@@ -3131,14 +3131,14 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
  */
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray());
+                                   InputArray R = noArray(), InputArray P = noArray() );
 /** @overload
     @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
 
  */
 CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R, InputArray P, TermCriteria criteria);
+                                                         InputArray cameraMatrix, InputArray distCoeffs,
+                                                         InputArray R, InputArray P, TermCriteria criteria );
 
 //! @} imgproc_transform
 
