@@ -29,6 +29,8 @@ class BatchNormLayerImpl CV_FINAL : public BatchNormLayer
 public:
     Mat weights_, bias_;
     UMat umat_weight, umat_bias;
+    mutable int dims;
+
 
     BatchNormLayerImpl(const LayerParams& params)
     {
@@ -142,6 +144,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        dims = inputs[0].size();
         if (!useGlobalStats && inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "Batch normalization in training mode with batch size > 1");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
@@ -150,9 +153,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
+        return (backendId == DNN_BACKEND_OPENCV && (dims == 4 || dims == 2)) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
 
 #ifdef HAVE_OPENCL
