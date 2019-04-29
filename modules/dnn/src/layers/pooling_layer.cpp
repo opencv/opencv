@@ -102,16 +102,12 @@ public:
         else if (params.has("pooled_w") || params.has("pooled_h"))
         {
             type = ROI;
-            pads_begin.resize(1, 0);
-            pads_end.resize(1, 0);
             pooledSize.width = params.get<uint32_t>("pooled_w", 1);
             pooledSize.height = params.get<uint32_t>("pooled_h", 1);
         }
         else if (params.has("output_dim") && params.has("group_size"))
         {
             type = PSROI;
-            pads_begin.resize(1, 0);
-            pads_end.resize(1, 0);
             pooledSize.width = params.get<int>("group_size");
             pooledSize.height = pooledSize.width;
             psRoiOutChannels = params.get<int>("output_dim");
@@ -180,9 +176,10 @@ public:
             return false;
 #endif
         }
-        return (kernel_size.empty() || kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-               (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))));
+        else
+            return (kernel_size.empty() || kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV ||
+                   (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
+                   (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))));
     }
 
 #ifdef HAVE_OPENCL

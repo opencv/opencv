@@ -1178,7 +1178,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
             if (kernel_size.size() == 3)
-                return false;
+                CV_Error(Error::StsNotImplemented, "Unsupported deconvolution3D layer");
 
             if (INF_ENGINE_RELEASE >= 2018050000 && (adjustPad.height || adjustPad.width))
                 return false;
@@ -1251,14 +1251,14 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-         std::vector<int> inpShape;
-         std::vector<int> outShape;
-         for (int i = 2; i < inputs[0].dims; i++) {
-           inpShape.push_back(inputs[0].size[i]);
-           outShape.push_back(outputs[0].size[i]);
-         }
-         getConvPoolPaddings(outShape, inpShape, kernel_size, strides, padMode, dilations, pads_begin, pads_end);
-         if (pads_begin.size() == 2) {
+        std::vector<int> inpShape;
+        std::vector<int> outShape;
+        for (int i = 2; i < inputs[0].dims; i++) {
+            inpShape.push_back(inputs[0].size[i]);
+            outShape.push_back(outputs[0].size[i]);
+        }
+        getConvPoolPaddings(outShape, inpShape, kernel_size, strides, padMode, dilations, pads_begin, pads_end);
+        if (pads_begin.size() == 2) {
             for (int i = 0; i < pads_begin.size(); i++) {
                 if (pads_begin[i] != pads_end[i])
                     CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in deconvolution layer");

@@ -57,7 +57,7 @@ std::string makeName(const std::string& str1, const std::string& str2)
 }
 
 bool getParameter(const LayerParams &params, const std::string& nameBase, const std::string& nameAll,
-                  std::vector<size_t>& parameter, bool hasDefault = false, const int& defaultValue = 0)
+                  std::vector<size_t>& parameter, bool hasDefault = false, const std::vector<size_t>& defaultValue = std::vector<size_t>(2, 0))
 {
     std::string nameH = makeName(nameBase, std::string("_h"));
     std::string nameW = makeName(nameBase, std::string("_w"));
@@ -81,16 +81,21 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
                 CV_Assert(param.get<int>(i) >= 0);
                 parameter.push_back(param.get<int>(i));
             }
+            if (parameter.size() == 1)
+                parameter.resize(2, parameter[0]);
             return true;
         }
         else
         {
             if (hasDefault)
             {
-                parameter.push_back(defaultValue);
+                parameter = defaultValue;
                 return true;
             }
-            return false;
+            else
+            {
+                return false;
+            }
         }
     }
 }
@@ -100,15 +105,12 @@ void getKernelSize(const LayerParams &params, std::vector<size_t>& kernel)
     if (!util::getParameter(params, "kernel", "kernel_size", kernel))
         CV_Error(cv::Error::StsBadArg, "kernel_size (or kernel_h and kernel_w) not specified");
 
-    if (kernel.size() == 1)
-        kernel.resize(2, kernel[0]);
-
     for (int i = 0; i < kernel.size(); i++)
         CV_Assert(kernel[i] > 0);
 }
 
 void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
-                         std::vector<size_t>& strides, cv::String& padMode)
+                         std::vector<size_t>& strides, cv::String& padMode, size_t kernel_size = 2)
 {
     if (params.has("pad_l") && params.has("pad_t") && params.has("pad_r") && params.has("pad_b")) {
         CV_Assert(params.get<int>("pad_t") >= 0 && params.get<int>("pad_l") >= 0 &&
@@ -119,7 +121,7 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
         pads_end.push_back(params.get<int>("pad_r"));
     }
     else {
-        util::getParameter(params, "pad", "pad", pads_begin, true, 0);
+        util::getParameter(params, "pad", "pad", pads_begin, true, std::vector<size_t>(kernel_size, 0));
         if (pads_begin.size() < 4)
             pads_end = pads_begin;
         else
@@ -129,19 +131,16 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
         }
         CV_Assert(pads_begin.size() == pads_end.size());
     }
-    util::getParameter(params, "stride", "stride", strides, true, 1);
+    util::getParameter(params, "stride", "stride", strides, true, std::vector<size_t>(kernel_size, 1));
 
     padMode = "";
     if (params.has("pad_mode"))
+    {
         padMode = params.get<String>("pad_mode");
+    }
 
     for (int i = 0; i < strides.size(); i++)
         CV_Assert(strides[i] > 0);
-}
-
-void checkSize(size_t expected_size, std::vector<size_t>& param) {
-    CV_Assert(param.size() >= 1 && param.size() <= expected_size);
-    param.resize(expected_size, param[0]);
 }
 }
 
@@ -150,6 +149,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
                             std::vector<size_t>& strides, cv::String &padMode)
 {
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
+
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
 
@@ -169,25 +169,17 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
         }
     }
     else
+    {
         util::getKernelSize(params, kernel);
-
-    int size = std::max(kernel.size(), (size_t)2);
-    util::checkSize(size, pads_begin);
-    util::checkSize(size, pads_end);
-    util::checkSize(size, strides);
+    }
 }
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations, cv::String &padMode)
 {
     util::getKernelSize(params, kernel);
-    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
-    util::getParameter(params, "dilation", "dilation", dilations, true, 1);
-
-    util::checkSize(kernel.size(), pads_begin);
-    util::checkSize(kernel.size(), pads_end);
-    util::checkSize(kernel.size(), strides);
-    util::checkSize(kernel.size(), dilations);
+    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
+    util::getParameter(params, "dilation", "dilation", dilations, true, std::vector<size_t>(kernel.size(), 1));
 
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
@@ -217,7 +209,9 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
             out.push_back((inp[i] - 1 + stride[i]) / stride[i]);
     }
     else
+    {
         CV_Error(Error::StsError, "Unsupported padding mode");
+    }
 }
 
 void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
@@ -225,17 +219,17 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& ou
                          const String &padMode, const std::vector<size_t>& dilation,
                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
-    CV_Assert_N(kernel.size() == pads_begin.size() || pads_begin.size() == 1, pads_begin.size() == pads_end.size());
-    pads_begin.resize(kernel.size(), pads_begin[0]);
-    pads_end.resize(kernel.size(), pads_end[0]);
-
     if (padMode == "VALID")
     {
-        std::fill(pads_begin.begin(), pads_begin.end(), 0);
-        std::fill(pads_end.begin(), pads_end.end(), 0);
+        pads_begin.assign(kernel.size(), 0);
+        pads_end.assign(kernel.size(), 0);
     }
     else if (padMode == "SAME")
     {
+        CV_Assert_N(kernel.size() == dilation.size(), kernel.size() == strides.size(),
+                    kernel.size() == inp.size(), kernel.size() == out.size());
+        pads_begin.resize(kernel.size());
+        pads_end.resize(kernel.size());
         for (int i = 0; i < pads_begin.size(); i++) {
             int pad = ((out[i] - 1) * strides[i] + dilation[i] * (kernel[i] - 1) + 1 - inp[i]) / 2;
             pads_begin[i] = pads_end[i] = std::max(0, pad);
