@@ -11,7 +11,7 @@
 namespace opencv_test
 {
 
-G_TYPED_KERNEL(GResize3c3p, <GMat(GMat,Size,int)>, "test.resize3c3p") {
+G_TYPED_KERNEL(GResize3c3p, <GMatP(GMat,Size,int)>, "test.resize3c3p") {
     static GMatDesc outMeta(GMatDesc in, Size sz, int) {
         GAPI_Assert(in.depth == CV_8U);
         GAPI_Assert(in.chan == 3);
@@ -20,7 +20,7 @@ G_TYPED_KERNEL(GResize3c3p, <GMat(GMat,Size,int)>, "test.resize3c3p") {
     }
 };
 
-G_TYPED_KERNEL(GResize3p3p, <GMat(GMat,Size,int)>, "test.resize3p3p") {
+G_TYPED_KERNEL(GResize3p3p, <GMatP(GMatP,Size,int)>, "test.resize3p3p") {
     static GMatDesc outMeta(GMatDesc in, Size sz, int) {
         GAPI_Assert(in.depth == CV_8U);
         GAPI_Assert(in.chan == 3);
@@ -42,13 +42,7 @@ static GMatDesc NV12toRGBoutMeta(GMatDesc inY, GMatDesc inUV)
     return inY.withType(CV_8U, 3);
 }
 
-G_TYPED_KERNEL(GNV12toRGB, <GMat(GMat,GMat)>, "test.nv12torgb") {
-    static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
-        return NV12toRGBoutMeta(inY, inUV);
-    }
-};
-
-G_TYPED_KERNEL(GNV12toRGBp, <GMat(GMat,GMat)>, "test.nv12torgbp") {
+G_TYPED_KERNEL(GNV12toRGBp, <GMatP(GMat,GMat)>, "test.nv12torgbp") {
     static GMatDesc outMeta(GMatDesc inY, GMatDesc inUV) {
         return NV12toRGBoutMeta(inY, inUV).asPlanar();
     }
@@ -152,7 +146,7 @@ TEST_P(PlanarTest, Resize3p3p)
     cv::Mat out_mat     = cv::Mat::zeros(out_sz.height*3, out_sz.width, CV_8UC1);
     cv::Mat out_mat_ocv = cv::Mat::zeros(out_sz.height*3, out_sz.width, CV_8UC1);
 
-    cv::GMat in;
+    cv::GMatP in;
     auto out = GResize3p3p::on(in, out_sz, interp);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
