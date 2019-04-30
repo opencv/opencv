@@ -1126,25 +1126,28 @@ void TFImporter::populateNet(Net dstNet)
             {
                 Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
 
-                if (newShape.total() != 4 && inpLayout == DATA_LAYOUT_NHWC)
+                if (inpLayout == DATA_LAYOUT_NHWC)
                 {
-                    LayerParams permLP;
-                    int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                    permLP.set("order", DictValue::arrayInt<int*>(order, 4));
+                    if (newShape.total() == 4)
+                    {
+                        // NHWC->NCHW
+                        std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                        std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                    }
+                    if (newShape.total() != 4 || newShape.at<int>(1) == 1)
+                    {
+                        LayerParams permLP;
+                        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                        permLP.set("order", DictValue::arrayInt<int*>(order, 4));
 
-                    std::string permName = name + "/nchw";
-                    CV_Assert(layer_id.find(permName) == layer_id.end());
-                    int permId = dstNet.addLayer(permName, "Permute", permLP);
-                    layer_id[permName] = permId;
-                    connect(layer_id, dstNet, inpId, permId, 0);
-                    inpId = Pin(permName);
-                    inpLayout = DATA_LAYOUT_NCHW;
-                }
-                else if (newShape.total() == 4 && inpLayout == DATA_LAYOUT_NHWC)
-                {
-                    // NHWC->NCHW
-                    std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
-                    std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                        std::string permName = name + "/nchw";
+                        CV_Assert(layer_id.find(permName) == layer_id.end());
+                        int permId = dstNet.addLayer(permName, "Permute", permLP);
+                        layer_id[permName] = permId;
+                        connect(layer_id, dstNet, inpId, permId, 0);
+                        inpId = Pin(permName);
+                        inpLayout = DATA_LAYOUT_NCHW;
+                    }
                 }
                 layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
 
@@ -1381,7 +1384,9 @@ void TFImporter::populateNet(Net dstNet)
             // num_split
             // 1st blob is dims tensor
             int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
-            layerParams.set("axis", toNCHW(axis));
+            if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
+                axis = toNCHW(axis);
+            layerParams.set("axis", axis);
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;
