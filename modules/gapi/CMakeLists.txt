@@ -60,6 +60,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp
