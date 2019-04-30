@@ -1434,7 +1434,8 @@ inline v_float64x8 v512_lut(const double* tab, const int* idx)
 {
     return v_float64x8(_mm512_i32gather_pd(_mm256_loadu_si256((const __m256i*)idx), tab, 8));
 }
-inline v_float64x8 v512_lut_pairs(const double* tab, const int* idx) { 
+inline v_float64x8 v512_lut_pairs(const double* tab, const int* idx)
+{
         return v_float64x8(_mm512_insertf64x2(_mm512_insertf64x2(_mm512_insertf64x2(_mm512_castpd128_pd512(
                                _mm_loadu_pd(tab + idx[0])),
                                _mm_loadu_pd(tab + idx[1]), 1),
@@ -1694,7 +1695,7 @@ inline v_int16x32 v_pack(const v_int32x16& a, const v_int32x16& b)
 { return v_int16x32(_mm512_permutexvar_epi64(_v512_set_epi64(7, 5, 3, 1, 6, 4, 2, 0), _mm512_packs_epi32(a.val, b.val))); }
 
 inline v_uint16x32 v_pack(const v_uint32x16& a, const v_uint32x16& b)
-{ 
+{
     const __m512i m = _mm512_set1_epi32(65535);
     return v_uint16x32(_v512_combine(_mm512_cvtepi32_epi16(_mm512_min_epu16(a.val, m)), _mm512_cvtepi32_epi16(_mm512_min_epu16(b.val, m))));
 }
