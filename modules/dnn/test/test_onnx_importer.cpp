@@ -81,6 +81,13 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("convolution");
 }
 
+TEST_P(Test_ONNX_layers, Convolution3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("conv3d");
+    testONNXModels("conv3d_bias");
+}
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
@@ -136,6 +143,20 @@ TEST_P(Test_ONNX_layers, Concatenation)
 TEST_P(Test_ONNX_layers, AveragePooling)
 {
     testONNXModels("average_pooling");
+}
+
+TEST_P(Test_ONNX_layers, MaxPooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("max_pool3d");
+}
+
+TEST_P(Test_ONNX_layers, AvePooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("ave_pool3d");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalization)
