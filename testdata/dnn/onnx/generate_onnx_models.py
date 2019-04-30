@@ -263,3 +263,23 @@ input = Variable(torch.randn(1, 2, 3))
 model = Unsqueeze()
 model.eval()
 save_data_and_model("unsqueeze", input, model)
+
+input = Variable(torch.randn(1, 2, 4, 5))
+deconv_adjpad2d = nn.ConvTranspose2d(2, 3, (3, 2), stride=(1, 2), padding=(1, 2), output_padding=(0, 1))
+save_data_and_model("deconv_adjpad_2d", input, deconv_adjpad2d)
+
+input = Variable(torch.randn(1, 2, 3, 4, 5))
+conv3d = nn.Conv3d(2, 3, (2, 3, 2), stride=(1, 1, 1), padding=(0, 0, 0), groups=1, dilation=(1, 1, 1), bias=False)
+save_data_and_model("conv3d", input, conv3d)
+
+input = Variable(torch.randn(1, 2, 3, 4, 5))
+conv3d = nn.Conv3d(2, 3, (2, 3, 3), stride=(1, 2, 3), padding=(0, 1, 2), groups=1, dilation=(1, 2, 3), bias=True)
+save_data_and_model("conv3d_bias", input, conv3d)
+
+input = torch.randn(1, 2, 3, 4, 6)
+maxpool3d = nn.MaxPool3d((3, 2, 5), stride=(2, 1, 2), padding=(1, 0, 2))
+save_data_and_model("max_pool3d", input, maxpool3d)
+
+input = torch.randn(1, 2, 3, 5, 6)
+avepool3d = nn.AvgPool3d((3, 4, 3), stride=(1, 2, 3), padding=(1, 2, 0))
+save_data_and_model("ave_pool3d", input, avepool3d)
