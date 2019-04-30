@@ -46,6 +46,12 @@ private:
     std::shared_ptr<GOrigin> m_priv;
 };
 
+class GAPI_EXPORTS GMatP : public GMat
+{
+public:
+    using GMat::GMat;
+};
+
 namespace gapi { namespace own {
     class Mat;
 }}//gapi::own

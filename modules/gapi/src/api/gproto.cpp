@@ -25,6 +25,9 @@ const cv::GOrigin& cv::gimpl::proto::origin_of(const cv::GProtoArg &arg)
     case cv::GProtoArg::index_of<cv::GMat>():
         return util::get<cv::GMat>(arg).priv();
 
+    case cv::GProtoArg::index_of<cv::GMatP>():
+        return util::get<cv::GMatP>(arg).priv();
+
     case cv::GProtoArg::index_of<cv::GScalar>():
         return util::get<cv::GScalar>(arg).priv();
 
@@ -53,6 +56,7 @@ bool cv::gimpl::proto::is_dynamic(const cv::GArg& arg)
     switch (arg.kind)
     {
     case detail::ArgKind::GMAT:
+    case detail::ArgKind::GMATP:
     case detail::ArgKind::GSCALAR:
     case detail::ArgKind::GARRAY:
         return true;
@@ -78,6 +82,7 @@ cv::GProtoArg cv::gimpl::proto::rewrap(const cv::GArg &arg)
     switch (arg.kind)
     {
     case detail::ArgKind::GMAT:    return GProtoArg(arg.get<cv::GMat>());
+    case detail::ArgKind::GMATP:   return GProtoArg(arg.get<cv::GMatP>());
     case detail::ArgKind::GSCALAR: return GProtoArg(arg.get<cv::GScalar>());
     case detail::ArgKind::GARRAY:  return GProtoArg(arg.get<cv::detail::GArrayU>());
     default: util::throw_error(std::logic_error("Unsupported GArg type"));
