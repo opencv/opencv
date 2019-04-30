@@ -901,7 +901,7 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
         InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
         infRequestPtr->SetUserData(reqWrapper.get(), 0);
 
-        infRequestPtr->SetCompletionCallback({
+        infRequestPtr->SetCompletionCallback(
             [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
             {
                 InfEngineReqWrapper* wrapper;
@@ -927,7 +927,7 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
                 }
                 wrapper->isReady = true;
             }
-        });
+        );
     }
     if (isAsync)
     {
