@@ -740,6 +740,32 @@ inp = tf.placeholder(tf.float32, [1, 5, 4, 5, 2], 'input') # NDHWC format
 avepool3d = tf.layers.average_pooling3d(inputs=inp, pool_size=(3, 3, 2), strides=(2, 1, 1), padding='valid')
 save(inp, avepool3d, 'ave_pool3d')
 ################################################################################
+# issue https://github.com/opencv/opencv/issues/13494
+inp_node = 'input_image'
+out_node = 'SUBPIXEL/SUBPIXEL/subpixel_image/Identity'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('simple_subpixel.optimized.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 1, 1, 4], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'subpixel_in')
+    writeBlob(outputData, 'subpixel_out')
+
+    for node in graph_def.node:
+        if node.op == 'Placeholder':
+            node.attr["data_format"].s = "NHWC"
+
+    with tf.gfile.FastGFile('subpixel_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
+################################################################################
+
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
 #     graph_def = tf.GraphDef()
