@@ -131,6 +131,13 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("conv_pool_nchw");
 }
 
+TEST_P(Test_TensorFlow_layers, Convolution3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+            throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("conv3d");
+}
+
 TEST_P(Test_TensorFlow_layers, padding)
 {
     runTensorFlowNet("padding_valid");
@@ -210,6 +217,20 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
         throw SkipTestException("Test is disabled for MyriadX");
 #endif
     runTensorFlowNet("ave_pool_same");
+}
+
+TEST_P(Test_TensorFlow_layers, MaxPooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("max_pool3d");
+}
+
+TEST_P(Test_TensorFlow_layers, AvePooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("ave_pool3d");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
