@@ -2326,6 +2326,7 @@ struct Net::Impl
                 if (isAsync)
                     CV_Error(Error::StsNotImplemented, "Default implementation fallbacks in asynchronous mode");
 
+                CV_Assert(layer->supportBackend(DNN_BACKEND_OPENCV));
                 if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
                 {
                     std::vector<UMat> umat_inputBlobs = OpenCLBackendWrapper::getUMatVector(ld.inputBlobsWrappers);

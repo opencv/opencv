@@ -51,6 +51,7 @@ enum DataLayout
 {
     DATA_LAYOUT_NHWC,
     DATA_LAYOUT_NCHW,
+    DATA_LAYOUT_NDHWC,
     DATA_LAYOUT_UNKNOWN,
     DATA_LAYOUT_PLANAR  // 2-dimensional outputs (matmul, flatten, reshape to 2d)
 };
@@ -258,6 +259,8 @@ static int getDataLayout(const tensorflow::NodeDef& layer)
             return DATA_LAYOUT_NHWC;
         else if (format == "NCHW" || format == "channels_first")
             return DATA_LAYOUT_NCHW;
+        else if (format == "NDHWC")
+            return DATA_LAYOUT_NDHWC;
         else
             CV_Error(Error::StsParseError, "Unknown data_format value: " + format);
     }
@@ -281,21 +284,34 @@ void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
     if (hasLayerAttr(layer, "strides"))
     {
         const tensorflow::AttrValue& val = getLayerAttr(layer, "strides");
-        int dimX, dimY, dimC;
+        int dimX, dimY, dimC, dimD;
         int layout = getDataLayout(layer);
         if (layout == DATA_LAYOUT_NCHW)
         {
             dimC = 1; dimY = 2; dimX = 3;
         }
+        else if (layout == DATA_LAYOUT_NDHWC)
+        {
+            dimD = 1; dimY = 2; dimX = 3; dimC = 4;
+        }
         else
         {
             dimY = 1; dimX = 2; dimC = 3;
         }
-        if (val.list().i_size() != 4 ||
+        if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported strides");
-        layerParams.set("stride_h", static_cast<int>(val.list().i(dimY)));
-        layerParams.set("stride_w", static_cast<int>(val.list().i(dimX)));
+        if (layout == DATA_LAYOUT_NDHWC) {
+            int strides[] = {static_cast<int>(val.list().i(dimD)),
+                             static_cast<int>(val.list().i(dimY)),
+                             static_cast<int>(val.list().i(dimX))};
+            layerParams.set("stride",  DictValue::arrayInt(strides, 3));
+        }
+        else
+        {
+            layerParams.set("stride_h", static_cast<int>(val.list().i(dimY)));
+            layerParams.set("stride_w", static_cast<int>(val.list().i(dimX)));
+        }
     }
 }
 
@@ -318,21 +334,35 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
     if (hasLayerAttr(layer, "ksize"))
     {
         const tensorflow::AttrValue& val = getLayerAttr(layer, "ksize");
-        int dimX, dimY, dimC;
+        int dimX, dimY, dimC, dimD;
         int layout = getDataLayout(layer);
         if (layout == DATA_LAYOUT_NCHW)
         {
             dimC = 1; dimY = 2; dimX = 3;
         }
+        else if (layout == DATA_LAYOUT_NDHWC)
+        {
+            dimD = 1; dimY = 2; dimX = 3; dimC = 4;
+        }
         else
         {
             dimY = 1; dimX = 2; dimC = 3;
         }
-        if (val.list().i_size() != 4 ||
+        if (!(val.list().i_size() == 4 || val.list().i_size() == 5) ||
             val.list().i(0) != 1 || val.list().i(dimC) != 1)
             CV_Error(Error::StsError, "Unsupported ksize");
-        layerParams.set("kernel_h", static_cast<int>(val.list().i(dimY)));
-        layerParams.set("kernel_w", static_cast<int>(val.list().i(dimX)));
+
+        if (layout == DATA_LAYOUT_NDHWC) {
+            int kernel[] = {static_cast<int>(val.list().i(dimD)),
+                            static_cast<int>(val.list().i(dimY)),
+                            static_cast<int>(val.list().i(dimX))};
+            layerParams.set("kernel_size",  DictValue::arrayInt(kernel, 3));
+        }
+        else
+        {
+            layerParams.set("kernel_h", static_cast<int>(val.list().i(dimY)));
+            layerParams.set("kernel_w", static_cast<int>(val.list().i(dimX)));
+        }
     }
     else
     {
@@ -456,12 +486,26 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     // TODO: other blob types
     CV_Assert(tensor.dtype() == tensorflow::DT_FLOAT ||
               tensor.dtype() == tensorflow::DT_HALF);
-    CV_Assert(dims == 4);
+    CV_Assert(dims == 4 || dims == 5);
 
-    // REORDER kernel HWIO to OIHW
-    swap(shape[0], shape[2]); // IWHO
-    swap(shape[1], shape[3]); // IOHW
-    swap(shape[0], shape[1]); // OIHW
+    int out_c, input_c, depth, height, width;
+    if (dims == 4)
+    {
+        // REORDER kernel HWIO to OIHW
+        swap(shape[0], shape[2]); // IWHO
+        swap(shape[1], shape[3]); // IOHW
+        swap(shape[0], shape[1]); // OIHW
+        depth = 1; height = shape[2]; width = shape[3];
+    }
+    else
+    {
+        // REORDER kernel DHWIO to OIDHW
+        swap(shape[0], shape[4]); // OHWID
+        swap(shape[1], shape[3]); // OIWHD
+        swap(shape[2], shape[4]); // OIDHW
+        depth = shape[2]; height = shape[3]; width = shape[4];
+    }
+    out_c = shape[0]; input_c = shape[1];
 
     dstBlob.create(shape, CV_32F);
 
@@ -472,17 +516,20 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     float *dstData = dstBlob.ptr<float>();
     const float *data = reinterpret_cast<const float*>(tensorContent.data);
 
-    int out_c = shape[0], input_c = shape[1], height = shape[2], width = shape[3];
-    int total = out_c*input_c*height*width;
-    for(int i_oc = 0; i_oc < out_c; i_oc++) {
-        for(int i_ic = 0; i_ic < input_c; i_ic++) {
-            for(int i_h = 0; i_h < height; i_h++) {
-                for(int i_w = 0; i_w < width; i_w++) {
-                    int dst_i = input_c*height*width*i_oc + height*width*i_ic + width*i_h + i_w;
-                    int src_i = out_c*input_c*width*i_h + out_c*input_c*i_w + out_c*i_ic + i_oc;
-                    CV_Assert(dst_i < total);
-                    CV_Assert(src_i < total);
-                   dstData[dst_i] = data[src_i];
+    int total = out_c * input_c * depth * height * width;
+    for (int i_oc = 0; i_oc < out_c; i_oc++) {
+        for (int i_ic = 0; i_ic < input_c; i_ic++) {
+            for (int i_d = 0; i_d < depth; i_d++) {
+                for (int i_h = 0; i_h < height; i_h++) {
+                    for (int i_w = 0; i_w < width; i_w++) {
+                        int dst_i = input_c * depth * height * width * i_oc +
+                                    depth * height * width * i_ic + height * width * i_d + width * i_h + i_w;
+                        int src_i = out_c * input_c * width * height * i_d +
+                                    out_c * input_c * width * i_h + out_c * input_c * i_w + out_c * i_ic + i_oc;
+                        CV_Assert(dst_i < total);
+                        CV_Assert(src_i < total);
+                       dstData[dst_i] = data[src_i];
+                   }
                 }
             }
         }
@@ -745,7 +792,7 @@ void TFImporter::populateNet(Net dstNet)
         int predictedLayout = predictOutputDataLayout(net, layer, data_layouts);
         data_layouts[name] = predictedLayout;
 
-        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad")
+        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "Conv3D")
         {
             // The first node of dilated convolution subgraph.
             // Extract input node, dilation rate and paddings.
@@ -917,9 +964,9 @@ void TFImporter::populateNet(Net dstNet)
             {
                 layerParams.blobs[0] = sharedWeightsIt->second;
             }
+            Mat weights = layerParams.blobs[0];
+            layerParams.set("kernel_size",  DictValue::arrayInt(&weights.size[2], weights.dims - 2));
 
-            layerParams.set("kernel_h", layerParams.blobs[0].size[2]);
-            layerParams.set("kernel_w", layerParams.blobs[0].size[3]);
             layerParams.set("num_output", layerParams.blobs[0].size[0]);
 
             setStrides(layerParams, layer);
@@ -1079,25 +1126,28 @@ void TFImporter::populateNet(Net dstNet)
             {
                 Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
 
-                if (newShape.total() != 4 && inpLayout == DATA_LAYOUT_NHWC)
+                if (inpLayout == DATA_LAYOUT_NHWC)
                 {
-                    LayerParams permLP;
-                    int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                    permLP.set("order", DictValue::arrayInt<int*>(order, 4));
+                    if (newShape.total() == 4)
+                    {
+                        // NHWC->NCHW
+                        std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
+                        std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                    }
+                    if (newShape.total() != 4 || newShape.at<int>(1) == 1)
+                    {
+                        LayerParams permLP;
+                        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                        permLP.set("order", DictValue::arrayInt<int*>(order, 4));
 
-                    std::string permName = name + "/nchw";
-                    CV_Assert(layer_id.find(permName) == layer_id.end());
-                    int permId = dstNet.addLayer(permName, "Permute", permLP);
-                    layer_id[permName] = permId;
-                    connect(layer_id, dstNet, inpId, permId, 0);
-                    inpId = Pin(permName);
-                    inpLayout = DATA_LAYOUT_NCHW;
-                }
-                else if (newShape.total() == 4 && inpLayout == DATA_LAYOUT_NHWC)
-                {
-                    // NHWC->NCHW
-                    std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
-                    std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                        std::string permName = name + "/nchw";
+                        CV_Assert(layer_id.find(permName) == layer_id.end());
+                        int permId = dstNet.addLayer(permName, "Permute", permLP);
+                        layer_id[permName] = permId;
+                        connect(layer_id, dstNet, inpId, permId, 0);
+                        inpId = Pin(permName);
+                        inpLayout = DATA_LAYOUT_NCHW;
+                    }
                 }
                 layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
 
@@ -1290,7 +1340,7 @@ void TFImporter::populateNet(Net dstNet)
                 connect(layer_id, dstNet, inp, id, ii - from);
             }
         }
-        else if (type == "MaxPool")
+        else if (type == "MaxPool" || type == "MaxPool3D")
         {
             layerParams.set("pool", "max");
 
@@ -1303,11 +1353,10 @@ void TFImporter::populateNet(Net dstNet)
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
-        else if (type == "AvgPool")
+        else if (type == "AvgPool" || type == "AvgPool3D")
         {
             layerParams.set("pool", "ave");
             layerParams.set("ave_pool_padded_area", false);
-
             setKSize(layerParams, layer);
             setStrides(layerParams, layer);
             setPadding(layerParams, layer);
@@ -1335,7 +1384,9 @@ void TFImporter::populateNet(Net dstNet)
             // num_split
             // 1st blob is dims tensor
             int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
-            layerParams.set("axis", toNCHW(axis));
+            if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
+                axis = toNCHW(axis);
+            layerParams.set("axis", axis);
 
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;

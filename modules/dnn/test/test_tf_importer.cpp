@@ -131,6 +131,13 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("conv_pool_nchw");
 }
 
+TEST_P(Test_TensorFlow_layers, Convolution3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+            throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("conv3d");
+}
+
 TEST_P(Test_TensorFlow_layers, padding)
 {
     runTensorFlowNet("padding_valid");
@@ -210,6 +217,20 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
         throw SkipTestException("Test is disabled for MyriadX");
 #endif
     runTensorFlowNet("ave_pool_same");
+}
+
+TEST_P(Test_TensorFlow_layers, MaxPooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("max_pool3d");
+}
+
+TEST_P(Test_TensorFlow_layers, AvePooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("ave_pool3d");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
@@ -335,6 +356,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0043 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.037 : default_lInf;
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
@@ -372,6 +394,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0097 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
@@ -402,6 +425,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1.5e-5;
     float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 1e-3;
     normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
@@ -460,6 +484,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.048 : 1.1e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.058 : default_lInf;
     normAssertDetections(ref, out, "", 0.45, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
@@ -489,6 +514,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 3.4e-3;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.024 : 1e-2;
     normAssertDetections(ref, out, "", 0.9, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 // inp = cv.imread('opencv_extra/testdata/cv/ximgproc/sources/08.png')
@@ -553,6 +579,7 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     }
     normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
     normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
+    expectNoFallbacksFromIE(net);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, dnnBackendsAndTargets());
@@ -652,6 +679,13 @@ TEST_P(Test_TensorFlow_layers, relu6)
 {
     runTensorFlowNet("keras_relu6");
     runTensorFlowNet("keras_relu6", /*hasText*/ true);
+}
+
+TEST_P(Test_TensorFlow_layers, subpixel)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    runTensorFlowNet("subpixel");
 }
 
 TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)

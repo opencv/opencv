@@ -1128,12 +1128,16 @@ inline v_float32x8 v_reduce_sum4(const v_float32x8& a, const v_float32x8& b,
 
 inline unsigned v_reduce_sad(const v_uint8x32& a, const v_uint8x32& b)
 {
-    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(a.val, b.val));
+    __m256i half = _mm256_sad_epu8(a.val, b.val);
+    __m128i quarter = _mm_add_epi32(_v256_extract_low(half), _v256_extract_high(half));
+    return (unsigned)_mm_cvtsi128_si32(_mm_add_epi32(quarter, _mm_unpackhi_epi64(quarter, quarter)));
 }
 inline unsigned v_reduce_sad(const v_int8x32& a, const v_int8x32& b)
 {
     __m256i half = _mm256_set1_epi8(0x7f);
-    return (unsigned)_v_cvtsi256_si32(_mm256_sad_epu8(_mm256_add_epi8(a.val, half), _mm256_add_epi8(b.val, half)));
+    half = _mm256_sad_epu8(_mm256_add_epi8(a.val, half), _mm256_add_epi8(b.val, half));
+    __m128i quarter = _mm_add_epi32(_v256_extract_low(half), _v256_extract_high(half));
+    return (unsigned)_mm_cvtsi128_si32(_mm_add_epi32(quarter, _mm_unpackhi_epi64(quarter, quarter)));
 }
 inline unsigned v_reduce_sad(const v_uint16x16& a, const v_uint16x16& b)
 {

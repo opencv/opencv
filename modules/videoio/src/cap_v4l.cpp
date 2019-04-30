@@ -251,6 +251,13 @@ make & enjoy!
 #define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH (V4L2_CID_MPEG_BASE+365)
 #endif
 
+#ifndef V4L2_CID_ROTATE
+#define V4L2_CID_ROTATE (V4L2_CID_BASE+34)
+#endif
+#ifndef V4L2_CID_IRIS_ABSOLUTE
+#define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
+#endif
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480

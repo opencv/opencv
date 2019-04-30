@@ -25,7 +25,7 @@ using namespace cvtest;
 using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
-unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
+unsigned int TestBase::iterationsLimitDefault = UINT_MAX;
 int64 TestBase::_timeadjustment = 0;
 
 // Item [0] will be considered the default implementation.
@@ -1158,7 +1158,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
-    iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;
+    iterationsLimitDefault = param_force_samples == 0 ? UINT_MAX : param_force_samples;
     _timeadjustment = _calibrate();
 }
 
@@ -1197,9 +1197,13 @@ enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 int64 TestBase::_calibrate()
 {
     CV_TRACE_FUNCTION();
+    if (iterationsLimitDefault <= 1)
+        return 0;
+
     class _helper : public ::perf::TestBase
     {
-        public:
+    public:
+        _helper() { testStrategy = PERF_STRATEGY_BASE; }
         performance_metrics& getMetrics() { return calcMetrics(); }
         virtual void TestBody() {}
         virtual void PerfTestBody()
@@ -1210,13 +1214,17 @@ int64 TestBase::_calibrate()
             cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
             declare.time(30);
             double s = 0;
-            for(declare.iterations(20); next() && startTimer(); stopTimer())
+            declare.iterations(20);
+            minIters = nIters = 20;
+            for(; next() && startTimer(); stopTimer())
                 s+=a.dot(b);
             declare.time(s);
 
             //self calibration
             SetUp();
-            for(declare.iterations(1000); next() && startTimer(); stopTimer()){}
+            declare.iterations(1000);
+            minIters = nIters = 1000;
+            for(int iters = 0; next() && startTimer(); iters++, stopTimer()) { /*std::cout << iters << nIters << std::endl;*/ }
         }
     };
 

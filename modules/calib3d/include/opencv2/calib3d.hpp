@@ -952,7 +952,7 @@ can be used as well.
 CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
 
 //! finds subpixel-accurate positions of the chessboard corners
-CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
+CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
 
 /** @brief Renders the detected chessboard corners.
 

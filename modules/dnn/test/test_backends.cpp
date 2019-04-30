@@ -45,7 +45,7 @@ public:
         netDefault.setInput(inp);
         Mat outDefault = netDefault.forward(outputLayer).clone();
 
-        Net net = readNet(weights, proto);
+        net = readNet(weights, proto);
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -94,6 +94,8 @@ public:
         else
             normAssert(ref, out, msg, l1, lInf);
     }
+
+    Net net;
 };
 
 TEST_P(DNNTestNetwork, AlexNet)
@@ -103,6 +105,7 @@ TEST_P(DNNTestNetwork, AlexNet)
                Size(227, 227), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_alexnet.yml" :
                                              "dnn/halide_scheduler_alexnet.yml");
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, ResNet_50)
@@ -112,6 +115,7 @@ TEST_P(DNNTestNetwork, ResNet_50)
                Size(224, 224), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_resnet_50.yml" :
                                              "dnn/halide_scheduler_resnet_50.yml");
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
@@ -120,6 +124,7 @@ TEST_P(DNNTestNetwork, SqueezeNet_v1_1)
                Size(227, 227), "prob",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_squeezenet_v1_1.yml" :
                                              "dnn/halide_scheduler_squeezenet_v1_1.yml");
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, GoogLeNet)
@@ -127,6 +132,7 @@ TEST_P(DNNTestNetwork, GoogLeNet)
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
     processNet("dnn/bvlc_googlenet.caffemodel", "dnn/bvlc_googlenet.prototxt",
                Size(224, 224), "prob");
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, Inception_5h)
@@ -142,6 +148,7 @@ TEST_P(DNNTestNetwork, Inception_5h)
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_inception_5h.yml" :
                                              "dnn/halide_scheduler_inception_5h.yml",
                l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, ENet)
@@ -168,6 +175,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.252  : 0.0;
          processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                     inp, "detection_out", "", diffScores, diffSquares, detectionConfThresh);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
@@ -185,7 +193,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
     float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09  : 0.0;
     processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                 inp, "detection_out", "", diffScores, diffSquares);
-
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
@@ -200,6 +208,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.216 : 0.2;
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf, detectionConfThresh);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
@@ -217,6 +226,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
     processNet("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", "dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
@@ -230,6 +240,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
     processNet("dnn/ssd_mobilenet_v2_coco_2018_03_29.pb", "dnn/ssd_mobilenet_v2_coco_2018_03_29.pbtxt",
                inp, "detection_out", "", l1, lInf, 0.25);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, SSD_VGG16)
@@ -244,6 +255,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
                "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreThreshold, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_coco)
@@ -262,6 +274,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.072 : 0.0;
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
                Size(46, 46), "", "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
@@ -280,6 +293,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.16 : 0.0;
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
                Size(46, 46), "", "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
@@ -296,6 +310,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi_faster_4_stages.prototxt",
                Size(46, 46));
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, OpenFace)
@@ -324,6 +339,7 @@ TEST_P(DNNTestNetwork, opencv_face_detector)
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
     processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
                inp, "detection_out");
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
@@ -342,6 +358,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0731 : 0.0;
     processNet("dnn/ssd_inception_v2_coco_2017_11_17.pb", "dnn/ssd_inception_v2_coco_2017_11_17.pbtxt",
                inp, "detection_out", "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, DenseNet_121)
@@ -360,6 +377,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
         l1 = 0.1; lInf = 0.6;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
