@@ -248,7 +248,7 @@ TEST_P(Test_ONNX_layers, Reshape)
 TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");
-    testONNXModels("log_softmax");
+    testONNXModels("log_softmax", npy, 0, 0, false, false);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

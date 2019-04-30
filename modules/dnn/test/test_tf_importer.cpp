@@ -663,6 +663,7 @@ TEST_P(Test_TensorFlow_layers, slice)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     runTensorFlowNet("slice_4d");
+    runTensorFlowNet("strided_slice");
 }
 
 TEST_P(Test_TensorFlow_layers, softmax)
