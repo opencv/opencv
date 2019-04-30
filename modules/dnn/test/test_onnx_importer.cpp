@@ -28,7 +28,8 @@ public:
     };
 
     void testONNXModels(const String& basename, const Extension ext = npy,
-                        const double l1 = 0, const float lInf = 0, const bool useSoftmax = false)
+                        const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
+                        bool checkNoFallbacks = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx");
         Mat inp, ref;
@@ -67,6 +68,8 @@ public:
             ref = netSoftmax.forward();
         }
         normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        if (checkNoFallbacks)
+            expectNoFallbacksFromIE(net);
     }
 };
 
@@ -81,6 +84,13 @@ TEST_P(Test_ONNX_layers, Convolution)
     testONNXModels("convolution");
 }
 
+TEST_P(Test_ONNX_layers, Convolution3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("conv3d");
+    testONNXModels("conv3d_bias");
+}
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
@@ -96,10 +106,11 @@ TEST_P(Test_ONNX_layers, Two_convolution)
 
 TEST_P(Test_ONNX_layers, Deconvolution)
 {
-    testONNXModels("deconvolution");
-    testONNXModels("two_deconvolution");
-    testONNXModels("deconvolution_group");
-    testONNXModels("deconvolution_output_shape");
+    testONNXModels("deconvolution", npy, 0, 0, false, false);
+    testONNXModels("two_deconvolution", npy, 0, 0, false, false);
+    testONNXModels("deconvolution_group", npy, 0, 0, false, false);
+    testONNXModels("deconvolution_output_shape", npy, 0, 0, false, false);
+    testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Dropout)
@@ -135,6 +146,20 @@ TEST_P(Test_ONNX_layers, Concatenation)
 TEST_P(Test_ONNX_layers, AveragePooling)
 {
     testONNXModels("average_pooling");
+}
+
+TEST_P(Test_ONNX_layers, MaxPooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("max_pool3d");
+}
+
+TEST_P(Test_ONNX_layers, AvePooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("ave_pool3d");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalization)
@@ -198,6 +223,7 @@ TEST_P(Test_ONNX_layers, MultyInputs)
     Mat out = net.forward();
 
     normAssert(ref, out, "", default_l1,  default_lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
@@ -235,6 +261,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
     Mat out = net.forward();
 
     normAssert(out, ref, "", default_l1,  default_lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
@@ -267,6 +294,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
     Mat out = net.forward();
 
     normAssert(ref, out, "", default_l1,  default_lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_ONNX_nets, CaffeNet)

@@ -111,6 +111,31 @@ public:
         }
     }
 
+    void expectNoFallbacks(Net& net)
+    {
+        // Check if all the layers are supported with current backend and target.
+        // Some layers might be fused so their timings equal to zero.
+        std::vector<double> timings;
+        net.getPerfProfile(timings);
+        std::vector<String> names = net.getLayerNames();
+        CV_Assert(names.size() == timings.size());
+
+        for (int i = 0; i < names.size(); ++i)
+        {
+            Ptr<dnn::Layer> l = net.getLayer(net.getLayerId(names[i]));
+            bool fused = !timings[i];
+            if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
+                CV_Error(Error::StsNotImplemented, "Layer [" + l->name + "] of type [" +
+                         l->type + "] is expected to has backend implementation");
+        }
+    }
+
+    void expectNoFallbacksFromIE(Net& net)
+    {
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+            expectNoFallbacks(net);
+    }
+
 protected:
     void checkBackend(Mat* inp = 0, Mat* ref = 0)
     {

@@ -40,6 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include "opencv2/core/core_c.h"
 
 #include <ctype.h>
@@ -741,7 +743,7 @@ void checkIppStatus()
     }
 }
 
-static bool checkTestData = false;
+static bool checkTestData = cv::utils::getConfigurationParameterBool("OPENCV_TEST_REQUIRE_DATA", false);
 bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
@@ -788,7 +790,10 @@ void testTearDown()
     {
         size_t peak = malloc_peak();
         memory_usage = peak - memory_usage_base;
-        CV_LOG_INFO(NULL, "Memory_usage (malloc): " << memory_usage << " (base=" << memory_usage_base << ")");
+        if (peak > 0)
+        {
+            CV_LOG_INFO(NULL, "Memory_usage (malloc): " << memory_usage << " (base=" << memory_usage_base << ")");
+        }
     }
     {
         // core/src/alloc.cpp: #define OPENCV_ALLOC_ENABLE_STATISTICS
@@ -797,7 +802,10 @@ void testTearDown()
         cv::utils::AllocatorStatisticsInterface& ocv_stats = cv::getAllocatorStatistics();
         ocv_peak = ocv_stats.getPeakUsage();
         ocv_memory_usage = ocv_peak - memory_usage_base_opencv;
-        CV_LOG_INFO(NULL, "Memory_usage (OpenCV): " << ocv_memory_usage << " (base=" << memory_usage_base_opencv << "  current=" << ocv_stats.getCurrentUsage() << ")");
+        if (ocv_peak)
+        {
+            CV_LOG_INFO(NULL, "Memory_usage (OpenCV): " << ocv_memory_usage << " (base=" << memory_usage_base_opencv << "  current=" << ocv_stats.getCurrentUsage() << ")");
+        }
         if (memory_usage == 0)  // external profiler has higher priority (and accuracy)
             memory_usage = ocv_memory_usage;
     }
@@ -807,7 +815,10 @@ void testTearDown()
         cv::utils::AllocatorStatisticsInterface& ocl_stats = cv::ocl::getOpenCLAllocatorStatistics();
         ocl_peak = ocl_stats.getPeakUsage();
         ocl_memory_usage = ocl_peak - memory_usage_base_opencl;
-        CV_LOG_INFO(NULL, "Memory_usage (OpenCL): " << ocl_memory_usage << " (base=" << memory_usage_base_opencl << "  current=" << ocl_stats.getCurrentUsage() << ")");
+        if (ocl_memory_usage > 0)
+        {
+            CV_LOG_INFO(NULL, "Memory_usage (OpenCL): " << ocl_memory_usage << " (base=" << memory_usage_base_opencl << "  current=" << ocl_stats.getCurrentUsage() << ")");
+        }
         ::testing::Test::RecordProperty("ocl_memory_usage",
                 cv::format("%llu", (unsigned long long)ocl_memory_usage));
     }
@@ -828,16 +839,16 @@ void testTearDown()
 
 void parseCustomOptions(int argc, char **argv)
 {
-    const char * const command_line_keys =
+    const string command_line_keys = string(
         "{ ipp test_ipp_check |false    |check whether IPP works without failures }"
         "{ test_seed          |809564   |seed for random numbers generator }"
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
-        "{ test_require_data  |false    |fail on missing non-required test data instead of skip}"
+        "{ test_require_data  |") + (checkTestData ? "true" : "false") + string("|fail on missing non-required test data instead of skip (env:OPENCV_TEST_REQUIRE_DATA)}"
         CV_TEST_TAGS_PARAMS
         "{ h   help           |false    |print help info                          }"
-    ;
+    );
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
     if (parser.get<bool>("help"))
@@ -860,7 +871,8 @@ void parseCustomOptions(int argc, char **argv)
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
-    checkTestData = parser.get<bool>("test_require_data");
+    if (parser.has("test_require_data"))
+        checkTestData = parser.get<bool>("test_require_data");
 
     activateTestTags(parser);
 }

@@ -92,7 +92,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return bias == 1;
+            return bias == (int)bias;
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));

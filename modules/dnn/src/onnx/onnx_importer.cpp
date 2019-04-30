@@ -184,6 +184,12 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
   return layers_weights;
 }
 
+static DictValue parse(const ::google::protobuf::RepeatedField< ::google::protobuf::int64>& src) {
+    std::vector<int32_t> dst(src.size());
+    convertInt64ToInt32(src, dst, src.size());
+    return DictValue::arrayInt(&dst[0], src.size());
+}
+
 LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_proto)
 {
     LayerParams lp;
@@ -194,15 +200,13 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
 
         if(attribute_name == "kernel_shape")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("kernel_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("kernel_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            lp.set("kernel_size", parse(attribute_proto.ints()));
         }
         else if(attribute_name == "strides")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("stride_h", saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("stride_w", saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            lp.set("stride", parse(attribute_proto.ints()));
         }
         else if(attribute_name == "pads")
         {
@@ -225,11 +229,8 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             else
             {
                 // Convolution or pooling.
-                CV_Assert(attribute_proto.ints_size() == 4);
-                lp.set("pad_t", saturate_cast<int32_t>(attribute_proto.ints(0)));
-                lp.set("pad_l", saturate_cast<int32_t>(attribute_proto.ints(1)));
-                lp.set("pad_b", saturate_cast<int32_t>(attribute_proto.ints(2)));
-                lp.set("pad_r", saturate_cast<int32_t>(attribute_proto.ints(3)));
+                CV_Assert(attribute_proto.ints_size() == 4 || attribute_proto.ints_size() == 6);
+                lp.set("pad", parse(attribute_proto.ints()));
             }
         }
         else if(attribute_name == "auto_pad")
@@ -243,9 +244,8 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if(attribute_name == "dilations")
         {
-            CV_Assert(attribute_proto.ints_size() == 2);
-            lp.set("dilation_h",  saturate_cast<int32_t>(attribute_proto.ints(0)));
-            lp.set("dilation_w",  saturate_cast<int32_t>(attribute_proto.ints(1)));
+            CV_Assert(attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+            lp.set("dilation", parse(attribute_proto.ints()));
         }
         else if (attribute_proto.has_i())
         {
@@ -270,10 +270,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         else if (attribute_proto.ints_size() > 0)
         {
-            const ::google::protobuf::RepeatedField< ::google::protobuf::int64> src = attribute_proto.ints();
-            std::vector<int32_t> dst(attribute_proto.ints_size());
-            convertInt64ToInt32(src, dst, attribute_proto.ints_size());
-            lp.set(attribute_proto.name(), DictValue::arrayInt(&dst[0], attribute_proto.ints_size()));
+            lp.set(attribute_proto.name(), parse(attribute_proto.ints()));
         }
         else if (attribute_proto.has_t())
         {
@@ -303,19 +300,6 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
              "Blob " + node_proto.input(index) + " not found in const blobs");
     }
     return constBlob->second;
-}
-
-
-bool ONNXImporter::isCeilMode(const LayerParams& layerParams) {
-    if (!layerParams.has("pad_mode")) {
-        if (layerParams.has("pad_h")) {
-            return layerParams.get<int>("pad_h") != layerParams.get<int>("pad_b") ||
-                        layerParams.get<int>("pad_w") != layerParams.get<int>("pad_r");
-        }
-        else
-            return false; // all pads == 0
-    }
-    return true;
 }
 
 void ONNXImporter::populateNet(Net dstNet)
@@ -384,13 +368,13 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "MAX");
-            layerParams.set("ceil_mode", isCeilMode(layerParams));
+            layerParams.set("ceil_mode", layerParams.has("pad_mode"));
         }
         else if (layer_type == "AveragePool")
         {
             layerParams.type = "Pooling";
             layerParams.set("pool", "AVE");
-            layerParams.set("ceil_mode", isCeilMode(layerParams));
+            layerParams.set("ceil_mode", layerParams.has("pad_mode"));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
         else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool")
@@ -600,8 +584,9 @@ void ONNXImporter::populateNet(Net dstNet)
                 if (outShape.size() != 4)
                     CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
 
-                const int strideY = layerParams.get<int>("stride_h", 1);
-                const int strideX = layerParams.get<int>("stride_w", 1);
+                DictValue stride = layerParams.get("stride");
+                const int strideY = stride.getIntValue(0);
+                const int strideX = stride.getIntValue(1);
                 const int outH = outShape.getIntValue(2);
                 const int outW = outShape.getIntValue(3);
 
@@ -612,16 +597,22 @@ void ONNXImporter::populateNet(Net dstNet)
                 }
                 else if (layerParams.get<String>("pad_mode") == "VALID")
                 {
-                    if (!layerParams.has("kernel_h") || !layerParams.has("kernel_w"))
+                    if (!layerParams.has("kernel_size"))
                         CV_Error(Error::StsNotImplemented,
-                                 "Required attributes 'kernel_h' and 'kernel_w' are not present.");
+                                 "Required attribute 'kernel_size' is not present.");
 
-                    int kernelH = layerParams.get<int>("kernel_h");
-                    int kernelW = layerParams.get<int>("kernel_w");
-
-                    layerParams.set("adj_w", (outW - kernelW) % strideX);
-                    layerParams.set("adj_h", (outH - kernelH) % strideY);
+                    DictValue kernel = layerParams.get("kernel_size");
+                    layerParams.set("adj_h", (outH - kernel.getIntValue(0)) % strideY);
+                    layerParams.set("adj_w", (outW - kernel.getIntValue(1)) % strideX);
                 }
+            }
+            else if (layerParams.has("output_padding"))
+            {
+                const DictValue& adj_pad = layerParams.get("output_padding");
+                if (adj_pad.size() != 2)
+                    CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
+                layerParams.set("adj_w", adj_pad.get<int>(1));
+                layerParams.set("adj_h", adj_pad.get<int>(0));
             }
         }
         else if (layer_type == "Transpose")
