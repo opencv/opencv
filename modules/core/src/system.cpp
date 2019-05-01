@@ -757,8 +757,12 @@ int64 getTickCount(void)
 #elif defined __MACH__ && defined __APPLE__
     return (int64)mach_absolute_time();
 #else
-    struct timeval tv;
+#if defined __QNX__
+    int tz;
+#else
     struct timezone tz;
+#endif
+    struct timeval tv;
     gettimeofday( &tv, &tz );
     return (int64)tv.tv_sec*1000000 + tv.tv_usec;
 #endif
