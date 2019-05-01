@@ -69,8 +69,9 @@ def printParams(backend, target):
 
 class dnn_test(NewOpenCVTests):
 
-    def __init__(self, *args, **kwargs):
-        super(dnn_test, self).__init__(*args, **kwargs)
+    def setUp(self):
+        super(dnn_test, self).setUp()
+
         self.dnnBackendsAndTargets = [
             [cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_CPU],
         ]
@@ -168,7 +169,7 @@ class dnn_test(NewOpenCVTests):
             normAssertDetections(self, ref, out, 0.5, scoresDiff, iouDiff)
 
     def test_async(self):
-        timeout = 5000  # in milliseconds
+        timeout = 500*10**6  # in nanoseconds (500ms)
         testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt', required=testdata_required)
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel', required=testdata_required)
@@ -209,11 +210,9 @@ class dnn_test(NewOpenCVTests):
                 outs.insert(0, netAsync.forwardAsync())
 
             for i in reversed(range(numInputs)):
-                ret = outs[i].wait_for(timeout)
-                if ret == 1:
-                    self.fail("Timeout")
-                self.assertEqual(ret, 0)  # is ready
-                normAssert(self, refs[i], outs[i].get(), 'Index: %d' % i, 1e-10)
+                ret, result = outs[i].get(timeoutNs=float(timeout))
+                self.assertTrue(ret)
+                normAssert(self, refs[i], result, 'Index: %d' % i, 1e-10)
 
 
 if __name__ == '__main__':
