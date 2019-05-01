@@ -849,7 +849,7 @@ void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Pt
     outsNames.resize(outs.size());
     for (int i = 0; i < outs.size(); ++i)
     {
-        outs[i]->futureMat = outProms[i].get_future();
+        outs[i]->futureMat = outProms[i].getArrayResult();
         outsNames[i] = outs[i]->dataPtr->name;
     }
 }
@@ -906,20 +906,38 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
             {
                 InfEngineReqWrapper* wrapper;
                 request->GetUserData((void**)&wrapper, 0);
-                CV_Assert(wrapper);
+                CV_Assert(wrapper && "Internal error");
 
-                for (int i = 0; i < wrapper->outProms.size(); ++i)
+                size_t processedOutputs = 0;
+                try
                 {
-                    const std::string& name = wrapper->outsNames[i];
-                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
+                    for (; processedOutputs < wrapper->outProms.size(); ++processedOutputs)
+                    {
+                        const std::string& name = wrapper->outsNames[processedOutputs];
+                        Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
 
-                    if (status == InferenceEngine::StatusCode::OK)
-                        wrapper->outProms[i].set_value(m.clone());
-                    else
+                        try
+                        {
+                            CV_Assert(status == InferenceEngine::StatusCode::OK);
+                            wrapper->outProms[processedOutputs].setValue(m.clone());
+                        }
+                        catch (...)
+                        {
+                            try {
+                                wrapper->outProms[processedOutputs].setException(std::current_exception());
+                            } catch(...) {
+                                CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                            }
+                        }
+                    }
+                }
+                catch (...)
+                {
+                    std::exception_ptr e = std::current_exception();
+                    for (; processedOutputs < wrapper->outProms.size(); ++processedOutputs)
                     {
                         try {
-                            std::runtime_error e("Async request failed");
-                            wrapper->outProms[i].set_exception(std::make_exception_ptr(e));
+                            wrapper->outProms[processedOutputs].setException(e);
                         } catch(...) {
                             CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
                         }
