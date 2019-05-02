@@ -1,7 +1,14 @@
 import numpy as np
 import cv2 as cv
+import argparse
 
-cap = cv.VideoCapture("slow_traffic_small.mp4")
+parser = argparse.ArgumentParser(description='This sample demonstrates the meanshift algorithm. \
+                                              The example file can be downloaded from: \
+                                              https://www.bogotobogo.com/python/OpenCV_Python/images/mean_shift_tracking/slow_traffic_small.mp4')
+parser.add_argument('image', type=str, help='path to image file')
+args = parser.parse_args()
+
+cap = cv.VideoCapture(args.image)
 
 # take first frame of the video
 ret,frame = cap.read()

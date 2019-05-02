@@ -8,9 +8,30 @@
 using namespace cv;
 using namespace std;
 
-int main() {
-    VideoCapture capture("slow_traffic_small.mp4");
+int main(int argc, char **argv)
+{
+    const string about =
+        "This sample demonstrates the camshift algorithm.\n"
+        "The example file can be downloaded from:\n"
+        "  https://www.bogotobogo.com/python/OpenCV_Python/images/mean_shift_tracking/slow_traffic_small.mp4";
+    const string keys =
+        "{ h help |      | print this help message }"
+        "{ @image |<none>| path to image file }";
+    CommandLineParser parser(argc, argv, keys);
+    parser.about(about);
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+    string filename = parser.get<string>("@image");
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return 0;
+    }
 
+    VideoCapture capture(filename);
     if (!capture.isOpened()){
         //error in opening the video input
         cerr << "Unable to open file!" << endl;
