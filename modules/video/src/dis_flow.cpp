@@ -48,8 +48,7 @@ using namespace std;
 #define EPS 0.001F
 #define INF 1E+10F
 
-namespace cv
-{
+namespace cv {
 
 class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
 {
@@ -216,6 +215,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
 
 DISOpticalFlowImpl::DISOpticalFlowImpl()
 {
+    CV_INSTRUMENT_REGION();
+
     finest_scale = 2;
     patch_size = 8;
     patch_stride = 4;
@@ -239,6 +240,8 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
 
 void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_flow)
 {
+    CV_INSTRUMENT_REGION();
+
     I0s.resize(coarsest_scale + 1);
     I1s.resize(coarsest_scale + 1);
     I1s_ext.resize(coarsest_scale + 1);
@@ -332,6 +335,8 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
 void DISOpticalFlowImpl::precomputeStructureTensor(Mat &dst_I0xx, Mat &dst_I0yy, Mat &dst_I0xy, Mat &dst_I0x,
                                                    Mat &dst_I0y, Mat &I0x, Mat &I0y)
 {
+    CV_INSTRUMENT_REGION();
+
     float *I0xx_ptr = dst_I0xx.ptr<float>();
     float *I0yy_ptr = dst_I0yy.ptr<float>();
     float *I0xy_ptr = dst_I0xy.ptr<float>();
@@ -596,8 +601,8 @@ inline float processPatch(float &dst_dUx, float &dst_dUy, uchar *I0_ptr, uchar *
         SSD = v_reduce_sum(SSD_vec);
     }
     else
-    {
 #endif
+    {
         dst_dUx = 0.0f;
         dst_dUy = 0.0f;
         float diff;
@@ -612,9 +617,7 @@ inline float processPatch(float &dst_dUx, float &dst_dUy, uchar *I0_ptr, uchar *
                 dst_dUx += diff * I0x_ptr[i * I0_stride + j];
                 dst_dUy += diff * I0y_ptr[i * I0_stride + j];
             }
-#if CV_SIMD128
     }
-#endif
     return SSD;
 }
 
@@ -668,8 +671,8 @@ inline float processPatchMeanNorm(float &dst_dUx, float &dst_dUy, uchar *I0_ptr,
         sum_diff_sq = v_reduce_sum(sum_diff_sq_vec);
     }
     else
-    {
 #endif
+    {
         float diff;
         for (int i = 0; i < patch_sz; i++)
             for (int j = 0; j < patch_sz; j++)
@@ -684,9 +687,7 @@ inline float processPatchMeanNorm(float &dst_dUx, float &dst_dUy, uchar *I0_ptr,
                 sum_I0x_mul += diff * I0x_ptr[i * I0_stride + j];
                 sum_I0y_mul += diff * I0y_ptr[i * I0_stride + j];
             }
-#if CV_SIMD128
     }
-#endif
     dst_dUx = sum_I0x_mul - sum_diff * x_grad_sum / n;
     dst_dUy = sum_I0y_mul - sum_diff * y_grad_sum / n;
     return sum_diff_sq - sum_diff * sum_diff / n;
@@ -711,8 +712,8 @@ inline float computeSSD(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int I1_stri
         SSD = v_reduce_sum(SSD_vec);
     }
     else
-    {
 #endif
+    {
         float diff;
         for (int i = 0; i < patch_sz; i++)
             for (int j = 0; j < patch_sz; j++)
@@ -722,9 +723,7 @@ inline float computeSSD(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int I1_stri
                        I0_ptr[i * I0_stride + j];
                 SSD += diff * diff;
             }
-#if CV_SIMD128
     }
-#endif
     return SSD;
 }
 
@@ -777,6 +776,8 @@ inline float computeSSDMeanNorm(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int
 
 void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     // force separate processing of stripes if we are using spatial propagation:
     if (dis->use_spatial_propagation && range.end > range.start + 1)
     {
@@ -1002,6 +1003,8 @@ DISOpticalFlowImpl::Densification_ParBody::Densification_ParBody(DISOpticalFlowI
  */
 void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     int start_i = min(range.start * stripe_sz, h);
     int end_i = min(range.end * stripe_sz, h);
 
@@ -1090,6 +1093,9 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
 bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
                                                 UMat &I0, UMat &I1, UMat &I0x, UMat &I0y, int num_iter, int pyr_level)
 {
+    CV_INSTRUMENT_REGION();
+    CV_INSTRUMENT_REGION_OPENCL();
+
     size_t globalSize[] = {(size_t)ws, (size_t)hs};
     size_t localSize[]  = {16, 16};
     int idx;
@@ -1207,6 +1213,9 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
 
 bool DISOpticalFlowImpl::ocl_Densification(UMat &dst_Ux, UMat &dst_Uy, UMat &src_Sx, UMat &src_Sy, UMat &_I0, UMat &_I1)
 {
+    CV_INSTRUMENT_REGION();
+    CV_INSTRUMENT_REGION_OPENCL();
+
     size_t globalSize[] = {(size_t)w, (size_t)h};
     size_t localSize[]  = {16, 16};
 
@@ -1224,6 +1233,9 @@ bool DISOpticalFlowImpl::ocl_Densification(UMat &dst_Ux, UMat &dst_Uy, UMat &src
 
 void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, UMat &flow, bool use_flow)
 {
+    CV_INSTRUMENT_REGION();
+    // not pure OpenCV code: CV_INSTRUMENT_REGION_OPENCL();
+
     u_I0s.resize(coarsest_scale + 1);
     u_I1s.resize(coarsest_scale + 1);
     u_I1s_ext.resize(coarsest_scale + 1);
@@ -1245,6 +1257,7 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, UMat &flow, bool
 
     for (int i = 0; i <= coarsest_scale; i++)
     {
+        CV_TRACE_REGION("coarsest_scale_iteration");
         /* Avoid initializing the pyramid levels above the finest scale, as they won't be used anyway */
         if (i == finest_scale)
         {
@@ -1313,6 +1326,9 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, UMat &flow, bool
 bool DISOpticalFlowImpl::ocl_precomputeStructureTensor(UMat &dst_I0xx, UMat &dst_I0yy, UMat &dst_I0xy,
                                                        UMat &dst_I0x, UMat &dst_I0y, UMat &I0x, UMat &I0y)
 {
+    CV_INSTRUMENT_REGION();
+    CV_INSTRUMENT_REGION_OPENCL();
+
     size_t globalSizeX[] = {(size_t)h};
     size_t localSizeX[]  = {16};
 
@@ -1350,6 +1366,9 @@ bool DISOpticalFlowImpl::ocl_precomputeStructureTensor(UMat &dst_I0xx, UMat &dst
 
 bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray flow)
 {
+    CV_INSTRUMENT_REGION();
+    // not pure OpenCV code: CV_INSTRUMENT_REGION_OPENCL();
+
     UMat I0Mat = I0.getUMat();
     UMat I1Mat = I1.getUMat();
     bool use_input_flow = false;
@@ -1378,6 +1397,7 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
 
     for (int i = coarsest_scale; i >= finest_scale; i--)
     {
+        CV_TRACE_REGION("coarsest_scale_iteration");
         w = u_I0s[i].cols;
         h = u_I0s[i].rows;
         ws = 1 + (w - patch_size) / patch_stride;
@@ -1418,6 +1438,8 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
 
 void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flow)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(!I0.empty() && I0.depth() == CV_8U && I0.channels() == 1);
     CV_Assert(!I1.empty() && I1.depth() == CV_8U && I1.channels() == 1);
     CV_Assert(I0.sameSize(I1));
@@ -1458,6 +1480,7 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
 
     for (int i = coarsest_scale; i >= finest_scale; i--)
     {
+        CV_TRACE_REGION("coarsest_scale_iteration");
         w = I0s[i].cols;
         h = I0s[i].rows;
         ws = 1 + (w - patch_size) / patch_stride;
@@ -1500,6 +1523,8 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
 
 void DISOpticalFlowImpl::collectGarbage()
 {
+    CV_INSTRUMENT_REGION();
+
     I0s.clear();
     I1s.clear();
     I1s_ext.clear();
@@ -1543,6 +1568,8 @@ void DISOpticalFlowImpl::collectGarbage()
 
 Ptr<DISOpticalFlow> DISOpticalFlow::create(int preset)
 {
+    CV_INSTRUMENT_REGION();
+
     Ptr<DISOpticalFlow> dis = makePtr<DISOpticalFlowImpl>();
     dis->setPatchSize(8);
     if (preset == DISOpticalFlow::PRESET_ULTRAFAST)
@@ -1569,4 +1596,6 @@ Ptr<DISOpticalFlow> DISOpticalFlow::create(int preset)
 
     return dis;
 }
-}
+
+
+} // namespace
