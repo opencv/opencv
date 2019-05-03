@@ -316,16 +316,18 @@ float3 processPatchMeanNorm(const __global uchar *I0_ptr, const __global uchar *
     float sum_diff = 0.0, sum_diff_sq = 0.0;
     float sum_I0x_mul = 0.0, sum_I0y_mul = 0.0;
     int n = patch_sz * patch_sz;
-    uchar8 I1_vec1, I1_vec2;
-    uchar I1_val1, I1_val2;
+    uchar8 I1_vec1;
+    uchar8 I1_vec2 = vload8(0, I1_ptr);
+    uchar I1_val1;
+    uchar I1_val2 = I1_ptr[patch_sz];
 
     for (int i = 0; i < 8; i++)
     {
         uchar8 I0_vec = vload8(0, I0_ptr + i * I0_stride);
 
-        I1_vec1 = (i == 0) ? vload8(0, I1_ptr + i * I1_stride) : I1_vec2;
+        I1_vec1 = I1_vec2;
         I1_vec2 = vload8(0, I1_ptr + (i + 1) * I1_stride);
-        I1_val1 = (i == 0) ? I1_ptr[i * I1_stride + patch_sz] : I1_val2;
+        I1_val1 = I1_val2;
         I1_val2 = I1_ptr[(i + 1) * I1_stride + patch_sz];
 
         float8 vec = w00 * convert_float8(I1_vec1) + w01 * convert_float8((uchar8)(I1_vec1.s123, I1_vec1.s4567, I1_val1)) +
