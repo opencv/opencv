@@ -1055,11 +1055,16 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
     int idx;
     int num_inner_iter = (int)floor(grad_descent_iter / (float)num_iter);
 
+    String subgroups_build_options;
+    if (ocl::Device::getDefault().isExtensionSupported("cl_khr_subgroups"))
+        subgroups_build_options = "-DCV_USE_SUBGROUPS=1";
+
+
     for (int iter = 0; iter < num_iter; iter++)
     {
         if (iter == 0)
         {
-            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc);
+            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
             idx = 0;
@@ -1111,7 +1116,7 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
         }
         else
         {
-            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc);
+            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
             idx = 0;
@@ -1368,7 +1373,7 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     CV_Assert(I0.isContinuous());
     CV_Assert(I1.isContinuous());
 
-    CV_OCL_RUN(ocl::Device::getDefault().isIntel() && flow.isUMat() &&
+    CV_OCL_RUN(flow.isUMat() &&
                (patch_size == 8) && (use_spatial_propagation == true),
                ocl_calc(I0, I1, flow));
 
