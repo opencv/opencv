@@ -829,14 +829,17 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     float j_upper_limit = bsz + dis->w - 1.0f;
     float dUx, dUy, i_I1, j_I1, w00, w01, w10, w11, dx, dy;
 
-#define INIT_BILINEAR_WEIGHTS(Ux, Uy)                                                                                  \
-    i_I1 = min(max(i + Uy + bsz, i_lower_limit), i_upper_limit);                                                       \
-    j_I1 = min(max(j + Ux + bsz, j_lower_limit), j_upper_limit);                                                       \
-                                                                                                                       \
-    w11 = (i_I1 - floor(i_I1)) * (j_I1 - floor(j_I1));                                                                 \
-    w10 = (i_I1 - floor(i_I1)) * (floor(j_I1) + 1 - j_I1);                                                             \
-    w01 = (floor(i_I1) + 1 - i_I1) * (j_I1 - floor(j_I1));                                                             \
-    w00 = (floor(i_I1) + 1 - i_I1) * (floor(j_I1) + 1 - j_I1);
+#define INIT_BILINEAR_WEIGHTS(Ux, Uy) \
+    i_I1 = min(max(i + Uy + bsz, i_lower_limit), i_upper_limit); \
+    j_I1 = min(max(j + Ux + bsz, j_lower_limit), j_upper_limit); \
+    { \
+        float di = i_I1 - floor(i_I1); \
+        float dj = j_I1 - floor(j_I1); \
+        w11 = di       * dj; \
+        w10 = di       * (1 - dj); \
+        w01 = (1 - di) * dj; \
+        w00 = (1 - di) * (1 - dj); \
+    }
 
 #define COMPUTE_SSD(dst, Ux, Uy)                                                                                       \
     INIT_BILINEAR_WEIGHTS(Ux, Uy);                                                                                     \
@@ -952,14 +955,16 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
                 {
                     INIT_BILINEAR_WEIGHTS(cur_Ux, cur_Uy);
                     if (dis->use_mean_normalization)
-                        SSD = processPatchMeanNorm(dUx, dUy, I0_ptr + i * dis->w + j,
-                                                   I1_ptr + (int)i_I1 * w_ext + (int)j_I1, I0x_ptr + i * dis->w + j,
-                                                   I0y_ptr + i * dis->w + j, dis->w, w_ext, w00, w01, w10, w11, psz,
-                                                   x_grad_sum, y_grad_sum);
+                        SSD = processPatchMeanNorm(dUx, dUy,
+                                I0_ptr  + i * dis->w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
+                                I0x_ptr + i * dis->w + j, I0y_ptr + i * dis->w + j,
+                                dis->w, w_ext, w00, w01, w10, w11, psz,
+                                x_grad_sum, y_grad_sum);
                     else
-                        SSD = processPatch(dUx, dUy, I0_ptr + i * dis->w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
-                                           I0x_ptr + i * dis->w + j, I0y_ptr + i * dis->w + j, dis->w, w_ext, w00, w01,
-                                           w10, w11, psz);
+                        SSD = processPatch(dUx, dUy,
+                                I0_ptr  + i * dis->w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
+                                I0x_ptr + i * dis->w + j, I0y_ptr + i * dis->w + j,
+                                dis->w, w_ext, w00, w01, w10, w11, psz);
 
                     dx = invH11 * dUx + invH12 * dUy;
                     dy = invH12 * dUx + invH22 * dUy;
@@ -1091,119 +1096,105 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
 
 #ifdef HAVE_OPENCL
 bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
-                                                UMat &I0, UMat &I1, UMat &I0x, UMat &I0y, int num_iter, int pyr_level)
+                                                UMat &I0, UMat &I1, UMat &I0x, UMat &I0y, int num_iter, int /*pyr_level*/)
 {
     CV_INSTRUMENT_REGION();
     CV_INSTRUMENT_REGION_OPENCL();
 
     size_t globalSize[] = {(size_t)ws, (size_t)hs};
     size_t localSize[]  = {16, 16};
-    int idx;
     int num_inner_iter = (int)floor(grad_descent_iter / (float)num_iter);
 
     String subgroups_build_options;
     if (ocl::Device::getDefault().isExtensionSupported("cl_khr_subgroups"))
-        subgroups_build_options = "-DCV_USE_SUBGROUPS=1";
+        subgroups_build_options = " -DCV_USE_SUBGROUPS=1";
 
+    String build_options = cv::format(
+                "-DDIS_BORDER_SIZE=%d -DDIS_PATCH_SIZE=%d -DDIS_PATCH_STRIDE=%d",
+                border_size, patch_size, patch_stride
+            ) + subgroups_build_options;
 
+#if 0 // OpenCL debug
+u_Sx = Scalar::all(0);
+u_Sy = Scalar::all(0);
+#endif
+
+    CV_Assert(num_iter == 2);
     for (int iter = 0; iter < num_iter; iter++)
     {
         if (iter == 0)
         {
-            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
+            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc, build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
-            idx = 0;
 
-            idx = k1.set(idx, ocl::KernelArg::PtrReadOnly(src_Ux));
-            idx = k1.set(idx, ocl::KernelArg::PtrReadOnly(src_Uy));
-            idx = k1.set(idx, ocl::KernelArg::PtrReadOnly(I0));
-            idx = k1.set(idx, ocl::KernelArg::PtrReadOnly(I1));
-            idx = k1.set(idx, (int)border_size);
-            idx = k1.set(idx, (int)patch_size);
-            idx = k1.set(idx, (int)patch_stride);
-            idx = k1.set(idx, (int)w);
-            idx = k1.set(idx, (int)h);
-            idx = k1.set(idx, (int)ws);
-            idx = k1.set(idx, (int)hs);
-            idx = k1.set(idx, (int)pyr_level);
-            idx = k1.set(idx, ocl::KernelArg::PtrWriteOnly(u_Sx));
-            idx = k1.set(idx, ocl::KernelArg::PtrWriteOnly(u_Sy));
+            k1.args(
+                ocl::KernelArg::PtrReadOnly(src_Ux),
+                ocl::KernelArg::PtrReadOnly(src_Uy),
+                ocl::KernelArg::PtrReadOnly(I0),
+                ocl::KernelArg::PtrReadOnly(I1),
+                (int)w, (int)h, (int)ws, (int)hs,
+                ocl::KernelArg::PtrWriteOnly(u_Sx),
+                ocl::KernelArg::PtrWriteOnly(u_Sy)
+            );
             if (!k1.run(1, global_sz, local_sz, false))
                 return false;
 
-            ocl::Kernel k2("dis_patch_inverse_search_fwd_2", ocl::video::dis_flow_oclsrc);
-            idx = 0;
+            ocl::Kernel k2("dis_patch_inverse_search_fwd_2", ocl::video::dis_flow_oclsrc, build_options);
 
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(src_Ux));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(src_Uy));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(I0));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(I1));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(I0x));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(I0y));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(u_I0xx_buf));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(u_I0yy_buf));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(u_I0xy_buf));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(u_I0x_buf));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadOnly(u_I0y_buf));
-            idx = k2.set(idx, (int)border_size);
-            idx = k2.set(idx, (int)patch_size);
-            idx = k2.set(idx, (int)patch_stride);
-            idx = k2.set(idx, (int)w);
-            idx = k2.set(idx, (int)h);
-            idx = k2.set(idx, (int)ws);
-            idx = k2.set(idx, (int)hs);
-            idx = k2.set(idx, (int)num_inner_iter);
-            idx = k2.set(idx, (int)pyr_level);
-            idx = k2.set(idx, ocl::KernelArg::PtrReadWrite(u_Sx));
-            idx = k2.set(idx, ocl::KernelArg::PtrReadWrite(u_Sy));
+            k2.args(
+                ocl::KernelArg::PtrReadOnly(src_Ux),
+                ocl::KernelArg::PtrReadOnly(src_Uy),
+                ocl::KernelArg::PtrReadOnly(I0),
+                ocl::KernelArg::PtrReadOnly(I1),
+                ocl::KernelArg::PtrReadOnly(I0x),
+                ocl::KernelArg::PtrReadOnly(I0y),
+                ocl::KernelArg::PtrReadOnly(u_I0xx_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0yy_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0xy_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0x_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0y_buf),
+                (int)w, (int)h, (int)ws, (int)hs,
+                (int)num_inner_iter,
+                ocl::KernelArg::PtrReadWrite(u_Sx),
+                ocl::KernelArg::PtrReadWrite(u_Sy)
+            );
             if (!k2.run(2, globalSize, localSize, false))
                 return false;
         }
         else
         {
-            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
+            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc, build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
-            idx = 0;
 
-            idx = k3.set(idx, ocl::KernelArg::PtrReadOnly(I0));
-            idx = k3.set(idx, ocl::KernelArg::PtrReadOnly(I1));
-            idx = k3.set(idx, (int)border_size);
-            idx = k3.set(idx, (int)patch_size);
-            idx = k3.set(idx, (int)patch_stride);
-            idx = k3.set(idx, (int)w);
-            idx = k3.set(idx, (int)h);
-            idx = k3.set(idx, (int)ws);
-            idx = k3.set(idx, (int)hs);
-            idx = k3.set(idx, (int)pyr_level);
-            idx = k3.set(idx, ocl::KernelArg::PtrReadWrite(u_Sx));
-            idx = k3.set(idx, ocl::KernelArg::PtrReadWrite(u_Sy));
+            k3.args(
+                ocl::KernelArg::PtrReadOnly(I0),
+                ocl::KernelArg::PtrReadOnly(I1),
+                (int)w, (int)h, (int)ws, (int)hs,
+                ocl::KernelArg::PtrReadWrite(u_Sx),
+                ocl::KernelArg::PtrReadWrite(u_Sy)
+            );
             if (!k3.run(1, global_sz, local_sz, false))
                 return false;
 
-            ocl::Kernel k4("dis_patch_inverse_search_bwd_2", ocl::video::dis_flow_oclsrc);
-            idx = 0;
+            ocl::Kernel k4("dis_patch_inverse_search_bwd_2", ocl::video::dis_flow_oclsrc, build_options);
 
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(I0));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(I1));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(I0x));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(I0y));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(u_I0xx_buf));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(u_I0yy_buf));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(u_I0xy_buf));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(u_I0x_buf));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadOnly(u_I0y_buf));
-            idx = k4.set(idx, (int)border_size);
-            idx = k4.set(idx, (int)patch_size);
-            idx = k4.set(idx, (int)patch_stride);
-            idx = k4.set(idx, (int)w);
-            idx = k4.set(idx, (int)h);
-            idx = k4.set(idx, (int)ws);
-            idx = k4.set(idx, (int)hs);
-            idx = k4.set(idx, (int)num_inner_iter);
-            idx = k4.set(idx, ocl::KernelArg::PtrReadWrite(u_Sx));
-            idx = k4.set(idx, ocl::KernelArg::PtrReadWrite(u_Sy));
+            k4.args(
+                ocl::KernelArg::PtrReadOnly(I0),
+                ocl::KernelArg::PtrReadOnly(I1),
+                ocl::KernelArg::PtrReadOnly(I0x),
+                ocl::KernelArg::PtrReadOnly(I0y),
+                ocl::KernelArg::PtrReadOnly(u_I0xx_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0yy_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0xy_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0x_buf),
+                ocl::KernelArg::PtrReadOnly(u_I0y_buf),
+                (int)w, (int)h,(int)ws, (int)hs,
+                (int)num_inner_iter,
+                ocl::KernelArg::PtrReadWrite(u_Sx),
+                ocl::KernelArg::PtrReadWrite(u_Sy)
+            );
             if (!k4.run(2, globalSize, localSize, false))
                 return false;
         }
@@ -1219,15 +1210,21 @@ bool DISOpticalFlowImpl::ocl_Densification(UMat &dst_Ux, UMat &dst_Uy, UMat &src
     size_t globalSize[] = {(size_t)w, (size_t)h};
     size_t localSize[]  = {16, 16};
 
-    ocl::Kernel kernel("dis_densification", ocl::video::dis_flow_oclsrc);
-    kernel.args(ocl::KernelArg::PtrReadOnly(src_Sx),
-                ocl::KernelArg::PtrReadOnly(src_Sy),
-                ocl::KernelArg::PtrReadOnly(_I0),
-                ocl::KernelArg::PtrReadOnly(_I1),
-                (int)patch_size, (int)patch_stride,
-                (int)w, (int)h, (int)ws,
-                ocl::KernelArg::PtrWriteOnly(dst_Ux),
-                ocl::KernelArg::PtrWriteOnly(dst_Uy));
+    String build_options = cv::format(
+                "-DDIS_PATCH_SIZE=%d -DDIS_PATCH_STRIDE=%d",
+                patch_size, patch_stride
+            );
+
+    ocl::Kernel kernel("dis_densification", ocl::video::dis_flow_oclsrc, build_options);
+    kernel.args(
+        ocl::KernelArg::PtrReadOnly(src_Sx),
+        ocl::KernelArg::PtrReadOnly(src_Sy),
+        ocl::KernelArg::PtrReadOnly(_I0),
+        ocl::KernelArg::PtrReadOnly(_I1),
+        (int)w, (int)h, (int)ws,
+        ocl::KernelArg::PtrWriteOnly(dst_Ux),
+        ocl::KernelArg::PtrWriteOnly(dst_Uy)
+    );
     return kernel.run(2, globalSize, localSize, false);
 }
 
@@ -1332,35 +1329,55 @@ bool DISOpticalFlowImpl::ocl_precomputeStructureTensor(UMat &dst_I0xx, UMat &dst
     size_t globalSizeX[] = {(size_t)h};
     size_t localSizeX[]  = {16};
 
-    ocl::Kernel kernelX("dis_precomputeStructureTensor_hor", ocl::video::dis_flow_oclsrc);
-    kernelX.args(ocl::KernelArg::PtrReadOnly(I0x),
-                 ocl::KernelArg::PtrReadOnly(I0y),
-                 (int)patch_size, (int)patch_stride,
-                 (int)w, (int)h, (int)ws,
-                 ocl::KernelArg::PtrWriteOnly(u_I0xx_buf_aux),
-                 ocl::KernelArg::PtrWriteOnly(u_I0yy_buf_aux),
-                 ocl::KernelArg::PtrWriteOnly(u_I0xy_buf_aux),
-                 ocl::KernelArg::PtrWriteOnly(u_I0x_buf_aux),
-                 ocl::KernelArg::PtrWriteOnly(u_I0y_buf_aux));
+#if 0 // OpenCL debug
+    u_I0xx_buf_aux = Scalar::all(0);
+    u_I0yy_buf_aux = Scalar::all(0);
+    u_I0xy_buf_aux = Scalar::all(0);
+    u_I0x_buf_aux = Scalar::all(0);
+    u_I0y_buf_aux = Scalar::all(0);
+    dst_I0xx = Scalar::all(0);
+    dst_I0yy = Scalar::all(0);
+    dst_I0xy = Scalar::all(0);
+    dst_I0x = Scalar::all(0);
+    dst_I0y = Scalar::all(0);
+#endif
+
+    String build_options = cv::format(
+                "-DDIS_PATCH_SIZE=%d -DDIS_PATCH_STRIDE=%d",
+                patch_size, patch_stride
+            );
+
+    ocl::Kernel kernelX("dis_precomputeStructureTensor_hor", ocl::video::dis_flow_oclsrc, build_options);
+    kernelX.args(
+        ocl::KernelArg::PtrReadOnly(I0x),
+        ocl::KernelArg::PtrReadOnly(I0y),
+        (int)w, (int)h, (int)ws,
+        ocl::KernelArg::PtrWriteOnly(u_I0xx_buf_aux),
+        ocl::KernelArg::PtrWriteOnly(u_I0yy_buf_aux),
+        ocl::KernelArg::PtrWriteOnly(u_I0xy_buf_aux),
+        ocl::KernelArg::PtrWriteOnly(u_I0x_buf_aux),
+        ocl::KernelArg::PtrWriteOnly(u_I0y_buf_aux)
+    );
     if (!kernelX.run(1, globalSizeX, localSizeX, false))
         return false;
 
     size_t globalSizeY[] = {(size_t)ws};
     size_t localSizeY[]  = {16};
 
-    ocl::Kernel kernelY("dis_precomputeStructureTensor_ver", ocl::video::dis_flow_oclsrc);
-    kernelY.args(ocl::KernelArg::PtrReadOnly(u_I0xx_buf_aux),
-                 ocl::KernelArg::PtrReadOnly(u_I0yy_buf_aux),
-                 ocl::KernelArg::PtrReadOnly(u_I0xy_buf_aux),
-                 ocl::KernelArg::PtrReadOnly(u_I0x_buf_aux),
-                 ocl::KernelArg::PtrReadOnly(u_I0y_buf_aux),
-                 (int)patch_size, (int)patch_stride,
-                 (int)w, (int)h, (int)ws,
-                 ocl::KernelArg::PtrWriteOnly(dst_I0xx),
-                 ocl::KernelArg::PtrWriteOnly(dst_I0yy),
-                 ocl::KernelArg::PtrWriteOnly(dst_I0xy),
-                 ocl::KernelArg::PtrWriteOnly(dst_I0x),
-                 ocl::KernelArg::PtrWriteOnly(dst_I0y));
+    ocl::Kernel kernelY("dis_precomputeStructureTensor_ver", ocl::video::dis_flow_oclsrc, build_options);
+    kernelY.args(
+        ocl::KernelArg::PtrReadOnly(u_I0xx_buf_aux),
+        ocl::KernelArg::PtrReadOnly(u_I0yy_buf_aux),
+        ocl::KernelArg::PtrReadOnly(u_I0xy_buf_aux),
+        ocl::KernelArg::PtrReadOnly(u_I0x_buf_aux),
+        ocl::KernelArg::PtrReadOnly(u_I0y_buf_aux),
+        (int)w, (int)h, (int)ws,
+        ocl::KernelArg::PtrWriteOnly(dst_I0xx),
+        ocl::KernelArg::PtrWriteOnly(dst_I0yy),
+        ocl::KernelArg::PtrWriteOnly(dst_I0xy),
+        ocl::KernelArg::PtrWriteOnly(dst_I0x),
+        ocl::KernelArg::PtrWriteOnly(dst_I0y)
+    );
     return kernelY.run(1, globalSizeY, localSizeY, false);
 }
 
