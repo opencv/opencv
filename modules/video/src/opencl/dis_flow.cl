@@ -126,10 +126,10 @@ __kernel void dis_precomputeStructureTensor_ver(__global const float *I0xx_aux_p
     }
 }
 
-__kernel void dis_densification(__global const float *sx, __global const float *sy,
+__kernel void dis_densification(__global const float2 *S_ptr,
                                 __global const uchar *i0, __global const uchar *i1,
                                 int w, int h, int ws,
-                                __global float *ux, __global float *uy)
+                                __global float2 *U_ptr)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -148,9 +148,8 @@ __kernel void dis_densification(__global const float *sx, __global const float *
     start_js = max(0, x - DIS_PATCH_SIZE + DIS_PATCH_STRIDE) / DIS_PATCH_STRIDE;
     start_js = min(start_js, end_js);
 
-    float coef, sum_coef = 0.0f;
-    float sum_Ux = 0.0f;
-    float sum_Uy = 0.0f;
+    float sum_coef = 0.0f;
+    float2 sum_U = (float2)(0.0f, 0.0f);
 
     int i_l, i_u;
     int j_l, j_u;
@@ -163,12 +162,11 @@ __kernel void dis_densification(__global const float *sx, __global const float *
     for (int is = start_is; is <= end_is; is++)
         for (int js = start_js; js <= end_js; js++)
         {
-            float sx_val = sx[is * ws + js];
-            float sy_val = sy[is * ws + js];
+            float2 s_val = S_ptr[is * ws + js];
             uchar2 i1_vec1, i1_vec2;
 
-            j_m = min(max(j + sx_val, 0.0f), w - 1.0f - EPS);
-            i_m = min(max(i + sy_val, 0.0f), h - 1.0f - EPS);
+            j_m = min(max(j + s_val.x, 0.0f), w - 1.0f - EPS);
+            i_m = min(max(i + s_val.y, 0.0f), h - 1.0f - EPS);
             j_l = (int)j_m;
             j_u = j_l + 1;
             i_l = (int)i_m;
@@ -179,14 +177,13 @@ __kernel void dis_densification(__global const float *sx, __global const float *
                    (j_u - j_m) * (i_m - i_l) * i1_vec1.x +
                    (j_m - j_l) * (i_u - i_m) * i1_vec2.y +
                    (j_u - j_m) * (i_u - i_m) * i1_vec2.x - i0[i * w + j];
-            coef = 1 / max(1.0f, fabs(diff));
-            sum_Ux += coef * sx_val;
-            sum_Uy += coef * sy_val;
+            float coef = 1.0f / max(1.0f, fabs(diff));
+            sum_U += coef * s_val;
             sum_coef += coef;
         }
 
-    ux[i * w + j] = sum_Ux / sum_coef;
-    uy[i * w + j] = sum_Uy / sum_coef;
+    float inv_sum_coef = 1.0 / sum_coef;
+    U_ptr[i * w + j] = sum_U * inv_sum_coef;
 }
 
 #else // DIS_BORDER_SIZE
@@ -255,10 +252,10 @@ float computeSSDMeanNorm(const __global uchar *I0_ptr, const __global uchar *I1_
 }
 
 __attribute__((reqd_work_group_size(8, 1, 1)))
-__kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __global const float *Uy_ptr,
+__kernel void dis_patch_inverse_search_fwd_1(__global const float2 *U_ptr,
                                              __global const uchar *I0_ptr, __global const uchar *I1_ptr,
                                              int w, int h, int ws, int hs,
-                                             __global float *Sx_ptr, __global float *Sy_ptr)
+                                             __global float2 *S_ptr)
 {
     int id = get_global_id(0);
     int is = get_group_id(0);
@@ -272,10 +269,8 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
     float j_lower_limit = DIS_BORDER_SIZE - DIS_PATCH_SIZE + 1.0f;
     float j_upper_limit = DIS_BORDER_SIZE + w - 1.0f;
 
-    float prev_Ux = Ux_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
-    float prev_Uy = Uy_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
-    Sx_ptr[is * ws] = prev_Ux;
-    Sy_ptr[is * ws] = prev_Uy;
+    float2 prev_U = U_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
+    S_ptr[is * ws] = prev_U;
     j += DIS_PATCH_STRIDE;
 
 #ifdef CV_USE_SUBGROUPS
@@ -288,32 +283,24 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
 #endif
     for (int js = 1; js < ws; js++, j += DIS_PATCH_STRIDE)
     {
-        float Ux = Ux_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
-        float Uy = Uy_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
+        float2 U = U_ptr[(i + DIS_PATCH_SIZE_HALF) * w + j + DIS_PATCH_SIZE_HALF];
 
         float i_I1, j_I1, w00, w01, w10, w11;
 
-        INIT_BILINEAR_WEIGHTS(Ux, Uy);
+        INIT_BILINEAR_WEIGHTS(U.x, U.y);
         float min_SSD = computeSSDMeanNorm(
                 I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 w, w_ext, w00, w01, w10, w11, EXTRA_ARGS_computeSSDMeanNorm);
 
-        INIT_BILINEAR_WEIGHTS(prev_Ux, prev_Uy);
+        INIT_BILINEAR_WEIGHTS(prev_U.x, prev_U.y);
         float cur_SSD = computeSSDMeanNorm(
                 I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 w, w_ext, w00, w01, w10, w11, EXTRA_ARGS_computeSSDMeanNorm);
 
-        if (cur_SSD < min_SSD)
-        {
-            Ux = prev_Ux;
-            Uy = prev_Uy;
-        }
-
-        prev_Ux = Ux;
-        prev_Uy = Uy;
-        Sx_ptr[is * ws + js] = Ux;
-        Sy_ptr[is * ws + js] = Uy;
+        prev_U = (cur_SSD < min_SSD) ? prev_U : U;
+        S_ptr[is * ws + js] = prev_U;
     }
+
 #undef EXTRA_ARGS_computeSSDMeanNorm
 }
 #endif // DIS_BORDER_SIZE
@@ -366,14 +353,14 @@ float4 processPatchMeanNorm(const __global uchar *I0_ptr, const __global uchar *
 }
 
 #ifdef DIS_BORDER_SIZE
-__kernel void dis_patch_inverse_search_fwd_2(__global const float *Ux_ptr, __global const float *Uy_ptr,
+__kernel void dis_patch_inverse_search_fwd_2(__global const float2 *U_ptr,
                                              __global const uchar *I0_ptr, __global const uchar *I1_ptr,
                                              __global const short *I0x_ptr, __global const short *I0y_ptr,
                                              __global const float *xx_ptr, __global const float *yy_ptr,
                                              __global const float *xy_ptr,
                                              __global const float *x_ptr, __global const float *y_ptr,
                                              int w, int h, int ws, int hs, int num_inner_iter,
-                                             __global float *Sx_ptr, __global float *Sy_ptr)
+                                             __global float2 *S_ptr)
 {
     int js = get_global_id(0);
     int is = get_global_id(1);
@@ -385,10 +372,8 @@ __kernel void dis_patch_inverse_search_fwd_2(__global const float *Ux_ptr, __glo
 
     if (js >= ws || is >= hs) return;
 
-    float Ux = Sx_ptr[index];
-    float Uy = Sy_ptr[index];
-    float cur_Ux = Ux;
-    float cur_Uy = Uy;
+    float2 U0 = S_ptr[index];
+    float2 cur_U = U0;
     float cur_xx = xx_ptr[index];
     float cur_yy = yy_ptr[index];
     float cur_xy = xy_ptr[index];
@@ -411,7 +396,7 @@ __kernel void dis_patch_inverse_search_fwd_2(__global const float *Ux_ptr, __glo
     for (int t = 0; t < num_inner_iter; t++)
     {
         float i_I1, j_I1, w00, w01, w10, w11;
-        INIT_BILINEAR_WEIGHTS(cur_Ux, cur_Uy);
+        INIT_BILINEAR_WEIGHTS(cur_U.x, cur_U.y);
         float4 res = processPatchMeanNorm(
                 I0_ptr  + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 I0x_ptr + i * w + j, I0y_ptr + i * w + j,
@@ -424,26 +409,21 @@ __kernel void dis_patch_inverse_search_fwd_2(__global const float *Ux_ptr, __glo
         float dx = invH11 * dUx + invH12 * dUy;
         float dy = invH12 * dUx + invH22 * dUy;
 
-        cur_Ux -= dx;
-        cur_Uy -= dy;
+        cur_U -= (float2)(dx, dy);
 
         if (SSD >= prev_SSD)
             break;
         prev_SSD = SSD;
     }
 
-    float2 vec = (float2)(cur_Ux - Ux, cur_Uy - Uy);
-    if (dot(vec, vec) <= (float)(DIS_PATCH_SIZE * DIS_PATCH_SIZE))
-    {
-        Sx_ptr[index] = cur_Ux;
-        Sy_ptr[index] = cur_Uy;
-    }
+    float2 vec = cur_U - U0;
+    S_ptr[index] = (dot(vec, vec) <= (float)(DIS_PATCH_SIZE * DIS_PATCH_SIZE)) ? cur_U : U0;
 }
 
 __attribute__((reqd_work_group_size(8, 1, 1)))
 __kernel void dis_patch_inverse_search_bwd_1(__global const uchar *I0_ptr, __global const uchar *I1_ptr,
                                              int w, int h, int ws, int hs,
-                                             __global float *Sx_ptr, __global float *Sy_ptr)
+                                             __global float2 *S_ptr)
 {
     int id = get_global_id(0);
     int is = get_group_id(0);
@@ -466,29 +446,27 @@ __kernel void dis_patch_inverse_search_bwd_1(__global const uchar *I0_ptr, __glo
     int sid = get_local_id(0);
 #define EXTRA_ARGS_computeSSDMeanNorm sid, smem
 #endif
+
     for (int js = (ws - 2); js > -1; js--, j -= DIS_PATCH_STRIDE)
     {
-        float2 Ux = vload2(0, Sx_ptr + is * ws + js);
-        float2 Uy = vload2(0, Sy_ptr + is * ws + js);
+        float2 U0 = S_ptr[is * ws + js];
+        float2 U1 = S_ptr[is * ws + js + 1];
 
         float i_I1, j_I1, w00, w01, w10, w11;
 
-        INIT_BILINEAR_WEIGHTS(Ux.x, Uy.x);
+        INIT_BILINEAR_WEIGHTS(U0.x, U0.y);
         float min_SSD = computeSSDMeanNorm(
                 I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 w, w_ext, w00, w01, w10, w11, EXTRA_ARGS_computeSSDMeanNorm);
 
-        INIT_BILINEAR_WEIGHTS(Ux.y, Uy.y);
+        INIT_BILINEAR_WEIGHTS(U1.x, U1.y);
         float cur_SSD = computeSSDMeanNorm(
                 I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 w, w_ext, w00, w01, w10, w11, EXTRA_ARGS_computeSSDMeanNorm);
 
-        if (cur_SSD < min_SSD)
-        {
-            Sx_ptr[is * ws + js] = Ux.y;
-            Sy_ptr[is * ws + js] = Uy.y;
-        }
+        S_ptr[is * ws + js] = (cur_SSD < min_SSD) ? U1 : U0;
     }
+
 #undef EXTRA_ARGS_computeSSDMeanNorm
 }
 
@@ -498,7 +476,7 @@ __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __glo
                                              __global const float *xy_ptr,
                                              __global const float *x_ptr, __global const float *y_ptr,
                                              int w, int h, int ws, int hs, int num_inner_iter,
-                                             __global float *Sx_ptr, __global float *Sy_ptr)
+                                             __global float2 *S_ptr)
 {
     int js = get_global_id(0);
     int is = get_global_id(1);
@@ -512,10 +490,8 @@ __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __glo
     int w_ext = w + 2 * DIS_BORDER_SIZE;
     int index = is * ws + js;
 
-    float Ux = Sx_ptr[index];
-    float Uy = Sy_ptr[index];
-    float cur_Ux = Ux;
-    float cur_Uy = Uy;
+    float2 U0 = S_ptr[index];
+    float2 cur_U = U0;
     float cur_xx = xx_ptr[index];
     float cur_yy = yy_ptr[index];
     float cur_xy = xy_ptr[index];
@@ -538,7 +514,7 @@ __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __glo
     for (int t = 0; t < num_inner_iter; t++)
     {
         float i_I1, j_I1, w00, w01, w10, w11;
-        INIT_BILINEAR_WEIGHTS(cur_Ux, cur_Uy);
+        INIT_BILINEAR_WEIGHTS(cur_U.x, cur_U.y);
         float4 res = processPatchMeanNorm(
                 I0_ptr  + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
                 I0x_ptr + i * w + j, I0y_ptr + i * w + j,
@@ -551,19 +527,14 @@ __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __glo
         float dx = invH11 * dUx + invH12 * dUy;
         float dy = invH12 * dUx + invH22 * dUy;
 
-        cur_Ux -= dx;
-        cur_Uy -= dy;
+        cur_U -= (float2)(dx, dy);
 
         if (SSD >= prev_SSD)
             break;
         prev_SSD = SSD;
     }
 
-    float2 vec = (float2)(cur_Ux - Ux, cur_Uy - Uy);
-    if ((dot(vec, vec)) <= (float)(DIS_PATCH_SIZE * DIS_PATCH_SIZE))
-    {
-        Sx_ptr[index] = cur_Ux;
-        Sy_ptr[index] = cur_Uy;
-    }
+    float2 vec = cur_U - U0;
+    S_ptr[index] = ((dot(vec, vec)) <= (float)(DIS_PATCH_SIZE * DIS_PATCH_SIZE)) ? cur_U : U0;
 }
 #endif // DIS_BORDER_SIZE
