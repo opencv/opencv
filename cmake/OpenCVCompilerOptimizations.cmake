@@ -380,6 +380,10 @@ if(CV_DISABLE_OPTIMIZATION)
   set(CPU_DISPATCH_REQUIRE "")
 endif()
 
+if("x${CPU_DISPATCH}" STREQUAL "xALL")
+  set(CPU_DISPATCH "${CPU_KNOWN_OPTIMIZATIONS}")
+endif()
+
 macro(ocv_check_compiler_optimization OPT)
   if(NOT DEFINED CPU_${OPT}_SUPPORTED)
     if((DEFINED CPU_${OPT}_FLAGS_ON AND NOT "x${CPU_${OPT}_FLAGS_ON}" STREQUAL "x") OR CPU_${OPT}_TEST_FILE)
@@ -854,19 +858,19 @@ macro(__ocv_add_dispatched_file filename target_src_var src_directory dst_direct
         file(WRITE "${__file}" "${__codestr}")
       endif()
 
-      if(";${CPU_DISPATCH};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
+      if(";${CPU_DISPATCH_FINAL};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
         if(EXISTS "${src_directory}/${filename}.${OPT_LOWER}.cpp")
           message(STATUS "Using overrided ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
         else()
           list(APPEND ${target_src_var} "${__file}")
         endif()
-      endif()
 
-      set(__declarations_str "${__declarations_str}
+        set(__declarations_str "${__declarations_str}
 #define CV_CPU_DISPATCH_MODE ${OPT}
 #include \"opencv2/core/private/cv_cpu_include_simd_declarations.hpp\"
 ")
-      set(__dispatch_modes "${OPT}, ${__dispatch_modes}")
+        set(__dispatch_modes "${OPT}, ${__dispatch_modes}")
+      endif()
     endforeach()
 
     set(__declarations_str "${__declarations_str}
