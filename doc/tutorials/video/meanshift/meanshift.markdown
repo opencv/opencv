@@ -41,20 +41,20 @@ backproject the target on each frame for calculation of meanshift. We also need 
 location of window. For histogram, only Hue is considered here. Also, to avoid false values due to
 low light, low light values are discarded using **cv.inRange()** function.
 
-@add_toggle_python
--   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/meanshift/meanshift.py)
-
--   **Code at glance:**
-    @include samples/python/tutorial_code/video/meanshift/meanshift.py
-@end_toggle
-
 @add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/meanshift/meanshift.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/meanshift/meanshift.cpp
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/meanshift/meanshift.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/video/meanshift/meanshift.py
 @end_toggle
 
 Three frames in a video I used is given below:
@@ -82,20 +82,20 @@ The process continues until the required accuracy is met.
 It is similar to meanshift, but returns a rotated rectangle (that is our result) and box
 parameters (used to be passed as search window in next iteration). See the code below:
 
-@add_toggle_python
--   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/meanshift/camshift.py)
-
--   **Code at glance:**
-    @include samples/python/tutorial_code/video/meanshift/camshift.py
-@end_toggle
-
 @add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/meanshift/camshift.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/meanshift/camshift.cpp
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/meanshift/camshift.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/video/meanshift/camshift.py
 @end_toggle
 
 Three frames of the result is shown below:

@@ -17,6 +17,6 @@ tracking and foreground extractions.
 
 -   @subpage tutorial_meanshift
 
-    *Languages:* Python, C++
+    *Languages:* C++, Python
 
     Learn how to use the Meanshift and Camshift algorithms to track objects in videos.
