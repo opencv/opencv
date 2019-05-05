@@ -48,6 +48,3 @@ while(1):
             break
     else:
         break
-
-cv.destroyAllWindows()
-cap.release()

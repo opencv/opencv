@@ -83,6 +83,4 @@ int main(int argc, char **argv)
         if (keyboard == 'q' || keyboard == 27)
             break;
     }
-    destroyAllWindows();
-    capture.release();
 }
