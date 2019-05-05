@@ -958,7 +958,16 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     // NOTE: Inference Engine sizes are reversed.
     std::vector<size_t> dims = blob->dims();
     std::vector<int> size(dims.rbegin(), dims.rend());
-    return Mat(size, CV_32F, (void*)blob->buffer());
+
+    int type = -1;
+    switch (blob->precision())
+    {
+        case InferenceEngine::Precision::FP32: type = CV_32F; break;
+        case InferenceEngine::Precision::U8: type = CV_8U; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    }
+    return Mat(size, type, (void*)blob->buffer());
 }
 
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
