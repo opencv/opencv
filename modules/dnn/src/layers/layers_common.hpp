@@ -69,9 +69,8 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
                           const std::vector<size_t>& stride, const String &padMode,
                           const std::vector<size_t>& dilation, std::vector<int>& out);
 
- void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
-                          const std::vector<size_t>& kernel, const std::vector<size_t>& strides,
-                          const String &padMode, const std::vector<size_t>& dilation,
+ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& strides, const String &padMode,
                           std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
 }
 }
