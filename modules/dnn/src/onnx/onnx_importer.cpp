@@ -57,6 +57,24 @@ public:
             CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model");
     }
 
+    ONNXImporter(const char* buffer, size_t sizeBuffer)
+    {
+        struct _Buf : public std::streambuf
+        {
+            _Buf(const char* buffer, size_t sizeBuffer)
+            {
+                char* p = const_cast<char*>(buffer);
+                setg(p, p, p + sizeBuffer);
+            }
+        };
+
+        _Buf buf(buffer, sizeBuffer);
+        std::istream input(&buf);
+
+        if (!model_proto.ParseFromIstream(&input))
+            CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
+    }
+
     void populateNet(Net dstNet);
 };
 
@@ -806,6 +824,19 @@ Net readNetFromONNX(const String& onnxFile)
     Net net;
     onnxImporter.populateNet(net);
     return net;
+}
+
+Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
+{
+    ONNXImporter onnxImporter(buffer, sizeBuffer);
+    Net net;
+    onnxImporter.populateNet(net);
+    return net;
+}
+
+Net readNetFromONNX(const std::vector<uchar>& buffer)
+{
+    return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
 Mat readTensorFromONNX(const String& path)
