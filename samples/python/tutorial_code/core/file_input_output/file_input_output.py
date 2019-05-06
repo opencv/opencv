@@ -18,6 +18,11 @@ class MyData:
     X = np.pi
     name = 'mydata1234' 
 
+    def __repr__(self):
+        s = '{ name = ' + self.name + ', X = ' + str(self.X)
+        s = s + ', A = ' str(self.A) + '}'
+        return s
+
     def write(self, fs):
         fs.write('MyData','{')
         fs.write('A', self.A)
@@ -26,9 +31,13 @@ class MyData:
         fs.write('MyData','}')
 
     def read(self, node):
-        self.A = node.getNode('A')
-        self.X = node.getNode('X')
-        self.name = node.getNode('name')
+        if (not node.empty()):
+            self.A = int(node.getNode('A').real())
+            self.X = node.getNode('X').real()
+            self.name = node.getNode('name').str()
+        else:
+            self.A = self.X = 0
+            self.name = ''
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -71,17 +80,17 @@ if __name__ == '__main__':
     itNr = int(n.real())
     print (itNr)
 
-    if (!fs.isOpened()):
+    if (not fs.isOpened()):
         print ('Failed to open ', filename, file=sys.stderr)
         help(sys.argv[0])
-        return 1
+        exit(1)
 
     n = fs.getNode('strings')
-    if (!n.isSeq()):
+    if (not n.isSeq()):
         print ('strings is not a sequence! FAIL', file=sys.stderr)
-        return 1
+        exit(1)
 
-    for (i in range(n.size())):
+    for i in range(n.size()):
         print (n.at(i))
 
     n = fs.getNode('Mapping')
@@ -90,18 +99,16 @@ if __name__ == '__main__':
 
     R = fs.getNode('R').mat()
     T = fs.getNode('T').mat()
-    # m = (MyData)(fs.getNode('MyData'))
+    m.read(fs.getNode('MyData'))
 
     print ('\nR =',R)
     print ('T =',T,'\n')
-    '''
     print ('MyData =','\n',m,'\n')
 
     print ('Attempt to read NonExisting (should initialize the data structure',
             'with its default).')
     m = (MyData)(fs.getNode('MyData'))
     print ('\nNonExisting =','\n',m)
-    '''
 
     print ('\nTip: Open up',filename,'with a text editor to see the serialized data.')
-    return 0
+    exit(0)
