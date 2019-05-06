@@ -214,25 +214,25 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
     }
 }
 
-void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<int>& out,
-                         const std::vector<size_t>& kernel, const std::vector<size_t>& strides,
-                         const String &padMode, const std::vector<size_t>& dilation,
+void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                         const std::vector<size_t>& strides, const String &padMode,
                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
-    if (padMode == "VALID")
+    if (padMode == "SAME" || padMode == "VALID")
     {
         pads_begin.assign(kernel.size(), 0);
         pads_end.assign(kernel.size(), 0);
     }
-    else if (padMode == "SAME")
+    if (padMode == "SAME")
     {
-        CV_Assert_N(kernel.size() == dilation.size(), kernel.size() == strides.size(),
-                    kernel.size() == inp.size(), kernel.size() == out.size());
-        pads_begin.resize(kernel.size());
-        pads_end.resize(kernel.size());
+        CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size());
         for (int i = 0; i < pads_begin.size(); i++) {
-            int pad = ((out[i] - 1) * strides[i] + dilation[i] * (kernel[i] - 1) + 1 - inp[i]) / 2;
-            pads_begin[i] = pads_end[i] = std::max(0, pad);
+            // There are test cases with stride > kernel.
+            if (strides[i] <= kernel[i])
+            {
+                int pad = (kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i]) / 2;
+                pads_begin[i] = pads_end[i] = pad;
+            }
         }
     }
 }
