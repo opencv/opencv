@@ -13,7 +13,6 @@
 
 #include <future>
 #include <condition_variable>
-//#include <chrono>
 #include <stdexcept>
 #include <queue>
 
@@ -58,7 +57,7 @@ public:
             {
                 //have won (probable) race - so actually start the thread
                 thrd = std::thread {[this](){
-                    //move the whole queue into local instance in order to minimize time the protecting lock is held
+                    //move the whole queue into local instance in order to minimize time the guarding lock is held
                     decltype(q) second_q;
                     while (!exiting){
                         std::unique_lock<std::mutex> lck{mtx};
@@ -140,7 +139,7 @@ void call_with_futute(f_t&& f, std::promise<void>& p){
 }//namespace
 
 //For now these async functions are simply wrapping serial version of apply/operator() into a functor.
-//These functors are then serialized into single queue, which is when processed by a devoted background thread.
+//These functors are then serialized into single queue, which is processed by a devoted background thread.
 void async_apply(GComputation& gcomp, std::function<void(std::exception_ptr)>&& callback, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args){
     //TODO: use move_through_copy for all args except gcomp
     auto l = [=]() mutable {
