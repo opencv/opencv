@@ -21,7 +21,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net);
 
 void simplifySubgraphs(tensorflow::GraphDef& net);
 
-Mat getTensorContent(const tensorflow::TensorProto &tensor);
+Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy = true);
 
 void releaseTensor(tensorflow::TensorProto* tensor);
 

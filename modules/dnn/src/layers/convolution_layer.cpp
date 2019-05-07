@@ -126,7 +126,7 @@ public:
             inpShape.push_back(inputs[0].size[i]);
             outShape.push_back(outputs[0].size[i]);
         }
-        getConvPoolPaddings(inpShape, outShape, kernel_size, strides, padMode, dilations, pads_begin, pads_end);
+        getConvPoolPaddings(inpShape, kernel_size, strides, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
             for (int i = 0; i < pads_begin.size(); i++) {
                 if (pads_begin[i] != pads_end[i])
@@ -1331,7 +1331,7 @@ public:
             inpShape.push_back(inputs[0].size[i]);
             outShape.push_back(outputs[0].size[i]);
         }
-        getConvPoolPaddings(outShape, inpShape, kernel_size, strides, padMode, dilations, pads_begin, pads_end);
+        getConvPoolPaddings(outShape, kernel_size, strides, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
             for (int i = 0; i < pads_begin.size(); i++) {
                 if (pads_begin[i] != pads_end[i])

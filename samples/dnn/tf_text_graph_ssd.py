@@ -274,7 +274,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     num_matched_layers = 0
     for node in graph_def.node:
-        if re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
+        if re.match('BoxPredictor_\d/BoxEncodingPredictor/convolution', node.name) or \
+           re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
            re.match('WeightSharedConvolutionalBoxPredictor(_\d)*/BoxPredictor/Conv2D', node.name):
             node.addAttr('loc_pred_transposed', True)
             num_matched_layers += 1
