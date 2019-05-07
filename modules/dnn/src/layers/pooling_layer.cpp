@@ -144,7 +144,7 @@ public:
             kernel_size = std::vector<size_t>(inp.begin(), inp.end());
         }
 
-        getConvPoolPaddings(inp, out, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), pads_begin, pads_end);
+        getConvPoolPaddings(inp, kernel_size, strides, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
             pad_t = pads_begin[0];
             pad_l = pads_begin[1];
