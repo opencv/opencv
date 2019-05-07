@@ -109,7 +109,7 @@ void parseTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
 
     dstBlob.create(shape, CV_32F);
 
-    Mat tensorContent = getTensorContent(tensor);
+    Mat tensorContent = getTensorContent(tensor, /*no copy*/false);
     int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
@@ -509,7 +509,7 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
 
     dstBlob.create(shape, CV_32F);
 
-    Mat tensorContent = getTensorContent(tensor);
+    Mat tensorContent = getTensorContent(tensor, /*no copy*/false);
     int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
 
