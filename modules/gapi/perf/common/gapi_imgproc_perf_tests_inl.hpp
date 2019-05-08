@@ -35,8 +35,8 @@ namespace opencv_test
           g = rgb_line[i * 3 + 4];
           b = rgb_line[i * 3 + 5];
 
-          yuv422_line[i * 2 + 2] = 0.615 * r - 0.51499 * g - 0.10001 * b;   // V0
-          yuv422_line[i * 2 + 3] = 0.299 * r + 0.587   * g + 0.114   * b;   // Y1
+          yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615 * r - 0.51499 * g - 0.10001 * b);   // V0
+          yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587   * g + 0.114   * b);   // Y1
       }
   }
 
