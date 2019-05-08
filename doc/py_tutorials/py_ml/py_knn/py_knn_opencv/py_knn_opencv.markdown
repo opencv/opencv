@@ -21,7 +21,6 @@ train_data, and next 250 samples as test_data. So let's prepare them first.
 @code{.py}
 import numpy as np
 import cv2 as cv
-from matplotlib import pyplot as plt
 
 img = cv.imread('digits.png')
 gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
@@ -89,7 +88,6 @@ alphabets directly.
 @code{.py}
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Load the data, converters convert the letter to a number
 data= np.loadtxt('letter-recognition.data', dtype= 'float32', delimiter = ',',
