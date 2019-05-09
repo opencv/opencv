@@ -5,41 +5,21 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_PRIV_HPP
-#define OPENCV_GAPI_PRIV_HPP
+#ifndef OPENCV_GAPI_GORIGIN_HPP
+#define OPENCV_GAPI_GORIGIN_HPP
 
 #include <set>   // set
 #include <map>   // map
-#include <limits>
 
 #include "opencv2/gapi/util/variant.hpp"   // variant
-#include "opencv2/gapi/garray.hpp"         // ConstructVec
-#include "opencv2/gapi/gscalar.hpp"
 #include "opencv2/gapi/gcommon.hpp"
-
 #include "opencv2/gapi/opencv_includes.hpp"
+#include "compiler/gobjref.hpp"
 
 #include "api/gnode.hpp"
 
 namespace cv
 {
-
-namespace gimpl
-{
-    // Union type for various user-defined type constructors (GArray<T>, etc)
-    // FIXME: Replace construct-only API with a more generic one
-    //    (probably with bits of introspection)
-    // Not required for non-user-defined types (GMat, GScalar, etc)
-    using HostCtor = util::variant
-        < util::monostate
-        , detail::ConstructVec
-        >;
-
-    using ConstVal = util::variant
-        < util::monostate
-        , cv::gapi::own::Scalar
-        >;
-}
 
 // TODO namespace gimpl?
 
@@ -74,4 +54,4 @@ template<typename T> using GOriginMap = std::map<GOrigin, T, detail::GOriginCmp>
 
 } // namespace cv
 
-#endif // OPENCV_GAPI_PRIV_HPP
+#endif // OPENCV_GAPI_GORIGIN_HPP

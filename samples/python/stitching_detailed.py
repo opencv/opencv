@@ -1,97 +1,50 @@
-"""Rotation model images stitcher.
-stitching_detailed img1 img2 [...imgN] [flags]
-Flags:
-    --preview
-        Run stitching in the preview mode. Works faster than usual mode,
-        but output image will have lower resolution.
-    --try_cuda (yes|no)
-        Try to use CUDA. The default value is 'no'. All default values
-        are for CPU mode.
-\nMotion Estimation Flags:
-    --work_megapix <float>
-        Resolution for image registration step. The default is 0.6 Mpx.
-    --features (surf|orb|sift)
-        Type of features used for images matching. The default is surf.
-    --matcher (homography|affine)
-        Matcher used for pairwise image matching.
-    --estimator (homography|affine)
-        Type of estimator used for transformation estimation.
-    --match_conf <float>
-        Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.
-    --conf_thresh <float>
-        Threshold for two images are from the same panorama confidence.
-        The default is 1.0.
-    --ba (no|reproj|ray|affine)
-        Bundle adjustment cost function. The default is ray.
-    --ba_refine_mask (mask)
-        Set refinement mask for bundle adjustment. It looks like 'x_xxx',
-        where 'x' means refine respective parameter and '_' means don't
-        refine one, and has the following format:
-        <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle
-        adjustment doesn't support estimation of selected parameter then
-        the respective flag is ignored.
-    --wave_correct (no|horiz|vert)
-        Perform wave effect correction. The default is 'horiz'.
-    --save_graph <file_name>
-        Save matches graph represented in DOT language to <file_name> file.
-        Labels description: Nm is number of matches, Ni is number of inliers,
-        C is confidence.
-\nCompositing Flags:
-    --warp (affine|plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)
-        Warp surface type. The default is 'spherical'.
-    --seam_megapix <float>
-        Resolution for seam estimation step. The default is 0.1 Mpx.
-    --seam (no|voronoi|gc_color|gc_colorgrad)
-        Seam estimation method. The default is 'gc_color'.
-    --compose_megapix <float>
-        Resolution for compositing step. Use -1 for original resolution.
-        The default is -1.
-    --expos_comp (no|gain|gain_blocks)
-        Exposure compensation method. The default is 'gain_blocks'.
-    --blend (no|feather|multiband)
-        Blending method. The default is 'multiband'.
-    --blend_strength <float>
-        Blending strength from [0,100] range. The default is 5.
-    --output <result_img>
-        The default is 'result.jpg'.
-    --timelapse (as_is|crop)
-        Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.
-    --rangewidth <int>
-        uses range_width to limit number of images to match with.\n
-        """
+"""
+Stitching sample (advanced)
+===========================
+
+Show how to use Stitcher API from python.
+"""
+
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2 as cv
+
 import sys
 import argparse
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='stitching_detailed')
-    parser.add_argument('img_names', nargs='+',help='files to stitch',type=str)
-    parser.add_argument('--preview',help='Run stitching in the preview mode. Works faster than usual mode but output image will have lower resolution.',type=bool,dest = 'preview' )
-    parser.add_argument('--try_cuda',action = 'store', default = False,help='Try to use CUDA. The default value is no. All default values are for CPU mode.',type=bool,dest = 'try_cuda' )
-    parser.add_argument('--work_megapix',action = 'store', default = 0.6,help=' Resolution for image registration step. The default is 0.6 Mpx',type=float,dest = 'work_megapix' )
-    parser.add_argument('--features',action = 'store', default = 'orb',help='Type of features used for images matching. The default is orb.',type=str,dest = 'features' )
-    parser.add_argument('--matcher',action = 'store', default = 'homography',help='Matcher used for pairwise image matching.',type=str,dest = 'matcher' )
-    parser.add_argument('--estimator',action = 'store', default = 'homography',help='Type of estimator used for transformation estimation.',type=str,dest = 'estimator' )
-    parser.add_argument('--match_conf',action = 'store', default = 0.3,help='Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.',type=float,dest = 'match_conf' )
-    parser.add_argument('--conf_thresh',action = 'store', default = 1.0,help='Threshold for two images are from the same panorama confidence.The default is 1.0.',type=float,dest = 'conf_thresh' )
-    parser.add_argument('--ba',action = 'store', default = 'ray',help='Bundle adjustment cost function. The default is ray.',type=str,dest = 'ba' )
-    parser.add_argument('--ba_refine_mask',action = 'store', default = 'xxxxx',help='Set refinement mask for bundle adjustment.  mask is "xxxxx"',type=str,dest = 'ba_refine_mask' )
-    parser.add_argument('--wave_correct',action = 'store', default = 'horiz',help='Perform wave effect correction. The default is "horiz"',type=str,dest = 'wave_correct' )
-    parser.add_argument('--save_graph',action = 'store', default = None,help='Save matches graph represented in DOT language to <file_name> file.',type=str,dest = 'save_graph' )
-    parser.add_argument('--warp',action = 'store', default = 'plane',help='Warp surface type. The default is "spherical".',type=str,dest = 'warp' )
-    parser.add_argument('--seam_megapix',action = 'store', default = 0.1,help=' Resolution for seam estimation step. The default is 0.1 Mpx.',type=float,dest = 'seam_megapix' )
-    parser.add_argument('--seam',action = 'store', default = 'no',help='Seam estimation method. The default is "gc_color".',type=str,dest = 'seam' )
-    parser.add_argument('--compose_megapix',action = 'store', default = -1,help='Resolution for compositing step. Use -1 for original resolution.',type=float,dest = 'compose_megapix' )
-    parser.add_argument('--expos_comp',action = 'store', default = 'no',help='Exposure compensation method. The default is "gain_blocks".',type=str,dest = 'expos_comp' )
-    parser.add_argument('--expos_comp_nr_feeds',action = 'store', default = 1,help='Number of exposure compensation feed.',type=np.int32,dest = 'expos_comp_nr_feeds' )
-    parser.add_argument('--expos_comp_nr_filtering',action = 'store', default = 2,help='Number of filtering iterations of the exposure compensation gains',type=float,dest = 'expos_comp_nr_filtering' )
-    parser.add_argument('--expos_comp_block_size',action = 'store', default = 32,help='BLock size in pixels used by the exposure compensator.',type=np.int32,dest = 'expos_comp_block_size' )
-    parser.add_argument('--blend',action = 'store', default = 'multiband',help='Blending method. The default is "multiband".',type=str,dest = 'blend' )
-    parser.add_argument('--blend_strength',action = 'store', default = 5,help='Blending strength from [0,100] range.',type=np.int32,dest = 'blend_strength' )
-    parser.add_argument('--output',action = 'store', default = 'result.jpg',help='The default is "result.jpg"',type=str,dest = 'output' )
-    parser.add_argument('--timelapse',action = 'store', default = None,help='Output warped images separately as frames of a time lapse movie, with "fixed_" prepended to input file names.',type=str,dest = 'timelapse' )
-    parser.add_argument('--rangewidth',action = 'store', default = -1,help='uses range_width to limit number of images to match with.',type=int,dest = 'rangewidth' )
+parser = argparse.ArgumentParser(prog='stitching_detailed.py', description='Rotation model images stitcher')
+parser.add_argument('img_names', nargs='+',help='files to stitch',type=str)
+parser.add_argument('--preview',help='Run stitching in the preview mode. Works faster than usual mode but output image will have lower resolution.',type=bool,dest = 'preview' )
+parser.add_argument('--try_cuda',action = 'store', default = False,help='Try to use CUDA. The default value is no. All default values are for CPU mode.',type=bool,dest = 'try_cuda' )
+parser.add_argument('--work_megapix',action = 'store', default = 0.6,help=' Resolution for image registration step. The default is 0.6 Mpx',type=float,dest = 'work_megapix' )
+parser.add_argument('--features',action = 'store', default = 'orb',help='Type of features used for images matching. The default is orb.',type=str,dest = 'features' )
+parser.add_argument('--matcher',action = 'store', default = 'homography',help='Matcher used for pairwise image matching.',type=str,dest = 'matcher' )
+parser.add_argument('--estimator',action = 'store', default = 'homography',help='Type of estimator used for transformation estimation.',type=str,dest = 'estimator' )
+parser.add_argument('--match_conf',action = 'store', default = 0.3,help='Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.',type=float,dest = 'match_conf' )
+parser.add_argument('--conf_thresh',action = 'store', default = 1.0,help='Threshold for two images are from the same panorama confidence.The default is 1.0.',type=float,dest = 'conf_thresh' )
+parser.add_argument('--ba',action = 'store', default = 'ray',help='Bundle adjustment cost function. The default is ray.',type=str,dest = 'ba' )
+parser.add_argument('--ba_refine_mask',action = 'store', default = 'xxxxx',help='Set refinement mask for bundle adjustment.  mask is "xxxxx"',type=str,dest = 'ba_refine_mask' )
+parser.add_argument('--wave_correct',action = 'store', default = 'horiz',help='Perform wave effect correction. The default is "horiz"',type=str,dest = 'wave_correct' )
+parser.add_argument('--save_graph',action = 'store', default = None,help='Save matches graph represented in DOT language to <file_name> file.',type=str,dest = 'save_graph' )
+parser.add_argument('--warp',action = 'store', default = 'plane',help='Warp surface type. The default is "spherical".',type=str,dest = 'warp' )
+parser.add_argument('--seam_megapix',action = 'store', default = 0.1,help=' Resolution for seam estimation step. The default is 0.1 Mpx.',type=float,dest = 'seam_megapix' )
+parser.add_argument('--seam',action = 'store', default = 'no',help='Seam estimation method. The default is "gc_color".',type=str,dest = 'seam' )
+parser.add_argument('--compose_megapix',action = 'store', default = -1,help='Resolution for compositing step. Use -1 for original resolution.',type=float,dest = 'compose_megapix' )
+parser.add_argument('--expos_comp',action = 'store', default = 'no',help='Exposure compensation method. The default is "gain_blocks".',type=str,dest = 'expos_comp' )
+parser.add_argument('--expos_comp_nr_feeds',action = 'store', default = 1,help='Number of exposure compensation feed.',type=np.int32,dest = 'expos_comp_nr_feeds' )
+parser.add_argument('--expos_comp_nr_filtering',action = 'store', default = 2,help='Number of filtering iterations of the exposure compensation gains',type=float,dest = 'expos_comp_nr_filtering' )
+parser.add_argument('--expos_comp_block_size',action = 'store', default = 32,help='BLock size in pixels used by the exposure compensator.',type=np.int32,dest = 'expos_comp_block_size' )
+parser.add_argument('--blend',action = 'store', default = 'multiband',help='Blending method. The default is "multiband".',type=str,dest = 'blend' )
+parser.add_argument('--blend_strength',action = 'store', default = 5,help='Blending strength from [0,100] range.',type=np.int32,dest = 'blend_strength' )
+parser.add_argument('--output',action = 'store', default = 'result.jpg',help='The default is "result.jpg"',type=str,dest = 'output' )
+parser.add_argument('--timelapse',action = 'store', default = None,help='Output warped images separately as frames of a time lapse movie, with "fixed_" prepended to input file names.',type=str,dest = 'timelapse' )
+parser.add_argument('--rangewidth',action = 'store', default = -1,help='uses range_width to limit number of images to match with.',type=int,dest = 'rangewidth' )
+
+__doc__ += '\n' + parser.format_help()
+
+def main():
     args = parser.parse_args()
     img_names=args.img_names
     print(img_names)
@@ -167,9 +120,9 @@ if __name__ == '__main__':
     is_seam_scale_set = False
     is_compose_scale_set = False;
     for name in img_names:
-        full_img = cv.imread(name)
+        full_img = cv.imread(cv.samples.findFile(name))
         if full_img is None:
-            print("Cannot read image ",name)
+            print("Cannot read image ", name)
             exit()
         full_img_sizes.append((full_img.shape[1],full_img.shape[0]))
         if work_megapix < 0:
@@ -401,8 +354,16 @@ if __name__ == '__main__':
         result_mask=None
         result,result_mask = blender.blend(result,result_mask)
         cv.imwrite(result_name,result)
-        zoomx =600/result.shape[1]
+        zoomx = 600.0 / result.shape[1]
         dst=cv.normalize(src=result,dst=None,alpha=255.,norm_type=cv.NORM_MINMAX,dtype=cv.CV_8U)
         dst=cv.resize(dst,dsize=None,fx=zoomx,fy=zoomx)
         cv.imshow(result_name,dst)
         cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

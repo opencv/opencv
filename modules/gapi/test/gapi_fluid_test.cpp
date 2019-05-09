@@ -752,4 +752,19 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
                               ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
                               ));
 
+TEST(Fluid, UnusedNodeTest) {
+    cv::GMat in;
+    cv::GMat a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::merge3(a, b, c);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC4);
+    cv::Mat out_mat(cv::Size(8, 8), CV_8UC3);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    ASSERT_NO_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
+        cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
 } // namespace opencv_test

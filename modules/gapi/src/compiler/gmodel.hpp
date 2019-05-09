@@ -24,9 +24,6 @@
 
 #include "opencv2/gapi/garg.hpp"
 #include "opencv2/gapi/gkernel.hpp"
-#include "api/gapi_priv.hpp"   // GShape
-#include "api/gproto_priv.hpp" // origin_of
-#include "backends/common/gbackend.hpp"
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"
@@ -121,16 +118,6 @@ struct Journal
     std::vector<std::string> messages;
 };
 
-// The mapping between user-side GMat/GScalar/... objects
-// and its  appropriate nodes. Can be stored in graph optionally
-// (NOT used by any compiler or backends, introspection purposes
-// only)
-struct Layout
-{
-    static const char *name() { return "Layout"; }
-    GOriginMap<ade::NodeHandle> object_nodes;
-};
-
 // Unique data object counter (per-type)
 class DataObjectCounter
 {
@@ -170,7 +157,6 @@ namespace GModel
         , Journal
         , ade::passes::TopologicalSortData
         , DataObjectCounter
-        , Layout
         , IslandModel
         , ActiveBackends
         >;
@@ -189,59 +175,46 @@ namespace GModel
         , Journal
         , ade::passes::TopologicalSortData
         , DataObjectCounter
-        , Layout
         , IslandModel
         , ActiveBackends
         >;
+
+    // FIXME:
+    // Export a single class, not a bunch of functions inside a namespace
 
     // User should initialize graph before using it
     // GAPI_EXPORTS for tests
     GAPI_EXPORTS void init (Graph& g);
 
-    ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
+    GAPI_EXPORTS ade::NodeHandle mkOpNode(Graph &g, const GKernel &k, const std::vector<GArg>& args, const std::string &island);
 
-    // FIXME: change it to take GMeta instead of GShape?
-    ade::NodeHandle mkDataNode(Graph &g, const GOrigin& origin);
+    GAPI_EXPORTS ade::NodeHandle mkDataNode(Graph &g, const GShape shape);
 
     // Adds a string message to a node. Any node can be subject of log, messages then
     // appear in the dumped .dot file.x
-    void log(Graph &g, ade::NodeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
-    void log(Graph &g, ade::EdgeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    GAPI_EXPORTS void log(Graph &g, ade::NodeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
+    GAPI_EXPORTS void log(Graph &g, ade::EdgeHandle op, std::string &&message, ade::NodeHandle updater = ade::NodeHandle());
 
-    void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
+    GAPI_EXPORTS void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
+    GAPI_EXPORTS void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
 
-    // FIXME: Align this GModel API properly, it is a mess now
-    namespace detail
-    {
-        // FIXME: GAPI_EXPORTS only because of tests!!!
-        GAPI_EXPORTS ade::NodeHandle dataNodeOf(const ConstGraph& g, const GOrigin &origin);
-    }
-    template<typename T> inline ade::NodeHandle dataNodeOf(const ConstGraph& g, T &&t)
-    {
-        return detail::dataNodeOf(g, cv::gimpl::proto::origin_of(GProtoArg{t}));
-    }
+    GAPI_EXPORTS void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
+    GAPI_EXPORTS void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
 
-    void linkIn   (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t in_port);
-    void linkOut  (Graph &g, ade::NodeHandle op,     ade::NodeHandle obj, std::size_t out_port);
-
-    void redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-    void redirectWriter (Graph &g, ade::NodeHandle from, ade::NodeHandle to);
-
-    std::vector<ade::NodeHandle> orderedInputs (Graph &g, ade::NodeHandle nh);
-    std::vector<ade::NodeHandle> orderedOutputs(Graph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedInputs (Graph &g, ade::NodeHandle nh);
+    GAPI_EXPORTS std::vector<ade::NodeHandle> orderedOutputs(Graph &g, ade::NodeHandle nh);
 
     // Returns input meta array for given op node
     // Array is sparse, as metadata for non-gapi input objects is empty
     // TODO:
     // Cover with tests!!
-    GMetaArgs collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
-    GMetaArgs collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
+    GAPI_EXPORTS GMetaArgs collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node);
 
-    ade::EdgeHandle getInEdgeByPort(const GModel::ConstGraph& cg, const ade::NodeHandle& nh, std::size_t in_port);
+    GAPI_EXPORTS ade::EdgeHandle getInEdgeByPort(const GModel::ConstGraph& cg, const ade::NodeHandle& nh, std::size_t in_port);
 
     // Returns true if the given backend participates in the execution
-    bool isActive(const GModel::Graph &cg, const cv::gapi::GBackend &backend);
+    GAPI_EXPORTS bool isActive(const GModel::Graph &cg, const cv::gapi::GBackend &backend);
 } // namespace GModel
 
 

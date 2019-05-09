@@ -210,7 +210,10 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
-        Size kernel, stride, pad, dilation, adjustPad;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad, dilation, adjustPad;
+        std::vector<size_t> adjust_pads;
+        std::vector<size_t> kernel_size, strides, dilations;
+        std::vector<size_t> pads_begin, pads_end;
         String padMode;
         int numOutput;
     };
@@ -243,9 +246,10 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int type;
-        Size kernel, stride;
-        int pad_l, pad_t, pad_r, pad_b;
-        CV_DEPRECATED_EXTERNAL Size pad;
+        std::vector<size_t> kernel_size, strides;
+        std::vector<size_t> pads_begin, pads_end;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad;
+        CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;

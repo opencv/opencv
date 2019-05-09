@@ -231,7 +231,10 @@ class Builder:
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
-        execute([self.ninja_path, "install" if self.debug else "install/strip"])
+        # full parallelism for C++ compilation tasks
+        execute([self.ninja_path, "opencv_modules"])
+        # limit parallelism for Gradle steps (avoid huge memory consumption)
+        execute([self.ninja_path, '-j3', "install" if self.debug else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -278,7 +281,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build OpenCV for Android SDK')
     parser.add_argument("work_dir", nargs='?', default='.', help="Working directory (and output)")
     parser.add_argument("opencv_dir", nargs='?', default=os.path.join(SCRIPT_DIR, '../..'), help="Path to OpenCV source dir")
-    parser.add_argument('--config', default='ndk-18.config.py', type=str, help="Package build configuration", )
+    parser.add_argument('--config', default='ndk-18-api-level-21.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
     parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')

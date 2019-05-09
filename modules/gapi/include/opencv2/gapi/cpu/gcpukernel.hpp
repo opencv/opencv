@@ -124,6 +124,10 @@ template<> struct get_in<cv::GMat>
 {
     static cv::Mat    get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inMat(idx)); }
 };
+template<> struct get_in<cv::GMatP>
+{
+    static cv::Mat    get(GCPUContext &ctx, int idx) { return get_in<cv::GMat>::get(ctx, idx); }
+};
 template<> struct get_in<cv::GScalar>
 {
     static cv::Scalar get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
@@ -186,6 +190,13 @@ template<> struct get_out<cv::GMat>
     {
         auto& r = ctx.outMatR(idx);
         return {r};
+    }
+};
+template<> struct get_out<cv::GMatP>
+{
+    static tracked_cv_mat get(GCPUContext &ctx, int idx)
+    {
+        return get_out<cv::GMat>::get(ctx, idx);
     }
 };
 template<> struct get_out<cv::GScalar>

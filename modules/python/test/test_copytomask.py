@@ -24,12 +24,13 @@ class copytomask_test(NewOpenCVTests):
         valeurBGRSup = np.array([70, 70,255])
         maskRed = cv.inRange(img, valeurBGRinf, valeurBGRSup)
         #New binding
-        dstcv  = cv.copyTo(img,maskRed)
+        dstcv = np.full(np.array((2, 2, 1))*img.shape, 255, dtype=img.dtype)
+        cv.copyTo(img, maskRed, dstcv[:img.shape[0],:img.shape[1],:])
         #using numpy
+        dstnp = np.full(np.array((2, 2, 1))*img.shape, 255, dtype=img.dtype)
         mask2=maskRed.astype(bool)
         _, mask_b = np.broadcast_arrays(img, mask2[..., None])
-        dstnp  = np.ma.masked_array(img, np.logical_not(mask_b))
-        dstnp =np.ma.filled(dstnp,[0])
+        np.copyto(dstnp[:img.shape[0],:img.shape[1],:], img, where=mask_b)
         self.assertEqual(cv.norm(dstnp ,dstcv), eps)
 
 

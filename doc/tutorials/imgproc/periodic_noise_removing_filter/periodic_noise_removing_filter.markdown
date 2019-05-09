@@ -1,6 +1,8 @@
 Periodic Noise Removing Filter {#tutorial_periodic_noise_removing_filter}
 ==========================
 
+@prev_tutorial{tutorial_anisotropic_image_segmentation_by_a_gst}
+
 Goal
 ----
 

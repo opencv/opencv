@@ -519,4 +519,27 @@ TEST_P(Core_EigenZero, double)
 }
 INSTANTIATE_TEST_CASE_P(/**/, Core_EigenZero, testing::Values(2, 3, 5));
 
+TEST(Core_EigenNonSymmetric, convergence)
+{
+    Matx33d m(
+        0, -1, 0,
+        1, 0, 1,
+        0, -1, 0);
+    Mat eigenvalues, eigenvectors;
+    // eigen values are complex, algorithm doesn't converge
+    try
+    {
+        cv::eigenNonSymmetric(m, eigenvalues, eigenvectors);
+        std::cout << Mat(eigenvalues.t()) << std::endl;
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(Error::StsNoConv, e.code) << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unknown exception has been raised";
+    }
+}
+
 }} // namespace

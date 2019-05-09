@@ -2,6 +2,7 @@
 // https://github.com/opencv/opencv/issues/13211
 
 #include <altivec.h>
+#undef bool
 
 #define vsx_ld vec_vsx_ld
 #define vsx_st vec_vsx_st

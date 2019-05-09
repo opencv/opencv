@@ -291,6 +291,8 @@ VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
  *
  * So we're not able to use inline asm and only use built-in functions that CLANG supports
  * and use __builtin_convertvector if clang missng any of vector conversions built-in functions
+ *
+ * todo: clang asm template bug is fixed, need to reconsider the current workarounds.
 */
 
 // convert vector helper
