@@ -1,8 +1,6 @@
-
 #include <opencv2/gapi/pattern_matching.hpp>
 
-
-__declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl::GModel::Graph patternGraph, cv::gimpl::GModel::Graph compGraph) {
+std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl::GModel::Graph patternGraph, cv::gimpl::GModel::Graph compGraph) {
     using PatternGraph = cv::gimpl::GModel::Graph;
     using CompGraph = cv::gimpl::GModel::Graph;
 
@@ -63,6 +61,8 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
                 return false;
             }
 
+            // Shall be handled more carefully - it shall contains nodes only for chosen first data node from array of matched first data nodes.
+            // TODO: fix wrong usage
             matchedVisitedNodes[m_firstPatternNode.get()] = node.get();
 
             std::vector<std::pair<ade::NodeHandle, ade::NodeHandle>> opNodesMatchings;
@@ -93,11 +93,9 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
                 });
 
                 if (matchedIt == compOutputNodes.end()) {
-                    opNodesMatchings.clear();
                     return false;
                 }
 
-                // Need to think about earlier exit
                 matchedVisitedNodes[(*patternIt).get()] = (*matchedIt).get();
                 opNodesMatchings.push_back({ *patternIt, *matchedIt });
             }
@@ -162,8 +160,6 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
             return false;
         }
 
-        // Can this logic produce artefacts?
-        // Like find two visited nodes, but we've visit them from different paths?
         auto foundit = matchedVisitedNodes.find(first.get());
         if (foundit != matchedVisitedNodes.end()) {
             if (second.get() != foundit->second) {
@@ -180,6 +176,8 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
 
     int i = 0;
     for (auto firstDataNode : possibleFirstDataNodes) {
+        // Fill the matchedVisitedNodes with new data node and nodes from matchings[i] here.
+        // Remove array fill in the code with first node search.
 
         subgraph.push_back(firstDataNode);
 
@@ -204,6 +202,7 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
                     nonStop = false;
                     isSearchFailed = true;
                     subgraph.clear();
+                    // Clear the matchedVisitedNodes
                     break;
                 }
 
@@ -231,6 +230,7 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
                         nonStop = false;
                         isSearchFailed = true;
                         subgraph.clear();
+                        // Clear the matchedVisitedNodes
                         break;
                     }
 
@@ -247,7 +247,6 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
             if (!isSearchFailed) {
                 if (nextLevelMatchings.size() == 0) {
                     // Subgraph is found
-
                         return subgraph;
                 }
 
@@ -260,5 +259,4 @@ __declspec(dllexport) std::list<ade::NodeHandle> cv::gapi::findMatches(cv::gimpl
     }
 
     return std::list<ade::NodeHandle>();
-
 }

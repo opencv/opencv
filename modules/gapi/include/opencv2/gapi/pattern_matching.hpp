@@ -25,11 +25,10 @@
 #include <ade/graph.hpp>
 #include <ade/typed_graph.hpp>
 
-//use non local class with a template static variable.
 namespace cv {
 namespace gapi {
 
-    __declspec(dllexport) std::list<ade::NodeHandle> findMatches(cv::gimpl::GModel::Graph patternGraph, cv::gimpl::GModel::Graph compGraph);
+    GAPI_EXPORTS std::list<ade::NodeHandle> findMatches(cv::gimpl::GModel::Graph patternGraph, cv::gimpl::GModel::Graph compGraph);
 
 } //namespace gapi
 } //namespace cv
