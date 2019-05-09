@@ -14,7 +14,7 @@
 namespace opencv_test
 {
 
-TEST_P(MathOpTest, MatricesAccuracyTest )
+TEST_P(MathOpTest, MatricesAccuracyTest)
 {
     mathOp opType = ADD;
     int type = 0, dtype = 0;
