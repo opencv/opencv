@@ -9,9 +9,6 @@
 #define CV_SIMD512_64F 1
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
 
-#define CV_USE_VBMIPERMUTE 0
-#define CV_USE_ERRECIP 0
-
 #define _v512_set_epi64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((a7),(a6),(a5),(a4),(a3),(a2),(a1),(a0))
 #define _v512_set_epi32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
         _v512_set_epi64(((int64)(a15)<<32)|(int64)(a14), ((int64)(a13)<<32)|(int64)(a12), ((int64)(a11)<<32)|(int64)(a10), ((int64)( a9)<<32)|(int64)( a8), \
@@ -480,7 +477,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
 /* Recombine & ZIP */
 inline void v_zip(const v_int8x64& a, const v_int8x64& b, v_int8x64& ab0, v_int8x64& ab1)
 {
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     __m512i mask0 = _v512_set_epi8( 95,  31,  94,  30,  93,  29,  92,  28,  91,  27,  90,  26,  89,  25,  88,  24,
                                     87,  23,  86,  22,  85,  21,  84,  20,  83,  19,  82,  18,  81,  17,  80,  16,
                                     79,  15,  78,  14,  77,  13,  76,  12,  75,  11,  74,  10,  73,   9,  72,   8,
@@ -894,7 +891,7 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
     if (imm == 0) return a;
     if (imm == 64) return b;
     if (imm >= 128) return v_int8x64();
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     return v_int8x64(_mm512_permutex2var_epi8(a.val,
            _v512_set_epi8(0x3f + imm,0x3e + imm,0x3d + imm,0x3c + imm,0x3b + imm,0x3a + imm,0x39 + imm,0x38 + imm,
                           0x37 + imm,0x36 + imm,0x35 + imm,0x34 + imm,0x33 + imm,0x32 + imm,0x31 + imm,0x30 + imm,
@@ -927,7 +924,7 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
     if (imm == 0) return a;
     if (imm == 64) return b;
     if (imm >= 128) return v_int8x64();
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     return v_int8x64(_mm512_permutex2var_epi8(b.val,
            _v512_set_epi8(0x7f - imm,0x7e - imm,0x7d - imm,0x7c - imm,0x7b - imm,0x7a - imm,0x79 - imm,0x78 - imm,
                           0x77 - imm,0x76 - imm,0x75 - imm,0x74 - imm,0x73 - imm,0x72 - imm,0x71 - imm,0x70 - imm,
@@ -947,7 +944,7 @@ inline v_int8x64 v_rotate_right(const v_int8x64& a)
 {
     if (imm == 0) return a;
     if (imm >= 64) return v_int8x64();
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF >> imm,
            _v512_set_epi8(0x3f + imm,0x3e + imm,0x3d + imm,0x3c + imm,0x3b + imm,0x3a + imm,0x39 + imm,0x38 + imm,
                           0x37 + imm,0x36 + imm,0x35 + imm,0x34 + imm,0x33 + imm,0x32 + imm,0x31 + imm,0x30 + imm,
@@ -966,7 +963,7 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a)
 {
     if (imm == 0) return a;
     if (imm >= 64) return v_int8x64();
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     return v_int8x64(_mm512_maskz_permutexvar_epi8(0xFFFFFFFFFFFFFFFF << imm,
            _v512_set_epi8(0x3f - imm,0x3e - imm,0x3d - imm,0x3c - imm,0x3b - imm,0x3a - imm,0x39 - imm,0x38 - imm,
                           0x37 - imm,0x36 - imm,0x35 - imm,0x34 - imm,0x33 - imm,0x32 - imm,0x31 - imm,0x30 - imm,
@@ -1141,9 +1138,9 @@ inline double v_reduce_sad(const v_float64x8& a, const v_float64x8& b)
 /** Popcount **/
 inline v_uint8x64 v_popcount(const v_int8x64& a)
 {
-#ifdef _mm512_popcnt_epi8
+#if CV_AVX_512BITALG
     return v_uint8x64(_mm512_popcnt_epi8(a.val));
-#elif CV_USE_VBMIPERMUTE
+#elif CV_AVX_512VBMI
     __m512i _popcnt_table0 = _v512_set_epi8(7, 6, 6, 5, 6, 5, 5, 4, 6, 5, 5, 4, 5, 4, 4, 3,
                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
                                             5, 4, 4, 3, 4, 3, 3, 2, 4, 3, 3, 2, 3, 2, 2, 1,
@@ -1163,7 +1160,7 @@ inline v_uint8x64 v_popcount(const v_int8x64& a)
 }
 inline v_uint16x32 v_popcount(const v_int16x32& a)
 {
-#ifdef _mm512_popcnt_epi16
+#if CV_AVX_512BITALG
     return v_uint16x32(_mm512_popcnt_epi16(a.val));
 #else
     __m512i zero = _mm512_setzero_si512();
@@ -1208,7 +1205,7 @@ inline v_int32x16 v_muladd(const v_int32x16& a, const v_int32x16& b, const v_int
 
 inline v_float32x16 v_invsqrt(const v_float32x16& x)
 {
-#if CV_USE_ERRECIP
+#if CV_AVX_512ER
     return v_float32x16(_mm512_rsqrt28_ps(x.val));
 #else
     v_float32x16 half = x * v512_setall_f32(0.5);
@@ -1220,7 +1217,7 @@ inline v_float32x16 v_invsqrt(const v_float32x16& x)
 
 inline v_float64x8 v_invsqrt(const v_float64x8& x)
 {
-#if CV_USE_ERRECIP
+#if CV_AVX_512ER
     return v_float64x8(_mm512_rsqrt28_pd(x.val));
 #else
     return v512_setall_f64(1.) / v_sqrt(x);
@@ -1857,7 +1854,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& a, v_uint8x64& b 
 {
     __m512i ab0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i ab1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     __m512i mask0 = _v512_set_epi8(126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
                                     94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
                                     62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
@@ -1917,7 +1914,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
     __m512i bgr2 = _mm512_loadu_si512((const __m512i*)(ptr + 128));
 
-#if defined(_mm512_mask_expand_epi8) && defined(_mm512_mask_compress_epi8)
+#if CV_AVX_512VBMI2
     __m512i mask0 = _v512_set_epi8(126, 123, 120, 117, 114, 111, 108, 105, 102,  99,  96,  93,  90,  87,  84, 81,
                                     78,  75,  72,  69,  66,  63,  60,  57,  54,  51,  48,  45,  42,  39,  36, 33,
                                     30,  27,  24,  21,  18,  15,  12,   9,   6,   3,   0,  62,  59,  56,  53, 50,
@@ -1932,7 +1929,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     b = v_uint8x64(_mm512_mask_compress_epi8(r12b2, 0xffffffffffe00000, r0b01));
     g = v_uint8x64(_mm512_mask_compress_epi8(b1g12, 0x2492492492492492, bgr0));
     r = v_uint8x64(_mm512_mask_expand_epi8(r0b01, 0xffffffffffe00000, r12b2));
-#elif CV_USE_VBMIPERMUTE
+#elif CV_AVX_512VBMI
     __m512i b0g0b1 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr1, bgr0);
     __m512i g1r1g2 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr2, bgr1);
     __m512i r2b2r0 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr0, bgr2);
@@ -2022,7 +2019,7 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i bgra2 = _mm512_loadu_si512((const __m512i*)(ptr + 128));
     __m512i bgra3 = _mm512_loadu_si512((const __m512i*)(ptr + 192));
 
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     __m512i mask0 = _v512_set_epi8(126, 124, 122, 120, 118, 116, 114, 112, 110, 108, 106, 104, 102, 100, 98, 96,
                                     94,  92,  90,  88,  86,  84,  82,  80,  78,  76,  74,  72,  70,  68, 66, 64,
                                     62,  60,  58,  56,  54,  52,  50,  48,  46,  44,  42,  40,  38,  36, 34, 32,
@@ -2221,7 +2218,7 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x8& x, const v_uint64
 inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x64& g, const v_uint8x64& r,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
-#if CV_USE_VBMIPERMUTE
+#if CV_AVX_512VBMI
     __m512i mask0 = _v512_set_epi8(127,  84,  20, 126,  83,  19, 125,  82,  18, 124,  81,  17, 123,  80,  16, 122,
                                     79,  15, 121,  78,  14, 120,  77,  13, 119,  76,  12, 118,  75,  11, 117,  74,
                                     10, 116,  73,   9, 115,  72,   8, 114,  71,   7, 113,  70,   6, 112,  69,   5,
