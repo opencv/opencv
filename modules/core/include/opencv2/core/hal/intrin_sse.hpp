@@ -1580,14 +1580,7 @@ inline v_uint32x4 v_popcount(const v_uint32x4& a)
 }
 inline v_uint64x2 v_popcount(const v_uint64x2& a)
 {
-    __m128i m1 = _mm_set1_epi32(0x55555555);
-    __m128i m2 = _mm_set1_epi32(0x33333333);
-    __m128i m4 = _mm_set1_epi32(0x0f0f0f0f);
-    __m128i p = a.val;
-    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 1), m1), _mm_and_si128(p, m1));
-    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 2), m2), _mm_and_si128(p, m2));
-    p = _mm_add_epi32(_mm_and_si128(_mm_srli_epi32(p, 4), m4), _mm_and_si128(p, m4));
-    return v_uint64x2(_mm_sad_epu8(p, _mm_setzero_si128()));
+    return v_uint64x2(_mm_sad_epu8(v_popcount(v_reinterpret_as_u8(a)).val, _mm_setzero_si128()));
 }
 inline v_uint8x16 v_popcount(const v_int8x16& a)
 { return v_popcount(v_reinterpret_as_u8(a)); }
