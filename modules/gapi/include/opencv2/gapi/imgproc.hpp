@@ -803,12 +803,9 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-
 GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
 
-GAPI_EXPORTS GMat BayerGR2RGB(const GMat& src_gr);
-
-/** @brief Converts an image from BayerGR color space to BGR.
+/** @brief Converts an image from BayerGR color space to RGB.
 The function converts an input image from BayerGR color space to RGB.
 The conventional ranges for G, R, and B channel values are 0 to 255.
 
@@ -820,7 +817,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat RGB2HSV(const GMat& src);
+GAPI_EXPORTS GMat BayerGR2RGB(const GMat& src_gr);
 
 /** @brief Converts an image from RGB color space to HSV.
 The function converts an input image from RGB color space to HSV.
@@ -834,7 +831,7 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
-GAPI_EXPORTS GMat RGB2YUV422(const GMat& src);
+GAPI_EXPORTS GMat RGB2HSV(const GMat& src);
 
 /** @brief Converts an image from RGB color space to YUV422.
 The function converts an input image from RGB color space to YUV422.
@@ -848,6 +845,7 @@ Output image must be 8-bit unsigned 2-channel image @ref CV_8UC2.
 
 @sa YUV2BGR, NV12toRGB
 */
+GAPI_EXPORTS GMat RGB2YUV422(const GMat& src);
 
 //! @} gapi_colorconvert
 } //namespace gapi
