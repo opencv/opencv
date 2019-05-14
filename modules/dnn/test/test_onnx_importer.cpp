@@ -481,6 +481,36 @@ TEST_P(Test_ONNX_nets, Shufflenet)
     testONNXModels("shufflenet", pb);
 }
 
+TEST_P(Test_ONNX_nets, Resnet34_kinetics)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+
+    Mat inp0 = blobFromNPY(_tf("data/input_kinetics0.npy"));
+    Mat ref0 = blobFromNPY(_tf("data/output_kinetics0.npy"));
+    Mat inp1 = blobFromNPY(_tf("data/input_kinetics1.npy"));
+    Mat ref1 = blobFromNPY(_tf("data/output_kinetics1.npy"));
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
+
+    checkBackend(&inp0, &ref0);
+    Net net = readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(inp0);
+    Mat out = net.forward();
+    normAssert(ref0, out);
+
+    checkBackend(&inp1, &ref1);
+    net.setInput(inp1);
+    out = net.forward();
+
+    normAssert(ref1, out);
+    expectNoFallbacksFromIE(net);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
