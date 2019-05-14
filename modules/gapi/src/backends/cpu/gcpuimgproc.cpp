@@ -297,7 +297,15 @@ GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
 {
     static void run(const cv::Mat& in, cv::Mat &out)
     {
-        cv::gapi::convertRGB2YUV422(in, out);
+        out.create(in.size(), CV_8UC2);
+
+        for (int i = 0; i < in.rows; ++i)
+        {
+            const uchar* in_line_p  = in.ptr<uchar>(i);
+            uchar* out_line_p = out.ptr<uchar>(i);
+            // FIXME: scalar and vectorized version are not bitwise due to round (~0.1%)
+            cv::gapi::fluid::run_rgb2yuv422_impl(out_line_p, in_line_p, in.cols);
+        }
     }
 };
 
@@ -333,20 +341,4 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPURGB2YUV422
         >();
     return pkg;
-}
-
-void cv::gapi::convertRGB2YUV422(const cv::Mat& in, cv::Mat& out)
-{
-    if (out.size() != in.size())
-    {
-        out.create(in.size(), CV_8UC2);
-    }
-
-    for (int i = 0; i < in.rows; ++i)
-    {
-        const uchar* in_line_p  = in.ptr<uchar>(i);
-        uchar* out_line_p = out.ptr<uchar>(i);
-        // FIXME: scalar and vectorized version are not bitwise due to round (~0.1%)
-        cv::gapi::fluid::run_rgb2yuv422_impl(out_line_p, in_line_p, in.cols);
-    }
 }

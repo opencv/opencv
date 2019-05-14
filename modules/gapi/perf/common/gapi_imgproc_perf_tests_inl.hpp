@@ -29,7 +29,7 @@ namespace opencv_test
           uchar b = rgb_line[i * 3 + 2];
 
           yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436 * b);  // U0
-          yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>(0.299   * r + 0.587   * g + 0.114 * b);  // Y0
+          yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114 * b);  // Y0
 
           r = rgb_line[i * 3 + 3];
           g = rgb_line[i * 3 + 4];
@@ -42,10 +42,7 @@ namespace opencv_test
 
   void convertRGB2YUV422Ref(const cv::Mat& in, cv::Mat &out)
   {
-      if (out.size() != in.size())
-      {
-          out.create(in.size(), CV_8UC2);
-      }
+      out.create(in.size(), CV_8UC2);
 
       for (int i = 0; i < in.rows; ++i)
       {

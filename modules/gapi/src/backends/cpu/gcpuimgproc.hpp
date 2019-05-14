@@ -20,12 +20,6 @@ void loadCPUImgProc(std::map<std::string, cv::GCPUKernel> &kmap);
 
 }
 
-namespace gapi {
-
-void convertRGB2YUV422(const cv::Mat& in, cv::Mat& out);
-
-}
-
 }
 
 #endif // OPENCV_GAPI_GCPUIMGPROC_HPP

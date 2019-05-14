@@ -196,7 +196,7 @@ namespace imgproc {
 
     G_TYPED_KERNEL(GRGB2HSV, <cv::GMat(cv::GMat)>, "org.opencv.imgproc.colorconvert.rgb2hsv") {
         static cv::GMatDesc outMeta(cv::GMatDesc in) {
-            return in.withType(CV_8U, 3);
+            return in;
         }
     };
 
