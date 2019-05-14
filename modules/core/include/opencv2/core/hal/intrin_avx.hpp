@@ -1188,14 +1188,11 @@ inline float v_reduce_sad(const v_float32x8& a, const v_float32x8& b)
 /** Popcount **/
 inline v_uint8x32 v_popcount(const v_uint8x32& a)
 {
-    __m256i m1 = _mm256_set1_epi32(0x55555555);
-    __m256i m2 = _mm256_set1_epi32(0x33333333);
-    __m256i m4 = _mm256_set1_epi32(0x0f0f0f0f);
-    __m256i p = a.val;
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 1), m1), _mm256_and_si256(p, m1));
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 2), m2), _mm256_and_si256(p, m2));
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 4), m4), _mm256_and_si256(p, m4));
-    return v_uint8x32(p);
+    __m256i _popcnt_table = _mm256_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+                                             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
+    __m256i _popcnt_mask = _mm256_set1_epi8(0x0F);
+    return v_uint8x32(_mm256_add_epi8(_mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(                  a.val    , _popcnt_mask)),
+                                      _mm256_shuffle_epi8(_popcnt_table, _mm256_and_si256(_mm256_srli_epi16(a.val, 4), _popcnt_mask))));
 }
 inline v_uint16x16 v_popcount(const v_uint16x16& a)
 {
@@ -1212,14 +1209,7 @@ inline v_uint32x8 v_popcount(const v_uint32x8& a)
 }
 inline v_uint64x4 v_popcount(const v_uint64x4& a)
 {
-    __m256i m1 = _mm256_set1_epi32(0x55555555);
-    __m256i m2 = _mm256_set1_epi32(0x33333333);
-    __m256i m4 = _mm256_set1_epi32(0x0f0f0f0f);
-    __m256i p = a.val;
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 1), m1), _mm256_and_si256(p, m1));
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 2), m2), _mm256_and_si256(p, m2));
-    p = _mm256_add_epi32(_mm256_and_si256(_mm256_srli_epi32(p, 4), m4), _mm256_and_si256(p, m4));
-    return v_uint64x4(_mm256_sad_epu8(p, _mm256_setzero_si256()));
+    return v_uint64x4(_mm256_sad_epu8(v_popcount(v_reinterpret_as_u8(a)).val, _mm256_setzero_si256()));
 }
 inline v_uint8x32 v_popcount(const v_int8x32& a)
 { return v_popcount(v_reinterpret_as_u8(a)); }
