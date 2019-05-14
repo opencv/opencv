@@ -803,6 +803,9 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 
 @sa YUV2BGR, NV12toRGB
 */
+
+GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
+
 GAPI_EXPORTS GMat BayerGR2RGB(const GMat& src_gr);
 
 /** @brief Converts an image from BayerGR color space to BGR.
