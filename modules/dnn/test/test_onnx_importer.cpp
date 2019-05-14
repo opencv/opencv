@@ -169,8 +169,8 @@ TEST_P(Test_ONNX_layers, BatchNormalization)
 
 TEST_P(Test_ONNX_layers, BatchNormalization3D)
 {
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-       throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
     testONNXModels("batch_norm_3d");
 }
 
