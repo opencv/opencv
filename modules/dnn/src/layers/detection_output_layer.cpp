@@ -312,15 +312,13 @@ public:
     {
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
+        outs.getUMatVector(outputs);
 
         bool use_half = (inps.depth() == CV_16S);
         if (use_half)
         {
             std::vector<UMat> orig_inputs;
-            std::vector<UMat> orig_outputs;
-
             inps.getUMatVector(orig_inputs);
-            outs.getUMatVector(orig_outputs);
 
             inputs.resize(orig_inputs.size());
             for (size_t i = 0; i < orig_inputs.size(); i++)
@@ -329,7 +327,6 @@ public:
         else
         {
             inps.getUMatVector(inputs);
-            outs.getUMatVector(outputs);
         }
 
         std::vector<LabelBBox> allDecodedBBoxes;
@@ -362,19 +359,17 @@ public:
 
         if (numKept == 0)
         {
-            // Set confidences to zeros.
-            Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(2, 3)};
-            if (use_half)
-            {
-                std::vector<UMat> orig_outputs;
-                outs.getUMatVector(orig_outputs);
-                orig_outputs[0](ranges).setTo(0);
-            } else
-                outputs[0](ranges).setTo(0);
+            outputs[0].setTo(0);
             return true;
         }
-        int outputShape[] = {1, 1, (int)numKept, 7};
-        UMat umat = UMat(4, outputShape, CV_32F);
+
+        UMat umat = use_half ? UMat::zeros(4, outputs[0].size, CV_32F) : outputs[0];
+
+        if (!use_half)
+            umat.setTo(0);
+
+        // If there are valid detections
+        if (numKept > 0)
         {
             Mat mat = umat.getMat(ACCESS_WRITE);
             float* outputsData = mat.ptr<float>();
@@ -393,16 +388,7 @@ public:
         {
             UMat half_umat;
             convertFp16(umat, half_umat);
-
-            std::vector<UMat> orig_outputs;
-            outs.getUMatVector(orig_outputs);
-            orig_outputs.clear();
-            orig_outputs.push_back(half_umat);
-            outs.assign(orig_outputs);
-        } else {
-            outputs.clear();
-            outputs.push_back(umat);
-            outs.assign(outputs);
+            outs.assign(std::vector<UMat>(1, half_umat));
         }
 
         return true;
@@ -484,15 +470,12 @@ public:
             numKept += processDetections_(allDecodedBBoxes[i], allConfidenceScores[i], allIndices);
         }
 
+        outputs[0].setTo(0);
+
+        // If there is no detections
         if (numKept == 0)
-        {
-            // Set confidences to zeros.
-            Range ranges[] = {Range::all(), Range::all(), Range::all(), Range(2, 3)};
-            outputs[0](ranges).setTo(0);
             return;
-        }
-        int outputShape[] = {1, 1, (int)numKept, 7};
-        outputs[0].create(4, outputShape, CV_32F);
+
         float* outputsData = outputs[0].ptr<float>();
 
         size_t count = 0;
@@ -703,8 +686,6 @@ public:
                 prior_width += 1.0f;
                 prior_height += 1.0f;
             }
-            CV_Assert(prior_width > 0);
-            CV_Assert(prior_height > 0);
             float prior_center_x = prior_bbox.xmin + prior_width * .5;
             float prior_center_y = prior_bbox.ymin + prior_height * .5;
 
