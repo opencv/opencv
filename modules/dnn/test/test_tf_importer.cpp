@@ -190,8 +190,8 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)
 {
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-       throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
     runTensorFlowNet("batch_norm3d");
 }
 

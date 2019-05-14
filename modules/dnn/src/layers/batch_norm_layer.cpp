@@ -153,7 +153,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return (backendId == DNN_BACKEND_OPENCV && (dims == 4 || dims == 2)) ||
+        return (backendId == DNN_BACKEND_OPENCV) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
@@ -181,11 +181,12 @@ public:
         }
 
         UMat &inpBlob = inputs[0];
-        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
         int groups = inpBlob.size[0];
         int channels = inpBlob.size[1];
-        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
-        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
+        int planeSize = 1;
+        for (size_t i = 2; i < inpBlob.dims; i++) {
+            planeSize *= inpBlob.size[i];
+        }
 
         String opts = (use_half) ? " -DDtype=half" : " -DDtype=float";
         for (size_t ii = 0; ii < outputs.size(); ii++)
@@ -199,7 +200,7 @@ public:
             }
             else
             {
-                MatShape s = shape(groups * channels, rows * cols);
+                MatShape s = shape(groups * channels, planeSize);
                 UMat src = inputs[ii].reshape(1, s.size(), &s[0]);
                 UMat dst = outputs[ii].reshape(1, s.size(), &s[0]);
                 int number = (s[1] % 8 == 0) ? 8 : ((s[1] % 4 == 0) ? 4 : 1);
@@ -251,9 +252,10 @@ public:
         CV_Assert(inputs.size() == 1);
 
         Mat &inpBlob = inputs[0];
-        CV_Assert(inpBlob.dims == 2 || inpBlob.dims == 4);
-        int rows = inpBlob.dims > 2 ? inpBlob.size[2] : 1;
-        int cols = inpBlob.dims > 2 ? inpBlob.size[3] : 1;
+        int planeSize = 1;
+        for (size_t i = 2; i < inpBlob.dims; i++) {
+            planeSize *= inpBlob.size[i];
+        }
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -265,8 +267,8 @@ public:
                 {
                     float w = weights_.at<float>(n);
                     float b = bias_.at<float>(n);
-                    Mat inpBlobPlane(rows, cols, CV_32F, inpBlob.ptr<float>(num, n));
-                    Mat outBlobPlane(rows, cols, CV_32F, outBlob.ptr<float>(num, n));
+                    Mat inpBlobPlane(1, planeSize, CV_32F, inpBlob.ptr<float>(num, n));
+                    Mat outBlobPlane(1, planeSize, CV_32F, outBlob.ptr<float>(num, n));
                     inpBlobPlane.convertTo(outBlobPlane, CV_32F, w, b);
                 }
             }
