@@ -341,11 +341,22 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
 
             if (chromaPixelStride == 2) { // Chroma channels are interleaved
+                assert(planes[0].getPixelStride() == 1);
+                assert(planes[2].getPixelStride() == 2);
                 ByteBuffer y_plane = planes[0].getBuffer();
-                ByteBuffer uv_plane = planes[1].getBuffer();
+                ByteBuffer uv_plane1 = planes[1].getBuffer();
+                ByteBuffer uv_plane2 = planes[2].getBuffer();
                 Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane);
-                Mat uv_mat = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane);
-                Imgproc.cvtColorTwoPlane(y_mat, uv_mat, mRgba, Imgproc.COLOR_YUV2RGBA_NV21);
+                Mat uv_mat1 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane1);
+                Mat uv_mat2 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane2);
+                long addr_diff = uv_mat2.dataAddr() - uv_mat1.dataAddr();
+                if (addr_diff > 0) {
+                    assert(addr_diff == 1);
+                    Imgproc.cvtColorTwoPlane(y_mat, uv_mat1, mRgba, Imgproc.COLOR_YUV2RGBA_NV12);
+                } else {
+                    assert(addr_diff == -1);
+                    Imgproc.cvtColorTwoPlane(y_mat, uv_mat2, mRgba, Imgproc.COLOR_YUV2RGBA_NV21);
+                }
                 return mRgba;
             } else { // Chroma channels are not interleaved
                 byte[] yuv_bytes = new byte[w*(h+h/2)];
