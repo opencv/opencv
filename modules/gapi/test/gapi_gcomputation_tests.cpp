@@ -52,6 +52,41 @@ namespace opencv_test
           {
           }
       };
+
+      struct GComputationVectorMatsAsOutput: public ::testing::Test
+      {
+          cv::GMat in;
+          cv::GMat out[3];
+          cv::Mat  in_mat;
+          cv::GComputation m_c;
+          std::vector<cv::Mat> ref_mats;
+
+          GComputationVectorMatsAsOutput() : in_mat(300, 300, CV_8UC3),
+          m_c([&](){
+                      std::tie(out[0], out[1], out[2]) = cv::gapi::split3(in);
+                      return cv::GComputation({in}, {out[0], out[1], out[2]});
+                  })
+          {
+              cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+              cv::split(in_mat, ref_mats);
+          }
+
+          void run(std::vector<cv::Mat>& out_mats)
+          {
+              m_c.apply({in_mat}, out_mats);
+          }
+
+          void check(const std::vector<cv::Mat>& out_mats)
+          {
+              for (const auto& it : ade::util::zip(ref_mats, out_mats))
+              {
+                  const auto& ref_mat = std::get<0>(it);
+                  const auto& out_mat = std::get<1>(it);
+
+                  EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+              }
+          }
+      };
   }
 
   TEST_F(GComputationApplyTest, ThrowDontPassCustomKernel)
@@ -66,28 +101,37 @@ namespace opencv_test
       ASSERT_NO_THROW(m_c.apply(in_mat, out_mat, cv::compile_args(pkg)));
   }
 
-  TEST(GComputationTest, VectorAsOutputApply)
+  TEST_F(GComputationVectorMatsAsOutput, OutputAllocated)
   {
-      cv::GMat in;
-      cv::GMat out[3];
-      std::tie(out[0], out[1], out[2]) = cv::gapi::split3(in);
-
-      cv::Mat in_mat(3, 3, CV_8UC3);
-      cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
       std::vector<cv::Mat> out_mats(3);
-      std::vector<cv::Mat> ref_mats(3);
-
-      cv::split(in_mat, ref_mats);
-
-      cv::GComputation({in}, {out[0], out[1], out[2]}).apply({in_mat}, out_mats);
-
-      EXPECT_EQ(cv::Size(3, 3), out_mats[0].size());
-      for (const auto& it : ade::util::zip(ref_mats, out_mats))
+      for (auto& out_mat : out_mats)
       {
-          const auto& ref_mat = std::get<0>(it);
-          const auto& out_mat = std::get<1>(it);
-
-          EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+          out_mat.create(in_mat.size(), CV_8UC1);
       }
+
+      run(out_mats);
+      check(out_mats);
   }
+
+  TEST_F(GComputationVectorMatsAsOutput, OutputNotAllocated)
+  {
+      std::vector<cv::Mat> out_mats(3);
+
+      run(out_mats);
+      check(out_mats);
+  }
+
+  TEST_F(GComputationVectorMatsAsOutput, OutputAllocatedWithInvalidMeta)
+  {
+      std::vector<cv::Mat> out_mats(3);
+
+      for (auto& out_mat : out_mats)
+      {
+          out_mat.create(in_mat.size() / 2, CV_8UC1);
+      }
+
+      run(out_mats);
+      check(out_mats);
+  }
+
 } // namespace opencv_test
