@@ -1130,7 +1130,7 @@ public:
             CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
-            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisible by 16" );
 
         if( params.textureThreshold < 0 )
             CV_Error( Error::StsOutOfRange, "texture threshold must be non-negative" );
