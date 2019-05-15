@@ -1,6 +1,13 @@
 import cv2 as cv
 import argparse
 import numpy as np
+import sys
+import time
+from threading import Thread
+if sys.version_info[0] == '2':
+    import Queue as queue
+else:
+    import queue
 
 from common import *
 from tf_text_graph_common import readTextMessage
@@ -35,6 +42,9 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
                          '%d: VPU' % targets)
+parser.add_argument('--async', type=int, default=0,
+                    help='Number of asynchronous forwards at the same time. '
+                         'Choose 0 for synchronous mode')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'object_detection')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -173,32 +183,125 @@ def callback(pos):
 cv.createTrackbar('Confidence threshold, %', winName, int(confThreshold * 100), 99, callback)
 
 cap = cv.VideoCapture(cv.samples.findFileOrKeep(args.input) if args.input else 0)
+
+class QueueFPS(queue.Queue):
+    def __init__(self):
+        queue.Queue.__init__(self)
+        self.startTime = 0
+        self.counter = 0
+
+    def put(self, v):
+        queue.Queue.put(self, v)
+        self.counter += 1
+        if self.counter == 1:
+            self.startTime = time.time()
+
+    def getFPS(self):
+        return self.counter / (time.time() - self.startTime)
+
+
+process = True
+
+#
+# Frames capturing thread
+#
+framesQueue = QueueFPS()
+def framesThreadBody():
+    global framesQueue, process
+
+    while process:
+        hasFrame, frame = cap.read()
+        if not hasFrame:
+            break
+        framesQueue.put(frame)
+
+
+#
+# Frames processing thread
+#
+processedFramesQueue = queue.Queue()
+predictionsQueue = QueueFPS()
+def processingThreadBody():
+    global processedFramesQueue, predictionsQueue, args, process
+
+    futureOutputs = []
+    while process:
+        # Get a next frame
+        frame = None
+        try:
+            frame = framesQueue.get_nowait()
+
+            if args.async:
+                if len(futureOutputs) == args.async:
+                    frame = None  # Skip the frame
+            else:
+                framesQueue.queue.clear()  # Skip the rest of frames
+        except queue.Empty:
+            pass
+
+
+        if not frame is None:
+            frameHeight = frame.shape[0]
+            frameWidth = frame.shape[1]
+
+            # Create a 4D blob from a frame.
+            inpWidth = args.width if args.width else frameWidth
+            inpHeight = args.height if args.height else frameHeight
+            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
+            processedFramesQueue.put(frame)
+
+            # Run a model
+            net.setInput(blob, scalefactor=args.scale, mean=args.mean)
+            if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
+                frame = cv.resize(frame, (inpWidth, inpHeight))
+                net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
+
+            if args.async:
+                futureOutputs.append(net.forwardAsync())
+            else:
+                outs = net.forward(outNames)
+                predictionsQueue.put(np.copy(outs))
+
+        while futureOutputs and futureOutputs[0].wait_for(0) == 0:
+            out = futureOutputs[0].get()
+            predictionsQueue.put(np.copy([out]))
+
+            del futureOutputs[0]
+
+
+framesThread = Thread(target=framesThreadBody)
+framesThread.start()
+
+processingThread = Thread(target=processingThreadBody)
+processingThread.start()
+
+#
+# Postprocessing and rendering loop
+#
 while cv.waitKey(1) < 0:
-    hasFrame, frame = cap.read()
-    if not hasFrame:
-        cv.waitKey()
-        break
+    try:
+        # Request prediction first because they put after frames
+        outs = predictionsQueue.get_nowait()
+        frame = processedFramesQueue.get_nowait()
 
-    frameHeight = frame.shape[0]
-    frameWidth = frame.shape[1]
+        postprocess(frame, outs)
 
-    # Create a 4D blob from a frame.
-    inpWidth = args.width if args.width else frameWidth
-    inpHeight = args.height if args.height else frameHeight
-    blob = cv.dnn.blobFromImage(frame, args.scale, (inpWidth, inpHeight), args.mean, args.rgb, crop=False)
+        # Put efficiency information.
+        if predictionsQueue.counter > 1:
+            label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
+            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
-    # Run a model
-    net.setInput(blob)
-    if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
-        frame = cv.resize(frame, (inpWidth, inpHeight))
-        net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
-    outs = net.forward(outNames)
+            label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
+            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
-    postprocess(frame, outs)
+            label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
+            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
-    # Put efficiency information.
-    t, _ = net.getPerfProfile()
-    label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-    cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv.imshow(winName, frame)
+    except queue.Empty:
+        pass
 
-    cv.imshow(winName, frame)
+
+process = False
+framesThread.join()
+processingThread.join()

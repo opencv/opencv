@@ -692,15 +692,27 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 ////////// Reduce and mask /////////
 
 /** Reduce **/
-inline short v_reduce_sum(const v_int16x8& a)
+inline uint v_reduce_sum(const v_uint8x16& a)
+{
+    const vec_uint4 zero4 = vec_uint4_z;
+    vec_uint4 sum4 = vec_sum4s(a.val, zero4);
+    return (uint)vec_extract(vec_sums(vec_int4_c(sum4), vec_int4_c(zero4)), 3);
+}
+inline int v_reduce_sum(const v_int8x16& a)
+{
+    const vec_int4 zero4 = vec_int4_z;
+    vec_int4 sum4 = vec_sum4s(a.val, zero4);
+    return (int)vec_extract(vec_sums(sum4, zero4), 3);
+}
+inline int v_reduce_sum(const v_int16x8& a)
 {
     const vec_int4 zero = vec_int4_z;
-    return saturate_cast<short>(vec_extract(vec_sums(vec_sum4s(a.val, zero), zero), 3));
+    return saturate_cast<int>(vec_extract(vec_sums(vec_sum4s(a.val, zero), zero), 3));
 }
-inline ushort v_reduce_sum(const v_uint16x8& a)
+inline uint v_reduce_sum(const v_uint16x8& a)
 {
     const vec_int4 v4 = vec_int4_c(vec_unpackhu(vec_adds(a.val, vec_sld(a.val, a.val, 8))));
-    return saturate_cast<ushort>(vec_extract(vec_sums(v4, vec_int4_z), 3));
+    return saturate_cast<uint>(vec_extract(vec_sums(v4, vec_int4_z), 3));
 }
 
 #define OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(_Tpvec, _Tpvec2, scalartype, suffix, func) \
@@ -719,6 +731,14 @@ OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, sum, vec_add)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, min, vec_min)
 
+inline uint64 v_reduce_sum(const v_uint64x2& a)
+{
+    return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
+}
+inline int64 v_reduce_sum(const v_int64x2& a)
+{
+    return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
+}
 inline double v_reduce_sum(const v_float64x2& a)
 {
     return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
@@ -735,6 +755,19 @@ OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint16x8, vec_ushort8, ushort, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint16x8, vec_ushort8, ushort, min, vec_min)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int16x8, vec_short8, short, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int16x8, vec_short8, short, min, vec_min)
+
+#define OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(_Tpvec, _Tpvec2, scalartype, suffix, func) \
+inline scalartype v_reduce_##suffix(const _Tpvec& a)                               \
+{                                                                                  \
+    _Tpvec2 rs = func(a.val, vec_sld(a.val, a.val, 8));                            \
+    rs = func(rs, vec_sld(rs, rs, 4));                                             \
+    rs = func(rs, vec_sld(rs, rs, 2));                                             \
+    return vec_extract(func(rs, vec_sld(rs, rs, 1)), 0);                           \
+}
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, min, vec_min)
 
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
@@ -792,9 +825,22 @@ inline float v_reduce_sad(const v_float32x4& a, const v_float32x4& b)
 }
 
 /** Popcount **/
-template<typename _Tpvec>
-inline v_uint32x4 v_popcount(const _Tpvec& a)
-{ return v_uint32x4(vec_popcntu(vec_uint4_c(a.val))); }
+inline v_uint8x16 v_popcount(const v_uint8x16& a)
+{ return v_uint8x16(vec_popcntu(a.val)); }
+inline v_uint8x16 v_popcount(const v_int8x16& a)
+{ return v_uint8x16(vec_popcntu(a.val)); }
+inline v_uint16x8 v_popcount(const v_uint16x8& a)
+{ return v_uint16x8(vec_popcntu(a.val)); }
+inline v_uint16x8 v_popcount(const v_int16x8& a)
+{ return v_uint16x8(vec_popcntu(a.val)); }
+inline v_uint32x4 v_popcount(const v_uint32x4& a)
+{ return v_uint32x4(vec_popcntu(a.val)); }
+inline v_uint32x4 v_popcount(const v_int32x4& a)
+{ return v_uint32x4(vec_popcntu(a.val)); }
+inline v_uint64x2 v_popcount(const v_uint64x2& a)
+{ return v_uint64x2(vec_popcntu(a.val)); }
+inline v_uint64x2 v_popcount(const v_int64x2& a)
+{ return v_uint64x2(vec_popcntu(a.val)); }
 
 /** Mask **/
 inline int v_signmask(const v_uint8x16& a)
