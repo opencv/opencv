@@ -98,7 +98,4 @@ int main(int argc, char **argv)
         old_gray = frame_gray.clone();
         p0 = good_new;
     }
-
-    destroyAllWindows();
-    capture.release();
 }

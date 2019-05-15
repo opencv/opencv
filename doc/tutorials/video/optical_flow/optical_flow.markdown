@@ -17,8 +17,7 @@ Optical Flow
 Optical flow is the pattern of apparent motion of image objects between two consecutive frames
 caused by the movemement of object or camera. It is 2D vector field where each vector is a
 displacement vector showing the movement of points from first frame to second. Consider the image
-below (Image Courtesy: [Wikipedia article on Optical
-Flow](http://en.wikipedia.org/wiki/Optical_flow)).
+below (Image Courtesy: [Wikipedia article on Optical Flow](http://en.wikipedia.org/wiki/Optical_flow)).
 
 ![image](images/optical_flow_basic1.jpg)
 
@@ -93,13 +92,6 @@ then we iteratively track those points using Lucas-Kanade optical flow. For the 
 returns next points along with some status numbers which has a value of 1 if next point is found,
 else zero. We iteratively pass these next points as previous points in next step. See the code
 below:
-@add_toggle_python
--   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
-
--   **Code at glance:**
-    @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
-@end_toggle
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
@@ -108,6 +100,15 @@ below:
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp
 @end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
+@end_toggle
+
 (This code doesn't check how correct are the next keypoints. So even if any feature point disappears
 in image, there is a chance that optical flow finds the next point which may look close to it. So
 actually for a robust tracking, corner points should be detected in particular intervals. OpenCV
@@ -133,6 +134,14 @@ array with optical flow vectors, \f$(u,v)\f$. We find their magnitude and direct
 result for better visualization. Direction corresponds to Hue value of the image. Magnitude
 corresponds to Value plane. See the code below:
 
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
+
+-   **Code at glance:**
+    @include samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp
+@end_toggle
+
 @add_toggle_python
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py)
@@ -141,13 +150,6 @@ corresponds to Value plane. See the code below:
     @include samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py
 @end_toggle
 
-@add_toggle_cpp
--   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
-
--   **Code at glance:**
-    @include samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp
-@end_toggle
 
 See the result below:
 

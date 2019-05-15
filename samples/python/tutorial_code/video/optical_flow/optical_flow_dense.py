@@ -1,5 +1,5 @@
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 cap = cv.VideoCapture(cv.samples.findFile("vtest.avi"))
 ret, frame1 = cap.read()
 prvs = cv.cvtColor(frame1,cv.COLOR_BGR2GRAY)
@@ -21,5 +21,3 @@ while(1):
         cv.imwrite('opticalfb.png',frame2)
         cv.imwrite('opticalhsv.png',bgr)
     prvs = next
-cap.release()
-cv.destroyAllWindows()

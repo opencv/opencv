@@ -56,7 +56,4 @@ int main()
 
         prvs = next;
     }
-
-    capture.release();
-    destroyAllWindows();
 }
