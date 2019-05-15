@@ -198,6 +198,15 @@ public class Calib3dTest extends OpenCVTestCase {
         assertTrue(!corners.empty());
     }
 
+    public void testFind4QuadCornerSubpix() {
+        Size patternSize = new Size(9, 6);
+        MatOfPoint2f corners = new MatOfPoint2f();
+        Size region_size = new Size(5, 5);
+        Calib3d.findChessboardCorners(grayChess, patternSize, corners);
+        Calib3d.find4QuadCornerSubpix(grayChess, corners, region_size);
+        assertTrue(!corners.empty());
+    }
+
     public void testFindCirclesGridMatSizeMat() {
         int size = 300;
         Mat img = new Mat(size, size, CvType.CV_8U);

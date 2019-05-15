@@ -248,9 +248,6 @@ private:
     // Holds the data dimension.
     int n;
 
-    // Stores real/imag part of a complex division.
-    double cdivr, cdivi;
-
     // Pointer to internal memory.
     double *d, *e, *ort;
     double **V, **H;
@@ -297,8 +294,9 @@ private:
         return arr;
     }
 
-    void cdiv(double xr, double xi, double yr, double yi) {
+    static void complex_div(double xr, double xi, double yr, double yi, double& cdivr, double& cdivi) {
         double r, dv;
+        CV_DbgAssert(std::abs(yr) + std::abs(yi) > 0.0);
         if (std::abs(yr) > std::abs(yi)) {
             r = yi / yr;
             dv = yr + r * yi;
@@ -322,24 +320,27 @@ private:
         //  Fortran subroutine in EISPACK.
 
         // Initialize
-        int nn = this->n;
+        const int max_iters_count = 1000 * this->n;
+
+        const int nn = this->n; CV_Assert(nn > 0);
         int n1 = nn - 1;
-        int low = 0;
-        int high = nn - 1;
-        double eps = std::pow(2.0, -52.0);
+        const int low = 0;
+        const int high = nn - 1;
+        const double eps = std::numeric_limits<double>::epsilon();
         double exshift = 0.0;
-        double p = 0, q = 0, r = 0, s = 0, z = 0, t, w, x, y;
 
         // Store roots isolated by balanc and compute matrix norm
 
         double norm = 0.0;
         for (int i = 0; i < nn; i++) {
+#if 0 // 'if' condition is always false
             if (i < low || i > high) {
                 d[i] = H[i][i];
                 e[i] = 0.0;
             }
+#endif
             for (int j = std::max(i - 1, 0); j < nn; j++) {
-                norm = norm + std::abs(H[i][j]);
+                norm += std::abs(H[i][j]);
             }
         }
 
@@ -353,7 +354,7 @@ private:
                 if (norm < FLT_EPSILON) {
                     break;
                 }
-                s = std::abs(H[l - 1][l - 1]) + std::abs(H[l][l]);
+                double s = std::abs(H[l - 1][l - 1]) + std::abs(H[l][l]);
                 if (s == 0.0) {
                     s = norm;
                 }
@@ -364,29 +365,26 @@ private:
             }
 
             // Check for convergence
-            // One root found
-
             if (l == n1) {
+                // One root found
                 H[n1][n1] = H[n1][n1] + exshift;
                 d[n1] = H[n1][n1];
                 e[n1] = 0.0;
                 n1--;
                 iter = 0;
 
-                // Two roots found
-
             } else if (l == n1 - 1) {
-                w = H[n1][n1 - 1] * H[n1 - 1][n1];
-                p = (H[n1 - 1][n1 - 1] - H[n1][n1]) / 2.0;
-                q = p * p + w;
-                z = std::sqrt(std::abs(q));
+                // Two roots found
+                double w = H[n1][n1 - 1] * H[n1 - 1][n1];
+                double p = (H[n1 - 1][n1 - 1] - H[n1][n1]) * 0.5;
+                double q = p * p + w;
+                double z = std::sqrt(std::abs(q));
                 H[n1][n1] = H[n1][n1] + exshift;
                 H[n1 - 1][n1 - 1] = H[n1 - 1][n1 - 1] + exshift;
-                x = H[n1][n1];
-
-                // Real pair
+                double x = H[n1][n1];
 
                 if (q >= 0) {
+                    // Real pair
                     if (p >= 0) {
                         z = p + z;
                     } else {
@@ -400,10 +398,10 @@ private:
                     e[n1 - 1] = 0.0;
                     e[n1] = 0.0;
                     x = H[n1][n1 - 1];
-                    s = std::abs(x) + std::abs(z);
+                    double s = std::abs(x) + std::abs(z);
                     p = x / s;
                     q = z / s;
-                    r = std::sqrt(p * p + q * q);
+                    double r = std::sqrt(p * p + q * q);
                     p = p / r;
                     q = q / r;
 
@@ -431,9 +429,8 @@ private:
                         V[i][n1] = q * V[i][n1] - p * z;
                     }
 
-                    // Complex pair
-
                 } else {
+                    // Complex pair
                     d[n1 - 1] = x + p;
                     d[n1] = x + p;
                     e[n1 - 1] = z;
@@ -442,28 +439,25 @@ private:
                 n1 = n1 - 2;
                 iter = 0;
 
+            } else {
                 // No convergence yet
 
-            } else {
-
                 // Form shift
-
-                x = H[n1][n1];
-                y = 0.0;
-                w = 0.0;
+                double x = H[n1][n1];
+                double y = 0.0;
+                double w = 0.0;
                 if (l < n1) {
                     y = H[n1 - 1][n1 - 1];
                     w = H[n1][n1 - 1] * H[n1 - 1][n1];
                 }
 
                 // Wilkinson's original ad hoc shift
-
                 if (iter == 10) {
                     exshift += x;
                     for (int i = low; i <= n1; i++) {
                         H[i][i] -= x;
                     }
-                    s = std::abs(H[n1][n1 - 1]) + std::abs(H[n1 - 1][n1 - 2]);
+                    double s = std::abs(H[n1][n1 - 1]) + std::abs(H[n1 - 1][n1 - 2]);
                     x = y = 0.75 * s;
                     w = -0.4375 * s * s;
                 }
@@ -471,14 +465,14 @@ private:
                 // MATLAB's new ad hoc shift
 
                 if (iter == 30) {
-                    s = (y - x) / 2.0;
+                    double s = (y - x) * 0.5;
                     s = s * s + w;
                     if (s > 0) {
                         s = std::sqrt(s);
                         if (y < x) {
                             s = -s;
                         }
-                        s = x - w / ((y - x) / 2.0 + s);
+                        s = x - w / ((y - x) * 0.5 + s);
                         for (int i = low; i <= n1; i++) {
                             H[i][i] -= s;
                         }
@@ -487,14 +481,20 @@ private:
                     }
                 }
 
-                iter = iter + 1; // (Could check iteration count here.)
+                iter = iter + 1;
+                if (iter > max_iters_count)
+                    CV_Error(Error::StsNoConv, "Algorithm doesn't converge (complex eigen values?)");
+
+                double p = std::numeric_limits<double>::quiet_NaN();
+                double q = std::numeric_limits<double>::quiet_NaN();
+                double r = std::numeric_limits<double>::quiet_NaN();
 
                 // Look for two consecutive small sub-diagonal elements
                 int m = n1 - 2;
                 while (m >= l) {
-                    z = H[m][m];
+                    double z = H[m][m];
                     r = x - z;
-                    s = y - z;
+                    double s = y - z;
                     p = (r * s - w) / H[m + 1][m] + H[m][m + 1];
                     q = H[m + 1][m + 1] - z - r - s;
                     r = H[m + 2][m + 1];
@@ -523,6 +523,7 @@ private:
                 // Double QR step involving rows l:n and columns m:n
 
                 for (int k = m; k < n1; k++) {
+
                     bool notlast = (k != n1 - 1);
                     if (k != m) {
                         p = H[k][k - 1];
@@ -538,7 +539,7 @@ private:
                     if (x == 0.0) {
                         break;
                     }
-                    s = std::sqrt(p * p + q * q + r * r);
+                    double s = std::sqrt(p * p + q * q + r * r);
                     if (p < 0) {
                         s = -s;
                     }
@@ -551,7 +552,7 @@ private:
                         p = p + s;
                         x = p / s;
                         y = q / s;
-                        z = r / s;
+                        double z = r / s;
                         q = q / p;
                         r = r / p;
 
@@ -563,8 +564,8 @@ private:
                                 p = p + r * H[k + 2][j];
                                 H[k + 2][j] = H[k + 2][j] - p * z;
                             }
-                            H[k][j] = H[k][j] - p * x;
-                            H[k + 1][j] = H[k + 1][j] - p * y;
+                            H[k][j] -= p * x;
+                            H[k + 1][j] -= p * y;
                         }
 
                         // Column modification
@@ -575,8 +576,8 @@ private:
                                 p = p + z * H[i][k + 2];
                                 H[i][k + 2] = H[i][k + 2] - p * r;
                             }
-                            H[i][k] = H[i][k] - p;
-                            H[i][k + 1] = H[i][k + 1] - p * q;
+                            H[i][k] -= p;
+                            H[i][k + 1] -= p * q;
                         }
 
                         // Accumulate transformations
@@ -602,17 +603,19 @@ private:
         }
 
         for (n1 = nn - 1; n1 >= 0; n1--) {
-            p = d[n1];
-            q = e[n1];
-
-            // Real vector
+            double p = d[n1];
+            double q = e[n1];
 
             if (q == 0) {
+                // Real vector
+                double z = std::numeric_limits<double>::quiet_NaN();
+                double s = std::numeric_limits<double>::quiet_NaN();
+
                 int l = n1;
                 H[n1][n1] = 1.0;
                 for (int i = n1 - 1; i >= 0; i--) {
-                    w = H[i][i] - p;
-                    r = 0.0;
+                    double w = H[i][i] - p;
+                    double r = 0.0;
                     for (int j = l; j <= n1; j++) {
                         r = r + H[i][j] * H[j][n1];
                     }
@@ -627,34 +630,38 @@ private:
                             } else {
                                 H[i][n1] = -r / (eps * norm);
                             }
-
-                            // Solve real equations
-
                         } else {
-                            x = H[i][i + 1];
-                            y = H[i + 1][i];
+                            // Solve real equations
+                            CV_DbgAssert(!cvIsNaN(z));
+                            double x = H[i][i + 1];
+                            double y = H[i + 1][i];
                             q = (d[i] - p) * (d[i] - p) + e[i] * e[i];
-                            t = (x * s - z * r) / q;
+                            double t = (x * s - z * r) / q;
                             H[i][n1] = t;
                             if (std::abs(x) > std::abs(z)) {
                                 H[i + 1][n1] = (-r - w * t) / x;
                             } else {
+                                CV_DbgAssert(z != 0.0);
                                 H[i + 1][n1] = (-s - y * t) / z;
                             }
                         }
 
                         // Overflow control
-
-                        t = std::abs(H[i][n1]);
+                        double t = std::abs(H[i][n1]);
                         if ((eps * t) * t > 1) {
+                            double inv_t = 1.0 / t;
                             for (int j = i; j <= n1; j++) {
-                                H[j][n1] = H[j][n1] / t;
+                                H[j][n1] *= inv_t;
                             }
                         }
                     }
                 }
-                // Complex vector
             } else if (q < 0) {
+                // Complex vector
+                double z = std::numeric_limits<double>::quiet_NaN();
+                double r = std::numeric_limits<double>::quiet_NaN();
+                double s = std::numeric_limits<double>::quiet_NaN();
+
                 int l = n1 - 1;
 
                 // Last vector component imaginary so matrix is triangular
@@ -663,9 +670,11 @@ private:
                     H[n1 - 1][n1 - 1] = q / H[n1][n1 - 1];
                     H[n1 - 1][n1] = -(H[n1][n1] - p) / H[n1][n1 - 1];
                 } else {
-                    cdiv(0.0, -H[n1 - 1][n1], H[n1 - 1][n1 - 1] - p, q);
-                    H[n1 - 1][n1 - 1] = cdivr;
-                    H[n1 - 1][n1] = cdivi;
+                    complex_div(
+                            0.0, -H[n1 - 1][n1],
+                            H[n1 - 1][n1 - 1] - p, q,
+                            H[n1 - 1][n1 - 1], H[n1 - 1][n1]
+                    );
                 }
                 H[n1][n1 - 1] = 0.0;
                 H[n1][n1] = 1.0;
@@ -677,7 +686,7 @@ private:
                         ra = ra + H[i][j] * H[j][n1 - 1];
                         sa = sa + H[i][j] * H[j][n1];
                     }
-                    w = H[i][i] - p;
+                    double w = H[i][i] - p;
 
                     if (e[i] < 0.0) {
                         z = w;
@@ -686,41 +695,42 @@ private:
                     } else {
                         l = i;
                         if (e[i] == 0) {
-                            cdiv(-ra, -sa, w, q);
-                            H[i][n1 - 1] = cdivr;
-                            H[i][n1] = cdivi;
+                            complex_div(
+                                    -ra, -sa,
+                                    w, q,
+                                    H[i][n1 - 1], H[i][n1]
+                            );
                         } else {
-
                             // Solve complex equations
 
-                            x = H[i][i + 1];
-                            y = H[i + 1][i];
+                            double x = H[i][i + 1];
+                            double y = H[i + 1][i];
                             vr = (d[i] - p) * (d[i] - p) + e[i] * e[i] - q * q;
                             vi = (d[i] - p) * 2.0 * q;
                             if (vr == 0.0 && vi == 0.0) {
                                 vr = eps * norm * (std::abs(w) + std::abs(q) + std::abs(x)
                                                    + std::abs(y) + std::abs(z));
                             }
-                            cdiv(x * r - z * ra + q * sa,
-                                 x * s - z * sa - q * ra, vr, vi);
-                            H[i][n1 - 1] = cdivr;
-                            H[i][n1] = cdivi;
+                            complex_div(
+                                    x * r - z * ra + q * sa, x * s - z * sa - q * ra,
+                                    vr, vi,
+                                    H[i][n1 - 1], H[i][n1]);
                             if (std::abs(x) > (std::abs(z) + std::abs(q))) {
                                 H[i + 1][n1 - 1] = (-ra - w * H[i][n1 - 1] + q
                                                    * H[i][n1]) / x;
                                 H[i + 1][n1] = (-sa - w * H[i][n1] - q * H[i][n1
                                                                             - 1]) / x;
                             } else {
-                                cdiv(-r - y * H[i][n1 - 1], -s - y * H[i][n1], z,
-                                     q);
-                                H[i + 1][n1 - 1] = cdivr;
-                                H[i + 1][n1] = cdivi;
+                                complex_div(
+                                        -r - y * H[i][n1 - 1], -s - y * H[i][n1],
+                                        z, q,
+                                        H[i + 1][n1 - 1], H[i + 1][n1]);
                             }
                         }
 
                         // Overflow control
 
-                        t = std::max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
+                        double t = std::max(std::abs(H[i][n1 - 1]), std::abs(H[i][n1]));
                         if ((eps * t) * t > 1) {
                             for (int j = i; j <= n1; j++) {
                                 H[j][n1 - 1] = H[j][n1 - 1] / t;
@@ -734,6 +744,7 @@ private:
 
         // Vectors of isolated roots
 
+#if 0 // 'if' condition is always false
         for (int i = 0; i < nn; i++) {
             if (i < low || i > high) {
                 for (int j = i; j < nn; j++) {
@@ -741,14 +752,15 @@ private:
                 }
             }
         }
+#endif
 
         // Back transformation to get eigenvectors of original matrix
 
         for (int j = nn - 1; j >= low; j--) {
             for (int i = low; i <= high; i++) {
-                z = 0.0;
+                double z = 0.0;
                 for (int k = low; k <= std::min(j, high); k++) {
-                    z = z + V[i][k] * H[k][j];
+                    z += V[i][k] * H[k][j];
                 }
                 V[i][j] = z;
             }
@@ -848,15 +860,15 @@ private:
     // Releases all internal working memory.
     void release() {
         // releases the working data
-        delete[] d;
-        delete[] e;
-        delete[] ort;
+        delete[] d; d = NULL;
+        delete[] e; e = NULL;
+        delete[] ort; ort = NULL;
         for (int i = 0; i < n; i++) {
-            delete[] H[i];
-            delete[] V[i];
+            if (H) delete[] H[i];
+            if (V) delete[] V[i];
         }
-        delete[] H;
-        delete[] V;
+        delete[] H; H = NULL;
+        delete[] V; V = NULL;
     }
 
     // Computes the Eigenvalue Decomposition for a matrix given in H.
@@ -866,7 +878,7 @@ private:
         d = alloc_1d<double> (n);
         e = alloc_1d<double> (n);
         ort = alloc_1d<double> (n);
-        try {
+        {
             // Reduce to Hessenberg form.
             orthes();
             // Reduce Hessenberg to real Schur form.
@@ -884,11 +896,6 @@ private:
             // Deallocate the memory by releasing all internal working data.
             release();
         }
-        catch (...)
-        {
-            release();
-            throw;
-        }
     }
 
 public:
@@ -896,15 +903,19 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(InputArray src, bool fallbackSymmetric = true) {
-        compute(src, fallbackSymmetric);
+    EigenvalueDecomposition() :
+        n(0),
+        d(NULL), e(NULL), ort(NULL),
+        V(NULL), H(NULL)
+    {
+        // nothing
     }
 
     // This function computes the Eigenvalue Decomposition for a general matrix
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(InputArray src, bool fallbackSymmetric)
+    void compute(InputArray src, bool fallbackSymmetric = true)
     {
         CV_INSTRUMENT_REGION();
 
@@ -934,7 +945,7 @@ public:
         }
     }
 
-    ~EigenvalueDecomposition() {}
+    ~EigenvalueDecomposition() { release(); }
 
     // Returns the eigenvalues of the Eigenvalue Decomposition.
     Mat eigenvalues() const { return _eigenvalues; }
@@ -959,7 +970,8 @@ void eigenNonSymmetric(InputArray _src, OutputArray _evals, OutputArray _evects)
     else
         src64f = src;
 
-    EigenvalueDecomposition eigensystem(src64f, false);
+    EigenvalueDecomposition eigensystem;
+    eigensystem.compute(src64f, false);
 
     // EigenvalueDecomposition returns transposed and non-sorted eigenvalues
     std::vector<double> eigenvalues64f;
@@ -1135,7 +1147,8 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // M = inv(Sw)*Sb
     Mat M;
     gemm(Swi, Sb, 1.0, Mat(), 0.0, M);
-    EigenvalueDecomposition es(M);
+    EigenvalueDecomposition es;
+    es.compute(M);
     _eigenvalues = es.eigenvalues();
     _eigenvectors = es.eigenvectors();
     // reshape eigenvalues, so they are stored by column

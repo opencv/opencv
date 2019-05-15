@@ -3580,6 +3580,12 @@ void VideoCapture_DShow::close()
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
 
+Ptr<IVideoCapture> create_DShow_capture(int index)
+{
+    return makePtr<VideoCapture_DShow>(index);
+}
+
+
 }
 
 #endif

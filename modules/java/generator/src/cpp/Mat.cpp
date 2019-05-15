@@ -32,6 +32,18 @@ static void throwJavaException(JNIEnv *env, const std::exception *e, const char 
   CV_UNUSED(method);        // avoid "unused" warning
 }
 
+// jint could be int or int32_t so casting jint* to int* in general wouldn't work
+static std::vector<int> convertJintArrayToVector(JNIEnv* env, jintArray in) {
+    std::vector<int> out;
+    int len = env->GetArrayLength(in);
+    jint* inArray = env->GetIntArrayElements(in, 0);
+    for ( int i = 0; i < len; i++ ) {
+        out.push_back(inArray[i]);
+    }
+    env->ReleaseIntArrayElements(in, inArray, 0);
+    return out;
+}
+
 extern "C" {
 
 
@@ -91,6 +103,30 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__III
     try {
         LOGD("%s", method_name);
         return (jlong) new Mat( rows, cols, type );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+//
+//   Mat::Mat(int[] sizes, int type)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__I_3II
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__I_3II
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type)
+{
+    static const char method_name[] = "Mat::n_1Mat__I_3II()";
+    try {
+        LOGD("%s", method_name);
+        std::vector<int> sizes = convertJintArrayToVector(env, sizesArray);
+        return (jlong) new Mat( ndims, sizes.data(), type );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -183,6 +219,33 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDIDDDD
 
 
 //
+//   Mat::Mat(int[] sizes, int type, Scalar s)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__I_3IIDDDD
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type, jdouble s_val0, jdouble s_val1, jdouble s_val2, jdouble s_val3);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__I_3IIDDDD
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type, jdouble s_val0, jdouble s_val1, jdouble s_val2, jdouble s_val3)
+{
+    static const char method_name[] = "Mat::n_1Mat__I_3IIDDDD()";
+    try {
+        LOGD("%s", method_name);
+        std::vector<int> sizes = convertJintArrayToVector(env, sizesArray);
+        Scalar s(s_val0, s_val1, s_val2, s_val3);
+        return (jlong) new Mat( ndims, sizes.data(), type, s );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+
+
+//
 //   Mat::Mat(Mat m, Range rowRange, Range colRange = Range::all())
 //
 
@@ -198,6 +261,59 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__JIIII
         Range rowRange(rowRange_start, rowRange_end);
         Range colRange(colRange_start, colRange_end);
         return (jlong) new Mat( (*(Mat*)m_nativeObj), rowRange, colRange );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+jint getObjectIntField(JNIEnv* env, jobject obj, const char * fieldName);
+
+jint getObjectIntField(JNIEnv* env, jobject obj, const char * fieldName) {
+    jfieldID fid; /* store the field ID */
+
+    /* Get a reference to obj's class */
+    jclass cls = env->GetObjectClass(obj);
+
+    /* Look for the instance field s in cls */
+    fid = env->GetFieldID(cls, fieldName, "I");
+    if (fid == NULL)
+    {
+        return 0; /* failed to find the field */
+    }
+
+    /* Read the instance field s */
+    return env->GetIntField(obj, fid);
+}
+
+#define RANGE_START_FIELD    "start"
+#define RANGE_END_FIELD      "end"
+
+//
+//   Mat::Mat(Mat m, Range[] ranges)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__J_3Lorg_opencv_core_Range_2
+  (JNIEnv* env, jclass, jlong m_nativeObj, jobjectArray rangesArray);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__J_3Lorg_opencv_core_Range_2
+  (JNIEnv* env, jclass, jlong m_nativeObj, jobjectArray rangesArray)
+{
+    static const char method_name[] = "Mat::n_1Mat__J_3Lorg_opencv_core_Range_2()";
+    try {
+        LOGD("%s", method_name);
+        std::vector<Range> ranges;
+        int rangeCount = env->GetArrayLength(rangesArray);
+        for (int i = 0; i < rangeCount; i++) {
+            jobject range = env->GetObjectArrayElement(rangesArray, i);
+            jint start = getObjectIntField(env, range, RANGE_START_FIELD);
+            jint end = getObjectIntField(env, range, RANGE_END_FIELD);
+            ranges.push_back(Range(start, end));
+        }
+        return (jlong) new Mat( (*(Mat*)m_nativeObj), ranges );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -709,6 +825,56 @@ JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1create__JDDI
         Mat* me = (Mat*) self; //TODO: check for NULL
         Size size((int)size_width, (int)size_height);
         me->create( size, type );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+}
+
+
+
+//
+//  void Mat::create(int[] sizes, int type)
+//
+
+JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1create__JI_3II
+  (JNIEnv* env, jclass, jlong self, jint ndims, jintArray sizesArray, jint type);
+
+JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1create__JI_3II
+  (JNIEnv* env, jclass, jlong self, jint ndims, jintArray sizesArray, jint type)
+{
+    static const char method_name[] = "Mat::n_1create__JI_3II()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self;
+        std::vector<int> sizes = convertJintArrayToVector(env, sizesArray);
+        me->create( ndims, sizes.data(), type );
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+}
+
+
+
+//
+//  Mat Mat::copySize(Mat m)
+//
+
+JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1copySize
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj);
+
+JNIEXPORT void JNICALL Java_org_opencv_core_Mat_n_1copySize
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj)
+{
+    static const char method_name[] = "Mat::n_1copySize()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self;
+        Mat& m = *((Mat*)m_nativeObj);
+        me->copySize( m );
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
@@ -1235,6 +1401,33 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1ones__DDI
 
 
 //
+// static Mat Mat::ones(int[] sizes, int type)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1ones__I_3II
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1ones__I_3II
+  (JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type)
+{
+    static const char method_name[] = "Mat::n_1ones__I_3II()";
+    try {
+        LOGD("%s", method_name);
+        std::vector<int> sizes = convertJintArrayToVector(env, sizesArray);
+        Mat _retval_ = Mat::ones( ndims, sizes.data(), type );
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+
+
+//
 //  void Mat::push_back(Mat m)
 //
 
@@ -1344,8 +1537,8 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape_11
     try {
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
-        int* newsz = (int*)env->GetPrimitiveArrayCritical(newshape, 0);
-        Mat _retval_ = me->reshape( cn, newndims, newsz );
+        std::vector<int> newsz = convertJintArrayToVector(env, newshape);
+        Mat _retval_ = me->reshape( cn, newndims, newsz.data() );
         return (jlong) new Mat(_retval_);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -1649,6 +1842,39 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1submat_1rr
     return 0;
 }
 
+//
+//  Mat Mat::operator()(Range[] ranges)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1submat_1ranges
+(JNIEnv* env, jclass, jlong self, jobjectArray rangesArray);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1submat_1ranges
+(JNIEnv* env, jclass, jlong self, jobjectArray rangesArray)
+{
+    static const char method_name[] = "Mat::n_1submat_1ranges()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self;
+        std::vector<Range> ranges;
+        int rangeCount = env->GetArrayLength(rangesArray);
+        for (int i = 0; i < rangeCount; i++) {
+            jobject range = env->GetObjectArrayElement(rangesArray, i);
+            jint start = getObjectIntField(env, range, RANGE_START_FIELD);
+            jint end = getObjectIntField(env, range, RANGE_END_FIELD);
+            ranges.push_back(Range(start, end));
+        }
+        Mat _retval_ = me->operator()( ranges );
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 
 
 //
@@ -1812,6 +2038,33 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__DDI
 
 
 //
+// static Mat Mat::zeros(int[] sizes, int type)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__I_3II
+(JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1zeros__I_3II
+(JNIEnv* env, jclass, jint ndims, jintArray sizesArray, jint type)
+{
+    static const char method_name[] = "Mat::n_1zeros__I_3II()";
+    try {
+        LOGD("%s", method_name);
+        std::vector<int> sizes = convertJintArrayToVector(env, sizesArray);
+        Mat _retval_ = Mat::zeros( ndims, sizes.data(), type );
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+
+
+//
 //  native support for java finalize()
 //  static void Mat::n_delete( __int64 self )
 //
@@ -1880,6 +2133,50 @@ template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count,
     return res;
 }
 
+// returns true if final index was reached
+static bool updateIdx(cv::Mat* m, std::vector<int>& idx, int inc) {
+    for (int i=m->dims-1; i>=0; i--) {
+        if (inc == 0) return false;
+        idx[i] = (idx[i] + 1) % m->size[i];
+        inc--;
+    }
+    return true;
+}
+
+template<typename T> static int mat_put_idx(cv::Mat* m, std::vector<int>& idx, int count, int offset, char* buff)
+{
+    if(! m) return 0;
+    if(! buff) return 0;
+
+    count *= sizeof(T);
+    int rest = (int)m->elemSize();
+    for (int i = 0; i < m->dims; i++) {
+        rest *= (m->size[i] - idx[i]);
+    }
+    if(count>rest) count = rest;
+    int res = count;
+
+    if( m->isContinuous() )
+    {
+        memcpy(m->ptr(idx.data()), buff + offset, count);
+    } else {
+        // dim by dim
+        int num = (m->size[m->dims-1] - idx[m->dims-1]) * (int)m->elemSize(); // 1st partial row
+        if(count<num) num = count;
+        uchar* data = m->ptr(idx.data());
+        while(count>0){
+            memcpy(data, buff + offset, num);
+            updateIdx(m, idx, num / (int)m->elemSize());
+            count -= num;
+            buff += num;
+            num = m->size[m->dims-1] * (int)m->elemSize();
+            if(count<num) num = count;
+            data = m->ptr(idx.data());
+        }
+    }
+    return res;
+}
+
 template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, jint offset, ARRAY vals)
 {
     static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
@@ -1903,6 +2200,31 @@ template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row
     return 0;
 }
 
+template<class ARRAY> static jint java_mat_put_idx(JNIEnv* env, jlong self, jintArray idxArray, jint count, jint offset, ARRAY vals)
+{
+    static const char *method_name = JavaOpenCVTrait<ARRAY>::put;
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
+        std::vector<int> idx = convertJintArrayToVector(env, idxArray);
+        for (int i = 0; i < me->dims ; i++ ) {
+            if (me->size[i]<=idx[i]) return 0;
+        }
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_put_idx<typename JavaOpenCVTrait<ARRAY>::value_type>(me, idx, count, offset, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, JNI_ABORT);
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 extern "C" {
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
@@ -1914,6 +2236,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutB
   return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jbyteArray vals)
+{
+    return java_mat_put_idx(env, self, idxArray, count, 0, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals);
 
@@ -1921,6 +2252,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwOffset
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jint offset, jbyteArray vals)
 {
   return java_mat_put(env, self, row, col, count, offset, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwIdxOffset
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jint offset, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutBwIdxOffset
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jint offset, jbyteArray vals)
+{
+    return java_mat_put_idx(env, self, idxArray, count, offset, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
@@ -1932,6 +2272,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutS
   return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutSIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jshortArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutSIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jshortArray vals)
+{
+    return java_mat_put_idx(env, self, idxArray, count, 0, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jintArray vals);
 
@@ -1941,6 +2290,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutI
   return java_mat_put(env, self, row, col, count, 0, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutIIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jintArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutIIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jintArray vals)
+{
+    return java_mat_put_idx(env, self, idxArray, count, 0, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
 
@@ -1948,6 +2306,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals)
 {
   return java_mat_put(env, self, row, col, count, 0, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutFIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jfloatArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutFIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jfloatArray vals)
+{
+    return java_mat_put_idx(env, self, idxArray, count, 0, vals);
 }
 
 // unlike other nPut()-s this one (with double[]) should convert input values to correct type
@@ -2010,6 +2377,56 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutD
     return 0;
 }
 
+// unlike other nPut()-s this one (with double[]) should convert input values to correct type
+#define PUT_ITEM_IDX(T, I) { T*dst = (T*)me->ptr(I); for(int ch=0; ch<me->channels() && count>0; count--,ch++,src++,dst++) *dst = cv::saturate_cast<T>(*src); }
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jdoubleArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jdoubleArray vals)
+{
+    static const char* method_name = JavaOpenCVTrait<jdoubleArray>::put;
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(!me || !me->data) return 0;  // no native object behind
+        std::vector<int> idx = convertJintArrayToVector(env, idxArray);
+        for (int i=0; i<me->dims; i++) {
+            if (me->size[i]<=idx[i]) return 0; // indexes out of range
+        }
+        int rest = me->channels();
+        for (int i=0; i<me->dims; i++) {
+            rest *= (me->size[i] - idx[i]);
+        }
+        if(count>rest) count = rest;
+        int res = count;
+        double* values = (double*)env->GetPrimitiveArrayCritical(vals, 0);
+        double* src = values;
+        bool reachedFinalIndex = false;
+        for(; !reachedFinalIndex && count>0; reachedFinalIndex = updateIdx(me, idx, 1))
+        {
+            switch(me->depth()) {
+                case CV_8U:  PUT_ITEM_IDX(uchar,  idx.data()); break;
+                case CV_8S:  PUT_ITEM_IDX(schar,  idx.data()); break;
+                case CV_16U: PUT_ITEM_IDX(ushort, idx.data()); break;
+                case CV_16S: PUT_ITEM_IDX(short,  idx.data()); break;
+                case CV_32S: PUT_ITEM_IDX(int,    idx.data()); break;
+                case CV_32F: PUT_ITEM_IDX(float,  idx.data()); break;
+                case CV_64F: PUT_ITEM_IDX(double, idx.data()); break;
+            }
+        }
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 } // extern "C"
 
 template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count, char* buff)
@@ -2042,6 +2459,40 @@ template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count,
     return res;
 }
 
+template<typename T> static int mat_get_idx(cv::Mat* m, std::vector<int>& idx, int count, char* buff)
+{
+    if(! m) return 0;
+    if(! buff) return 0;
+
+    count *= sizeof(T);
+    int rest = (int)m->elemSize();
+    for (int i = 0; i < m->dims; i++) {
+        rest *= (m->size[i] - idx[i]);
+    }
+    if(count>rest) count = rest;
+    int res = count;
+
+    if( m->isContinuous() )
+    {
+        memcpy(buff, m->ptr(idx.data()), count);
+    } else {
+        // dim by dim
+        int num = (m->size[m->dims-1] - idx[m->dims-1]) * (int)m->elemSize(); // 1st partial row
+        if(count<num) num = count;
+        uchar* data = m->ptr(idx.data());
+        while(count>0){
+            memcpy(buff, data, num);
+            updateIdx(m, idx, num / (int)m->elemSize());
+            count -= num;
+            buff += num;
+            num = m->size[m->dims-1] * (int)m->elemSize();
+            if(count<num) num = count;
+            data = m->ptr(idx.data());
+        }
+    }
+    return res;
+}
+
 template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals) {
     static const char *method_name = JavaOpenCVTrait<ARRAY>::get;
     try {
@@ -2064,6 +2515,31 @@ template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row
     return 0;
 }
 
+template<class ARRAY> static jint java_mat_get_idx(JNIEnv* env, jlong self, jintArray idxArray, jint count, ARRAY vals) {
+    static const char *method_name = JavaOpenCVTrait<ARRAY>::get;
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        if(me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_1 && me->depth() != JavaOpenCVTrait<ARRAY>::cvtype_2) return 0; // incompatible type
+        std::vector<int> idx = convertJintArrayToVector(env, idxArray);
+        for (int i = 0; i < me->dims ; i++ ) {
+            if (me->size[i]<=idx[i]) return 0;
+        }
+
+        char* values = (char*)env->GetPrimitiveArrayCritical(vals, 0);
+        int res = mat_get_idx<typename JavaOpenCVTrait<ARRAY>::value_type>(me, idx, count, values);
+        env->ReleasePrimitiveArrayCritical(vals, values, 0);
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 extern "C" {
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetB
@@ -2075,6 +2551,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetB
   return java_mat_get(env, self, row, col, count, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetBIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jbyteArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetBIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jbyteArray vals)
+{
+    return java_mat_get_idx(env, self, idxArray, count, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetS
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals);
 
@@ -2082,6 +2567,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetS
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jshortArray vals)
 {
   return java_mat_get(env, self, row, col, count, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetSIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jshortArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetSIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jshortArray vals)
+{
+    return java_mat_get_idx(env, self, idxArray, count, vals);
 }
 
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetI
@@ -2093,6 +2587,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetI
   return java_mat_get(env, self, row, col, count, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetIIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jintArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetIIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jintArray vals)
+{
+    return java_mat_get_idx(env, self, idxArray, count, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetF
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jfloatArray vals);
 
@@ -2102,6 +2605,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetF
   return java_mat_get(env, self, row, col, count, vals);
 }
 
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetFIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jfloatArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetFIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jfloatArray vals)
+{
+    return java_mat_get_idx(env, self, idxArray, count, vals);
+}
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals);
 
@@ -2109,6 +2621,15 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetD
     (JNIEnv* env, jclass, jlong self, jint row, jint col, jint count, jdoubleArray vals)
 {
   return java_mat_get(env, self, row, col, count, vals);
+}
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetDIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jdoubleArray vals);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nGetDIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray, jint count, jdoubleArray vals)
+{
+    return java_mat_get_idx(env, self, idxArray, count, vals);
 }
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
@@ -2136,6 +2657,47 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGet
                 case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(row, col) + i); break;
                 case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(row, col) + i); break;
                 case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(row, col) + i); break;
+            }
+            env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
+        }
+        return res;
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGetIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray);
+
+JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_nGetIdx
+    (JNIEnv* env, jclass, jlong self, jintArray idxArray)
+{
+    static const char method_name[] = "Mat::nGetIdx()";
+    try {
+        LOGD("%s", method_name);
+        cv::Mat* me = (cv::Mat*) self;
+        if(! self) return 0; // no native object behind
+        std::vector<int> idx = convertJintArrayToVector(env, idxArray);
+        for (int i=0; i<me->dims; i++) {
+            if (me->size[i]<=idx[i]) return 0; // indexes out of range
+        }
+
+        jdoubleArray res = env->NewDoubleArray(me->channels());
+        if(res){
+            jdouble buff[CV_CN_MAX];//me->channels()
+            int i;
+            switch(me->depth()){
+                case CV_8U:  for(i=0; i<me->channels(); i++) buff[i] = *((unsigned char*) me->ptr(idx.data()) + i); break;
+                case CV_8S:  for(i=0; i<me->channels(); i++) buff[i] = *((signed char*)   me->ptr(idx.data()) + i); break;
+                case CV_16U: for(i=0; i<me->channels(); i++) buff[i] = *((unsigned short*)me->ptr(idx.data()) + i); break;
+                case CV_16S: for(i=0; i<me->channels(); i++) buff[i] = *((signed short*)  me->ptr(idx.data()) + i); break;
+                case CV_32S: for(i=0; i<me->channels(); i++) buff[i] = *((int*)           me->ptr(idx.data()) + i); break;
+                case CV_32F: for(i=0; i<me->channels(); i++) buff[i] = *((float*)         me->ptr(idx.data()) + i); break;
+                case CV_64F: for(i=0; i<me->channels(); i++) buff[i] = *((double*)        me->ptr(idx.data()) + i); break;
             }
             env->SetDoubleArrayRegion(res, 0, me->channels(), buff);
         }

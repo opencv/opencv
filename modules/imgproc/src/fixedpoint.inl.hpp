@@ -9,10 +9,7 @@
 #ifndef _CV_FIXEDPOINT_HPP_
 #define _CV_FIXEDPOINT_HPP_
 
-#include "opencv2/core/softfloat.hpp"
-
-namespace
-{
+namespace {
 
 class fixedpoint64
 {

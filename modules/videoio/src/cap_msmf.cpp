@@ -2159,13 +2159,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     }
 }
 
-cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
-                                                        double fps, cv::Size frameSize, int isColor )
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
+                                                        double fps, const cv::Size &frameSize, bool isColor )
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
-        writer->open(filename, fourcc, fps, frameSize, isColor != 0);
+        writer->open(filename, fourcc, fps, frameSize, isColor);
         if (writer->isOpened())
             return writer;
     }

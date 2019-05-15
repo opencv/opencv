@@ -315,14 +315,9 @@ bool CvCapture_Images::isOpened() const
     return !filename.empty();
 }
 
-Ptr<IVideoCapture> createFileCapture_Images(const String& filename)
+Ptr<IVideoCapture> create_Images_capture(const std::string &filename)
 {
-    Ptr<IVideoCapture> capture(new CvCapture_Images(filename));
-    if( capture->isOpened() )
-        return capture;
-    return Ptr<IVideoCapture>();
-}
-
+    return makePtr<CvCapture_Images>(filename);
 }
 
 //
@@ -410,14 +405,15 @@ bool CvVideoWriter_Images::setProperty( int id, double value )
     return false; // not supported
 }
 
-
-CvVideoWriter* cvCreateVideoWriter_Images( const char* filename )
+Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int, double, const Size &, bool)
 {
     CvVideoWriter_Images *writer = new CvVideoWriter_Images;
 
-    if( writer->open( filename ))
-        return writer;
+    if( writer->open( filename.c_str() ))
+        return makePtr<LegacyWriter>(writer);
 
     delete writer;
     return 0;
 }
+
+} // cv::

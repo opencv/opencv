@@ -59,10 +59,10 @@ typedef my_coef_controller *my_coef_ptr;
 
 
 LOCAL(void)
-start_iMCU_row (j_decompress_ptr cinfo)
+start_iMCU_row(j_decompress_ptr cinfo)
 /* Reset within-iMCU-row counters for a new row (input side) */
 {
-  my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
+  my_coef_ptr coef = (my_coef_ptr)cinfo->coef;
 
   /* In an interleaved scan, an MCU row is the same as an iMCU row.
    * In a noninterleaved scan, an iMCU row has v_samp_factor MCU rows.
@@ -71,7 +71,7 @@ start_iMCU_row (j_decompress_ptr cinfo)
   if (cinfo->comps_in_scan > 1) {
     coef->MCU_rows_per_iMCU_row = 1;
   } else {
-    if (cinfo->input_iMCU_row < (cinfo->total_iMCU_rows-1))
+    if (cinfo->input_iMCU_row < (cinfo->total_iMCU_rows - 1))
       coef->MCU_rows_per_iMCU_row = cinfo->cur_comp_info[0]->v_samp_factor;
     else
       coef->MCU_rows_per_iMCU_row = cinfo->cur_comp_info[0]->last_row_height;

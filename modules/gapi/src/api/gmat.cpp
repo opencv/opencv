@@ -10,7 +10,7 @@
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
 
 #include "opencv2/gapi/gmat.hpp"
-#include "api/gapi_priv.hpp" // GOrigin
+#include "api/gorigin.hpp"
 
 // cv::GMat public implementation //////////////////////////////////////////////
 cv::GMat::GMat()
@@ -99,9 +99,32 @@ std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
         break;
     }
 
-    os << "C" << desc.chan << " ";
+    os << "C" << desc.chan;
+    if (desc.planar) os << "p";
+    os << " ";
     os << desc.size.width << "x" << desc.size.height;
 
     return os;
 }
+
+namespace {
+template<typename M> inline bool canDescribeHelper(const GMatDesc& desc, const M& mat)
+{
+    const auto mat_desc = desc.planar ? descr_of(mat).asPlanar(desc.chan) : descr_of(mat);
+    return desc == mat_desc;
 }
+} // anonymous namespace
+
+bool GMatDesc::canDescribe(const cv::gapi::own::Mat& mat) const
+{
+    return canDescribeHelper(*this, mat);
+}
+
+#if !defined(GAPI_STANDALONE)
+bool GMatDesc::canDescribe(const cv::Mat& mat) const
+{
+    return canDescribeHelper(*this, mat);
+}
+#endif
+
+}// namespace cv

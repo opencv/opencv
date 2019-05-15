@@ -46,6 +46,16 @@ private:
     std::shared_ptr<GOrigin> m_priv;
 };
 
+class GAPI_EXPORTS GMatP : public GMat
+{
+public:
+    using GMat::GMat;
+};
+
+namespace gapi { namespace own {
+    class Mat;
+}}//gapi::own
+
 /** @} */
 
 /**
@@ -58,16 +68,28 @@ struct GAPI_EXPORTS GMatDesc
     int depth;
     int chan;
     cv::gapi::own::Size size; // NB.: no multi-dimensional cases covered yet
+    bool planar;
+
+    GMatDesc(int d, int c, cv::gapi::own::Size s, bool p = false)
+        : depth(d), chan(c), size(s), planar(p) {}
+
+    GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {
-        return depth == rhs.depth && chan == rhs.chan && size == rhs.size;
+        return depth == rhs.depth && chan == rhs.chan && size == rhs.size && planar == rhs.planar;
     }
 
     inline bool operator!= (const GMatDesc &rhs) const
     {
         return !(*this == rhs);
     }
+
+    // Checks if the passed mat can be described by this descriptor
+    // (it handles the case when
+    // 1-channel mat can be reinterpreted as is (1-channel mat)
+    // and as a 3-channel planar mat with height divided by 3)
+    bool canDescribe(const cv::gapi::own::Mat& mat) const;
 
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -88,6 +110,8 @@ struct GAPI_EXPORTS GMatDesc
     {
         return withSize(to_own(sz));
     }
+
+    bool canDescribe(const cv::Mat& mat) const;
 #endif // !defined(GAPI_STANDALONE)
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
@@ -125,6 +149,43 @@ struct GAPI_EXPORTS GMatDesc
         desc.chan = dchan;
         return desc;
     }
+
+    // Meta combinator: return a new GMatDesc with planar flag set
+    // (no size changes are performed, only channel interpretation is changed
+    // (interleaved -> planar)
+    GMatDesc asPlanar() const
+    {
+        GAPI_Assert(planar == false);
+        GMatDesc desc(*this);
+        desc.planar = true;
+        return desc;
+    }
+
+    // Meta combinator: return a new GMatDesc
+    // reinterpreting 1-channel input as planar image
+    // (size height is divided by plane number)
+    GMatDesc asPlanar(int planes) const
+    {
+        GAPI_Assert(planar == false);
+        GAPI_Assert(chan == 1);
+        GAPI_Assert(planes > 1);
+        GAPI_Assert(size.height % planes == 0);
+        GMatDesc desc(*this);
+        desc.size.height /=  planes;
+        desc.chan = planes;
+        return desc.asPlanar();
+    }
+
+    // Meta combinator: return a new GMatDesc with planar flag set to false
+    // (no size changes are performed, only channel interpretation is changed
+    // (planar -> interleaved)
+    GMatDesc asInterleaved() const
+    {
+        GAPI_Assert(planar == true);
+        GMatDesc desc(*this);
+        desc.planar = false;
+        return desc;
+    }
 };
 
 static inline GMatDesc empty_gmat_desc() { return GMatDesc{-1,-1,{-1,-1}}; }
@@ -138,7 +199,6 @@ GAPI_EXPORTS GMatDesc descr_of(const cv::UMat &mat);
 /** @} */
 
 namespace gapi { namespace own {
-    class Mat;
     GAPI_EXPORTS GMatDesc descr_of(const Mat &mat);
 }}//gapi::own
 

@@ -564,6 +564,7 @@ TEST_P(NV12toRGBTest, AccuracyTest)
 
     // Additional mat for uv
     cv::Mat in_mat_uv(cv::Size(sz.width / 2, sz.height / 2), CV_8UC2);
+    cv::randn(in_mat_uv, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
     cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
     c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi), std::move(compile_args));
@@ -594,6 +595,7 @@ TEST_P(NV12toBGRTest, AccuracyTest)
 
     // Additional mat for uv
     cv::Mat in_mat_uv(cv::Size(sz.width / 2, sz.height / 2), CV_8UC2);
+    cv::randn(in_mat_uv, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
     cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
     c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi), std::move(compile_args));

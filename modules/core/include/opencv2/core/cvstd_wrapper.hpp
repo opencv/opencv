@@ -57,10 +57,12 @@ template <typename T, typename = void>
 struct has_custom_delete
         : public std::false_type {};
 
+// Force has_custom_delete to std::false_type when NVCC is compiling CUDA source files
+#ifndef __CUDACC__
 template <typename T>
 struct has_custom_delete<T, typename std::enable_if< sfinae::has_parenthesis_operator<DefaultDeleter<T>, void, T*>::value >::type >
         : public std::true_type {};
-
+#endif
 
 template<typename T>
 struct Ptr : public std::shared_ptr<T>

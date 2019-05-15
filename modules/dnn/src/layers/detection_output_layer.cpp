@@ -179,7 +179,7 @@ public:
         _backgroundLabelId = getParameter<int>(params, "background_label_id");
         _varianceEncodedInTarget = getParameter<bool>(params, "variance_encoded_in_target", 0, false, false);
         _keepTopK = getParameter<int>(params, "keep_top_k");
-        _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, -FLT_MAX);
+        _confidenceThreshold = getParameter<float>(params, "confidence_threshold", 0, false, 0);
         _topK = getParameter<int>(params, "top_k", 0, false, -1);
         _locPredTransposed = getParameter<bool>(params, "loc_pred_transposed", 0, false, false);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
@@ -206,8 +206,9 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        const int num = inputs[0][0];
         CV_Assert(inputs.size() >= 3);
-        CV_Assert(inputs[0][0] == inputs[1][0]);
+        CV_Assert(num == inputs[1][0]);
 
         int numPriors = inputs[2][2] / 4;
         CV_Assert((numPriors * _numLocClasses * 4) == total(inputs[0], 1));
@@ -216,10 +217,10 @@ public:
 
         // num() and channels() are 1.
         // Since the number of bboxes to be kept is unknown before nms, we manually
-        // set it to maximal number of detections, [keep_top_k] parameter.
+        // set it to maximal number of detections, [keep_top_k] parameter multiplied by batch size.
         // Each row is a 7 dimension std::vector, which stores
         // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-        outputs.resize(1, shape(1, 1, _keepTopK, 7));
+        outputs.resize(1, shape(1, 1, _keepTopK * num, 7));
 
         return false;
     }

@@ -5,5 +5,5 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "gapi_operators_tests_inl.hpp"

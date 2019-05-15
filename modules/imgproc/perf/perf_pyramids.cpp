@@ -26,7 +26,7 @@ PERF_TEST_P(Size_MatType, pyrDown, testing::Combine(
     SANITY_CHECK(dst, eps, error_type);
 }
 
-PERF_TEST_P(Size_MatType, pyrDown_ovx, testing::Combine(
+PERF_TEST_P(Size_MatType, DISABLED_pyrDown_ovx, testing::Combine(
     testing::Values(sz1080p, sz720p, szVGA, szQVGA, szODD),
     testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4)
 )

@@ -6,6 +6,7 @@
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
+#include "cap_interface.hpp"
 
 using namespace cv;
 using namespace std;
@@ -264,3 +265,8 @@ int VideoCapture_IntelMFX::getCaptureDomain()
 }
 
 //==================================================================================================
+
+cv::Ptr<IVideoCapture> cv::create_MFX_capture(const std::string &filename)
+{
+    return cv::makePtr<VideoCapture_IntelMFX>(filename);
+}

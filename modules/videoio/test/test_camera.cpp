@@ -5,7 +5,7 @@
 // Note: all tests here are DISABLED by default due specific requirements.
 // Don't use #if 0 - these tests should be tested for compilation at least.
 //
-// Usage: opencv_test_videoio --gtest_also_run_disabled_tests --gtest_filter=*VideoIO_Camera*<tested case>*
+// Usage: opencv_test_videoio --gtest_also_run_disabled_tests --gtest_filter=*videoio_camera*<tested case>*
 
 #include "test_precomp.hpp"
 
@@ -29,7 +29,7 @@ static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, 
     if (lastFrame) *lastFrame = frame.clone();
 }
 
-TEST(DISABLED_VideoIO_Camera, basic)
+TEST(DISABLED_videoio_camera, basic)
 {
     VideoCapture capture(0);
     ASSERT_TRUE(capture.isOpened());
@@ -41,7 +41,7 @@ TEST(DISABLED_VideoIO_Camera, basic)
     capture.release();
 }
 
-TEST(DISABLED_VideoIO_Camera, validate_V4L2_MJPEG)
+TEST(DISABLED_videoio_camera, v4l_read_mjpg)
 {
     VideoCapture capture(CAP_V4L2);
     ASSERT_TRUE(capture.isOpened());
@@ -57,7 +57,7 @@ TEST(DISABLED_VideoIO_Camera, validate_V4L2_MJPEG)
 }
 
 //Following test if for capture device using PhysConn_Video_SerialDigital as crossbar input pin
-TEST(DISABLED_VideoIO_Camera, dshow_avermedia_capture)
+TEST(DISABLED_videoio_camera, channel6)
 {
     VideoCapture capture(0);
     ASSERT_TRUE(capture.isOpened());
@@ -70,7 +70,7 @@ TEST(DISABLED_VideoIO_Camera, dshow_avermedia_capture)
     capture.release();
 }
 
-TEST(DISABLED_VideoIO_Camera, validate_V4L2_FrameSize)
+TEST(DISABLED_videoio_camera, v4l_read_framesize)
 {
     VideoCapture capture(CAP_V4L2);
     ASSERT_TRUE(capture.isOpened());
