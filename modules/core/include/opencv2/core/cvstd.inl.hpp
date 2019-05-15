@@ -74,12 +74,6 @@ public:
 };
 
 static inline
-std::ostream& operator << (std::ostream& os, const String& str)
-{
-    return os << str.c_str();
-}
-
-static inline
 std::ostream& operator << (std::ostream& out, Ptr<Formatted> fmtd)
 {
     fmtd->reset();
