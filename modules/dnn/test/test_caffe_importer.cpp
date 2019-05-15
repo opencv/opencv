@@ -204,7 +204,7 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssertDetections(ref, out);
+    normAssertDetections(ref, out, "", FLT_MIN);
 }
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
@@ -224,6 +224,8 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     net.setInput(inp);
     Mat out = net.forward().clone();
+
+    ASSERT_EQ(out.size[2], 100);
 
     const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
     const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 6.3e-2 : 1e-4;

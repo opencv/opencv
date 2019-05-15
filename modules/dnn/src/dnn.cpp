@@ -2794,9 +2794,6 @@ AsyncMat Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
 #ifdef CV_CXX11
-    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
-        CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
-
     String layerName = outputName;
 
     if (layerName.empty())
@@ -2804,6 +2801,9 @@ AsyncMat Net::forwardAsync(const String& outputName)
 
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
+
+    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
+        CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
 
     impl->isAsync = true;
     impl->forwardToLayer(impl->getLayerData(layerName));
