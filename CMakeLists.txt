@@ -919,7 +919,7 @@ unset(_hal_includes)
 # Add CUDA libraries (needed for apps/tools, samples)
 # ----------------------------------------------------------------------------
 if(HAVE_CUDA)
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_CUDA_LIBRARY} ${CUDA_npp_LIBRARY})
   if(HAVE_CUBLAS)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
   endif()
