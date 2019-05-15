@@ -14,3 +14,9 @@ tracking and foreground extractions.
 
     We will learn how to extract foreground masks from both videos and sequences of images and
     to show them.
+
+-   @subpage tutorial_meanshift
+
+    *Languages:* C++, Python
+
+    Learn how to use the Meanshift and Camshift algorithms to track objects in videos.
