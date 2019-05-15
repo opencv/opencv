@@ -589,4 +589,330 @@ TEST(Calib3d_SolvePnP, iterativeInitialGuess3pts)
     }
 }
 
+TEST(Calib3d_SolvePnP, refine3pts)
+{
+    {
+        Matx33d intrinsics(605.4, 0.0, 317.35,
+                           0.0, 601.2, 242.63,
+                           0.0, 0.0, 1.0);
+
+        double L = 0.1;
+        vector<Point3d> p3d;
+        p3d.push_back(Point3d(-L, -L, 0.0));
+        p3d.push_back(Point3d(L, -L, 0.0));
+        p3d.push_back(Point3d(L, L, 0.0));
+
+        Mat rvec_ground_truth = (Mat_<double>(3,1) << 0.3, -0.2, 0.75);
+        Mat tvec_ground_truth = (Mat_<double>(3,1) << 0.15, -0.2, 1.5);
+
+        vector<Point2d> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        {
+            Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
+            Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
+
+            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Levenberg-Marquardt" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<double>(3,1) << 0.2, -0.1, 0.6);
+            Mat tvec_est = (Mat_<double>(3,1) << 0.05, -0.05, 1.0);
+
+            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Virtual Visual Servoing" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+    }
+
+    {
+        Matx33f intrinsics(605.4f, 0.0f, 317.35f,
+                           0.0f, 601.2f, 242.63f,
+                           0.0f, 0.0f, 1.0f);
+
+        float L = 0.1f;
+        vector<Point3f> p3d;
+        p3d.push_back(Point3f(-L, -L, 0.0f));
+        p3d.push_back(Point3f(L, -L, 0.0f));
+        p3d.push_back(Point3f(L, L, 0.0f));
+
+        Mat rvec_ground_truth = (Mat_<float>(3,1) << -0.75f, 0.4f, 0.34f);
+        Mat tvec_ground_truth = (Mat_<float>(3,1) << -0.15f, 0.35f, 1.58f);
+
+        vector<Point2f> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        {
+            Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
+            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
+
+            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Levenberg-Marquardt" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<float>(3,1) << -0.5f, 0.2f, 0.2f);
+            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.2f, 1.0f);
+
+            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Virtual Visual Servoing" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+    }
+}
+
+TEST(Calib3d_SolvePnP, refine)
+{
+    //double
+    {
+        Matx33d intrinsics(605.4, 0.0, 317.35,
+                           0.0, 601.2, 242.63,
+                           0.0, 0.0, 1.0);
+
+        double L = 0.1;
+        vector<Point3d> p3d;
+        p3d.push_back(Point3d(-L, -L, 0.0));
+        p3d.push_back(Point3d(L, -L, 0.0));
+        p3d.push_back(Point3d(L, L, 0.0));
+        p3d.push_back(Point3d(-L, L, L/2));
+        p3d.push_back(Point3d(0, 0, -L/2));
+
+        Mat rvec_ground_truth = (Mat_<double>(3,1) << 0.3, -0.2, 0.75);
+        Mat tvec_ground_truth = (Mat_<double>(3,1) << 0.15, -0.2, 1.5);
+
+        vector<Point2d> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        {
+            Mat rvec_est = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
+            Mat tvec_est = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
+
+            solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+
+            cout << "\nmethod: Levenberg-Marquardt (C API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
+            Mat tvec_est = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
+
+            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<double>(3,1) << 0.1, -0.1, 0.1);
+            Mat tvec_est = (Mat_<double>(3,1) << 0.0, -0.5, 1.0);
+
+            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Virtual Visual Servoing" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+    }
+
+    //float
+    {
+        Matx33f intrinsics(605.4f, 0.0f, 317.35f,
+                           0.0f, 601.2f, 242.63f,
+                           0.0f, 0.0f, 1.0f);
+
+        float L = 0.1f;
+        vector<Point3f> p3d;
+        p3d.push_back(Point3f(-L, -L, 0.0f));
+        p3d.push_back(Point3f(L, -L, 0.0f));
+        p3d.push_back(Point3f(L, L, 0.0f));
+        p3d.push_back(Point3f(-L, L, L/2));
+        p3d.push_back(Point3f(0, 0, -L/2));
+
+        Mat rvec_ground_truth = (Mat_<float>(3,1) << -0.75f, 0.4f, 0.34f);
+        Mat tvec_ground_truth = (Mat_<float>(3,1) << -0.15f, 0.35f, 1.58f);
+
+        vector<Point2f> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        {
+            Mat rvec_est = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
+            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
+
+            solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, true, SOLVEPNP_ITERATIVE);
+
+            cout << "\nmethod: Levenberg-Marquardt (C API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
+            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
+
+            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+        {
+            Mat rvec_est = (Mat_<float>(3,1) << -0.1f, 0.1f, 0.1f);
+            Mat tvec_est = (Mat_<float>(3,1) << 0.0f, 0.0f, 1.0f);
+
+            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est);
+
+            cout << "\nmethod: Virtual Visual Servoing" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-6);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-6);
+        }
+    }
+
+    //refine after solvePnP
+    {
+        Matx33d intrinsics(605.4, 0.0, 317.35,
+                           0.0, 601.2, 242.63,
+                           0.0, 0.0, 1.0);
+
+        double L = 0.1;
+        vector<Point3d> p3d;
+        p3d.push_back(Point3d(-L, -L, 0.0));
+        p3d.push_back(Point3d(L, -L, 0.0));
+        p3d.push_back(Point3d(L, L, 0.0));
+        p3d.push_back(Point3d(-L, L, L/2));
+        p3d.push_back(Point3d(0, 0, -L/2));
+
+        Mat rvec_ground_truth = (Mat_<double>(3,1) << 0.3, -0.2, 0.75);
+        Mat tvec_ground_truth = (Mat_<double>(3,1) << 0.15, -0.2, 1.5);
+
+        vector<Point2d> p2d;
+        projectPoints(p3d, rvec_ground_truth, tvec_ground_truth, intrinsics, noArray(), p2d);
+
+        //add small Gaussian noise
+        RNG& rng = theRNG();
+        for (size_t i = 0; i < p2d.size(); i++)
+        {
+            p2d[i].x += rng.gaussian(5e-2);
+            p2d[i].y += rng.gaussian(5e-2);
+        }
+
+        Mat rvec_est, tvec_est;
+        solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est, tvec_est, false, SOLVEPNP_EPNP);
+
+        {
+
+            Mat rvec_est_refine = rvec_est.clone(), tvec_est_refine = tvec_est.clone();
+            solvePnP(p3d, p2d, intrinsics, noArray(), rvec_est_refine, tvec_est_refine, true, SOLVEPNP_ITERATIVE);
+
+            cout << "\nmethod: Levenberg-Marquardt (C API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est (EPnP): " << rvec_est.t() << std::endl;
+            cout << "rvec_est_refine: " << rvec_est_refine.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est (EPnP): " << tvec_est.t() << std::endl;
+            cout << "tvec_est_refine: " << tvec_est_refine.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-2);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-3);
+
+            EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+        }
+        {
+            Mat rvec_est_refine = rvec_est.clone(), tvec_est_refine = tvec_est.clone();
+            solvePnPRefineLM(p3d, p2d, intrinsics, noArray(), rvec_est_refine, tvec_est_refine);
+
+            cout << "\nmethod: Levenberg-Marquardt (C++ API)" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est_refine: " << rvec_est_refine.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est_refine: " << tvec_est_refine.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-2);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-3);
+
+            EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+        }
+        {
+            Mat rvec_est_refine = rvec_est.clone(), tvec_est_refine = tvec_est.clone();
+            solvePnPRefineVVS(p3d, p2d, intrinsics, noArray(), rvec_est_refine, tvec_est_refine);
+
+            cout << "\nmethod: Virtual Visual Servoing" << endl;
+            cout << "rvec_ground_truth: " << rvec_ground_truth.t() << std::endl;
+            cout << "rvec_est: " << rvec_est.t() << std::endl;
+            cout << "rvec_est_refine: " << rvec_est_refine.t() << std::endl;
+            cout << "tvec_ground_truth: " << tvec_ground_truth.t() << std::endl;
+            cout << "tvec_est: " << tvec_est.t() << std::endl;
+            cout << "tvec_est_refine: " << tvec_est_refine.t() << std::endl;
+
+            EXPECT_LE(cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF), 1e-2);
+            EXPECT_LE(cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF), 1e-3);
+
+            EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
+            EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+        }
+    }
+}
+
 }} // namespace

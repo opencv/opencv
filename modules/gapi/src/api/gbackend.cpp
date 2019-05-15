@@ -349,5 +349,24 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
 }
 
 } // namespace magazine
+
+void createMat(const cv::GMatDesc desc, cv::gapi::own::Mat& mat)
+{
+    const auto type = desc.planar ? desc.depth : CV_MAKETYPE(desc.depth, desc.chan);
+    const auto size = desc.planar ? cv::gapi::own::Size{desc.size.width, desc.size.height*desc.chan}
+                                  : desc.size;
+    mat.create(size, type);
+}
+
+#if !defined(GAPI_STANDALONE)
+void createMat(const cv::GMatDesc desc, cv::Mat& mat)
+{
+    const auto type = desc.planar ? desc.depth : CV_MAKETYPE(desc.depth, desc.chan);
+    const auto size = desc.planar ? cv::Size{desc.size.width, desc.size.height*desc.chan}
+                                  : cv::gapi::own::to_ocv(desc.size);
+    mat.create(size, type);
+}
+#endif
+
 } // namespace gimpl
 } // namespace cv

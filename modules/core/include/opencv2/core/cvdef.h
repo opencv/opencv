@@ -235,6 +235,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX_512PF        19
 #define CV_CPU_AVX_512VBMI      20
 #define CV_CPU_AVX_512VL        21
+#define CV_CPU_AVX_512VBMI2     22
+#define CV_CPU_AVX_512VNNI      23
+#define CV_CPU_AVX_512BITALG    24
+#define CV_CPU_AVX_512VPOPCNTDQ 25
+#define CV_CPU_AVX_5124VNNIW    26
+#define CV_CPU_AVX_5124FMAPS    27
 
 #define CV_CPU_NEON             100
 
@@ -243,6 +249,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
+#define CV_CPU_AVX512_COMMON    257
+#define CV_CPU_AVX512_KNL       258
+#define CV_CPU_AVX512_KNM       259
+#define CV_CPU_AVX512_CNL       260
+#define CV_CPU_AVX512_CEL       261
+#define CV_CPU_AVX512_ICL       262
 
 // when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 512
@@ -273,6 +285,12 @@ enum CpuFeatures {
     CPU_AVX_512PF       = 19,
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
+    CPU_AVX_512VBMI2    = 22,
+    CPU_AVX_512VNNI     = 23,
+    CPU_AVX_512BITALG   = 24,
+    CPU_AVX_512VPOPCNTDQ= 25,
+    CPU_AVX_5124VNNIW   = 26,
+    CPU_AVX_5124FMAPS   = 27,
 
     CPU_NEON            = 100,
 
@@ -280,6 +298,12 @@ enum CpuFeatures {
     CPU_VSX3            = 201,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
+    CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
+    CPU_AVX512_KNL      = 258, //!< Knights Landing with AVX-512F/CD/ER/PF
+    CPU_AVX512_KNM      = 259, //!< Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ
+    CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
+    CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
+    CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
 };

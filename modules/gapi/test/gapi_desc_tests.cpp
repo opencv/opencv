@@ -236,4 +236,70 @@ TEST(GAPI_MetaDesc, Typed_Compile_MatchMetaType_Mixed)
     EXPECT_NO_THROW(cc.compile(desc1, desc2));
 }
 
+TEST(GAPI_MetaDesc, Compare_Planar)
+{
+    const auto desc0 = cv::GMatDesc{CV_8U,3,{32,32},false};
+    const auto desc1 = cv::GMatDesc{CV_8U,3,{32,32},false};
+    const auto desc2 = cv::GMatDesc{CV_8U,3,{32,32},true};
+    const auto desc3 = cv::GMatDesc{CV_8U,3,{64,64},true};
+
+    EXPECT_TRUE(desc0 == desc1);
+    EXPECT_TRUE(desc1 != desc2);
+    EXPECT_TRUE(desc1 != desc3);
+    EXPECT_TRUE(desc2 != desc3);
+}
+
+TEST(GAPI_MetaDesc, Sanity_asPlanar)
+{
+    constexpr int w = 32;
+    constexpr int h = 16;
+    const auto desc1 = cv::GMatDesc{CV_8U,3,{w,h},false};
+    const auto desc2 = cv::GMatDesc{CV_8U,3,{w,h},true};
+
+    EXPECT_NO_THROW(desc1.asPlanar());
+    EXPECT_NO_THROW(desc2.asInterleaved());
+    EXPECT_ANY_THROW(desc1.asInterleaved());
+    EXPECT_ANY_THROW(desc2.asPlanar());
+}
+
+TEST(GAPI_MetaDesc, Compare_asPlanar)
+{
+    constexpr int w = 32;
+    constexpr int h = 64;
+    const auto desc0 = cv::GMatDesc{CV_8U,3,{w,h},false};
+    const auto desc1 = cv::GMatDesc{CV_8U,3,{w,h},true};
+
+    EXPECT_TRUE(desc0.asPlanar()      == desc1);
+    EXPECT_TRUE(desc1.asInterleaved() == desc0);
+}
+
+TEST(GAPI_MetaDesc, Compare_asPlanarTransform)
+{
+    constexpr int w = 64;
+    constexpr int h = 32;
+    const auto desc0 = cv::GMatDesc{CV_8U,3,{w,h},true};
+    const auto desc1 = cv::GMatDesc{CV_8U,1,{w,h*3},false};
+
+    EXPECT_ANY_THROW(desc0.asPlanar(3));
+    EXPECT_NO_THROW(desc1.asPlanar(3));
+    EXPECT_TRUE(desc1.asPlanar(3) == desc0);
+}
+
+TEST(GAPI_MetaDesc, CanDescribe)
+{
+    constexpr int w = 15;
+    constexpr int h = 7;
+    cv::Mat m0(h, w, CV_8UC3);
+    cv::GMatDesc md0{CV_8U,3,{w,h},false};
+
+    cv::Mat m1(h*3, w, CV_8UC1);
+    cv::GMatDesc md10{CV_8U,3,{w,h},true};
+    cv::GMatDesc md11{CV_8U,1,{w,h*3},false};
+
+    EXPECT_TRUE (md0 .canDescribe(m0));
+    EXPECT_FALSE(md0 .canDescribe(m1));
+    EXPECT_TRUE (md10.canDescribe(m1));
+    EXPECT_TRUE (md11.canDescribe(m1));
+}
+
 } // namespace opencv_test

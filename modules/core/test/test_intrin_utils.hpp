@@ -770,6 +770,15 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_reduce_sad()
+    {
+        Data<R> dataA, dataB(R::nlanes/2);
+        R a = dataA;
+        R b = dataB;
+        EXPECT_EQ((unsigned)(R::nlanes*R::nlanes/4), v_reduce_sad(a, b));
+        return *this;
+    }
+
     TheTest & test_mask()
     {
         typedef typename V_RegTraits<R>::int_reg int_reg;
@@ -1320,6 +1329,7 @@ void test_hal_intrin_uint8()
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1358,6 +1368,7 @@ void test_hal_intrin_int8()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1387,6 +1398,7 @@ void test_hal_intrin_uint16()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1418,6 +1430,7 @@ void test_hal_intrin_int16()
         .test_absdiffs()
         .test_abs()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1446,6 +1459,7 @@ void test_hal_intrin_uint32()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
@@ -1473,6 +1487,7 @@ void test_hal_intrin_int32()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
@@ -1528,6 +1543,7 @@ void test_hal_intrin_float32()
         .test_min_max()
         .test_float_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_unpack()
         .test_float_math()

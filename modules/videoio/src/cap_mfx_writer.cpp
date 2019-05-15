@@ -41,6 +41,12 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
         return;
     }
 
+    if (fps <= 0)
+    {
+        MSG(cerr << "MFX: Invalid FPS passed to encoder" << endl);
+        return;
+    }
+
     // Init device and session
     deviceHandler = createDeviceHandler();
     session = new MFXVideoSession();

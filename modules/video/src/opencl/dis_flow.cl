@@ -2,6 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+//#define CV_USE_SUBGROUPS
+
 #define EPS 0.001f
 #define INF 1E+10F
 
@@ -193,7 +195,11 @@ __kernel void dis_densification(__global const float *sx, __global const float *
 
 float computeSSDMeanNorm(const __global uchar *I0_ptr, const __global uchar *I1_ptr,
                          int I0_stride, int I1_stride,
-                         float w00, float w01, float w10, float w11, int patch_sz, int i)
+                         float w00, float w01, float w10, float w11, int patch_sz, int i
+#ifndef CV_USE_SUBGROUPS
+                         , __local float2 *smem /*[8]*/
+#endif
+)
 {
     float sum_diff = 0.0f, sum_diff_sq = 0.0f;
     int n = patch_sz * patch_sz;
@@ -214,12 +220,31 @@ float computeSSDMeanNorm(const __global uchar *I0_ptr, const __global uchar *I1_
     sum_diff = (dot(vec.lo, 1.0) + dot(vec.hi, 1.0));
     sum_diff_sq = (dot(vec.lo, vec.lo) + dot(vec.hi, vec.hi));
 
+#ifdef CV_USE_SUBGROUPS
     sum_diff = sub_group_reduce_add(sum_diff);
     sum_diff_sq = sub_group_reduce_add(sum_diff_sq);
+#else
+    barrier(CLK_LOCAL_MEM_FENCE);
+    smem[i] = (float2)(sum_diff, sum_diff_sq);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (i < 4)
+        smem[i] += smem[i + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (i < 2)
+        smem[i] += smem[i + 2];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (i == 0)
+        smem[0] += smem[1];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    float2 reduce_add_result = smem[0];
+    sum_diff = reduce_add_result.x;
+    sum_diff_sq = reduce_add_result.y;
+#endif
 
     return sum_diff_sq - sum_diff * sum_diff / n;
 }
 
+__attribute__((reqd_work_group_size(8, 1, 1)))
 __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __global const float *Uy_ptr,
                                              __global const uchar *I0_ptr, __global const uchar *I1_ptr,
                                              int border_size, int patch_size, int patch_stride,
@@ -227,8 +252,7 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
                                              __global float *Sx_ptr, __global float *Sy_ptr)
 {
     int id = get_global_id(0);
-    int is = id / 8;
-    if (id >= (hs * 8)) return;
+    int is = get_group_id(0);
 
     int i = is * patch_stride;
     int j = 0;
@@ -249,7 +273,14 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
     Sy_ptr[is * ws] = prev_Uy;
     j += patch_stride;
 
+#ifdef CV_USE_SUBGROUPS
     int sid = get_sub_group_local_id();
+#define EXTRA_ARGS_computeSSDMeanNorm sid
+#else
+    __local float2 smem[8];
+    int sid = get_local_id(0);
+#define EXTRA_ARGS_computeSSDMeanNorm sid, smem
+#endif
     for (int js = 1; js < ws; js++, j += patch_stride)
     {
         float min_SSD, cur_SSD;
@@ -258,11 +289,11 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
 
         INIT_BILINEAR_WEIGHTS(Ux, Uy);
         min_SSD = computeSSDMeanNorm(I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
-                                     w, w_ext, w00, w01, w10, w11, psz, sid);
+                                     w, w_ext, w00, w01, w10, w11, psz, EXTRA_ARGS_computeSSDMeanNorm);
 
         INIT_BILINEAR_WEIGHTS(prev_Ux, prev_Uy);
         cur_SSD = computeSSDMeanNorm(I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
-                                     w, w_ext, w00, w01, w10, w11, psz, sid);
+                                     w, w_ext, w00, w01, w10, w11, psz, EXTRA_ARGS_computeSSDMeanNorm);
         if (cur_SSD < min_SSD)
         {
             Ux = prev_Ux;
@@ -274,6 +305,7 @@ __kernel void dis_patch_inverse_search_fwd_1(__global const float *Ux_ptr, __glo
         Sx_ptr[is * ws + js] = Ux;
         Sy_ptr[is * ws + js] = Uy;
     }
+#undef EXTRA_ARGS_computeSSDMeanNorm
 }
 
 float3 processPatchMeanNorm(const __global uchar *I0_ptr, const __global uchar *I1_ptr,
@@ -284,16 +316,18 @@ float3 processPatchMeanNorm(const __global uchar *I0_ptr, const __global uchar *
     float sum_diff = 0.0, sum_diff_sq = 0.0;
     float sum_I0x_mul = 0.0, sum_I0y_mul = 0.0;
     int n = patch_sz * patch_sz;
-    uchar8 I1_vec1, I1_vec2;
-    uchar I1_val1, I1_val2;
+    uchar8 I1_vec1;
+    uchar8 I1_vec2 = vload8(0, I1_ptr);
+    uchar I1_val1;
+    uchar I1_val2 = I1_ptr[patch_sz];
 
     for (int i = 0; i < 8; i++)
     {
         uchar8 I0_vec = vload8(0, I0_ptr + i * I0_stride);
 
-        I1_vec1 = (i == 0) ? vload8(0, I1_ptr + i * I1_stride) : I1_vec2;
+        I1_vec1 = I1_vec2;
         I1_vec2 = vload8(0, I1_ptr + (i + 1) * I1_stride);
-        I1_val1 = (i == 0) ? I1_ptr[i * I1_stride + patch_sz] : I1_val2;
+        I1_val1 = I1_val2;
         I1_val2 = I1_ptr[(i + 1) * I1_stride + patch_sz];
 
         float8 vec = w00 * convert_float8(I1_vec1) + w01 * convert_float8((uchar8)(I1_vec1.s123, I1_vec1.s4567, I1_val1)) +
@@ -396,14 +430,14 @@ __kernel void dis_patch_inverse_search_fwd_2(__global const float *Ux_ptr, __glo
     }
 }
 
+__attribute__((reqd_work_group_size(8, 1, 1)))
 __kernel void dis_patch_inverse_search_bwd_1(__global const uchar *I0_ptr, __global const uchar *I1_ptr,
                                              int border_size, int patch_size, int patch_stride,
                                              int w, int h, int ws, int hs, int pyr_level,
                                              __global float *Sx_ptr, __global float *Sy_ptr)
 {
     int id = get_global_id(0);
-    int is = id / 8;
-    if (id >= (hs * 8)) return;
+    int is = get_group_id(0);
 
     is = (hs - 1 - is);
     int i = is * patch_stride;
@@ -419,7 +453,14 @@ __kernel void dis_patch_inverse_search_bwd_1(__global const uchar *I0_ptr, __glo
     float j_upper_limit = bsz + w - 1.0f;
     float i_I1, j_I1, w00, w01, w10, w11;
 
+#ifdef CV_USE_SUBGROUPS
     int sid = get_sub_group_local_id();
+#define EXTRA_ARGS_computeSSDMeanNorm sid
+#else
+    __local float2 smem[8];
+    int sid = get_local_id(0);
+#define EXTRA_ARGS_computeSSDMeanNorm sid, smem
+#endif
     for (int js = (ws - 2); js > -1; js--, j -= patch_stride)
     {
         float min_SSD, cur_SSD;
@@ -428,17 +469,18 @@ __kernel void dis_patch_inverse_search_bwd_1(__global const uchar *I0_ptr, __glo
 
         INIT_BILINEAR_WEIGHTS(Ux.x, Uy.x);
         min_SSD = computeSSDMeanNorm(I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
-                                     w, w_ext, w00, w01, w10, w11, psz, sid);
+                                     w, w_ext, w00, w01, w10, w11, psz, EXTRA_ARGS_computeSSDMeanNorm);
 
         INIT_BILINEAR_WEIGHTS(Ux.y, Uy.y);
         cur_SSD = computeSSDMeanNorm(I0_ptr + i * w + j, I1_ptr + (int)i_I1 * w_ext + (int)j_I1,
-                                     w, w_ext, w00, w01, w10, w11, psz, sid);
+                                     w, w_ext, w00, w01, w10, w11, psz, EXTRA_ARGS_computeSSDMeanNorm);
         if (cur_SSD < min_SSD)
         {
             Sx_ptr[is * ws + js] = Ux.y;
             Sy_ptr[is * ws + js] = Uy.y;
         }
     }
+#undef EXTRA_ARGS_computeSSDMeanNorm
 }
 
 __kernel void dis_patch_inverse_search_bwd_2(__global const uchar *I0_ptr, __global const uchar *I1_ptr,

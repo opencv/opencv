@@ -64,7 +64,16 @@ type_dict = {
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "__int64" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "int64"   : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
-    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" }
+    "double[]": { "j_type" : "double[]", "jn_type" : "double[]", "jni_type" : "jdoubleArray", "suffix" : "_3D" },
+    'string'  : {  # std::string, see "String" in modules/core/misc/java/gen_dict.json
+        'j_type': 'String',
+        'jn_type': 'String',
+        'jni_name': 'n_%(n)s',
+        'jni_type': 'jstring',
+        'jni_var': 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+        'suffix': 'Ljava_lang_String_2',
+        'j_import': 'java.lang.String'
+    },
 }
 
 # Defines a rule to add extra prefixes for names from specific namespaces.
@@ -831,7 +840,7 @@ class JavaWrapperGenerator(object):
                     ret = "return (jlong) _retval_;"
                 else: # returned as jobject
                     ret = "return _retval_;"
-            elif fi.ctype == "String":
+            elif fi.ctype in ['String', 'string']:
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif self.isWrapped(fi.ctype): # wrapped class:
@@ -858,6 +867,8 @@ class JavaWrapperGenerator(object):
                 retval = ""
             elif fi.ctype == "String":
                 retval = "cv::" + retval
+            elif fi.ctype == "string":
+                retval = "std::" + retval
             elif "v_type" in type_dict[fi.ctype]: # vector is returned
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):

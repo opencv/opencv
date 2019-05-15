@@ -31,7 +31,7 @@ file(GLOB gapi_ext_hdrs
 
 set(gapi_srcs
     # Front-end part
-    src/api/gapi_priv.cpp
+    src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
     src/api/gscalar.cpp
@@ -60,6 +60,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp

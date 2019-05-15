@@ -1020,7 +1020,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
     int i, j, cols;
     int cn, depth, mat_depth;
     CvMat astub, bstub, *a, *b;
-    double mat[16];
+    double mat[16] = {0.0};
 
     a = cvGetMat( _src, &astub, 0, 0 );
     b = cvGetMat( _dst, &bstub, 0, 0 );

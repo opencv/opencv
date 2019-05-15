@@ -278,48 +278,6 @@ struct v_float64x2
 };
 #endif
 
-#if CV_FP16
-// Workaround for old compilers
-static inline int16x4_t vreinterpret_s16_f16(float16x4_t a) { return (int16x4_t)a; }
-static inline float16x4_t vreinterpret_f16_s16(int16x4_t a) { return (float16x4_t)a; }
-
-static inline float16x4_t cv_vld1_f16(const void* ptr)
-{
-#ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
-    return vreinterpret_f16_s16(vld1_s16((const short*)ptr));
-#else
-    return vld1_f16((const __fp16*)ptr);
-#endif
-}
-static inline void cv_vst1_f16(void* ptr, float16x4_t a)
-{
-#ifndef vst1_f16 // APPLE compiler defines vst1_f16 as macro
-    vst1_s16((short*)ptr, vreinterpret_s16_f16(a));
-#else
-    vst1_f16((__fp16*)ptr, a);
-#endif
-}
-
-#ifndef vdup_n_f16
-    #define vdup_n_f16(v) (float16x4_t){v, v, v, v}
-#endif
-
-#endif // CV_FP16
-
-#if CV_FP16
-inline v_float32x4 v128_load_fp16_f32(const short* ptr)
-{
-    float16x4_t a = cv_vld1_f16((const __fp16*)ptr);
-    return v_float32x4(vcvt_f32_f16(a));
-}
-
-inline void v_store_fp16(short* ptr, const v_float32x4& a)
-{
-    float16x4_t fp16 = vcvt_f16_f32(a.val);
-    cv_vst1_f16((short*)ptr, fp16);
-}
-#endif
-
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
 inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix(v)); } \

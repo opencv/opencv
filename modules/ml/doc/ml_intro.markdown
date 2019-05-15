@@ -25,7 +25,7 @@ components:
     vector responses.
 -   Another optional component is the mask of missing measurements. Most algorithms require all the
     components in all the training samples be valid, but some other algorithms, such as decision
-    tress, can handle the cases of missing measurements.
+    trees, can handle the cases of missing measurements.
 -   In the case of classification problem user may want to give different weights to different
     classes. This is useful, for example, when:
     -   user wants to shift prediction accuracy towards lower false-alarm rate or higher hit-rate.

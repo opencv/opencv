@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #ifndef __OPENCV_DNN_OP_INF_ENGINE_HPP__
@@ -12,32 +12,47 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/dnn.hpp"
 
+#include "opencv2/dnn/utils/inference_engine.hpp"
+
 #ifdef HAVE_INF_ENGINE
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-#include <inference_engine.hpp>
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic pop
-#endif
 
 #define INF_ENGINE_RELEASE_2018R3 2018030000
 #define INF_ENGINE_RELEASE_2018R4 2018040000
 #define INF_ENGINE_RELEASE_2018R5 2018050000
+#define INF_ENGINE_RELEASE_2019R1 2019010000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2018R5 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2018R5
+#warning("IE version have not been provided via command-line. Using 2019R1 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2019R1
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
+
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#pragma GCC visibility push(default)
+#endif
+
+#include <inference_engine.hpp>
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 #include <ie_builders.hpp>
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#pragma GCC visibility pop
+#endif
+
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
 #endif
 
 #endif  // HAVE_INF_ENGINE
@@ -114,10 +129,8 @@ public:
 
     virtual size_t getBatchSize() const CV_NOEXCEPT CV_OVERRIDE;
 
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
-    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT;
-    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT;
-#endif
+    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT CV_OVERRIDE;
+    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT CV_OVERRIDE;
 
     void init(int targetId);
 
@@ -172,7 +185,8 @@ public:
 
     void init(int targetId);
 
-    void forward();
+    void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                 bool isAsync);
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 
@@ -184,11 +198,22 @@ private:
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
-    InferenceEngine::InferRequest infRequest;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::BlobMap inpBlobs;
-    InferenceEngine::BlobMap outBlobs;
     InferenceEngine::TargetDevice targetDevice;
+
+    struct InfEngineReqWrapper
+    {
+        InfEngineReqWrapper() : isReady(true) {}
+
+        void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
+
+        InferenceEngine::InferRequest req;
+        std::vector<std::promise<Mat> > outProms;
+        std::vector<std::string> outsNames;
+        bool isReady;
+    };
+
+    std::vector<Ptr<InfEngineReqWrapper> > infRequests;
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
@@ -239,6 +264,7 @@ public:
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
+    std::future<Mat> futureMat;
 };
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
@@ -279,11 +305,18 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+CV__DNN_INLINE_NS_BEGIN
+
+bool isMyriadX();
+
+CV__DNN_INLINE_NS_END
+
 #endif  // HAVE_INF_ENGINE
 
 bool haveInfEngine();
 
-void forwardInfEngine(Ptr<BackendNode>& node);
+void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                      Ptr<BackendNode>& node, bool isAsync);
 
 }}  // namespace dnn, namespace cv
 

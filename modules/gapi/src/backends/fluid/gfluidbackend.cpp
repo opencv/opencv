@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <iomanip> // std::fixed, std::setprecision
+#include <set>
 #include <unordered_set>
 #include <stack>
 
@@ -370,7 +371,8 @@ std::pair<int,int> cv::gimpl::FluidUpscaleMapper::linesReadAndNextWindow(int out
 
 int cv::gimpl::FluidFilterAgent::firstWindow(std::size_t) const
 {
-    return k.m_window + k.m_lpi - 1;
+    int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines);
+    return k.m_window + lpi - 1;
 }
 
 std::pair<int,int> cv::gimpl::FluidFilterAgent::linesReadAndnextWindow(std::size_t) const

@@ -35,7 +35,7 @@ TEST(videoio_mfx, write_invalid)
     ASSERT_NO_THROW(res = writer.open(String(), CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_ANY_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
 

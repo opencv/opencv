@@ -38,6 +38,7 @@ public:
 
     // A generic yield method - obtain a link to operator's particular GMat output
     GMat    yield      (int output = 0);
+    GMatP   yieldP     (int output = 0);
     GScalar yieldScalar(int output = 0);
 
     template<class T> GArray<T> yieldArray(int output = 0)

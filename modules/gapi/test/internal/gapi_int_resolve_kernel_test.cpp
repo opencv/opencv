@@ -5,9 +5,9 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 
-#include "gapi_mock_kernels.hpp"
+#include "../gapi_mock_kernels.hpp"
 
 namespace opencv_test
 {

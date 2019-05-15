@@ -383,7 +383,10 @@ public:
          modified using setMaxIters() method.
     */
     static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters);
+    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
 };
+
+
 
 /** @brief Finds a perspective transformation between two planes.
 
@@ -842,6 +845,65 @@ CV_EXPORTS_W int solveP3P( InputArray objectPoints, InputArray imagePoints,
                            OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                            int flags );
 
+/** @brief Refine a pose (the translation and the rotation that transform a 3D point expressed in the object coordinate frame
+to the camera coordinate frame) from a 3D-2D point correspondences and starting from an initial solution.
+
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or 1xN/Nx1 3-channel,
+where N is the number of points. vector\<Point3f\> can also be passed here.
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+where N is the number of points. vector\<Point2f\> can also be passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
+@param rvec Input/Output rotation vector (see @ref Rodrigues ) that, together with tvec , brings points from
+the model coordinate system to the camera coordinate system. Input values are used as an initial solution.
+@param tvec Input/Output translation vector. Input values are used as an initial solution.
+@param criteria Criteria when to stop the Levenberg-Marquard iterative algorithm.
+
+The function refines the object pose given at least 3 object points, their corresponding image
+projections, an initial solution for the rotation and translation vector,
+as well as the camera matrix and the distortion coefficients.
+The function minimizes the projection error with respect to the rotation and the translation vectors, according
+to a Levenberg-Marquardt iterative minimization @cite Madsen04 @cite Eade13 process.
+ */
+CV_EXPORTS_W void solvePnPRefineLM( InputArray objectPoints, InputArray imagePoints,
+                                    InputArray cameraMatrix, InputArray distCoeffs,
+                                    InputOutputArray rvec, InputOutputArray tvec,
+                                    TermCriteria criteria = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 20, FLT_EPSILON));
+
+/** @brief Refine a pose (the translation and the rotation that transform a 3D point expressed in the object coordinate frame
+to the camera coordinate frame) from a 3D-2D point correspondences and starting from an initial solution.
+
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or 1xN/Nx1 3-channel,
+where N is the number of points. vector\<Point3f\> can also be passed here.
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+where N is the number of points. vector\<Point2f\> can also be passed here.
+@param cameraMatrix Input camera matrix \f$A = \vecthreethree{fx}{0}{cx}{0}{fy}{cy}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
+4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
+@param rvec Input/Output rotation vector (see @ref Rodrigues ) that, together with tvec , brings points from
+the model coordinate system to the camera coordinate system. Input values are used as an initial solution.
+@param tvec Input/Output translation vector. Input values are used as an initial solution.
+@param criteria Criteria when to stop the Levenberg-Marquard iterative algorithm.
+@param VVSlambda Gain for the virtual visual servoing control law, equivalent to the \f$\alpha\f$
+gain in the Gauss-Newton formulation.
+
+The function refines the object pose given at least 3 object points, their corresponding image
+projections, an initial solution for the rotation and translation vector,
+as well as the camera matrix and the distortion coefficients.
+The function minimizes the projection error with respect to the rotation and the translation vectors, using a
+virtual visual servoing (VVS) @cite Chaumette06 @cite Marchand16 scheme.
+ */
+CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePoints,
+                                     InputArray cameraMatrix, InputArray distCoeffs,
+                                     InputOutputArray rvec, InputOutputArray tvec,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 20, FLT_EPSILON),
+                                     double VVSlambda = 1);
+
 /** @brief Finds an initial camera matrix from 3D-2D point correspondences.
 
 @param objectPoints Vector of vectors of the calibration pattern points in the calibration pattern
@@ -952,7 +1014,7 @@ can be used as well.
 CV_EXPORTS_W bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,int flags=0);
 
 //! finds subpixel-accurate positions of the chessboard corners
-CV_EXPORTS bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
+CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corners, Size region_size );
 
 /** @brief Renders the detected chessboard corners.
 

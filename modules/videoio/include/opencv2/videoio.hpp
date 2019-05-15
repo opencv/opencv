@@ -782,9 +782,18 @@ public:
      */
     CV_WRAP String getBackendName() const;
 
+    /** Switches exceptions mode
+     *
+     * methods raise exceptions if not successful instead of returning an error code
+     */
+    CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
+
+    /// query if exception mode is active
+    CV_WRAP bool getExceptionMode() { return throwOnFail; }
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
+    bool throwOnFail;
 };
 
 class IVideoWriter;
