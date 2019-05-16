@@ -1162,16 +1162,35 @@ inline v_uint16x32 v_popcount(const v_int16x32& a)
 {
 #if CV_AVX_512BITALG
     return v_uint16x32(_mm512_popcnt_epi16(a.val));
-#else
+#elif CV_AVX_512VPOPCNTDQ
     __m512i zero = _mm512_setzero_si512();
     return v_uint16x32(_mm512_packs_epi32(_mm512_popcnt_epi32(_mm512_unpacklo_epi16(a.val, zero)),
                                           _mm512_popcnt_epi32(_mm512_unpackhi_epi16(a.val, zero))));
+#else
+    v_uint8x64 p = v_popcount(v_reinterpret_as_s8(a));
+    p += v_rotate_right<1>(p);
+    return v_reinterpret_as_u16(p) & v512_setall_u16(0x00ff);
 #endif
 }
 inline v_uint32x16 v_popcount(const v_int32x16& a)
-{ return v_uint32x16(_mm512_popcnt_epi32(a.val)); }
+{
+#if CV_AVX_512VPOPCNTDQ
+    return v_uint32x16(_mm512_popcnt_epi32(a.val));
+#else
+    v_uint8x64 p = v_popcount(v_reinterpret_as_s8(a));
+    p += v_rotate_right<1>(p);
+    p += v_rotate_right<2>(p);
+    return v_reinterpret_as_u32(p) & v512_setall_u32(0x000000ff);
+#endif
+}
 inline v_uint64x8 v_popcount(const v_int64x8& a)
-{ return v_uint64x8(_mm512_popcnt_epi64(a.val)); }
+{
+#if CV_AVX_512VPOPCNTDQ
+    return v_uint64x8(_mm512_popcnt_epi64(a.val));
+#else
+    return v_uint64x8(_mm512_sad_epu8(v_popcount(v_reinterpret_as_s8(a)).val, _mm512_setzero_si512()));
+#endif
+}
 
 
 inline v_uint8x64  v_popcount(const v_uint8x64&  a) { return v_popcount(v_reinterpret_as_s8 (a)); }
