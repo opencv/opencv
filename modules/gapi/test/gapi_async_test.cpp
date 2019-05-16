@@ -380,14 +380,115 @@ TYPED_TEST_P(cancel, basic){
     ASSERT_GT(canceled, 0u);
 }
 
+namespace {
+    GRunArgs deep_copy_out_args(const GRunArgsP& args ){
+        GRunArgs result; result.reserve(args.size());
+        for (auto&& arg : args){
+            //FIXME: replace this switch with use of visit() on variant, when it will be available
+            switch (arg.index()){
+    #if !defined(GAPI_STANDALONE)
+                case GRunArgP::index_of<cv::Mat*>()                 :   result.emplace_back(*util::get<cv::Mat*>(arg));     break;
+                case GRunArgP::index_of<cv::Scalar*>()              :   result.emplace_back(*util::get<cv::Scalar*>(arg));  break;
+                case GRunArgP::index_of<cv::UMat*>()                :   result.emplace_back(*util::get<cv::UMat*>(arg));    break;
+    #endif // !defined(GAPI_STANDALONE)
+                case GRunArgP::index_of<cv::gapi::own::Mat*>()      :   result.emplace_back(*util::get<cv::gapi::own::Mat*>   (arg));   break;
+                case GRunArgP::index_of<cv::gapi::own::Scalar*>()   :   result.emplace_back(*util::get<cv::gapi::own::Scalar*>(arg));   break;
+                case GRunArgP::index_of<cv::detail::VectorRef>()    :   result.emplace_back(util::get<cv::detail::VectorRef>  (arg));   break;
+                default : ;
+            }
+        }
+        return result;
+    }
+
+    GRunArgsP args_p_from_args(GRunArgs& args){
+        GRunArgsP result; result.reserve(args.size());
+        for (auto&& arg : args){
+            switch (arg.index()){
+    #if !defined(GAPI_STANDALONE)
+                case GRunArg::index_of<cv::Mat>()                 :   result.emplace_back(&util::get<cv::Mat>(arg));     break;
+                case GRunArg::index_of<cv::Scalar>()              :   result.emplace_back(&util::get<cv::Scalar>(arg));  break;
+                case GRunArg::index_of<cv::UMat>()                :   result.emplace_back(&util::get<cv::UMat>(arg));    break;
+    #endif // !defined(GAPI_STANDALONE)
+                case GRunArg::index_of<cv::gapi::own::Mat>()      :   result.emplace_back(&util::get<cv::gapi::own::Mat>   (arg));   break;
+                case GRunArg::index_of<cv::gapi::own::Scalar>()   :   result.emplace_back(&util::get<cv::gapi::own::Scalar>(arg));   break;
+                case GRunArg::index_of<cv::detail::VectorRef>()   :   result.emplace_back(util::get<cv::detail::VectorRef>  (arg));   break;
+                default : ;
+            }
+        }
+        return result;
+    }
+}
+
 REGISTER_TYPED_TEST_CASE_P(cancel, basic);
 
+template<typename case_t>
+struct output_args_lifetime : ::testing::Test{
+    static constexpr const int num_of_requests = 20;
+};
+TYPED_TEST_CASE_P(output_args_lifetime);
+//There are intentionaly no actual checks (asserts and verify) in output_args_lifetime tests.
+//They are more of example use-cases than real tests. (ASAN/valgrind can still catch issues here)
+TYPED_TEST_P(output_args_lifetime, callback){
+
+    std::atomic<int> active_requests = {0};
+
+    for (int i=0; i<this->num_of_requests; i++)
+    {
+        TypeParam r;
+
+        //As output arguments are __captured by reference__  calling code
+        //__must__ ensure they live long enough to complete asynchronous activity.
+        //(i.e. live at least until callback is called)
+        auto out_args_ptr =  std::make_shared<cv::GRunArgs>(deep_copy_out_args(r.out_args()));
+
+        //Extend lifetime of out_args_ptr content by capturing it into a callback
+        auto cb =  [&active_requests, out_args_ptr](std::exception_ptr ){
+            --active_requests;
+        };
+
+        ++active_requests;
+
+        r.async(cb, r.in_args(), args_p_from_args(*out_args_ptr));
+    }
+
+
+   while(active_requests){
+       std::this_thread::sleep_for(std::chrono::milliseconds{2});
+   }
+}
+
+
+TYPED_TEST_P(output_args_lifetime, future){
+
+    std::vector<std::future<void>>                      fs(this->num_of_requests);
+    std::vector<std::shared_ptr<cv::GRunArgs>>    out_ptrs(this->num_of_requests);
+
+    for (int i=0; i<this->num_of_requests; i++)
+    {
+        TypeParam r;
+
+        //As output arguments are __captured by reference__  calling code
+        //__must__ ensure they live long enough to complete asynchronous activity.
+        //(i.e. live at least until future.get()/wait() is returned)
+        auto out_args_ptr =  std::make_shared<cv::GRunArgs>(deep_copy_out_args(r.out_args()));
+
+        //Extend lifetime of out_args_ptr content
+        out_ptrs[i] = out_args_ptr;
+
+        fs[i] = r.async(r.in_args(), args_p_from_args(*out_args_ptr));
+    }
+
+    for (auto const& ftr : fs ){
+        ftr.wait();
+    }
+}
+REGISTER_TYPED_TEST_CASE_P(output_args_lifetime, callback, future);
+
 //little helpers to match up all combinations of setups
-template<typename compute_fixture_t,template <typename> class callback_or_future_t, template <typename> class compiled_or_apply_t>
+template<typename compute_fixture_t, template<typename> class... args_t>
 struct Case
         : compute_fixture_t,
-          callback_or_future_t<Case<compute_fixture_t,callback_or_future_t,compiled_or_apply_t>>,
-          compiled_or_apply_t <Case<compute_fixture_t,callback_or_future_t,compiled_or_apply_t>>
+          args_t<Case<compute_fixture_t, args_t...>> ...
 {
     template<typename... Args>
     Case(Args&&... args) : compute_fixture_t(std::forward<Args>(args)...) { }
@@ -404,6 +505,7 @@ using cases = ::testing::Types<
             Case<computation_t, Future,   AsyncCompiled>,
             Case<computation_t, Future,   AsyncApply>
             >;
+
 INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPINormalFlow_,        normal,     cases<SumOfSum2x2>);
 INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPIExceptionHandling_, exception,  cases<ExceptionOnExecution>);
 
@@ -411,19 +513,14 @@ INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPIStress,             stress,     cases<SumO
 
 INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPICancelation,        cancel,     cases<SelfCanceling>);
 
-TEST(AsyncAPI, Sample){
-    cv::GComputation self_mul([]{
-        cv::GMat in;
-        cv::GMat out = cv::gapi::mul(in, in);
-        return GComputation{in, out};
-    });
+template<typename computation_t>
+using explicit_wait_cases = ::testing::Types<
+            Case<computation_t, AsyncCompiled>,
+            Case<computation_t, AsyncApply>,
+            Case<computation_t, AsyncCompiled>,
+            Case<computation_t, AsyncApply>
+            >;
 
-    const cv::Size sz{2, 2};
-    cv::Mat in_mat{sz, CV_8U, cv::Scalar(1)};
-    cv::Mat out;
-
-    auto f = cv::gapi::wip::async_apply(self_mul,cv::gin(in_mat), cv::gout(out));
-    f.wait();
-}
+INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPIOutArgsLifetTime,   output_args_lifetime,     explicit_wait_cases<SumOfSum2x2>);
 
 } // namespace opencv_test
