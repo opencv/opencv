@@ -317,11 +317,7 @@ optimization procedures like calibrateCamera, stereoCalibrate, or solvePnP .
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
-/** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
-An example program about pose estimation from coplanar points
 
-Check @ref tutorial_homography "the corresponding tutorial" for more details
-*/
 
 /** Levenberg-Marquardt solver. Starting with the specified vector of parameters it
     optimizes the target vector criteria "err"
@@ -387,6 +383,12 @@ public:
 };
 
 
+
+/** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
+An example program about pose estimation from coplanar points
+
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
 
 /** @brief Finds a perspective transformation between two planes.
 
