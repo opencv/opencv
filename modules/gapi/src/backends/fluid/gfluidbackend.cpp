@@ -648,6 +648,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
 
                     cv::gapi::own::Rect produced = rois[m_id_map.at(data.rc)];
 
+                    // Apply resize-specific roi transformations
                     cv::gapi::own::Rect resized;
                     switch (fg.metadata(oh).get<FluidUnit>().k.m_kind)
                     {
@@ -657,8 +658,28 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                     default: GAPI_Assert(false);
                     }
 
+                    // All below transformations affect roi of the writer, preserve read start position here
                     int readStart = resized.y;
-                    cv::gapi::own::Rect roi = adjFilterRoi(resized, fd.border_size, in_meta.size.height);
+
+                    // Extend required input roi (both y and height) to be even if it's produced by NV12toRGB
+                    if (!in_node->inNodes().empty()) {
+                        auto in_data_producer = in_node->inNodes().front();
+                        if (fg.metadata(in_data_producer).get<FluidUnit>().k.m_kind == GFluidKernel::Kind::NV12toRGB) {
+                            if (resized.y % 2 != 0) {
+                                resized.y--;
+                                resized.height++;
+                            }
+
+                            if (resized.height % 2 != 0) {
+                                resized.height++;
+                            }
+                        }
+                    }
+
+                    // Apply filter-specific roi transformations, clip to image size
+                    // Note: done even for non-filter kernels as applies border-related transformations
+                    // (required in the case when there are multiple readers with different border requirements)
+                    auto roi = adjFilterRoi(resized, fd.border_size, in_meta.size.height);
 
                     auto in_id = m_id_map.at(in_data.rc);
                     if (rois[in_id] == cv::gapi::own::Rect{})
