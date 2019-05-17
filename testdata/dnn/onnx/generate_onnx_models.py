@@ -283,3 +283,7 @@ save_data_and_model("max_pool3d", input, maxpool3d)
 input = torch.randn(1, 2, 3, 5, 6)
 avepool3d = nn.AvgPool3d((3, 4, 3), stride=(1, 2, 3), padding=(1, 2, 0))
 save_data_and_model("ave_pool3d", input, avepool3d)
+
+input = Variable(torch.randn(1, 2, 3, 4, 5))
+conv3d = nn.BatchNorm3d(2)
+save_data_and_model("batch_norm_3d", input, conv3d)

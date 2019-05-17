@@ -766,6 +766,14 @@ with tf.Session(graph=tf.Graph()) as localSession:
         f.write(graph_def.SerializeToString())
 ################################################################################
 
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4, 2], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch_norm3d',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   gamma_initializer=tf.random_normal_initializer(),
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'batch_norm3d', optimize=False)
+################################################################################
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
 #     graph_def = tf.GraphDef()
