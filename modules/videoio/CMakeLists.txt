@@ -64,18 +64,24 @@ if(DEFINED WINRT AND NOT DEFINED WINRT_8_0 AND NOT DEFINED ENABLE_WINRT_MODE_NAT
         ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaStreamSink.hpp)
 endif()
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
+
 set(tgts)
 
 if(TARGET ocv.3rdparty.mediasdk)
-  list(APPEND videoio_srcs
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_common.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_reader.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_writer.cpp)
-  list(APPEND videoio_hdrs
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_common.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_reader.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_writer.hpp)
-  list(APPEND tgts ocv.3rdparty.mediasdk)
+  if("mfx" IN_LIST VIDEOIO_PLUGIN_LIST)
+    ocv_create_builtin_videoio_plugin("opencv_videoio_intel_mfx" ocv.3rdparty.mediasdk "cap_mfx_common.cpp" "cap_mfx_reader.cpp" "cap_mfx_writer.cpp" "cap_mfx_plugin.cpp")
+  else()
+    list(APPEND videoio_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_common.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_reader.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_writer.cpp)
+    list(APPEND videoio_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_common.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_reader.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_mfx_writer.hpp)
+    list(APPEND tgts ocv.3rdparty.mediasdk)
+  endif()
 endif()
 
 if(TARGET ocv.3rdparty.dshow)
@@ -99,8 +105,6 @@ if(TARGET ocv.3rdparty.dc1394_2)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_dc1394_v2.cpp)
   list(APPEND tgts ocv.3rdparty.dc1394_2)
 endif()
-
-include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
 if(TARGET ocv.3rdparty.gstreamer)
   if("gstreamer" IN_LIST VIDEOIO_PLUGIN_LIST)
