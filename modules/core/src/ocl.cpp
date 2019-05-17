@@ -2847,7 +2847,11 @@ struct Kernel::Impl
     }
 
     bool run(int dims, size_t _globalsize[], size_t _localsize[],
-            bool sync, int64* timeNS, const Queue& q);
+        bool sync, int64* timeNS, const Queue& q);
+
+    bool run(int dims, size_t _globalsize[], size_t _localsize[],
+        const Queue& q,
+        std::vector<cl_event>& wait_list, cl_event* kernel_event);
 
     ~Impl()
     {
@@ -3142,7 +3146,6 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     return p->run(dims, globalsize, _localsize, sync, NULL, q);
 }
 
-
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
@@ -3210,6 +3213,79 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
     }
     if (asyncEvent)
         CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
+    return retval == CL_SUCCESS;
+}
+
+bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[], const Queue & q, std::vector<cl_event>& wait_list, cl_event* kernel_event)
+{
+    if (!p)
+        return false;
+
+    size_t globalsize[CV_MAX_DIM] = { 1,1,1 };
+    size_t total = 1;
+    CV_Assert(_globalsize != NULL);
+    for (int i = 0; i < dims; i++)
+    {
+        size_t val = _localsize ? _localsize[i] :
+            dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8 >> (int)(i>0)) : 1;
+        CV_Assert(val > 0);
+        total *= _globalsize[i];
+        if (_globalsize[i] == 1 && !_localsize)
+            val = 1;
+        globalsize[i] = divUp(_globalsize[i], (unsigned int)val) * val;
+    }
+    CV_Assert(total > 0);
+
+    return p->run(dims, globalsize, _localsize, q, wait_list, kernel_event);
+}
+
+bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
+    const Queue& q, std::vector<cl_event>& wait_list, cl_event* kernel_event)
+{
+    CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
+
+    if (!handle || isInProgress)
+        return false;
+
+    cl_command_queue qq = getQueue(q);
+    cl_event asyncEvent = 0;
+    cl_int retval = clEnqueueNDRangeKernel(qq, handle, (cl_uint)dims,
+        NULL, globalsize, localsize, wait_list.size(), wait_list.empty() ? NULL : &(wait_list[0]),
+        &asyncEvent);
+#if !CV_OPENCL_SHOW_RUN_KERNELS
+    if (retval != CL_SUCCESS)
+#endif
+    {
+        cv::String msg = cv::format("clEnqueueNDRangeKernel('%s', dims=%d, globalsize=%dx%dx%d, localsize=%s)", name.c_str(), (int)dims,
+            globalsize[0], (dims > 1 ? globalsize[1] : 1), (dims > 2 ? globalsize[2] : 1),
+            (localsize ? cv::format("%dx%dx%d", localsize[0], (dims > 1 ? localsize[1] : 1), (dims > 2 ? localsize[2] : 1)) : cv::String("NULL")).c_str()
+        );
+        if (retval != CL_SUCCESS)
+        {
+            msg = CV_OCL_API_ERROR_MSG(retval, msg.c_str());
+        }
+#if CV_OPENCL_TRACE_CHECK
+        CV_OCL_TRACE_CHECK_RESULT(retval, msg.c_str());
+#else
+        printf("%s\n", msg.c_str());
+        fflush(stdout);
+#endif
+        cleanupUMats();
+    }
+    else
+    {
+        addref();
+        isInProgress = true;
+        CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
+    }
+
+    if (kernel_event)
+        *kernel_event = asyncEvent;
+    else {
+        if (asyncEvent)
+            CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
+    }
+
     return retval == CL_SUCCESS;
 }
 
