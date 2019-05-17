@@ -70,7 +70,7 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v
     if(v_float32::nlanes == 4)
     {
 #if CV_SIMD_WIDTH == 16
-        int32_t CV_DECL_ALIGNED(MAX_ALIGN) idx[4];
+        int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx[4];
         v_store_aligned(idx, ix);
         v_float32x4 tt[4];
         tt[0] = v_load(tab + idx[0]);
@@ -200,6 +200,8 @@ struct RGB2XYZ_f<float>
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int scn = srccn;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -230,7 +232,6 @@ struct RGB2XYZ_f<float>
 
             v_store_interleave(dst, x, y, z);
         }
-        vx_cleanup();
 #endif
         for( ; i < n; i++, src += scn, dst += 3)
         {
@@ -305,6 +306,8 @@ struct RGB2XYZ_i<uchar>
     }
     void operator()(const uchar * src, uchar * dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int scn = srccn, i = 0;
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -375,7 +378,6 @@ struct RGB2XYZ_i<uchar>
 
             v_store_interleave(dst, x, y, z);
         }
-        vx_cleanup();
 #endif
 
         for ( ; i < n; i++, src += scn, dst += 3)
@@ -416,6 +418,8 @@ struct RGB2XYZ_i<ushort>
 
     void operator()(const ushort * src, ushort * dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int scn = srccn, i = 0;
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -504,8 +508,6 @@ struct RGB2XYZ_i<ushort>
 
             v_store_interleave(dst, x, y, z);
         }
-
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src += scn, dst += 3)
         {
@@ -583,6 +585,8 @@ struct XYZ2RGB_f<float>
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int dcn = dstcn;
         float alpha = ColorChannel<float>::max();
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -615,7 +619,6 @@ struct XYZ2RGB_f<float>
                 v_store_interleave(dst, b, g, r);
             }
         }
-        vx_cleanup();
 #endif
         for( ; i < n; i++, src += 3, dst += dcn)
         {
@@ -697,6 +700,8 @@ struct XYZ2RGB_i<uchar>
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int dcn = dstcn, i = 0;
         uchar alpha = ColorChannel<uchar>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -768,7 +773,6 @@ struct XYZ2RGB_i<uchar>
                 v_store_interleave(dst, bb, gg, rr);
             }
         }
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src += 3, dst += dcn)
         {
@@ -809,6 +813,8 @@ struct XYZ2RGB_i<ushort>
 
     void operator()(const ushort* src, ushort* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int dcn = dstcn, i = 0;
         ushort alpha = ColorChannel<ushort>::max();
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
@@ -894,7 +900,6 @@ struct XYZ2RGB_i<ushort>
                 v_store_interleave(dst, b, g, r);
             }
         }
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src += 3, dst += dcn)
         {
@@ -1568,6 +1573,8 @@ struct RGB2Lab_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         const int Lscale = (116*255+50)/100;
         const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
         const ushort* tab = srgb ? sRGBGammaTab_b : linearGammaTab_b;
@@ -1724,8 +1731,6 @@ struct RGB2Lab_b
 
             v_store_interleave(dst, L, a, b);
         }
-
-        vx_cleanup();
 #endif
 
         for(; i < n; i++, src += scn, dst += 3 )
@@ -1793,6 +1798,8 @@ struct RGB2Lab_f
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int scn = srccn, bIdx = blueIdx;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
@@ -1886,7 +1893,6 @@ struct RGB2Lab_f
                     v_store_interleave(dst + i + 0*vsize, l_vec0, a_vec0, b_vec0);
                     v_store_interleave(dst + i + 3*vsize, l_vec1, a_vec1, b_vec1);
                 }
-                vx_cleanup();
             }
 #endif // CV_SIMD
 
@@ -1982,7 +1988,6 @@ struct RGB2Lab_f
                     v_store_interleave(dst + k*3*vsize, L[k], a[k], b[k]);
                 }
             }
-            vx_cleanup();
 #endif
 
             for (; i < n; i++, src += scn, dst += 3 )
@@ -2062,6 +2067,8 @@ struct Lab2RGBfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
@@ -2194,8 +2201,6 @@ struct Lab2RGBfloat
                 }
             }
         }
-
-        vx_cleanup();
 #endif
         for (; i < n; i++, src += 3, dst += dcn)
         {
@@ -2427,6 +2432,8 @@ struct Lab2RGBinteger
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
@@ -2526,7 +2533,6 @@ struct Lab2RGBinteger
                     v_store_interleave(dst, B, G, R);
                 }
             }
-            vx_cleanup();
         }
 #endif
 
@@ -2579,6 +2585,8 @@ struct Lab2RGB_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         if(enableBitExactness)
         {
             icvt(src, dst, n);
@@ -2643,7 +2651,6 @@ struct Lab2RGB_b
                     v_store_aligned(buf + j + bufp, v_muladd(v_cvt_f32(vs[bufp]), mluv[bufp%3], aluv[bufp%3]));
                 }
             }
-            vx_cleanup();
 #endif
 
             for( ; j < dn*3; j += 3 )
@@ -2702,7 +2709,6 @@ struct Lab2RGB_b
                     v_store(dst, v_pack_u(v_pack(vi[0], vi[1]), v_pack(vi[2], vi[3])));
                 }
             }
-            vx_cleanup();
 #endif
 
             for( ; j < dn*3; j += 3, dst += dcn )
@@ -2768,6 +2774,8 @@ struct RGB2Luvfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, scn = srccn;
         float gscale = GammaTabScale;
         const float* gammaTab = srgb ? sRGBGammaTab : 0;
@@ -2857,7 +2865,6 @@ struct RGB2Luvfloat
                 v_store_interleave(dst + k*3*vsize, L[k], u[k], v[k]);
             }
         }
-        vx_cleanup();
 #endif
 
         for( ; i < n; i++, src += scn, dst += 3 )
@@ -2954,6 +2961,8 @@ struct Luv2RGBfloat
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
@@ -3062,8 +3071,6 @@ struct Luv2RGBfloat
                 }
             }
         }
-
-        vx_cleanup();
 #endif
 
         for( ; i < n; i++, src += 3,  dst += dcn )
@@ -3143,6 +3150,8 @@ struct RGB2Luvinterpolate
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i, scn = srccn, bIdx = blueIdx;
 
         i = 0; n *= 3;
@@ -3205,7 +3214,6 @@ struct RGB2Luvinterpolate
                 v_uint8 v = v_pack(v0, v1);
                 v_store_interleave(dst + i, l, u, v);
             }
-            vx_cleanup();
         }
 #endif // CV_SIMD
 
@@ -3250,6 +3258,8 @@ struct RGB2Luv_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         if(useInterpolation)
         {
             icvt(src, dst, n);
@@ -3339,7 +3349,6 @@ struct RGB2Luv_b
                     v_store_aligned(buf + j + 1*fsize, v_cvt_f32(q1)*v255inv);
                 }
             }
-            vx_cleanup();
 #endif
             for( ; j < dn*bufChannels; j += bufChannels, src += scn )
             {
@@ -3377,7 +3386,6 @@ struct RGB2Luv_b
                                                           v_pack(q[k*4+2], q[k*4+3])));
                 }
             }
-            vx_cleanup();
 #endif
             for( ; j < dn*3; j += 3 )
             {
@@ -3594,6 +3602,8 @@ struct Luv2RGBinteger
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
@@ -3733,7 +3743,6 @@ struct Luv2RGBinteger
                     v_store_interleave(dst, u8_b, u8_g, u8_r);
                 }
             }
-            vx_cleanup();
         }
 #endif
 
@@ -3773,6 +3782,8 @@ struct Luv2RGB_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         if(useBitExactness)
         {
             icvt(src, dst, n);
@@ -3839,7 +3850,6 @@ struct Luv2RGB_b
                     v_store_aligned(buf + j + bufp, v_muladd(v_cvt_f32(vs[bufp]), mluv[bufp%3], aluv[bufp%3]));
                 }
             }
-            vx_cleanup();
 #endif
             for( ; j < dn*3; j += 3 )
             {
@@ -3897,7 +3907,6 @@ struct Luv2RGB_b
                     v_store(dst, v_pack_u(v_pack(vi[0], vi[1]), v_pack(vi[2], vi[3])));
                 }
             }
-            vx_cleanup();
 #endif
 
             for( ; j < dn*3; j += 3, dst += dcn )
