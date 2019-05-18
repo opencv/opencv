@@ -143,6 +143,7 @@ class Builder:
         self.cmake_path = self.get_cmake()
         self.ninja_path = self.get_ninja()
         self.debug = True if config.debug else False
+        self.debug_info = True if config.debug_info else False
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -217,6 +218,8 @@ class Builder:
 
         if self.debug:
             cmake_vars['CMAKE_BUILD_TYPE'] = "Debug"
+
+        if self.debug_info:  # Release with debug info
             cmake_vars['BUILD_WITH_DEBUG_INFO'] = "ON"
 
         if self.config.extra_modules_path is not None:
@@ -234,7 +237,7 @@ class Builder:
         # full parallelism for C++ compilation tasks
         execute([self.ninja_path, "opencv_modules"])
         # limit parallelism for Gradle steps (avoid huge memory consumption)
-        execute([self.ninja_path, '-j3', "install" if self.debug else "install/strip"])
+        execute([self.ninja_path, '-j3', "install" if (self.debug_info or self.debug) else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -291,7 +294,8 @@ if __name__ == "__main__":
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
     parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
     parser.add_argument('--force_opencv_toolchain', action="store_true", help="Do not use toolchain from Android NDK")
-    parser.add_argument('--debug', action="store_true", help="Build for debug")
+    parser.add_argument('--debug', action="store_true", help="Build 'Debug' binaries (CMAKE_BUILD_TYPE=Debug)")
+    parser.add_argument('--debug_info', action="store_true", help="Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
