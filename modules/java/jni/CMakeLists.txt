@@ -77,7 +77,7 @@ if(ANDROID)
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
-  if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+  if(NOT BUILD_WITH_DEBUG_INFO AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
     add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${the_module}>")
   endif()
 endif()
