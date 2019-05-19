@@ -1,4 +1,4 @@
-function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
+function(ocv_create_builtin_videoio_plugin name target)
 
   ocv_debug_message("ocv_create_builtin_videoio_plugin(${ARGV})")
 
@@ -11,9 +11,11 @@ function(ocv_create_builtin_videoio_plugin name target videoio_src_file)
 
   message(STATUS "Video I/O: add builtin plugin '${name}'")
 
-  add_library(${name} MODULE
-    "${CMAKE_CURRENT_LIST_DIR}/src/${videoio_src_file}"
-  )
+  foreach(src ${ARGN})
+    list(APPEND sources "${CMAKE_CURRENT_LIST_DIR}/src/${src}")
+  endforeach()
+
+  add_library(${name} MODULE ${sources})
   target_include_directories(${name} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
   target_compile_definitions(${name} PRIVATE BUILD_PLUGIN)
   target_link_libraries(${name} PRIVATE ${target})
