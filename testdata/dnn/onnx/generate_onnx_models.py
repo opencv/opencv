@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
@@ -30,14 +31,14 @@ def export_to_string(model, inputs):
 
 def save_data_and_model(name, input, model):
     model.eval()
-    print name + " input has sizes",  input.shape
+    print(name + " input has sizes",  input.shape)
     input_files = os.path.join("data", "input_" + name)
     np.save(input_files, input.data)
 
     output = model(input)
 
-    print name + " output has sizes", output.shape
-    print
+    print(name + " output has sizes", output.shape)
+    print()
     output_files =  os.path.join("data", "output_" + name)
     np.save(output_files, np.ascontiguousarray(output.data))
 
@@ -161,8 +162,8 @@ def save_data_and_model_multy_inputs(name, model, *args):
         np.save(input_files, input)
 
     output = model(*args)
-    print name + " output has sizes", output.shape
-    print
+    print(name + " output has sizes", output.shape)
+    print()
     output_files =  os.path.join("data", "output_" + name)
     np.save(output_files, output.data)
 
