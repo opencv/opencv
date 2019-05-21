@@ -157,14 +157,19 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
             // if output buffer is not enough to hold the result, reallocate it
             if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
             {
-                auto& out_mat   = *get<cv::Mat*>(args.outObjs.at(index));
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
                 createMat(desc, out_mat);
-                continue;
+            }
+            else
+            {
+                auto& out_mat = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
+                GAPI_Assert(out_mat.data != nullptr &&
+                        desc.canDescribe(out_mat));
             }
 #endif // !defined(GAPI_STANDALONE)
             // Building standalone - output buffer should always exist,
             // and _exact_ match our inferred metadata
-            auto& out_mat   = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
+            auto& out_mat = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
             GAPI_Assert(out_mat.data != nullptr &&
                         desc.canDescribe(out_mat));
         }
