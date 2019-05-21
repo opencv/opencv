@@ -816,8 +816,7 @@ TEST_P(Preproc4lpiTest, Test)
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
     auto pkg = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
-                                 fluidResizeTestPackage(interp, in_sz, out_sz, 4),
-                                 cv::unite_policy::REPLACE);
+                                 fluidResizeTestPackage(interp, in_sz, out_sz, 4));
 
     c.apply(cv::gin(in_mat), cv::gout(out_mat)
            ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
