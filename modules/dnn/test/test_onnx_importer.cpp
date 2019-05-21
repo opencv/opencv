@@ -245,6 +245,12 @@ TEST_P(Test_ONNX_layers, Reshape)
     testONNXModels("unsqueeze");
 }
 
+TEST_P(Test_ONNX_layers, Softmax)
+{
+    testONNXModels("softmax");
+    testONNXModels("log_softmax");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers {};
