@@ -1,7 +1,4 @@
 {
-    "class_ignore_list" : [
-        "SimpleBlobDetector"
-    ],
     "const_private_list" : [
         "OPPONENTEXTRACTOR",
         "GRIDDETECTOR",
