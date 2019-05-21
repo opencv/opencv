@@ -47,8 +47,9 @@ int main(int argc, char *argv[])
     //! [graph_decl_apply]
 
     //! [apply_with_param]
-    cv::gapi::GKernelPackage kernels = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
-                                                         cv::gapi::imgproc::fluid::kernels());
+    cv::gapi::GKernelPackage kernels = cv::gapi::combine
+        (cv::gapi::core::fluid::kernels(),
+         cv::gapi::imgproc::fluid::kernels());
     sobelEdge.apply(input, output, cv::compile_args(kernels));
     //! [apply_with_param]
 

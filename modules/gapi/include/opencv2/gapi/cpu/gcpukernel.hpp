@@ -46,6 +46,9 @@ namespace cpu
      * Backends are usually "black boxes" for G-API users -- on the API
      * side, all backends are represented as different objects of the
      * same class cv::gapi::GBackend.
+     * User can manipulate with backends by specifying which kernels to use.
+     *
+     * @sa @ref gapi_hld
      */
 
     /**
