@@ -55,14 +55,14 @@ namespace opencv_test
 
       struct GComputationVectorMatsAsOutput: public ::testing::Test
       {
-          cv::GMat in;
-          cv::GMat out[3];
           cv::Mat  in_mat;
           cv::GComputation m_c;
           std::vector<cv::Mat> ref_mats;
 
           GComputationVectorMatsAsOutput() : in_mat(300, 300, CV_8UC3),
           m_c([&](){
+                      cv::GMat in;
+                      cv::GMat out[3];
                       std::tie(out[0], out[1], out[2]) = cv::gapi::split3(in);
                       return cv::GComputation({in}, {out[0], out[1], out[2]});
                   })

@@ -159,7 +159,7 @@ void cv::GComputation::apply(cv::Mat in1, cv::Mat in2, cv::Scalar &out, GCompile
 }
 
 void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
-                             std::vector<cv::Mat>       &outs,
+                             std::vector<cv::Mat> &outs,
                              GCompileArgs &&args)
 {
     GRunArgs call_ins;
