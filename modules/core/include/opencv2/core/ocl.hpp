@@ -61,6 +61,7 @@ CV_EXPORTS bool haveSVM();
 class CV_EXPORTS Context;
 class CV_EXPORTS_W_SIMPLE Device;
 class CV_EXPORTS Kernel;
+class CV_EXPORTS Event;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource;
 class CV_EXPORTS Queue;
@@ -344,6 +345,55 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS Event
+{
+public:
+    Event();
+    ~Event();
+    Event(const Event& e);
+    Event& operator = (const Event& e);
+
+    /** @brief Create a user-defined event.
+    @param ctx OpenCL Context associated to the event.
+    **/
+    bool create(const Context& ctx = Context());
+    /** @brief Set the event as being completed (CL_COMPLETE).
+    **/
+    bool setFinished();
+    /** @brief Set the event as having an error.
+    **/
+    bool setError();
+    /** @brief Return true if the kernel associated to that event is complete.
+    **/
+    bool isComplete();
+    /** @brief Return true if the kernel associated to that event is enqueued or submitted.
+    **/
+    bool isEnqueued();
+    /** @brief Return true if the event kernel associated to that is running.
+    **/
+    bool isRunning();
+    //bool setCallback(void* oclCallback(cl_event, cl_int, void* user_data), void* user_data);
+    /** @brief Increment the reference count of that event.
+    **/
+    bool retain();
+    /** @brief Decrement the reference count of that event.
+    **/
+    bool release();
+    /** @brief Wait for all events in the list to be completed before moving on.
+    @param wait_list vector of events the method waits for before continuing.
+    **/
+    static bool waitForEvents(std::vector<Event>& wait_list);
+
+    /** @brief Returns the underlying cl_event.
+    **/
+    void* ptr() const;
+
+    struct Impl; //friend struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+
+protected:
+    Impl* p;
+};
 
 class CV_EXPORTS KernelArg
 {
@@ -575,7 +625,7 @@ public:
     @param q command queue.
     */
     bool run(int dims, size_t globalsize[], size_t localsize[],
-        bool sync, const Queue& q = Queue(), cl_event* kernel_event = (cl_event*)0);
+        bool sync, const Queue& q = Queue(), Event* kernel_event = (Event*)0);
 
     /** @brief Run the OpenCL kernel. Compared to the previous run method, the kernel is not launched immediately but it
     waits for the events in wait_list to be completed. The method is necessarily launched asynchronously (sync=false in previous method).
@@ -585,13 +635,14 @@ public:
     value in localsize. If localsize is NULL, it will still be adjusted depending on dims. The
     adjusted values are greater than or equal to the original values.
     @param localsize work-group size for each dimension.
-    @param wait_list list of OpenCL events that must be finished before the kernel is launched.
+    @param wait_list list of events that must be finished before the kernel is launched.
     @param kernel_event event associated with this kernel launch. If used, it is the user's responsability to release it.
     @param q command queue.
     @sa Queue::finish()
     */
-    bool run(int dims, size_t globalsize[], size_t localsize[],
-        const Queue& q = Queue(), std::vector<cl_event>& wait_list = std::vector<cl_event>(), cl_event* kernel_event = (cl_event*)0);
+    bool runWithWaitList(int dims, size_t globalsize[], size_t localsize[],
+        std::vector<Event>& wait_list, Event* kernel_event,
+        const Queue& q = Queue());
     bool runTask(bool sync, const Queue& q=Queue());
 
     /** @brief Similar to synchronized run() call with returning of kernel execution time

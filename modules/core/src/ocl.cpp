@@ -2763,6 +2763,178 @@ static cl_command_queue getQueue(const Queue& q)
     return qq;
 }
 
+/////////////////////////////////////////// Event /////////////////////////////////////////////
+
+struct Event::Impl
+{
+    Impl()
+    {
+        handle = NULL;
+        refcount = 0;
+    }
+
+    Impl(cl_event e)
+    {
+        handle = e;
+        refcount = 1;
+    }
+
+    ~Impl()
+    {
+#ifdef _WIN32
+        if (!cv::__termination)
+#endif
+        {
+            if(handle)
+            {
+                CV_OCL_DBG_CHECK(clReleaseEvent(handle));
+                handle = NULL;
+            }
+        }
+    }
+
+    void setEvent(const cl_event e) {
+        handle = e;
+        addref();
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+
+    cl_event handle;
+
+    friend struct Kernel::Impl;
+};
+
+Event::Event()
+{
+    p = new Impl();
+}
+
+Event::~Event() {
+    if (p) {
+        p->release();
+    }
+}
+
+Event::Event(const Event& e) {
+    p = e.p;
+    if (p) {
+        retain();
+        p->addref();
+    }
+}
+
+Event& Event::operator= (const Event& e) {
+    Impl* newp = (Impl*)e.p;
+    if(newp)
+        newp->addref();
+    if (p) {
+        release();
+        p->release();
+    }
+    p = newp;
+    if (p)
+        retain();
+    return *this;
+}
+
+bool Event::create(const Context& ctx) {
+    cl_context clctx = (cl_context)ctx.ptr();
+    if (!clctx)
+        clctx = (cl_context)Context::getDefault().ptr();
+    if (p) {
+        release();
+        p->release();
+    }
+    cl_int err_code;
+    p = new Impl(clCreateUserEvent(clctx, &err_code));
+
+    return (err_code == CL_SUCCESS);
+}
+
+bool Event::setFinished() {
+    if (p) {
+        cl_int err_code = clSetUserEventStatus(p->handle, CL_COMPLETE);
+        return (err_code == CL_SUCCESS);
+    }
+    else
+        return false;
+}
+
+bool Event::setError() {
+    if (p) {
+        cl_int err_code = clSetUserEventStatus(p->handle, -1);
+        return (err_code == CL_SUCCESS);
+    }
+    else
+        return false;
+}
+
+bool Event::waitForEvents(std::vector<Event>& wait_list)
+{
+    int number_of_events = wait_list.size();
+    cl_event* event_list = new cl_event[number_of_events];
+
+    for (int i = 0; i < number_of_events; ++i)
+        event_list[i] = (cl_event)wait_list[i].ptr();
+
+    cl_int err_code = clWaitForEvents(number_of_events, event_list);
+    return (err_code == CL_SUCCESS);
+}
+
+bool Event::retain() {
+    if (p) {
+        cl_int err_code = clRetainEvent(p->handle);
+        return (err_code == CL_SUCCESS);
+    }
+    else
+        return false;
+}
+
+bool Event::release() {
+    if (p){
+        if (p->handle) {
+            cl_int err_code = clReleaseEvent(p->handle);
+            return (err_code == CL_SUCCESS);
+        }
+        else
+            return false;
+    }
+    else
+        return false;
+}
+
+void* Event::ptr() const {
+    return p ? p->handle : 0;
+}
+
+bool Event::isComplete(){
+    if (!p)
+        return true;
+
+    cl_event e = p->handle;
+    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    return (status == CL_COMPLETE);
+}
+
+bool Event::isEnqueued(){
+    if (!p)
+        return true;
+
+    cl_event e = p->handle;
+    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    return ((status == CL_QUEUED)||(status == CL_SUBMITTED));
+}
+
+bool Event::isRunning(){
+    if (!p)
+        return true;
+
+    cl_event e = p->handle;
+    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    return (status == CL_RUNNING);
+}
+
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
 KernelArg::KernelArg()
@@ -2847,11 +3019,11 @@ struct Kernel::Impl
     }
 
     bool run(int dims, size_t _globalsize[], size_t _localsize[],
-        bool sync, int64* timeNS, const Queue& q);
+        bool sync, int64* timeNS, const Queue& q, Event* kernel_event=(Event*)0);
 
     bool run(int dims, size_t _globalsize[], size_t _localsize[],
-        const Queue& q,
-        std::vector<cl_event>& wait_list, cl_event* kernel_event);
+        std::vector<Event>& wait_list, Event* kernel_event,
+        const Queue& q);
 
     ~Impl()
     {
@@ -3123,7 +3295,7 @@ int Kernel::set(int i, const KernelArg& arg)
 }
 
 bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
-                 bool sync, const Queue& q)
+                 bool sync, const Queue& q, Event* kernel_event)
 {
     if (!p)
         return false;
@@ -3143,11 +3315,11 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     }
     CV_Assert(total > 0);
 
-    return p->run(dims, globalsize, _localsize, sync, NULL, q);
+    return p->run(dims, globalsize, _localsize, sync, NULL, q, kernel_event);
 }
 
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
-        bool sync, int64* timeNS, const Queue& q)
+        bool sync, int64* timeNS, const Queue& q, Event* kernel_event)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
@@ -3211,12 +3383,22 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         isInProgress = true;
         CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
     }
-    if (asyncEvent)
-        CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
+    if (kernel_event) {
+        Event::Impl* eImpl = kernel_event->getImpl();
+        if (!eImpl) {
+            *kernel_event = Event();
+        }
+        kernel_event->release();
+        eImpl->setEvent(asyncEvent);
+    }
+    else {
+        if (asyncEvent)
+            CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
+    }
     return retval == CL_SUCCESS;
 }
 
-bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[], const Queue & q, std::vector<cl_event>& wait_list, cl_event* kernel_event)
+bool Kernel::runWithWaitList(int dims, size_t _globalsize[], size_t _localsize[], std::vector<Event>& wait_list, Event* kernel_event, const Queue & q)
 {
     if (!p)
         return false;
@@ -3236,11 +3418,11 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[], const Queu
     }
     CV_Assert(total > 0);
 
-    return p->run(dims, globalsize, _localsize, q, wait_list, kernel_event);
+    return p->run(dims, globalsize, _localsize, wait_list, kernel_event, q);
 }
 
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
-    const Queue& q, std::vector<cl_event>& wait_list, cl_event* kernel_event)
+    std::vector<Event>& wait_list, Event* kernel_event, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
@@ -3249,8 +3431,13 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
 
     cl_command_queue qq = getQueue(q);
     cl_event asyncEvent = 0;
+    int nb_of_wait_events = wait_list.size();
+    cl_event* event_list = new cl_event[nb_of_wait_events];
+    for (int i = 0; i < nb_of_wait_events; ++i)
+        event_list[i] = (cl_event)wait_list[i].ptr();
+
     cl_int retval = clEnqueueNDRangeKernel(qq, handle, (cl_uint)dims,
-        NULL, globalsize, localsize, wait_list.size(), wait_list.empty() ? NULL : &(wait_list[0]),
+        NULL, globalsize, localsize, nb_of_wait_events, wait_list.empty() ? NULL : event_list,
         &asyncEvent);
 #if !CV_OPENCL_SHOW_RUN_KERNELS
     if (retval != CL_SUCCESS)
@@ -3279,12 +3466,20 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         CV_OCL_CHECK(clSetEventCallback(asyncEvent, CL_COMPLETE, oclCleanupCallback, this));
     }
 
-    if (kernel_event)
-        *kernel_event = asyncEvent;
+    if (kernel_event) {
+        Event::Impl* eImpl = kernel_event->getImpl();
+        if (!eImpl) {
+            *kernel_event = Event();
+        }
+        kernel_event->release();
+        eImpl->setEvent(asyncEvent);
+    }
     else {
         if (asyncEvent)
             CV_OCL_DBG_CHECK(clReleaseEvent(asyncEvent));
     }
+
+    delete[] event_list;
 
     return retval == CL_SUCCESS;
 }

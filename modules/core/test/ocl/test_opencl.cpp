@@ -7,6 +7,21 @@
 
 namespace opencv_test { namespace {
 
+static void testOpenCLEvents(cv::ocl::Kernel &k, std::vector<cv::ocl::Event>& wait_list, cv::ocl::Event& kEvent)
+{
+    cv::UMat src(cv::Size(4096, 2048), CV_8UC1, cv::Scalar::all(100));
+    cv::UMat dst(src.size(), CV_8UC1);
+    size_t globalSize[2] = {(size_t)src.cols, (size_t)src.rows};
+    size_t localSize[2] = {8, 8};
+    bool kSuccess = k.args(
+            cv::ocl::KernelArg::ReadOnlyNoSize(src), // size is not used (similar to 'dst' size)
+            cv::ocl::KernelArg::WriteOnly(dst),
+            (int)5).runWithWaitList(2, globalSize, localSize, wait_list, &kEvent);
+    ASSERT_TRUE(kSuccess);
+    std::cout << "kEvent.isEnqueued(): " << kEvent.isEnqueued() << std::endl;
+    //ASSERT_TRUE(kEvent.isEnqueued());
+}
+
 static void testOpenCLKernel(cv::ocl::Kernel& k)
 {
     ASSERT_FALSE(k.empty());
@@ -79,6 +94,19 @@ TEST(OpenCL, support_binary_programs)
     }
 
     testOpenCLKernel(k);
+
+    cv::ocl::Event kEvent;
+    cv::ocl::Event wait_event;// = clCreateUserEvent((cl_context)ctx.ptr(), (cl_int*)0);
+    std::cout << "wait_event.isEnqueued(): " << wait_event.isEnqueued() << std::endl;
+    std::cout << "wait_event.isComplete(): " << wait_event.isComplete() << std::endl;
+    wait_event.create();
+    std::cout << "wait_event.isEnqueued(): " << wait_event.isEnqueued() << std::endl;
+    std::cout << "wait_event.isComplete(): " << wait_event.isComplete() << std::endl;
+    std::vector<cv::ocl::Event> wait_list;
+    wait_list.push_back(wait_event);
+    testOpenCLEvents(k, wait_list, kEvent);
+    wait_event.setFinished();
+    ASSERT_TRUE((kEvent.isRunning()) || (kEvent.isComplete()));
 }
 
 
