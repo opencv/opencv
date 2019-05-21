@@ -147,6 +147,60 @@ QUnit.test('test_imgProc', function(assert) {
         dest.delete();
         source.delete();
     }
+
+    // floodFill
+    {
+        let center = new cv.Point(5, 5);
+        let rect = new cv.Rect(0, 0, 0, 0);
+        let img = new cv.Mat.zeros(10, 10, cv.CV_8UC1);
+        let color = new cv.Scalar (255);
+        cv.circle(img, center, 3, color, 1);
+
+        let edge = new cv.Mat();
+        cv.Canny(img, edge, 100, 255);
+        cv.copyMakeBorder(edge, edge, 1, 1, 1, 1, cv.BORDER_REPLICATE);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+            0,   0,   0,   0,   0, 255,   0,   0,   0,   0,
+            0,   0,   0, 255, 255, 255, 255, 255,   0,   0,
+            0,   0,   0, 255,   0, 255,   0, 255,   0,   0,
+            0,   0, 255, 255, 255, 255,   0,   0, 255,   0,
+            0,   0,   0, 255,   0,   0,   0, 255,   0,   0,
+            0,   0,   0, 255, 255,   0, 255, 255,   0,   0,
+            0,   0,   0,   0,   0, 255,   0,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0]);
+
+        let img_elem = 10*10*1;
+        let expected_img_data_ptr = cv._malloc(img_elem);
+        let expected_img_data_heap = new Uint8Array(cv.HEAPU8.buffer,
+                                                    expected_img_data_ptr,
+                                                    img_elem);
+        expected_img_data_heap.set(new Uint8Array(expected_img_data.buffer));
+
+        let expected_img = new cv.Mat(  10, 10, cv.CV_8UC1, expected_img_data_ptr, 0);
+
+        let expected_rect = new cv.Rect(3,3,3,3);
+
+        let compare_result = new cv.Mat(10, 10, cv.CV_8UC1);
+
+        cv.floodFill(img, edge, center, color, rect);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+        assert.equal (rect.x, expected_rect.x);
+        assert.equal (rect.y, expected_rect.y);
+        assert.equal (rect.width, expected_rect.width);
+        assert.equal (rect.height, expected_rect.height);
+
+        img.delete();
+        edge.delete();
+        expected_img.delete();
+        compare_result.delete();
+    }
 });
 
 QUnit.test('test_segmentation', function(assert) {
