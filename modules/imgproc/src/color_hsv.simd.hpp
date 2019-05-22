@@ -927,115 +927,79 @@ struct HLS2RGB_f
     typedef float channel_type;
 
     HLS2RGB_f(int _dstcn, int _blueIdx, float _hrange)
-    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange) {
-        #if CV_SIMD128
-        hasSIMD = hasSIMD128();
-        #endif
-    }
+    : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange)
+    { }
 
-    #if CV_SIMD128
-    inline void process(v_float32x4& v_h, v_float32x4& v_l, v_float32x4& v_s) const
+#if CV_SIMD
+    inline void process(const v_float32& h, const v_float32& l, const v_float32& s,
+                        v_float32& b, v_float32& g, v_float32& r) const
     {
-        v_float32x4 v_one = v_setall_f32(1.0f);
+        v_float32 v1 = vx_setall_f32(1.0f), v2 = vx_setall_f32(2.0f), v4 = vx_setall_f32(4.0f);
 
-        v_float32x4 v_l_le_half = v_l <= v_setall_f32(0.5f);
-        v_float32x4 v_ls = v_l * v_s;
-        v_float32x4 v_elem0 = v_select(v_l_le_half, v_ls, v_s - v_ls);
+        v_float32 lBelowHalfMask = l <= vx_setall_f32(0.5f);
+        v_float32 ls = l * s;
+        v_float32 elem0 = v_select(lBelowHalfMask, ls, s - ls);
 
-        v_float32x4 v_hs_raw = v_h * v_setall_f32(hscale);
-        v_float32x4 v_pre_hs = v_cvt_f32(v_trunc(v_hs_raw));
-        v_float32x4 v_hs = v_hs_raw - v_pre_hs;
-        v_float32x4 v_sector = v_pre_hs - v_setall_f32(6.0f) * v_cvt_f32(v_trunc(v_hs_raw * v_setall_f32(1.0f / 6.0f)));
-        v_float32x4 v_elem1 = v_hs + v_hs;
+        v_float32 hsRaw = h * vx_setall_f32(hscale);
+        v_float32 preHs = v_cvt_f32(v_trunc(hsRaw));
+        v_float32 hs = hsRaw - preHs;
+        v_float32 sector = preHs - vx_setall_f32(6.0f) * v_cvt_f32(v_trunc(hsRaw * vx_setall_f32(1.0f / 6.0f)));
+        v_float32 elem1 = hs + hs;
 
-        v_float32x4 v_tab0 = v_l + v_elem0;
-        v_float32x4 v_tab1 = v_l - v_elem0;
-        v_float32x4 v_tab2 = v_l + v_elem0 - v_elem0 * v_elem1;
-        v_float32x4 v_tab3 = v_l - v_elem0 + v_elem0 * v_elem1;
+        v_float32 tab0 = l + elem0;
+        v_float32 tab1 = l - elem0;
+        v_float32 tab2 = l + elem0 - elem0 * elem1;
+        v_float32 tab3 = l - elem0 + elem0 * elem1;
 
-        v_float32x4 v_two  = v_setall_f32(2.0f);
-        v_float32x4 v_four = v_setall_f32(4.0f);
+        b = v_select(sector <  v2, tab1,
+            v_select(sector <= v2, tab3,
+            v_select(sector <= v4, tab0, tab2)));
 
-        v_h = v_select(v_sector <  v_two , v_tab1,
-              v_select(v_sector <= v_two , v_tab3,
-              v_select(v_sector <= v_four, v_tab0, v_tab2)));
+        g = v_select(sector <  v1, tab3,
+            v_select(sector <= v2, tab0,
+            v_select(sector <  v4, tab2, tab1)));
 
-        v_l = v_select(v_sector <  v_one , v_tab3,
-              v_select(v_sector <= v_two , v_tab0,
-              v_select(v_sector <  v_four, v_tab2, v_tab1)));
-
-        v_s = v_select(v_sector <  v_one , v_tab0,
-              v_select(v_sector <  v_two , v_tab2,
-              v_select(v_sector <  v_four, v_tab1,
-              v_select(v_sector <= v_four, v_tab3, v_tab0))));
+        r = v_select(sector <  v1, tab0,
+            v_select(sector <  v2, tab2,
+            v_select(sector <  v4, tab1,
+            v_select(sector <= v4, tab3, tab0))));
     }
-    #endif
+#endif
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, bidx = blueIdx, dcn = dstcn;
         float alpha = ColorChannel<float>::max();
-        n *= 3;
 
-        #if CV_SIMD128
-        if (hasSIMD)
+#if CV_SIMD
+        static const int vsize = v_float32::nlanes;
+        for (; i <= n - vsize; i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
-            if (dcn == 3)
+            v_float32 h, l, s, r, g, b;
+            v_load_deinterleave(src, h, l, s);
+
+            process(h, l, s, b, g, r);
+
+            if(bidx)
+                swap(b, r);
+
+            if(dcn == 3)
             {
-                if (bidx)
-                {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_l;
-                        v_float32x4 v_s;
-                        v_load_deinterleave(src + i, v_h, v_l, v_s);
-                        process(v_h, v_l, v_s);
-                        v_store_interleave(dst, v_s, v_l, v_h);
-                    }
-                } else {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_l;
-                        v_float32x4 v_s;
-                        v_load_deinterleave(src + i, v_h, v_l, v_s);
-                        process(v_h, v_l, v_s);
-                        v_store_interleave(dst, v_h, v_l, v_s);
-                    }
-                }
-            } else { // dcn == 4
-                if (bidx)
-                {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_l;
-                        v_float32x4 v_s;
-                        v_load_deinterleave(src + i, v_h, v_l, v_s);
-                        process(v_h, v_l, v_s);
-                        v_float32x4 v_a = v_setall_f32(alpha);
-                        v_store_interleave(dst, v_s, v_l, v_h, v_a);
-                    }
-                } else {
-                    for (; i <= n - 12; i += 12, dst += dcn * 4)
-                    {
-                        v_float32x4 v_h;
-                        v_float32x4 v_l;
-                        v_float32x4 v_s;
-                        v_load_deinterleave(src + i, v_h, v_l, v_s);
-                        process(v_h, v_l, v_s);
-                        v_float32x4 v_a = v_setall_f32(alpha);
-                        v_store_interleave(dst, v_h, v_l, v_s, v_a);
-                    }
-                }
+                v_store_interleave(dst, b, g, r);
+            }
+            else
+            {
+                v_float32 a = vx_setall_f32(alpha);
+                v_store_interleave(dst, b, g, r, a);
             }
         }
-        #endif
+#endif
 
-        for( ; i < n; i += 3, dst += dcn )
+        for( ; i < n; i++, src += 3, dst += dcn )
         {
-            float h = src[i], l = src[i+1], s = src[i+2];
+            float h = src[0], l = src[1], s = src[2];
             float b, g, r;
 
             if( s == 0 )
@@ -1080,9 +1044,6 @@ struct HLS2RGB_f
 
     int dstcn, blueIdx;
     float hscale;
-    #if CV_SIMD128
-    bool hasSIMD;
-    #endif
 };
 
 
