@@ -369,7 +369,7 @@ public:
     /** @brief Return true if the kernel associated to that event is enqueued or submitted.
     **/
     bool isEnqueued();
-    /** @brief Return true if the event kernel associated to that is running.
+    /** @brief Return true if the event kernel associated to that event is running.
     **/
     bool isRunning();
     //bool setCallback(void* oclCallback(cl_event, cl_int, void* user_data), void* user_data);

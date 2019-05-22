@@ -2913,7 +2913,8 @@ bool Event::isComplete(){
         return true;
 
     cl_event e = p->handle;
-    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    cl_int status;
+    clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(cl_int), &status, NULL);
     return (status == CL_COMPLETE);
 }
 
@@ -2922,7 +2923,8 @@ bool Event::isEnqueued(){
         return true;
 
     cl_event e = p->handle;
-    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    cl_int status;
+    clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(cl_int), &status, NULL);
     return ((status == CL_QUEUED)||(status == CL_SUBMITTED));
 }
 
@@ -2931,7 +2933,8 @@ bool Event::isRunning(){
         return true;
 
     cl_event e = p->handle;
-    cl_int status = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, 0, NULL, NULL);
+    cl_int status;
+    clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(cl_int), &status, NULL);
     return (status == CL_RUNNING);
 }
 
@@ -3470,6 +3473,7 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         Event::Impl* eImpl = kernel_event->getImpl();
         if (!eImpl) {
             *kernel_event = Event();
+            eImpl = kernel_event->getImpl();
         }
         kernel_event->release();
         eImpl->setEvent(asyncEvent);
