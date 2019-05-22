@@ -80,24 +80,58 @@ function(download_ie)
       return()
   endif()
 
+  function(ie_patch filename from to)
+    file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/${filename}" filedata)
+    string(REPLACE "${from}" "${to}" filedata "${filedata}")
+    file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/${filename}" "${filedata}")
+  endfunction()
+
   # This is a minor patch to IE's cmake files.
-  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/cmake/dependencies.cmake" filedata)
-  string(REPLACE "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR" filedata "${filedata}")
-  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/cmake/dependencies.cmake" ${filedata})
-
-  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/src/inference_engine/CMakeLists.txt" filedata)
-  string(REPLACE "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR" filedata "${filedata}")
-  string(REPLACE "PRIVATE ade)" "PRIVATE ade PUBLIC pugixml)" filedata "${filedata}")
-  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/src/inference_engine/CMakeLists.txt" ${filedata})
-
-  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/CMakeLists.txt" filedata)
-  string(REPLACE "add_subdirectory(tests)" "" filedata "${filedata}")  # Disable tests
-  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/CMakeLists.txt" ${filedata})
-
+  ie_patch("cmake/dependencies.cmake" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
+  ie_patch("src/inference_engine/CMakeLists.txt" "CMAKE_SOURCE_DIR" "PROJECT_SOURCE_DIR")
+  ie_patch("src/inference_engine/CMakeLists.txt" "PRIVATE \${INTEL_ITT_LIBS})" "PRIVATE \${INTEL_ITT_LIBS} PUBLIC pugixml)")
+  ie_patch("CMakeLists.txt" "add_subdirectory(tests)" "")  # Disable tests
+  ie_patch("CMakeLists.txt" "add_subdirectory(samples)" "")  # Disable samples
+  # Remove redundant CMake version check
+  ie_patch("CMakeLists.txt" "cmake_minimum_required(VERSION 3.8 FATAL_ERROR)" "")
   # Enable extensions library
-  file(READ "${ie_src_dir}/${ie_subdir}/inference-engine/src/CMakeLists.txt" filedata)
-  string(REPLACE "add_subdirectory(extension EXCLUDE_FROM_ALL)" "add_subdirectory(extension)" filedata "${filedata}")
-  file(WRITE "${ie_src_dir}/${ie_subdir}/inference-engine/src/CMakeLists.txt" ${filedata})
+  ie_patch("src/CMakeLists.txt" "add_subdirectory(extension EXCLUDE_FROM_ALL)" "add_subdirectory(extension)")
+  # Fix for MKL-DNN
+  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_bin_conv_kernel.cpp"
+           "int kw_padding[ur_w]" "int* kw_padding = new int[ur_w]")
+  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_bin_conv_kernel.cpp"
+           "        int eltwise_inj_idx"
+           "        delete[] kw_padding; int eltwise_inj_idx")
+
+  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_planar_convolution.cpp"
+           "int od_indexes[jcp.od]" "int* od_indexes = new int[jcp.od]")
+  ie_patch("thirdparty/mkl-dnn/src/cpu/jit_uni_planar_convolution.cpp"
+           "    parallel(0, ker);" "    parallel(0, ker); delete[] od_indexes;")
+  ie_patch("src/mkldnn_plugin/mkldnn_node.cpp"
+           "MKLDNNMemory memory(engine)" "MKLDNNMemory memory{engine}")
+
+  # Fix misleading indentation error during compilation (newer MKL-DNN fixed that bug)
+  ie_patch("thirdparty/mkl-dnn/src/cpu/nchw_pooling.cpp"
+           "if (d[0] < s)
+                            d[0] = s;
+                            set_ws(mb, c, od, oh, ow, kd*KH*KW + kh*KW + kw);"
+           "if (d[0] < s) {
+                            d[0] = s;
+                            set_ws(mb, c, od, oh, ow, kd*KH*KW + kh*KW + kw);}")
+  ie_patch("thirdparty/mkl-dnn/src/cpu/ref_pooling.cpp"
+           "if (d[0] < s)
+                        d[0] = s;
+                        set_ws(mb, oc, 1, oh, ow, kh*KW + kw);"
+           "if (d[0] < s) {
+                        d[0] = s;
+                        set_ws(mb, oc, 1, oh, ow, kh*KW + kw);}")
+  ie_patch("thirdparty/mkl-dnn/src/cpu/ref_pooling.cpp"
+           "if (d[0] < s)
+                            d[0] = s;
+                            set_ws(mb, oc, od, oh, ow, kd * KH * KW + kh * KW + kw);"
+           "if (d[0] < s) {
+                            d[0] = s;
+                            set_ws(mb, oc, od, oh, ow, kd * KH * KW + kh * KW + kw);}")
 
   # Download ADE
   set(ade_src_dir "${ie_src_dir}/${ie_subdir}/inference-engine/thirdparty/ade")
@@ -119,8 +153,10 @@ function(download_ie)
       return()
   endif()
 
+  # Move ade folder excluding subfolder name
   if(EXISTS "${ade_src_dir}/${ade_subdir}")
     file(RENAME "${ade_src_dir}/${ade_subdir}" "${ade_src_dir}_tmp")
+    file(REMOVE_RECURSE "${ade_src_dir}")
     file(RENAME "${ade_src_dir}_tmp" "${ade_src_dir}")
   endif()
 
@@ -130,25 +166,60 @@ function(download_ie)
   set(ENABLE_SEGMENTATION_TESTS OFF)
   set(ENABLE_OBJECT_DETECTION_TESTS OFF)
   set(ENABLE_OPENCV OFF)
-  set(BUILD_TESTS OFF)
+  set(BUILD_TESTS OFF)  # pugixml
   set(BUILD_SHARED_LIBS OFF)  # pugixml
 
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
-                                       -Wunused-parameter -Wsign-compare -Wstrict-prototypes -Wnon-virtual-dtor
-                                       -Wundef -Wstrict-aliasing -Wsign-promo -Wreorder -Wunused-variable
-                                       -Wunknown-pragmas -Wstrict-overflow -Wextra -Wunused-local-typedefs
-                                       -Wunused-function -Wsequence-point -Wunused-but-set-variable -Wparentheses
-                                       -Wsuggest-override)
-  ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes)
+  if(MSVC)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4146 /wd4703)
+  else()
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
+                                         -Wunused-parameter -Wsign-compare -Wstrict-prototypes -Wnon-virtual-dtor
+                                         -Wundef -Wstrict-aliasing -Wsign-promo -Wreorder -Wunused-variable
+                                         -Wunknown-pragmas -Wstrict-overflow -Wextra -Wunused-local-typedefs
+                                         -Wunused-function -Wsequence-point -Wunused-but-set-variable -Wparentheses
+                                         -Wsuggest-override -Wimplicit-fallthrough -Wattributes)
+    ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes)
+
+    if(APPLE)
+      ocv_warnings_disable(CMAKE_CXX_FLAGS -Wpessimizing-move -Wunused-private-field
+                                           -Wmissing-braces -Wunused-lambda-capture)
+    endif()
+  endif()
 
   add_subdirectory(${OpenCV_BINARY_DIR}/3rdparty/dldt/${ie_subdir}/inference-engine
                    ${OpenCV_BINARY_DIR}/3rdparty/dldt)
-  set_target_properties(MKLDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
-  set_target_properties(clDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
-  set_target_properties(ie_cpu_extension PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  if (TARGET MKLDNNPlugin)
+    set_target_properties(MKLDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+    set_target_properties(ie_cpu_extension PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  endif()
+  if (TARGET clDNNPlugin)
+    set_target_properties(clDNNPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_PATH}")
+  endif()
 
   set(INF_ENGINE_TARGET inference_engine_s PARENT_SCOPE)
-  set(INF_ENGINE_RELEASE "2018050000" PARENT_SCOPE)
+  set(INF_ENGINE_RELEASE "2019010001" PARENT_SCOPE)
+
+  # if(WITH_TBB)
+  #   # message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  #   # message("${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/include")
+  #   # find_path(ie_custom_inc "inference_engine.hpp" PATHS "${INF_ENGINE_INCLUDE_DIRS}" NO_DEFAULT_PATH)
+  #   unset(TBB_ENV_INCLUDE CACHE)
+  #   # message("${TBB_ENV_LIB}")
+  #   # message("${TBB_ENV_LIB_DEBUG}")
+  #   unset(TBB_ENV_LIB CACHE)
+  #   unset(TBB_ENV_LIB_DEBUG CACHE)
+  #   unset(HAVE_TBB)
+  #
+  #   set(ENV{TBBROOT} "${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/")
+  #   set(TBB_ENV_INCLUDE "${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/include")
+  #   set(TBB_ENV_LIB "${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/lib/libtbb.so")
+  #   set(TBB_ENV_LIB_DEBUG "${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/lib/libtbb_debug.so")
+  #   message("++++++++++++++++++++++++++")
+  #   message("${TBB_ENV_INCLUDE}")
+  #   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
+  #   # find_path(TBB_ENV_INCLUDE NAMES "tbb/tbb.h" PATHS "${ie_src_dir}/${ie_subdir}/inference-engine/temp/tbb/include" NO_DEFAULT_PATH)
+  #   # message("${TBB_ENV_INCLUDE}")
+  # endif()
 endfunction()
 
 # ======================
