@@ -31,26 +31,32 @@ macro(ocv_lapack_check)
   else()
     # adding proxy opencv_lapack.h header
     set(CBLAS_H_PROXY_PATH ${CMAKE_BINARY_DIR}/opencv_lapack.h)
-    if((APPLE OR OPENCV_SKIP_LAPACK_EXTERN_C) AND NOT OPENCV_FORCE_LAPACK_EXTERN_C)
-        set(_lapack_include_str_extern_C "")
-        set(_lapack_include_str_extern_C_end "")
-    else()
-        set(_lapack_include_str_extern_C "extern \"C\" {\n")
-        set(_lapack_include_str_extern_C_end "}\n")
+
+    set(_lapack_add_extern_c NOT (APPLE OR OPENCV_SKIP_LAPACK_EXTERN_C) OR OPENCV_FORCE_LAPACK_EXTERN_C)
+
+    set(_lapack_content "// This file is auto-generated\n")
+    if(${_lapack_add_extern_c})
+      list(APPEND _lapack_content "extern \"C\" {")
     endif()
-    set(_lapack_include_str "${_lapack_include_str_extern_C}\#include \"${OPENCV_CBLAS_H_PATH_${_lapack_impl}}\"")
+    if(NOT OPENCV_SKIP_LAPACK_MSVC_FIX)
+      list(APPEND _lapack_content "
+#ifdef _MSC_VER
+#include <complex.h>
+#define lapack_complex_float _Fcomplex
+#define lapack_complex_double _Dcomplex
+#endif
+")
+    endif()
+    list(APPEND _lapack_content "#include \"${OPENCV_CBLAS_H_PATH_${_lapack_impl}}\"")
     if(NOT "${OPENCV_CBLAS_H_PATH_${_lapack_impl}}" STREQUAL "${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}")
-      set(_lapack_include_str "${_lapack_include_str}\n#include \"${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}\"")
+      list(APPEND _lapack_content "#include \"${OPENCV_LAPACKE_H_PATH_${_lapack_impl}}\"")
     endif()
-    set(_lapack_include_str "${_lapack_include_str}\n${_lapack_include_str_extern_C_end}")
-    # update file contents (if required)
-    set(__content_str "")
-    if(EXISTS "${CBLAS_H_PROXY_PATH}")
-      file(READ "${CBLAS_H_PROXY_PATH}" __content_str)
+    if(${_lapack_add_extern_c})
+      list(APPEND _lapack_content "}")
     endif()
-    if(NOT " ${__content_str}" STREQUAL " ${_lapack_include_str}")
-      file(WRITE "${CBLAS_H_PROXY_PATH}" "${_lapack_include_str}")
-    endif()
+
+    string(REPLACE ";" "\n" _lapack_content "${_lapack_content}")
+    ocv_update_file("${CBLAS_H_PROXY_PATH}" "${_lapack_content}")
 
     try_compile(__VALID_LAPACK
         "${OpenCV_BINARY_DIR}"
