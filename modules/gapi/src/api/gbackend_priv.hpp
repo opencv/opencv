@@ -47,6 +47,8 @@ public:
 
     virtual void addBackendPasses(ade::ExecutionEngineSetupContext &);
 
+    virtual cv::gapi::GKernelPackage auxiliaryKernels() const;
+
     virtual ~Priv() = default;
 };
 

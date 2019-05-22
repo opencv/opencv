@@ -48,9 +48,17 @@ namespace
 {
     cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
+        auto withAuxKernels = [](const cv::gapi::GKernelPackage& pkg) {
+            cv::gapi::GKernelPackage aux_pkg;
+            for (const auto &b : pkg.backends()) {
+                aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
+            }
+            return combine(pkg, aux_pkg);
+        };
+
         auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
         if (has_use_only)
-            return has_use_only.value().pkg;
+            return withAuxKernels(has_use_only.value().pkg);
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
@@ -60,7 +68,8 @@ namespace
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}));
+        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
+        return combine(ocv_pkg, user_pkg_with_aux);
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
