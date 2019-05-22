@@ -306,24 +306,16 @@ G-API to utilize appropriate Fluid functions in our graph.
 
 Kernel packages are combinable -- in the above example, we take "Core"
 and "ImgProc" Fluid kernel packages and combine it into a single
-one. See documentation reference on cv::gapi::combine and
-cv::unite_policy on package combination options.
+one. See documentation reference on cv::gapi::combine.
 
 If no kernel packages are specified in options, G-API is using
 _default_ package which consists of default OpenCV implementations and
 thus G-API graphs are executed via OpenCV functions by default. OpenCV
 backend provides broader functional coverage than any other
 backend. If a kernel package is specified, like in this example, then
-it is being combined with the _default_ one with
-cv::unite_policy::REPLACE. It means that user-specified
-implementations will replace default implementations in case of
+it is being combined with the _default_.
+It means that user-specified implementations will replace default implementations in case of
 conflict.
-
-Kernel packages may contain a mix of kernels, in particular, multiple
-implementations of the same kernel. For example, a single kernel
-package may contain both OpenCV and Fluid implementations of kernel
-"Filter2D". In this case, the implementation selection preference can
-be specified with a special compilation parameter cv::gapi::lookup_order.
 
 <!-- FIXME Document this process better as a part of regular -->
 <!-- documentation, not a tutorial kind of thing -->

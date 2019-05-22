@@ -14,7 +14,6 @@
 #include <type_traits> // false_type, true_type
 #include <unordered_map> // map (for GKernelPackage)
 #include <utility> // tuple
-#include <vector>  // lookup order
 
 #include <opencv2/gapi/gcommon.hpp> // CompileArgTag
 #include <opencv2/gapi/util/util.hpp> // Seq
@@ -23,7 +22,6 @@
 #include <opencv2/gapi/gmetaarg.hpp>  // GMetaArg
 #include <opencv2/gapi/gtype_traits.hpp> // GTypeTraits
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
-
 
 namespace cv {
 
@@ -57,7 +55,6 @@ namespace detail
     //
     namespace
     {
-
         template<typename T> struct Yield;
         template<> struct Yield<cv::GMat>
         {
@@ -248,13 +245,6 @@ public:
 
 namespace cv
 {
-// Declare <unite> in cv:: namespace
-enum class unite_policy
-{
-    REPLACE,
-    KEEP
-};
-
 namespace gapi
 {
     // Prework: model "Device" API before it gets to G-API headers.
@@ -303,33 +293,6 @@ namespace gapi {
      * @{
      */
 
-    // Lookup order is in fact a vector of Backends to traverse during look-up
-    /**
-     * @brief Priority list of backends to use during kernel
-     *   resolution process.
-     *
-     * Priority is descending -- the first backend in the list has the
-     * top priority, and the last one has the lowest priority.
-     *
-     * If there's multiple implementations available for a kernel at
-     * the moment of graph compilation, a kernel (and thus a backend)
-     * will be selected according to this order (if the parameter is passed).
-     *
-     * Default order is not specified (and by default, only
-     * CPU(OpenCV) backend is involved in graph compilation).
-     */
-    using GLookupOrder = std::vector<GBackend>;
-    /**
-     * @brief Create a backend lookup order -- priority list of
-     * backends to use during graph compilation process.
-     *
-     * @sa GLookupOrder, @ref gapi_std_backends
-     */
-    inline GLookupOrder lookup_order(std::initializer_list<GBackend> &&list)
-    {
-        return GLookupOrder(std::move(list));
-    }
-
     // FIXME: Hide implementation
     /**
      * @brief A container class for heterogeneous kernel
@@ -353,20 +316,16 @@ namespace gapi {
      * one since G-API kernel implementations are _types_, not objects.
      *
      * Finally, two kernel packages can be combined into a new one
-     * with function cv::gapi::combine(). There are different rules
-     * apply to this process, see also cv::gapi::unite_policy for
-     * details.
+     * with function cv::gapi::combine().
      */
     class GAPI_EXPORTS GKernelPackage
     {
-        /// @private
-        using S = std::unordered_map<std::string, GKernelImpl>;
 
         /// @private
-        using M = std::unordered_map<GBackend, S>;
+        using M = std::unordered_map<std::string, std::pair<GBackend, GKernelImpl>>;
 
         /// @private
-        M m_backend_kernels;
+        M m_id_kernels;
 
     protected:
         /// @private
@@ -398,10 +357,9 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            const auto set_iter = m_backend_kernels.find(KImpl::backend());
-            return (set_iter != m_backend_kernels.end())
-                ? (set_iter->second.count(KImpl::API::id()) > 0)
-                : false;
+            auto kernel_it = m_id_kernels.find(KImpl::API::id());
+            return kernel_it != m_id_kernels.end() &&
+                   kernel_it->second.first == KImpl::backend();
         }
 
         /**
@@ -439,47 +397,37 @@ namespace gapi {
         }
 
         /**
-         * @brief Find a kernel (by its API), given the look-up order.
+         * @brief Find a kernel (by its API)
          *
-         * If order is empty, returns first suitable implementation.
+         * Returns implementation corresponding id.
          * Throws if nothing found.
          *
          * @return Backend which hosts matching kernel implementation.
          *
-         * @sa cv::gapi::lookup_order
          */
         template<typename KAPI>
-        GBackend lookup(const GLookupOrder &order = {}) const
+        GBackend lookup() const
         {
-            return lookup(KAPI::id(), order).first;
+            return lookup(KAPI::id()).first;
         }
 
         /// @private
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-        lookup(const std::string &id, const GLookupOrder &order = {}) const;
+        lookup(const std::string &id) const;
 
         // FIXME: No overwrites allowed?
         /**
          * @brief Put a new kernel implementation KImpl into package.
-         *
-         * @param up unite policy to use. If the package has already
-         * implementation for this kernel (probably from another
-         * backend), and cv::unite_policy::KEEP is passed, the
-         * existing implementation remains in package; on
-         * cv::unite_policy::REPLACE all other existing
-         * implementations are first dropped from the package.
          */
         template<typename KImpl>
-        void include(const cv::unite_policy up = cv::unite_policy::KEEP)
+        void include()
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
             auto kernel_impl = GKernelImpl{KImpl::kernel()};
-            if (up == cv::unite_policy::REPLACE) removeAPI(kernel_id);
-            else GAPI_Assert(up == cv::unite_policy::KEEP);
+            removeAPI(kernel_id);
 
-            // Regardless of the policy, store new impl in its storage slot.
-            m_backend_kernels[backend][kernel_id] = std::move(kernel_impl);
+            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
         }
 
         /**
@@ -492,23 +440,14 @@ namespace gapi {
         // TODO: Doxygen bug -- it wants me to place this comment
         // here, not below.
         /**
-         * @brief Create a new package based on `lhs` and `rhs`,
-         * with unity policy defined by `policy`.
+         * @brief Create a new package based on `lhs` and `rhs`.
          *
          * @param lhs "Left-hand-side" package in the process
          * @param rhs "Right-hand-side" package in the process
-         * @param policy Unite policy which is used in case of conflicts
-         * -- when the same kernel API is implemented in both packages by
-         * different backends; cv::unite_policy::KEEP keeps both
-         * implementation in the resulting package, while
-         * cv::unite_policy::REPLACE gives precedence two kernels from
-         * "Right-hand-side".
-         *
          * @return a new kernel package.
          */
         friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                                   const GKernelPackage  &rhs,
-                                                   const cv::unite_policy policy);
+                                                   const GKernelPackage  &rhs);
     };
 
     /**
@@ -540,6 +479,7 @@ namespace gapi {
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
 
+        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
@@ -548,8 +488,17 @@ namespace gapi {
     /** @} */
 
     GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                        const GKernelPackage  &rhs,
-                                        const cv::unite_policy policy);
+                                        const GKernelPackage  &rhs);
+    /**
+     * @brief cv::use_only() is a special combinator which hints G-API to use only
+     * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
+     * default with that package).
+     */
+    struct GAPI_EXPORTS use_only
+    {
+        GKernelPackage pkg;
+    };
+
 } // namespace gapi
 
 namespace detail
@@ -558,9 +507,10 @@ namespace detail
     {
         static const char* tag() { return "gapi.kernel_package"; }
     };
-    template<> struct CompileArgTag<cv::gapi::GLookupOrder>
+
+    template<> struct CompileArgTag<cv::gapi::use_only>
     {
-        static const char* tag() { return "gapi.lookup_order"; }
+        static const char* tag() { return "gapi.use_only"; }
     };
 } // namespace detail
 } // namespace cv
