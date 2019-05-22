@@ -43,6 +43,8 @@ struct RGB2HSV_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i, bidx = blueIdx, scn = srccn;
         const int hsv_shift = 12;
 
@@ -106,7 +108,7 @@ struct RGB2HSV_b
             v_expand(v_reinterpret_as_s16(vd[0]), vq[0], vq[1]);
             v_expand(v_reinterpret_as_s16(vd[1]), vq[2], vq[3]);
             {
-                int32_t CV_DECL_ALIGNED(MAX_ALIGN) storevq[vsize];
+                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storevq[vsize];
                 for (int k = 0; k < 4; k++)
                 {
                     v_store_aligned(storevq + k*vsize/4, vq[k]);
@@ -126,7 +128,7 @@ struct RGB2HSV_b
             v_expand(v_reinterpret_as_s16(diffd[0]), diffq[0], diffq[1]);
             v_expand(v_reinterpret_as_s16(diffd[1]), diffq[2], diffq[3]);
             {
-                int32_t CV_DECL_ALIGNED(MAX_ALIGN) storediffq[vsize];
+                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storediffq[vsize];
                 for (int k = 0; k < 4; k++)
                 {
                     v_store_aligned(storediffq + k*vsize/4, diffq[k]);
@@ -198,7 +200,6 @@ struct RGB2HSV_b
 
             v_store_interleave(dst, h, s, v);
         }
-        vx_cleanup();
 #endif
 
         for( ; i < n; i++, src += scn, dst += 3 )
@@ -268,6 +269,8 @@ struct RGB2HSV_f
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, bidx = blueIdx, scn = srccn;
         float hscale = hrange*(1.f/360.f);
         n *= 3;
@@ -294,7 +297,6 @@ struct RGB2HSV_f
 
             v_store_interleave(dst + i, h, s, v);
         }
-        vx_cleanup();
 #endif
 
         for( ; i < n; i += 3, src += scn )
@@ -430,6 +432,8 @@ struct HSV2RGB_f
 
     void operator()(const float* src, float* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int i = 0, bidx = blueIdx, dcn = dstcn;
         float alpha = ColorChannel<float>::max();
         float hs = hscale;
@@ -457,7 +461,6 @@ struct HSV2RGB_f
                 v_store_interleave(dst, b, g, r);
             }
         }
-        vx_cleanup();
 #endif
         for( ; i < n; i += 3, dst += dcn )
         {
@@ -488,6 +491,8 @@ struct HSV2RGB_b
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
+        CV_INSTRUMENT_REGION();
+
         int j = 0, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
@@ -562,8 +567,7 @@ struct HSV2RGB_b
                     v_store_interleave(dst, r_b, g_b, b_b, alpha_b);
             }
         }
-        vx_cleanup();
-        #endif
+#endif
 
         for( ; j < n * 3; j += 3, dst += dcn )
         {
