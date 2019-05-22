@@ -559,7 +559,6 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
         }
     #endif
 
-    // Anatoly's scalar code
     bool curr_red = true;
     int t0, t1, t2;
 
@@ -954,7 +953,8 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
     v_cleanup();
     #endif
 
-    for (; w < width * 3; w += 6){
+    for (; w < width * 3; w += 6)
+    {
         short r = in[w] << 7;
         short g = in[w + 1] << 7;
         short b = in[w + 2] << 7;

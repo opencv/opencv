@@ -25,14 +25,14 @@ void rgb2yuyv(const uchar* rgb_line, uchar* yuv422_line, int width)
         uchar g = rgb_line[i * 3 + 1];
         uchar b = rgb_line[i * 3 + 2];
 
-        yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436 * b);  // U0
-        yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114 * b);  // Y0
+        yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436   * b + 128.f);  // U0
+        yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114   * b        );  // Y0
+        yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615    * r - 0.51499 * g - 0.10001 * b + 128.f);   // V0
 
         r = rgb_line[i * 3 + 3];
         g = rgb_line[i * 3 + 4];
         b = rgb_line[i * 3 + 5];
 
-        yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615 * r - 0.51499 * g - 0.10001 * b);   // V0
         yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587   * g + 0.114   * b);   // Y1
     }
 }
