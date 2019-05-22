@@ -298,4 +298,20 @@ TEST(GAPI_Pipeline, PipelineAllocatingKernel)
 
     EXPECT_THROW(comp.apply(in_mat, out_mat, cv::compile_args(pkg)), std::logic_error);
 }
+
+TEST(GAPI_Pipeline, CanUseOwnMatAsOutput)
+{
+    cv::GMat in;
+    cv::GComputation comp(in, cv::gapi::bitwise_not(in));
+
+    cv::Mat in_mat(3, 3, CV_8UC1);
+    cv::Mat out_mat(3, 3, CV_8UC1);
+
+    cv::gapi::own::Mat in_own_mat(in_mat.rows, in_mat.cols, CV_8UC1, in_mat.data);
+    cv::gapi::own::Mat out_own_mat(out_mat.rows, out_mat.cols, CV_8UC1, out_mat.data);
+
+    // FIXME add overload for apply(cv::gapi::own::Mat in, cv::gapi::own::Mat& out)
+    EXPECT_NO_THROW(comp.apply({in_own_mat}, {out_own_mat}));
+}
+
 } // namespace opencv_test
