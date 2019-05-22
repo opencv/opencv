@@ -381,7 +381,7 @@ static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Si
     }break;
     default: CV_Assert(false);
     }
-    return combine(pkg, fluidTestPackage, unite_policy::KEEP);
+    return combine(pkg, fluidTestPackage);
 
 #undef RESIZE_SWITCH
 #undef RESIZE_CASE
@@ -743,7 +743,7 @@ TEST_P(NV12PlusResizeTest, Test)
     auto out = cv::gapi::resize(rgb, out_sz, 0, 0, interp);
     cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
 
-    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels(), cv::unite_policy::KEEP);
+    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels());
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
            ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
@@ -822,8 +822,7 @@ TEST_P(Preproc4lpiTest, Test)
     cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
 
     auto pkg = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
-                                 fluidResizeTestPackage(interp, in_sz, out_sz, 4),
-                                 cv::unite_policy::REPLACE);
+                                 fluidResizeTestPackage(interp, in_sz, out_sz, 4));
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
            ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
