@@ -25,11 +25,11 @@ public final class CvType {
 
     public static final int makeType(int depth, int channels) {
         if (channels <= 0 || channels >= CV_CN_MAX) {
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Channels count should be 1.." + (CV_CN_MAX - 1));
         }
         if (depth < 0 || depth >= CV_DEPTH_MAX) {
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Data type depth should be 0.." + (CV_DEPTH_MAX - 1));
         }
         return (depth & (CV_DEPTH_MAX - 1)) + ((channels - 1) << CV_CN_SHIFT);
@@ -89,7 +89,7 @@ public final class CvType {
         case CV_64F:
             return 8 * channels(type);
         default:
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Unsupported CvType value: " + type);
         }
     }
@@ -122,7 +122,7 @@ public final class CvType {
             s = "CV_USRTYPE1";
             break;
         default:
-            throw new java.lang.UnsupportedOperationException(
+            throw new UnsupportedOperationException(
                     "Unsupported CvType value: " + type);
         }
 
