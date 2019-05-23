@@ -2656,15 +2656,6 @@ inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 
-//! @name Check SIMD256 support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD512()
-{
-    return (CV_CPU_HAS_SUPPORT_AVX512_SKX) ? true : false;
-}
-//! @}
-
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
