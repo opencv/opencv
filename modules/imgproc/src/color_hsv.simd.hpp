@@ -726,7 +726,11 @@ struct RGB2HLS_b
 
         int i, j, scn = srccn;
 
+#if CV_SIMD
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[bufChannels*BLOCK_SIZE];
+#else
+        float CV_DECL_ALIGNED(16) buf[bufChannels*BLOCK_SIZE];
+#endif
 
 #if CV_SIMD
         static const int fsize = v_float32::nlanes;
