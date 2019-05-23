@@ -4,10 +4,6 @@
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
-// this should work for SIMD sizes up to 512 bits
-// can't use v_uint8::nlanes due to compilation issues
-#define MAX_ALIGN 64
-
 namespace {
 
 //constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
