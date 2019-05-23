@@ -765,7 +765,20 @@ with tf.Session(graph=tf.Graph()) as localSession:
     with tf.gfile.FastGFile('subpixel_net.pb', 'wb') as f:
         f.write(graph_def.SerializeToString())
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
+strided_slice = conv[:, 1:, :2, 2:3]
+save(inp, strided_slice, 'strided_slice')
+################################################################################
 
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4, 2], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch_norm3d',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   gamma_initializer=tf.random_normal_initializer(),
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'batch_norm3d', optimize=False)
+################################################################################
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
 #     graph_def = tf.GraphDef()
