@@ -2687,9 +2687,9 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
@@ -2780,9 +2780,9 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;

@@ -31,7 +31,13 @@ def createFasterRCNNGraph(modelPath, configPath, outputPath):
     aspect_ratios = [float(ar) for ar in grid_anchor_generator['aspect_ratios']]
     width_stride = float(grid_anchor_generator['width_stride'][0])
     height_stride = float(grid_anchor_generator['height_stride'][0])
-    features_stride = float(config['feature_extractor'][0]['first_stage_features_stride'][0])
+
+    feature_extractor = config['feature_extractor'][0]
+    if 'type' in feature_extractor and feature_extractor['type'][0] == 'faster_rcnn_nas':
+        features_stride = 16.0
+    else:
+        features_stride = float(feature_extractor['first_stage_features_stride'][0])
+
     first_stage_nms_iou_threshold = float(config['first_stage_nms_iou_threshold'][0])
     first_stage_max_proposals = int(config['first_stage_max_proposals'][0])
 
