@@ -167,6 +167,13 @@ TEST_P(Test_ONNX_layers, BatchNormalization)
     testONNXModels("batch_norm");
 }
 
+TEST_P(Test_ONNX_layers, BatchNormalization3D)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    testONNXModels("batch_norm_3d");
+}
+
 TEST_P(Test_ONNX_layers, Transpose)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
@@ -236,6 +243,12 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
 TEST_P(Test_ONNX_layers, Reshape)
 {
     testONNXModels("unsqueeze");
+}
+
+TEST_P(Test_ONNX_layers, Softmax)
+{
+    testONNXModels("softmax");
+    testONNXModels("log_softmax", npy, 0, 0, false, false);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

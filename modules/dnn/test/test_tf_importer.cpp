@@ -188,6 +188,13 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("mvn_batch_norm_1x1");
 }
 
+TEST_P(Test_TensorFlow_layers, batch_norm3D)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    runTensorFlowNet("batch_norm3d");
+}
+
 TEST_P(Test_TensorFlow_layers, slim_batch_norm)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
@@ -656,6 +663,7 @@ TEST_P(Test_TensorFlow_layers, slice)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     runTensorFlowNet("slice_4d");
+    runTensorFlowNet("strided_slice");
 }
 
 TEST_P(Test_TensorFlow_layers, softmax)

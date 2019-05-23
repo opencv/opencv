@@ -46,12 +46,44 @@
 #include "epnp.h"
 #include "p3p.h"
 #include "ap3p.h"
+#include "ippe.hpp"
 #include "calib3d_c_api.h"
-
-#include <iostream>
 
 namespace cv
 {
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
+{
+    CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
+                 "Type of _objectPoints must be CV_32FC3 or CV_64FC3");
+    Mat objectPoints;
+    if (_objectPoints.type() == CV_32FC3)
+    {
+        _objectPoints.getMat().convertTo(objectPoints, CV_64F);
+    }
+    else
+    {
+        objectPoints = _objectPoints.getMat();
+    }
+
+    Scalar meanValues = mean(objectPoints);
+    int nbPts = objectPoints.checkVector(3, CV_64F);
+    Mat objectPointsCentred = objectPoints - meanValues;
+    objectPointsCentred = objectPointsCentred.reshape(1, nbPts);
+
+    Mat w, u, vt;
+    Mat MM = objectPointsCentred.t() * objectPointsCentred;
+    SVDecomp(MM, w, u, vt);
+
+    return (w.at<double>(2) < w.at<double>(1) * threshold);
+}
+
+static bool approxEqual(double a, double b, double eps)
+{
+    return std::fabs(a-b) < eps;
+}
+#endif
+
 void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray distCoeffs,
                    InputArray rvec, InputArray tvec, float length, int thickness)
 {
@@ -80,120 +112,24 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     line(image, imagePoints[0], imagePoints[3], Scalar(255, 0, 0), thickness);
 }
 
-bool solvePnP( InputArray _opoints, InputArray _ipoints,
-               InputArray _cameraMatrix, InputArray _distCoeffs,
-               OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess, int flags )
+bool solvePnP( InputArray opoints, InputArray ipoints,
+               InputArray cameraMatrix, InputArray distCoeffs,
+               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess, int flags )
 {
     CV_INSTRUMENT_REGION();
 
-    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
-    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
-               && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    vector<Mat> rvecs, tvecs;
+    int solutions = solvePnPGeneric(opoints, ipoints, cameraMatrix, distCoeffs, rvecs, tvecs, useExtrinsicGuess, (SolvePnPMethod)flags, rvec, tvec);
 
-    Mat rvec, tvec;
-    if( flags != SOLVEPNP_ITERATIVE )
-        useExtrinsicGuess = false;
-
-    if( useExtrinsicGuess )
+    if (solutions > 0)
     {
-        int rtype = _rvec.type(), ttype = _tvec.type();
-        Size rsize = _rvec.size(), tsize = _tvec.size();
-        CV_Assert( (rtype == CV_32F || rtype == CV_64F) &&
-                   (ttype == CV_32F || ttype == CV_64F) );
-        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
-                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+        int rdepth = rvec.empty() ? CV_64F : rvec.depth();
+        int tdepth = tvec.empty() ? CV_64F : tvec.depth();
+        rvecs[0].convertTo(rvec, rdepth);
+        tvecs[0].convertTo(tvec, tdepth);
     }
-    else
-    {
-        int mtype = CV_64F;
-        // use CV_32F if all PnP inputs are CV_32F and outputs are empty
-        if (_ipoints.depth() == _cameraMatrix.depth() && _ipoints.depth() == _opoints.depth() &&
-            _rvec.empty() && _tvec.empty())
-            mtype = _opoints.depth();
 
-        _rvec.create(3, 1, mtype);
-        _tvec.create(3, 1, mtype);
-    }
-    rvec = _rvec.getMat();
-    tvec = _tvec.getMat();
-
-    Mat cameraMatrix0 = _cameraMatrix.getMat();
-    Mat distCoeffs0 = _distCoeffs.getMat();
-    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
-    Mat distCoeffs = Mat_<double>(distCoeffs0);
-    bool result = false;
-
-    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
-    {
-        Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-        epnp PnP(cameraMatrix, opoints, undistortedPoints);
-
-        Mat R;
-        PnP.compute_pose(R, tvec);
-        Rodrigues(R, rvec);
-        result = true;
-    }
-    else if (flags == SOLVEPNP_P3P)
-    {
-        CV_Assert( npoints == 4);
-        Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-        p3p P3Psolver(cameraMatrix);
-
-        Mat R;
-        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
-        if (result)
-            Rodrigues(R, rvec);
-    }
-    else if (flags == SOLVEPNP_AP3P)
-    {
-        CV_Assert( npoints == 4);
-        Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-        ap3p P3Psolver(cameraMatrix);
-
-        Mat R;
-        result = P3Psolver.solve(R, tvec, opoints, undistortedPoints);
-        if (result)
-            Rodrigues(R, rvec);
-    }
-    else if (flags == SOLVEPNP_ITERATIVE)
-    {
-        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
-        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
-        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
-        cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
-                                     &c_rvec, &c_tvec, useExtrinsicGuess );
-        result = true;
-    }
-    /*else if (flags == SOLVEPNP_DLS)
-    {
-        Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-
-        dls PnP(opoints, undistortedPoints);
-
-        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        bool result = PnP.compute_pose(R, tvec);
-        if (result)
-            Rodrigues(R, rvec);
-        return result;
-    }
-    else if (flags == SOLVEPNP_UPNP)
-    {
-        upnp PnP(cameraMatrix, opoints, ipoints);
-
-        Mat R, rvec = _rvec.getMat(), tvec = _tvec.getMat();
-        PnP.compute_pose(R, tvec);
-        Rodrigues(R, rvec);
-        return true;
-    }*/
-    else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
-    return result;
+    return solutions > 0;
 }
 
 class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
@@ -258,10 +194,10 @@ public:
 };
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
-                        InputArray _cameraMatrix, InputArray _distCoeffs,
-                        OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                        int iterationsCount, float reprojectionError, double confidence,
-                        OutputArray _inliers, int flags)
+                    InputArray _cameraMatrix, InputArray _distCoeffs,
+                    OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
+                    int iterationsCount, float reprojectionError, double confidence,
+                    OutputArray _inliers, int flags)
 {
     CV_INSTRUMENT_REGION();
 
@@ -410,7 +346,8 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
 
     Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
-    CV_Assert( npoints == 3 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+    CV_Assert( npoints == 3 || npoints == 4 );
     CV_Assert( flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P );
 
     Mat cameraMatrix0 = _cameraMatrix.getMat();
@@ -420,7 +357,7 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
 
     Mat undistortedPoints;
     undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-    std::vector<Mat> Rs, ts;
+    std::vector<Mat> Rs, ts, rvecs;
 
     int solutions = 0;
     if (flags == SOLVEPNP_P3P)
@@ -438,19 +375,91 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
         return 0;
     }
 
-    if (_rvecs.needed()) {
-        _rvecs.create(solutions, 1, CV_64F);
+    Mat objPts, imgPts;
+    opoints.convertTo(objPts, CV_64F);
+    ipoints.convertTo(imgPts, CV_64F);
+    if (imgPts.cols > 1)
+    {
+        imgPts = imgPts.reshape(1);
+        imgPts = imgPts.t();
     }
+    else
+        imgPts = imgPts.reshape(1, 2*imgPts.rows);
 
-    if (_tvecs.needed()) {
-        _tvecs.create(solutions, 1, CV_64F);
-    }
-
-    for (int i = 0; i < solutions; i++) {
+    vector<double> reproj_errors(solutions);
+    for (size_t i = 0; i < reproj_errors.size(); i++)
+    {
         Mat rvec;
         Rodrigues(Rs[i], rvec);
-        _tvecs.getMatRef(i) = ts[i];
-        _rvecs.getMatRef(i) = rvec;
+        rvecs.push_back(rvec);
+
+        Mat projPts;
+        projectPoints(objPts, rvec, ts[i], _cameraMatrix, _distCoeffs, projPts);
+
+        projPts = projPts.reshape(1, 2*projPts.rows);
+        Mat err = imgPts - projPts;
+
+        err = err.t() * err;
+        reproj_errors[i] = err.at<double>(0,0);
+    }
+
+    //sort the solutions
+    for (int i = 1; i < solutions; i++)
+    {
+        for (int j = i; j > 0 && reproj_errors[j-1] > reproj_errors[j]; j--)
+        {
+            std::swap(reproj_errors[j], reproj_errors[j-1]);
+            std::swap(rvecs[j], rvecs[j-1]);
+            std::swap(ts[j], ts[j-1]);
+        }
+    }
+
+    int depthRot = _rvecs.fixedType() ? _rvecs.depth() : CV_64F;
+    int depthTrans = _tvecs.fixedType() ? _tvecs.depth() : CV_64F;
+    _rvecs.create(solutions, 1, CV_MAKETYPE(depthRot, _rvecs.fixedType() && _rvecs.kind() == _InputArray::STD_VECTOR ? 3 : 1));
+    _tvecs.create(solutions, 1, CV_MAKETYPE(depthTrans, _tvecs.fixedType() && _tvecs.kind() == _InputArray::STD_VECTOR ? 3 : 1));
+
+    for (int i = 0; i < solutions; i++)
+    {
+        Mat rvec0, tvec0;
+        if (depthRot == CV_64F)
+            rvec0 = rvecs[i];
+        else
+            rvecs[i].convertTo(rvec0, depthRot);
+
+        if (depthTrans == CV_64F)
+            tvec0 = ts[i];
+        else
+            ts[i].convertTo(tvec0, depthTrans);
+
+        if (_rvecs.fixedType() && _rvecs.kind() == _InputArray::STD_VECTOR)
+        {
+            Mat rref = _rvecs.getMat_();
+
+            if (_rvecs.depth() == CV_32F)
+                rref.at<Vec3f>(0,i) = Vec3f(rvec0.at<float>(0,0), rvec0.at<float>(1,0), rvec0.at<float>(2,0));
+            else
+                rref.at<Vec3d>(0,i) = Vec3d(rvec0.at<double>(0,0), rvec0.at<double>(1,0), rvec0.at<double>(2,0));
+        }
+        else
+        {
+            _rvecs.getMatRef(i) = rvec0;
+        }
+
+        if (_tvecs.fixedType() && _tvecs.kind() == _InputArray::STD_VECTOR)
+        {
+
+            Mat tref = _tvecs.getMat_();
+
+            if (_tvecs.depth() == CV_32F)
+                tref.at<Vec3f>(0,i) = Vec3f(tvec0.at<float>(0,0), tvec0.at<float>(1,0), tvec0.at<float>(2,0));
+            else
+                tref.at<Vec3d>(0,i) = Vec3d(tvec0.at<double>(0,0), tvec0.at<double>(1,0), tvec0.at<double>(2,0));
+        }
+        else
+        {
+            _tvecs.getMatRef(i) = tvec0;
+        }
     }
 
     return solutions;
@@ -721,6 +730,316 @@ void solvePnPRefineVVS(InputArray _objectPoints, InputArray _imagePoints,
 {
     CV_INSTRUMENT_REGION();
     solvePnPRefine(_objectPoints, _imagePoints, _cameraMatrix, _distCoeffs, _rvec, _tvec, SOLVEPNP_REFINE_VVS, _criteria, _VVSlambda);
+}
+
+int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
+                     InputArray _cameraMatrix, InputArray _distCoeffs,
+                     OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                     bool useExtrinsicGuess, SolvePnPMethod flags,
+                     InputArray _rvec, InputArray _tvec,
+                     OutputArray reprojectionError) {
+    CV_INSTRUMENT_REGION();
+
+    Mat opoints = _opoints.getMat(), ipoints = _ipoints.getMat();
+    int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
+               && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+
+    if( flags != SOLVEPNP_ITERATIVE )
+        useExtrinsicGuess = false;
+
+    if (useExtrinsicGuess)
+        CV_Assert( !_rvec.empty() && !_tvec.empty() );
+
+    if( useExtrinsicGuess )
+    {
+        int rtype = _rvec.type(), ttype = _tvec.type();
+        Size rsize = _rvec.size(), tsize = _tvec.size();
+        CV_Assert( (rtype == CV_32FC1 || rtype == CV_64FC1) &&
+                   (ttype == CV_32FC1 || ttype == CV_64FC1) );
+        CV_Assert( (rsize == Size(1, 3) || rsize == Size(3, 1)) &&
+                   (tsize == Size(1, 3) || tsize == Size(3, 1)) );
+    }
+
+    Mat cameraMatrix0 = _cameraMatrix.getMat();
+    Mat distCoeffs0 = _distCoeffs.getMat();
+    Mat cameraMatrix = Mat_<double>(cameraMatrix0);
+    Mat distCoeffs = Mat_<double>(distCoeffs0);
+
+    vector<Mat> vec_rvecs, vec_tvecs;
+    if (flags == SOLVEPNP_EPNP || flags == SOLVEPNP_DLS || flags == SOLVEPNP_UPNP)
+    {
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        epnp PnP(cameraMatrix, opoints, undistortedPoints);
+
+        Mat rvec, tvec, R;
+        PnP.compute_pose(R, tvec);
+        Rodrigues(R, rvec);
+
+        vec_rvecs.push_back(rvec);
+        vec_tvecs.push_back(tvec);
+    }
+    else if (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
+    {
+        vector<Mat> rvecs, tvecs;
+        solveP3P(_opoints, _ipoints, _cameraMatrix, _distCoeffs, rvecs, tvecs, flags);
+        vec_rvecs.insert(vec_rvecs.end(), rvecs.begin(), rvecs.end());
+        vec_tvecs.insert(vec_tvecs.end(), tvecs.begin(), tvecs.end());
+    }
+    else if (flags == SOLVEPNP_ITERATIVE)
+    {
+        Mat rvec, tvec;
+        if (useExtrinsicGuess)
+        {
+            rvec = _rvec.getMat();
+            tvec = _tvec.getMat();
+        }
+        else
+        {
+            rvec.create(3, 1, CV_64FC1);
+            tvec.create(3, 1, CV_64FC1);
+        }
+
+        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
+        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
+        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
+        cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
+                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
+                                     &c_rvec, &c_tvec, useExtrinsicGuess );
+
+        vec_rvecs.push_back(rvec);
+        vec_tvecs.push_back(tvec);
+    }
+    else if (flags == SOLVEPNP_IPPE)
+    {
+        CV_DbgAssert(isPlanarObjectPoints(opoints, 1e-3));
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+
+        IPPE::PoseSolver poseSolver;
+        Mat rvec1, tvec1, rvec2, tvec2;
+        float reprojErr1, reprojErr2;
+        try
+        {
+            poseSolver.solveGeneric(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
+
+            if (reprojErr1 < reprojErr2)
+            {
+                vec_rvecs.push_back(rvec1);
+                vec_tvecs.push_back(tvec1);
+
+                vec_rvecs.push_back(rvec2);
+                vec_tvecs.push_back(tvec2);
+            }
+            else
+            {
+                vec_rvecs.push_back(rvec2);
+                vec_tvecs.push_back(tvec2);
+
+                vec_rvecs.push_back(rvec1);
+                vec_tvecs.push_back(tvec1);
+            }
+        }
+        catch (...) { }
+    }
+    else if (flags == SOLVEPNP_IPPE_SQUARE)
+    {
+        CV_Assert(npoints == 4);
+
+#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+        double Xs[4][3];
+        if (opoints.depth() == CV_32F)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    Xs[i][j] = opoints.ptr<Vec3f>(0)[i](j);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    Xs[i][j] = opoints.ptr<Vec3d>(0)[i](j);
+                }
+            }
+        }
+
+        const double equalThreshold = 1e-9;
+        //Z must be zero
+        for (int i = 0; i < 4; i++)
+        {
+            CV_DbgCheck(Xs[i][2], approxEqual(Xs[i][2], 0, equalThreshold), "Z object point coordinate must be zero!");
+        }
+        //Y0 == Y1 && Y2 == Y3
+        CV_DbgCheck(Xs[0][1], approxEqual(Xs[0][1], Xs[1][1], equalThreshold), "Object points must be: Y0 == Y1!");
+        CV_DbgCheck(Xs[2][1], approxEqual(Xs[2][1], Xs[3][1], equalThreshold), "Object points must be: Y2 == Y3!");
+        //X0 == X3 && X1 == X2
+        CV_DbgCheck(Xs[0][0], approxEqual(Xs[0][0], Xs[3][0], equalThreshold), "Object points must be: X0 == X3!");
+        CV_DbgCheck(Xs[1][0], approxEqual(Xs[1][0], Xs[2][0], equalThreshold), "Object points must be: X1 == X2!");
+        //X1 == Y1 && X3 == Y3
+        CV_DbgCheck(Xs[1][0], approxEqual(Xs[1][0], Xs[1][1], equalThreshold), "Object points must be: X1 == Y1!");
+        CV_DbgCheck(Xs[3][0], approxEqual(Xs[3][0], Xs[3][1], equalThreshold), "Object points must be: X3 == Y3!");
+#endif
+
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+
+        IPPE::PoseSolver poseSolver;
+        Mat rvec1, tvec1, rvec2, tvec2;
+        float reprojErr1, reprojErr2;
+        try
+        {
+            poseSolver.solveSquare(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
+
+            if (reprojErr1 < reprojErr2)
+            {
+                vec_rvecs.push_back(rvec1);
+                vec_tvecs.push_back(tvec1);
+
+                vec_rvecs.push_back(rvec2);
+                vec_tvecs.push_back(tvec2);
+            }
+            else
+            {
+                vec_rvecs.push_back(rvec2);
+                vec_tvecs.push_back(tvec2);
+
+                vec_rvecs.push_back(rvec1);
+                vec_tvecs.push_back(tvec1);
+            }
+        } catch (...) { }
+    }
+    /*else if (flags == SOLVEPNP_DLS)
+    {
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+
+        dls PnP(opoints, undistortedPoints);
+
+        Mat rvec, tvec, R;
+        bool result = PnP.compute_pose(R, tvec);
+        if (result)
+        {
+            Rodrigues(R, rvec);
+            vec_rvecs.push_back(rvec);
+            vec_tvecs.push_back(tvec);
+        }
+    }
+    else if (flags == SOLVEPNP_UPNP)
+    {
+        upnp PnP(cameraMatrix, opoints, ipoints);
+
+        Mat rvec, tvec, R;
+        PnP.compute_pose(R, tvec);
+        Rodrigues(R, rvec);
+        vec_rvecs.push_back(rvec);
+        vec_tvecs.push_back(tvec);
+    }*/
+    else
+        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, SOLVEPNP_EPNP or SOLVEPNP_DLS");
+
+    CV_Assert(vec_rvecs.size() == vec_tvecs.size());
+
+    int solutions = static_cast<int>(vec_rvecs.size());
+
+    int depthRot = _rvecs.fixedType() ? _rvecs.depth() : CV_64F;
+    int depthTrans = _tvecs.fixedType() ? _tvecs.depth() : CV_64F;
+    _rvecs.create(solutions, 1, CV_MAKETYPE(depthRot, _rvecs.fixedType() && _rvecs.kind() == _InputArray::STD_VECTOR ? 3 : 1));
+    _tvecs.create(solutions, 1, CV_MAKETYPE(depthTrans, _tvecs.fixedType() && _tvecs.kind() == _InputArray::STD_VECTOR ? 3 : 1));
+
+    for (int i = 0; i < solutions; i++)
+    {
+        Mat rvec0, tvec0;
+        if (depthRot == CV_64F)
+            rvec0 = vec_rvecs[i];
+        else
+            vec_rvecs[i].convertTo(rvec0, depthRot);
+
+        if (depthTrans == CV_64F)
+            tvec0 = vec_tvecs[i];
+        else
+            vec_tvecs[i].convertTo(tvec0, depthTrans);
+
+        if (_rvecs.fixedType() && _rvecs.kind() == _InputArray::STD_VECTOR)
+        {
+            Mat rref = _rvecs.getMat_();
+
+            if (_rvecs.depth() == CV_32F)
+                rref.at<Vec3f>(0,i) = Vec3f(rvec0.at<float>(0,0), rvec0.at<float>(1,0), rvec0.at<float>(2,0));
+            else
+                rref.at<Vec3d>(0,i) = Vec3d(rvec0.at<double>(0,0), rvec0.at<double>(1,0), rvec0.at<double>(2,0));
+        }
+        else
+        {
+            _rvecs.getMatRef(i) = rvec0;
+        }
+
+        if (_tvecs.fixedType() && _tvecs.kind() == _InputArray::STD_VECTOR)
+        {
+
+            Mat tref = _tvecs.getMat_();
+
+            if (_tvecs.depth() == CV_32F)
+                tref.at<Vec3f>(0,i) = Vec3f(tvec0.at<float>(0,0), tvec0.at<float>(1,0), tvec0.at<float>(2,0));
+            else
+                tref.at<Vec3d>(0,i) = Vec3d(tvec0.at<double>(0,0), tvec0.at<double>(1,0), tvec0.at<double>(2,0));
+        }
+        else
+        {
+            _tvecs.getMatRef(i) = tvec0;
+        }
+    }
+
+    if (reprojectionError.needed())
+    {
+        int type = reprojectionError.type();
+        reprojectionError.create(solutions, 1, type);
+        CV_CheckType(reprojectionError.type(), type == CV_32FC1 || type == CV_64FC1,
+                     "Type of reprojectionError must be CV_32FC1 or CV_64FC1!");
+
+        Mat objectPoints, imagePoints;
+        if (_opoints.depth() == CV_32F)
+        {
+            _opoints.getMat().convertTo(objectPoints, CV_64F);
+        }
+        else
+        {
+            objectPoints = _opoints.getMat();
+        }
+        if (_ipoints.depth() == CV_32F)
+        {
+            _ipoints.getMat().convertTo(imagePoints, CV_64F);
+        }
+        else
+        {
+            imagePoints = _ipoints.getMat();
+        }
+
+        for (size_t i = 0; i < vec_rvecs.size(); i++)
+        {
+            vector<Point2d> projectedPoints;
+            projectPoints(objectPoints, vec_rvecs[i], vec_tvecs[i], cameraMatrix, distCoeffs, projectedPoints);
+            double rmse = norm(projectedPoints, imagePoints, NORM_L2) / sqrt(2*projectedPoints.size());
+
+            Mat err = reprojectionError.getMat();
+            if (type == CV_32F)
+            {
+                err.at<float>(0,static_cast<int>(i)) = static_cast<float>(rmse);
+            }
+            else
+            {
+                err.at<double>(0,static_cast<int>(i)) = rmse;
+            }
+        }
+    }
+
+    return solutions;
 }
 
 }
