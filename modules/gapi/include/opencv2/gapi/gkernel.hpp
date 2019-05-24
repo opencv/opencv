@@ -22,6 +22,7 @@
 #include <opencv2/gapi/gmetaarg.hpp>  // GMetaArg
 #include <opencv2/gapi/gtype_traits.hpp> // GTypeTraits
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
+#include <opencv2/gapi/gtransform.hpp>
 
 namespace cv {
 
@@ -175,7 +176,8 @@ namespace detail
 
 template<typename K, typename... R, typename... Args>
 class GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...> >
+        public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...> >,
+        public cv::detail::KernelTag
 {
     template<int... IIs>
     static std::tuple<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
@@ -199,7 +201,8 @@ template<typename, typename> class GKernelType;
 
 template<typename K, typename R, typename... Args>
 class GKernelType<K, std::function<R(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, R >
+        public detail::MetaHelper<K, std::tuple<Args...>, R >,
+        public cv::detail::KernelTag
 {
 public:
     using InArgs  = std::tuple<Args...>;
@@ -240,7 +243,7 @@ public:
 #define G_TYPED_KERNEL_M(Class, API, Id)                                    \
     G_ID_HELPER_BODY(Class, Id)                                             \
     struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
-                        public detail::G_ID_HELPER_CLASS(Class)             \
+                        public detail::G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
 namespace cv
@@ -327,6 +330,9 @@ namespace gapi {
         /// @private
         M m_id_kernels;
 
+        /// @private
+        std::vector<GTransform> m_transformations;
+
     protected:
         /// @private
         // Check if package contains ANY implementation of a kernel API
@@ -346,6 +352,14 @@ namespace gapi {
          */
         std::size_t size() const;
 
+        template <typename KImpl, cv::detail::PackageObjectTag Val>
+        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), bool>::type
+        includesHelper() const {
+            auto kernel_it = m_id_kernels.find(KImpl::API::id());
+            return kernel_it != m_id_kernels.end() &&
+                   kernel_it->second.first == KImpl::backend();
+        }
+
         /**
          * @brief Test if a particular kernel _implementation_ KImpl is
          * included in this kernel package.
@@ -357,9 +371,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            auto kernel_it = m_id_kernels.find(KImpl::API::id());
-            return kernel_it != m_id_kernels.end() &&
-                   kernel_it->second.first == KImpl::backend();
+            return includesHelper<KImpl, KImpl::object_entity()>();
         }
 
         /**
@@ -415,12 +427,9 @@ namespace gapi {
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
         lookup(const std::string &id) const;
 
-        // FIXME: No overwrites allowed?
-        /**
-         * @brief Put a new kernel implementation KImpl into package.
-         */
-        template<typename KImpl>
-        void include()
+        template <typename KImpl, cv::detail::PackageObjectTag Val>
+        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), void>::type
+        includeHelper(const cv::unite_policy up)
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
@@ -428,6 +437,27 @@ namespace gapi {
             removeAPI(kernel_id);
 
             m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
+        }
+
+        template <typename TImpl, cv::detail::PackageObjectTag Val>
+        typename std::enable_if<(Val == cv::detail::PackageObjectTag::TRANSFORMATION), void>::type
+        includeHelper(const cv::unite_policy up)
+        {
+            // fix warning
+            (void)up;
+            auto transform_impl = GTransform{transformation<TImpl>()};
+
+            m_transformations.push_back(std::move(transform_impl));
+        }
+
+        // FIXME: No overwrites allowed?
+        /**
+         * @brief Put a new kernel implementation KImpl into package.
+         */
+        template<typename KImpl>
+        void include()
+        {
+            includeHelper<KImpl, KImpl::object_entity()>(up);
         }
 
         /**

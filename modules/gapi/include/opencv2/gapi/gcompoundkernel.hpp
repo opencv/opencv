@@ -104,7 +104,8 @@ struct GCompoundCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 };
 
 template<class Impl, class K>
-class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                           public cv::detail::KernelTag
 {
     using P = cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 

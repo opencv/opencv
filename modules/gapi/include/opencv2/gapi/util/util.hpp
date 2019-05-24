@@ -97,6 +97,27 @@ namespace detail
     template <typename T1, typename... Ts>
     struct all_unique<T1, Ts...> : std::integral_constant<bool, !contains<T1, Ts...>::value &&
                                                                  all_unique<Ts...>::value> {};
+    enum class PackageObjectTag {
+        KERNEL,
+        TRANSFORMATION
+    };
+
+    struct KernelTag
+    {
+        static constexpr PackageObjectTag object_entity()
+        {
+            return PackageObjectTag::KERNEL;
+        };
+    };
+
+    struct TransformTag
+    {
+        static constexpr PackageObjectTag object_entity()
+        {
+            return PackageObjectTag::TRANSFORMATION;
+        };
+    };
+
 } // namespace detail
 } // namespace cv
 

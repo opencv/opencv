@@ -275,7 +275,7 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
 
 
 template<class Impl, class K, bool UseScratch>
-class GFluidKernelImpl
+class GFluidKernelImpl : public cv::detail::KernelTag
 {
     static const int LPI = 1;
     static const auto Kind = GFluidKernel::Kind::Filter;

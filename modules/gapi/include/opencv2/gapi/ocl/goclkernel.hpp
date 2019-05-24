@@ -226,7 +226,8 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 } // namespace detail
 
 template<class Impl, class K>
-class GOCLKernelImpl: public detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GOCLKernelImpl: public detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                      public cv::detail::KernelTag
 {
     using P = detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 
