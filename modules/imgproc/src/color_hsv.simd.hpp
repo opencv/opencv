@@ -1063,22 +1063,25 @@ struct HLS2RGB_b
             if(dcn == 3)
             {
                 int x = 0;
-                for( ; x <= dn - 4*fsize; x += 4*fsize, dst += 4*fsize)
+                float* pbuf = buf;
+                for( ; x <= dn - 4*fsize; x += 4*fsize, dst += 4*fsize, pbuf += 4*fsize)
                 {
                     v_float32 vf[4];
+                    vf[0] = vx_load_aligned(pbuf + 0*fsize);
+                    vf[1] = vx_load_aligned(pbuf + 1*fsize);
+                    vf[2] = vx_load_aligned(pbuf + 2*fsize);
+                    vf[3] = vx_load_aligned(pbuf + 3*fsize);
                     v_int32 vi[4];
-                    for(int k = 0; k < 4; k++)
-                    {
-                        vf[k] = vx_load_aligned(buf + x + k*fsize);
-                        vi[k] = v_round(vf[k]*v255);
-                    }
+                    vi[0] = v_round(vf[0]*v255);
+                    vi[1] = v_round(vf[1]*v255);
+                    vi[2] = v_round(vf[2]*v255);
+                    vi[3] = v_round(vf[3]*v255);
                     v_store(dst, v_pack_u(v_pack(vi[0], vi[1]),
                                           v_pack(vi[2], vi[3])));
                 }
-
-                for( ; x < dn*3; x++, dst++)
+                for( ; x < dn*3; x++, dst++, pbuf++)
                 {
-                    dst[0] = saturate_cast<uchar>(buf[x]*255.f);
+                    dst[0] = saturate_cast<uchar>(pbuf[0]*255.f);
                 }
             }
             else // dcn == 4
