@@ -192,7 +192,7 @@ struct RGB2HSV_b
             }
             hd[0] = v_pack(hq[0], hq[1]);
             hd[1] = v_pack(hq[2], hq[3]);
-            v_int16 vhr = vx_setall_s16(hr);
+            v_int16 vhr = vx_setall_s16((short)hr);
             v_int16 vzd = vx_setzero_s16();
             hd[0] += v_select(hd[0] < vzd, vhr, vzd);
             hd[1] += v_select(hd[1] < vzd, vhr, vzd);
