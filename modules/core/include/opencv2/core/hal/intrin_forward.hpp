@@ -88,11 +88,16 @@ struct v_mask8x16;
 struct v_mask16x8;
 struct v_mask32x4;
 struct v_mask64x2;
+#if CV_VSX || CV_NEON
+typedef v_mask32x4 v_maskf32x4;
+typedef v_mask64x2 v_maskf64x2;
+#else
 struct v_maskf32x4;
 struct v_maskf64x2;
 #endif
+#endif // CV_SIMD128_CPP
 
-#endif
+#endif // CV__SIMD_FORWARD
 
 /** Traits **/
 template<typename T>

@@ -279,8 +279,10 @@ struct v_mask64x2
     vec_bdword2 val;
 };
 
+/* already defined by intrin_forward.hpp
 typedef v_mask32x4 v_maskf32x4;
 typedef v_mask64x2 v_maskf64x2;
+*/
 
 //////////////// Load and store operations ///////////////
 

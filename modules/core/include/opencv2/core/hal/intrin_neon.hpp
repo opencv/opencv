@@ -357,10 +357,14 @@ struct v_mask32x4
     {}
     explicit v_mask32x4(const uint32x4_t& v) : val(v)
     {}
+    static inline v_mask32x4 from(const v_mask32x4& a)
+    { return a; }
     static inline v_mask32x4 from(const v_uint32x4& a)
     { return v_mask32x4(a.val); }
     static inline v_mask32x4 from(const v_int32x4& a)
     { return v_mask32x4(vreinterpretq_u32_s32(a.val)); }
+    static inline v_mask32x4 from(const v_float32x4& a)
+    { return v_mask32x4(vreinterpretq_u32_f32(a.val)); }
 
     uint32x4_t val;
 };
@@ -371,16 +375,23 @@ struct v_mask64x2
     {}
     explicit v_mask64x2(const uint64x2_t& v) : val(v)
     {}
+    static inline v_mask64x2 from(const v_mask64x2& a)
+    { return a; }
     static inline v_mask64x2 from(const v_uint64x2& a)
     { return v_mask64x2(a.val); }
     static inline v_mask64x2 from(const v_int64x2& a)
     { return v_mask64x2(vreinterpretq_u64_s64(a.val)); }
-
+#if CV_SIMD128_64F
+    static inline v_mask64x2 from(const v_float64x2& a)
+    { return v_mask64x2(vreinterpretq_u64_f64(a.val)); }
+#endif
     uint64x2_t val;
 };
 
+/* already defined by intrin_forward.hpp
 typedef v_mask32x4 v_maskf32x4;
 typedef v_mask64x2 v_maskf64x2;
+*/
 
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
