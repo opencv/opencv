@@ -70,9 +70,13 @@ function(ocv_tbb_env_guess _found)
     add_library(tbb UNKNOWN IMPORTED)
     set_target_properties(tbb PROPERTIES
       IMPORTED_LOCATION "${TBB_ENV_LIB}"
-      IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
       INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
     )
+    if (TBB_ENV_LIB_DEBUG)
+      set_target_properties(tbb PROPERTIES
+        IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
+      )
+    endif()
     # workaround: system TBB library is used for linking instead of provided
     if(CV_GCC)
       get_filename_component(_dir "${TBB_ENV_LIB}" DIRECTORY)
