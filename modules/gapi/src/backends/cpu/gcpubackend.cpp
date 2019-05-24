@@ -26,8 +26,8 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/cpu/gcpubackend.hpp"
-#include "backends/cpu/gcpuimgproc.hpp"
-#include "backends/cpu/gcpucore.hpp"
+#include "opencv2/gapi/cpu/imgproc.hpp"
+#include "opencv2/gapi/cpu/core.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 

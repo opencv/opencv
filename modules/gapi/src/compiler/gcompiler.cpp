@@ -48,16 +48,28 @@ namespace
 {
     cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
+        auto withAuxKernels = [](const cv::gapi::GKernelPackage& pkg) {
+            cv::gapi::GKernelPackage aux_pkg;
+            for (const auto &b : pkg.backends()) {
+                aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
+            }
+            return combine(pkg, aux_pkg);
+        };
+
+        auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
+        if (has_use_only)
+            return withAuxKernels(has_use_only.value().pkg);
+
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
             combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels(),
-                    cv::unite_policy::KEEP);
+                    cv::gapi::imgproc::cpu::kernels());
 #else
             cv::gapi::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
         auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        return combine(ocv_pkg, user_pkg.value_or(cv::gapi::GKernelPackage{}), cv::unite_policy::REPLACE);
+        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
+        return combine(ocv_pkg, user_pkg_with_aux);
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
@@ -87,7 +99,6 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 {
     using namespace std::placeholders;
     m_all_kernels       = getKernelPackage(m_args);
-    auto lookup_order   = getCompileArg<gapi::GLookupOrder>(m_args).value_or(gapi::GLookupOrder());
     auto dump_path      = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
@@ -107,8 +118,7 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 
     m_e.addPassStage("kernels");
     m_e.addPass("kernels", "resolve_kernels", std::bind(passes::resolveKernels, _1,
-                                                     std::ref(m_all_kernels), // NB: and not copied here
-                                                     lookup_order));
+                                              std::ref(m_all_kernels))); // NB: and not copied here
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
     m_e.addPassStage("meta");

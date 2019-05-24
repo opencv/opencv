@@ -603,27 +603,20 @@ static const unsigned char popCountTable[] =
     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
     4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 };
-/** @brief Count the 1 bits in the vector and return 4 values
+/** @brief Count the 1 bits in the vector lanes and return result as corresponding unsigned type
 
 Scheme:
 @code
-{A1 A2 A3 ...} => popcount(A1)
+{A1 A2 A3 ...} => {popcount(A1), popcount(A2), popcount(A3), ...}
 @endcode
-Any types but result will be in v_uint32x4*/
-template<typename _Tp, int n> inline v_uint32x4 v_popcount(const v_reg<_Tp, n>& a)
+For all integer types. */
+template<typename _Tp, int n>
+inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_popcount(const v_reg<_Tp, n>& a)
 {
-    v_uint8x16 b;
-    b = v_reinterpret_as_u8(a);
-    for( int i = 0; i < v_uint8x16::nlanes; i++ )
-    {
-        b.s[i] = popCountTable[b.s[i]];
-    }
-    v_uint32x4 c;
-    for( int i = 0; i < v_uint32x4::nlanes; i++ )
-    {
-        c.s[i] = b.s[i*4] + b.s[i*4+1] + b.s[i*4+2] + b.s[i*4+3];
-    }
-    return c;
+    v_reg<typename V_TypeTraits<_Tp>::abs_type, n> b = v_reg<typename V_TypeTraits<_Tp>::abs_type, n>::zero();
+    for (int i = 0; i < (int)(n*sizeof(_Tp)); i++)
+        b.s[i/sizeof(_Tp)] += popCountTable[v_reinterpret_as_u8(a).s[i]];
+    return b;
 }
 
 

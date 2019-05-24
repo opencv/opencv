@@ -57,6 +57,24 @@ public:
             CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model");
     }
 
+    ONNXImporter(const char* buffer, size_t sizeBuffer)
+    {
+        struct _Buf : public std::streambuf
+        {
+            _Buf(const char* buffer, size_t sizeBuffer)
+            {
+                char* p = const_cast<char*>(buffer);
+                setg(p, p, p + sizeBuffer);
+            }
+        };
+
+        _Buf buf(buffer, sizeBuffer);
+        std::istream input(&buf);
+
+        if (!model_proto.ParseFromIstream(&input))
+            CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
+    }
+
     void populateNet(Net dstNet);
 };
 
@@ -768,37 +786,42 @@ void ONNXImporter::populateNet(Net dstNet)
             }
             replaceLayerParam(layerParams, "mode", "interpolation");
         }
+        else if (layer_type == "LogSoftmax")
+        {
+            layerParams.type = "Softmax";
+            layerParams.set("log_softmax", true);
+        }
         else
         {
             for (int j = 0; j < node_proto.input_size(); j++) {
                 if (layer_id.find(node_proto.input(j)) == layer_id.end())
                     layerParams.blobs.push_back(getBlob(node_proto, constBlobs, j));
             }
-         }
+        }
 
-         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
-         layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
+        int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
+        layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
 
-         std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
-         for (int j = 0; j < node_proto.input_size(); j++) {
-             layerId = layer_id.find(node_proto.input(j));
-             if (layerId != layer_id.end()) {
-                 dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
-                 // Collect input shapes.
-                 shapeIt = outShapes.find(node_proto.input(j));
-                 CV_Assert(shapeIt != outShapes.end());
-                 layerInpShapes.push_back(shapeIt->second);
-             }
-         }
+        std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
+        for (int j = 0; j < node_proto.input_size(); j++) {
+            layerId = layer_id.find(node_proto.input(j));
+            if (layerId != layer_id.end()) {
+                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
+                // Collect input shapes.
+                shapeIt = outShapes.find(node_proto.input(j));
+                CV_Assert(shapeIt != outShapes.end());
+                layerInpShapes.push_back(shapeIt->second);
+            }
+        }
 
-         // Compute shape of output blob for this layer.
-         Ptr<Layer> layer = dstNet.getLayer(id);
-         layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
-         CV_Assert(!layerOutShapes.empty());
-         outShapes[layerParams.name] = layerOutShapes[0];
-     }
- }
+        // Compute shape of output blob for this layer.
+        Ptr<Layer> layer = dstNet.getLayer(id);
+        layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
+        CV_Assert(!layerOutShapes.empty());
+        outShapes[layerParams.name] = layerOutShapes[0];
+    }
+}
 
 Net readNetFromONNX(const String& onnxFile)
 {
@@ -806,6 +829,19 @@ Net readNetFromONNX(const String& onnxFile)
     Net net;
     onnxImporter.populateNet(net);
     return net;
+}
+
+Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
+{
+    ONNXImporter onnxImporter(buffer, sizeBuffer);
+    Net net;
+    onnxImporter.populateNet(net);
+    return net;
+}
+
+Net readNetFromONNX(const std::vector<uchar>& buffer)
+{
+    return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
 Mat readTensorFromONNX(const String& path)

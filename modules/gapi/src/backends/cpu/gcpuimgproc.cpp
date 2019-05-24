@@ -9,7 +9,8 @@
 
 #include "opencv2/gapi/imgproc.hpp"
 #include "opencv2/gapi/cpu/imgproc.hpp"
-#include "backends/cpu/gcpuimgproc.hpp"
+#include "opencv2/gapi/cpu/gcpukernel.hpp"
+
 #include "backends/fluid/gfluidimgproc_func.hpp"
 
 namespace {
@@ -303,7 +304,6 @@ GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
         {
             const uchar* in_line_p  = in.ptr<uchar>(i);
             uchar* out_line_p = out.ptr<uchar>(i);
-            // FIXME: scalar and vectorized version are not bitwise due to round (~0.1%)
             cv::gapi::fluid::run_rgb2yuv422_impl(out_line_p, in_line_p, in.cols);
         }
     }

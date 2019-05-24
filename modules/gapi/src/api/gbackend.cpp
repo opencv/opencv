@@ -45,6 +45,11 @@ void cv::gapi::GBackend::Priv::addBackendPasses(ade::ExecutionEngineSetupContext
     // add custom (backend-specific) graph transformations
 }
 
+cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
+{
+    return {};
+}
+
 // GBackend public implementation //////////////////////////////////////////////
 cv::gapi::GBackend::GBackend()
 {

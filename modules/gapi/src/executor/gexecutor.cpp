@@ -152,17 +152,31 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         {
             using cv::util::get;
             const auto desc = get<cv::GMatDesc>(d.meta);
+
+            auto check_own_mat = [&desc, &args, &index]()
+            {
+                auto& out_mat = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
+                GAPI_Assert(out_mat.data != nullptr &&
+                        desc.canDescribe(out_mat));
+            };
+
 #if !defined(GAPI_STANDALONE)
             // Building as part of OpenCV - follow OpenCV behavior
-            // if output buffer is not enough to hold the result, reallocate it
-            auto& out_mat   = *get<cv::Mat*>(args.outObjs.at(index));
-            createMat(desc, out_mat);
+            // In the case of cv::Mat if output buffer is not enough to hold the result, reallocate it
+            if (cv::util::holds_alternative<cv::Mat*>(args.outObjs.at(index)))
+            {
+                auto& out_mat = *get<cv::Mat*>(args.outObjs.at(index));
+                createMat(desc, out_mat);
+            }
+            // In the case of own::Mat never reallocated, checked to perfectly fit required meta
+            else
+            {
+                check_own_mat();
+            }
 #else
             // Building standalone - output buffer should always exist,
             // and _exact_ match our inferred metadata
-            auto& out_mat   = *get<cv::gapi::own::Mat*>(args.outObjs.at(index));
-            GAPI_Assert(out_mat.data != nullptr &&
-                        desc.canDescribe(out_mat))
+            check_own_mat();
 #endif // !defined(GAPI_STANDALONE)
         }
     }

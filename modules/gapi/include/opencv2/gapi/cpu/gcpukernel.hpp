@@ -43,13 +43,12 @@ namespace cpu
      * stack. Every backend is hardware-oriented and thus can run its
      * kernels efficiently on the target platform.
      *
-     * Backends are usually "back boxes" for G-API users -- on the API
+     * Backends are usually "black boxes" for G-API users -- on the API
      * side, all backends are represented as different objects of the
-     * same class cv::gapi::GBackend. User can manipulate with backends
-     * mainly by specifying which kernels to use or where to look up
-     * for kernels first.
+     * same class cv::gapi::GBackend.
+     * User can manipulate with backends by specifying which kernels to use.
      *
-     * @sa @ref gapi_hld, cv::gapi::lookup_order()
+     * @sa @ref gapi_hld
      */
 
     /**
