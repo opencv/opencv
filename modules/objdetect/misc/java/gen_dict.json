@@ -1,0 +1,17 @@
+{
+    "ManualFuncs" : {
+        "CascadeClassifier" : {
+            "pathConstructor" : {
+                "j_code" : [
+                    "\n",
+                    "public CascadeClassifier(java.io.File file) {",
+                    "    this(file.toString());",
+                    "}",
+                    "\n"
+                ],
+                "jn_code" : [],
+                "cpp_code" : []
+            }
+        }
+    }
+}

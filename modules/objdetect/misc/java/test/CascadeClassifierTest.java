@@ -8,6 +8,7 @@ import org.opencv.objdetect.CascadeClassifier;
 import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
+import java.io.File;
 
 public class CascadeClassifierTest extends OpenCVTestCase {
 
@@ -98,6 +99,12 @@ public class CascadeClassifierTest extends OpenCVTestCase {
     public void testLoad() {
         cc = new CascadeClassifier();
         cc.load(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
+        assertTrue(!cc.empty());
+    }
+
+    public void testPath() {
+        File file = new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
+        cc = new CascadeClassifier(file);
         assertTrue(!cc.empty());
     }
 

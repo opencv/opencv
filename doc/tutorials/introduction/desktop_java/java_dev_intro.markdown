@@ -274,7 +274,8 @@ class DetectFaceDemo {
 
     // Create a face detector from the cascade file in the resources
     // directory.
-    CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/lbpcascade_frontalface.xml").getPath());
+    File file = new File(getClass().getResource("/lbpcascade_frontalface.xml").getFile());
+    CascadeClassifier faceDetector = new CascadeClassifier(file);
     Mat image = Imgcodecs.imread(getClass().getResource("/lena.png").getPath());
 
     // Detect faces in the image.
