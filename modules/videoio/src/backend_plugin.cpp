@@ -21,7 +21,7 @@ using namespace std;
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__)
 #include <dlfcn.h>
 #endif
 
@@ -29,7 +29,7 @@ namespace cv { namespace impl {
 
 #if defined(_WIN32)
 typedef HMODULE LibHandle_t;
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__)
 typedef void* LibHandle_t;
 #endif
 
@@ -44,7 +44,7 @@ void* getSymbol_(LibHandle_t h, const char* symbolName)
 {
 #if defined(_WIN32)
     return (void*)GetProcAddress(h, symbolName);
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__)
     return dlsym(h, symbolName);
 #endif
 }
@@ -54,7 +54,7 @@ LibHandle_t libraryLoad_(const char* filename)
 {
 #if defined(_WIN32)
     return LoadLibraryA(filename);
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__)
     return dlopen(filename, RTLD_LAZY);
 #endif
 }
@@ -64,7 +64,7 @@ void libraryRelease_(LibHandle_t h)
 {
 #if defined(_WIN32)
     FreeLibrary(h);
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__)
     dlclose(h);
 #endif
 }
