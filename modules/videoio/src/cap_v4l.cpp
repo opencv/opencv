@@ -238,6 +238,10 @@ make & enjoy!
 #include <sys/videoio.h>
 #endif
 
+#ifdef __OpenBSD__
+typedef uint32_t __u32;
+#endif
+
 // https://github.com/opencv/opencv/issues/13335
 #ifndef V4L2_CID_ISO_SENSITIVITY
 #define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
