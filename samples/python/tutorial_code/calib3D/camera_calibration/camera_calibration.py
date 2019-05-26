@@ -4,6 +4,18 @@ import cv2 as cv
 import numpy as np
 
 class Settings:
+    # Pattern
+    NOT_EXISTING = 0
+    CHESSBOARD = 1
+    CIRCLES_GRID = 2
+    ASYMMETRIC_CIRCLES_GRID = 3
+
+    # InputType
+    INVALID = 0
+    CAMERA = 1
+    VIDEO_FILE = 2
+    IMAGE_LIST = 3
+
     def __init__(self):
         self.goodInput = False
     def write(self, fs):
@@ -59,24 +71,24 @@ class Settings:
             print('Invalid number of frames', self.nrFrames, file=sys.stderr)
             self.goodInput = False
         if self.input.empty():
-            # self.inputType = INVALID
+            self.inputType = INVALID
         else:
             if self.input[0].isdigit():
                 self.cameraID = int(self.input)
-                # self.inputType = CAMERA
+                self.inputType = CAMERA
             else:
                 if isListOfImages(self.input) and readStringList(self.input, imageList):
-                    # self.inputType = IMAGE_LIST
+                    self.inputType = IMAGE_LIST
                     self.nrFrames = self.nrFrames if self.nrFrames < self.imageList.size() else self.imageList.size()
                 else:
-                    # self.inputType = VIDEO_FILE
-            if '''self.inputType == CAMERA''':
+                    self.inputType = VIDEO_FILE
+            if self.inputType == CAMERA
                 self.inputCapture.open(self.cameraID)
-            if '''self.inputType == VIDEO_FILE''':
+            if self.inputType == VIDEO_FILE:
                 self.inputCapture.open(self.input)
-            if '''self.inputType == IMAGE_LIST''' and not self.inputCapture.isOpened():
-                # self.inputType = INVALID
-        if '''self.inputType == INVALID''':
+            if self.inputType == IMAGE_LIST and not self.inputCapture.isOpened():
+                self.inputType = INVALID
+        if self.inputType == INVALID:
             print('Input does not exist:', self.input, file=sys.stderr)
             self.goodInput = False
 
@@ -97,14 +109,14 @@ class Settings:
             if self.fixK4: self.flag |= fisheye.CALIB_FIX_K4
             if self.fixK5: self.flag |= fisheye.CALIB_FIX_K5
             if self.calibFixPrincipalPoint: self.flag |= fisheye.CALIB_FIX_PRINCIPAL_POINT
-        # self.calibrationPattern = NOT_EXISTING
+        self.calibrationPattern = NOT_EXISTING
         if self.patternToUse == 'CHESSBOARD':
-            # self.calibrationPattern = CHESSBOARD
+            self.calibrationPattern = CHESSBOARD
         if self.patternToUse == 'CIRCLES_GRID':
-            # self.calibrationPattern = CIRCLE_GRID
+            self.calibrationPattern = CIRCLE_GRID
         if self.patternToUse == 'ASYMMETRIC_CIRCLES_GRID':
-            # self.calibrationPattern = ASYMMETRIC_CIRCLES_GRID
-        if ''' self.calibrationPattern == NOT_EXISTING''':
+            self.calibrationPattern = ASYMMETRIC_CIRCLES_GRID
+        if self.calibrationPattern == NOT_EXISTING:
             print(' Camera calibration mode does not exist:', self.patternToUse, file=sys.stderr)
             self.goodInput = False
         self.atImageList = 0
@@ -116,16 +128,17 @@ class Settings:
         return result
     def readStringList(filename, l):
         l.clear()
-        fs = FileStorage(filename, 1)
+        fs = FileStorage(filename, cv.FileStorage_READ)
         if not fs.isOpened():
             return False
         n = fs.getFirstTopLevelNode()
-        if n.type() != 4:
+        if n.type() != cv.FileNode_SEQ:
             return False
         for i in range(n.size()):
             l.append(n.at(i).string())
         return True
     def isListOfImages(filename):
-        return s.find('.xml') != -1 and s.find('.yaml') != -1 and s.find('.yml') != -1 and s.find('.json')
+        return not (s.find('.xml') != -1 and s.find('.yaml') != -1 and s.find('.yml') != -1 and s.find('.json') != -1)
 
 if __name__ == '__main__':
+
