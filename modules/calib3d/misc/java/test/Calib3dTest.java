@@ -611,4 +611,32 @@ public class Calib3dTest extends OpenCVTestCase {
         Calib3d.computeCorrespondEpilines(left, 1, fundamental, lines);
         assertMatEqual(truth, lines, EPS);
     }
+
+    public void testConstants()
+    {
+        // calib3d.hpp: some constants have conflict with constants from 'fisheye' namespace
+        assertEquals(1, Calib3d.CALIB_USE_INTRINSIC_GUESS);
+        assertEquals(2, Calib3d.CALIB_FIX_ASPECT_RATIO);
+        assertEquals(4, Calib3d.CALIB_FIX_PRINCIPAL_POINT);
+        assertEquals(8, Calib3d.CALIB_ZERO_TANGENT_DIST);
+        assertEquals(16, Calib3d.CALIB_FIX_FOCAL_LENGTH);
+        assertEquals(32, Calib3d.CALIB_FIX_K1);
+        assertEquals(64, Calib3d.CALIB_FIX_K2);
+        assertEquals(128, Calib3d.CALIB_FIX_K3);
+        assertEquals(0x0800, Calib3d.CALIB_FIX_K4);
+        assertEquals(0x1000, Calib3d.CALIB_FIX_K5);
+        assertEquals(0x2000, Calib3d.CALIB_FIX_K6);
+        assertEquals(0x4000, Calib3d.CALIB_RATIONAL_MODEL);
+        assertEquals(0x8000, Calib3d.CALIB_THIN_PRISM_MODEL);
+        assertEquals(0x10000, Calib3d.CALIB_FIX_S1_S2_S3_S4);
+        assertEquals(0x40000, Calib3d.CALIB_TILTED_MODEL);
+        assertEquals(0x80000, Calib3d.CALIB_FIX_TAUX_TAUY);
+        assertEquals(0x100000, Calib3d.CALIB_USE_QR);
+        assertEquals(0x200000, Calib3d.CALIB_FIX_TANGENT_DIST);
+        assertEquals(0x100, Calib3d.CALIB_FIX_INTRINSIC);
+        assertEquals(0x200, Calib3d.CALIB_SAME_FOCAL_LENGTH);
+        assertEquals(0x400, Calib3d.CALIB_ZERO_DISPARITY);
+        assertEquals((1 << 17), Calib3d.CALIB_USE_LU);
+        assertEquals((1 << 22), Calib3d.CALIB_USE_EXTRINSIC_GUESS);
+    }
 }
