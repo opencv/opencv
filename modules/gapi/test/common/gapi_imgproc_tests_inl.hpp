@@ -15,37 +15,40 @@ namespace opencv_test
 {
 
 // FIXME avoid this code duplicate in perf tests
-void rgb2yuyv(const uchar* rgb_line, uchar* yuv422_line, int width)
+namespace
 {
-    CV_Assert(width % 2 == 0);
-
-    for (int i = 0; i < width; i += 2)
+    void rgb2yuyv(const uchar* rgb_line, uchar* yuv422_line, int width)
     {
-        uchar r = rgb_line[i * 3    ];
-        uchar g = rgb_line[i * 3 + 1];
-        uchar b = rgb_line[i * 3 + 2];
+        CV_Assert(width % 2 == 0);
 
-        yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436   * b + 128.f);  // U0
-        yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114   * b        );  // Y0
-        yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615    * r - 0.51499 * g - 0.10001 * b + 128.f);   // V0
+        for (int i = 0; i < width; i += 2)
+        {
+            uchar r = rgb_line[i * 3    ];
+            uchar g = rgb_line[i * 3 + 1];
+            uchar b = rgb_line[i * 3 + 2];
 
-        r = rgb_line[i * 3 + 3];
-        g = rgb_line[i * 3 + 4];
-        b = rgb_line[i * 3 + 5];
+            yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436   * b + 128.f);  // U0
+            yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114   * b        );  // Y0
+            yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615    * r - 0.51499 * g - 0.10001 * b + 128.f);  // V0
 
-        yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587   * g + 0.114   * b);   // Y1
+            r = rgb_line[i * 3 + 3];
+            g = rgb_line[i * 3 + 4];
+            b = rgb_line[i * 3 + 5];
+
+            yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587   * g + 0.114   * b);   // Y1
+        }
     }
-}
 
-void convertRGB2YUV422Ref(const cv::Mat& in, cv::Mat &out)
-{
-    out.create(in.size(), CV_8UC2);
-
-    for (int i = 0; i < in.rows; ++i)
+    void convertRGB2YUV422Ref(const cv::Mat& in, cv::Mat &out)
     {
-        const uchar* in_line_p  = in.ptr<uchar>(i);
-        uchar* out_line_p = out.ptr<uchar>(i);
-        rgb2yuyv(in_line_p, out_line_p, in.cols);
+        out.create(in.size(), CV_8UC2);
+
+        for (int i = 0; i < in.rows; ++i)
+        {
+            const uchar* in_line_p  = in.ptr<uchar>(i);
+            uchar* out_line_p = out.ptr<uchar>(i);
+            rgb2yuyv(in_line_p, out_line_p, in.cols);
+        }
     }
 }
 
