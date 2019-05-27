@@ -140,6 +140,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     void prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_flow);
     void precomputeStructureTensor(Mat &dst_I0xx, Mat &dst_I0yy, Mat &dst_I0xy, Mat &dst_I0x, Mat &dst_I0y, Mat &I0x,
                                    Mat &I0y);
+    int autoSelectCoarsestScale(int img_width);
+    void autoSelectPatchSizeAndScales(int img_width);
 
     struct PatchInverseSearch_ParBody : public ParallelLoopBody
     {
@@ -432,6 +434,44 @@ void DISOpticalFlowImpl::precomputeStructureTensor(Mat &dst_I0xx, Mat &dst_I0yy,
             }
             is++;
         }
+    }
+}
+
+int DISOpticalFlowImpl::autoSelectCoarsestScale(int img_width)
+{
+    const int fratio = 5;
+    return std::max(0, (int)std::floor(log2((2.0f*(float)img_width) / ((float)fratio * (float)patch_size))));
+}
+
+void DISOpticalFlowImpl::autoSelectPatchSizeAndScales(int img_width)
+{
+    switch (finest_scale)
+    {
+    case 1:
+        patch_size = 8;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-2, 0);
+        break;
+
+    case 3:
+        patch_size = 12;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-4, 0);
+        break;
+
+    case 4:
+        patch_size = 12;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-5, 0);
+        break;
+
+    // default case, fall-through.
+    case 2:
+    default:
+        patch_size = 8;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-2, 0);
+        break;
     }
 }
 
@@ -1318,8 +1358,19 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     else
         flow.create(I1Mat.size(), CV_32FC2);
     UMat &u_flowMat = flow.getUMatRef();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code serach for maximal movement of width/4 */
+    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
                          (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (coarsest_scale<0)
+        CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
+
+    if (coarsest_scale<finest_scale)
+    {
+        // choose the finest level based on coarsest level.
+        // Refs: https://github.com/tikroeger/OF_DIS/blob/2c9f2a674f3128d3a41c10e41cc9f3a35bb1b523/run_dense.cpp#L239
+        int original_img_width = I0.size().width;
+        autoSelectPatchSizeAndScales(original_img_width);
+    }
 
     ocl_prepareBuffers(I0Mat, I1Mat, u_flowMat, use_input_flow);
     u_Ux[coarsest_scale].setTo(0.0f);
@@ -1385,8 +1436,20 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     else
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code serach for maximal movement of width/4 */
+    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
                          (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (coarsest_scale<0)
+        CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
+
+    if (coarsest_scale<finest_scale)
+    {
+        // choose the finest level based on coarsest level.
+        // Refs: https://github.com/tikroeger/OF_DIS/blob/2c9f2a674f3128d3a41c10e41cc9f3a35bb1b523/run_dense.cpp#L239
+        int original_img_width = I0.size().width;
+        autoSelectPatchSizeAndScales(original_img_width);
+    }
+
     int num_stripes = getNumThreads();
 
     prepareBuffers(I0Mat, I1Mat, flowMat, use_input_flow);
