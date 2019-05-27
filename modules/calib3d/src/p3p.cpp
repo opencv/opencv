@@ -35,7 +35,7 @@ bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat
 {
     CV_INSTRUMENT_REGION();
 
-    double rotation_matrix[3][3], translation[3];
+    double rotation_matrix[3][3] = {}, translation[3] = {};
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth())
     {
@@ -63,7 +63,7 @@ int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::
 {
     CV_INSTRUMENT_REGION();
 
-    double rotation_matrix[4][3][3], translation[4][3];
+    double rotation_matrix[4][3][3] = {}, translation[4][3] = {};
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth())
     {
@@ -103,7 +103,7 @@ bool p3p::solve(double R[3][3], double t[3],
     double mu2, double mv2,   double X2, double Y2, double Z2,
     double mu3, double mv3,   double X3, double Y3, double Z3)
 {
-    double Rs[4][3][3], ts[4][3];
+    double Rs[4][3][3] = {}, ts[4][3] = {};
 
     const bool p4p = true;
     int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0,  mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2, mu3, mv3, X3, Y3, Z3, p4p);
@@ -159,7 +159,7 @@ int p3p::solve(double R[4][3][3], double t[4][3],
     cosines[1] = mu0 * mu2 + mv0 * mv2 + mk0 * mk2;
     cosines[2] = mu0 * mu1 + mv0 * mv1 + mk0 * mk1;
 
-    double lengths[4][3];
+    double lengths[4][3] = {};
     int n = solve_for_lengths(lengths, distances, cosines);
 
     int nb_solutions = 0;
@@ -319,21 +319,21 @@ bool p3p::align(double M_end[3][3],
     double R[3][3], double T[3])
 {
     // Centroids:
-    double C_start[3], C_end[3];
+    double C_start[3] = {}, C_end[3] = {};
     for(int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3;
     C_start[0] = (X0 + X1 + X2) / 3;
     C_start[1] = (Y0 + Y1 + Y2) / 3;
     C_start[2] = (Z0 + Z1 + Z2) / 3;
 
     // Covariance matrix s:
-    double s[3 * 3];
+    double s[3 * 3] = {};
     for(int j = 0; j < 3; j++) {
         s[0 * 3 + j] = (X0 * M_end[0][j] + X1 * M_end[1][j] + X2 * M_end[2][j]) / 3 - C_end[j] * C_start[0];
         s[1 * 3 + j] = (Y0 * M_end[0][j] + Y1 * M_end[1][j] + Y2 * M_end[2][j]) / 3 - C_end[j] * C_start[1];
         s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) / 3 - C_end[j] * C_start[2];
     }
 
-    double Qs[16], evs[4], U[16];
+    double Qs[16] = {}, evs[4] = {}, U[16] = {};
 
     Qs[0 * 4 + 0] = s[0 * 3 + 0] + s[1 * 3 + 1] + s[2 * 3 + 2];
     Qs[1 * 4 + 1] = s[0 * 3 + 0] - s[1 * 3 + 1] - s[2 * 3 + 2];
@@ -386,7 +386,7 @@ bool p3p::align(double M_end[3][3],
 
 bool p3p::jacobi_4x4(double * A, double * D, double * U)
 {
-    double B[4], Z[4];
+    double B[4] = {}, Z[4] = {};
     double Id[16] = {1., 0., 0., 0.,
         0., 1., 0., 0.,
         0., 0., 1., 0.,
@@ -396,7 +396,6 @@ bool p3p::jacobi_4x4(double * A, double * D, double * U)
 
     B[0] = A[0]; B[1] = A[5]; B[2] = A[10]; B[3] = A[15];
     memcpy(D, B, 4 * sizeof(double));
-    memset(Z, 0, 4 * sizeof(double));
 
     for(int iter = 0; iter < 50; iter++) {
         double sum = fabs(A[1]) + fabs(A[2]) + fabs(A[3]) + fabs(A[6]) + fabs(A[7]) + fabs(A[11]);
