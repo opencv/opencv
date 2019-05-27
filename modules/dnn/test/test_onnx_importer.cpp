@@ -339,7 +339,7 @@ TEST_P(Test_ONNX_nets, ResNet18v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-16; 22], after Softmax [0, 0.51]
-    testONNXModels("resnet18v1", pb, default_l1, default_lInf, true);
+    testONNXModels("resnet18v1", pb, default_l1, default_lInf, true, false);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
@@ -347,7 +347,7 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
-    testONNXModels("resnet50v1", pb, default_l1, default_lInf, true);
+    testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, false);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
@@ -461,7 +461,7 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-87; 138], after Softmax [0; 1]
-    testONNXModels("densenet121", pb, default_l1, default_lInf, true);
+    testONNXModels("densenet121", pb, default_l1, default_lInf, true, false);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v1)

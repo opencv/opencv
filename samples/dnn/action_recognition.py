@@ -1,19 +1,16 @@
 import os
-import copy
-import shutil
 import numpy as np
 import cv2 as cv
 import argparse
 
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('--input', help='Path to input video file.')
+parser = argparse.ArgumentParser(description='Use this script to run action classification using 3D ResNet34')
+parser.add_argument('--input', '-i', help='Path to input video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', help='Path to model.')
-parser.add_argument('--classes', help='Path to classes list.')
-parser.add_argument('--temporal_unit', default=5, help='Averages the scores over temporal_unit x sample_duration clips.')
-parser.add_argument('--sample_duration', default=16, help='Number of frames for action detection.')
+parser.add_argument('--classes', default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                '..', 'data', 'dnn', 'action_classification.txt'), help='Path to classes list.')
 
-# To get net download original repository https://github.com/kenshohara/video-classification-3d-cnn-pytorch.git
-# For correct ONNX export modify file: video-classification-3d-cnn-pytorch/models/resnet.py 
+# To get net download original repository https://github.com/kenshohara/video-classification-3d-cnn-pytorch
+# For correct ONNX export modify file: video-classification-3d-cnn-pytorch/models/resnet.py
 # change
 # - def downsample_basic_block(x, planes, stride):
 # -     out = F.avg_pool3d(x, kernel_size=1, stride=stride)
@@ -22,36 +19,18 @@ parser.add_argument('--sample_duration', default=16, help='Number of frames for 
 # -                              out.size(4)).zero_()
 # -     if isinstance(out.data, torch.cuda.FloatTensor):
 # -         zero_pads = zero_pads.cuda()
-# - 
+# -
 # -     out = Variable(torch.cat([out.data, zero_pads], dim=1))
 # -     return out
 
-# To 
+# To
 # + def downsample_basic_block(x, planes, stride):
 # +     out = F.avg_pool3d(x, kernel_size=1, stride=stride)
 # +     out = F.pad(out, (0, 0, 0, 0, 0, 0, 0, int(planes - out.size(1)), 0, 0), "constant", 0)
 # +     return out
 
-# To ONNX export use torch.onnx.export(model, inputs, model_name) 
+# To ONNX export use torch.onnx.export(model, inputs, model_name)
 
-
-def parse_video(video_path):
-    cap = cv.VideoCapture(video_path)
-    fps = cap.get(cv.CAP_PROP_FPS)
-    if os.path.exists('tmp'):
-        shutil.rmtree('tmp')
-    os.mkdir('tmp')
-    i = 0
-    while cv.waitKey(1) < 0:
-        hasFrame, frame = cap.read()
-        if hasFrame:
-            cv.imwrite('tmp/image_{:05}.jpg'.format(i), frame)
-            i += 1
-            if cv.waitKey(1) & 0xFF == ord('q'):
-                break
-        else:
-            break
-    return fps
 
 def get_class_names(path):
     class_names = []
@@ -59,24 +38,6 @@ def get_class_names(path):
         for row in f:
             class_names.append(row[:-1])
     return class_names
-
-def make_dataset(video_path, sample_duration):
-    dataset = []
-    n_frames = len(os.listdir(video_path))
-    begin_t = 1
-    end_t = n_frames
-    sample = {
-        'video': video_path,
-        'segment': [begin_t, end_t],
-        'n_frames': n_frames,
-    }
-    for i in range(1, (n_frames - sample_duration + 1), sample_duration):
-        sample_i = copy.deepcopy(sample)
-        sample_i['frame_indices'] = list(range(i, i + sample_duration))
-        sample_i['segment'] = np.array([i, i + sample_duration - 1])
-        dataset.append(sample_i)
-    return dataset
-
 
 class Compose(object):
     def __init__(self, transforms):
@@ -149,132 +110,65 @@ class LoopPadding(object):
             out.append(index)
         return out
 
-def video_loader(video_dir_path, frame_indices):
+def classify_video(video_path, net_path):
+    SAMPLE_DURATION = 16
+    SAMPLE_SIZE = 112
     video = []
-    for i in frame_indices:
-        image_path = os.path.join(video_dir_path, 'image_{:05d}.jpg'.format(i))
-        if os.path.exists(image_path):
-            img = cv.imread(image_path)
-            img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-            video.append(img)
-    return video
+    frame_indices = []
 
-class Video(object):
-    def __init__(self, video_path,
-                 spatial_transform=None, temporal_transform=None,
-                 sample_duration=16):
-        self.data = make_dataset(video_path, sample_duration)
-        self.spatial_transform = spatial_transform
-        self.temporal_transform = temporal_transform
-
-    def __getitem__(self, index):
-        path = self.data[index]['video']
-        frame_indices = self.data[index]['frame_indices']
-        if self.temporal_transform is not None:
-            frame_indices = self.temporal_transform(frame_indices)
-        
-        clip = video_loader(path, frame_indices)
-        if self.spatial_transform is not None:
-            clip = [self.spatial_transform(img) for img in clip]
-        clip = np.stack(clip, axis=0)
-        target = self.data[index]['segment']
-        return clip, target
-    
-    def __len__(self):
-        return len(self.data)
-
-
-def prepare_input(video_dir, sample_duration=16, sample_size=112):
+    class_names = get_class_names(args.classes)
     mean = (114.7748, 107.7354, 99.4750)
-    temporal_transform = LoopPadding(sample_duration)
+    temporal_transform = LoopPadding(SAMPLE_DURATION)
     spatial_transform = Compose([
-                                Scale(sample_size),
-                                CenterCrop(sample_size),
+                                Scale(SAMPLE_SIZE),
+                                CenterCrop(SAMPLE_SIZE),
                                 Normalize(mean, [1, 1, 1]),
                                 ])
-    data = Video(video_dir, spatial_transform=spatial_transform,
-                temporal_transform=temporal_transform,
-                sample_duration=sample_duration)
-
-    data_loader = [elem for elem in data]
-    return data_loader
-
-
-def classify_video(video_dir, net_path, classes_path, sample_duration=16, sample_size=112):
-    data_loader = prepare_input(video_dir, sample_duration, sample_size)
-    class_names = get_class_names(classes_path)
-    video_outputs = []
-    video_segments = []
 
     net = cv.dnn.readNet(net_path)
     net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
     net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
-    for i, (inputs, segments) in enumerate(data_loader):
-        inputs = np.expand_dims(inputs, axis=0)
-        inputs = np.transpose(inputs, (0, 2, 1, 3, 4))    
-        net.setInput(inputs)
-        outputs = net.forward()
-        video_outputs.append(outputs)
-        video_segments.append(segments)
+    left = 0
+    top = 10
+    winName = 'Deep learning action classification in OpenCV'
+    cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
-    video_outputs = np.concatenate(video_outputs)
+    cap = cv.VideoCapture(video_path)
+    i = 0
+    while cv.waitKey(1) < 0:
+        hasFrame, frame = cap.read()
+        if hasFrame:
+            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            video.append(frame)
+            frame_indices.append(i)
+            i += 1
+            if len(video) == SAMPLE_DURATION:
+                frame_indices = temporal_transform(frame_indices)
+                clip = [spatial_transform(img) for img in video]
+                inputs = np.stack(clip, axis=0)
+                inputs = np.expand_dims(inputs, axis=0)
+                inputs = np.transpose(inputs, (0, 2, 1, 3, 4))
 
-    max_indices = [np.argmax(elem) for elem in video_outputs]
-    results = []
-    for i, out in enumerate(video_outputs):
-        clip_results = {
-            'segment': video_segments[i].tolist()
-            }
-        clip_results['label'] = class_names[max_indices[i]]
-        clip_results['scores'] = out.tolist()
-        results.append(clip_results)
-    return results
+                net.setInput(inputs)
+                outputs = net.forward()
+                class_pred = np.argmax(outputs)
+                label = class_names[class_pred]
 
-def postprocess(clips, temporal_unit):
-    class_names = get_class_names(args.classes)
-    unit_classes = []
-    unit_segments = []
-    unit = int(temporal_unit) if temporal_unit != 0 else len(clips)
-
-    for i in range(0, len(clips), unit):
-        n_elements = min(unit, len(clips) - i)
-        scores = np.array(clips[i]['scores'])
-        for j in range(i, min(i + unit, len(clips))):
-            scores += np.array(clips[i]['scores'])
-        scores /= n_elements
-        unit_classes.append(class_names[np.argmax(scores)])
-        unit_segments.append([clips[i]['segment'][0],
-                                clips[i + n_elements - 1]['segment'][1]])
-
-    for i in range(len(unit_classes)):
-        for j in range(unit_segments[i][0], unit_segments[i][1] + 1):
-            frame = cv.imread('tmp/image_{:05}.jpg'.format(j))
-            label = unit_classes[i]
-            left = 0
-            top = 10
-            labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv.rectangle(frame, (left, top - labelSize[1]),
-                                (left + labelSize[0], top + baseLine), (255, 255, 255), cv.FILLED)
-            cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
-            cv.imwrite('tmp/image_{:05}.jpg'.format(j), frame)
-
-
-def generate_video(name='action_recognition_opencv.avi', fps=30.0):
-    fourcc = cv.VideoWriter_fourcc(*'XVID')
-    if os.path.exists('tmp/image_00001.jpg'):
-        img = cv.imread('tmp/image_00001.jpg')
-        h, w = img.shape[0], img.shape[1]
-    video = cv.VideoWriter(name, fourcc, fps, (w, h))
-    for i in range(1, len(os.listdir('tmp'))):
-        img = cv.imread('tmp/image_{:05}.jpg'.format(i))
-        video.write(img)
-    video.release()
-    shutil.rmtree('tmp')
+                for frame in video:
+                    labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                    cv.rectangle(frame, (left, top - labelSize[1]),
+                                        (left + labelSize[0], top + baseLine), (255, 255, 255), cv.FILLED)
+                    cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+                    frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
+                    cv.imshow(winName, frame)
+                video = []
+                frame_indices = []
+            if cv.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
 
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
-    fps = parse_video(args.input if args.input else 0)
-    predictions = classify_video('tmp', args.model, args.classes, args.sample_duration)
-    postprocess(predictions, args.temporal_unit)
-    generate_video(fps=fps)
+    classify_video(args.input if args.input else 0, args.model)
