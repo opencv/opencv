@@ -110,15 +110,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        {
-            return INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5) &&
-                   sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
-        }
-        else
-#endif
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+                sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -264,39 +258,65 @@ public:
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Crop";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
-
         CV_Assert(sliceRanges.size() == 1);
 
+        std::vector<size_t> axes, offsets, dims;
         int from, to, step;
+        int numDims = sliceRanges[0].size();
         if (preferableTarget == DNN_TARGET_MYRIAD)
         {
             from = 1;
-            to = sliceRanges[0].size() + 1;
+            to = numDims;
             step = 1;
         }
         else
         {
-            from = sliceRanges[0].size() - 1;
+            from = numDims - 1;
             to = -1;
             step = -1;
         }
         for (int i = from; i != to; i += step)
         {
-            ieLayer->axis.push_back(i);
-            ieLayer->offset.push_back(sliceRanges[0][i].start);
-            ieLayer->dim.push_back(sliceRanges[0][i].end - sliceRanges[0][i].start);
+            axes.push_back(i);
+            offsets.push_back(sliceRanges[0][i].start);
+            dims.push_back(sliceRanges[0][i].size());
         }
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        std::vector<size_t> outShape(numDims);
+        for (int i = 0; i < numDims; ++i)
+            outShape[numDims - 1 - i] = sliceRanges[0][i].size();
+
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        ieLayer.setType("Crop");
+        ieLayer.getParameters()["axis"] = axes;
+        ieLayer.getParameters()["dim"] = dims;
+        ieLayer.getParameters()["offset"] = offsets;
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
+        ieLayer.getInputPorts()[1].setParameter("type", "weights");
+
+        // Fake blob which will be moved to inputs (as weights).
+        auto shapeSource = InferenceEngine::make_shared_blob<float>(
+                               InferenceEngine::Precision::FP32,
+                               InferenceEngine::Layout::ANY, outShape);
+        shapeSource->allocate();
+        addConstantData("weights", shapeSource, ieLayer);
+
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #else
-        return Ptr<BackendNode>();
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Crop";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
+        ieLayer->axis = axes;
+        ieLayer->offset = offsets;
+        ieLayer->dim = dims;
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // IE < R5
+        return Ptr<BackendNode>();
     }
 #endif
 };
