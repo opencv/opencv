@@ -3266,7 +3266,7 @@ struct RGB2Luv_b
             return;
         }
 
-        int i, j, scn = srccn;
+        int scn = srccn;
 #if CV_SIMD
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[bufChannels*BLOCK_SIZE];
 #else
@@ -3295,16 +3295,16 @@ struct RGB2Luv_b
         }
 #endif
 
-        for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*bufChannels )
+        for(int i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*bufChannels )
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
-            j = 0;
 
             static const softfloat f255inv = softfloat::one()/f255;
 #if CV_SIMD
             v_float32 v255inv = vx_setall_f32((float)f255inv);
             if(scn == 4)
             {
+                int j = 0;
                 static const int nBlock = fsize*4;
                 for( ; j <= dn*bufChannels - nBlock*3;
                      j += nBlock*3, src += nBlock*4)
@@ -3334,9 +3334,16 @@ struct RGB2Luv_b
                         v_store_interleave(buf + j + k*3*fsize, f[0*4+k], f[1*4+k], f[2*4+k]);
                     }
                 }
+                for( ; j < dn*bufChannels; j += bufChannels, src += 4 )
+                {
+                    buf[j  ] = (float)(src[0]*((float)f255inv));
+                    buf[j+1] = (float)(src[1]*((float)f255inv));
+                    buf[j+2] = (float)(src[2]*((float)f255inv));
+                }
             }
             else // scn == 3
             {
+                int j = 0;
                 static const int nBlock = fsize*2;
                 for( ; j <= dn*bufChannels - nBlock;
                      j += nBlock, src += nBlock)
@@ -3348,17 +3355,23 @@ struct RGB2Luv_b
                     v_store_aligned(buf + j + 0*fsize, v_cvt_f32(q0)*v255inv);
                     v_store_aligned(buf + j + 1*fsize, v_cvt_f32(q1)*v255inv);
                 }
+                for( ; j < dn*bufChannels; j++, src++ )
+                {
+                    buf[j] = (float)(src[0]*((float)f255inv));
+                }
             }
-#endif
-            for( ; j < dn*bufChannels; j += bufChannels, src += scn )
+#else
+            for(int j = 0; j < dn*bufChannels; j += bufChannels, src += scn )
             {
                 buf[j  ] = (float)(src[0]*((float)f255inv));
                 buf[j+1] = (float)(src[1]*((float)f255inv));
                 buf[j+2] = (float)(src[2]*((float)f255inv));
             }
+#endif
+
             fcvt(buf, buf, dn);
 
-            j = 0;
+            int j = 0;
 
 #if CV_SIMD
             for( ; j <= dn*3 - fsize*3*4; j += fsize*3*4)
@@ -3389,7 +3402,7 @@ struct RGB2Luv_b
 #endif
             for( ; j < dn*3; j += 3 )
             {
-                dst[j] = saturate_cast<uchar>(buf[j]*(float)fL);
+                dst[j+0] = saturate_cast<uchar>(buf[j+0]*(float)fL);
                 dst[j+1] = saturate_cast<uchar>(buf[j+1]*(float)fu + (float)su);
                 dst[j+2] = saturate_cast<uchar>(buf[j+2]*(float)fv + (float)sv);
             }
