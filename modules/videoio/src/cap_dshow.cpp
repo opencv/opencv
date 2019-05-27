@@ -965,7 +965,7 @@ videoDevice::~videoDevice(){
     HRESULT HR = NOERROR;
 
     //Check to see if the graph is running, if so stop it.
-     if( (pControl) )
+    if( (pControl) )
     {
         HR = pControl->Pause();
         if (FAILED(HR)) DebugPrintOut("ERROR - Could not pause pControl\n");
