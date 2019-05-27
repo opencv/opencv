@@ -177,7 +177,7 @@ public class Calib3dTest extends OpenCVTestCase {
         Size patternSize = new Size(9, 6);
         MatOfPoint2f corners = new MatOfPoint2f();
         Calib3d.findChessboardCorners(grayChess, patternSize, corners);
-        assertTrue(!corners.empty());
+        assertFalse(corners.empty());
     }
 
     public void testFindChessboardCornersMatSizeMatInt() {
@@ -185,7 +185,7 @@ public class Calib3dTest extends OpenCVTestCase {
         MatOfPoint2f corners = new MatOfPoint2f();
         Calib3d.findChessboardCorners(grayChess, patternSize, corners, Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE
                 + Calib3d.CALIB_CB_FAST_CHECK);
-        assertTrue(!corners.empty());
+        assertFalse(corners.empty());
     }
 
     public void testFind4QuadCornerSubpix() {
@@ -194,7 +194,7 @@ public class Calib3dTest extends OpenCVTestCase {
         Size region_size = new Size(5, 5);
         Calib3d.findChessboardCorners(grayChess, patternSize, corners);
         Calib3d.find4QuadCornerSubpix(grayChess, corners, region_size);
-        assertTrue(!corners.empty());
+        assertFalse(corners.empty());
     }
 
     public void testFindCirclesGridMatSizeMat() {
