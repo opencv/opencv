@@ -724,7 +724,7 @@ struct RGB2HLS_b
     {
         CV_INSTRUMENT_REGION();
 
-        int i, j, scn = srccn;
+        int scn = srccn;
 
 #if CV_SIMD
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[bufChannels*BLOCK_SIZE];
@@ -744,15 +744,15 @@ struct RGB2HLS_b
         }
 #endif
 
-        for( i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
+        for(int i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
-            j = 0;
 
 #if CV_SIMD
             v_float32 v255inv = vx_setall_f32(1.f/255.f);
             if (scn == 3)
             {
+                int j = 0;
                 static const int nBlock = fsize*2;
                 for ( ; j <= (dn * bufChannels - nBlock);
                       j += nBlock, src += nBlock)
@@ -763,9 +763,14 @@ struct RGB2HLS_b
                     v_store_aligned(buf + j + 0*fsize, v_cvt_f32(qrgb0)*v255inv);
                     v_store_aligned(buf + j + 1*fsize, v_cvt_f32(qrgb1)*v255inv);
                 }
+                for( ; j < dn*3; j++, src++ )
+                {
+                    buf[j] = src[0]*(1.f/255.f);
+                }
             }
             else // if (scn == 4)
             {
+                int j = 0;
                 static const int nBlock = fsize*4;
                 for ( ; j <= dn*bufChannels - nBlock*bufChannels;
                       j += nBlock*bufChannels, src += nBlock*4)
@@ -795,17 +800,24 @@ struct RGB2HLS_b
                         v_store_interleave(buf + j + k*bufChannels*fsize, f[0*4+k], f[1*4+k], f[2*4+k]);
                     }
                 }
+                for( ; j < dn*3; j += 3, src += 4 )
+                {
+                    buf[j+0] = src[0]*(1.f/255.f);
+                    buf[j+1] = src[1]*(1.f/255.f);
+                    buf[j+2] = src[2]*(1.f/255.f);
+                }
             }
-#endif
-            for( ; j < dn*3; j += 3, src += scn )
+#else
+            for(int j = 0; j < dn*3; j += 3, src += scn )
             {
                 buf[j+0] = src[0]*(1.f/255.f);
                 buf[j+1] = src[1]*(1.f/255.f);
                 buf[j+2] = src[2]*(1.f/255.f);
             }
+#endif
             cvt(buf, buf, dn);
 
-            j = 0;
+            int j = 0;
 #if CV_SIMD
             for( ; j <= dn*3 - fsize*3*4; j += fsize*3*4)
             {
