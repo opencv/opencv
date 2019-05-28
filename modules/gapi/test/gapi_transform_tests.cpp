@@ -42,6 +42,19 @@ GAPI_TRANSFORM_M(another_transform, <GMat3(GMat2)>, "does nothing")
         return {};
     }
 };
+
+GAPI_TRANSFORM_M(copy_transform, <GMat3(GMat2)>, "does nothing")
+{
+    static GMat3 pattern(GMat2)
+    {
+        return {};
+    };
+
+    static GMat3 substitute(GMat2)
+    {
+        return {};
+    }
+};
 } // namespace
 
 TEST(KernelPackageTransform, SingleOutInclude)
@@ -66,12 +79,19 @@ TEST(KernelPackageTransform, MultiOutConstructor)
     EXPECT_EQ(2u, pkg.size());
 }
 
+TEST(KernelPackageTransform, CopyClass)
+{
+    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<copy_transform,
+                                                     another_transform>();
+    EXPECT_EQ(2u, pkg.size());
+}
+
 TEST(KernelPackageTransform, Combine)
 {
     cv::gapi::GKernelPackage pkg1 = cv::gapi::kernels<my_transform>();
     cv::gapi::GKernelPackage pkg2 = cv::gapi::kernels<another_transform>();
     cv::gapi::GKernelPackage pkg_comb =
-        cv::gapi::combine(pkg1, pkg2, cv::unite_policy::KEEP);
+        cv::gapi::combine(pkg1, pkg2);
 
     EXPECT_EQ(2u, pkg_comb.size());
 }

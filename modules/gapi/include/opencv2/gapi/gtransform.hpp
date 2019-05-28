@@ -163,6 +163,10 @@ template <typename K, typename R, typename... Args>
 class GTransformImpl<K, std::function<R(Args...)>> : public TransHelper<K, std::tuple<Args...>, R>,
                                                      public cv::detail::TransformTag
 {
+public:
+    // FIXME: currently there is no check that transformations' signatures are unique
+    // and won't be any intersection in graph compilation stage
+    using API = K;
 };
 
 template <typename, typename>
@@ -172,6 +176,10 @@ template <typename K, typename... R, typename... Args>
 class GTransformImplM<K, std::function<std::tuple<R...>(Args...)>> : public TransHelper<K, std::tuple<Args...>, std::tuple<R...>>,
                                                                      public cv::detail::TransformTag
 {
+public:
+    // FIXME: currently there is no check that transformations' signatures are unique
+    // and won't be any intersection in graph compilation stage
+    using API = K;
 };
 
 //////////////////////////////////////////////////////////////////////

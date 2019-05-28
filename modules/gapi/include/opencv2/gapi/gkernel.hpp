@@ -359,7 +359,7 @@ namespace gapi {
         // Partial include() specialization for kernels
         template <typename KImpl, cv::detail::PackageObjectTag Val>
         typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), void>::type
-        includeHelper(const cv::unite_policy up)
+        includeHelper()
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
@@ -373,9 +373,8 @@ namespace gapi {
         // Partial include() specialization for transformations
         template <typename TImpl, cv::detail::PackageObjectTag Val>
         typename std::enable_if<(Val == cv::detail::PackageObjectTag::TRANSFORMATION), void>::type
-        includeHelper(const cv::unite_policy up)
+        includeHelper()
         {
-            (void)up; // fix warning
             auto transform_impl = GTransform{transformation<TImpl>()};
 
             m_transformations.push_back(std::move(transform_impl));
@@ -472,7 +471,7 @@ namespace gapi {
         template<typename KImpl>
         void include()
         {
-            includeHelper<KImpl, KImpl::object_entity()>(up);
+            includeHelper<KImpl, KImpl::object_entity()>();
         }
 
         /**
@@ -515,6 +514,10 @@ namespace gapi {
      */
     template<typename... KK> GKernelPackage kernels()
     {
+        // FIXME: currently there is no check that transformations' signatures are unique
+        // and won't be any intersection in graph compilation stage
+        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
+
         GKernelPackage pkg;
 
         // For those who wonder - below is a trick to call a number of
@@ -523,8 +526,6 @@ namespace gapi {
         // Just note that `f(),a` always equals to `a` (with f() called!)
         // and parentheses are used to hide function call in the expanded sequence.
         // Leading 0 helps to handle case when KK is an empty list (kernels<>()).
-
-        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
