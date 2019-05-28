@@ -565,10 +565,16 @@ void undistortPoints(InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
 
-    CV_Assert( src.isContinuous() && (src.depth() == CV_32F || src.depth() == CV_64F) &&
-              ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
+    int npoints = src.checkVector(2), depth = src.depth();
+    if (npoints < 0)
+        src = src.t();
+    npoints = src.checkVector(2);
+    CV_Assert(npoints >= 0 && src.isContinuous() && (depth == CV_32F || depth == CV_64F));
 
-    _dst.create(src.size(), src.type(), -1, true);
+    if (src.cols == 2)
+        src = src.reshape(2);
+
+    _dst.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
     Mat dst = _dst.getMat();
 
     CvMat _csrc = cvMat(src), _cdst = cvMat(dst), _ccameraMatrix = cvMat(cameraMatrix);

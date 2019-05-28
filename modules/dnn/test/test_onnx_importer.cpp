@@ -343,7 +343,7 @@ TEST_P(Test_ONNX_nets, VGG16_bn)
 
 TEST_P(Test_ONNX_nets, ZFNet)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
     testONNXModels("zfnet512", pb);
 }
 
@@ -418,7 +418,10 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
 
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+        CV_TEST_TAG_DEBUG_LONG
+    );
     if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
          (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");

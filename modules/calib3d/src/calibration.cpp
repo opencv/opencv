@@ -1168,6 +1168,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         else
         {
             // non-planar structure. Use DLT method
+            CV_CheckGE(count, 6, "DLT algorithm needs at least 6 points for pose estimation from 3D-2D point correspondences.");
             double* L;
             double LL[12*12], LW[12], LV[12*12], sc;
             CvMat _LL = cvMat( 12, 12, CV_64F, LL );
@@ -3560,7 +3561,13 @@ void cv::projectPoints( InputArray _opoints,
 {
     Mat opoints = _opoints.getMat();
     int npoints = opoints.checkVector(3), depth = opoints.depth();
+    if (npoints < 0)
+        opoints = opoints.t();
+    npoints = opoints.checkVector(3);
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
+
+    if (opoints.cols == 3)
+        opoints = opoints.reshape(3);
 
     CvMat dpdrot, dpdt, dpdf, dpdc, dpddist;
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;

@@ -245,6 +245,9 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if( model_points == npoints )
     {
+        opoints = opoints.reshape(3);
+        ipoints = ipoints.reshape(2);
+
         bool result = solvePnP(opoints, ipoints, cameraMatrix, distCoeffs, _rvec, _tvec, useExtrinsicGuess, ransac_kernel_method);
 
         if(!result)
@@ -349,6 +352,11 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     CV_Assert( npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
     CV_Assert( npoints == 3 || npoints == 4 );
     CV_Assert( flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P );
+
+    if (opoints.cols == 3)
+        opoints = opoints.reshape(3);
+    if (ipoints.cols == 2)
+        ipoints = ipoints.reshape(2);
 
     Mat cameraMatrix0 = _cameraMatrix.getMat();
     Mat distCoeffs0 = _distCoeffs.getMat();
@@ -744,6 +752,11 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( ( (npoints >= 4) || (npoints == 3 && flags == SOLVEPNP_ITERATIVE && useExtrinsicGuess) )
                && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
+
+    if (opoints.cols == 3)
+        opoints = opoints.reshape(3);
+    if (ipoints.cols == 2)
+        ipoints = ipoints.reshape(2);
 
     if( flags != SOLVEPNP_ITERATIVE )
         useExtrinsicGuess = false;

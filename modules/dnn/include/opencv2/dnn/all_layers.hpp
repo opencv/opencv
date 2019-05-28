@@ -608,7 +608,7 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     /**
-     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public
+     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
      * It differs from @ref ResizeLayer in output shape and resize scales computations.
      */

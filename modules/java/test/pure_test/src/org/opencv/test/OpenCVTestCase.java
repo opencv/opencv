@@ -607,7 +607,7 @@ public class OpenCVTestCase extends TestCase {
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
-        assertTrue(message, instance!=null);
+        assertNotNull(message, instance);
 
         return instance;
     }

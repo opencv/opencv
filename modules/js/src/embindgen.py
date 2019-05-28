@@ -84,7 +84,7 @@ ignore_list = ['locate',  #int&
                'minEnclosingCircle',  #float&
                'checkRange',
                'minMaxLoc',   #double*
-               'floodFill',
+               'floodFill', # special case, implemented in core_bindings.cpp
                'phaseCorrelate',
                'randShuffle',
                'calibrationMatrixValues', #double&

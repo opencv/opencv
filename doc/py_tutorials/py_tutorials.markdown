@@ -25,7 +25,7 @@ OpenCV-Python Tutorials {#tutorial_py_root}
     In this section
     you will learn about feature detectors and descriptors
 
--   @subpage tutorial_py_table_of_contents_video
+-   @ref tutorial_table_of_content_video
 
     In this section you
     will learn different techniques to work with videos like object tracking etc.
