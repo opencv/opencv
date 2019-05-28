@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2019 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -65,6 +65,9 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
             {
                 result.m_id_kernels.emplace(kernel.first, kernel.second);
             }
+        }
+        for (const auto &transforms : lhs.m_transformations){
+            result.m_transformations.push_back(transforms);
         }
         return result;
 }

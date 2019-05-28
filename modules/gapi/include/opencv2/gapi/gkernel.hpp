@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -171,7 +171,7 @@ namespace detail
 // GKernelType and GKernelTypeM are base classes which implement typed ::on()
 // method based on kernel signature. GKernelTypeM stands for multiple-return-value kernels
 //
-// G_TYPED_KERNEL and G_TYPED_KERNEK_M macros inherit user classes from GKernelType and
+// G_TYPED_KERNEL and G_TYPED_KERNEL_M macros inherit user classes from GKernelType and
 // GKernelTypeM respectively.
 
 template<typename K, typename... R, typename... Args>
@@ -299,12 +299,13 @@ namespace gapi {
     // FIXME: Hide implementation
     /**
      * @brief A container class for heterogeneous kernel
-     * implementation collections.
+     * implementation collections and graph transformations.
      *
      * GKernelPackage is a special container class which stores kernel
-     * _implementations_. Objects of this class are created and passed
-     * to cv::GComputation::compile() to specify which kernels to use
-     * in the compiled graph. GKernelPackage may contain kernels of
+     * _implementations_ and graph transformations. Objects of this class
+     * are created and passed to cv::GComputation::compile() to specify
+     * which kernels to use and which transformations to apply in the
+     * compiled graph. GKernelPackage may contain kernels of
      * different backends, e.g. be heterogeneous.
      *
      * The most easy way to create a kernel package is to use function
@@ -316,7 +317,8 @@ namespace gapi {
      * with an empty package (created with the default constructor)
      * and then by populating it with kernels via call to
      * GKernelPackage::include(). Note this method is also a template
-     * one since G-API kernel implementations are _types_, not objects.
+     * one since G-API kernel and transformation implementations are _types_,
+     * not objects.
      *
      * Finally, two kernel packages can be combined into a new one
      * with function cv::gapi::combine().
@@ -343,15 +345,8 @@ namespace gapi {
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
 
-    public:
-        /**
-         * @brief Returns total number of kernels in the package
-         * (across all backends included)
-         *
-         * @return a number of kernels in the package
-         */
-        std::size_t size() const;
-
+        /// @private
+        // Partial includes() specialization for kernels
         template <typename KImpl, cv::detail::PackageObjectTag Val>
         typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), bool>::type
         includesHelper() const {
@@ -359,6 +354,41 @@ namespace gapi {
             return kernel_it != m_id_kernels.end() &&
                    kernel_it->second.first == KImpl::backend();
         }
+
+        /// @private
+        // Partial include() specialization for kernels
+        template <typename KImpl, cv::detail::PackageObjectTag Val>
+        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), void>::type
+        includeHelper(const cv::unite_policy up)
+        {
+            auto backend     = KImpl::backend();
+            auto kernel_id   = KImpl::API::id();
+            auto kernel_impl = GKernelImpl{KImpl::kernel()};
+            removeAPI(kernel_id);
+
+            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
+        }
+
+        /// @private
+        // Partial include() specialization for transformations
+        template <typename TImpl, cv::detail::PackageObjectTag Val>
+        typename std::enable_if<(Val == cv::detail::PackageObjectTag::TRANSFORMATION), void>::type
+        includeHelper(const cv::unite_policy up)
+        {
+            (void)up; // fix warning
+            auto transform_impl = GTransform{transformation<TImpl>()};
+
+            m_transformations.push_back(std::move(transform_impl));
+        }
+
+    public:
+        /**
+         * @brief Returns total number of kernels and transformations
+         * in the package (across all backends included)
+         *
+         * @return a number of kernels and transformations in the package
+         */
+        std::size_t size() const;
 
         /**
          * @brief Test if a particular kernel _implementation_ KImpl is
@@ -427,32 +457,17 @@ namespace gapi {
         std::pair<cv::gapi::GBackend, cv::GKernelImpl>
         lookup(const std::string &id) const;
 
-        template <typename KImpl, cv::detail::PackageObjectTag Val>
-        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), void>::type
-        includeHelper(const cv::unite_policy up)
-        {
-            auto backend     = KImpl::backend();
-            auto kernel_id   = KImpl::API::id();
-            auto kernel_impl = GKernelImpl{KImpl::kernel()};
-            removeAPI(kernel_id);
-
-            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
-        }
-
-        template <typename TImpl, cv::detail::PackageObjectTag Val>
-        typename std::enable_if<(Val == cv::detail::PackageObjectTag::TRANSFORMATION), void>::type
-        includeHelper(const cv::unite_policy up)
-        {
-            // fix warning
-            (void)up;
-            auto transform_impl = GTransform{transformation<TImpl>()};
-
-            m_transformations.push_back(std::move(transform_impl));
-        }
-
         // FIXME: No overwrites allowed?
         /**
-         * @brief Put a new kernel implementation KImpl into package.
+         * @brief Put a new kernel implementation or a new transformation
+         * KImpl into the package.
+         *
+         * @param up unite policy to use. If the package has already
+         * implementation for this kernel (probably from another
+         * backend), and cv::unite_policy::KEEP is passed, the
+         * existing implementation remains in package; on
+         * cv::unite_policy::REPLACE all other existing
+         * implementations are first dropped from the package.
          */
         template<typename KImpl>
         void include()
@@ -482,15 +497,15 @@ namespace gapi {
 
     /**
      * @brief Create a kernel package object containing kernels
-     * specified in variadic template argument.
+     * and transformations specified in variadic template argument.
      *
-     * In G-API, kernel implementations are _types_. Every backend has
-     * its own kernel API (like GAPI_OCV_KERNEL() and
+     * In G-API, kernel implementations and transformations are _types_.
+     * Every backend has its own kernel API (like GAPI_OCV_KERNEL() and
      * GAPI_FLUID_KERNEL()) but all of that APIs define a new type for
      * each kernel implementation.
      *
      * Use this function to pass kernel implementations (defined in
-     * either way) to the system. Example:
+     * either way) and transformations to the system. Example:
      *
      * @snippet modules/gapi/samples/api_ref_snippets.cpp kernels_snippet
      *
