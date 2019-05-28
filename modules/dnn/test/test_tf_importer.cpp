@@ -186,6 +186,7 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("unfused_batch_norm_no_gamma");
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
+    runTensorFlowNet("switch_identity");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)
