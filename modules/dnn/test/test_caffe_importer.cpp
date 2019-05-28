@@ -109,6 +109,45 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
+TEST_P(Test_Caffe_nets, Axpy)
+{
+    String proto = _tf("axpy.prototxt");
+    // String proto = "/home/liubov/work_spase/Axpy/axpy_mo.prototxt";
+    Net net = readNetFromCaffe(proto);
+
+    checkBackend();
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int size[] = {1, 2, 3, 4};
+    int scale_size[] = {1, 2, 1, 1};
+    Mat scale(4, &scale_size[0], CV_32F);
+    Mat shift(4, &size[0], CV_32F);
+    Mat inp(4, &size[0], CV_32F);
+    randu(scale, -1.0f, 1.0f);
+    randu(shift, -1.0f, 1.0f);
+    randu(inp, -1.0f, 1.0f);
+
+    net.setInput(scale, "scale");
+    net.setInput(shift, "shift");
+    net.setInput(inp, "data");
+
+    Mat out = net.forward();
+
+    Mat ref(4, &size[0], inp.type());
+    for (int i = 0; i < inp.size[1]; i++) {
+        for (int h = 0; h < inp.size[2]; h++) {
+            for (int w = 0; w < inp.size[3]; w++) {
+                int idx[] = {0, i, h, w};
+                int scale_idx[] = {0, i, 0, 0};
+                ref.at<float>(idx) = inp.at<float>(idx) * scale.at<float>(scale_idx) +
+                                     shift.at<float>(idx);
+            }
+        }
+    }
+    normAssert(ref, out);
+}
+
 typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
