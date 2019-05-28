@@ -574,25 +574,7 @@
       <y>206</y>
       <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
  <!-- resumed -->
-<PointsNum_Algo_solvePnP--solvePnP---5--SOLVEPNP_ITERATIVE->
-  <rvec>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        -5.49888790e-01 8.08575749e-01 -6.96206510e-01</data></val></rvec>
-  <tvec>
-    <kind>65536</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>f</dt>
-      <data>
-        -3.53088550e+03 -3.26223511e+02 1.65568005e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---5--SOLVEPNP_ITERATIVE->
+ <!-- resumed -->
 <PointsNum_Algo_solvePnP--solvePnP---5--SOLVEPNP_EPNP->
   <rvec>
     <kind>65536</kind>
@@ -878,4 +860,82 @@
       <dt>f</dt>
       <data>
         3.53089551e+03 3.26227356e+02 -5.94261597e+02</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---5--SOLVEPNP_UPNP->
+ <!-- resumed -->
+
+<PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_ITERATIVE->
+  <rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        9.01256442e-01 8.32762122e-02 -4.22612309e-01</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -2.73962769e+03 9.76111511e+02 -9.08437378e+02</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_ITERATIVE->
+<PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_EPNP->
+  <rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -1.11466251e-01 1.20623410e+00 2.45043230e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        2.73960669e+03 -9.76128174e+02 3.14725879e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_EPNP->
+<PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_UPNP->
+  <rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -1.11466251e-01 1.20623410e+00 2.45043230e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        2.73960669e+03 -9.76128174e+02 3.14725879e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_UPNP->
+<PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_DLS->
+  <rvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        -1.11466251e-01 1.20623410e+00 2.45043230e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        2.73960669e+03 -9.76128174e+02 3.14725879e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_DLS->
 </opencv_storage>
