@@ -260,14 +260,23 @@ public:
         }
         else
         {
-            // Half precision floats.
-            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
-            std::string raw_data = pbBlob.raw_data();
+            CV_Assert(pbBlob.has_raw_data());
+            const std::string& raw_data = pbBlob.raw_data();
+            if (pbBlob.raw_data_type() == caffe::FLOAT16)
+            {
+                // Half precision floats.
+                CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
-
-            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-            convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+                convertFp16(halfs, dstBlob);
+            }
+            else if (pbBlob.raw_data_type() == caffe::FLOAT)
+            {
+                CV_Assert(raw_data.size() / 4 == (int)dstBlob.total());
+                Mat((int)shape.size(), &shape[0], CV_32FC1, (void*)raw_data.c_str()).copyTo(dstBlob);
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unexpected blob data type");
         }
     }
 

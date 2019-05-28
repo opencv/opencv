@@ -95,7 +95,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
 typedef tuple<std::string, int, tuple<int, int>, int> Path_Idx_NPoints_WSize_t;
 typedef TestBaseWithParam<Path_Idx_NPoints_WSize_t> Path_Idx_NPoints_WSize;
 
-PERF_TEST_P(Path_Idx_NPoints_WSize, OpticalFlowPyrLK_ovx, testing::Combine(
+PERF_TEST_P(Path_Idx_NPoints_WSize, DISABLED_OpticalFlowPyrLK_ovx, testing::Combine(
                 testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.png"),
                 testing::Range(1, 3),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),

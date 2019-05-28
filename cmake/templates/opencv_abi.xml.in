@@ -28,7 +28,9 @@
     opencv/cxeigen.hpp
     opencv2/core/eigen.hpp
     opencv2/flann/hdf5.h
+    opencv2/imgcodecs/imgcodecs_c.h
     opencv2/imgcodecs/ios.h
+    opencv2/videoio/videoio_c.h
     opencv2/videoio/cap_ios.h
     opencv2/xobjdetect/private.hpp
     @OPENCV_ABI_SKIP_HEADERS@
@@ -39,6 +41,7 @@
 </skip_libs>
 
 <gcc_options>
+ -std=c++11
  @OPENCV_ABI_GCC_OPTIONS@
 </gcc_options>
 

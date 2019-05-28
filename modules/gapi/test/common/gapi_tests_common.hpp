@@ -115,6 +115,9 @@ class TestPerfParams: public TestFunctional, public perf::TestBaseWithParam<T>{}
 
 using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
+using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
+
+
 template<typename T>
 struct Wrappable
 {
@@ -127,6 +130,20 @@ struct Wrappable
         };
     }
 };
+
+template<typename T>
+struct WrappableScalar
+{
+    compare_scalar_f to_compare_f()
+    {
+        T t = *static_cast<T*const>(this);
+        return [t](const cv::Scalar &a, const cv::Scalar &b)
+        {
+            return t(a, b);
+        };
+    }
+};
+
 
 class AbsExact : public Wrappable<AbsExact>
 {
@@ -285,6 +302,28 @@ private:
     double _tol;
     double _inf_tol;
 };
+
+class AbsToleranceScalar : public WrappableScalar<AbsToleranceScalar>
+{
+public:
+    AbsToleranceScalar(double tol) : _tol(tol) {}
+    bool operator() (const cv::Scalar& in1, const cv::Scalar& in2) const
+    {
+        double abs_err = std::abs(in1[0] - in2[0]) / std::max(1.0, std::abs(in2[0]));
+        if (abs_err > _tol)
+        {
+            std::cout << "AbsToleranceScalar error: abs_err=" << abs_err << "  tolerance=" << _tol << " in1[0]" << in1[0] << " in2[0]" << in2[0] << std::endl;;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+private:
+    double _tol;
+};
+
 } // namespace opencv_test
 
 namespace
@@ -292,5 +331,13 @@ namespace
     inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
     {
         return os << "compare_f";
+    }
+}
+
+namespace
+{
+    inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
+    {
+        return os << "compare_scalar_f";
     }
 }

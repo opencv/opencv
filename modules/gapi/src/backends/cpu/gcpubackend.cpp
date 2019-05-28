@@ -26,8 +26,8 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/cpu/gcpubackend.hpp"
-#include "backends/cpu/gcpuimgproc.hpp"
-#include "backends/cpu/gcpucore.hpp"
+#include "opencv2/gapi/cpu/imgproc.hpp"
+#include "opencv2/gapi/cpu/core.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -101,8 +101,8 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
             if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
             {
                 const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                const auto type = CV_MAKETYPE(mat_desc.depth, mat_desc.chan);
-                m_res.slot<cv::gapi::own::Mat>()[desc.rc].create(mat_desc.size, type);
+                auto& mat = m_res.slot<cv::gapi::own::Mat>()[desc.rc];
+                createMat(mat_desc, mat);
             }
             break;
         }
@@ -207,14 +207,16 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
         //As Kernels are forbidden to allocate memory for (Mat) outputs,
         //this code seems redundant, at least for Mats
         //FIXME: unify with cv::detail::ensure_out_mats_not_reallocated
+        //FIXME: when it's done, remove can_describe(const GMetaArg&, const GRunArgP&)
+        //and descr_of(const cv::GRunArgP &argp)
         for (const auto &out_it : ade::util::indexed(op_info.expected_out_metas))
         {
             const auto out_index      = ade::util::index(out_it);
             const auto expected_meta  = ade::util::value(out_it);
-            const auto out_meta       = descr_of(context.m_results[out_index]);
 
-            if (expected_meta != out_meta)
+            if (!can_describe(expected_meta, context.m_results[out_index]))
             {
+                const auto out_meta = descr_of(context.m_results[out_index]);
                 util::throw_error
                     (std::logic_error
                      ("Output meta doesn't "

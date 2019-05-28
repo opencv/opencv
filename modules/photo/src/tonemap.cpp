@@ -66,6 +66,7 @@ public:
 
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
+        CV_Assert(_src.dims() == 2 && _src.type() == CV_32FC3);
         _dst.create(src.size(), CV_32FC3);
         Mat dst = _dst.getMat();
 
@@ -191,94 +192,6 @@ protected:
 Ptr<TonemapDrago> createTonemapDrago(float gamma, float saturation, float bias)
 {
     return makePtr<TonemapDragoImpl>(gamma, saturation, bias);
-}
-
-class TonemapDurandImpl CV_FINAL : public TonemapDurand
-{
-public:
-    TonemapDurandImpl(float _gamma, float _contrast, float _saturation, float _sigma_color, float _sigma_space) :
-        name("TonemapDurand"),
-        gamma(_gamma),
-        contrast(_contrast),
-        saturation(_saturation),
-        sigma_color(_sigma_color),
-        sigma_space(_sigma_space)
-    {
-    }
-
-    void process(InputArray _src, OutputArray _dst) CV_OVERRIDE
-    {
-        CV_INSTRUMENT_REGION();
-
-        Mat src = _src.getMat();
-        CV_Assert(!src.empty());
-        _dst.create(src.size(), CV_32FC3);
-        Mat img = _dst.getMat();
-        Ptr<Tonemap> linear = createTonemap(1.0f);
-        linear->process(src, img);
-
-        Mat gray_img;
-        cvtColor(img, gray_img, COLOR_RGB2GRAY);
-        Mat log_img;
-        log_(gray_img, log_img);
-        Mat map_img;
-        bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
-
-        double min, max;
-        minMaxLoc(map_img, &min, &max);
-        float scale = contrast / static_cast<float>(max - min);
-        exp(map_img * (scale - 1.0f) + log_img, map_img);
-        log_img.release();
-
-        mapLuminance(img, img, gray_img, map_img, saturation);
-        pow(img, 1.0f / gamma, img);
-    }
-
-    float getGamma() const CV_OVERRIDE { return gamma; }
-    void setGamma(float val) CV_OVERRIDE { gamma = val; }
-
-    float getSaturation() const CV_OVERRIDE { return saturation; }
-    void setSaturation(float val) CV_OVERRIDE { saturation = val; }
-
-    float getContrast() const CV_OVERRIDE { return contrast; }
-    void setContrast(float val) CV_OVERRIDE { contrast = val; }
-
-    float getSigmaColor() const CV_OVERRIDE { return sigma_color; }
-    void setSigmaColor(float val) CV_OVERRIDE { sigma_color = val; }
-
-    float getSigmaSpace() const CV_OVERRIDE { return sigma_space; }
-    void setSigmaSpace(float val) CV_OVERRIDE { sigma_space = val; }
-
-    void write(FileStorage& fs) const CV_OVERRIDE
-    {
-        writeFormat(fs);
-        fs << "name" << name
-           << "gamma" << gamma
-           << "contrast" << contrast
-           << "sigma_color" << sigma_color
-           << "sigma_space" << sigma_space
-           << "saturation" << saturation;
-    }
-
-    void read(const FileNode& fn) CV_OVERRIDE
-    {
-        FileNode n = fn["name"];
-        CV_Assert(n.isString() && String(n) == name);
-        gamma = fn["gamma"];
-        contrast = fn["contrast"];
-        sigma_color = fn["sigma_color"];
-        sigma_space = fn["sigma_space"];
-        saturation = fn["saturation"];
-    }
-
-protected:
-    String name;
-    float gamma, contrast, saturation, sigma_color, sigma_space;
-};
-
-Ptr<TonemapDurand> createTonemapDurand(float gamma, float contrast, float saturation, float sigma_color, float sigma_space)
-{
-    return makePtr<TonemapDurandImpl>(gamma, contrast, saturation, sigma_color, sigma_space);
 }
 
 class TonemapReinhardImpl CV_FINAL : public TonemapReinhard

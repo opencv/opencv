@@ -4,12 +4,13 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_MFX
-
 namespace opencv_test { namespace {
 
-TEST(Videoio_MFX, read_invalid)
+TEST(videoio_mfx, read_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open("nonexistent-file", CAP_INTEL_MFX));
     ASSERT_FALSE(cap.isOpened());
@@ -18,8 +19,11 @@ TEST(Videoio_MFX, read_invalid)
     ASSERT_TRUE(img.empty());
 }
 
-TEST(Videoio_MFX, write_invalid)
+TEST(videoio_mfx, write_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const string filename = cv::tempfile(".264");
     VideoWriter writer;
     bool res = true;
@@ -35,7 +39,7 @@ TEST(Videoio_MFX, write_invalid)
     ASSERT_NO_THROW(res = writer.open(String(), CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_ANY_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
 
@@ -80,10 +84,13 @@ inline int fourccByExt(const String &ext)
 //==================================================================================================
 
 typedef tuple<Size, double, const char *> Size_FPS_Ext;
-typedef testing::TestWithParam< Size_FPS_Ext > Videoio_MFX;
+typedef testing::TestWithParam< Size_FPS_Ext > videoio_mfx;
 
-TEST_P(Videoio_MFX, read_write_raw)
+TEST_P(videoio_mfx, read_write_raw)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const Size FRAME_SIZE = get<0>(GetParam());
     const double FPS = get<1>(GetParam());
     const char *ext = get<2>(GetParam());
@@ -137,12 +144,10 @@ TEST_P(Videoio_MFX, read_write_raw)
     remove(filename.c_str());
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_MFX,
+INSTANTIATE_TEST_CASE_P(videoio, videoio_mfx,
                         testing::Combine(
                             testing::Values(Size(640, 480), Size(638, 478), Size(636, 476), Size(1920, 1080)),
                             testing::Values(1, 30, 100),
                             testing::Values(".mpeg2", ".264", ".265")));
 
 }} // namespace
-
-#endif

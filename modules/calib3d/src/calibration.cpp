@@ -1520,10 +1520,6 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     nparams = NINTRINSIC + nimages*6;
     if( releaseObject )
         nparams += maxPoints * 3;
-    Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
-    Mat _Je( maxPoints*2, 6, CV_64FC1 );
-    Mat _Jo( maxPoints*2, maxPoints*3, CV_64FC1, Scalar(0) );
-    Mat _err( maxPoints*2, 1, CV_64FC1 );
 
     _k = cvMat( distCoeffs->rows, distCoeffs->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k);
     if( distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) < 8 )
@@ -1586,6 +1582,13 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     }
 
     CvLevMarq solver( nparams, 0, termCrit );
+
+    Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
+    Mat _Je( maxPoints*2, 6, CV_64FC1 );
+    Mat _err( maxPoints*2, 1, CV_64FC1 );
+
+    const bool allocJo = (solver.state == CvLevMarq::CALC_J) || stdDevs;
+    Mat _Jo = allocJo ? Mat( maxPoints*2, maxPoints*3, CV_64FC1, Scalar(0) ) : Mat();
 
     if(flags & CALIB_USE_LU) {
         solver.solveMethod = DECOMP_LU;
@@ -1720,20 +1723,22 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
             _Je.resize(ni*2); _Ji.resize(ni*2); _err.resize(ni*2);
             _Jo.resize(ni*2);
-            CvMat _dpdr = cvMat(_Je.colRange(0, 3));
-            CvMat _dpdt = cvMat(_Je.colRange(3, 6));
-            CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
-            CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
-            CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
-            CvMat _dpdo = cvMat(_Jo.colRange(0, ni * 3));
+
             CvMat _mp = cvMat(_err.reshape(2, 1));
 
             if( calcJ )
             {
-                 cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
-                                  (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
-                                  (flags & CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
-                                  &_dpdo,
+                CvMat _dpdr = cvMat(_Je.colRange(0, 3));
+                CvMat _dpdt = cvMat(_Je.colRange(3, 6));
+                CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
+                CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
+                CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
+                CvMat _dpdo = _Jo.empty() ? CvMat() : cvMat(_Jo.colRange(0, ni * 3));
+
+                cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
+                                  (flags & CALIB_FIX_FOCAL_LENGTH) ? nullptr : &_dpdf,
+                                  (flags & CALIB_FIX_PRINCIPAL_POINT) ? nullptr : &_dpdc, &_dpdk,
+                                  (_Jo.empty()) ? nullptr: &_dpdo,
                                   (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);
             }
             else
@@ -3348,10 +3353,17 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
 
     for( i = 0; i < nimages; i++ )
     {
-        ni = objectPoints.getMat(i).checkVector(3, CV_32F);
+        Mat objectPoint = objectPoints.getMat(i);
+        if (objectPoint.empty())
+            CV_Error(CV_StsBadSize, "objectPoints should not contain empty vector of vectors of points");
+        ni = objectPoint.checkVector(3, CV_32F);
         if( ni <= 0 )
             CV_Error(CV_StsUnsupportedFormat, "objectPoints should contain vector of vectors of points of type Point3f");
-        int ni1 = imagePoints1.getMat(i).checkVector(2, CV_32F);
+
+        Mat imagePoint1 = imagePoints1.getMat(i);
+        if (imagePoint1.empty())
+            CV_Error(CV_StsBadSize, "imagePoints1 should not contain empty vector of vectors of points");
+        int ni1 = imagePoint1.checkVector(2, CV_32F);
         if( ni1 <= 0 )
             CV_Error(CV_StsUnsupportedFormat, "imagePoints1 should contain vector of vectors of points of type Point2f");
         CV_Assert( ni == ni1 );

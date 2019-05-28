@@ -96,6 +96,7 @@ Thanks to:
 #ifdef __MINGW32__
 // MinGW does not understand COM interfaces
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#define STRSAFE_NO_DEPRECATE
 #endif
 
 #include <tchar.h>
@@ -108,9 +109,9 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#include "DShow.h"
+#include "dshow.h"
 #include "strmif.h"
-#include "Aviriff.h"
+#include "aviriff.h"
 #include "dvdmedia.h"
 #include "bdaiface.h"
 
@@ -2177,7 +2178,7 @@ void videoInput::setPhyCon(int id, int conn){
 
 
 // ----------------------------------------------------------------------
-// Check that we are not trying to setup a non-existant device
+// Check that we are not trying to setup a non-existent device
 // Then start the graph building!
 // ----------------------------------------------------------------------
 
@@ -3578,6 +3579,12 @@ void VideoCapture_DShow::close()
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
+
+Ptr<IVideoCapture> create_DShow_capture(int index)
+{
+    return makePtr<VideoCapture_DShow>(index);
+}
+
 
 }
 

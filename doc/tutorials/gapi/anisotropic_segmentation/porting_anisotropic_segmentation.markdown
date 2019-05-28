@@ -106,9 +106,7 @@ like this:
 
 Note that this code slightly changes from the original one: forming up
 the resulting image is also a part of the pipeline (done with
-cv::gapi::addWeighted). Normalization of orientation and coherency
-images is still done by traditional OpenCV (using cv::normalize) as
-G-API doesn't provide such kernel at the moment.
+cv::gapi::addWeighted).
 
 Result of this G-API pipeline bit-exact matches the original one
 (given the same input image):
@@ -211,7 +209,7 @@ algorithm versions:
     ==6117==
 
 Once done, we can inspect the collected profiles with
-[Massif Visualizer](@https://github.com/KDE/massif-visualizer)
+[Massif Visualizer](https://github.com/KDE/massif-visualizer)
 (installed in the above step).
 
 Below is the visualized memory profile of the original OpenCV version
@@ -231,7 +229,7 @@ Now let's have a look on the profile of G-API version:
 Once G-API computation is created and its execution starts, G-API
 allocates all required memory at once and then the memory profile
 remains flat until the termination of the program. Massif reports us
-peak memory consumption of 10.6 MiB.
+peak memory consumption of 11.4 MiB.
 
 A reader may ask a right question at this point -- is G-API that bad?
 What is the reason in using it than?
@@ -262,7 +260,7 @@ Fluid backend to make our graph cache-efficient on CPU.
 G-API defines _backend_ as the lower-level entity which knows how to
 run kernels. Backends may have (and, in fact, do have) different
 _Kernel APIs_ which are used to program and integrate kernels for that
-backends. In this context, _kernel_ is an implementaion of an
+backends. In this context, _kernel_ is an implementation of an
 _operation_, which is defined on the top API level (see
 G_TYPED_KERNEL() macro).
 
@@ -308,24 +306,16 @@ G-API to utilize appropriate Fluid functions in our graph.
 
 Kernel packages are combinable -- in the above example, we take "Core"
 and "ImgProc" Fluid kernel packages and combine it into a single
-one. See documentation reference on cv::gapi::combine and
-cv::unite_policy on package combination options.
+one. See documentation reference on cv::gapi::combine.
 
 If no kernel packages are specified in options, G-API is using
 _default_ package which consists of default OpenCV implementations and
 thus G-API graphs are executed via OpenCV functions by default. OpenCV
 backend provides broader functional coverage than any other
 backend. If a kernel package is specified, like in this example, then
-it is being combined with the _default_ one with
-cv::unite_policy::REPLACE. It means that user-specified
-implementations will replace default implementations in case of
+it is being combined with the _default_.
+It means that user-specified implementations will replace default implementations in case of
 conflict.
-
-Kernel packages may contain a mix of kernels, in particular, multiple
-implementations of the same kernel. For example, a single kernel
-package may contain both OpenCV and Fluid implementations of kernel
-"Filter2D". In this case, the implementation selection preference can
-be specified with a special compilation parameter cv::gapi::lookup_order.
 
 <!-- FIXME Document this process better as a part of regular -->
 <!-- documentation, not a tutorial kind of thing -->
@@ -367,9 +357,9 @@ Fluid backend. Now it looks like this:
 
 ![Memory profile: G-API/Fluid port of Anisotropic Image Segmentation sample](pics/massif_export_gapi_fluid.png)
 
-Now the tool reports 3.8MiB -- and we just changed a few lines in our
-code, without modifying the graph itself! It is a ~2.8X improvement of
-the previous G-API result, and 2X improvement of the original OpenCV
+Now the tool reports 4.7MiB -- and we just changed a few lines in our
+code, without modifying the graph itself! It is a ~2.4X improvement of
+the previous G-API result, and ~1.6X improvement of the original OpenCV
 version.
 
 Let's also examine how the internal representation of the graph now

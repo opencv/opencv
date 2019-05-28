@@ -116,18 +116,45 @@ PERF_TEST_P(MatSize, equalizeHist,
 }
 #undef MatSize
 
-typedef tuple<Size, double> Sz_ClipLimit_t;
+typedef TestBaseWithParam< tuple<int, int> > Dim_Cmpmethod;
+PERF_TEST_P(Dim_Cmpmethod, compareHist,
+            testing::Combine(testing::Values(1, 3),
+                             testing::Values(HISTCMP_CORREL, HISTCMP_CHISQR, HISTCMP_INTERSECT, HISTCMP_BHATTACHARYYA, HISTCMP_CHISQR_ALT, HISTCMP_KL_DIV))
+            )
+{
+    int dims = get<0>(GetParam());
+    int method = get<1>(GetParam());
+    int histSize[] = { 2048, 128, 64 };
+
+    Mat hist1(dims, histSize, CV_32FC1);
+    Mat hist2(dims, histSize, CV_32FC1);
+    randu(hist1, 0, 256);
+    randu(hist2, 0, 256);
+
+    declare.in(hist1.reshape(1, 256), hist2.reshape(1, 256));
+
+    TEST_CYCLE()
+    {
+        compareHist(hist1, hist2, method);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef tuple<Size, double, MatType> Sz_ClipLimit_t;
 typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;
 
 PERF_TEST_P(Sz_ClipLimit, CLAHE,
             testing::Combine(testing::Values(::perf::szVGA, ::perf::sz720p, ::perf::sz1080p),
-                             testing::Values(0.0, 40.0))
+                             testing::Values(0.0, 40.0),
+                             testing::Values(MatType(CV_8UC1), MatType(CV_16UC1)))
             )
 {
     const Size size = get<0>(GetParam());
     const double clipLimit = get<1>(GetParam());
+    const int type = get<2>(GetParam());
 
-    Mat src(size, CV_8UC1);
+    Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
     Ptr<CLAHE> clahe = createCLAHE(clipLimit);

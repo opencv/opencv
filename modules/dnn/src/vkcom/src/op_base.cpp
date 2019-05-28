@@ -16,8 +16,8 @@ namespace cv { namespace dnn { namespace vkcom {
 
 OpBase::OpBase()
 {
-    ctx_ = getContext();
-    device_ = ctx_->device;
+    createContext();
+    device_ = kDevice;
     pipeline_ = VK_NULL_HANDLE;
     cmd_buffer_ = VK_NULL_HANDLE;
     descriptor_pool_ = VK_NULL_HANDLE;
@@ -45,7 +45,9 @@ void OpBase::initVulkanThing(int buffer_num)
 
 void OpBase::createDescriptorSetLayout(int buffer_num)
 {
-    VkDescriptorSetLayoutBinding bindings[buffer_num] = {};
+    if (buffer_num <= 0)
+        return;
+    std::vector<VkDescriptorSetLayoutBinding> bindings(buffer_num);
     for (int i = 0; i < buffer_num; i++)
     {
         bindings[i].binding = i;
@@ -56,7 +58,7 @@ void OpBase::createDescriptorSetLayout(int buffer_num)
     VkDescriptorSetLayoutCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     info.bindingCount = buffer_num;
-    info.pBindings = bindings;
+    info.pBindings = &bindings[0];
     VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device_, &info, NULL, &descriptor_set_layout_));
 }
 
@@ -101,7 +103,7 @@ void OpBase::createShaderModule(const uint32_t* spv, size_t sz, const std::strin
     VK_CHECK_RESULT(vkCreateShaderModule(device_, &create_info, NULL, &module_));
 }
 
-void OpBase::createPipeline(size_t push_constants_size)
+void OpBase::createPipeline(size_t push_constants_size, VkSpecializationInfo* specialization_info)
 {
     // create pipeline
     VkPipelineShaderStageCreateInfo stage_create_info = {};
@@ -109,6 +111,7 @@ void OpBase::createPipeline(size_t push_constants_size)
     stage_create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     stage_create_info.module = module_;
     stage_create_info.pName = "main";
+    stage_create_info.pSpecializationInfo = specialization_info;
     VkPushConstantRange push_constant_ranges[1] = {};
     push_constant_ranges[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     push_constant_ranges[0].offset = 0;
@@ -139,7 +142,7 @@ void OpBase::createCommandBuffer()
 {
     VkCommandBufferAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    info.commandPool = ctx_->cmd_pool;
+    info.commandPool = kCmdPool;
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     info.commandBufferCount = 1;
     VK_CHECK_RESULT(vkAllocateCommandBuffers(device_, &info, &cmd_buffer_));
@@ -150,6 +153,7 @@ void OpBase::recordCommandBuffer(void* push_constants, size_t push_constants_siz
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cv::AutoLock lock(kContextMtx);
     VK_CHECK_RESULT(vkBeginCommandBuffer(cmd_buffer_, &beginInfo));
     if (push_constants)
         vkCmdPushConstants(cmd_buffer_, pipeline_layout_,
@@ -176,7 +180,10 @@ void OpBase::runCommandBuffer()
     fence_create_info_.flags = 0;
 
     VK_CHECK_RESULT(vkCreateFence(device_, &fence_create_info_, NULL, &fence));
-    VK_CHECK_RESULT(vkQueueSubmit(ctx_->queue, 1, &submit_info, fence));
+    {
+        cv::AutoLock lock(kContextMtx);
+        VK_CHECK_RESULT(vkQueueSubmit(kQueue, 1, &submit_info, fence));
+    }
     VK_CHECK_RESULT(vkWaitForFences(device_, 1, &fence, VK_TRUE, 100000000000));
     vkDestroyFence(device_, fence, NULL);
 }

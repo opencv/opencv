@@ -52,18 +52,19 @@
 #undef WINVER
 #define WINVER _WIN32_WINNT_WIN8
 #endif
+
 #include <windows.h>
 #include <guiddef.h>
 #include <mfidl.h>
-#include <Mfapi.h>
+#include <mfapi.h>
 #include <mfplay.h>
 #include <mfobjects.h>
 #include <tchar.h>
 #include <strsafe.h>
-#include <Mfreadwrite.h>
-#ifdef HAVE_DXVA
-#include <D3D11.h>
-#include <D3d11_4.h>
+#include <mfreadwrite.h>
+#ifdef HAVE_MSMF_DXVA
+#include <d3d11.h>
+#include <d3d11_4.h>
 #endif
 #include <new>
 #include <map>
@@ -81,7 +82,7 @@
 #pragma comment(lib, "mfuuid")
 #pragma comment(lib, "Strmiids")
 #pragma comment(lib, "Mfreadwrite")
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
 #pragma comment(lib, "d3d11")
 // MFCreateDXGIDeviceManager() is available since Win8 only.
 // To avoid OpenCV loading failure on Win7 use dynamic detection of this symbol.
@@ -99,9 +100,7 @@ static void init_MFCreateDXGIDeviceManager()
     pMFCreateDXGIDeviceManager_initialized = true;
 }
 #endif
-#if (WINVER >= 0x0602) // Available since Win 8
-#pragma comment(lib, "MinCore_Downlevel")
-#endif
+#pragma comment(lib, "Shlwapi.lib")
 #endif
 
 #include <mferror.h>
@@ -717,7 +716,7 @@ protected:
     cv::String filename;
     int camid;
     MSMFCapture_Mode captureMode;
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
@@ -742,7 +741,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     filename(""),
     camid(-1),
     captureMode(MODE_SW),
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
     D3DDev(NULL),
     D3DMgr(NULL),
 #endif
@@ -781,7 +780,7 @@ void CvCapture_MSMF::close()
 
 bool CvCapture_MSMF::configureHW(bool enable)
 {
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
     if ((enable && D3DMgr && D3DDev) || (!enable && !D3DMgr && !D3DDev))
         return true;
     if (!pMFCreateDXGIDeviceManager_initialized)
@@ -978,7 +977,7 @@ bool CvCapture_MSMF::open(int _index)
                             SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, FALSE)) &&
                             SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, TRUE)))
                         {
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
                             if (D3DMgr)
                                 srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
@@ -1029,7 +1028,7 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
         SUCCEEDED(srAttr->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
         )
     {
-#ifdef HAVE_DXVA
+#ifdef HAVE_MSMF_DXVA
         if(D3DMgr)
             srAttr->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get());
 #endif
@@ -2160,13 +2159,13 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     }
 }
 
-cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const cv::String& filename, int fourcc,
-                                                        double fps, cv::Size frameSize, int isColor )
+cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
+                                                        double fps, const cv::Size &frameSize, bool isColor )
 {
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
-        writer->open(filename, fourcc, fps, frameSize, isColor != 0);
+        writer->open(filename, fourcc, fps, frameSize, isColor);
         if (writer->isOpened())
             return writer;
     }

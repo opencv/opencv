@@ -8,6 +8,10 @@
 #ifndef OPENCV_DNN_VKCOM_VULKAN_VK_LOADER_HPP
 #define OPENCV_DNN_VKCOM_VULKAN_VK_LOADER_HPP
 
+#ifdef HAVE_VULKAN
+#include <vulkan/vulkan.h>
+#endif // HAVE_VULKAN
+
 namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN

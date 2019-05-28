@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_video.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 #if defined __APPLE__ || defined __ANDROID__
 #define SMALL_LOCALSIZE
@@ -433,13 +434,11 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     for( i = 0; i <= m; i++ )
         kernel[i] = (float)(kernel[i]*s);
 
-#if CV_SSE2
+#if CV_SIMD128
     float* simd_kernel = alignPtr(kernel + m+1, 16);
-    volatile bool useSIMD = checkHardwareSupport(CV_CPU_SSE);
-    if( useSIMD )
     {
         for( i = 0; i <= m; i++ )
-            _mm_store_ps(simd_kernel + i*4, _mm_set1_ps(kernel[i]));
+            v_store(simd_kernel + i*4, v_setall_f32(kernel[i]));
     }
 #endif
 
@@ -457,54 +456,53 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         }
 
         x = 0;
-#if CV_SSE2
-        if( useSIMD )
+#if CV_SIMD128
         {
             for( ; x <= width*5 - 16; x += 16 )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0, s1, s2, s3;
-                s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
-                s1 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 4), g4);
-                s2 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 8), g4);
-                s3 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x + 12), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0, s1, s2, s3;
+                s0 = v_load(sptr0 + x) * g4;
+                s1 = v_load(sptr0 + x + 4) * g4;
+                s2 = v_load(sptr0 + x + 8) * g4;
+                s3 = v_load(sptr0 + x + 12) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
-                    __m128 x0, x1;
+                    v_float32x4 x0, x1;
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
-                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 4), _mm_loadu_ps(sptr1 + x + 4));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
-                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
-                    x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 8), _mm_loadu_ps(sptr1 + x + 8));
-                    x1 = _mm_add_ps(_mm_loadu_ps(sptr0 + x + 12), _mm_loadu_ps(sptr1 + x + 12));
-                    s2 = _mm_add_ps(s2, _mm_mul_ps(x0, g4));
-                    s3 = _mm_add_ps(s3, _mm_mul_ps(x1, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    x0 = v_load(sptr0 + x) + v_load(sptr1 + x);
+                    x1 = v_load(sptr0 + x + 4) + v_load(sptr1 + x + 4);
+                    s0 = v_muladd(x0, g4, s0);
+                    s1 = v_muladd(x1, g4, s1);
+                    x0 = v_load(sptr0 + x + 8) + v_load(sptr1 + x + 8);
+                    x1 = v_load(sptr0 + x + 12) + v_load(sptr1 + x + 12);
+                    s2 = v_muladd(x0, g4, s2);
+                    s3 = v_muladd(x1, g4, s3);
                 }
 
-                _mm_store_ps(vsum + x, s0);
-                _mm_store_ps(vsum + x + 4, s1);
-                _mm_store_ps(vsum + x + 8, s2);
-                _mm_store_ps(vsum + x + 12, s3);
+                v_store(vsum + x, s0);
+                v_store(vsum + x + 4, s1);
+                v_store(vsum + x + 8, s2);
+                v_store(vsum + x + 12, s3);
             }
 
             for( ; x <= width*5 - 4; x += 4 )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(sptr0 + x), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0 = v_load(sptr0 + x) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(sptr0 + x), _mm_loadu_ps(sptr1 + x));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    v_float32x4 x0 = v_load(sptr0 + x) + v_load(sptr1 + x);
+                    s0 = v_muladd(x0, g4, s0);
                 }
-                _mm_store_ps(vsum + x, s0);
+                v_store(vsum + x, s0);
             }
         }
 #endif
@@ -525,28 +523,25 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_SSE2
-        if( useSIMD )
+#if CV_SIMD128
         {
             for( ; x <= width*5 - 8; x += 8 )
             {
-                __m128 g4 = _mm_load_ps(simd_kernel);
-                __m128 s0 = _mm_mul_ps(_mm_loadu_ps(vsum + x), g4);
-                __m128 s1 = _mm_mul_ps(_mm_loadu_ps(vsum + x + 4), g4);
+                v_float32x4 g4 = v_load(simd_kernel);
+                v_float32x4 s0 = v_load(vsum + x) * g4;
+                v_float32x4 s1 = v_load(vsum + x + 4) * g4;
 
                 for( i = 1; i <= m; i++ )
                 {
-                    g4 = _mm_load_ps(simd_kernel + i*4);
-                    __m128 x0 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5),
-                                           _mm_loadu_ps(vsum + x + i*5));
-                    __m128 x1 = _mm_add_ps(_mm_loadu_ps(vsum + x - i*5 + 4),
-                                           _mm_loadu_ps(vsum + x + i*5 + 4));
-                    s0 = _mm_add_ps(s0, _mm_mul_ps(x0, g4));
-                    s1 = _mm_add_ps(s1, _mm_mul_ps(x1, g4));
+                    g4 = v_load(simd_kernel + i*4);
+                    v_float32x4 x0 = v_load(vsum + x - i*5) + v_load(vsum + x+ i*5);
+                    v_float32x4 x1 = v_load(vsum + x - i*5 + 4) + v_load(vsum + x+ i*5 + 4);
+                    s0 = v_muladd(x0, g4, s0);
+                    s1 = v_muladd(x1, g4, s1);
                 }
 
-                _mm_store_ps(hsum + x, s0);
-                _mm_store_ps(hsum + x + 4, s1);
+                v_store(hsum + x, s0);
+                v_store(hsum + x + 4, s1);
             }
         }
 #endif
@@ -646,8 +641,6 @@ private:
         Size size = frame0.size();
         UMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
         UMat flowx0 = flowx;
         UMat flowy0 = flowy;
 
@@ -1075,12 +1068,19 @@ private:
             return false;
 
         std::vector<UMat> flowar;
-        if (!_flow0.empty())
+
+        // If flag is set, check for integrity; if not set, allocate memory space
+        if (flags_ & OPTFLOW_USE_INITIAL_FLOW)
+        {
+            if (_flow0.empty() || _flow0.size() != _prev0.size() || _flow0.channels() != 2 ||
+                _flow0.depth() != CV_32F)
+                return false;
             split(_flow0, flowar);
+        }
         else
         {
-            flowar.push_back(UMat());
-            flowar.push_back(UMat());
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
+            flowar.push_back(UMat(_prev0.size(), CV_32FC1));
         }
         if(!this->operator()(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1])){
             return false;
@@ -1112,7 +1112,14 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
 
     CV_Assert( prev0.size() == next0.size() && prev0.channels() == next0.channels() &&
                prev0.channels() == 1 && pyrScale_ < 1 );
-    _flow0.create( prev0.size(), CV_32FC2 );
+
+    // If flag is set, check for integrity; if not set, allocate memory space
+    if( flags_ & OPTFLOW_USE_INITIAL_FLOW )
+        CV_Assert( _flow0.size() == prev0.size() && _flow0.channels() == 2 &&
+                   _flow0.depth() == CV_32F );
+    else
+        _flow0.create( prev0.size(), CV_32FC2 );
+
     Mat flow0 = _flow0.getMat();
 
     for( k = 0, scale = 1; k < levels; k++ )

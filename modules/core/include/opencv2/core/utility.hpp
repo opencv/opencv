@@ -118,7 +118,11 @@ CV_EXPORTS void setUseCollection(bool flag); // set implementation collection st
  }
  \endcode
 */
+#ifdef OPENCV_ENABLE_MEMORY_SANITIZER
+template<typename _Tp, size_t fixed_size = 0> class AutoBuffer
+#else
 template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
+#endif
 {
 public:
     typedef _Tp value_type;

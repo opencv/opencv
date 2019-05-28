@@ -54,12 +54,11 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            return (interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD) ||
+            return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
                    (interpolation == "bilinear" && INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4));
         }
-        else
 #endif
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -163,6 +162,33 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        if (interpolation == "nearest")
+        {
+            ieLayer.setType("Resample");
+            ieLayer.getParameters()["type"] = std::string("caffe.ResampleParameter.NEAREST");
+            ieLayer.getParameters()["antialias"] = false;
+            if (scaleWidth != scaleHeight)
+                CV_Error(Error::StsNotImplemented, "resample with sw != sh");
+            ieLayer.getParameters()["factor"] = 1.0f / scaleWidth;
+        }
+        else if (interpolation == "bilinear")
+        {
+            ieLayer.setType("Interp");
+            ieLayer.getParameters()["pad_beg"] = 0;
+            ieLayer.getParameters()["pad_end"] = 0;
+            ieLayer.getParameters()["align_corners"] = false;
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
+        ieLayer.getParameters()["width"] = outWidth;
+        ieLayer.getParameters()["height"] = outHeight;
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.precision = InferenceEngine::Precision::FP32;
@@ -187,6 +213,7 @@ public:
         ieLayer->params["width"] = cv::format("%d", outWidth);
         ieLayer->params["height"] = cv::format("%d", outHeight);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
@@ -247,6 +274,18 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        ieLayer.setType("Interp");
+        ieLayer.getParameters()["pad_beg"] = 0;
+        ieLayer.getParameters()["pad_end"] = 0;
+        ieLayer.getParameters()["width"] = outWidth;
+        ieLayer.getParameters()["height"] = outHeight;
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "Interp";
@@ -256,6 +295,7 @@ public:
         ieLayer->params["pad_beg"] = "0";
         ieLayer->params["pad_end"] = "0";
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

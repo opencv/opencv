@@ -112,6 +112,8 @@ TEST(Test_Caffe, read_googlenet)
 typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
+    Target targetId = get<1>(GetParam());
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     bool readFromMemory = get<0>(GetParam());
     Net net;
     {
@@ -132,7 +134,6 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         ASSERT_FALSE(net.empty());
     }
 
-    int targetId = get<1>(GetParam());
     const float l1 = 1e-5;
     const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
 
@@ -151,9 +152,9 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
                         Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)));
 
-#if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_2GB);
     Net net;
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
@@ -179,10 +180,10 @@ TEST(Reproducibility_FCN, Accuracy)
 
     normAssert(ref, out);
 }
-#endif
 
 TEST(Reproducibility_SSD, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     Net net;
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
@@ -203,71 +204,86 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssertDetections(ref, out);
+    normAssertDetections(ref, out, "", FLT_MIN);
 }
 
-typedef testing::TestWithParam<Target> Reproducibility_MobileNet_SSD;
+typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
 TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 {
     const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
     const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
-    int targetId = GetParam();
-    const float l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 1.5e-4 : 1e-5;
-    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-4;
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
 
     Mat sample = imread(_tf("street.png"));
 
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     net.setInput(inp);
-    Mat out = net.forward();
+    Mat out = net.forward().clone();
 
-    const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-4 : 1e-5;
-    const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-3 : 1e-4;
+    ASSERT_EQ(out.size[2], 100);
+
+    const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
+    const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 6.3e-2 : 1e-4;
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    normAssertDetections(ref, out, "", 0.0, scores_diff, boxes_iou_diff);
+    normAssertDetections(ref, out, "", FLT_MIN, scores_diff, boxes_iou_diff);
 
     // Check that detections aren't preserved.
     inp.setTo(0.0f);
     net.setInput(inp);
-    out = net.forward();
-    out = out.reshape(1, out.total() / 7);
+    Mat zerosOut = net.forward();
+    zerosOut = zerosOut.reshape(1, zerosOut.total() / 7);
 
-    const int numDetections = out.rows;
+    const int numDetections = zerosOut.rows;
     ASSERT_NE(numDetections, 0);
     for (int i = 0; i < numDetections; ++i)
     {
-        float confidence = out.ptr<float>(i)[2];
+        float confidence = zerosOut.ptr<float>(i)[2];
         ASSERT_EQ(confidence, 0);
     }
 
+    // There is something wrong with Reshape layer in Myriad plugin and
+    // regression with DLIE/OCL_FP16 target.
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if ((targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2) ||
+            targetId == DNN_TARGET_OPENCL_FP16)
+            return;
+    }
+
     // Check batching mode.
-    ref = ref.reshape(1, numDetections);
     inp = blobFromImages(std::vector<Mat>(2, sample), 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     net.setInput(inp);
     Mat outBatch = net.forward();
 
     // Output blob has a shape 1x1x2Nx7 where N is a number of detection for
     // a single sample in batch. The first numbers of detection vectors are batch id.
-    outBatch = outBatch.reshape(1, outBatch.total() / 7);
-    EXPECT_EQ(outBatch.rows, 2 * numDetections);
-    normAssert(outBatch.rowRange(0, numDetections), ref, "", l1, lInf);
-    normAssert(outBatch.rowRange(numDetections, 2 * numDetections).colRange(1, 7), ref.colRange(1, 7),
-               "", l1, lInf);
+    // For Inference Engine backend there is -1 delimiter which points the end of detections.
+    const int numRealDetections = ref.size[2];
+    EXPECT_EQ(outBatch.size[2], 2 * numDetections);
+    out = out.reshape(1, numDetections).rowRange(0, numRealDetections);
+    outBatch = outBatch.reshape(1, 2 * numDetections);
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat pred = outBatch.rowRange(i * numRealDetections, (i + 1) * numRealDetections);
+        EXPECT_EQ(countNonZero(pred.col(0) != i), 0);
+        normAssert(pred.colRange(1, 7), out.colRange(1, 7));
+    }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD,
-                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, dnnBackendsAndTargets());
 
 typedef testing::TestWithParam<Target> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
 {
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
-    int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -300,10 +316,11 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
 typedef testing::TestWithParam<Target> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
+    int targetId = GetParam();
+    if(targetId == DNN_TARGET_OPENCL_FP16)
+        throw SkipTestException("This test does not support FP16");
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-
-    int targetId = GetParam();
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -324,10 +341,12 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1,
+    testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
@@ -373,7 +392,9 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 // https://github.com/richzhang/colorization
 TEST_P(Test_Caffe_nets, Colorization)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     checkBackend();
+
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
     Mat ref = blobFromNPY(_tf("colorization_out.npy"));
     Mat kernel = blobFromNPY(_tf("colorization_pts_in_hull.npy"));
@@ -391,13 +412,19 @@ TEST_P(Test_Caffe_nets, Colorization)
     Mat out = net.forward();
 
     // Reference output values are in range [-29.1, 69.5]
-    const double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.25 : 4e-4;
-    const double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.25 : 4e-4;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
+    if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    {
+        l1 = 0.6; lInf = 15;
+    }
     normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_Caffe_nets, DenseNet_121)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
     const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
@@ -421,9 +448,10 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
-        l1 = 0.097; lInf = 0.52;
+        l1 = 0.11; lInf = 0.5;
     }
     normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST(Test_Caffe, multiple_inputs)
@@ -469,6 +497,7 @@ TEST(Test_Caffe, shared_weights)
 
   net.setInput(blob_1, "input_1");
   net.setInput(blob_2, "input_2");
+  net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
   Mat sum = net.forward();
 
@@ -512,12 +541,16 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
 
 TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE > 2018030000
-     || (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("Test is disabled for DLIE OpenCL targets");  // very slow
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
-    )
-        throw SkipTestException("");
+
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
                                            0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
                                            0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166);
@@ -526,6 +559,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 
 TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
@@ -537,6 +571,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 
 TEST_P(Test_Caffe_nets, RFCN)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_2GB));
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");

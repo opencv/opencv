@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008,2019 Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-
+#include "sumpixels.hpp"
 
 namespace cv
 {
@@ -60,6 +60,37 @@ struct Integral_SIMD
     {
         return false;
     }
+};
+
+
+template <>
+struct Integral_SIMD<uchar, double, double> {
+    Integral_SIMD() {};
+
+
+    bool operator()(const uchar *src, size_t _srcstep,
+                    double *sum,      size_t _sumstep,
+                    double *sqsum,    size_t _sqsumstep,
+                    double *tilted,   size_t _tiltedstep,
+                    int width, int height, int cn) const
+    {
+#if CV_TRY_AVX512_SKX
+        CV_UNUSED(_tiltedstep);
+        // TODO:  Add support for 1 channel input (WIP)
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && (cn <= 4)){
+            opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
+                                                      sqsum, _sqsumstep, width, height, cn);
+            return true;
+        }
+#else
+        // Avoid warnings in some builds
+        CV_UNUSED(src); CV_UNUSED(_srcstep); CV_UNUSED(sum); CV_UNUSED(_sumstep);
+        CV_UNUSED(sqsum); CV_UNUSED(_sqsumstep); CV_UNUSED(tilted); CV_UNUSED(_tiltedstep);
+        CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(cn);
+#endif
+        return false;
+    }
+
 };
 
 #if CV_SIMD && CV_SIMD_WIDTH <= 64

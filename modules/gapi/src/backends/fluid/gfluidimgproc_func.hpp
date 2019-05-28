@@ -33,29 +33,87 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
 
 void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4]);
 
-//---------------------
+//-------------------------
 //
-// Fluid kernels: Sobel
+// Fluid kernels: sepFilter
 //
-//---------------------
+//-------------------------
 
-#define RUN_SOBEL_ROW(DST, SRC)                                     \
-void run_sobel_row(DST out[], const SRC *in[], int width, int chan, \
-                   const float kx[], const float ky[], int border,  \
-                   float scale, float delta, float *buf[],          \
-                   int y, int y0);
+#define RUN_SEPFILTER3X3_IMPL(DST, SRC)                                     \
+void run_sepfilter3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kx[], const float ky[], int border,  \
+                           float scale, float delta,                        \
+                           float *buf[], int y, int y0);
 
-RUN_SOBEL_ROW(uchar , uchar )
-RUN_SOBEL_ROW(ushort, ushort)
-RUN_SOBEL_ROW( short, uchar )
-RUN_SOBEL_ROW( short, ushort)
-RUN_SOBEL_ROW( short,  short)
-RUN_SOBEL_ROW( float, uchar )
-RUN_SOBEL_ROW( float, ushort)
-RUN_SOBEL_ROW( float,  short)
-RUN_SOBEL_ROW( float,  float)
+RUN_SEPFILTER3X3_IMPL(uchar , uchar )
+RUN_SEPFILTER3X3_IMPL( short, uchar )
+RUN_SEPFILTER3X3_IMPL( float, uchar )
+RUN_SEPFILTER3X3_IMPL(ushort, ushort)
+RUN_SEPFILTER3X3_IMPL( short, ushort)
+RUN_SEPFILTER3X3_IMPL( float, ushort)
+RUN_SEPFILTER3X3_IMPL( short,  short)
+RUN_SEPFILTER3X3_IMPL( float,  short)
+RUN_SEPFILTER3X3_IMPL( float,  float)
 
-#undef RUN_SOBEL_ROW
+#undef RUN_SEPFILTER3X3_IMPL
+
+//-------------------------
+//
+// Fluid kernels: Filter 2D
+//
+//-------------------------
+
+#define RUN_FILTER2D_3X3_IMPL(DST, SRC)                                     \
+void run_filter2d_3x3_impl(DST out[], const SRC *in[], int width, int chan, \
+                           const float kernel[], float scale, float delta);
+
+RUN_FILTER2D_3X3_IMPL(uchar , uchar )
+RUN_FILTER2D_3X3_IMPL(ushort, ushort)
+RUN_FILTER2D_3X3_IMPL( short,  short)
+RUN_FILTER2D_3X3_IMPL( float, uchar )
+RUN_FILTER2D_3X3_IMPL( float, ushort)
+RUN_FILTER2D_3X3_IMPL( float,  short)
+RUN_FILTER2D_3X3_IMPL( float,  float)
+
+#undef RUN_FILTER2D_3X3_IMPL
+
+//-----------------------------
+//
+// Fluid kernels: Erode, Dilate
+//
+//-----------------------------
+
+enum Morphology { M_ERODE, M_DILATE };
+
+enum MorphShape { M_FULL, M_CROSS, M_UNDEF };
+
+#define RUN_MORPHOLOGY3X3_IMPL(T)                                        \
+void run_morphology3x3_impl(T out[], const T *in[], int width, int chan, \
+                            const uchar k[], MorphShape k_type,          \
+                            Morphology morphology);
+
+RUN_MORPHOLOGY3X3_IMPL(uchar )
+RUN_MORPHOLOGY3X3_IMPL(ushort)
+RUN_MORPHOLOGY3X3_IMPL( short)
+RUN_MORPHOLOGY3X3_IMPL( float)
+
+#undef RUN_MORPHOLOGY3X3_IMPL
+
+//---------------------------
+//
+// Fluid kernels: Median blur
+//
+//---------------------------
+
+#define RUN_MEDBLUR3X3_IMPL(T) \
+void run_medblur3x3_impl(T out[], const T *in[], int width, int chan);
+
+RUN_MEDBLUR3X3_IMPL(uchar )
+RUN_MEDBLUR3X3_IMPL(ushort)
+RUN_MEDBLUR3X3_IMPL( short)
+RUN_MEDBLUR3X3_IMPL( float)
+
+#undef RUN_MEDBLUR3X3_IMPL
 
 }  // namespace fluid
 }  // namespace gapi

@@ -203,6 +203,17 @@ public:
         return true;
     }
 
+    void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
+        CV_Assert(!outputs.empty());
+        outShapes.resize(outputs.size());
+        for (int i = 0; i < outputs.size(); ++i)
+            outShapes[i] = shape(outputs[i]);
+    }
+
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         std::vector<UMat> inputs;
@@ -218,8 +229,7 @@ public:
             void *dst_handle = outputs[i].handle(ACCESS_WRITE);
             if (src_handle != dst_handle)
             {
-                MatShape outShape = shape(outputs[i]);
-                UMat umat = srcBlob.reshape(1, (int)outShape.size(), &outShape[0]);
+                UMat umat = srcBlob.reshape(1, (int)outShapes[i].size(), &outShapes[i][0]);
                 umat.copyTo(outputs[i]);
             }
         }
@@ -250,6 +260,12 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::ReshapeLayer ieLayer(name);
+        CV_Assert(outShapes.size() == 1);
+        ieLayer.setDims(outShapes[0]);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "Reshape";
@@ -265,9 +281,13 @@ public:
             ieLayer->shape = std::vector<int>(shapeSrc->dims.rbegin(), shapeSrc->dims.rend());
         }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
+
+private:
+    std::vector<MatShape> outShapes;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

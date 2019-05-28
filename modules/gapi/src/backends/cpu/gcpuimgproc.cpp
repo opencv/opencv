@@ -9,7 +9,20 @@
 
 #include "opencv2/gapi/imgproc.hpp"
 #include "opencv2/gapi/cpu/imgproc.hpp"
-#include "backends/cpu/gcpuimgproc.hpp"
+#include "opencv2/gapi/cpu/gcpukernel.hpp"
+
+namespace {
+    cv::Mat add_border(const cv::Mat& in, const int ksize, const int borderType, const cv::Scalar& bordVal){
+        if( borderType == cv::BORDER_CONSTANT )
+        {
+            cv::Mat temp_in;
+            int add = (ksize - 1) / 2;
+            cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal);
+            return temp_in(cv::Rect(add, add, in.cols, in.rows));
+        }
+        return in;
+    }
+}
 
 GAPI_OCV_KERNEL(GCPUSepFilter, cv::gapi::imgproc::GSepFilter)
 {
@@ -133,16 +146,19 @@ GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
     static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
                     const cv::Scalar& bordVal, cv::Mat &out)
     {
-        if( borderType == cv::BORDER_CONSTANT )
-        {
-            cv::Mat temp_in;
-            int add = (ksize - 1) / 2;
-            cv::copyMakeBorder(in, temp_in, add, add, add, add, borderType, bordVal );
-            cv::Rect rect = cv::Rect(add, add, in.cols, in.rows);
-            cv::Sobel(temp_in(rect), out, ddepth, dx, dy, ksize, scale, delta, borderType);
-        }
-        else
-        cv::Sobel(in, out, ddepth, dx, dy, ksize, scale, delta, borderType);
+        cv::Mat temp_in = add_border(in, ksize, borderType, bordVal);
+        cv::Sobel(temp_in, out, ddepth, dx, dy, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUSobelXY, cv::gapi::imgproc::GSobelXY)
+{
+    static void run(const cv::Mat& in, int ddepth, int order, int ksize, double scale, double delta, int borderType,
+                    const cv::Scalar& bordVal, cv::Mat &out_dx, cv::Mat &out_dy)
+    {
+        cv::Mat temp_in = add_border(in, ksize, borderType, bordVal);
+        cv::Sobel(temp_in, out_dx, ddepth, order, 0, ksize, scale, delta, borderType);
+        cv::Sobel(temp_in, out_dy, ddepth, 0, order, ksize, scale, delta, borderType);
     }
 };
 
@@ -175,6 +191,22 @@ GAPI_OCV_KERNEL(GCPUYUV2RGB, cv::gapi::imgproc::GYUV2RGB)
     static void run(const cv::Mat& in, cv::Mat &out)
     {
         cv::cvtColor(in, out, cv::COLOR_YUV2RGB);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUNV12toRGB, cv::gapi::imgproc::GNV12toRGB)
+{
+    static void run(const cv::Mat& in_y, const cv::Mat& in_uv, cv::Mat &out)
+    {
+        cv::cvtColorTwoPlane(in_y, in_uv, out, cv::COLOR_YUV2RGB_NV12);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUNV12toBGR, cv::gapi::imgproc::GNV12toBGR)
+{
+    static void run(const cv::Mat& in_y, const cv::Mat& in_uv, cv::Mat &out)
+    {
+        cv::cvtColorTwoPlane(in_y, in_uv, out, cv::COLOR_YUV2BGR_NV12);
     }
 };
 
@@ -256,10 +288,13 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUErode
         , GCPUDilate
         , GCPUSobel
+        , GCPUSobelXY
         , GCPUCanny
         , GCPUEqualizeHist
         , GCPURGB2YUV
         , GCPUYUV2RGB
+        , GCPUNV12toRGB
+        , GCPUNV12toBGR
         , GCPURGB2Lab
         , GCPUBGR2LUV
         , GCPUBGR2YUV

@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 import video
 
 
@@ -56,7 +57,7 @@ def warp_flow(img, flow):
     return res
 
 
-if __name__ == '__main__':
+def main():
     import sys
     print(__doc__)
     try:
@@ -111,4 +112,11 @@ if __name__ == '__main__':
         if ch == ord('4'):
             use_temporal_propagation = not use_temporal_propagation
             print('temporal propagation is', ['off', 'on'][use_temporal_propagation])
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -33,7 +33,7 @@ String dumpInputArray(InputArray argument)
     }
     catch (...)
     {
-        ss << " ERROR: exception occured, dump is non-complete";  // need to properly support different kinds
+        ss << " ERROR: exception occurred, dump is non-complete";  // need to properly support different kinds
     }
     return ss.str();
 }
@@ -70,7 +70,7 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
     }
     catch (...)
     {
-        ss << " ERROR: exception occured, dump is non-complete";  // need to properly support different kinds
+        ss << " ERROR: exception occurred, dump is non-complete";  // need to properly support different kinds
     }
     return ss.str();
 }
@@ -100,7 +100,7 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
     }
     catch (...)
     {
-        ss << " ERROR: exception occured, dump is non-complete";  // need to properly support different kinds
+        ss << " ERROR: exception occurred, dump is non-complete";  // need to properly support different kinds
     }
     return ss.str();
 }
@@ -137,7 +137,7 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
     }
     catch (...)
     {
-        ss << " ERROR: exception occured, dump is non-complete";  // need to properly support different kinds
+        ss << " ERROR: exception occurred, dump is non-complete";  // need to properly support different kinds
     }
     return ss.str();
 }

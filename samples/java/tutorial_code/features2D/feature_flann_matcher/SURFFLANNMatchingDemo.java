@@ -58,7 +58,7 @@ class SURFFLANNMatching {
         //-- Draw matches
         Mat imgMatches = new Mat();
         Features2d.drawMatches(img1, keypoints1, img2, keypoints2, goodMatches, imgMatches, Scalar.all(-1),
-                Scalar.all(-1), new MatOfByte(), Features2d.NOT_DRAW_SINGLE_POINTS);
+                Scalar.all(-1), new MatOfByte(), Features2d.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS);
 
         //-- Show detected matches
         HighGui.imshow("Good Matches", imgMatches);

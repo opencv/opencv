@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <iomanip> // std::fixed, std::setprecision
+#include <set>
 #include <unordered_set>
 #include <stack>
 
@@ -67,7 +68,7 @@ namespace
         {
             GFluidModel fm(graph);
             auto fluid_impl = cv::util::any_cast<cv::GFluidKernel>(impl.opaque);
-            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, 0, 0.0});
+            fm.metadata(op_node).set(cv::gimpl::FluidUnit{fluid_impl, {}, 0, {}, 0.0});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -107,19 +108,29 @@ cv::gapi::GBackend cv::gapi::fluid::backend()
 // FluidAgent implementation ///////////////////////////////////////////////////
 
 namespace cv { namespace gimpl {
+struct FluidMapper
+{
+    FluidMapper(double ratio, int lpi) : m_ratio(ratio), m_lpi(lpi) {}
+    virtual ~FluidMapper() = default;
+    virtual int firstWindow(int outCoord, int lpi) const = 0;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const = 0;
+
+protected:
+    double m_ratio = 0.0;
+    int    m_lpi   = 0;
+};
+
 struct FluidDownscaleMapper : public FluidMapper
 {
     virtual int firstWindow(int outCoord, int lpi) const override;
-    virtual int nextWindow(int outCoord, int lpi) const override;
-    virtual int linesRead(int outCoord) const override;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const override;
     using FluidMapper::FluidMapper;
 };
 
 struct FluidUpscaleMapper : public FluidMapper
 {
     virtual int firstWindow(int outCoord, int lpi) const override;
-    virtual int nextWindow(int outCoord, int lpi) const override;
-    virtual int linesRead(int outCoord) const override;
+    virtual std::pair<int,int> linesReadAndNextWindow(int outCoord, int lpi) const override;
     FluidUpscaleMapper(double ratio, int lpi, int inHeight) : FluidMapper(ratio, lpi), m_inHeight(inHeight) {}
 private:
     int m_inHeight = 0;
@@ -128,9 +139,8 @@ private:
 struct FluidFilterAgent : public FluidAgent
 {
 private:
-    virtual int firstWindow() const override;
-    virtual int nextWindow() const override;
-    virtual int linesRead() const override;
+    virtual int firstWindow(std::size_t inPort) const override;
+    virtual std::pair<int,int> linesReadAndnextWindow(std::size_t inPort) const override;
     virtual void setRatio(double) override { /* nothing */ }
 public:
     using FluidAgent::FluidAgent;
@@ -139,12 +149,21 @@ public:
 struct FluidResizeAgent : public FluidAgent
 {
 private:
-    virtual int firstWindow() const override;
-    virtual int nextWindow() const override;
-    virtual int linesRead() const override;
+    virtual int firstWindow(std::size_t inPort) const override;
+    virtual std::pair<int,int> linesReadAndnextWindow(std::size_t inPort) const override;
     virtual void setRatio(double ratio) override;
 
     std::unique_ptr<FluidMapper> m_mapper;
+public:
+    using FluidAgent::FluidAgent;
+};
+
+struct FluidNV12toRGBAgent : public FluidAgent
+{
+private:
+    virtual int firstWindow(std::size_t inPort) const override;
+    virtual std::pair<int,int> linesReadAndnextWindow(std::size_t inPort) const override;
+    virtual void setRatio(double) override { /* nothing */ }
 public:
     using FluidAgent::FluidAgent;
 };
@@ -174,11 +193,13 @@ void cv::gimpl::FluidAgent::reset()
 {
     m_producedLines = 0;
 
-    auto lines = firstWindow();
-    for (auto &v : in_views)
+    for (const auto& it : ade::util::indexed(in_views))
     {
+        auto& v = ade::util::value(it);
         if (v)
         {
+            auto idx = ade::util::index(it);
+            auto lines = firstWindow(idx);
             v.priv().reset(lines);
         }
     }
@@ -232,7 +253,7 @@ static int calcResizeWindow(int inH, int outH)
     }
 }
 
-static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int lpi)
+static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int lpi, std::size_t inPort)
 {
     switch (k.m_kind)
     {
@@ -252,6 +273,7 @@ static int maxLineConsumption(const cv::GFluidKernel& k, int inH, int outH, int 
             return (inH == 1) ? 1 : 2 + lpi - 1;
         }
     } break;
+    case cv::GFluidKernel::Kind::NV12toRGB: return inPort == 0 ? 2 : 1; break;
     default: GAPI_Assert(false); return 0;
     }
 }
@@ -263,39 +285,40 @@ static int borderSize(const cv::GFluidKernel& k)
     case cv::GFluidKernel::Kind::Filter: return (k.m_window - 1) / 2; break;
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
+    case cv::GFluidKernel::Kind::NV12toRGB: return 0; break;
     default: GAPI_Assert(false); return 0;
     }
 }
 
-double inCoord(int outIdx, double ratio)
+inline double inCoord(int outIdx, double ratio)
 {
     return outIdx * ratio;
 }
 
-int windowStart(int outIdx, double ratio)
+inline int windowStart(int outIdx, double ratio)
 {
     return static_cast<int>(inCoord(outIdx, ratio) + 1e-3);
 }
 
-int windowEnd(int outIdx, double ratio)
+inline int windowEnd(int outIdx, double ratio)
 {
     return static_cast<int>(std::ceil(inCoord(outIdx + 1, ratio) - 1e-3));
 }
 
-double inCoordUpscale(int outCoord, double ratio)
+inline double inCoordUpscale(int outCoord, double ratio)
 {
     // Calculate the projection of output pixel's center
     return (outCoord + 0.5) * ratio - 0.5;
 }
 
-int upscaleWindowStart(int outCoord, double ratio)
+inline int upscaleWindowStart(int outCoord, double ratio)
 {
     int start = static_cast<int>(inCoordUpscale(outCoord, ratio));
     GAPI_DbgAssert(start >= 0);
     return start;
 }
 
-int upscaleWindowEnd(int outCoord, double ratio, int inSz)
+inline int upscaleWindowEnd(int outCoord, double ratio, int inSz)
 {
     int end = static_cast<int>(std::ceil(inCoordUpscale(outCoord, ratio)) + 1);
     if (end > inSz)
@@ -311,16 +334,19 @@ int cv::gimpl::FluidDownscaleMapper::firstWindow(int outCoord, int lpi) const
     return windowEnd(outCoord + lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
 }
 
-int cv::gimpl::FluidDownscaleMapper::nextWindow(int outCoord, int lpi) const
+std::pair<int,int> cv::gimpl::FluidDownscaleMapper::linesReadAndNextWindow(int outCoord, int lpi) const
 {
     auto nextStartIdx = outCoord + 1 + m_lpi - 1;
     auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return windowEnd(nextEndIdx, m_ratio) - windowStart(nextStartIdx, m_ratio);
-}
 
-int cv::gimpl::FluidDownscaleMapper::linesRead(int outCoord) const
-{
-    return windowStart(outCoord + 1 + m_lpi - 1, m_ratio) - windowStart(outCoord, m_ratio);
+    auto currStart = windowStart(outCoord, m_ratio);
+    auto nextStart = windowStart(nextStartIdx, m_ratio);
+    auto nextEnd   = windowEnd(nextEndIdx, m_ratio);
+
+    auto lines_read = nextStart - currStart;
+    auto next_window = nextEnd - nextStart;
+
+    return std::make_pair(lines_read, next_window);
 }
 
 int cv::gimpl::FluidUpscaleMapper::firstWindow(int outCoord, int lpi) const
@@ -328,52 +354,57 @@ int cv::gimpl::FluidUpscaleMapper::firstWindow(int outCoord, int lpi) const
     return upscaleWindowEnd(outCoord + lpi - 1, m_ratio, m_inHeight) - upscaleWindowStart(outCoord, m_ratio);
 }
 
-int cv::gimpl::FluidUpscaleMapper::nextWindow(int outCoord, int lpi) const
+std::pair<int,int> cv::gimpl::FluidUpscaleMapper::linesReadAndNextWindow(int outCoord, int lpi) const
 {
     auto nextStartIdx = outCoord + 1 + m_lpi - 1;
     auto nextEndIdx   = nextStartIdx + lpi - 1;
-    return upscaleWindowEnd(nextEndIdx, m_ratio, m_inHeight) - upscaleWindowStart(nextStartIdx, m_ratio);
+
+    auto currStart = upscaleWindowStart(outCoord, m_ratio);
+    auto nextStart = upscaleWindowStart(nextStartIdx, m_ratio);
+    auto nextEnd   = upscaleWindowEnd(nextEndIdx, m_ratio, m_inHeight);
+
+    auto lines_read = nextStart - currStart;
+    auto next_window = nextEnd - nextStart;
+
+    return std::make_pair(lines_read, next_window);
 }
 
-int cv::gimpl::FluidUpscaleMapper::linesRead(int outCoord) const
+int cv::gimpl::FluidFilterAgent::firstWindow(std::size_t) const
 {
-    return upscaleWindowStart(outCoord + 1 + m_lpi - 1, m_ratio) - upscaleWindowStart(outCoord, m_ratio);
+    int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines);
+    return k.m_window + lpi - 1;
 }
 
-int cv::gimpl::FluidFilterAgent::firstWindow() const
-{
-    return k.m_window + k.m_lpi - 1;
-}
-
-int cv::gimpl::FluidFilterAgent::nextWindow() const
+std::pair<int,int> cv::gimpl::FluidFilterAgent::linesReadAndnextWindow(std::size_t) const
 {
     int lpi = std::min(k.m_lpi, m_outputLines - m_producedLines - k.m_lpi);
-    return k.m_window - 1 + lpi;
+    return std::make_pair(k.m_lpi, k.m_window - 1 + lpi);
 }
 
-int cv::gimpl::FluidFilterAgent::linesRead() const
-{
-    return k.m_lpi;
-}
-
-int cv::gimpl::FluidResizeAgent::firstWindow() const
+int cv::gimpl::FluidResizeAgent::firstWindow(std::size_t) const
 {
     auto outIdx = out_buffers[0]->priv().y();
     auto lpi = std::min(m_outputLines - m_producedLines, k.m_lpi);
     return m_mapper->firstWindow(outIdx, lpi);
 }
 
-int cv::gimpl::FluidResizeAgent::nextWindow() const
+std::pair<int,int> cv::gimpl::FluidResizeAgent::linesReadAndnextWindow(std::size_t) const
 {
     auto outIdx = out_buffers[0]->priv().y();
     auto lpi = std::min(m_outputLines - m_producedLines - k.m_lpi, k.m_lpi);
-    return m_mapper->nextWindow(outIdx, lpi);
+    return m_mapper->linesReadAndNextWindow(outIdx, lpi);
 }
 
-int cv::gimpl::FluidResizeAgent::linesRead() const
+int cv::gimpl::FluidNV12toRGBAgent::firstWindow(std::size_t inPort) const
 {
-    auto outIdx = out_buffers[0]->priv().y();
-    return m_mapper->linesRead(outIdx);
+    // 2 lines for Y, 1 for UV
+    return inPort == 0 ? 2 : 1;
+}
+
+std::pair<int,int> cv::gimpl::FluidNV12toRGBAgent::linesReadAndnextWindow(std::size_t inPort) const
+{
+    // 2 lines for Y, 1 for UV
+    return inPort == 0 ? std::make_pair(2, 2) : std::make_pair(1, 1);
 }
 
 void cv::gimpl::FluidResizeAgent::setRatio(double ratio)
@@ -435,9 +466,16 @@ void cv::gimpl::FluidAgent::doWork()
 
     k.m_f(in_args, out_buffers);
 
-    for (auto& in_view : in_views)
+    for (const auto& it : ade::util::indexed(in_views))
     {
-        if (in_view) in_view.priv().readDone(linesRead(), nextWindow());
+        auto& in_view = ade::util::value(it);
+
+        if (in_view)
+        {
+            auto idx = ade::util::index(it);
+            auto pair = linesReadAndnextWindow(idx);
+            in_view.priv().readDone(pair.first, pair.second);
+        };
     }
 
     for (auto out_buf : out_buffers)
@@ -547,14 +585,15 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
             // only GMats participate in the process so it's valid to obtain GMatDesc
             const auto& meta = util::get<GMatDesc>(data.meta);
 
-            for (const auto& inNode : oh->inNodes())
+            for (const auto& in_edge : oh->inEdges())
             {
-                const auto& in_data = m_gm.metadata(inNode).get<Data>();
+                const auto& in_node = in_edge->srcNode();
+                const auto& in_data = m_gm.metadata(in_node).get<Data>();
 
-                if (in_data.shape == GShape::GMAT && fg.metadata(inNode).contains<FluidData>())
+                if (in_data.shape == GShape::GMAT && fg.metadata(in_node).contains<FluidData>())
                 {
                     const auto& in_meta = util::get<GMatDesc>(in_data.meta);
-                    const auto& fd = fg.metadata(inNode).get<FluidData>();
+                    const auto& fd = fg.metadata(in_node).get<FluidData>();
 
                     auto adjFilterRoi = [](cv::gapi::own::Rect produced, int b, int max_height) {
                         // Extend with border roi which should be produced, crop to logical image size
@@ -592,18 +631,55 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         return roi;
                     };
 
+                    auto adjNV12Roi = [&](cv::gapi::own::Rect produced, std::size_t port) {
+                        GAPI_Assert(produced.x % 2 == 0);
+                        GAPI_Assert(produced.y % 2 == 0);
+                        GAPI_Assert(produced.width % 2 == 0);
+                        GAPI_Assert(produced.height % 2 == 0);
+
+                        cv::gapi::own::Rect roi;
+                        switch (port) {
+                        case 0: roi = produced; break;
+                        case 1: roi = cv::gapi::own::Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
+                        default: GAPI_Assert(false);
+                        }
+                        return roi;
+                    };
+
                     cv::gapi::own::Rect produced = rois[m_id_map.at(data.rc)];
 
+                    // Apply resize-specific roi transformations
                     cv::gapi::own::Rect resized;
                     switch (fg.metadata(oh).get<FluidUnit>().k.m_kind)
                     {
-                    case GFluidKernel::Kind::Filter: resized = produced; break;
-                    case GFluidKernel::Kind::Resize: resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
+                    case GFluidKernel::Kind::Filter:    resized = produced; break;
+                    case GFluidKernel::Kind::Resize:    resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
+                    case GFluidKernel::Kind::NV12toRGB: resized = adjNV12Roi(produced, m_gm.metadata(in_edge).get<Input>().port); break;
                     default: GAPI_Assert(false);
                     }
 
+                    // All below transformations affect roi of the writer, preserve read start position here
                     int readStart = resized.y;
-                    cv::gapi::own::Rect roi = adjFilterRoi(resized, fd.border_size, in_meta.size.height);
+
+                    // Extend required input roi (both y and height) to be even if it's produced by NV12toRGB
+                    if (!in_node->inNodes().empty()) {
+                        auto in_data_producer = in_node->inNodes().front();
+                        if (fg.metadata(in_data_producer).get<FluidUnit>().k.m_kind == GFluidKernel::Kind::NV12toRGB) {
+                            if (resized.y % 2 != 0) {
+                                resized.y--;
+                                resized.height++;
+                            }
+
+                            if (resized.height % 2 != 0) {
+                                resized.height++;
+                            }
+                        }
+                    }
+
+                    // Apply filter-specific roi transformations, clip to image size
+                    // Note: done even for non-filter kernels as applies border-related transformations
+                    // (required in the case when there are multiple readers with different border requirements)
+                    auto roi = adjFilterRoi(resized, fd.border_size, in_meta.size.height);
 
                     auto in_id = m_id_map.at(in_data.rc);
                     if (rois[in_id] == cv::gapi::own::Rect{})
@@ -611,7 +687,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         readStarts[in_id] = readStart;
                         rois[in_id] = roi;
                         // Continue traverse on internal (w.r.t Island) data nodes only.
-                        if (fd.internal) nodesToVisit.push(inNode);
+                        if (fd.internal) nodesToVisit.push(in_node);
                     }
                     else
                     {
@@ -619,7 +695,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         GAPI_Assert(rois[in_id] == roi);
                     }
                 } // if (in_data.shape == GShape::GMAT)
-            } // for (const auto& inNode : oh->inNodes())
+            } // for (const auto& in_edge : oh->inEdges())
         } // if (!startNode->inNodes().empty())
     } // while (!nodesToVisit.empty())
 }
@@ -659,8 +735,9 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph &g,
             const auto& fu = fg.metadata(nh).get<FluidUnit>();
             switch (fu.k.m_kind)
             {
-            case GFluidKernel::Kind::Filter: m_agents.emplace_back(new FluidFilterAgent(m_g, nh)); break;
-            case GFluidKernel::Kind::Resize: m_agents.emplace_back(new FluidResizeAgent(m_g, nh)); break;
+            case GFluidKernel::Kind::Filter:    m_agents.emplace_back(new FluidFilterAgent(m_g, nh));    break;
+            case GFluidKernel::Kind::Resize:    m_agents.emplace_back(new FluidResizeAgent(m_g, nh));    break;
+            case GFluidKernel::Kind::NV12toRGB: m_agents.emplace_back(new FluidNV12toRGBAgent(m_g, nh)); break;
             default: GAPI_Assert(false);
             }
             // NB.: in_buffer_ids size is equal to Arguments size, not Edges size!!!
@@ -842,21 +919,35 @@ namespace
                     }
                 }
 
-                GAPI_Assert(in_hs.size() == 1 && out_ws.size() == 1 && out_hs.size() == 1);
+                auto &fu = fg.metadata(node).get<FluidUnit>();
+
+                GAPI_Assert((out_ws.size() == 1 && out_hs.size() == 1) &&
+                            ((in_hs.size() == 1) ||
+                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB)));
+
+                const auto &op = g.metadata(node).get<Op>();
+                fu.line_consumption.resize(op.args.size(), 0);
 
                 auto in_h  = *in_hs .cbegin();
                 auto out_h = *out_hs.cbegin();
 
-                auto &fu = fg.metadata(node).get<FluidUnit>();
                 fu.ratio = (double)in_h / out_h;
 
-                int line_consumption = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi);
-                int border_size = borderSize(fu.k);
+                // Set line consumption for each image (GMat) input
+                for (const auto& in_edge : node->inEdges())
+                {
+                    const auto& d = g.metadata(in_edge->srcNode()).get<Data>();
+                    if (d.shape == cv::GShape::GMAT)
+                    {
+                        auto port = g.metadata(in_edge).get<Input>().port;
+                        fu.line_consumption[port] = maxLineConsumption(fu.k, in_h, out_h, fu.k.m_lpi, port);
 
-                fu.border_size = border_size;
-                fu.line_consumption = line_consumption;
+                        GModel::log(g, node, "Line consumption (port " + std::to_string(port) + "): "
+                                    + std::to_string(fu.line_consumption[port]));
+                    }
+                }
 
-                GModel::log(g, node, "Line consumption: " + std::to_string(fu.line_consumption));
+                fu.border_size = borderSize(fu.k);
                 GModel::log(g, node, "Border size: " + std::to_string(fu.border_size));
             }
         }
@@ -877,17 +968,20 @@ namespace
             {
                 const auto &fu = fg.metadata(node).get<FluidUnit>();
 
-                for (const auto &in_data_node : node->inNodes())
+                for (const auto &in_edge : node->inEdges())
                 {
+                    const auto &in_data_node = in_edge->srcNode();
+                    auto port = g.metadata(in_edge).get<Input>().port;
+
                     auto &fd = fg.metadata(in_data_node).get<FluidData>();
 
                     // Update (not Set) fields here since a single data node may be
                     // accessed by multiple consumers
-                    fd.max_consumption = std::max(fu.line_consumption, fd.max_consumption);
+                    fd.max_consumption = std::max(fu.line_consumption[port], fd.max_consumption);
                     fd.border_size     = std::max(fu.border_size, fd.border_size);
 
                     GModel::log(g, in_data_node, "Line consumption: " + std::to_string(fd.max_consumption)
-                                + " (upd by " + std::to_string(fu.line_consumption) + ")", node);
+                                + " (upd by " + std::to_string(fu.line_consumption[port]) + ")", node);
                     GModel::log(g, in_data_node, "Border size: " + std::to_string(fd.border_size), node);
                 }
             }
@@ -907,25 +1001,30 @@ namespace
             {
                 const auto &fu = fg.metadata(node).get<FluidUnit>();
 
-                const int own_latency = fu.line_consumption - fu.border_size;
                 GModel::log(g, node, "LPI: " + std::to_string(fu.k.m_lpi));
 
                 // Output latency is max(input_latency) + own_latency
-                int in_latency = 0;
-                for (const auto &in_data_node : node->inNodes())
+                int out_latency = 0;
+                for (const auto &in_edge: node->inEdges())
                 {
                     // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
-                    in_latency = std::max(in_latency, fg.metadata(in_data_node).get<FluidData>().latency);
+                    const auto port = g.metadata(in_edge).get<Input>().port;
+                    const auto own_latency = fu.line_consumption[port] - fu.border_size;
+                    const auto in_latency = fg.metadata(in_edge->srcNode()).get<FluidData>().latency;
+                    out_latency = std::max(out_latency, in_latency + own_latency);
                 }
-                const int out_latency = in_latency + own_latency;
 
                 for (const auto &out_data_node : node->outNodes())
                 {
                     // FIXME: ASSERT(DATA), ASSERT(FLUIDDATA)
                     auto &fd     = fg.metadata(out_data_node).get<FluidData>();
-                    fd.latency   = out_latency;
+                    // If fluid node is external, it will be bound to a real image without
+                    // fluid buffer allocation, so set its latency to 0 not to confuse later latency propagation.
+                    // Latency is used in fluid buffer allocation process and is not used by the scheduler
+                    // so latency doesn't affect the execution and setting it to 0 is legal
+                    fd.latency   = fd.internal ? out_latency : 0;
                     fd.lpi_write = fu.k.m_lpi;
-                    GModel::log(g, out_data_node, "Latency: " + std::to_string(out_latency));
+                    GModel::log(g, out_data_node, "Latency: " + std::to_string(fd.latency));
                 }
             }
         }
@@ -1007,7 +1106,7 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
 
             if (buf_idx >= 0)
             {
-                agent->in_views[in_idx].priv().allocate(fu.line_consumption, fu.border);
+                agent->in_views[in_idx].priv().allocate(fu.line_consumption[in_idx], fu.border);
             }
         }
 
@@ -1030,6 +1129,10 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
             GAPI_LOG_INFO(NULL, stream.str());
         }
     }
+
+    // FIXME: calculate the size (lpi * ..)
+    m_script.clear();
+    m_script.reserve(10000);
 }
 
 void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &args)
@@ -1134,24 +1237,36 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &&input_objs,
     //       and output buffers get "writeDone()"
     //   - if there's not enough data, Agent is skipped
     // Yes, THAT easy!
-    bool complete = true;
-    do {
-        complete = true;
-        bool work_done=false;
-        for (auto &agent : m_agents)
-        {
-            // agent->debug(std::cout);
-            if (!agent->done())
+
+    if (m_script.empty())
+    {
+        bool complete = true;
+        do {
+            complete = true;
+            bool work_done=false;
+            for (auto &agent : m_agents)
             {
-                if (agent->canWork())
+                // agent->debug(std::cout);
+                if (!agent->done())
                 {
-                    agent->doWork(); work_done=true;
+                    if (agent->canWork())
+                    {
+                        agent->doWork(); work_done=true;
+                        m_script.push_back(agent.get());
+                    }
+                    if (!agent->done())   complete = false;
                 }
-                if (!agent->done())   complete = false;
             }
+            GAPI_Assert(work_done || complete);
+        } while (!complete); // FIXME: number of iterations can be calculated statically
+    }
+    else
+    {
+        for (auto &agent : m_script)
+        {
+            agent->doWork();
         }
-        GAPI_Assert(work_done || complete);
-    } while (!complete); // FIXME: number of iterations can be calculated statically
+    }
 }
 
 // FIXME: these passes operate on graph global level!!!
@@ -1184,35 +1299,41 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
 
         for (const auto& nh : gim.nodes())
         {
-            if (gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND)
+            switch (gim.metadata(nh).get<NodeKind>().k)
+            {
+            case NodeKind::ISLAND:
             {
                 const auto isl = gim.metadata(nh).get<FusedIsland>().object;
                 if (isl->backend() == cv::gapi::fluid::backend())
                 {
-                    // add FluidData to all data nodes inside island
+                    // Add FluidData to all data nodes inside island,
+                    // set internal = true if node is not a slot in terms of higher-level GIslandModel
                     for (const auto node : isl->contents())
                     {
-                        if (g.metadata(node).get<NodeType>().t == NodeType::DATA)
+                        if (g.metadata(node).get<NodeType>().t == NodeType::DATA &&
+                            !fg.metadata(node).contains<FluidData>())
                             setFluidData(node, true);
                     }
-
-                    // add FluidData to slot if it's read/written by fluid
-                    std::vector<ade::NodeHandle> io_handles;
-                    for (const auto &in_op : isl->in_ops())
-                    {
-                        ade::util::copy(in_op->inNodes(), std::back_inserter(io_handles));
-                    }
-                    for (const auto &out_op : isl->out_ops())
-                    {
-                        ade::util::copy(out_op->outNodes(), std::back_inserter(io_handles));
-                    }
-                    for (const auto &io_node : io_handles)
-                    {
-                        if (!fg.metadata(io_node).contains<FluidData>())
-                            setFluidData(io_node, false);
-                    }
                 } // if (fluid backend)
-            } // if (ISLAND)
+            } break; // case::ISLAND
+            case NodeKind::SLOT:
+            {
+                // add FluidData to slot if it's read/written by fluid
+                // regardless if it is one fluid island (both writing to and reading from this object)
+                // or two distinct islands (both fluid)
+                auto isFluidIsland = [&](const ade::NodeHandle& node) {
+                    const auto isl = gim.metadata(node).get<FusedIsland>().object;
+                    return isl->backend() == cv::gapi::fluid::backend();
+                };
+
+                if (ade::util::any_of(ade::util::chain(nh->inNodes(), nh->outNodes()), isFluidIsland))
+                {
+                    auto data_node = gim.metadata(nh).get<DataSlot>().original_data_node;
+                    setFluidData(data_node, false);
+                }
+            } break; // case::SLOT
+            default: GAPI_Assert(false);
+            } // switch
         } // for (gim.nodes())
     });
     // FIXME:
@@ -1301,6 +1422,20 @@ void GFluidBackendImpl::addBackendPasses(ade::ExecutionEngineSetupContext &ectx)
                     // will be copied by views on each iteration and base our choice
                     // on this criteria)
                     auto readers = node->outNodes();
+
+                    // There can be a situation when __internal__ nodes produced as part of some
+                    // operation are unused later in the graph:
+                    //
+                    // in -> OP1
+                    //        |------> internal_1  // unused node
+                    //        |------> internal_2 -> OP2
+                    //                                |------> out
+                    //
+                    // To allow graphs like the one above, skip nodes with empty outNodes()
+                    if (readers.empty()) {
+                        continue;
+                    }
+
                     const auto &candidate = ade::util::find_if(readers, [&](ade::NodeHandle nh) {
                         return fg.metadata(nh).contains<FluidUnit>() &&
                                fg.metadata(nh).get<FluidUnit>().border_size == fd.border_size;

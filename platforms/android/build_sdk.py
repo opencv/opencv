@@ -48,9 +48,15 @@ def check_dir(d, create=False, clean=False):
             os.makedirs(d)
     return d
 
-def determine_engine_version(manifest_path):
-    with open(manifest_path, "rt") as f:
-        return re.search(r'android:versionName="(\d+\.\d+)"', f.read(), re.MULTILINE).group(1)
+def check_executable(cmd):
+    try:
+        log.debug("Executing: %s" % cmd)
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        log.debug("Result: %s" % (result+'\n').split('\n')[0])
+        return True
+    except Exception as e:
+        log.debug('Failed: %s' % e)
+        return False
 
 def determine_opencv_version(version_hpp_path):
     # version in 2.4 - CV_VERSION_EPOCH.CV_VERSION_MAJOR.CV_VERSION_MINOR.CV_VERSION_REVISION
@@ -133,8 +139,40 @@ class Builder:
         self.docdest = check_dir(os.path.join(self.workdir, 'OpenCV-android-sdk', 'sdk', 'java', 'javadoc'), create=True, clean=True)
         self.extra_packs = []
         self.opencv_version = determine_opencv_version(os.path.join(self.opencvdir, "modules", "core", "include", "opencv2", "core", "version.hpp"))
-        self.engine_version = determine_engine_version(os.path.join(self.opencvdir, "platforms", "android", "service", "engine", "AndroidManifest.xml"))
         self.use_ccache = False if config.no_ccache else True
+        self.cmake_path = self.get_cmake()
+        self.ninja_path = self.get_ninja()
+        self.debug = True if config.debug else False
+
+    def get_cmake(self):
+        if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
+            log.info("Using cmake from PATH")
+            return 'cmake'
+        # look to see if Android SDK's cmake is installed
+        android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
+        if os.path.exists(android_cmake):
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'cmake'), '--version'])]
+            if len(cmake_subdirs) > 0:
+                # there could be more than one - just take the first one
+                cmake_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'cmake')
+                log.info("Using cmake from Android SDK: %s", cmake_from_sdk)
+                return cmake_from_sdk
+        raise Fail("Can't find cmake")
+
+    def get_ninja(self):
+        if not self.config.use_android_buildtools and check_executable(['ninja', '--version']):
+            log.info("Using ninja from PATH")
+            return 'ninja'
+        # Android SDK's cmake includes a copy of ninja - look to see if its there
+        android_cmake = os.path.join(os.environ['ANDROID_SDK'], 'cmake')
+        if os.path.exists(android_cmake):
+            cmake_subdirs = [f for f in os.listdir(android_cmake) if check_executable([os.path.join(android_cmake, f, 'bin', 'ninja'), '--version'])]
+            if len(cmake_subdirs) > 0:
+                # there could be more than one - just take the first one
+                ninja_from_sdk = os.path.join(android_cmake, cmake_subdirs[0], 'bin', 'ninja')
+                log.info("Using ninja from Android SDK: %s", ninja_from_sdk)
+                return ninja_from_sdk
+        raise Fail("Can't find ninja")
 
     def get_toolchain_file(self):
         if not self.config.force_opencv_toolchain:
@@ -160,9 +198,10 @@ class Builder:
             rm_one(d)
 
     def build_library(self, abi, do_install):
-        cmd = ["cmake", "-GNinja"]
+        cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
+            INSTALL_CREATE_DISTRIB="ON",
             WITH_OPENCL="OFF",
             WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
             WITH_TBB="ON",
@@ -173,6 +212,12 @@ class Builder:
             BUILD_ANDROID_EXAMPLES="ON",
             INSTALL_ANDROID_EXAMPLES="ON",
         )
+        if self.ninja_path != 'ninja':
+            cmake_vars['CMAKE_MAKE_PROGRAM'] = self.ninja_path
+
+        if self.debug:
+            cmake_vars['CMAKE_BUILD_TYPE'] = "Debug"
+            cmake_vars['BUILD_WITH_DEBUG_INFO'] = "ON"
 
         if self.config.extra_modules_path is not None:
             cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
@@ -186,51 +231,10 @@ class Builder:
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
-        if do_install:
-            execute(["ninja"])
-            for c in ["libs", "dev", "java", "samples"]:
-                execute(["cmake", "-DCOMPONENT=%s" % c, "-P", "cmake_install.cmake"])
-        else:
-            execute(["ninja", "install/strip"])
-
-    def build_engine(self, abi, engdest):
-        cmd = ["cmake", "-GNinja"]
-        cmake_vars = dict(
-            CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
-            WITH_OPENCL="OFF",
-            WITH_IPP="OFF",
-            BUILD_ANDROID_SERVICE = 'ON'
-        )
-        cmake_vars.update(abi.cmake_vars)
-        cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
-        cmd.append(self.opencvdir)
-        execute(cmd)
-        apkdest = self.get_engine_apk_dest(engdest)
-        assert os.path.exists(apkdest), apkdest
-        # Add extra data
-        apkxmldest = check_dir(os.path.join(apkdest, "res", "xml"), create=True)
-        apklibdest = check_dir(os.path.join(apkdest, "libs", abi.name), create=True)
-        for ver, d in self.extra_packs + [("3.4.4", os.path.join(self.libdest, "lib"))]:
-            r = ET.Element("library", attrib={"version": ver})
-            log.info("Adding libraries from %s", d)
-
-            for f in glob.glob(os.path.join(d, abi.name, "*.so")):
-                log.info("Copy file: %s", f)
-                shutil.copy2(f, apklibdest)
-                if "libnative_camera" in f:
-                    continue
-                log.info("Register file: %s", os.path.basename(f))
-                n = ET.SubElement(r, "file", attrib={"name": os.path.basename(f)})
-
-            if len(list(r)) > 0:
-                xmlname = os.path.join(apkxmldest, "config%s.xml" % ver.replace(".", ""))
-                log.info("Generating XML config: %s", xmlname)
-                ET.ElementTree(r).write(xmlname, encoding="utf-8")
-
-        execute(["ninja", "opencv_engine"])
-        execute(["ant", "-f", os.path.join(apkdest, "build.xml"), "debug"],
-            shell=(sys.platform == 'win32'))
-        # TODO: Sign apk
+        # full parallelism for C++ compilation tasks
+        execute([self.ninja_path, "opencv_modules"])
+        # limit parallelism for Gradle steps (avoid huge memory consumption)
+        execute([self.ninja_path, '-j3', "install" if self.debug else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -251,7 +255,7 @@ class Builder:
         ]
         execute(cmd)
 
-    def gather_results(self, engines):
+    def gather_results(self):
         # Copy all files
         root = os.path.join(self.libdest, "install")
         for item in os.listdir(root):
@@ -270,25 +274,6 @@ class Builder:
                 else:
                     shutil.move(src, dst)
 
-        # Copy engines for all platforms
-        for abi, engdest in engines:
-            log.info("Copy engine: %s (%s)", abi, engdest)
-            f = os.path.join(self.get_engine_apk_dest(engdest), "bin", "opencv_engine-debug.apk")
-            resname = "OpenCV_%s_Manager_%s_%s.apk" % (self.opencv_version, self.engine_version, abi)
-            dst = os.path.join(self.resultdest, "apk", resname)
-            if self.config.force_copy:
-                shutil.copy2(f, dst)
-            else:
-                shutil.move(f, dst)
-
-        # Clean samples
-        path = os.path.join(self.resultdest, "samples")
-        for item in os.listdir(path):
-            item = os.path.join(path, item)
-            if os.path.isdir(item):
-                for name in ["build.xml", "local.properties", "proguard-project.txt"]:
-                    rm_one(os.path.join(item, name))
-
 
 #===================================================================================================
 
@@ -296,16 +281,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build OpenCV for Android SDK')
     parser.add_argument("work_dir", nargs='?', default='.', help="Working directory (and output)")
     parser.add_argument("opencv_dir", nargs='?', default=os.path.join(SCRIPT_DIR, '../..'), help="Path to OpenCV source dir")
-    parser.add_argument('--config', default='ndk-10.config.py', type=str, help="Package build configuration", )
+    parser.add_argument('--config', default='ndk-18-api-level-21.config.py', type=str, help="Package build configuration", )
     parser.add_argument('--ndk_path', help="Path to Android NDK to use for build")
     parser.add_argument('--sdk_path', help="Path to Android SDK to use for build")
+    parser.add_argument('--use_android_buildtools', action="store_true", help='Use cmake/ninja build tools from Android SDK')
     parser.add_argument("--extra_modules_path", help="Path to extra modules to use for build")
     parser.add_argument('--sign_with', help="Certificate to sign the Manager apk")
     parser.add_argument('--build_doc', action="store_true", help="Build javadoc")
     parser.add_argument('--no_ccache', action="store_true", help="Do not use ccache during library build")
-    parser.add_argument('--extra_pack', action='append', help="provide extra OpenCV libraries for Manager apk in form <version>:<path-to-native-libs>, for example '2.4.11:unpacked/sdk/native/libs'")
     parser.add_argument('--force_copy', action="store_true", help="Do not use file move during library build (useful for debug)")
     parser.add_argument('--force_opencv_toolchain', action="store_true", help="Do not use toolchain from Android NDK")
+    parser.add_argument('--debug', action="store_true", help="Build for debug")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -315,6 +301,23 @@ if __name__ == "__main__":
         os.environ["ANDROID_NDK"] = args.ndk_path
     if args.sdk_path is not None:
         os.environ["ANDROID_SDK"] = args.sdk_path
+
+    if not 'ANDROID_HOME' in os.environ and 'ANDROID_SDK' in os.environ:
+        os.environ['ANDROID_HOME'] = os.environ["ANDROID_SDK"]
+
+    if not 'ANDROID_SDK' in os.environ:
+        raise Fail("SDK location not set. Either pass --sdk_path or set ANDROID_SDK environment variable")
+
+    # look for an NDK installed with the Android SDK
+    if not 'ANDROID_NDK' in os.environ and 'ANDROID_SDK' in os.environ and os.path.exists(os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')):
+        os.environ['ANDROID_NDK'] = os.path.join(os.environ["ANDROID_SDK"], 'ndk-bundle')
+
+    if not 'ANDROID_NDK' in os.environ:
+        raise Fail("NDK location not set. Either pass --ndk_path or set ANDROID_NDK environment variable")
+
+    if not check_executable(['ccache', '--version']):
+        log.info("ccache not found - disabling ccache support")
+        args.no_ccache = True
 
     if os.path.realpath(args.work_dir) == os.path.realpath(SCRIPT_DIR):
         raise Fail("Specify workdir (building from script directory is not supported)")
@@ -348,20 +351,9 @@ if __name__ == "__main__":
     builder = Builder(args.work_dir, args.opencv_dir, args)
 
     log.info("Detected OpenCV version: %s", builder.opencv_version)
-    log.info("Detected Engine version: %s", builder.engine_version)
 
-    if args.extra_pack:
-        for one in args.extra_pack:
-            i = one.find(":")
-            if i > 0 and i < len(one) - 1:
-                builder.add_extra_pack(one[:i], one[i+1:])
-            else:
-                raise Fail("Bad extra pack provided: %s, should be in form '<version>:<path-to-native-libs>'" % one)
-
-    engines = []
     for i, abi in enumerate(ABIs):
         do_install = (i == 0)
-        engdest = check_dir(os.path.join(builder.workdir, "build_service_%s" % abi.name), create=True, clean=True)
 
         log.info("=====")
         log.info("===== Building library for %s", abi)
@@ -371,15 +363,7 @@ if __name__ == "__main__":
         builder.clean_library_build_dir()
         builder.build_library(abi, do_install)
 
-        log.info("=====")
-        log.info("===== Building engine for %s", abi)
-        log.info("=====")
-
-        os.chdir(engdest)
-        builder.build_engine(abi, engdest)
-        engines.append((abi.name, engdest))
-
-    builder.gather_results(engines)
+    builder.gather_results()
 
     if args.build_doc:
         builder.build_javadoc()

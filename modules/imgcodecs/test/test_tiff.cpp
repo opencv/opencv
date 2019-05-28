@@ -76,7 +76,7 @@ TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
         // Write sample TIFF file
         FILE* fp = fopen(filename.c_str(), "wb");
         ASSERT_TRUE(fp != NULL);
-        ASSERT_EQ((size_t)1, fwrite(tiff_sample_data, 86, 1, fp));
+        ASSERT_EQ((size_t)1, fwrite(tiff_sample_data[i], 86, 1, fp));
         fclose(fp);
 
         Mat img = imread(filename, IMREAD_UNCHANGED);
@@ -158,11 +158,67 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
-    ASSERT_EQ(img2.type(),img.type());
-    ASSERT_EQ(img2.size(),img.size());
-    EXPECT_GE(1e-3, cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE));
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
+
+TEST(Imgcodecs_Tiff, readWrite_64FC1)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test64FC1.tiff";
+    const string filenameOutput = cv::tempfile(".tiff");
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_64FC1, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_Tiff, readWrite_32FC3_SGILOG)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC3_sgilog.tiff";
+    const string filenameOutput = cv::tempfile(".tiff");
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC3, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 0.01);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC3_raw.tiff";
+    const string filenameOutput = cv::tempfile(".tiff");
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC3, img.type());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_TIFF_COMPRESSION);
+    params.push_back(1/*COMPRESSION_NONE*/);
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
 
 //==================================================================================================
 

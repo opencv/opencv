@@ -27,6 +27,7 @@
 namespace cv { namespace gapi {
 
 namespace imgproc {
+    using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
 
     G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
@@ -83,6 +84,12 @@ namespace imgproc {
         }
     };
 
+    G_TYPED_KERNEL_M(GSobelXY, <GMat2(GMat,int,int,int,double,double,int,Scalar)>, "org.opencv.imgproc.filters.sobelxy") {
+        static std::tuple<GMatDesc, GMatDesc> outMeta(GMatDesc in, int ddepth, int, int, double, double, int, Scalar) {
+            return std::make_tuple(in.withDepth(ddepth), in.withDepth(ddepth));
+        }
+    };
+
     G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist"){
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
@@ -104,6 +111,32 @@ namespace imgproc {
     G_TYPED_KERNEL(GYUV2RGB, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.yuv2rgb") {
         static GMatDesc outMeta(GMatDesc in) {
             return in; // type still remains CV_8UC3;
+        }
+    };
+
+    G_TYPED_KERNEL(GNV12toRGB, <GMat(GMat, GMat)>, "org.opencv.imgproc.colorconvert.nv12torgb") {
+        static GMatDesc outMeta(GMatDesc in_y, GMatDesc in_uv) {
+            GAPI_Assert(in_y.chan == 1);
+            GAPI_Assert(in_uv.chan == 2);
+            GAPI_Assert(in_y.depth == CV_8U);
+            GAPI_Assert(in_uv.depth == CV_8U);
+            // UV size should be aligned with Y
+            GAPI_Assert(in_y.size.width == 2 * in_uv.size.width);
+            GAPI_Assert(in_y.size.height == 2 * in_uv.size.height);
+            return in_y.withType(CV_8U, 3); // type will be CV_8UC3;
+        }
+    };
+
+    G_TYPED_KERNEL(GNV12toBGR, <GMat(GMat, GMat)>, "org.opencv.imgproc.colorconvert.nv12tobgr") {
+        static GMatDesc outMeta(GMatDesc in_y, GMatDesc in_uv) {
+            GAPI_Assert(in_y.chan == 1);
+            GAPI_Assert(in_uv.chan == 2);
+            GAPI_Assert(in_y.depth == CV_8U);
+            GAPI_Assert(in_uv.depth == CV_8U);
+            // UV size should be aligned with Y
+            GAPI_Assert(in_y.size.width == 2 * in_uv.size.width);
+            GAPI_Assert(in_y.size.height == 2 * in_uv.size.height);
+            return in_y.withType(CV_8U, 3); // type will be CV_8UC3;
         }
     };
 
@@ -487,6 +520,58 @@ GAPI_EXPORTS GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize =
                         int borderType = BORDER_DEFAULT,
                         const Scalar& borderValue = Scalar(0));
 
+/** @brief Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
+
+In all cases except one, the \f$\texttt{ksize} \times \texttt{ksize}\f$ separable kernel is used to
+calculate the derivative. When \f$\texttt{ksize = 1}\f$, the \f$3 \times 1\f$ or \f$1 \times 3\f$
+kernel is used (that is, no Gaussian smoothing is done). `ksize = 1` can only be used for the first
+or the second x- or y- derivatives.
+
+There is also the special value `ksize = FILTER_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
+filter that may give more accurate results than the \f$3\times3\f$ Sobel. The Scharr aperture is
+
+\f[\vecthreethree{-3}{0}{3}{-10}{0}{10}{-3}{0}{3}\f]
+
+for the x-derivative, or transposed for the y-derivative.
+
+The function calculates an image derivative by convolving the image with the appropriate kernel:
+
+\f[\texttt{dst} =  \frac{\partial^{xorder+yorder} \texttt{src}}{\partial x^{xorder} \partial y^{yorder}}\f]
+
+The Sobel operators combine Gaussian smoothing and differentiation, so the result is more or less
+resistant to the noise. Most often, the function is called with ( xorder = 1, yorder = 0, ksize = 3)
+or ( xorder = 0, yorder = 1, ksize = 3) to calculate the first x- or y- image derivative. The first
+case corresponds to a kernel of:
+
+\f[\vecthreethree{-1}{0}{1}{-2}{0}{2}{-1}{0}{1}\f]
+
+The second case corresponds to a kernel of:
+
+\f[\vecthreethree{-1}{-2}{-1}{0}{0}{0}{1}{2}{1}\f]
+
+@note First returned matrix correspons to dx derivative while the second one to dy.
+
+@note Rounding to nearest even is procedeed if hardware supports it, if not - to nearest.
+
+@note Function textual ID is "org.opencv.imgproc.filters.sobelxy"
+
+@param src input image.
+@param ddepth output image depth, see @ref filter_depths "combinations"; in the case of
+    8-bit input images it will result in truncated derivatives.
+@param order order of the derivatives.
+@param ksize size of the extended Sobel kernel; it must be odd.
+@param scale optional scale factor for the computed derivative values; by default, no scaling is
+applied (see cv::getDerivKernels for details).
+@param delta optional delta value that is added to the results prior to storing them in dst.
+@param borderType pixel extrapolation method, see cv::BorderTypes
+@param borderValue border value in case of constant border type
+@sa filter2D, gaussianBlur, cartToPolar
+ */
+GAPI_EXPORTS std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize = 3,
+                        double scale = 1, double delta = 0,
+                        int borderType = BORDER_DEFAULT,
+                        const Scalar& borderValue = Scalar(0));
+
 /** @brief Finds edges in an image using the Canny algorithm.
 
 The function finds edges in the input image and marks them in the output map edges using the
@@ -670,6 +755,35 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 */
 GAPI_EXPORTS GMat YUV2RGB(const GMat& src);
 
+/** @brief Converts an image from NV12 (YUV420p) color space to RGB.
+The function converts an input image from NV12 color space to RGB.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12torgb"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2RGB, NV12toBGR
+*/
+GAPI_EXPORTS GMat NV12toRGB(const GMat& src_y, const GMat& src_uv);
+
+/** @brief Converts an image from NV12 (YUV420p) color space to BGR.
+The function converts an input image from NV12 color space to RGB.
+The conventional ranges for Y, U, and V channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.nv12tobgr"
+
+@param src_y input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param src_uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@sa YUV2BGR, NV12toRGB
+*/
+GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
 //! @} gapi_colorconvert
 } //namespace gapi
 } //namespace cv

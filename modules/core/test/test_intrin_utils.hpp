@@ -686,18 +686,24 @@ template<typename R> struct TheTest
 
     TheTest & test_popcount()
     {
+        typedef typename V_RegTraits<R>::u_reg Ru;
         static unsigned popcountTable[] = {
-            0, 1, 2, 4, 5, 7, 9, 12, 13, 15, 17, 20, 22, 25, 28, 32, 33,
-            35, 37, 40, 42, 45, 48, 52, 54, 57, 60, 64, 67, 71, 75, 80, 81,
-            83, 85, 88, 90, 93, 96, 100, 102, 105, 108, 112, 115, 119, 123,
-            128, 130, 133, 136, 140, 143, 147, 151, 156, 159, 163, 167, 172,
-            176, 181, 186, 192, 193
+            0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, //0x00-0x0f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x10-0x1f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x20-0x2f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x30-0x3f
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x40-0x4f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x50-0x5f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x60-0x6f
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0x70-0x7f
+            1                                               //0x80
         };
         Data<R> dataA;
         R a = dataA;
 
-        unsigned resB = (unsigned)v_reduce_sum(v_popcount(a));
-        EXPECT_EQ(popcountTable[R::nlanes], resB);
+        Data<Ru> resB = v_popcount(a);
+        for (int i = 0; i < Ru::nlanes; ++i)
+            EXPECT_EQ(popcountTable[i + 1], resB[i]);
 
         return *this;
     }
@@ -767,6 +773,15 @@ template<typename R> struct TheTest
         EXPECT_EQ((LaneType)1, v_reduce_min(a));
         EXPECT_EQ((LaneType)R::nlanes, v_reduce_max(a));
         EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), v_reduce_sum(a));
+        return *this;
+    }
+
+    TheTest & test_reduce_sad()
+    {
+        Data<R> dataA, dataB(R::nlanes/2);
+        R a = dataA;
+        R b = dataB;
+        EXPECT_EQ((unsigned)(R::nlanes*R::nlanes/4), v_reduce_sad(a, b));
         return *this;
     }
 
@@ -1320,6 +1335,7 @@ void test_hal_intrin_uint8()
         .test_logic()
         .test_min_max()
         .test_absdiff()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1358,6 +1374,7 @@ void test_hal_intrin_int8()
         .test_absdiff()
         .test_absdiffs()
         .test_abs()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
@@ -1387,6 +1404,7 @@ void test_hal_intrin_uint16()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1418,6 +1436,7 @@ void test_hal_intrin_int16()
         .test_absdiffs()
         .test_abs()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
@@ -1446,6 +1465,7 @@ void test_hal_intrin_uint32()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
@@ -1473,6 +1493,7 @@ void test_hal_intrin_int32()
         .test_min_max()
         .test_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
         .test_unpack()
@@ -1528,6 +1549,7 @@ void test_hal_intrin_float32()
         .test_min_max()
         .test_float_absdiff()
         .test_reduce()
+        .test_reduce_sad()
         .test_mask()
         .test_unpack()
         .test_float_math()

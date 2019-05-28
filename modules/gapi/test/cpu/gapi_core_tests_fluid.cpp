@@ -121,7 +121,8 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 testing::Bool(),
-                                Values(0.5000005),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+                                //Values(0.5000005),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,

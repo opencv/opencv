@@ -2,7 +2,15 @@ set(the_description "The Core Functionality")
 
 ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2)
 ocv_add_dispatched_file(stat SSE4_2 AVX2)
-ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2)
+ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
+ocv_add_dispatched_file(convert SSE2 AVX2 VSX3)
+ocv_add_dispatched_file(convert_scale SSE2 AVX2)
+ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
+ocv_add_dispatched_file(matmul SSE2 AVX2)
+ocv_add_dispatched_file(mean SSE2 AVX2)
+ocv_add_dispatched_file(merge SSE2 AVX2)
+ocv_add_dispatched_file(split SSE2 AVX2)
+ocv_add_dispatched_file(sum SSE2 AVX2)
 
 # dispatching for accuracy tests
 ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE4_2 AVX FP16 AVX2)
@@ -27,6 +35,9 @@ if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
 endif()
 
 if(HAVE_CUDA)
+  if(NOT HAVE_opencv_cudev)
+    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  endif()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 

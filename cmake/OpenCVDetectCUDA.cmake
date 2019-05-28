@@ -52,7 +52,7 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta")
+  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta" "Turing")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
@@ -115,7 +115,7 @@ if(CUDA_FOUND)
       string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
-        set(__cuda_arch_bin "5.3 6.2 7.0 7.5")
+        set(__cuda_arch_bin "5.3 6.2 7.2")
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
         string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")

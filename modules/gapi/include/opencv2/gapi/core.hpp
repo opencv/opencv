@@ -459,6 +459,13 @@ namespace core {
             return in;
         }
     };
+
+    G_TYPED_KERNEL(GNormalize, <GMat(GMat, double, double, int, int)>, "org.opencv.core.normalize") {
+        static GMatDesc outMeta(GMatDesc in, double, double, int, int ddepth) {
+            // unlike opencv doesn't have a mask as a parameter
+            return (ddepth < 0 ? in : in.withDepth(ddepth));
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -1248,7 +1255,7 @@ GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, i
 /** @brief Applies a fixed-level threshold to each matrix element.
 
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
-The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp funtions could be also used for
+The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp functions could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several depths of thresholding supported by the function. They are determined by
 depth parameter.
@@ -1592,6 +1599,29 @@ same as the input has; if rdepth is negative, the output matrix will have the sa
 @param beta optional delta added to the scaled values.
  */
 GAPI_EXPORTS GMat convertTo(const GMat& src, int rdepth, double alpha=1, double beta=0);
+
+/** @brief Normalizes the norm or value range of an array.
+
+The function normalizes scale and shift the input array elements so that
+\f[\| \texttt{dst} \| _{L_p}= \texttt{alpha}\f]
+(where p=Inf, 1 or 2) when normType=NORM_INF, NORM_L1, or NORM_L2, respectively; or so that
+\f[\min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}\f]
+when normType=NORM_MINMAX (for dense arrays only).
+
+@note Function textual ID is "org.opencv.core.normalize"
+
+@param src input array.
+@param alpha norm value to normalize to or the lower range boundary in case of the range
+normalization.
+@param beta upper range boundary in case of the range normalization; it is not used for the norm
+normalization.
+@param norm_type normalization type (see cv::NormTypes).
+@param ddepth when negative, the output array has the same type as src; otherwise, it has the same
+number of channels as src and the depth =ddepth.
+@sa norm, Mat::convertTo
+*/
+GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
+                            int norm_type, int ddepth = -1);
 //! @} gapi_transform
 
 } //namespace gapi

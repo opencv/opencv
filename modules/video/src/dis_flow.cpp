@@ -140,6 +140,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     void prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_flow);
     void precomputeStructureTensor(Mat &dst_I0xx, Mat &dst_I0yy, Mat &dst_I0xy, Mat &dst_I0x, Mat &dst_I0y, Mat &I0x,
                                    Mat &I0y);
+    int autoSelectCoarsestScale(int img_width);
+    void autoSelectPatchSizeAndScales(int img_width);
 
     struct PatchInverseSearch_ParBody : public ParallelLoopBody
     {
@@ -226,9 +228,11 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     border_size = 16;
     use_mean_normalization = true;
     use_spatial_propagation = true;
+    coarsest_scale = 10;
 
     /* Use separate variational refinement instances for different scales to avoid repeated memory allocation: */
     int max_possible_scales = 10;
+    ws = hs = w = h = 0;
     for (int i = 0; i < max_possible_scales; i++)
         variational_refinement_processors.push_back(VariationalRefinement::create());
 }
@@ -430,6 +434,44 @@ void DISOpticalFlowImpl::precomputeStructureTensor(Mat &dst_I0xx, Mat &dst_I0yy,
             }
             is++;
         }
+    }
+}
+
+int DISOpticalFlowImpl::autoSelectCoarsestScale(int img_width)
+{
+    const int fratio = 5;
+    return std::max(0, (int)std::floor(log2((2.0f*(float)img_width) / ((float)fratio * (float)patch_size))));
+}
+
+void DISOpticalFlowImpl::autoSelectPatchSizeAndScales(int img_width)
+{
+    switch (finest_scale)
+    {
+    case 1:
+        patch_size = 8;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-2, 0);
+        break;
+
+    case 3:
+        patch_size = 12;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-4, 0);
+        break;
+
+    case 4:
+        patch_size = 12;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-5, 0);
+        break;
+
+    // default case, fall-through.
+    case 2:
+    default:
+        patch_size = 8;
+        coarsest_scale = autoSelectCoarsestScale(img_width);
+        finest_scale = std::max(coarsest_scale-2, 0);
+        break;
     }
 }
 
@@ -1035,6 +1077,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
                     sum_Uy += coef * Sy_ptr[is * dis->ws + js];
                     sum_coef += coef;
                 }
+            CV_DbgAssert(sum_coef != 0);
             Ux_ptr[i * dis->w + j] = sum_Ux / sum_coef;
             Uy_ptr[i * dis->w + j] = sum_Uy / sum_coef;
         }
@@ -1052,11 +1095,16 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
     int idx;
     int num_inner_iter = (int)floor(grad_descent_iter / (float)num_iter);
 
+    String subgroups_build_options;
+    if (ocl::Device::getDefault().isExtensionSupported("cl_khr_subgroups"))
+        subgroups_build_options = "-DCV_USE_SUBGROUPS=1";
+
+
     for (int iter = 0; iter < num_iter; iter++)
     {
         if (iter == 0)
         {
-            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc);
+            ocl::Kernel k1("dis_patch_inverse_search_fwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
             idx = 0;
@@ -1108,7 +1156,7 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_Ux, UMat &src_Uy,
         }
         else
         {
-            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc);
+            ocl::Kernel k3("dis_patch_inverse_search_bwd_1", ocl::video::dis_flow_oclsrc, subgroups_build_options);
             size_t global_sz[] = {(size_t)hs * 8};
             size_t local_sz[]  = {8};
             idx = 0;
@@ -1310,8 +1358,19 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     else
         flow.create(I1Mat.size(), CV_32FC2);
     UMat &u_flowMat = flow.getUMatRef();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code serach for maximal movement of width/4 */
+    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
                          (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (coarsest_scale<0)
+        CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
+
+    if (coarsest_scale<finest_scale)
+    {
+        // choose the finest level based on coarsest level.
+        // Refs: https://github.com/tikroeger/OF_DIS/blob/2c9f2a674f3128d3a41c10e41cc9f3a35bb1b523/run_dense.cpp#L239
+        int original_img_width = I0.size().width;
+        autoSelectPatchSizeAndScales(original_img_width);
+    }
 
     ocl_prepareBuffers(I0Mat, I1Mat, u_flowMat, use_input_flow);
     u_Ux[coarsest_scale].setTo(0.0f);
@@ -1365,7 +1424,7 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     CV_Assert(I0.isContinuous());
     CV_Assert(I1.isContinuous());
 
-    CV_OCL_RUN(ocl::Device::getDefault().isIntel() && flow.isUMat() &&
+    CV_OCL_RUN(flow.isUMat() &&
                (patch_size == 8) && (use_spatial_propagation == true),
                ocl_calc(I0, I1, flow));
 
@@ -1377,8 +1436,20 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     else
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code serach for maximal movement of width/4 */
+    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
                          (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (coarsest_scale<0)
+        CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
+
+    if (coarsest_scale<finest_scale)
+    {
+        // choose the finest level based on coarsest level.
+        // Refs: https://github.com/tikroeger/OF_DIS/blob/2c9f2a674f3128d3a41c10e41cc9f3a35bb1b523/run_dense.cpp#L239
+        int original_img_width = I0.size().width;
+        autoSelectPatchSizeAndScales(original_img_width);
+    }
+
     int num_stripes = getNumThreads();
 
     prepareBuffers(I0Mat, I1Mat, flowMat, use_input_flow);

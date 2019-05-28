@@ -203,7 +203,8 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(1e-5),
+                                //Values(1e-5),
+                                Values(AbsToleranceScalar(1e-5).to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
@@ -222,15 +223,14 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCTestCPU, AbsDiffCTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 
-// FIXME: Comparison introduced by YL doesn't work with C3
 INSTANTIATE_TEST_CASE_P(AddWeightedTestCPU, AddWeightedTest,
-                        Combine(Values( CV_8UC1/*, CV_8UC3*/, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.5000005),
+                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
@@ -239,7 +239,8 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(1e-5),
+                                //Values(1e-5),
+                                Values(AbsToleranceScalar(1e-5).to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))),
                         opencv_test::PrintNormCoreParams());
 
@@ -401,5 +402,17 @@ INSTANTIATE_TEST_CASE_P(ConcatHorVecTestCPU, ConcatHorVecTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(0.0, 15.0),
+                                Values(1.0, 120.0, 255.0),
+                                Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
+                                Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
+/*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 }

@@ -74,7 +74,14 @@
 
 using namespace emscripten;
 using namespace cv;
+
+#ifdef HAVE_OPENCV_DNN
 using namespace dnn;
+#endif
+
+#ifdef HAVE_OPENCV_ARUCO
+using namespace aruco;
+#endif
 
 namespace binding_utils
 {
@@ -282,13 +289,16 @@ namespace binding_utils
         float radius;
     };
 
+#ifdef HAVE_OPENCV_IMGPROC
     Circle minEnclosingCircle(const cv::Mat& points)
     {
         Circle circle;
         cv::minEnclosingCircle(points, circle.center, circle.radius);
         return circle;
     }
+#endif
 
+#ifdef HAVE_OPENCV_VIDEO
     emscripten::val CamShiftWrapper(const cv::Mat& arg1, Rect& arg2, TermCriteria arg3)
     {
         RotatedRect rotatedRect = cv::CamShift(arg1, arg2, arg3);
@@ -306,6 +316,7 @@ namespace binding_utils
         result.call<void>("push", arg2);
         return result;
     }
+#endif  // HAVE_OPENCV_VIDEO
 
     std::string getExceptionMsg(const cv::Exception& e) {
         return e.msg;
@@ -334,6 +345,9 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
+    register_vector<cv::DMatch>("DMatchVector");
+    register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
+
 
     emscripten::class_<cv::Mat>("Mat")
         .constructor<>()
@@ -487,6 +501,12 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("response", &cv::KeyPoint::response)
         .field("size", &cv::KeyPoint::size);
 
+    emscripten::value_object<cv::DMatch>("DMatch")
+        .field("queryIdx", &cv::DMatch::queryIdx)
+        .field("trainIdx", &cv::DMatch::trainIdx)
+        .field("imgIdx", &cv::DMatch::imgIdx)
+        .field("distance", &cv::DMatch::distance);
+
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
         .element(index<0>())
         .element(index<1>())
@@ -535,19 +555,25 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
     function("exceptionFromPtr", &binding_utils::exceptionFromPtr, allow_raw_pointers());
 
+#ifdef HAVE_OPENCV_IMGPROC
     function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
+#endif
 
     function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));
 
     function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&)>(&binding_utils::minMaxLoc_1));
 
+#ifdef HAVE_OPENCV_IMGPROC
     function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
+#endif
 
     function("CV_MAT_DEPTH", &binding_utils::cvMatDepth);
 
+#ifdef HAVE_OPENCV_VIDEO
     function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
 
     function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
+#endif
 
     function("getBuildInformation", &binding_utils::getBuildInformation);
 

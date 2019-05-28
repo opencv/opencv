@@ -67,14 +67,10 @@ public:
         {
             if (pnorm != 2)
                 return false;
-            if (!blobs.empty())
-                return true;
-            if (preferableTarget == DNN_TARGET_MYRIAD)
-                return !acrossSpatial;
-            return startAxis == 1 && (!acrossSpatial || endAxis > 1);
+
+            return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
-        else
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -264,6 +260,51 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
+        if (input->dims.size() == 4)
+        {
+            InferenceEngine::Builder::NormalizeLayer ieLayer(name);
+
+            ieLayer.setChannelShared(false);
+            ieLayer.setAcrossMaps(acrossSpatial);
+            ieLayer.setEpsilon(epsilon);
+
+            InferenceEngine::Builder::Layer l = ieLayer;
+            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+            InferenceEngine::Blob::Ptr weights;
+            if (blobs.empty())
+            {
+                weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                   InferenceEngine::Layout::C,
+                                                                   {(size_t)numChannels});
+                weights->allocate();
+
+                Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
+                Mat(numChannels, 1, CV_32F, Scalar(1)).copyTo(weightsMat);
+                l.getParameters()["channel_shared"] = false;
+            }
+            else
+            {
+                CV_Assert(numChannels == blobs[0].total());
+                weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
+                l.getParameters()["channel_shared"] = blobs[0].total() == 1;
+            }
+            addConstantData("weights", weights, l);
+            l.getParameters()["across_spatial"] = acrossSpatial;
+            return Ptr<BackendNode>(new InfEngineBackendNode(l));
+        }
+        else
+        {
+            InferenceEngine::Builder::GRNLayer ieLayer(name);
+            ieLayer.setBeta(epsilon);
+
+            InferenceEngine::Builder::Layer l = ieLayer;
+            l.getParameters()["bias"] = epsilon;
+
+            return Ptr<BackendNode>(new InfEngineBackendNode(l));
+        }
+#else
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::LayerParams lp;
@@ -307,6 +348,7 @@ public:
             ieLayer->params["bias"] = format("%f", epsilon);
             return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
         }
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

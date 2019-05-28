@@ -20,9 +20,9 @@
  */
 
 #if BITS_IN_JSAMPLE == 8
-#define MAX_COEF_BITS 10
+#define MAX_COEF_BITS  10
 #else
-#define MAX_COEF_BITS 14
+#define MAX_COEF_BITS  14
 #endif
 
 /* Derived data constructed for each Huffman table */
@@ -34,10 +34,9 @@ typedef struct {
 } c_derived_tbl;
 
 /* Expand a Huffman table definition into the derived format */
-EXTERN(void) jpeg_make_c_derived_tbl
-        (j_compress_ptr cinfo, boolean isDC, int tblno,
-         c_derived_tbl ** pdtbl);
+EXTERN(void) jpeg_make_c_derived_tbl(j_compress_ptr cinfo, boolean isDC,
+                                     int tblno, c_derived_tbl **pdtbl);
 
 /* Generate an optimal table definition given the specified counts */
-EXTERN(void) jpeg_gen_optimal_table
-        (j_compress_ptr cinfo, JHUFF_TBL *htbl, long freq[]);
+EXTERN(void) jpeg_gen_optimal_table(j_compress_ptr cinfo, JHUFF_TBL *htbl,
+                                    long freq[]);

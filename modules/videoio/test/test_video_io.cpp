@@ -55,6 +55,7 @@ protected:
 protected:
     Videoio_Test_Base() {}
     virtual ~Videoio_Test_Base() {}
+    virtual void writeVideo() {}
     virtual void checkFrameContent(Mat &, int) {}
     virtual void checkFrameCount(int &) {}
     void checkFrameRead(int idx, VideoCapture & cap)
@@ -81,8 +82,9 @@ protected:
 public:
     void doTest()
     {
-        if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+        writeVideo();
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
@@ -154,11 +156,11 @@ public:
 //==================================================================================================
 typedef tuple<string, VideoCaptureAPIs> Backend_Type_Params;
 
-class Videoio_Bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
+class videoio_bunny : public Videoio_Test_Base, public testing::TestWithParam<Backend_Type_Params>
 {
     BunnyParameters bunny_param;
 public:
-    Videoio_Bunny()
+    videoio_bunny()
     {
         ext = get<0>(GetParam());
         apiPref = get<1>(GetParam());
@@ -166,7 +168,7 @@ public:
     }
     void doFrameCountTest()
     {
-        if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        if (!videoio_registry::hasBackend(apiPref))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
@@ -232,7 +234,7 @@ struct Ext_Fourcc_PSNR
 };
 typedef tuple<Size, Ext_Fourcc_PSNR> Size_Ext_Fourcc_PSNR;
 
-class Videoio_Synthetic : public Videoio_Test_Base, public testing::TestWithParam<Size_Ext_Fourcc_PSNR>
+class videoio_synthetic : public Videoio_Test_Base, public testing::TestWithParam<Size_Ext_Fourcc_PSNR>
 {
     Size frame_size;
     int fourcc;
@@ -240,7 +242,7 @@ class Videoio_Synthetic : public Videoio_Test_Base, public testing::TestWithPara
     int frame_count;
     double fps;
 public:
-    Videoio_Synthetic()
+    videoio_synthetic()
     {
         frame_size = get<0>(GetParam());
         const Ext_Fourcc_PSNR p = get<1>(GetParam());
@@ -252,7 +254,11 @@ public:
         fps = 25.;
         apiPref = p.api;
     }
-    void SetUp()
+    void TearDown()
+    {
+        remove(video_file.c_str());
+    }
+    virtual void writeVideo()
     {
         Mat img(frame_size, CV_8UC3);
         VideoWriter writer;
@@ -264,10 +270,6 @@ public:
             EXPECT_NO_THROW(writer << img);
         }
         EXPECT_NO_THROW(writer.release());
-    }
-    void TearDown()
-    {
-        remove(video_file.c_str());
     }
     virtual void checkFrameContent(Mat & img, int idx)
     {
@@ -303,26 +305,16 @@ public:
 //==================================================================================================
 
 static const VideoCaptureAPIs backend_params[] = {
-#ifdef HAVE_QUICKTIME
-    CAP_QT,
+#ifdef HAVE_AVFOUNDATION
+   CAP_AVFOUNDATION,
 #endif
-
-// TODO: Broken?
-//#ifdef HAVE_AVFOUNDATION
-//    CAP_AVFOUNDATION,
-//#endif
 
 #ifdef HAVE_MSMF
     CAP_MSMF,
 #endif
 
-#ifdef HAVE_GSTREAMER
     CAP_GSTREAMER,
-#endif
-
-#ifdef HAVE_FFMPEG
     CAP_FFMPEG,
-#endif
 
 #ifdef HAVE_XINE
     CAP_XINE,
@@ -333,7 +325,6 @@ static const VideoCaptureAPIs backend_params[] = {
 };
 
 static const string bunny_params[] = {
-#ifdef HAVE_VIDEO_INPUT
     string("wmv"),
     string("mov"),
     string("mp4"),
@@ -341,15 +332,14 @@ static const string bunny_params[] = {
     string("avi"),
     string("h264"),
     string("h265"),
-#endif
     string("mjpg.avi")
 };
 
-TEST_P(Videoio_Bunny, read_position) { doTest(); }
+TEST_P(videoio_bunny, read_position) { doTest(); }
 
-TEST_P(Videoio_Bunny, frame_count) { doFrameCountTest(); }
+TEST_P(videoio_bunny, frame_count) { doFrameCountTest(); }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Bunny,
+INSTANTIATE_TEST_CASE_P(videoio, videoio_bunny,
                           testing::Combine(
                               testing::ValuesIn(bunny_params),
                               testing::ValuesIn(backend_params)));
@@ -384,32 +374,15 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("mov", "H264", 30.f, CAP_MSMF),
 #endif
 
-#ifdef HAVE_QUICKTIME
-    makeParam("mov", "mp4v", 30.f, CAP_QT),
-    makeParam("avi", "XVID", 30.f, CAP_QT),
-    makeParam("avi", "MPEG", 30.f, CAP_QT),
-    makeParam("avi", "IYUV", 30.f, CAP_QT),
-    makeParam("avi", "MJPG", 30.f, CAP_QT),
-
-    makeParam("mkv", "XVID", 30.f, CAP_QT),
-    makeParam("mkv", "MPEG", 30.f, CAP_QT),
-    makeParam("mkv", "MJPG", 30.f, CAP_QT),
+#ifdef HAVE_AVFOUNDATION
+   makeParam("mov", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("mov", "MJPG", 30.f, CAP_AVFOUNDATION),
+   makeParam("mp4", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("mp4", "MJPG", 30.f, CAP_AVFOUNDATION),
+   makeParam("m4v", "H264", 30.f, CAP_AVFOUNDATION),
+   makeParam("m4v", "MJPG", 30.f, CAP_AVFOUNDATION),
 #endif
 
-// TODO: Broken?
-//#ifdef HAVE_AVFOUNDATION
-//    makeParam("mov", "mp4v", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "XVID", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "MPEG", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "IYUV", 30.f, CAP_AVFOUNDATION),
-//    makeParam("avi", "MJPG", 30.f, CAP_AVFOUNDATION),
-
-//    makeParam("mkv", "XVID", 30.f, CAP_AVFOUNDATION),
-//    makeParam("mkv", "MPEG", 30.f, CAP_AVFOUNDATION),
-//    makeParam("mkv", "MJPG", 30.f, CAP_AVFOUNDATION),
-//#endif
-
-#ifdef HAVE_FFMPEG
     makeParam("avi", "XVID", 30.f, CAP_FFMPEG),
     makeParam("avi", "MPEG", 30.f, CAP_FFMPEG),
     makeParam("avi", "IYUV", 30.f, CAP_FFMPEG),
@@ -418,9 +391,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("mkv", "XVID", 30.f, CAP_FFMPEG),
     makeParam("mkv", "MPEG", 30.f, CAP_FFMPEG),
     makeParam("mkv", "MJPG", 30.f, CAP_FFMPEG),
-#endif
 
-#ifdef HAVE_GSTREAMER
     makeParam("avi", "MPEG", 30.f, CAP_GSTREAMER),
     makeParam("avi", "MJPG", 30.f, CAP_GSTREAMER),
     makeParam("avi", "H264", 30.f, CAP_GSTREAMER),
@@ -429,7 +400,6 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     makeParam("mkv", "MJPG", 30.f, CAP_GSTREAMER),
     makeParam("mkv", "H264", 30.f, CAP_GSTREAMER),
 
-#endif
     makeParam("avi", "MJPG", 30.f, CAP_OPENCV_MJPEG),
 };
 
@@ -439,11 +409,30 @@ Size all_sizes[] = {
     Size(976, 768)
 };
 
-TEST_P(Videoio_Synthetic, write_read_position) { doTest(); }
+TEST_P(videoio_synthetic, write_read_position) { doTest(); }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Synthetic,
+INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
+
+TEST(Videoio, exceptions)
+{
+    VideoCapture cap;
+
+    Mat mat;
+
+    EXPECT_FALSE(cap.grab());
+    EXPECT_FALSE(cap.retrieve(mat));
+    EXPECT_FALSE(cap.set(CAP_PROP_POS_FRAMES, 1));
+    EXPECT_FALSE(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG));
+
+    cap.setExceptionMode(true);
+
+    EXPECT_THROW(cap.grab(), Exception);
+    EXPECT_THROW(cap.retrieve(mat), Exception);
+    EXPECT_THROW(cap.set(CAP_PROP_POS_FRAMES, 1), Exception);
+    EXPECT_THROW(cap.open("this_does_not_exist.avi", CAP_OPENCV_MJPEG), Exception);
+}
 
 } // namespace

@@ -98,7 +98,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && (op != SUM || coeffs.empty()));
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+                (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -419,14 +420,35 @@ public:
         return Ptr<BackendNode>();
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        InferenceEngine::Builder::EltwiseLayer ieLayer(name);
+
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
+
+        if (op == SUM)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::SUM);
+        else if (op == PROD)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MUL);
+        else if (op == MAX)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MAX);
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+
+        InferenceEngine::Builder::Layer l = ieLayer;
+        if (!coeffs.empty())
+            l.getParameters()["coeff"] = coeffs;
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
+#else
         InferenceEngine::LayerParams lp;
         lp.name = name;
         lp.type = "Eltwise";
         lp.precision = InferenceEngine::Precision::FP32;
         std::shared_ptr<InferenceEngine::EltwiseLayer> ieLayer(new InferenceEngine::EltwiseLayer(lp));
+        ieLayer->coeff = coeffs;
         if (op == SUM)
             ieLayer->_operation = InferenceEngine::EltwiseLayer::Sum;
         else if (op == PROD)
@@ -436,6 +458,7 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }

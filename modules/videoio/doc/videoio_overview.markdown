@@ -57,17 +57,20 @@ cap.open(filename, cv::CAP_DSHOW);
 
 @sa cv::VideoCapture::open() , cv::VideoCapture::VideoCapture()
 
-#### Enable backends
+#### How to enable backends
 
-Backends are available only if they have been built with your OpenCV binaries.
+There are two kinds of videoio backends: built-in backends and plugins which will be loaded at runtime (since OpenCV 4.1.0). Use functions cv::videoio_registry::getBackends, cv::videoio_registry::hasBackend and cv::videoio_registry::getBackendName to check actual presence of backend during runtime.
 
-Check in `opencv2/cvconfig.h` to know which APIs are currently available
-(e.g. `HAVE_MSMF, HAVE_V4L2`, etc...).
+To enable built-in videoio backends:
+  1. Enable corresponding CMake option, e.g. `-DWITH_GSTREAMER=ON`
+  2. Rebuild OpenCV
 
-To enable/disable APIs, you have to:
-  1. re-configure OpenCV using appropriates CMake switches
-     (e.g. `-DWITH_MSMF=ON -DWITH_DSHOW=ON ... `) or checking related switch in cmake-gui
-  2. rebuild OpenCV itself
+To enable dynamically-loaded videoio backend (currently supported: GStreamer and FFmpeg on Linux, MediaSDK on Linux and Windows):
+  1. Enable backend and add it to the list of plugins: `-DWITH_GSTREAMER=ON -DVIDEOIO_PLUGIN_LIST=gstreamer` CMake options
+  2. Rebuild OpenCV
+  3. Check that `libopencv_videoio_gstreamer.so` library exists in the `lib` directory
+
+@note Don't forget to clean CMake cache when switching between these two modes
 
 #### Use 3rd party drivers or cameras
 

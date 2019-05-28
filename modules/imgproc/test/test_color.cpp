@@ -2687,9 +2687,9 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
@@ -2780,9 +2780,9 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
@@ -3060,6 +3060,16 @@ TEST(ImgProc_BGR2RGBA, 3ch24ch)
     expected.setTo(Scalar(80, 0, 200, 255));
 
     EXPECT_DOUBLE_EQ(cvtest::norm(expected - dst, NORM_INF), 0.);
+}
+
+TEST(ImgProc_RGB2YUV, regression_13668)
+{
+    Mat src(Size(32, 4), CV_8UC3, Scalar(9, 250,  82));  // Ensure that SIMD code path works
+    Mat dst;
+    cvtColor(src, dst, COLOR_RGB2YUV);
+    Vec3b res = dst.at<Vec3b>(0, 0);
+    Vec3b ref(159, 90, 0);
+    EXPECT_EQ(res, ref);
 }
 
 }} // namespace

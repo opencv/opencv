@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "circlesgrid.hpp"
 #include <limits>
+
+ // Requires CMake flag: DEBUG_opencv_calib3d=ON
 //#define DEBUG_CIRCLES
 
 #ifdef DEBUG_CIRCLES
@@ -156,7 +158,7 @@ void CirclesGridClusterFinder::findGrid(const std::vector<cv::Point2f> &points, 
 #endif
 
   std::vector<Point2f> hull2f;
-  convexHull(Mat(patternPoints), hull2f, false);
+  convexHull(patternPoints, hull2f, false);
   const size_t cornersCount = isAsymmetricGrid ? 6 : 4;
   if(hull2f.size() < cornersCount)
     return;
@@ -407,7 +409,7 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
     }
   }
 
-  Mat homography = findHomography(Mat(sortedCorners), Mat(idealPoints), 0);
+  Mat homography = findHomography(sortedCorners, idealPoints, 0);
   Mat rectifiedPointsMat;
   transform(patternPoints, rectifiedPointsMat, homography);
   rectifiedPatternPoints.clear();
@@ -863,8 +865,8 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
     }
   }
 
-  Mat H = findHomography(Mat(centers), Mat(dstPoints), RANSAC);
-  //Mat H = findHomography( Mat( corners ), Mat( dstPoints ) );
+  Mat H = findHomography(centers, dstPoints, RANSAC);
+  //Mat H = findHomography(corners, dstPoints);
 
   if (H.empty())
   {
@@ -880,7 +882,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   }
 
   Mat dstKeypointsMat;
-  transform(Mat(srcKeypoints), dstKeypointsMat, H);
+  transform(srcKeypoints, dstKeypointsMat, H);
   std::vector<Point2f> dstKeypoints;
   convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
 
@@ -1168,7 +1170,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
   }
   for (size_t i = 0; i < basis.size(); i++)
   {
-    convexHull(Mat(clusters[i]), hulls[i]);
+    convexHull(clusters[i], hulls[i]);
   }
 
   basisGraphs.resize(basis.size(), Graph(keypoints.size()));
@@ -1183,7 +1185,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
 
       for (size_t k = 0; k < hulls.size(); k++)
       {
-        if (pointPolygonTest(Mat(hulls[k]), vec, false) >= 0)
+        if (pointPolygonTest(hulls[k], vec, false) >= 0)
         {
           basisGraphs[k].addEdge(i, j);
         }
@@ -1414,7 +1416,6 @@ void CirclesGridFinder::drawHoles(const Mat &srcImage, Mat &drawImage) const
       if (i != holes.size() - 1)
         line(drawImage, keypoints[holes[i][j]], keypoints[holes[i + 1][j]], Scalar(255, 0, 0), 2);
 
-      //circle(drawImage, keypoints[holes[i][j]], holeRadius, holeColor, holeThickness);
       circle(drawImage, keypoints[holes[i][j]], holeRadius, holeColor, holeThickness);
     }
   }

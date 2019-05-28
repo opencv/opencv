@@ -79,9 +79,7 @@ def update(_=None):
     draw_str(img, (20, 20), cur_func_name)
     cv.imshow('fit line', img)
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     cv.namedWindow('fit line')
     cv.createTrackbar('noise', 'fit line', 3, 50, update)
     cv.createTrackbar('point n', 'fit line', 100, 500, update)
@@ -96,3 +94,11 @@ if __name__ == '__main__':
                 cur_func_name = dist_func_names.next()
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

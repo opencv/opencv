@@ -355,5 +355,11 @@ GMat sqrt(const GMat& src)
     return core::GSqrt::on(src);
 }
 
+GMat normalize(const GMat& _src, double a, double b,
+               int norm_type, int ddepth)
+{
+    return core::GNormalize::on(_src, a, b, norm_type, ddepth);
+}
+
 } //namespace gapi
 } //namespace cv

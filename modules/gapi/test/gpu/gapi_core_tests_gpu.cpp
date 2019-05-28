@@ -7,7 +7,6 @@
 
 #include "../test_precomp.hpp"
 #include "../common/gapi_core_tests.hpp"
-#include "opencv2/gapi/gpu/core.hpp"
 
 #define CORE_GPU cv::gapi::core::gpu::kernels()
 
@@ -190,7 +189,7 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(1e-3), //TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-3).to_compare_f()),//TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
@@ -209,15 +208,14 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCTestGPU, AbsDiffCTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_GPU))));
 
-// FIXME: Comparison introduced by YL doesn't work with C3
 INSTANTIATE_TEST_CASE_P(AddWeightedTestGPU, AddWeightedTest,
-                        Combine(Values( CV_8UC1/*, CV_8UC3*/, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
 /*init output matrices or not*/ testing::Bool(),
-                                Values(0.50005),
+                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
@@ -226,7 +224,7 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(1e-3), //TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-3).to_compare_f()), //TODO: too relaxed?
                                 Values(cv::compile_args(CORE_GPU))),
                         opencv_test::PrintNormCoreParams());
 

@@ -43,13 +43,12 @@ namespace cpu
      * stack. Every backend is hardware-oriented and thus can run its
      * kernels efficiently on the target platform.
      *
-     * Backends are usually "back boxes" for G-API users -- on the API
+     * Backends are usually "black boxes" for G-API users -- on the API
      * side, all backends are represented as different objects of the
-     * same class cv::gapi::GBackend. User can manipulate with backends
-     * mainly by specifying which kernels to use or where to look up
-     * for kernels first.
+     * same class cv::gapi::GBackend.
+     * User can manipulate with backends by specifying which kernels to use.
      *
-     * @sa @ref gapi_hld, cv::gapi::lookup_order()
+     * @sa @ref gapi_hld
      */
 
     /**
@@ -124,6 +123,10 @@ template<> struct get_in<cv::GMat>
 {
     static cv::Mat    get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inMat(idx)); }
 };
+template<> struct get_in<cv::GMatP>
+{
+    static cv::Mat    get(GCPUContext &ctx, int idx) { return get_in<cv::GMat>::get(ctx, idx); }
+};
 template<> struct get_in<cv::GScalar>
 {
     static cv::Scalar get(GCPUContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
@@ -186,6 +189,13 @@ template<> struct get_out<cv::GMat>
     {
         auto& r = ctx.outMatR(idx);
         return {r};
+    }
+};
+template<> struct get_out<cv::GMatP>
+{
+    static tracked_cv_mat get(GCPUContext &ctx, int idx)
+    {
+        return get_out<cv::GMat>::get(ctx, idx);
     }
 };
 template<> struct get_out<cv::GScalar>

@@ -4,9 +4,11 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-
 #ifndef OPENCV_GAPI_FLUID_BACKEND_HPP
 #define OPENCV_GAPI_FLUID_BACKEND_HPP
+
+// FIXME? Actually gfluidbackend.hpp is not included anywhere
+// and can be placed in gfluidbackend.cpp
 
 #include "opencv2/gapi/garg.hpp"
 #include "opencv2/gapi/gproto.hpp"
@@ -25,7 +27,7 @@ struct FluidUnit
     GFluidKernel k;
     gapi::fluid::BorderOpt border;
     int border_size;
-    int line_consumption;
+    std::vector<int> line_consumption;
     double ratio;
 };
 
@@ -47,19 +49,6 @@ struct FluidData
     int  lpi_write       = 1;
     bool internal        = false; // is node internal to any fluid island
     gapi::fluid::BorderOpt border;
-};
-
-struct FluidMapper
-{
-    FluidMapper(double ratio, int lpi) : m_ratio(ratio), m_lpi(lpi) {}
-    virtual ~FluidMapper() = default;
-    virtual int firstWindow(int outCoord, int lpi) const = 0;
-    virtual int nextWindow(int outCoord, int lpi) const = 0;
-    virtual int linesRead(int outCoord) const = 0;
-
-protected:
-    double m_ratio = 0.0;
-    int    m_lpi   = 0;
 };
 
 struct FluidAgent
@@ -103,9 +92,8 @@ public:
 private:
     // FIXME!!!
     // move to another class
-    virtual int firstWindow() const = 0;
-    virtual int nextWindow() const = 0;
-    virtual int linesRead()  const = 0;
+    virtual int firstWindow(std::size_t inPort) const = 0;
+    virtual std::pair<int,int> linesReadAndnextWindow(std::size_t inPort) const = 0;
 };
 
 class GFluidExecutable final: public GIslandExecutable
@@ -115,6 +103,8 @@ class GFluidExecutable final: public GIslandExecutable
 
     std::vector<std::unique_ptr<FluidAgent>> m_agents;
     std::vector<cv::gapi::fluid::Buffer> m_buffers;
+
+    std::vector<FluidAgent*> m_script;
 
     using Magazine = detail::magazine<cv::gapi::own::Scalar>;
     Magazine m_res;

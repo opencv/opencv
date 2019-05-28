@@ -51,12 +51,14 @@ TEST(FluidBuffer, InputTest)
     cv::Mat in_mat = cv::Mat::eye(buffer_size, CV_8U);
 
     cv::gapi::fluid::Buffer buffer(to_own(in_mat), true);
-    cv::gapi::fluid::View  view = buffer.mkView(0, {});
+    cv::gapi::fluid::View  view = buffer.mkView(0, false);
+    view.priv().allocate(1, {});
     view.priv().reset(1);
     int this_y = 0;
 
     while (this_y < buffer_size.height)
     {
+        view.priv().prepareToRead();
         const uint8_t* rrow = view.InLine<uint8_t>(0);
         ReadFunction1x1(rrow, buffer_size.width);
         view.priv().readDone(1,1);
@@ -76,6 +78,7 @@ TEST(FluidBuffer, CircularTest)
         util::make_optional(cv::gapi::fluid::Border{cv::BORDER_CONSTANT, cv::gapi::own::Scalar(255)}));
     cv::gapi::fluid::View view = buffer.mkView(1, {});
     view.priv().reset(3);
+    view.priv().allocate(3, {});
     buffer.debug(std::cout);
 
     const auto whole_line_is = [](const uint8_t *line, int len, int value)
@@ -705,6 +708,63 @@ TEST(FluidTwoIslands, SanityTest)
     EXPECT_NO_THROW(c.apply(gin(in_mat1, in_mat2), gout(out_mat1, out_mat2), cv::compile_args(fluidTestPackage)));
     EXPECT_EQ(0, countNonZero(in_mat1 != out_mat1));
     EXPECT_EQ(0, countNonZero(in_mat2 != out_mat2));
+}
+
+struct NV12RoiTest : public TestWithParam <std::pair<cv::Size, cv::Rect>> {};
+TEST_P(NV12RoiTest, Test)
+{
+    cv::Size y_sz;
+    cv::Rect roi;
+    std::tie(y_sz, roi) = GetParam();
+
+    cv::Size uv_sz(y_sz.width / 2, y_sz.height / 2);
+    cv::Size in_sz(y_sz.width, y_sz.height*3/2);
+
+    cv::Mat in_mat = cv::Mat(in_sz, CV_8UC1);
+
+    cv::Scalar mean   = cv::Scalar(127.0f);
+    cv::Scalar stddev = cv::Scalar(40.f);
+    cv::randn(in_mat, mean, stddev);
+
+    cv::Mat y_mat  = cv::Mat(y_sz, CV_8UC1, in_mat.data);
+    cv::Mat uv_mat = cv::Mat(uv_sz, CV_8UC2, in_mat.data + in_mat.step1() * y_sz.height);
+    cv::Mat out_mat, out_mat_ocv;
+
+    cv::GMat y, uv;
+    auto rgb = cv::gapi::NV12toRGB(y, uv);
+    cv::GComputation c(cv::GIn(y, uv), cv::GOut(rgb));
+
+    c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat), cv::compile_args(fluidTestPackage, cv::GFluidOutputRois{{to_own(roi)}}));
+
+    cv::cvtColor(in_mat, out_mat_ocv, cv::COLOR_YUV2RGB_NV12);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != out_mat_ocv(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
+                        Values(std::make_pair(cv::Size{8, 8}, cv::Rect{0, 0, 8, 2})
+                              ,std::make_pair(cv::Size{8, 8}, cv::Rect{0, 2, 8, 2})
+                              ,std::make_pair(cv::Size{8, 8}, cv::Rect{0, 4, 8, 2})
+                              ,std::make_pair(cv::Size{8, 8}, cv::Rect{0, 6, 8, 2})
+                              ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0,   0, 1920, 270})
+                              ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 270, 1920, 270})
+                              ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 540, 1920, 270})
+                              ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
+                              ));
+
+TEST(Fluid, UnusedNodeTest) {
+    cv::GMat in;
+    cv::GMat a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::merge3(a, b, c);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC4);
+    cv::Mat out_mat(cv::Size(8, 8), CV_8UC3);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    ASSERT_NO_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
+        cv::compile_args(cv::gapi::core::fluid::kernels())));
 }
 
 } // namespace opencv_test

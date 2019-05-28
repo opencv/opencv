@@ -1,3 +1,7 @@
+if(COMMAND ocv_cmake_dump_vars)  # include guard
+  return()
+endif()
+
 include(CMakeParseArguments)
 
 # Debugging function
@@ -480,6 +484,44 @@ macro(ocv_check_flag_support lang flag varname base_options)
   ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
 endmacro()
 
+macro(ocv_check_runtime_flag flag result)
+  set(_fname "${ARGN}")
+  if(NOT DEFINED ${result})
+    file(RELATIVE_PATH _rname "${CMAKE_SOURCE_DIR}" "${_fname}")
+    message(STATUS "Performing Runtime Test ${result} (check file: ${_rname})")
+    try_run(exec_return compile_result
+      "${CMAKE_BINARY_DIR}"
+      "${_fname}"
+      CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}" # CMP0056 do this on new CMake
+      COMPILE_DEFINITIONS "${flag}"
+      OUTPUT_VARIABLE OUTPUT)
+
+    if(${compile_result})
+      if(exec_return EQUAL 0)
+        set(${result} 1 CACHE INTERNAL "Runtime Test ${result}")
+        message(STATUS "Performing Runtime Test ${result} - Success")
+      else()
+        message(STATUS "Performing Runtime Test ${result} - Failed(${exec_return})")
+        set(${result} 0 CACHE INTERNAL "Runtime Test ${result}")
+      endif()
+    else()
+      set(${result} 0 CACHE INTERNAL "Runtime Test ${result}")
+      message(STATUS "Performing Runtime Test ${result} - Compiling Failed")
+    endif()
+
+    if(NOT ${result})
+      file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+        "Runtime Test failed:\n"
+        "    source file: '${_fname}'\n"
+        "    check option: '${flag}'\n"
+        "    exec return: ${exec_return}\n"
+        "===== BUILD AND RUNTIME LOG =====\n"
+        "${OUTPUT}\n"
+        "===== END =====\n\n")
+    endif()
+  endif()
+endmacro()
+
 # turns off warnings
 macro(ocv_warnings_disable)
   if(NOT ENABLE_NOISY_WARNINGS)
@@ -508,7 +550,7 @@ macro(ocv_warnings_disable)
       foreach(var ${_flag_vars})
         foreach(warning ${_gxx_warnings})
           if(NOT warning MATCHES "^-Wno-")
-            string(REGEX REPLACE "${warning}(=[^ ]*)?" "" ${var} "${${var}}")
+            string(REGEX REPLACE "(^|[ ]+)${warning}(=[^ ]*)?([ ]+|$)" " " ${var} "${${var}}")
             string(REPLACE "-W" "-Wno-" warning "${warning}")
           endif()
           ocv_check_flag_support(${var} "${warning}" _varname "")
@@ -571,14 +613,21 @@ endmacro()
 # Provides an option that the user can optionally select.
 # Can accept condition to control when option is available for user.
 # Usage:
-#   option(<option_variable> "help string describing the option" <initial value or boolean expression> [IF <condition>])
+#   option(<option_variable>
+#          "help string describing the option"
+#          <initial value or boolean expression>
+#          [VISIBLE_IF <condition>]
+#          [VERIFY <condition>])
 macro(OCV_OPTION variable description value)
   set(__value ${value})
   set(__condition "")
+  set(__verification)
   set(__varname "__value")
   foreach(arg ${ARGN})
-    if(arg STREQUAL "IF" OR arg STREQUAL "if")
+    if(arg STREQUAL "IF" OR arg STREQUAL "if" OR arg STREQUAL "VISIBLE_IF")
       set(__varname "__condition")
+    elseif(arg STREQUAL "VERIFY")
+      set(__varname "__verification")
     else()
       list(APPEND ${__varname} ${arg})
     endif()
@@ -614,13 +663,49 @@ macro(OCV_OPTION variable description value)
       unset(${variable} CACHE)
     endif()
   endif()
+  if(__verification)
+    set(OPENCV_VERIFY_${variable} "${__verification}") # variable containing condition to verify
+    list(APPEND OPENCV_VERIFICATIONS "${variable}") # list of variable names (WITH_XXX;WITH_YYY;...)
+  endif()
   unset(__condition)
   unset(__value)
 endmacro()
 
+
+# Check that each variable stored in OPENCV_VERIFICATIONS list
+# is consistent with actual detection result (stored as condition in OPENCV_VERIFY_...) variables
+function(ocv_verify_config)
+  set(broken_options)
+  foreach(var ${OPENCV_VERIFICATIONS})
+    set(evaluated FALSE)
+    if(${OPENCV_VERIFY_${var}})
+      set(evaluated TRUE)
+    endif()
+    status("Verifying ${var}=${${var}} => '${OPENCV_VERIFY_${var}}'=${evaluated}")
+    if (${var} AND NOT evaluated)
+      list(APPEND broken_options ${var})
+      message(WARNING
+        "Option ${var} is enabled but corresponding dependency "
+        "have not been found: \"${OPENCV_VERIFY_${var}}\" is FALSE")
+    elseif(NOT ${var} AND evaluated)
+      list(APPEND broken_options ${var})
+      message(WARNING
+        "Option ${var} is disabled or unset but corresponding dependency "
+        "have been explicitly turned on: \"${OPENCV_VERIFY_${var}}\" is TRUE")
+    endif()
+  endforeach()
+  if(broken_options)
+    string(REPLACE ";" "\n" broken_options "${broken_options}")
+    message(FATAL_ERROR
+      "Some dependencies have not been found or have been forced, "
+      "unset ENABLE_CONFIG_VERIFICATION option to ignore these failures "
+      "or change following options:\n${broken_options}")
+  endif()
+endfunction()
+
 # Usage: ocv_append_build_options(HIGHGUI FFMPEG)
 macro(ocv_append_build_options var_prefix pkg_prefix)
-  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS)
+  foreach(suffix INCLUDE_DIRS LIBRARIES LIBRARY_DIRS LINK_LIBRARIES)
     if(${pkg_prefix}_${suffix})
       list(APPEND ${var_prefix}_${suffix} ${${pkg_prefix}_${suffix}})
       list(REMOVE_DUPLICATES ${var_prefix}_${suffix})
@@ -658,7 +743,9 @@ macro(ocv_check_modules define)
     endif()
     unset(${define}_${__modname}_FOUND)
   endforeach()
-  pkg_check_modules(${define} ${ARGN})
+  if(PKG_CONFIG_FOUND OR PkgConfig_FOUND)
+    pkg_check_modules(${define} ${ARGN})
+  endif()
   if(${define}_FOUND)
     set(HAVE_${define} 1)
   endif()
@@ -672,28 +759,46 @@ macro(ocv_check_modules define)
       set(${define}_${__modname}_FOUND 1)
     endif()
   endforeach()
-endmacro()
-
-
-# Macro that checks if module has been installed.
-# After it adds module to build and define
-# constants passed as second arg
-macro(CHECK_MODULE module_name define cv_module)
-  set(${define} 0)
-  if(PKG_CONFIG_FOUND)
-    set(ALIAS               ALIASOF_${module_name})
-    set(ALIAS_FOUND                 ${ALIAS}_FOUND)
-    set(ALIAS_INCLUDE_DIRS   ${ALIAS}_INCLUDE_DIRS)
-    set(ALIAS_LIBRARY_DIRS   ${ALIAS}_LIBRARY_DIRS)
-    set(ALIAS_LIBRARIES         ${ALIAS}_LIBRARIES)
-
-    PKG_CHECK_MODULES(${ALIAS} ${module_name})
-    if(${ALIAS_FOUND})
-      set(${define} 1)
-      ocv_append_build_options(${cv_module} ${ALIAS})
+  if(${define}_FOUND AND ${define}_LIBRARIES)
+    if(${define}_LINK_LIBRARIES_XXXXX)  # CMake 3.12+: https://gitlab.kitware.com/cmake/cmake/merge_requests/2068
+      set(${define}_LIBRARIES "${${define}_LINK_LIBRARIES}" CACHE INTERNAL "")
+    else()
+      unset(_libs)          # absolute paths
+      unset(_libs_paths)  # -L args
+      foreach(flag ${${define}_LDFLAGS})
+        if(flag MATCHES "^-L(.*)")
+          list(APPEND _libs_paths ${CMAKE_MATCH_1})
+        elseif(IS_ABSOLUTE "${flag}")
+          list(APPEND _libs "${flag}")
+        elseif(flag MATCHES "^-l(.*)")
+          set(_lib "${CMAKE_MATCH_1}")
+          if(_libs_paths)
+            find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib}
+                         HINTS ${_libs_paths} NO_DEFAULT_PATH)
+          endif()
+          find_library(pkgcfg_lib_${define}_${_lib} NAMES ${_lib})
+          mark_as_advanced(pkgcfg_lib_${define}_${_lib})
+          if(pkgcfg_lib_${define}_${_lib})
+            list(APPEND _libs "${pkgcfg_lib_${define}_${_lib}}")
+          else()
+            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manualy")
+            list(APPEND _libs "${_lib}")
+          endif()
+        else()
+          # -pthread
+          #message(WARNING "ocv_check_modules(${define}): unknown LDFLAG '${flag}'")
+        endif()
+      endforeach()
+      set(${define}_LINK_LIBRARIES "${_libs}")
+      set(${define}_LIBRARIES "${_libs}" CACHE INTERNAL "")
+      unset(_lib)
+      unset(_libs)
+      unset(_libs_paths)
     endif()
   endif()
 endmacro()
+
+
 
 if(NOT DEFINED CMAKE_ARGC) # Guard CMake standalone invocations
 
@@ -741,6 +846,11 @@ function(ocv_output_status msg)
   message(STATUS "${msg}")
   string(REPLACE "\\" "\\\\" msg "${msg}")
   string(REPLACE "\"" "\\\"" msg "${msg}")
+  string(REGEX REPLACE "^\n+|\n+$" "" msg "${msg}")
+  if(msg MATCHES "\n")
+    message(WARNING "String to be inserted to version_string.inc has an unexpected line break: '${msg}'")
+    string(REPLACE "\n" "\\n" msg "${msg}")
+  endif()
   set(OPENCV_BUILD_INFO_STR "${OPENCV_BUILD_INFO_STR}\"${msg}\\n\"\n" CACHE INTERNAL "")
 endfunction()
 
@@ -1005,15 +1115,6 @@ function(ocv_convert_to_lib_name var)
   set(${var} ${tmp} PARENT_SCOPE)
 endfunction()
 
-if(MSVC AND BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
-  if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
-    option(INSTALL_PDB "Add install PDB rules" ON)
-  elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
-    option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
-    option(INSTALL_PDB "Add install PDB rules" OFF)
-  endif()
-endif()
 
 # add install command
 function(ocv_install_target)
@@ -1046,6 +1147,18 @@ function(ocv_install_target)
 
   if(MSVC)
     set(__target "${ARGV0}")
+
+    # don't move this into global scope of this file: compiler settings (like MSVC variable) are not available during processing
+    if(BUILD_SHARED_LIBS)  # no defaults for static libs (modern CMake is required)
+      if(NOT CMAKE_VERSION VERSION_LESS 3.6.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default" ON)
+        option(INSTALL_PDB "Add install PDB rules" ON)
+      elseif(NOT CMAKE_VERSION VERSION_LESS 3.1.0)
+        option(INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL "Don't install PDB files by default (not supported)" OFF)
+        option(INSTALL_PDB "Add install PDB rules" OFF)
+      endif()
+    endif()
+
     if(INSTALL_PDB AND NOT INSTALL_IGNORE_PDB
         AND NOT OPENCV_${__target}_PDB_SKIP
     )
@@ -1090,7 +1203,7 @@ function(ocv_install_target)
           endif()
 
 #          message(STATUS "Adding PDB file installation rule: target=${__target} dst=${__dst} component=${__pdb_install_component}")
-          if("${__target_type}" STREQUAL "SHARED_LIBRARY")
+          if("${__target_type}" STREQUAL "SHARED_LIBRARY" OR "${__target_type}" STREQUAL "MODULE_LIBRARY")
             install(FILES "$<TARGET_PDB_FILE:${__target}>" DESTINATION "${__dst}"
                 COMPONENT ${__pdb_install_component} OPTIONAL ${__pdb_exclude_from_all})
           else()
@@ -1114,13 +1227,17 @@ endfunction()
 # ocv_install_3rdparty_licenses(<library-name> <filename1> [<filename2> ..])
 function(ocv_install_3rdparty_licenses library)
   foreach(filename ${ARGN})
+    set(filepath "${filename}")
+    if(NOT IS_ABSOLUTE "${filepath}")
+      set(filepath "${CMAKE_CURRENT_LIST_DIR}/${filepath}")
+    endif()
     get_filename_component(name "${filename}" NAME)
     install(
-      FILES "${filename}"
+      FILES "${filepath}"
       DESTINATION "${OPENCV_LICENSES_INSTALL_PATH}"
       COMPONENT licenses
       RENAME "${library}-${name}"
-      OPTIONAL)
+    )
   endforeach()
 endfunction()
 
@@ -1197,14 +1314,6 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
     else()
       set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_STRING}" ${ARGN})
     endif()
-  endif()
-endmacro()
-
-# read single version info from the pkg file
-macro(ocv_parse_pkg LIBNAME PKG_PATH SCOPE)
-  if(EXISTS "${PKG_PATH}/${LIBNAME}.pc")
-    file(STRINGS "${PKG_PATH}/${LIBNAME}.pc" line_to_parse REGEX "^Version:[ \t]+[0-9.]*.*$" LIMIT_COUNT 1)
-    STRING(REGEX REPLACE ".*Version: ([^ ]+).*" "\\1" ALIASOF_${LIBNAME}_VERSION "${line_to_parse}" )
   endif()
 endmacro()
 
@@ -1687,3 +1796,22 @@ macro(ocv_git_describe var_name path)
     set(${var_name} "unknown")
   endif()
 endmacro()
+
+
+# ocv_update_file(filepath content [VERBOSE])
+# - write content to file
+# - will not change modification time in case when file already exists and content has not changed
+function(ocv_update_file filepath content)
+  if(EXISTS "${filepath}")
+    file(READ "${filepath}" actual_content)
+  else()
+    set(actual_content "")
+  endif()
+  if("${actual_content}" STREQUAL "${content}")
+    if(";${ARGN};" MATCHES ";VERBOSE;")
+      message(STATUS "${filepath} contains the same content")
+    endif()
+  else()
+    file(WRITE "${filepath}" "${content}")
+  endif()
+endfunction()

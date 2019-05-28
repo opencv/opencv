@@ -42,23 +42,23 @@ private:
 
 /**********************************************************************************/
 
-CvCapture* cvCreateCameraCapture_XIMEA( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam( int index )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
     if( capture->open( index ))
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return 0;
 }
 
-CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber )
+cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file( const std::string &serialNumber )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
-    if( capture->open( serialNumber ))
-        return capture;
+    if( capture->open( serialNumber.c_str() ))
+        return cv::makePtr<cv::LegacyCapture>(capture);
 
     delete capture;
     return 0;

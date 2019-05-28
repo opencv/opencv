@@ -7,20 +7,19 @@
 
 #ifndef OPENCV_DNN_VKCOM_CONTEXT_HPP
 #define OPENCV_DNN_VKCOM_CONTEXT_HPP
-#include "common.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
 
-struct Context
+class Context
 {
-    VkDevice device;
-    VkQueue queue;
-    VkCommandPool cmd_pool;
-    std::map<std::string, VkShaderModule> shader_modules;
-    int ref;
+public:
+    Context();
+    ~Context();
 };
+
+void createContext();
 
 #endif // HAVE_VULKAN
 

@@ -8,7 +8,6 @@
 #include "../test_precomp.hpp"
 
 #include "../common/gapi_imgproc_tests.hpp"
-#include "opencv2/gapi/gpu/imgproc.hpp"
 
 #define IMGPROC_GPU cv::gapi::imgproc::gpu::kernels()
 
@@ -131,11 +130,23 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3TestGPU, Dilate3x3Test,
 
 INSTANTIATE_TEST_CASE_P(SobelTestGPU, SobelTest,
                         Combine(Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_f()),
-                                Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1/*, CV_32FC1*/), //TODO: CV_32FC1 fails accuracy
+                                Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
                                 Values(3, 5),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
-                                Values(-1, CV_32F),
+                                Values(-1, CV_16S, CV_32F),
+                                Values(0, 1),
+                                Values(1, 2),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(IMGPROC_GPU))));
+
+INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
+                        Combine(Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_f()),
+                                Values(CV_32FC1),
+                                Values(3, 5),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_32F),
                                 Values(0, 1),
                                 Values(1, 2),
 /*init output matrices or not*/ testing::Bool(),

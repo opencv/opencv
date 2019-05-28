@@ -1,6 +1,7 @@
 # FIXME: Rework standalone build in more generic maner
 # (Restructure directories, add common pass, etc)
 if (NOT DEFINED OPENCV_INITIAL_PASS)
+    cmake_minimum_required(VERSION 3.3)
     include("cmake/standalone.cmake")
     return()
 endif()
@@ -23,13 +24,14 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cpu/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     )
 
 set(gapi_srcs
     # Front-end part
-    src/api/gapi_priv.cpp
+    src/api/gorigin.cpp
     src/api/gmat.cpp
     src/api/garray.cpp
     src/api/gscalar.cpp
@@ -58,6 +60,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp
@@ -72,11 +75,11 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
 
-    # GPU Backend (currently built-in)
-    src/backends/gpu/ggpubackend.cpp
-    src/backends/gpu/ggpukernel.cpp
-    src/backends/gpu/ggpuimgproc.cpp
-    src/backends/gpu/ggpucore.cpp
+    # OCL Backend (currently built-in)
+    src/backends/ocl/goclbackend.cpp
+    src/backends/ocl/goclkernel.cpp
+    src/backends/ocl/goclimgproc.cpp
+    src/backends/ocl/goclcore.cpp
 
     # Compound
     src/backends/common/gcompoundbackend.cpp

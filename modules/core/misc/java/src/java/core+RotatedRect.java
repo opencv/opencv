@@ -33,7 +33,7 @@ public class RotatedRect {
             angle = vals.length > 4 ? (double) vals[4] : 0;
         } else {
             center.x = 0;
-            center.x = 0;
+            center.y = 0;
             size.width = 0;
             size.height = 0;
             angle = 0;

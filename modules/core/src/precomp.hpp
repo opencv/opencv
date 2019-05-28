@@ -246,7 +246,7 @@ BinaryFunc getCopyMaskFunc(size_t esz);
 
 // There is some mess in code with vectors representation.
 // Both vector-column / vector-rows are used with dims=2 (as Mat2D always).
-// Reshape matrices if neccessary (in case of vectors) and returns size with scaled width.
+// Reshape matrices if necessary (in case of vectors) and returns size with scaled width.
 Size getContinuousSize2D(Mat& m1, int widthScale=1);
 Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale=1);
 Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale=1);

@@ -634,6 +634,8 @@ class CppHeaderParser(object):
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
             if block_type in ["file", "enum"]:
                 continue
+            if block_type in ["enum struct", "enum class"] and block_name == name:
+                continue
             if block_type not in ["struct", "class", "namespace", "enum struct", "enum class"]:
                 print("Error at %d: there are non-valid entries in the current block stack %s" % (self.lineno, self.block_stack))
                 sys.exit(-1)
@@ -831,7 +833,7 @@ class CppHeaderParser(object):
                 l = l[pos+2:]
                 state = SCAN
 
-            if l.startswith('CV__'): # just ignore this lines
+            if l.startswith('CV__') or l.startswith('__CV_'): # just ignore these lines
                 #print('IGNORE: ' + l)
                 state = SCAN
                 continue
@@ -845,11 +847,17 @@ class CppHeaderParser(object):
 
                 if not token:
                     block_head += " " + l
-                    break
+                    block_head = block_head.strip()
+                    if len(block_head) > 0 and block_head[-1] == ')' and block_head.startswith('CV_ENUM_FLAGS('):
+                        l = ''
+                        token = ';'
+                    else:
+                        break
 
                 if token == "//":
                     block_head += " " + l[:pos]
-                    break
+                    l = ''
+                    continue
 
                 if token == "/*":
                     block_head += " " + l[:pos]

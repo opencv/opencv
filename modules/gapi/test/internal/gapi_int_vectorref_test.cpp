@@ -5,7 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 
 namespace opencv_test
 {
@@ -90,7 +90,7 @@ TYPED_TEST(VectorRefT, ReadAfterWrite)
     EXPECT_EQ(0u, writer.wref().size()); // Check the initial state
     EXPECT_EQ(0u, reader.rref().size());
 
-    writer.wref().emplace_back();        // Check that write is successfull
+    writer.wref().emplace_back();        // Check that write is successful
     EXPECT_EQ(1u, writer.wref().size());
 
     EXPECT_EQ(1u, vec.size());           // Check that changes are reflected to the original container
@@ -183,7 +183,7 @@ TYPED_TEST(VectorRefU, ReadAfterWrite)
     EXPECT_EQ(0u, writer.wref<T>().size()); // Check the initial state
     EXPECT_EQ(0u, reader.rref<T>().size());
 
-    writer.wref<T>().emplace_back();        // Check that write is successfull
+    writer.wref<T>().emplace_back();        // Check that write is successful
     EXPECT_EQ(1u, writer.wref<T>().size());
 
     EXPECT_EQ(1u, vec.size());              // Check that changes are reflected to the original container

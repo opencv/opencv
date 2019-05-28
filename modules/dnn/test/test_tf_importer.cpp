@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
+// Copyright (C) 2017-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 /*
@@ -40,7 +40,7 @@ TEST(Test_TensorFlow, read_inception)
     ASSERT_TRUE(!sample.empty());
     Mat input;
     resize(sample, input, Size(224, 224));
-    input -= 128; // mean sub
+    input -= Scalar::all(117); // mean sub
 
     Mat inputBlob = blobFromImage(input);
 
@@ -131,24 +131,40 @@ TEST_P(Test_TensorFlow_layers, conv)
     runTensorFlowNet("conv_pool_nchw");
 }
 
-TEST_P(Test_TensorFlow_layers, padding)
+TEST_P(Test_TensorFlow_layers, Convolution3D)
 {
-    runTensorFlowNet("padding_same");
-    runTensorFlowNet("padding_valid");
-    runTensorFlowNet("spatial_padding");
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+            throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("conv3d");
 }
 
-TEST_P(Test_TensorFlow_layers, eltwise_add_mul)
+TEST_P(Test_TensorFlow_layers, padding)
+{
+    runTensorFlowNet("padding_valid");
+    runTensorFlowNet("spatial_padding");
+    runTensorFlowNet("keras_pad_concat");
+}
+
+TEST_P(Test_TensorFlow_layers, padding_same)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
+    // Reference output values are in range [0.0006, 2.798]
+    runTensorFlowNet("padding_same");
+}
+
+TEST_P(Test_TensorFlow_layers, eltwise)
 {
     runTensorFlowNet("eltwise_add_mul");
+    runTensorFlowNet("eltwise_sub");
 }
 
 TEST_P(Test_TensorFlow_layers, pad_and_concat)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
-#endif
     runTensorFlowNet("pad_and_concat");
 }
 
@@ -172,6 +188,23 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("mvn_batch_norm_1x1");
 }
 
+TEST_P(Test_TensorFlow_layers, batch_norm3D)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("");
+    runTensorFlowNet("batch_norm3d");
+}
+
+TEST_P(Test_TensorFlow_layers, slim_batch_norm)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("Test is disabled for DLIE");
+    // Output values range: [-40.0597, 207.827]
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.041 : default_l1;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.33 : default_lInf;
+    runTensorFlowNet("slim_batch_norm", false, l1, lInf);
+}
+
 TEST_P(Test_TensorFlow_layers, pooling)
 {
     runTensorFlowNet("max_pool_even");
@@ -183,11 +216,28 @@ TEST_P(Test_TensorFlow_layers, pooling)
 // TODO: fix tests and replace to pooling
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+    // Reference output values are in range [-0.519531, 0.112976]
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
     runTensorFlowNet("ave_pool_same");
+}
+
+TEST_P(Test_TensorFlow_layers, MaxPooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("max_pool3d");
+}
+
+TEST_P(Test_TensorFlow_layers, AvePooling3D)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    runTensorFlowNet("ave_pool3d");
 }
 
 TEST_P(Test_TensorFlow_layers, deconvolution)
@@ -206,8 +256,11 @@ TEST_P(Test_TensorFlow_layers, matmul)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("");
     runTensorFlowNet("matmul");
-    runTensorFlowNet("nhwc_reshape_matmul");
     runTensorFlowNet("nhwc_transpose_reshape_matmul");
+    // Reference output values are in range [-5.688, 4.484]
+    double l1 = target == DNN_TARGET_MYRIAD ? 6.1e-3 : default_l1;
+    runTensorFlowNet("nhwc_reshape_matmul", false, l1);
+
 }
 
 TEST_P(Test_TensorFlow_layers, reshape)
@@ -222,23 +275,28 @@ TEST_P(Test_TensorFlow_layers, reshape)
 
 TEST_P(Test_TensorFlow_layers, flatten)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+
     runTensorFlowNet("flatten", true);
 }
 
 TEST_P(Test_TensorFlow_layers, unfused_flatten)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE &&
-        (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
     runTensorFlowNet("unfused_flatten");
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
 
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
+        throw SkipTestException("Test is disabled for DLIE/OCL target (OpenVINO 2018R5)");
+#endif
     runTensorFlowNet("leaky_relu_order1");
     runTensorFlowNet("leaky_relu_order2");
     runTensorFlowNet("leaky_relu_order3");
@@ -246,14 +304,30 @@ TEST_P(Test_TensorFlow_layers, leaky_relu)
 
 TEST_P(Test_TensorFlow_layers, l2_normalize)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
+
     runTensorFlowNet("l2_normalize");
 }
 
 // TODO: fix it and add to l2_normalize
 TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE
+            && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+    )
+        throw SkipTestException("Test is disabled for DLIE for OpenCL targets");
+#endif
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        throw SkipTestException("Test is disabled for Myriad targets");
+#endif
+
     runTensorFlowNet("l2_normalize_3d");
 }
 
@@ -261,11 +335,14 @@ class Test_TensorFlow_nets : public DNNTestLayer {};
 
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 {
-    checkBackend();
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
 
+    checkBackend();
     std::string netPath = findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false);
     std::string netConfig = findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false);
     std::string imgPath = findDataFile("dnn/street.png", false);
@@ -274,34 +351,32 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     resize(imread(imgPath), inp, Size(300, 300));
     inp = blobFromImage(inp, 1.0f / 127.5, Size(), Scalar(127.5, 127.5, 127.5), true);
 
-    std::vector<String> outNames(3);
-    outNames[0] = "concat";
-    outNames[1] = "concat_1";
-    outNames[2] = "detection_out";
-
-    std::vector<Mat> refs(outNames.size());
-    for (int i = 0; i < outNames.size(); ++i)
-    {
-        std::string path = findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco." + outNames[i] + ".npy", false);
-        refs[i] = blobFromNPY(path);
-    }
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco.detection_out.npy", false));
 
     Net net = readNetFromTensorflow(netPath, netConfig);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
     net.setInput(inp);
+    Mat out = net.forward();
 
-    std::vector<Mat> output;
-    net.forward(output, outNames);
-
-    normAssert(refs[0].reshape(1, 1), output[0].reshape(1, 1), "", 1e-5, 1.5e-4);
-    normAssert(refs[1].reshape(1, 1), output[1].reshape(1, 1), "", 1e-5, 3e-4);
-    normAssertDetections(refs[2], output[2], "", 0.2);
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0043 : default_l1;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.037 : default_lInf;
+    normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 {
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
+
     checkBackend();
     std::string proto = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pbtxt", false);
     std::string model = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pb", false);
@@ -322,14 +397,23 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 3, 0.75838411, 0.44668293, 0.45907149, 0.49459291, 0.52197015,
                                     0, 10, 0.95932811, 0.38349164, 0.32528657, 0.40387636, 0.39165527,
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
+
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0097 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : default_lInf;
     normAssertDetections(ref, out, "", 0.5, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
 {
     checkBackend();
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
+#endif
 
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", false);
     std::string proto = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt", false);
@@ -345,21 +429,24 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
-    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1e-5;
-    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0098 : 1e-3;
+    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1.5e-5;
+    float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 1e-3;
     normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 {
+    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));  // FIXIT split test
     static std::string names[] = {"faster_rcnn_inception_v2_coco_2018_01_28",
                                   "faster_rcnn_resnet50_coco_2018_01_28"};
 
     checkBackend();
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU) ||
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
         (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
 
+    double scoresDiff = backend == DNN_BACKEND_INFERENCE_ENGINE ? 2.9e-5 : 1e-5;
     for (int i = 0; i < 2; ++i)
     {
         std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt", false);
@@ -375,12 +462,17 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
         Mat out = net.forward();
 
         Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/" + names[i] + ".detection_out.npy"));
-        normAssertDetections(ref, out, names[i].c_str(), 0.3);
+        normAssertDetections(ref, out, names[i].c_str(), 0.3, scoresDiff);
     }
 }
 
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        throw SkipTestException("Test is disabled for DLIE OpenCL targets in OpenVINO 2018R5");
+#endif
+
     checkBackend();
     std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt", false);
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pb", false);
@@ -396,9 +488,10 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     net.setInput(blob);
     Mat out = net.forward();
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.011 : default_l1;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.021 : default_lInf;
-    normAssertDetections(ref, out, "", 0.4, scoreDiff, iouDiff);
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.048 : 1.1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.058 : default_lInf;
+    normAssertDetections(ref, out, "", 0.45, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
@@ -428,6 +521,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 4e-3 : 3.4e-3;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.024 : 1e-2;
     normAssertDetections(ref, out, "", 0.9, scoreDiff, iouDiff);
+    expectNoFallbacksFromIE(net);
 }
 
 // inp = cv.imread('opencv_extra/testdata/cv/ximgproc/sources/08.png')
@@ -441,11 +535,14 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 // np.save('east_text_detection.geometry.npy', geometry)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
-    checkBackend();
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+        throw SkipTestException("Test is disabled for Myriad targets");
 #endif
+
+    checkBackend();
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
     std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
@@ -480,8 +577,8 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
-        lInf_scores = 0.214;
-        l1_geometry = 0.47; lInf_geometry = 15.34;
+        lInf_scores = 0.41;
+        l1_geometry = 0.28; lInf_geometry = 5.94;
     }
     else
     {
@@ -489,34 +586,43 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     }
     normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
     normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
+    expectNoFallbacksFromIE(net);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_nets, dnnBackendsAndTargets());
 
 TEST_P(Test_TensorFlow_layers, fp16_weights)
 {
-    const float l1 = 0.00071;
-    const float lInf = 0.012;
+    float l1 = 0.00078;
+    float lInf = 0.012;
     runTensorFlowNet("fp16_single_conv", false, l1, lInf);
-    runTensorFlowNet("fp16_deconvolution", false, l1, lInf);
     runTensorFlowNet("fp16_max_pool_odd_same", false, l1, lInf);
-    runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
     runTensorFlowNet("fp16_eltwise_add_mul", false, l1, lInf);
+    runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
+    runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
+    // Reference output values are in range [0.0889, 1.651]
+    runTensorFlowNet("fp16_max_pool_even", false, (target == DNN_TARGET_MYRIAD) ? 0.003 : l1, lInf);
+    if (target == DNN_TARGET_MYRIAD) {
+        l1 = 0.0041;
+        lInf = 0.024;
+    }
+    // Reference output values are in range [0, 10.75]
+    runTensorFlowNet("fp16_deconvolution", false, l1, lInf);
+    // Reference output values are in range [0.418, 2.297]
     runTensorFlowNet("fp16_max_pool_odd_valid", false, l1, lInf);
-    runTensorFlowNet("fp16_max_pool_even", false, l1, lInf);
-    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
 }
 
-// TODO: fix pad_and_concat and add this test case to fp16_weights
-TEST_P(Test_TensorFlow_layers, fp16_pad_and_concat)
+TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
-    const float l1 = 0.00071;
-    const float lInf = 0.012;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R3");
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        throw SkipTestException("Test is disabled for MyriadX");
 #endif
-    runTensorFlowNet("fp16_pad_and_concat", false, l1, lInf);
+
+    // Reference output values are in range [-3.504, -0.002]
+    runTensorFlowNet("fp16_padding_same", false, 6e-4, 4e-3);
 }
 
 TEST_P(Test_TensorFlow_layers, defun)
@@ -547,8 +653,6 @@ TEST_P(Test_TensorFlow_layers, split)
 
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
     runTensorFlowNet("resize_nearest_neighbor");
     runTensorFlowNet("keras_upsampling2d");
 }
@@ -559,17 +663,37 @@ TEST_P(Test_TensorFlow_layers, slice)
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         throw SkipTestException("");
     runTensorFlowNet("slice_4d");
+    runTensorFlowNet("strided_slice");
 }
 
 TEST_P(Test_TensorFlow_layers, softmax)
 {
     runTensorFlowNet("keras_softmax");
+    runTensorFlowNet("slim_softmax");
+}
+
+TEST_P(Test_TensorFlow_layers, slim_softmax_v2)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+    runTensorFlowNet("slim_softmax_v2");
 }
 
 TEST_P(Test_TensorFlow_layers, relu6)
 {
     runTensorFlowNet("keras_relu6");
     runTensorFlowNet("keras_relu6", /*hasText*/ true);
+}
+
+TEST_P(Test_TensorFlow_layers, subpixel)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+    runTensorFlowNet("subpixel");
 }
 
 TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
@@ -581,6 +705,44 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
     runTensorFlowNet("resize_bilinear");
     runTensorFlowNet("resize_bilinear_factor");
+}
+
+TEST_P(Test_TensorFlow_layers, squeeze)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2
+    )
+        throw SkipTestException("Test is disabled for Myriad2");
+#endif
+    int inpShapes[][4] = {{1, 3, 4, 2}, {1, 3, 1, 2}, {1, 3, 4, 1}, {1, 3, 4, 1}};  // TensorFlow's shape (NHWC)
+    int outShapes[][3] = {{3, 4, 2}, {1, 3, 2}, {1, 3, 4}, {1, 3, 4}};
+    int squeeze_dims[] = {0, 2, 3, -1};
+    for (int i = 0; i < 4; ++i)
+    {
+        SCOPED_TRACE(format("i=%d", i));
+        std::string pbtxt =
+            "node { name: \"input\" op: \"Placeholder\""
+            "attr { key: \"data_format\" value { s: \"NHWC\" } } }"
+            "node { name: \"squeeze\" op: \"Squeeze\" input: \"input\""
+              "attr { key: \"squeeze_dims\" value { list { i:" + format("%d", squeeze_dims[i]) + "}}}}";
+        Net net = readNetFromTensorflow(0, 0, pbtxt.c_str(), pbtxt.size());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        Mat tfInp(4, &inpShapes[i][0], CV_32F);
+        randu(tfInp, -1, 1);
+
+        // NHWC to NCHW
+        CV_Assert(inpShapes[i][0] == 1);
+        std::swap(inpShapes[i][2], inpShapes[i][3]);
+        std::swap(inpShapes[i][1], inpShapes[i][2]);
+        Mat cvInp = tfInp.reshape(1, tfInp.total() / inpShapes[i][1]).t();
+        cvInp = cvInp.reshape(1, 4, &inpShapes[i][0]);
+
+        net.setInput(cvInp);
+        Mat out = net.forward();
+        normAssert(tfInp.reshape(1, 3, &outShapes[i][0]), out, "", default_l1, default_lInf);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_layers, dnnBackendsAndTargets());
@@ -603,6 +765,7 @@ TEST(Test_TensorFlow, two_inputs)
 
 TEST(Test_TensorFlow, Mask_RCNN)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 

@@ -5,14 +5,14 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "compiler/transactions.hpp"
 
-#include "gapi_mock_kernels.hpp"
+#include "../gapi_mock_kernels.hpp"
 
-#include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/gcompiler.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace opencv_test
 {
@@ -44,10 +44,11 @@ TEST(IslandFusion, TwoOps_OneIsland)
 
     // Inspect the graph and verify the islands configuration
     cv::gimpl::GModel::ConstGraph gm(*graph);
+    cv::gimpl::GModel::ConstLayoutGraph glm(*graph);
 
-    auto in_nh  = cv::gimpl::GModel::dataNodeOf(gm, in);
-    auto tmp_nh = cv::gimpl::GModel::dataNodeOf(gm, tmp0);
-    auto out_nh = cv::gimpl::GModel::dataNodeOf(gm, out);
+    auto in_nh  = cv::gimpl::GModel::dataNodeOf(glm, in);
+    auto tmp_nh = cv::gimpl::GModel::dataNodeOf(glm, tmp0);
+    auto out_nh = cv::gimpl::GModel::dataNodeOf(glm, out);
 
     // in/out mats shouldn't be assigned to any Island
     EXPECT_FALSE(gm.metadata(in_nh ).contains<cv::gimpl::Island>());
@@ -320,7 +321,7 @@ TEST(IslandsFusion, PartionOverlapUserIsland)
     //                                    |
     //    (in1) --------------------------`
 
-    // Check that internal islands does't overlap user island
+    // Check that internal islands doesn't overlap user island
 
     namespace J = Jupiter;
     namespace S = Saturn;

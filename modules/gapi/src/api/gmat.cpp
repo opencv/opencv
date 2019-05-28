@@ -10,7 +10,7 @@
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
 
 #include "opencv2/gapi/gmat.hpp"
-#include "api/gapi_priv.hpp" // GOrigin
+#include "api/gorigin.hpp"
 
 // cv::GMat public implementation //////////////////////////////////////////////
 cv::GMat::GMat()
@@ -33,20 +33,49 @@ const cv::GOrigin& cv::GMat::priv() const
     return *m_priv;
 }
 
+namespace{
+    template <typename T> cv::GMetaArgs vec_descr_of(const std::vector<T> &vec)
+        {
+        cv::GMetaArgs vec_descr;
+        vec_descr.reserve(vec.size());
+        for(auto& mat : vec){
+            vec_descr.emplace_back(descr_of(mat));
+        }
+        return vec_descr;
+    }
+}
+
+
 #if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 }
+
 cv::GMatDesc cv::descr_of(const cv::UMat &mat)
 {
     return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
+}
+
+cv::GMetaArgs cv::descr_of(const std::vector<cv::Mat> &vec)
+{
+    return vec_descr_of(vec);
+}
+
+cv::GMetaArgs cv::descr_of(const std::vector<cv::UMat> &vec)
+{
+    return vec_descr_of(vec);
 }
 #endif
 
 cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)
 {
     return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
+}
+
+cv::GMetaArgs cv::gapi::own::descr_of(const std::vector<cv::gapi::own::Mat> &vec)
+{
+    return vec_descr_of(vec);
 }
 
 namespace cv {
@@ -70,9 +99,32 @@ std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
         break;
     }
 
-    os << "C" << desc.chan << " ";
+    os << "C" << desc.chan;
+    if (desc.planar) os << "p";
+    os << " ";
     os << desc.size.width << "x" << desc.size.height;
 
     return os;
 }
+
+namespace {
+template<typename M> inline bool canDescribeHelper(const GMatDesc& desc, const M& mat)
+{
+    const auto mat_desc = desc.planar ? descr_of(mat).asPlanar(desc.chan) : descr_of(mat);
+    return desc == mat_desc;
 }
+} // anonymous namespace
+
+bool GMatDesc::canDescribe(const cv::gapi::own::Mat& mat) const
+{
+    return canDescribeHelper(*this, mat);
+}
+
+#if !defined(GAPI_STANDALONE)
+bool GMatDesc::canDescribe(const cv::Mat& mat) const
+{
+    return canDescribeHelper(*this, mat);
+}
+#endif
+
+}// namespace cv

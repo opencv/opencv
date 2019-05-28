@@ -37,6 +37,13 @@ public class CvTypeTest extends OpenCVTestCase {
         assertEquals(CvType.CV_64FC4, CvType.CV_64FC(4));
     }
 
+    public void testCV_16FC() {
+        assertEquals(CvType.CV_16FC1, CvType.CV_16FC(1));
+        assertEquals(CvType.CV_16FC2, CvType.CV_16FC(2));
+        assertEquals(CvType.CV_16FC3, CvType.CV_16FC(3));
+        assertEquals(CvType.CV_16FC4, CvType.CV_16FC(4));
+    }
+
     public void testChannels() {
         assertEquals(1, CvType.channels(CvType.CV_64F));
     }
@@ -52,6 +59,7 @@ public class CvTypeTest extends OpenCVTestCase {
 
     public void testELEM_SIZE() {
         assertEquals(3 * 8, CvType.ELEM_SIZE(CvType.CV_64FC3));
+        assertEquals(3 * 2, CvType.ELEM_SIZE(CvType.CV_16FC3));
     }
 
     public void testTypeToString() {

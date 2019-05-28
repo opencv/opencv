@@ -114,9 +114,11 @@ char* floatToString( char* buf, float value, bool halfprecision, bool explicitZe
         }
         else
         {
-            static const char* fmt = halfprecision ? "%.4e" : "%.8e";
             char* ptr = buf;
-            sprintf( buf, fmt, value );
+            if (halfprecision)
+                sprintf(buf, "%.4e", value);
+            else
+                sprintf(buf, "%.8e", value);
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -340,16 +342,9 @@ static inline void writeReal(uchar* p, double fval)
 class FileStorage::Impl : public FileStorage_API
 {
 public:
-    enum State
-    {
-        UNDEFINED      = 0,
-        VALUE_EXPECTED = 1,
-        NAME_EXPECTED  = 2,
-        INSIDE_MAP     = 4
-    };
-
     void init()
     {
+        flags = 0;
         buffer.clear();
         bufofs = 0;
         state = UNDEFINED;
@@ -358,6 +353,7 @@ public:
         write_mode = false;
         mem_mode = false;
         space = 0;
+        wrap_margin = 71;
         fmt = 0;
         file = 0;
         gzfile = 0;
@@ -615,7 +611,8 @@ public:
                     for(;;)
                     {
                         int line_offset = (int)ftell( file );
-                        char* ptr0 = gets( &xml_buf_[0], xml_buf_size ), *ptr;
+                        const char* ptr0 = this->gets(&xml_buf_[0], xml_buf_size );
+                        const char* ptr = NULL;
                         if( !ptr0 )
                             break;
                         ptr = ptr0;
@@ -708,7 +705,7 @@ public:
             const char* json_signature = "{";
             const char* xml_signature  = "<?xml";
             char buf[16];
-            gets( buf, sizeof(buf)-2 );
+            this->gets( buf, sizeof(buf)-2 );
             char* bufPtr = cv_skip_BOM(buf);
             size_t bufOffset = bufPtr - buf;
 
@@ -861,7 +858,7 @@ public:
 
     char* gets()
     {
-        char* ptr = gets(bufferStart(), (int)(bufferEnd() - bufferStart()));
+        char* ptr = this->gets(bufferStart(), (int)(bufferEnd() - bufferStart()));
         if( !ptr )
         {
             ptr = bufferStart();  // FIXIT Why do we need this hack? What is about other parsers JSON/YAML?
@@ -1766,11 +1763,13 @@ public:
 };
 
 FileStorage::FileStorage()
+    : state(0)
 {
     p = makePtr<FileStorage::Impl>(this);
 }
 
 FileStorage::FileStorage(const String& filename, int flags, const String& encoding)
+    : state(0)
 {
     p = makePtr<FileStorage::Impl>(this);
     bool ok = p->open(filename.c_str(), flags, encoding.c_str());
@@ -2197,7 +2196,8 @@ FileNode::operator double() const
         return DBL_MAX;
 }
 
-FileNode::operator std::string() const
+double FileNode::real() const  { return double(*this); }
+std::string FileNode::string() const
 {
     const uchar* p = ptr();
     if( !p || (*p & TYPE_MASK) != STRING )
@@ -2206,9 +2206,6 @@ FileNode::operator std::string() const
     size_t sz = (size_t)(unsigned)readInt(p);
     return std::string((const char*)(p + 4), sz - 1);
 }
-
-double FileNode::real() const  { return double(*this); }
-std::string FileNode::string() const { return std::string(*this); }
 Mat FileNode::mat() const { Mat value; read(*this, value, Mat()); return value; }
 
 FileNodeIterator FileNode::begin() const { return FileNodeIterator(*this, false); }

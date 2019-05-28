@@ -100,7 +100,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Mat dist (pairwise_matches.H, Range::all(), Range(2, 3));
     Mat R (pairwise_matches.H, Range::all(), Range(0, 2));
     // separate transform matrix, use lower error on rotations
-    SANITY_CHECK(dist, 1., ERROR_ABSOLUTE);
+    SANITY_CHECK(dist, 3., ERROR_ABSOLUTE);
     SANITY_CHECK(R, .06, ERROR_ABSOLUTE);
 }
 
@@ -280,7 +280,7 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_GT(pairwise_matches[i].matches.size(), 200u);
+        EXPECT_GT(pairwise_matches[i].matches.size(), 150u);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }

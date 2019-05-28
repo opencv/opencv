@@ -92,7 +92,7 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 {                                                                                                     \
     if (!dst || dst == Py_None)                                                                       \
         return true;                                                                                  \
-    std::underlying_type<TYPE>::type underlying = 0;                                                  \
+    int underlying = 0;                                                  \
                                                                                                       \
     if (!pyopencv_to(dst, underlying, name)) return false;                                            \
     src = static_cast<TYPE>(underlying);                                                              \
@@ -103,7 +103,7 @@ bool pyopencv_to(PyObject* dst, TYPE& src, const char* name)                    
 template<>                                                                                            \
 PyObject* pyopencv_from(const TYPE& src)                                                              \
 {                                                                                                     \
-    return pyopencv_from(static_cast<std::underlying_type<TYPE>::type>(src));                         \
+    return pyopencv_from(static_cast<int>(src));                         \
 }
 
 #include "pyopencv_generated_include.h"
@@ -197,6 +197,7 @@ typedef std::vector<size_t> vector_size_t;
 typedef std::vector<Point> vector_Point;
 typedef std::vector<Point2f> vector_Point2f;
 typedef std::vector<Point3f> vector_Point3f;
+typedef std::vector<Size> vector_Size;
 typedef std::vector<Vec2f> vector_Vec2f;
 typedef std::vector<Vec3f> vector_Vec3f;
 typedef std::vector<Vec4f> vector_Vec4f;
@@ -846,6 +847,40 @@ bool pyopencv_to(PyObject* obj, Range& r, const char* name)
     CV_UNUSED(name);
     if(!obj || obj == Py_None)
         return true;
+    while (PySequence_Check(obj))
+    {
+        PyObject *fi = PySequence_Fast(obj, name);
+        if (fi == NULL)
+            break;
+        if (2 != PySequence_Fast_GET_SIZE(fi))
+        {
+            failmsg("Range value for argument '%s' is longer than 2", name);
+            Py_DECREF(fi);
+            return false;
+        }
+        {
+            PyObject *item = PySequence_Fast_GET_ITEM(fi, 0);
+            if (PyInt_Check(item)) {
+                r.start = (int)PyInt_AsLong(item);
+            } else {
+                failmsg("Range.start value for argument '%s' is not integer", name);
+                Py_DECREF(fi);
+                break;
+            }
+        }
+        {
+            PyObject *item = PySequence_Fast_GET_ITEM(fi, 1);
+            if (PyInt_Check(item)) {
+                r.end = (int)PyInt_AsLong(item);
+            } else {
+                failmsg("Range.end value for argument '%s' is not integer", name);
+                Py_DECREF(fi);
+                break;
+            }
+        }
+        Py_DECREF(fi);
+        return true;
+    }
     if(PyObject_Size(obj) == 0)
     {
         r = Range::all();
@@ -1338,6 +1373,19 @@ template<> struct pyopencvVecConverter<Mat>
     }
 };
 
+template<> struct pyopencvVecConverter<UMat>
+{
+    static bool to(PyObject* obj, std::vector<UMat>& value, const ArgInfo info)
+    {
+        return pyopencv_to_generic_vec(obj, value, info);
+    }
+
+    static PyObject* from(const std::vector<UMat>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
 template<> struct pyopencvVecConverter<KeyPoint>
 {
     static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo info)
@@ -1694,7 +1742,7 @@ static PyMethodDef special_methods[] = {
 struct ConstDef
 {
     const char * name;
-    long val;
+    long long val;
 };
 
 static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
@@ -1733,7 +1781,7 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
   }
   for (ConstDef * c = consts; c->name != NULL; ++c)
   {
-    PyDict_SetItemString(d, c->name, PyInt_FromLong(c->val));
+    PyDict_SetItemString(d, c->name, PyLong_FromLongLong(c->val));
   }
 
 }

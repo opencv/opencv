@@ -1,0 +1,40 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
+    //buildToolsVersion "x.y.z" // not needed since com.android.tools.build:gradle:3.0.0
+
+    defaultConfig {
+        minSdkVersion @ANDROID_MIN_SDK_VERSION@
+        targetSdkVersion @ANDROID_TARGET_SDK_VERSION@
+    }
+
+    buildTypes {
+        debug {
+            packagingOptions{
+                doNotStrip '*.so'
+            }
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_6
+        targetCompatibility JavaVersion.VERSION_1_6
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['../../jni']
+            java.srcDirs = ['src']  // TODO Use original files instead of copied into build directory
+            aidl.srcDirs = ['src']
+            res.srcDirs = ['@OpenCV_SOURCE_DIR@/modules/java/android_sdk/android_gradle_lib/res']
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+}
+
+dependencies {
+}
