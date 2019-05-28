@@ -328,7 +328,7 @@ int ap3p::computePoses(const double featureVectors[3][4],
 bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Mat &ipoints) {
     CV_INSTRUMENT_REGION();
 
-    double rotation_matrix[3][3], translation[3];
+    double rotation_matrix[3][3] = {}, translation[3] = {};
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth()) {
         if (opoints.depth() == CV_32F)
@@ -353,7 +353,7 @@ bool ap3p::solve(cv::Mat &R, cv::Mat &tvec, const cv::Mat &opoints, const cv::Ma
 int ap3p::solve(std::vector<cv::Mat> &Rs, std::vector<cv::Mat> &tvecs, const cv::Mat &opoints, const cv::Mat &ipoints) {
     CV_INSTRUMENT_REGION();
 
-    double rotation_matrix[4][3][3], translation[4][3];
+    double rotation_matrix[4][3][3] = {}, translation[4][3] = {};
     std::vector<double> points;
     if (opoints.depth() == ipoints.depth()) {
         if (opoints.depth() == CV_32F)
@@ -391,7 +391,7 @@ ap3p::solve(double R[3][3], double t[3],
             double mu1, double mv1, double X1, double Y1, double Z1,
             double mu2, double mv2, double X2, double Y2, double Z2,
             double mu3, double mv3, double X3, double Y3, double Z3) {
-    double Rs[4][3][3], ts[4][3];
+    double Rs[4][3][3] = {}, ts[4][3] = {};
 
     const bool p4p = true;
     int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0, mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2, mu3, mv3, X3, Y3, Z3, p4p);

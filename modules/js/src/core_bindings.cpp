@@ -296,6 +296,40 @@ namespace binding_utils
         cv::minEnclosingCircle(points, circle.center, circle.radius);
         return circle;
     }
+
+    int floodFill_withRect_helper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6 = Scalar(), Scalar arg7 = Scalar(), int arg8 = 4)
+    {
+        cv::Rect rect;
+
+        int rc = cv::floodFill(arg1, arg2, arg3, arg4, &rect, arg6, arg7, arg8);
+
+        arg5.set("x", emscripten::val(rect.x));
+        arg5.set("y", emscripten::val(rect.y));
+        arg5.set("width", emscripten::val(rect.width));
+        arg5.set("height", emscripten::val(rect.height));
+
+        return rc;
+    }
+
+    int floodFill_wrapper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7, int arg8) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    int floodFill_wrapper_1(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    int floodFill_wrapper_2(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+
+    int floodFill_wrapper_3(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5);
+    }
+
+    int floodFill_wrapper_4(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4) {
+        return cv::floodFill(arg1, arg2, arg3, arg4);
+    }
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
@@ -557,6 +591,16 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
 #ifdef HAVE_OPENCV_IMGPROC
     function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar, int)>(&binding_utils::floodFill_wrapper));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar)>(&binding_utils::floodFill_wrapper_1));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar)>(&binding_utils::floodFill_wrapper_2));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val)>(&binding_utils::floodFill_wrapper_3));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar)>(&binding_utils::floodFill_wrapper_4));
 #endif
 
     function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));

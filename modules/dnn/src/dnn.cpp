@@ -3056,6 +3056,23 @@ int Net::getLayerId(const String &layer)
     return impl->getLayerId(layer);
 }
 
+String parseLayerParams(const String& name, const LayerParams& lp) {
+    DictValue param = lp.get(name);
+    std::ostringstream out;
+    out << name << " ";
+    switch (param.size()) {
+        case 1: out << ": "; break;
+        case 2: out << "(HxW): "; break;
+        case 3: out << "(DxHxW): "; break;
+        default: CV_Error(Error::StsNotImplemented, format("Unsupported %s size = %d", name.c_str(), param.size()));
+    }
+    for (size_t i = 0; i < param.size() - 1; i++) {
+        out << param.get<int>(i) << " x ";
+    }
+    out << param.get<int>(param.size() - 1) << "\\l";
+    return out.str();
+}
+
 String Net::dump()
 {
     CV_Assert(!empty());
@@ -3141,39 +3158,47 @@ String Net::dump()
                     out << " | ";
                 }
                 out << lp.name << "\\n" << lp.type << "\\n";
-                 if (lp.has("kernel_size")) {
-                     DictValue size = lp.get("kernel_size");
-                     out << "kernel (HxW): " << size << " x " << size << "\\l";
-                 } else if (lp.has("kernel_h") && lp.has("kernel_w")) {
-                     DictValue h = lp.get("kernel_h");
-                     DictValue w = lp.get("kernel_w");
-                     out << "kernel (HxW): " << h << " x " << w << "\\l";
-                 }
-                 if (lp.has("stride")) {
-                     DictValue stride = lp.get("stride");
-                     out << "stride (HxW): " << stride << " x " << stride << "\\l";
-                 } else if (lp.has("stride_h") && lp.has("stride_w")) {
-                     DictValue h = lp.get("stride_h");
-                     DictValue w = lp.get("stride_w");
-                     out << "stride (HxW): " << h << " x " << w << "\\l";
-                 }
-                 if (lp.has("dilation")) {
-                     DictValue dilation = lp.get("dilation");
-                     out << "dilation (HxW): " << dilation << " x " << dilation << "\\l";
-                 } else if (lp.has("dilation_h") && lp.has("dilation_w")) {
-                     DictValue h = lp.get("dilation_h");
-                     DictValue w = lp.get("dilation_w");
-                     out << "dilation (HxW): " << h << " x " << w << "\\l";
-                 }
-                 if (lp.has("pad")) {
-                     DictValue pad = lp.get("pad");
-                     out << "pad (LxTxRxB): " << pad << " x " << pad << " x " << pad << " x " << pad << "\\l";
+                if (lp.has("kernel_size")) {
+                    String kernel = parseLayerParams("kernel_size", lp);
+                    out << kernel;
+                } else if (lp.has("kernel_h") && lp.has("kernel_w")) {
+                    DictValue h = lp.get("kernel_h");
+                    DictValue w = lp.get("kernel_w");
+                    out << "kernel (HxW): " << h << " x " << w << "\\l";
+                }
+                if (lp.has("stride")) {
+                    String stride = parseLayerParams("stride", lp);
+                    out << stride;
+                } else if (lp.has("stride_h") && lp.has("stride_w")) {
+                    DictValue h = lp.get("stride_h");
+                    DictValue w = lp.get("stride_w");
+                    out << "stride (HxW): " << h << " x " << w << "\\l";
+                }
+                if (lp.has("dilation")) {
+                    String dilation = parseLayerParams("dilation", lp);
+                    out << dilation;
+                } else if (lp.has("dilation_h") && lp.has("dilation_w")) {
+                    DictValue h = lp.get("dilation_h");
+                    DictValue w = lp.get("dilation_w");
+                    out << "dilation (HxW): " << h << " x " << w << "\\l";
+                }
+                if (lp.has("pad")) {
+                    DictValue pad = lp.get("pad");
+                    out << "pad ";
+                    switch (pad.size()) {
+                        case 1: out << ": " << pad << "\\l"; break;
+                        case 2: out << "(HxW): (" << pad.get<int>(0) << " x " << pad.get<int>(1) << ")" << "\\l"; break;
+                        case 4: out << "(HxW): (" << pad.get<int>(0) << ", " << pad.get<int>(2) << ") x (" << pad.get<int>(1) << ", " << pad.get<int>(3) << ")" << "\\l"; break;
+                        case 6: out << "(DxHxW): (" << pad.get<int>(0) << ", " << pad.get<int>(3) << ") x (" << pad.get<int>(1) << ", " << pad.get<int>(4)
+                                << ") x (" << pad.get<int>(2) << ", " << pad.get<int>(5) << ")" << "\\l"; break;
+                        default: CV_Error(Error::StsNotImplemented,  format("Unsupported pad size = %d", pad.size()));
+                    }
                  } else if (lp.has("pad_l") && lp.has("pad_t") && lp.has("pad_r") && lp.has("pad_b")) {
                      DictValue l = lp.get("pad_l");
                      DictValue t = lp.get("pad_t");
                      DictValue r = lp.get("pad_r");
                      DictValue b = lp.get("pad_b");
-                     out << "pad (LxTxRxB): " << l << " x " << t << " x " << r << " x " << b << "\\l";
+                     out << "pad (HxW): (" << t << ", " << b << ") x (" << l << ", " << r << ")" << "\\l";
                  }
                  else if (lp.has("pooled_w") || lp.has("pooled_h")) {
                      DictValue h = lp.get("pooled_h");

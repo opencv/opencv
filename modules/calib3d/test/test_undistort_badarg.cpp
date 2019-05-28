@@ -105,7 +105,7 @@ void CV_UndistortPointsBadArgTest::run(int)
     R = cv::cvarrToMat(&_R_orig);
     src_points = cv::cvarrToMat(&_src_points_orig);
 
-    src_points.create(2, 2, CV_32F);
+    src_points.create(2, 2, CV_32FC2);
     errcount += run_test_case( CV_StsAssert, "Invalid input data matrix size" );
     src_points = cv::cvarrToMat(&_src_points_orig);
 
