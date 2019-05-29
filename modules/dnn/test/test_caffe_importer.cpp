@@ -83,17 +83,17 @@ TEST(Test_Caffe, memory_read)
     const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
-    string dataProto;
-    ASSERT_TRUE(readFileInMemory(proto, dataProto));
-    string dataModel;
-    ASSERT_TRUE(readFileInMemory(model, dataModel));
+    std::vector<char> dataProto;
+    readFileContent(proto, dataProto);
+    std::vector<char> dataModel;
+    readFileContent(model, dataModel);
 
-    Net net = readNetFromCaffe(dataProto.c_str(), dataProto.size());
+    Net net = readNetFromCaffe(dataProto.data(), dataProto.size());
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     ASSERT_FALSE(net.empty());
 
-    Net net2 = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                dataModel.c_str(), dataModel.size());
+    Net net2 = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                dataModel.data(), dataModel.size());
     ASSERT_FALSE(net2.empty());
 }
 
@@ -124,13 +124,13 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
         if (readFromMemory)
         {
-            string dataProto;
-            ASSERT_TRUE(readFileInMemory(proto, dataProto));
-            string dataModel;
-            ASSERT_TRUE(readFileInMemory(model, dataModel));
+            std::vector<char> dataProto;
+            readFileContent(proto, dataProto);
+            std::vector<char> dataModel;
+            readFileContent(model, dataModel);
 
-            net = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                   dataModel.c_str(), dataModel.size());
+            net = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                   dataModel.data(), dataModel.size());
         }
         else
             net = readNetFromCaffe(proto, model);
