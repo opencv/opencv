@@ -97,6 +97,7 @@ namespace detail
     template <typename T1, typename... Ts>
     struct all_unique<T1, Ts...> : std::integral_constant<bool, !contains<T1, Ts...>::value &&
                                                                  all_unique<Ts...>::value> {};
+
     enum class PackageObjectTag {
         KERNEL,
         TRANSFORMATION

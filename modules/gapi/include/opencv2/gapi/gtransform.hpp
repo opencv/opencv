@@ -20,53 +20,6 @@
 namespace cv
 {
 
-template <typename T>
-struct TransType;
-template <>
-struct TransType<cv::GMat>
-{
-    using type = cv::GMat;
-};
-template <>
-struct TransType<cv::GMatP>
-{
-    using type = cv::GMat;
-};
-template <>
-struct TransType<cv::GScalar>
-{
-    using type = cv::GScalar;
-};
-template <typename U>
-struct TransType<cv::GArray<U>>
-{
-    using type = cv::GArray<U>;
-};
-template <typename T>
-struct TransType
-{
-    using type = T;
-};
-
-template <typename T>
-using is_nongapi_type2 = std::is_same<T, typename TransType<T>::type>;
-
-template <typename T>
-typename std::enable_if<!is_nongapi_type2<T>::value,
-                        typename TransType<T>::type>::type
-get_in_args(const GArgs &in_args, int idx)
-{
-    return util::get<typename TransType<T>::type>(in_args.at(idx));
-}
-
-template <typename T>
-typename std::enable_if<is_nongapi_type2<T>::value, T>::type get_in_args(const GArgs &in_args, int idx)
-{
-    return in_args.at(idx).template get<T>();
-}
-
-//////////////////////////////////////////////////////////////////////
-
 struct GAPI_EXPORTS GTransform
 {
     using F = std::function<GArgs(const GArgs &)>;
@@ -99,16 +52,14 @@ struct TransHelper<K, std::tuple<Ins...>, Out>
     template <int... IIs>
     static GArgs get_pattern_impl(const GArgs &in_args, detail::Seq<IIs...>)
     {
-        using R = typename TransType<Out>::type;
-        const R r = K::pattern(get_in_args<Ins>(in_args, IIs)...);
+        const Out r = K::pattern(in_args.at(IIs).template get<Ins>()...);
         return GArgs{GArg(r)};
     }
 
     template <int... IIs>
     static GArgs get_substitute_impl(const GArgs &in_args, detail::Seq<IIs...>)
     {
-        using R = typename TransType<Out>::type;
-        const R r = K::substitute(get_in_args<Ins>(in_args, IIs)...);
+        const Out r = K::pattern(in_args.at(IIs).template get<Ins>()...);
         return GArgs{GArg(r)};
     }
 
@@ -129,16 +80,16 @@ struct TransHelper<K, std::tuple<Ins...>, std::tuple<Outs...>>
     template <int... IIs, int... OIs>
     static GArgs get_pattern_impl(const GArgs &in_args, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        using R = std::tuple<typename TransType<Outs>::type...>;
-        const R r = K::pattern(get_in_args<Ins>(in_args, IIs)...);
+        using R = std::tuple<Outs...>;
+        const R r = K::pattern(in_args.at(IIs).template get<Ins>()...);
         return GArgs{GArg(std::get<OIs>(r))...};
     }
 
     template <int... IIs, int... OIs>
     static GArgs get_substitute_impl(const GArgs &in_args, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        using R = std::tuple<typename TransType<Outs>::type...>;
-        const R r = K::substitute(get_in_args<Ins>(in_args, IIs)...);
+        using R = std::tuple<Outs...>;
+        const R r = K::pattern(in_args.at(IIs).template get<Ins>()...);
         return GArgs{GArg(std::get<OIs>(r))...};
     }
 
@@ -186,18 +137,18 @@ public:
 
 #define G_DESCR_HELPER_CLASS(Class) Class##DescrHelper
 
-#define G_DESCR_HELPER_BODY(Class, Descr)                           \
-    namespace detail                                                \
-    {                                                               \
-    struct G_DESCR_HELPER_CLASS(Class)                              \
-    {                                                               \
-        static constexpr const char *descr() { return Descr; };     \
-    };                                                              \
+#define G_DESCR_HELPER_BODY(Class, Descr)                       \
+    namespace detail                                            \
+    {                                                           \
+    struct G_DESCR_HELPER_CLASS(Class)                          \
+    {                                                           \
+        static constexpr const char *descr() { return Descr; }; \
+    };                                                          \
     }
 
-#define GAPI_TRANSFORM(Class, API, Descr)                                      \
-    G_DESCR_HELPER_BODY(Class, Descr)                                          \
-    struct Class final : public cv::GTransformImpl<Class, std::function API>,  \
+#define GAPI_TRANSFORM(Class, API, Descr)                                     \
+    G_DESCR_HELPER_BODY(Class, Descr)                                         \
+    struct Class final : public cv::GTransformImpl<Class, std::function API>, \
                          public detail::G_DESCR_HELPER_CLASS(Class)
 
 #define GAPI_TRANSFORM_M(Class, API, Descr)                                    \
