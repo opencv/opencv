@@ -4,9 +4,10 @@ import cv2 as cv
 import argparse
 from common import findFile
 
-parser = argparse.ArgumentParser(description='Use this script to run action recognition using 3D ResNet34')
+parser = argparse.ArgumentParser(description='Use this script to run action recognition using 3D ResNet34',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input', '-i', help='Path to input video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--model', help='Path to model.')
+parser.add_argument('--model', required=True, help='Path to model.')
 parser.add_argument('--classes', default=findFile('action_recongnition_kinetics.txt'), help='Path to classes list.')
 
 # To get net download original repository https://github.com/kenshohara/video-classification-3d-cnn-pytorch
