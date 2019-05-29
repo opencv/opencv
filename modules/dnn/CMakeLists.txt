@@ -89,7 +89,7 @@ endif()
 if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
   list(APPEND include_dirs ${CUDA_TOOLKIT_INCLUDE} ${CUDNN_INCLUDE_DIRS})
 else()
-  set(sources_options EXCLUDE_CUDA)
+  set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
 ocv_module_include_directories(${include_dirs})
