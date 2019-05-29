@@ -486,28 +486,53 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
 
-    Mat inp0 = blobFromNPY(_tf("data/input_kinetics0.npy"));
-    Mat ref0 = blobFromNPY(_tf("data/output_kinetics0.npy"));
-    Mat inp1 = blobFromNPY(_tf("data/input_kinetics1.npy"));
-    Mat ref1 = blobFromNPY(_tf("data/output_kinetics1.npy"));
     String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
+    Mat image0 = imread(findDataFile("dnn/dog416.png"));
+    Mat image1 = imread(findDataFile("dnn/street.png"));
 
-    checkBackend(&inp0, &ref0);
+    Mat ref0 = blobFromNPY(_tf("data/output_kinetics0.npy"));
+    Mat ref1 = blobFromNPY(_tf("data/output_kinetics1.npy"));
+
+    std::vector<Mat> images_0(16, image0);
+    std::vector<Mat> images_1(16, image1);
+    Mat blob0 = blobFromImages(images_0, 1.0, Size(112, 112), Scalar(114.7748, 107.7354, 99.4750), true, true);
+    Mat blob1 = blobFromImages(images_1, 1.0, Size(112, 112), Scalar(114.7748, 107.7354, 99.4750), true, true);
+
+    Net permute;
+    LayerParams lp;
+    int order[] = {1, 0, 2, 3};
+    lp.set("order", DictValue::arrayInt<int*>(&order[0], 4));
+    permute.addLayerToPrev("perm", "Permute", lp);
+
+    permute.setInput(blob0);
+    Mat input0 = permute.forward().clone();
+
+    permute.setInput(blob1);
+    Mat input1 = permute.forward().clone();
+
+    int dims[] = {1, 3, 16, 112, 112};
+    input0 = input0.reshape(0, 5, &dims[0]);
+    input1 = input1.reshape(0, 5, &dims[0]);
+
     Net net = readNetFromONNX(onnxmodel);
     ASSERT_FALSE(net.empty());
-
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    net.setInput(inp0);
-    Mat out = net.forward();
-    normAssert(ref0, out);
+    // output range [-5, 11]
+    float l1 = 0.0013;
+    float lInf = 0.009;
 
-    checkBackend(&inp1, &ref1);
-    net.setInput(inp1);
-    out = net.forward();
+    checkBackend(&input0, &ref0);
+    net.setInput(input0);
+    Mat out = net.forward().clone();
+    normAssert(ref0, out, "", l1, lInf);
 
-    normAssert(ref1, out);
+    checkBackend(&input1, &ref1);
+    net.setInput(input1);
+    out = net.forward().clone();
+    normAssert(ref1, out, "", l1, lInf);
+
     expectNoFallbacksFromIE(net);
 }
 
