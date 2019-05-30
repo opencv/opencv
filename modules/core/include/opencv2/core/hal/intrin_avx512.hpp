@@ -1049,67 +1049,112 @@ OPENCV_HAL_IMPL_AVX512_ROTATE_EC(v_float64x8,  pd)
 ////////// Reduce /////////
 
 /** Reduce **/
-#define OPENCV_HAL_IMPL_AVX512_REDUCE(func, ifunc, _Tpvec, sctype, suffix) \
-    inline sctype v_reduce_##func(const _Tpvec& a)                         \
-    { return _mm512_reduce_##ifunc##_##suffix(a.val); }
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64(a, b) a + b
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_8(sctype, func, _Tpvec, ifunc, scop)                                          \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                                  \
+    { __m256i half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));                           \
+      sctype CV_DECL_ALIGNED(64) idx[2];                                                                            \
+      _mm_store_si128((__m128i*)idx, _mm_##ifunc(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1))); \
+      return scop(idx[0], idx[1]); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, min, v_uint64x8, min_epu64, min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, max, v_uint64x8, max_epu64, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, sum, v_uint64x8, add_epi64, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  min, v_int64x8,  min_epi64, min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  max, v_int64x8,  max_epi64, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  sum, v_int64x8,  add_epi64, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
 
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_uint32x16,  uint,   epu32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_int32x16,   int,    epi32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_uint64x8,   uint64, epu64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_int64x8,    int64,  epi64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_float32x16, float,  ps)
-OPENCV_HAL_IMPL_AVX512_REDUCE(min, min, v_float64x8,  double, pd)
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_8F(func, ifunc, scop)                                         \
+    inline double v_reduce_##func(const v_float64x8& a)                                             \
+    { __m256d half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));           \
+      double CV_DECL_ALIGNED(64) idx[2];                                                            \
+      _mm_store_pd(idx, _mm_##ifunc(_mm256_castpd256_pd128(half), _mm256_extractf128_pd(half, 1))); \
+      return scop(idx[0], idx[1]); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_8F(min, min_pd, min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8F(max, max_pd, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8F(sum, add_pd, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
 
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_uint32x16,  uint,   epu32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_int32x16,   int,    epi32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_uint64x8,   uint64, epu64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_int64x8,    int64,  epi64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_float32x16, float,  ps)
-OPENCV_HAL_IMPL_AVX512_REDUCE(max, max, v_float64x8,  double, pd)
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_16(sctype, func, _Tpvec, ifunc)                                 \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                    \
+    { __m256i half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));             \
+      __m128i quarter = _mm_##ifunc(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1)); \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 8));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 4));                                     \
+      return (sctype)_mm_cvtsi128_si32(quarter); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_16(uint, min, v_uint32x16, min_epu32)
+OPENCV_HAL_IMPL_AVX512_REDUCE_16(uint, max, v_uint32x16, max_epu32)
+OPENCV_HAL_IMPL_AVX512_REDUCE_16(int,  min, v_int32x16,  min_epi32)
+OPENCV_HAL_IMPL_AVX512_REDUCE_16(int,  max, v_int32x16,  max_epi32)
 
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_uint32x16,  uint,   epi32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_int32x16,   int,    epi32)
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_uint64x8,   uint64, epi64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_int64x8,    int64,  epi64)
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_float32x16, float,  ps)
-OPENCV_HAL_IMPL_AVX512_REDUCE(sum, add, v_float64x8,  double, pd)
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_16F(func, ifunc)                                            \
+    inline float v_reduce_##func(const v_float32x16& a)                                           \
+    { __m256 half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));          \
+      __m128 quarter = _mm_##ifunc(_mm256_castps256_ps128(half), _mm256_extractf128_ps(half, 1)); \
+      quarter = _mm_##ifunc(quarter, _mm_permute_ps(quarter, _MM_SHUFFLE(0, 0, 3, 2)));           \
+      quarter = _mm_##ifunc(quarter, _mm_permute_ps(quarter, _MM_SHUFFLE(0, 0, 0, 1)));           \
+      return _mm_cvtss_f32(quarter); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_16F(min, min_ps)
+OPENCV_HAL_IMPL_AVX512_REDUCE_16F(max, max_ps)
 
-#define OPENCV_HAL_IMPL_AVX512_REDUCE_32(func, ifunc, _Tpvec, sctype, suffix) \
-    inline sctype v_reduce_##func(const _Tpvec& a)                            \
-    { return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_cvt##suffix##_epi32(_mm256_##ifunc##_##suffix(_v512_extract_low(a.val), _v512_extract_high(a.val)))); }
-#define OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(_Tpvec, sctype, suffix) \
-    inline sctype v_reduce_sum(const _Tpvec& a)                      \
-    { return (sctype)_mm512_reduce_add_epi32(_mm512_add_epi32(_mm512_cvt##suffix##_epi32(_v512_extract_low(a.val)), _mm512_cvt##suffix##_epi32(_v512_extract_high(a.val)))); }
+inline float v_reduce_sum(const v_float32x16& a)
+{
+    __m256 half = _mm256_add_ps(_v512_extract_low(a.val), _v512_extract_high(a.val));
+    __m128 quarter = _mm_add_ps(_mm256_castps256_ps128(half), _mm256_extractf128_ps(half, 1));
+    quarter = _mm_hadd_ps(quarter, quarter);
+    return _mm_cvtss_f32(_mm_hadd_ps(quarter, quarter));
+}
+inline int v_reduce_sum(const v_int32x16& a)
+{
+    __m256i half = _mm256_add_epi32(_v512_extract_low(a.val), _v512_extract_high(a.val));
+    __m128i quarter = _mm_add_epi32(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1));
+    quarter = _mm_hadd_epi32(quarter, quarter);
+    return _mm_cvtsi128_si32(_mm_hadd_epi32(quarter, quarter));
+}
+inline uint v_reduce_sum(const v_uint32x16& a)
+{ return (uint)v_reduce_sum(v_reinterpret_as_s32(a)); }
 
-OPENCV_HAL_IMPL_AVX512_REDUCE_32(min, min, v_uint16x32, ushort, epu16)
-OPENCV_HAL_IMPL_AVX512_REDUCE_32(min, min, v_int16x32,  short,  epi16)
-OPENCV_HAL_IMPL_AVX512_REDUCE_32(max, max, v_uint16x32, ushort, epu16)
-OPENCV_HAL_IMPL_AVX512_REDUCE_32(max, max, v_int16x32,  short,  epi16)
-OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(v_uint16x32, uint, epu16)
-OPENCV_HAL_IMPL_AVX512_REDUCE_32_SUM(v_int16x32,  int,  epi16)
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_32(sctype, func, _Tpvec, ifunc)                                 \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                    \
+    { __m256i half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));             \
+      __m128i quarter = _mm_##ifunc(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1)); \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 8));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 4));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 2));                                     \
+      return (sctype)_mm_cvtsi128_si32(quarter); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(ushort, min, v_uint16x32, min_epu16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(ushort, max, v_uint16x32, max_epu16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(short,  min, v_int16x32,  min_epi16)
+OPENCV_HAL_IMPL_AVX512_REDUCE_32(short,  max, v_int16x32,  max_epi16)
 
-#define OPENCV_HAL_IMPL_AVX512_REDUCE_64(func, ifunc, _Tpvec, sctype, suffix)                                      \
-    inline sctype v_reduce_##func(const _Tpvec& a)                                                                 \
-    {                                                                                                              \
-        __m256i half = _mm256_##ifunc##_##suffix(_v512_extract_low(a.val), _v512_extract_high(a.val));             \
-        __m128i quarter = _mm_##ifunc##_##suffix(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1)); \
-        return (sctype)_mm512_reduce_##ifunc##_epi32(_mm512_cvt##suffix##_epi32(quarter));                         \
-    }
-#define OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(_Tpvec, sctype, suffix)                            \
-    inline sctype v_reduce_sum(const _Tpvec& a)                                                 \
-    {                                                                                           \
-        __m512i half = _mm512_add_epi16(_mm512_cvt##suffix##_epi16(_v512_extract_low(a.val)),   \
-                                        _mm512_cvt##suffix##_epi16(_v512_extract_high(a.val))); \
-        __m256i quarter = _mm256_add_epi16(_v512_extract_low(half), _v512_extract_high(half));  \
-        return (sctype)_mm512_reduce_add_epi32(_mm512_cvtepi16_epi32(quarter));                 \
-    }
+inline int v_reduce_sum(const v_int16x32& a)
+{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+inline uint v_reduce_sum(const v_uint16x32& a)
+{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
 
-OPENCV_HAL_IMPL_AVX512_REDUCE_64(min, min, v_uint8x64, uchar, epu8)
-OPENCV_HAL_IMPL_AVX512_REDUCE_64(min, min, v_int8x64,  char,  epi8)
-OPENCV_HAL_IMPL_AVX512_REDUCE_64(max, max, v_uint8x64, uchar, epu8)
-OPENCV_HAL_IMPL_AVX512_REDUCE_64(max, max, v_int8x64,  char,  epi8)
-OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(v_uint8x64, uint, epu8)
-OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(v_int8x64,  int,  epi8)
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_64(sctype, func, _Tpvec, ifunc)                                 \
+    inline sctype v_reduce_##func(const _Tpvec& a)                                                    \
+    { __m256i half = _mm256_##ifunc(_v512_extract_low(a.val), _v512_extract_high(a.val));             \
+      __m128i quarter = _mm_##ifunc(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1)); \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 8));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 4));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 2));                                     \
+      quarter = _mm_##ifunc(quarter, _mm_srli_si128(quarter, 1));                                     \
+      return (sctype)_mm_cvtsi128_si32(quarter); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(uchar, min, v_uint8x64, min_epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(uchar, max, v_uint8x64, max_epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(schar, min, v_int8x64,  min_epi8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64(schar, max, v_int8x64,  max_epi8)
+
+#define OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(sctype, _Tpvec, suffix)                                    \
+    inline sctype v_reduce_sum(const _Tpvec& a)                                                         \
+    {   __m512i a16 = _mm512_add_epi16(_mm512_cvt##suffix##_epi16(_v512_extract_low(a.val)),            \
+                                       _mm512_cvt##suffix##_epi16(_v512_extract_high(a.val)));          \
+        a16 = _mm512_cvtepi16_epi32(_mm256_add_epi16(_v512_extract_low(a16), _v512_extract_high(a16))); \
+        __m256i a8 = _mm256_add_epi32(_v512_extract_low(a16), _v512_extract_high(a16));                 \
+        __m128i a4 = _mm_add_epi32(_mm256_castsi256_si128(a8), _mm256_extracti128_si256(a8, 1));        \
+        a4 = _mm_hadd_epi32(a4, a4);                                                                    \
+        return (sctype)_mm_cvtsi128_si32(_mm_hadd_epi32(a4, a4)); }
+OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(uint, v_uint8x64, epu8)
+OPENCV_HAL_IMPL_AVX512_REDUCE_64_SUM(int,  v_int8x64,  epi8)
 
 inline v_float32x16 v_reduce_sum4(const v_float32x16& a, const v_float32x16& b,
                                   const v_float32x16& c, const v_float32x16& d)
@@ -1123,12 +1168,18 @@ inline v_float32x16 v_reduce_sum4(const v_float32x16& a, const v_float32x16& b,
 
 inline unsigned v_reduce_sad(const v_uint8x64& a, const v_uint8x64& b)
 {
-    return (unsigned)_mm512_reduce_add_epi32(_mm512_sad_epu8(a.val, b.val));
+    __m512i val = _mm512_sad_epu8(a.val, b.val);
+    __m256i half = _mm256_add_epi32(_v512_extract_low(val), _v512_extract_high(val));
+    __m128i quarter = _mm_add_epi32(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1));
+    return (unsigned)_mm_cvtsi128_si32(_mm_add_epi32(quarter, _mm_unpackhi_epi64(quarter, quarter)));
 }
 inline unsigned v_reduce_sad(const v_int8x64& a, const v_int8x64& b)
 {
-    __m512i half = _mm512_set1_epi8(0x80);
-    return (unsigned)_mm512_reduce_add_epi32(_mm512_sad_epu8(_mm512_add_epi8(a.val, half), _mm512_add_epi8(b.val, half)));
+    __m512i val = _mm512_set1_epi8(0x80);
+    val = _mm512_sad_epu8(_mm512_add_epi8(a.val, val), _mm512_add_epi8(b.val, val));
+    __m256i half = _mm256_add_epi32(_v512_extract_low(val), _v512_extract_high(val));
+    __m128i quarter = _mm_add_epi32(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1));
+    return (unsigned)_mm_cvtsi128_si32(_mm_add_epi32(quarter, _mm_unpackhi_epi64(quarter, quarter)));
 }
 inline unsigned v_reduce_sad(const v_uint16x32& a, const v_uint16x32& b)
 { return v_reduce_sum(v_add_wrap(a - b, b - a)); }
@@ -1265,15 +1316,31 @@ OPENCV_HAL_IMPL_AVX512_ABS(v_int8x64,    v_uint8x64,    epi8)
 OPENCV_HAL_IMPL_AVX512_ABS(v_int16x32,   v_uint16x32,  epi16)
 OPENCV_HAL_IMPL_AVX512_ABS(v_int32x16,   v_uint32x16,  epi32)
 OPENCV_HAL_IMPL_AVX512_ABS(v_int64x8,    v_uint64x8,   epi64)
-OPENCV_HAL_IMPL_AVX512_ABS(v_float32x16, v_float32x16,    ps)
+
+inline v_float32x16 v_abs(const v_float32x16& x)
+{
+#ifdef _mm512_abs_pd
+    return v_float32x16(_mm512_abs_ps(x.val));
+#else
+    return v_float32x16(_mm512_castsi512_ps(_mm512_and_si512(_mm512_castps_si512(x.val),
+                        _v512_set_epu64(0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF,
+                                        0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF, 0x7FFFFFFF7FFFFFFF))));
+#endif
+}
 
 inline v_float64x8 v_abs(const v_float64x8& x)
 {
-#if defined __GNUC__ && (__GNUC__ < 7 || (__GNUC__ == 7 && __GNUC_MINOR__ <= 3))
-    // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87467
-    return v_float64x8(_mm512_abs_pd(_mm512_castpd_ps(x.val)));
+#ifdef _mm512_abs_pd
+    #if defined __GNUC__ && (__GNUC__ < 7 || (__GNUC__ == 7 && __GNUC_MINOR__ <= 3) || (__GNUC__ == 8 && __GNUC_MINOR__ <= 2))
+        // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87476
+        return v_float64x8(_mm512_abs_pd(_mm512_castpd_ps(x.val)));
+    #else
+        return v_float64x8(_mm512_abs_pd(x.val));
+    #endif
 #else
-    return v_float64x8(_mm512_abs_pd(x.val));
+    return v_float64x8(_mm512_castsi512_pd(_mm512_and_si512(_mm512_castpd_si512(x.val),
+                       _v512_set_epu64(0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF,
+                                       0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF))));
 #endif
 }
 
@@ -1388,21 +1455,21 @@ inline v_float64x8 v_cvt_f64_high(const v_float32x16& a)
 
 inline v_int8x64 v512_lut(const schar* tab, const int* idx)
 {
-    __m128i p0 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), tab, 1));
-    __m128i p1 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), tab, 1));
-    __m128i p2 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 2), tab, 1));
-    __m128i p3 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 3), tab, 1));
+    __m128i p0 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), (const int *)tab, 1));
+    __m128i p1 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), (const int *)tab, 1));
+    __m128i p2 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 2), (const int *)tab, 1));
+    __m128i p3 = _mm512_cvtepi32_epi8(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 3), (const int *)tab, 1));
     return v_int8x64(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_castsi128_si512(p0), p1, 1), p2, 2), p3, 3));
 }
 inline v_int8x64 v512_lut_pairs(const schar* tab, const int* idx)
 {
-    __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), tab, 1));
-    __m256i p1 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), tab, 1));
+    __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), (const int *)tab, 1));
+    __m256i p1 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), (const int *)tab, 1));
     return v_int8x64(_v512_combine(p0, p1));
 }
 inline v_int8x64 v512_lut_quads(const schar* tab, const int* idx)
 {
-    return v_int8x64(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), tab, 1));
+    return v_int8x64(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), (const int *)tab, 1));
 }
 inline v_uint8x64 v512_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v512_lut((const schar *)tab, idx)); }
 inline v_uint8x64 v512_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v512_lut_pairs((const schar *)tab, idx)); }
@@ -1410,17 +1477,21 @@ inline v_uint8x64 v512_lut_quads(const uchar* tab, const int* idx) { return v_re
 
 inline v_int16x32 v512_lut(const short* tab, const int* idx)
 {
-    __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), tab, 2));
-    __m256i p1 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), tab, 2));
+    __m256i p0 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx    ), (const int *)tab, 2));
+    __m256i p1 = _mm512_cvtepi32_epi16(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx + 1), (const int *)tab, 2));
     return v_int16x32(_v512_combine(p0, p1));
 }
 inline v_int16x32 v512_lut_pairs(const short* tab, const int* idx)
 {
-    return v_int16x32(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), tab, 2));
+    return v_int16x32(_mm512_i32gather_epi32(_mm512_loadu_si512((const __m512i*)idx), (const int *)tab, 2));
 }
 inline v_int16x32 v512_lut_quads(const short* tab, const int* idx)
 {
-    return v_int16x32(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), tab, 2));
+#if defined(__GNUC__)
+    return v_int16x32(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), (const long long int*)tab, 2));
+#else
+    return v_int16x32(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), (const int64*)tab, 2));
+#endif
 }
 inline v_uint16x32 v512_lut(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v512_lut((const short *)tab, idx)); }
 inline v_uint16x32 v512_lut_pairs(const ushort* tab, const int* idx) { return v_reinterpret_as_u16(v512_lut_pairs((const short *)tab, idx)); }
@@ -1432,7 +1503,11 @@ inline v_int32x16 v512_lut(const int* tab, const int* idx)
 }
 inline v_int32x16 v512_lut_pairs(const int* tab, const int* idx)
 {
-    return v_int32x16(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), tab, 4));
+#if defined(__GNUC__)
+    return v_int32x16(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), (const long long int*)tab, 4));
+#else
+    return v_int32x16(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), (const int64*)tab, 4));
+#endif
 }
 inline v_int32x16 v512_lut_quads(const int* tab, const int* idx)
 {
@@ -1448,7 +1523,11 @@ inline v_uint32x16 v512_lut_quads(const unsigned* tab, const int* idx) { return 
 
 inline v_int64x8 v512_lut(const int64* tab, const int* idx)
 {
+#if defined(__GNUC__)
+    return v_int64x8(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), (const long long int*)tab, 8));
+#else
     return v_int64x8(_mm512_i32gather_epi64(_mm256_loadu_si256((const __m256i*)idx), tab , 8));
+#endif
 }
 inline v_int64x8 v512_lut_pairs(const int64* tab, const int* idx)
 {
