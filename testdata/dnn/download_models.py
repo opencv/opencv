@@ -798,6 +798,11 @@ models = [
         member='shufflenet/test_data_set_0/output_0.pb',
         sha='6a33ed6ccef4c69a27a3993363c3f854d0f79bb0',
         filename='onnx/data/output_shufflenet.pb'),
+    Model(
+        name='ResNet-34_kinetics (ONNX)', # https://github.com/kenshohara/video-classification-3d-cnn-pytorch
+        url='https://www.dropbox.com/s/065l4vr8bptzohb/resnet-34_kinetics.onnx?dl=1',
+        sha='88897629e4abb0fddef939f0c2d668a4edeb0788',
+        filename='resnet-34_kinetics.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
