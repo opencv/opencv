@@ -352,7 +352,7 @@ TEST_P(Test_ONNX_nets, ResNet18v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-16; 22], after Softmax [0, 0.51]
-    testONNXModels("resnet18v1", pb, default_l1, default_lInf, true);
+    testONNXModels("resnet18v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
 }
 
 TEST_P(Test_ONNX_nets, ResNet50v1)
@@ -360,7 +360,7 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
-    testONNXModels("resnet50v1", pb, default_l1, default_lInf, true);
+    testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
@@ -477,7 +477,7 @@ TEST_P(Test_ONNX_nets, DenseNet121)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-87; 138], after Softmax [0; 1]
-    testONNXModels("densenet121", pb, default_l1, default_lInf, true);
+    testONNXModels("densenet121", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v1)
@@ -495,6 +495,61 @@ TEST_P(Test_ONNX_nets, Shufflenet)
          (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL || target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
     testONNXModels("shufflenet", pb);
+}
+
+TEST_P(Test_ONNX_nets, Resnet34_kinetics)
+{
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
+    Mat image0 = imread(findDataFile("dnn/dog416.png"));
+    Mat image1 = imread(findDataFile("dnn/street.png"));
+
+    Mat ref0 = blobFromNPY(_tf("data/output_kinetics0.npy"));
+    Mat ref1 = blobFromNPY(_tf("data/output_kinetics1.npy"));
+
+    std::vector<Mat> images_0(16, image0);
+    std::vector<Mat> images_1(16, image1);
+    Mat blob0 = blobFromImages(images_0, 1.0, Size(112, 112), Scalar(114.7748, 107.7354, 99.4750), true, true);
+    Mat blob1 = blobFromImages(images_1, 1.0, Size(112, 112), Scalar(114.7748, 107.7354, 99.4750), true, true);
+
+    Net permute;
+    LayerParams lp;
+    int order[] = {1, 0, 2, 3};
+    lp.set("order", DictValue::arrayInt<int*>(&order[0], 4));
+    permute.addLayerToPrev("perm", "Permute", lp);
+
+    permute.setInput(blob0);
+    Mat input0 = permute.forward().clone();
+
+    permute.setInput(blob1);
+    Mat input1 = permute.forward().clone();
+
+    int dims[] = {1, 3, 16, 112, 112};
+    input0 = input0.reshape(0, 5, &dims[0]);
+    input1 = input1.reshape(0, 5, &dims[0]);
+
+    Net net = readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    // output range [-5, 11]
+    float l1 = 0.0013;
+    float lInf = 0.009;
+
+    checkBackend(&input0, &ref0);
+    net.setInput(input0);
+    Mat out = net.forward().clone();
+    normAssert(ref0, out, "", l1, lInf);
+
+    checkBackend(&input1, &ref1);
+    net.setInput(input1);
+    out = net.forward().clone();
+    normAssert(ref1, out, "", l1, lInf);
+
+    expectNoFallbacksFromIE(net);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
