@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_OWN_TYPES_HPP
 #define OPENCV_GAPI_OWN_TYPES_HPP
 
-#   if 0
+#   if defined(__OPENCV_BUILD)
 #       include <opencv2/core/base.hpp>
 #       define GAPI_EXPORTS CV_EXPORTS
 
