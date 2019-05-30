@@ -59,7 +59,7 @@ void normAssertDetections(
         double confThreshold = 0.0, double scores_diff = 1e-5,
         double boxes_iou_diff = 1e-4);
 
-bool readFileInMemory(const std::string& filename, std::string& content);
+void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
 #ifdef HAVE_INF_ENGINE
 bool validateVPUType();
