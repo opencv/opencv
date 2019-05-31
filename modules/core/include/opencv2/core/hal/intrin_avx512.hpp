@@ -2697,41 +2697,40 @@ OPENCV_HAL_IMPL_AVX512_LOADSTORE_INTERLEAVE(v_float64x8, double, f64, v_uint64x8
 ////////// Mask and checks /////////
 
 /** Mask **/
-inline int64 v_signmask(const v_int8x64& a)
-{ return (int64)_mm256_movemask_epi8(_v512_extract_low(a.val)) | ((int64)_mm256_movemask_epi8(_v512_extract_high(a.val)) << 32); }
-inline int v_signmask(const v_int16x32& a)
-{ return _mm256_movemask_epi8(_v512_extract_low(v_pack(a, a).val)); }
-inline int v_signmask(const v_int32x16& a)
-{
-    __m512i a16 = _mm512_packs_epi32(a.val, a.val);
-    return _mm_movemask_epi8(_mm512_castsi512_si128(_mm512_permutexvar_epi32(_v512_set_epu32(12, 8, 4, 0, 12, 8, 4, 0, 12, 8, 4, 0, 12, 8, 4, 0), _mm512_packs_epi16(a16, a16))));
-}
+inline int64 v_signmask(const v_int8x64& a) { return (int64)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline int v_signmask(const v_int16x32& a) { return (int)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline int v_signmask(const v_int32x16& a) { return (int)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline int v_signmask(const v_int64x8& a) { return (int)_mm512_cmp_epi64_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+
 inline int64 v_signmask(const v_uint8x64& a) { return v_signmask(v_reinterpret_as_s8(a)); }
 inline int v_signmask(const v_uint16x32& a) { return v_signmask(v_reinterpret_as_s16(a)); }
 inline int v_signmask(const v_uint32x16& a) { return v_signmask(v_reinterpret_as_s32(a)); }
-
-inline int v_signmask(const v_float32x16& a) { return _mm256_movemask_ps(_v512_extract_low(a.val)) | (_mm256_movemask_ps(_v512_extract_high(a.val)) << 8); }
-inline int v_signmask(const v_float64x8& a) { return _mm256_movemask_ps(_mm512_cvtpd_ps(a.val)); }
+inline int v_signmask(const v_uint64x8& a) { return v_signmask(v_reinterpret_as_s64(a)); }
+inline int v_signmask(const v_float32x16& a) { return v_signmask(v_reinterpret_as_s32(a)); }
+inline int v_signmask(const v_float64x8& a) { return v_signmask(v_reinterpret_as_s64(a)); }
 
 /** Checks **/
-inline bool v_check_all(const v_int8x64& a) { return (_mm256_movemask_epi8(_v512_extract_low(a.val)) & _mm256_movemask_epi8(_v512_extract_high(a.val))) == -1; }
-inline bool v_check_any(const v_int8x64& a) { return (_mm256_movemask_epi8(_v512_extract_low(a.val)) | _mm256_movemask_epi8(_v512_extract_high(a.val))) != 0; }
-inline bool v_check_all(const v_int16x32& a) { return _mm256_movemask_epi8(_v512_extract_low(_mm512_packs_epi16(a.val, a.val))) == -1; }
-inline bool v_check_any(const v_int16x32& a) { return _mm256_movemask_epi8(_v512_extract_low(_mm512_packs_epi16(a.val, a.val))) != 0; }
-inline bool v_check_all(const v_int32x16& a) { return (_mm256_movemask_epi8(_v512_extract_low(_mm512_packs_epi32(a.val, a.val))) & (int)0xaaaa) == (int)0xaaaa; }
-inline bool v_check_any(const v_int32x16& a) { return (_mm256_movemask_epi8(_v512_extract_low(_mm512_packs_epi32(a.val, a.val))) & (int)0xaaaa) != 0; }
+inline bool v_check_all(const v_int8x64& a) { return !(bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
+inline bool v_check_any(const v_int8x64& a) { return (bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline bool v_check_all(const v_int16x32& a) { return !(bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
+inline bool v_check_any(const v_int16x32& a) { return (bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline bool v_check_all(const v_int32x16& a) { return !(bool)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
+inline bool v_check_any(const v_int32x16& a) { return (bool)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline bool v_check_all(const v_int64x8& a) { return !(bool)_mm512_cmp_epi64_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
+inline bool v_check_any(const v_int64x8& a) { return (bool)_mm512_cmp_epi64_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 
-inline bool v_check_all(const v_float32x16& a) { return (_mm256_movemask_ps(_v512_extract_low(a.val)) & _mm256_movemask_ps(_v512_extract_high(a.val))) == 255; }
-inline bool v_check_any(const v_float32x16& a) { return (_mm256_movemask_ps(_v512_extract_low(a.val)) | _mm256_movemask_ps(_v512_extract_high(a.val))) != 0; }
-inline bool v_check_all(const v_float64x8& a) { return _mm256_movemask_ps(_mm512_cvtpd_ps(a.val)) == 255; }
-inline bool v_check_any(const v_float64x8& a) { return _mm256_movemask_ps(_mm512_cvtpd_ps(a.val)) != 0; }
-
+inline bool v_check_all(const v_float32x16& a) { return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_float32x16& a) { return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_float64x8& a) { return v_check_all(v_reinterpret_as_s64(a)); }
+inline bool v_check_any(const v_float64x8& a) { return v_check_any(v_reinterpret_as_s64(a)); }
 inline bool v_check_all(const v_uint8x64& a) { return v_check_all(v_reinterpret_as_s8(a)); }
 inline bool v_check_all(const v_uint16x32& a) { return v_check_all(v_reinterpret_as_s16(a)); }
-inline bool v_check_all(const v_uint32x16& a) { return v_check_all(v_reinterpret_as_f32(a)); }
+inline bool v_check_all(const v_uint32x16& a) { return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_all(const v_uint64x8& a) { return v_check_all(v_reinterpret_as_s64(a)); }
 inline bool v_check_any(const v_uint8x64& a) { return v_check_any(v_reinterpret_as_s8(a)); }
 inline bool v_check_any(const v_uint16x32& a) { return v_check_any(v_reinterpret_as_s16(a)); }
-inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret_as_f32(a)); }
+inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_uint64x8& a) { return v_check_any(v_reinterpret_as_s64(a)); }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 
