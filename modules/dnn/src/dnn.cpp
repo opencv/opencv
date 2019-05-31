@@ -43,6 +43,7 @@
 #include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include "op_vkcom.hpp"
+#include "op_cuda.hpp"
 #include "halide_scheduler.hpp"
 #include <set>
 #include <algorithm>
@@ -140,6 +141,11 @@ private:
 #ifdef HAVE_VULKAN
         if (haveVulkan())
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
+#endif
+
+#ifdef HAVE_CUDA
+        if(haveCUDA())
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP32));
 #endif
     }
     static inline bool checkIETarget(int target)
@@ -540,6 +546,7 @@ struct DataLayer : public Layer
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && inputsData.size() == 1);
     }
 
@@ -674,6 +681,15 @@ struct DataLayer : public Layer
     }
 #endif
 
+#ifdef HAVE_CUDA
+    void forwardCUDA(std::vector<cv::Ptr<BackendWrapper>>& inputs, std::vector<cv::Ptr<BackendWrapper>>& outputs) CV_OVERRIDE
+    {
+        /* standardize/normalize on device */
+        // use CPU for now
+        Layer::forwardCUDA(inputs, outputs);
+    }
+#endif
+
     int outputNameToIndex(const String& tgtName) CV_OVERRIDE
     {
         int idx = (int)(std::find(outNames.begin(), outNames.end(), tgtName) - outNames.begin());
@@ -753,6 +769,10 @@ struct DataLayer : public Layer
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_CUDA
+    void initCUDA() CV_OVERRIDE { }
+#endif
 
     std::vector<String> outNames;
     // Preprocessing parameters for each network's input.
@@ -1019,6 +1039,15 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         return Ptr<BackendWrapper>(new VkComBackendWrapper(m));
 #endif  // HAVE_VULKAN
     }
+    else if (backendId == DNN_BACKEND_CUDA)
+    {
+        CV_Assert(haveCUDA());
+        CV_Assert(IS_DNN_CUDA_TARGET(targetId));
+
+#ifdef HAVE_CUDA
+        return CUDABackendWrapperFP32::create(m);
+#endif
+    }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     return Ptr<BackendWrapper>();
@@ -1103,6 +1132,14 @@ struct Net::Impl
   #ifdef HAVE_VULKAN
                 return Ptr<BackendWrapper>(new VkComBackendWrapper(baseBuffer, host));
   #endif
+            }
+            else if (preferableBackend == DNN_BACKEND_CUDA)
+            {
+                CV_Assert(haveCUDA());
+                CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
+#ifdef HAVE_CUDA
+                return CUDABackendWrapperFP32::create(baseBuffer, shape);
+#endif
             }
             else
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -1209,6 +1246,9 @@ struct Net::Impl
                   preferableTarget == DNN_TARGET_FPGA);
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
+        CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
+                  preferableTarget == DNN_TARGET_CUDA_FP32);
+
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
             if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
@@ -1244,6 +1284,13 @@ struct Net::Impl
                 preferableTarget = DNN_TARGET_CPU;
             }
 
+            if (preferableBackend == DNN_BACKEND_CUDA && !haveCUDA())
+            {
+                CV_LOG_WARNING(NULL, "DNN module was not built with CUDA backend; switching to CPU");
+                preferableBackend = DNN_BACKEND_OPENCV;
+                preferableTarget = DNN_TARGET_CPU;
+            }
+
             clear();
 
             allocateLayers(blobsToKeep_);
@@ -1254,7 +1301,7 @@ struct Net::Impl
 
             initBackend();
 
-            if (!netWasAllocated )
+            if (!netWasAllocated)
             {
 #ifdef HAVE_HALIDE
                 if (preferableBackend == DNN_BACKEND_HALIDE)
@@ -1398,6 +1445,8 @@ struct Net::Impl
             initInfEngineBackend();
         else if (preferableBackend == DNN_BACKEND_VKCOM)
             initVkComBackend();
+        else if (preferableBackend == DNN_BACKEND_CUDA)
+            initCUDABackend();
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -1817,6 +1866,18 @@ struct Net::Impl
             }
         }
 #endif  // HAVE_INF_ENGINE
+    }
+
+    void initCUDABackend() {
+        CV_Assert(haveCUDA());
+
+#ifdef HAVE_CUDA
+        for (auto& layer : layers)
+        {
+            auto& ld = layer.second;
+            ld.layerInstance->initCUDA();
+        }
+#endif
     }
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes)
@@ -2321,7 +2382,8 @@ struct Net::Impl
         if( !ld.skip )
         {
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
-            if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
+            if (preferableBackend == DNN_BACKEND_OPENCV ||
+                (preferableBackend != DNN_BACKEND_CUDA && (it == ld.backendNodes.end() || it->second.empty())))
             {
                 if (isAsync)
                     CV_Error(Error::StsNotImplemented, "Default implementation fallbacks in asynchronous mode");
@@ -2474,32 +2536,61 @@ struct Net::Impl
             }
             else
             {
-                Ptr<BackendNode> node = it->second;
-                CV_Assert(!node.empty());
-                if (preferableBackend == DNN_BACKEND_HALIDE)
-                {
-                    forwardHalide(ld.outputBlobsWrappers, node);
-                }
-                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-                {
-                    forwardInfEngine(ld.outputBlobsWrappers, node, isAsync);
-                }
-                else if (preferableBackend == DNN_BACKEND_VKCOM)
+                if (preferableBackend == DNN_BACKEND_CUDA)
                 {
                     try
                     {
-                        forwardVkCom(ld.outputBlobsWrappers, node);
+                        layer->forwardCUDA(ld.inputBlobsWrappers, ld.outputBlobsWrappers);
                     }
-                    catch (const cv::Exception& e)
+                    catch (const cv::Exception&)
                     {
-                        CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
-                        it->second = Ptr<BackendNode>();
-                        forwardLayer(ld);
+                        CV_LOG_WARNING(NULL, "Layer does not support CUDA. Switching to CPU implementation. ");
+                        auto actual_target = preferableTarget;
+                        preferableBackend = DNN_BACKEND_OPENCV;
+                        preferableTarget = DNN_TARGET_CPU;
+                        try
+                        {
+                            forwardLayer(ld);
+                        }
+                        catch (...)
+                        {
+                            preferableTarget = actual_target;
+                            preferableBackend = DNN_BACKEND_CUDA;
+                            throw;
+                        }
+                        preferableTarget = actual_target;
+                        preferableBackend = DNN_BACKEND_CUDA;
                     }
                 }
                 else
                 {
-                    CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                    Ptr<BackendNode> node = it->second;
+                    CV_Assert(!node.empty());
+                    if (preferableBackend == DNN_BACKEND_HALIDE)
+                    {
+                        forwardHalide(ld.outputBlobsWrappers, node);
+                    }
+                    else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+                    {
+                        forwardInfEngine(ld.outputBlobsWrappers, node, isAsync);
+                    }
+                    else if (preferableBackend == DNN_BACKEND_VKCOM)
+                    {
+                        try
+                        {
+                            forwardVkCom(ld.outputBlobsWrappers, node);
+                        }
+                        catch (const cv::Exception& e)
+                        {
+                            CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
+                            it->second = Ptr<BackendNode>();
+                            forwardLayer(ld);
+                        }
+                    }
+                    else
+                    {
+                        CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                    }
                 }
             }
         }
@@ -3631,6 +3722,29 @@ int Layer::outputNameToIndex(const String&)
 bool Layer::supportBackend(int backendId)
 {
     return backendId == DNN_BACKEND_OPENCV;
+}
+
+void Layer::initCUDA()
+{
+    /*
+    ** Implementing initCUDA is required iff the layer supports forward pass on CUDA devices.
+    ** Otherwise, the forward pass will fallback to CPU automatically.
+    **
+    ** Hence, if the derived class did not implement initCUDA, we do nothing here.
+    */
+}
+
+void Layer::forwardCUDA(std::vector<cv::Ptr<BackendWrapper>>& inputs, std::vector<cv::Ptr<BackendWrapper>>& outputs)
+{
+    /*
+    ** Implementing forwardCUDA is required iff the layer supports forward pass on CUDA devices.
+    ** Otherwise, the forward pass will fallback to CPU automatically.
+    **
+    ** Hence, if the derived class did not implement forwardCUDA, we throw to let the network know that
+    ** the layer does not support forward pass on CUDA devices. This will inform the network to use the
+    ** CPU version.
+    */
+    CV_Error(Error::StsNotImplemented, "Layer does not have a CUDA implementation");
 }
 
 Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &)
