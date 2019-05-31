@@ -285,7 +285,7 @@ INSTANTIATE_TEST_CASE_P(BayerGR2RGBTestCPU, BayerGR2RGBTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
-INSTANTIATE_TEST_CASE_P(RGB2YUVTestCPU, RGB2YUV422Test,
+INSTANTIATE_TEST_CASE_P(RGB2YUV422TestCPU, RGB2YUV422Test,
                         Combine(Values(ToleranceColor(1e-3).to_compare_f()),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
