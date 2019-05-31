@@ -229,7 +229,7 @@ CV__DNN_INLINE_NS_BEGIN
          *
          *  @param[in]  inputs  input tensors
          *  @param[out] outputs output tensors
-         *  @param[out] workspace scratchpad memory that can be used for anything
+         *  param[out] workspace scratchpad memory that can be used for anything
          *
          *  This method needs to be implemented iff the layer supports computation on a CUDA device. If not implemented,
          *  the forward pass is computed using the CPU.
@@ -296,10 +296,10 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Initializes the layer to perform forward pass on CUDA capable devices.
          *
-         * @params[in]  stream                  stream to use for operations
-         * @params[in]  cublas_handle           cuBLAS handle to use for cuBLAS operations
-         * @params[in]  cudnn_handle            cuDNN handle to use for cuDNN operations
-         * @params[out] scratch_mem_in_bytes    request extra device memory in bytes for internals
+         * param[in]  stream                  stream to use for operations
+         * param[in]  cublas_handle           cuBLAS handle to use for cuBLAS operations
+         * param[in]  cudnn_handle            cuDNN handle to use for cuDNN operations
+         * param[out] scratch_mem_in_bytes    request extra device memory in bytes for internals
          *
          * This method needs to be implemented iff the layer supports computation on a CUDA device.
          */
