@@ -111,8 +111,10 @@ TEST(Test_Caffe, read_googlenet)
 
 TEST_P(Test_Caffe_nets, Axpy)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
     String proto = _tf("axpy.prototxt");
-    // String proto = "/home/liubov/work_spase/Axpy/axpy_mo.prototxt";
     Net net = readNetFromCaffe(proto);
 
     checkBackend();
@@ -145,7 +147,9 @@ TEST_P(Test_Caffe_nets, Axpy)
             }
         }
     }
-    normAssert(ref, out);
+    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 2e-4 : 1e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1e-3 : 1e-4;
+    normAssert(ref, out, "", l1, lInf);
 }
 
 typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
