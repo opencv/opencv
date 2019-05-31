@@ -1,0 +1,38 @@
+name: "TestAxpy"
+
+input: "scale"
+input_shape
+{
+    dim: 1
+    dim: 2
+    dim: 1
+    dim: 1
+}
+
+
+input: "shift"
+input_shape
+{
+    dim: 1
+    dim: 2
+    dim: 3
+    dim: 4
+}
+
+input: "data"
+input_shape
+{
+    dim: 1
+    dim: 2
+    dim: 3
+    dim: 4
+}
+
+layer {
+  name: "axpy"
+  type: "Axpy"
+  bottom: "scale"
+  bottom: "shift"
+  bottom: "data"
+  top: "axpy"
+}
