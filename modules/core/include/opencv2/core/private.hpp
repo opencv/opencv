@@ -872,9 +872,17 @@ Passed subdirectories are used in LIFO order.
 */
 CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir);
 
-/** @brief Return location of OpenCV libraries or current executable
+/** @brief Retrieve location of OpenCV libraries or current executable
  */
-CV_EXPORTS std::string getBinLocation();
+CV_EXPORTS bool getBinLocation(std::string& dst);
+
+#if defined(_WIN32)
+/** @brief Retrieve location of OpenCV libraries or current executable
+
+@note WIN32 only
+ */
+CV_EXPORTS bool getBinLocation(std::wstring& dst);
+#endif
 
 //! @}
 

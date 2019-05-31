@@ -28,6 +28,7 @@ CV_EXPORTS cv::String join(const cv::String& base, const cv::String& path);
 
 /** Get parent directory */
 CV_EXPORTS cv::String getParent(const cv::String &path);
+CV_EXPORTS std::wstring getParent(const std::wstring& path);
 
 /**
  * Generate a list of all files that match the globbing pattern.

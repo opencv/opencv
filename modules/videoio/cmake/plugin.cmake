@@ -25,9 +25,22 @@ function(ocv_create_builtin_videoio_plugin name target)
     ocv_target_include_directories(${name} PRIVATE "${OPENCV_MODULE_${mod}_LOCATION}/include")
   endforeach()
 
+  if(WIN32)
+    set(OPENCV_PLUGIN_VERSION "${OPENCV_DLLVERSION}" CACHE STRING "")
+    if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+      set(OPENCV_PLUGIN_ARCH "_64" CACHE STRING "")
+    else()
+      set(OPENCV_PLUGIN_ARCH "" CACHE STRING "")
+    endif()
+  else()
+    set(OPENCV_PLUGIN_VERSION "" CACHE STRING "")
+    set(OPENCV_PLUGIN_ARCH "" CACHE STRING "")
+  endif()
+
   set_target_properties(${name} PROPERTIES
     CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
+    OUTPUT_NAME "${name}${OPENCV_PLUGIN_VERSION}${OPENCV_PLUGIN_ARCH}"
   )
 
   if(WIN32)
