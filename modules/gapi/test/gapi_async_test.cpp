@@ -8,6 +8,8 @@
 #include "test_precomp.hpp"
 #include <opencv2/gapi/gcomputation_async.hpp>
 #include <opencv2/gapi/gcompiled_async.hpp>
+#include <opencv2/gapi/gasync_context.hpp>
+
 
 #include <condition_variable>
 #include <stdexcept>
@@ -78,6 +80,32 @@ namespace {
             }
         }
     };
+
+
+    //TODO: unify with callback helper code
+    struct cancel_struct {
+        std::atomic<int> num_tasks_to_spawn;
+
+        cv::gapi::wip::GAsyncContext ctx;
+
+        cancel_struct(int tasks_to_spawn) : num_tasks_to_spawn(tasks_to_spawn) {}
+    };
+
+    G_TYPED_KERNEL(GCancelationAdHoc, <GMat(GMat, cancel_struct*)>, "org.opencv.test.cancel_ad_hoc")
+    {
+        static GMatDesc outMeta(GMatDesc in, cancel_struct* ) { return in;  }
+
+    };
+
+    GAPI_OCV_KERNEL(GCancelationAdHocImpl, GCancelationAdHoc)
+    {
+        static void run(const cv::Mat& , cancel_struct* cancel_struct_p, cv::Mat&)        {
+            auto& cancel_struct_ = * cancel_struct_p;
+            auto num_tasks_to_spawn =  -- cancel_struct_.num_tasks_to_spawn;
+            cancel_struct_.ctx.cancel();
+            EXPECT_GT(num_tasks_to_spawn, 0)<<"Incorrect Test setup - to small number of tasks to feed the queue \n";
+        }
+    };
 }
 
 struct ExceptionOnExecution {
@@ -117,6 +145,41 @@ struct ExceptionOnExecution {
 
 };
 
+struct SelfCanceling {
+    cv::GComputation self_cancel;
+    SelfCanceling(cancel_struct* cancel_struct_p) : self_cancel([cancel_struct_p]{
+        cv::GMat in;
+        cv::GMat out = GCancelationAdHoc::on(in, cancel_struct_p);
+        return GComputation{in, out};
+    })
+    {}
+
+    const cv::Size sz{2, 2};
+    cv::Mat in_mat{sz, CV_8U, cv::Scalar(1)};
+    cv::Mat out_mat;
+
+    cv::GCompiled compile(){
+        return self_cancel.compile(descr_of(in_mat), compile_args());
+    }
+
+    cv::GComputation& computation(){
+        return self_cancel;
+    }
+
+    cv::GRunArgs in_args(){
+        return cv::gin(in_mat);
+    }
+
+    cv::GRunArgsP out_args(){
+        return cv::gout(out_mat);
+    }
+
+    cv::GCompileArgs compile_args(){
+        auto pkg = cv::gapi::kernels<GCancelationAdHocImpl>();
+        return cv::compile_args(pkg);
+    }
+};
+
 template<typename crtp_final_t>
 struct crtp_cast {
     template<typename crtp_base_t>
@@ -148,6 +211,11 @@ struct CallBack: crtp_cast<crtp_final_t> {
     template<typename... Args >
     void start_async(Args&&... args){
         this->crtp_cast_(this)->async(callback(), std::forward<Args>(args)...);
+    }
+
+    template<typename... Args >
+    void start_async(cv::gapi::wip::GAsyncContext& ctx, Args&&... args){
+        this->crtp_cast_(this)->async(ctx, callback(), std::forward<Args>(args)...);
     }
 
     void wait_for_result()
@@ -186,6 +254,14 @@ struct AsyncCompiled  : crtp_cast<crtp_final_t>{
         auto gcmpld = this->crtp_cast_(this)->compile();
         return cv::gapi::wip::async(gcmpld, std::forward<Args>(args)...);
     }
+
+    template<typename... Args>
+    auto async(cv::gapi::wip::GAsyncContext& ctx, Args&&... args) ->
+        decltype(cv::gapi::wip::async(std::declval<cv::GCompiled&>(), std::forward<Args>(args)..., std::declval<cv::gapi::wip::GAsyncContext&>()))
+    {
+        auto gcmpld = this->crtp_cast_(this)->compile();
+        return cv::gapi::wip::async(gcmpld, std::forward<Args>(args)..., ctx);
+    }
 };
 
 //Test Mixin, hiding details of calling apply (async_apply) on GAPI Computation object
@@ -193,9 +269,23 @@ template<typename crtp_final_t>
 struct AsyncApply : crtp_cast<crtp_final_t> {
 
     template<typename... Args>
-    auto async(Args&&... args) ->decltype(cv::gapi::wip::async_apply(std::declval<cv::GComputation&>(), std::forward<Args>(args)...)) {
-        return cv::gapi::wip::async_apply(this->crtp_cast_(this)->computation(), std::forward<Args>(args)..., this->crtp_cast_(this)->compile_args());
+    auto async(Args&&... args) ->
+         decltype(cv::gapi::wip::async_apply(std::declval<cv::GComputation&>(), std::forward<Args>(args)..., std::declval<cv::GCompileArgs>()))
+    {
+        return cv::gapi::wip::async_apply(
+                this->crtp_cast_(this)->computation(), std::forward<Args>(args)..., this->crtp_cast_(this)->compile_args()
+        );
     }
+
+    template<typename... Args>
+    auto async(cv::gapi::wip::GAsyncContext& ctx, Args&&... args) ->
+         decltype(cv::gapi::wip::async_apply(std::declval<cv::GComputation&>(), std::forward<Args>(args)... , std::declval<cv::GCompileArgs>(), std::declval<cv::gapi::wip::GAsyncContext&>()))
+    {
+        return cv::gapi::wip::async_apply(
+                this->crtp_cast_(this)->computation(), std::forward<Args>(args)..., this->crtp_cast_(this)->compile_args(), ctx
+        );
+    }
+
 };
 
 
@@ -240,7 +330,7 @@ TYPED_TEST_P(stress, test){
     const std::size_t number_of_threads  = 4;
 
     auto thread_body = [&](){
-        std::vector<TypeParam> requests{request_per_thread};
+        std::vector<TypeParam> requests(request_per_thread);
         for (auto&& r : requests){
             r.start_async(r.in_args(), r.out_args());
         }
@@ -262,13 +352,50 @@ TYPED_TEST_P(stress, test){
 }
 REGISTER_TYPED_TEST_CASE_P(stress, test);
 
+template<typename case_t>
+struct cancel : ::testing::Test{};
+TYPED_TEST_CASE_P(cancel);
+
+TYPED_TEST_P(cancel, basic){
+    constexpr int num_tasks = 100;
+    cancel_struct cancel_struct_ {num_tasks};
+    std::vector<TypeParam> requests; requests.reserve(num_tasks);
+
+    for (auto i = num_tasks; i>0; i--){
+        requests.emplace_back(&cancel_struct_);
+    }
+    for (auto&& r : requests){
+        //first request will cancel other on it's execution
+        r.start_async(cancel_struct_.ctx, r.in_args(), r.out_args());
+    }
+
+    unsigned int canceled = 0 ;
+    for (auto&& r : requests){
+        try {
+            r.wait_for_result();
+        }catch (cv::gapi::wip::GAsyncCanceled&){
+            ++canceled;
+        }
+    }
+    ASSERT_GT(canceled, 0u);
+}
+
+REGISTER_TYPED_TEST_CASE_P(cancel, basic);
+
 //little helpers to match up all combinations of setups
 template<typename compute_fixture_t,template <typename> class callback_or_future_t, template <typename> class compiled_or_apply_t>
 struct Case
         : compute_fixture_t,
           callback_or_future_t<Case<compute_fixture_t,callback_or_future_t,compiled_or_apply_t>>,
           compiled_or_apply_t <Case<compute_fixture_t,callback_or_future_t,compiled_or_apply_t>>
-{};
+{
+    template<typename... Args>
+    Case(Args&&... args) : compute_fixture_t(std::forward<Args>(args)...) { }
+    Case(Case const &  ) = default;
+    Case(Case &&  ) = default;
+
+    Case() = default;
+};
 
 template<typename computation_t>
 using cases = ::testing::Types<
@@ -281,6 +408,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPINormalFlow_,        normal,     cases<SumO
 INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPIExceptionHandling_, exception,  cases<ExceptionOnExecution>);
 
 INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPIStress,             stress,     cases<SumOfSum2x2>);
+
+INSTANTIATE_TYPED_TEST_CASE_P(AsyncAPICancelation,        cancel,     cases<SelfCanceling>);
 
 TEST(AsyncAPI, Sample){
     cv::GComputation self_mul([]{
@@ -296,4 +425,5 @@ TEST(AsyncAPI, Sample){
     auto f = cv::gapi::wip::async_apply(self_mul,cv::gin(in_mat), cv::gout(out));
     f.wait();
 }
+
 } // namespace opencv_test
