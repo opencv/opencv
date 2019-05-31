@@ -603,27 +603,20 @@ static const unsigned char popCountTable[] =
     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
     4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 };
-/** @brief Count the 1 bits in the vector and return 4 values
+/** @brief Count the 1 bits in the vector lanes and return result as corresponding unsigned type
 
 Scheme:
 @code
-{A1 A2 A3 ...} => popcount(A1)
+{A1 A2 A3 ...} => {popcount(A1), popcount(A2), popcount(A3), ...}
 @endcode
-Any types but result will be in v_uint32x4*/
-template<typename _Tp, int n> inline v_uint32x4 v_popcount(const v_reg<_Tp, n>& a)
+For all integer types. */
+template<typename _Tp, int n>
+inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_popcount(const v_reg<_Tp, n>& a)
 {
-    v_uint8x16 b;
-    b = v_reinterpret_as_u8(a);
-    for( int i = 0; i < v_uint8x16::nlanes; i++ )
-    {
-        b.s[i] = popCountTable[b.s[i]];
-    }
-    v_uint32x4 c;
-    for( int i = 0; i < v_uint32x4::nlanes; i++ )
-    {
-        c.s[i] = b.s[i*4] + b.s[i*4+1] + b.s[i*4+2] + b.s[i*4+3];
-    }
-    return c;
+    v_reg<typename V_TypeTraits<_Tp>::abs_type, n> b = v_reg<typename V_TypeTraits<_Tp>::abs_type, n>::zero();
+    for (int i = 0; i < (int)(n*sizeof(_Tp)); i++)
+        b.s[i/sizeof(_Tp)] += popCountTable[v_reinterpret_as_u8(a).s[i]];
+    return b;
 }
 
 
@@ -1799,10 +1792,40 @@ template<int n> inline v_reg<double, n> v_cvt_f64(const v_reg<float, n*2>& a)
     return c;
 }
 
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i]];
+    return c;
+}
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut_pairs(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i / 2] + i % 2];
+    return c;
+}
+template<typename _Tp> inline v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> v_lut_quads(const _Tp* tab, const int* idx)
+{
+    v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128> c;
+    for (int i = 0; i < V_TypeTraits<_Tp>::nlanes128; i++)
+        c.s[i] = tab[idx[i / 4] + i % 4];
+    return c;
+}
+
 template<int n> inline v_reg<int, n> v_lut(const int* tab, const v_reg<int, n>& idx)
 {
     v_reg<int, n> c;
     for( int i = 0; i < n; i++ )
+        c.s[i] = tab[idx.s[i]];
+    return c;
+}
+
+template<int n> inline v_reg<unsigned, n> v_lut(const unsigned* tab, const v_reg<int, n>& idx)
+{
+    v_reg<int, n> c;
+    for (int i = 0; i < n; i++)
         c.s[i] = tab[idx.s[i]];
     return c;
 }
@@ -1843,6 +1866,48 @@ template<int n> inline void v_lut_deinterleave(const double* tab, const v_reg<in
         x.s[i] = tab[j];
         y.s[i] = tab[j+1];
     }
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_pairs(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/4; i++)
+    {
+        c.s[4*i  ] = vec.s[4*i  ];
+        c.s[4*i+1] = vec.s[4*i+2];
+        c.s[4*i+2] = vec.s[4*i+1];
+        c.s[4*i+3] = vec.s[4*i+3];
+    }
+    return c;
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_interleave_quads(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/8; i++)
+    {
+        c.s[8*i  ] = vec.s[8*i  ];
+        c.s[8*i+1] = vec.s[8*i+4];
+        c.s[8*i+2] = vec.s[8*i+1];
+        c.s[8*i+3] = vec.s[8*i+5];
+        c.s[8*i+4] = vec.s[8*i+2];
+        c.s[8*i+5] = vec.s[8*i+6];
+        c.s[8*i+6] = vec.s[8*i+3];
+        c.s[8*i+7] = vec.s[8*i+7];
+    }
+    return c;
+}
+
+template<typename _Tp, int n> inline v_reg<_Tp, n> v_pack_triplets(const v_reg<_Tp, n>& vec)
+{
+    v_reg<float, n> c;
+    for (int i = 0; i < n/4; i++)
+    {
+        c.s[3*i  ] = vec.s[4*i  ];
+        c.s[3*i+1] = vec.s[4*i+1];
+        c.s[3*i+2] = vec.s[4*i+2];
+    }
+    return c;
 }
 
 /** @brief Transpose 4x4 matrix

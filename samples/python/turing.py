@@ -27,7 +27,7 @@ USAGE: turing.py [-o <output.avi>]
 Press ESC to stop.
 '''
 
-if __name__ == '__main__':
+def main():
     print(help_message)
 
     w, h = 512, 512
@@ -71,4 +71,11 @@ if __name__ == '__main__':
         cv.imshow('a', vis)
         if cv.waitKey(5) == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

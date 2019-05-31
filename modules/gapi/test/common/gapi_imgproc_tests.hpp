@@ -33,6 +33,8 @@ struct RGB2GrayTest : public  TestParams<std::tuple<compare_f,cv::Size,bool,cv::
 struct BGR2GrayTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct RGB2YUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct YUV2RGBTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
+struct NV12toRGBTest : public TestParams<std::tuple<compare_f,cv::Size,cv::GCompileArgs>> {};
+struct NV12toBGRTest : public TestParams<std::tuple<compare_f,cv::Size,cv::GCompileArgs>> {};
 struct RGB2LabTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct BGR2LUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct LUV2BGRTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};

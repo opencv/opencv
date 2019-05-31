@@ -34,6 +34,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
+#include "cap_interface.hpp"
 #include <iostream>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
@@ -197,28 +198,30 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
 /****************** Implementation of interface functions ********************/
 
 
-CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
-
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+{
+    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
-        return retval;
+        return makePtr<LegacyCapture>(retval);
     delete retval;
     return NULL;
-}
-
-CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
-
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
-        cvReleaseCapture(&retval);
-    return retval;
 
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
-        double fps, CvSize frame_size,
-        int is_color) {
-    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+{
+    CvCaptureCAM* retval = new CvCaptureCAM(index);
+    if (retval->didStart())
+        return cv::makePtr<cv::LegacyCapture>(retval);
+    delete retval;
+    return 0;
+}
+
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+{
+    CvSize sz = { frameSize.width, frameSize.height };
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
+    return cv::makePtr<cv::LegacyWriter>(wrt);
 }
 
 /********************** Implementation of Classes ****************************/

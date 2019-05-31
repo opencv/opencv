@@ -27,21 +27,21 @@ typedef enum {            /* Operating modes for buffer controllers */
 } J_BUF_MODE;
 
 /* Values of global_state field (jdapi.c has some dependencies on ordering!) */
-#define CSTATE_START    100     /* after create_compress */
-#define CSTATE_SCANNING 101     /* start_compress done, write_scanlines OK */
-#define CSTATE_RAW_OK   102     /* start_compress done, write_raw_data OK */
-#define CSTATE_WRCOEFS  103     /* jpeg_write_coefficients done */
-#define DSTATE_START    200     /* after create_decompress */
-#define DSTATE_INHEADER 201     /* reading header markers, no SOS yet */
-#define DSTATE_READY    202     /* found SOS, ready for start_decompress */
-#define DSTATE_PRELOAD  203     /* reading multiscan file in start_decompress*/
-#define DSTATE_PRESCAN  204     /* performing dummy pass for 2-pass quant */
-#define DSTATE_SCANNING 205     /* start_decompress done, read_scanlines OK */
-#define DSTATE_RAW_OK   206     /* start_decompress done, read_raw_data OK */
-#define DSTATE_BUFIMAGE 207     /* expecting jpeg_start_output */
-#define DSTATE_BUFPOST  208     /* looking for SOS/EOI in jpeg_finish_output */
-#define DSTATE_RDCOEFS  209     /* reading file in jpeg_read_coefficients */
-#define DSTATE_STOPPING 210     /* looking for EOI in jpeg_finish_decompress */
+#define CSTATE_START     100    /* after create_compress */
+#define CSTATE_SCANNING  101    /* start_compress done, write_scanlines OK */
+#define CSTATE_RAW_OK    102    /* start_compress done, write_raw_data OK */
+#define CSTATE_WRCOEFS   103    /* jpeg_write_coefficients done */
+#define DSTATE_START     200    /* after create_decompress */
+#define DSTATE_INHEADER  201    /* reading header markers, no SOS yet */
+#define DSTATE_READY     202    /* found SOS, ready for start_decompress */
+#define DSTATE_PRELOAD   203    /* reading multiscan file in start_decompress*/
+#define DSTATE_PRESCAN   204    /* performing dummy pass for 2-pass quant */
+#define DSTATE_SCANNING  205    /* start_decompress done, read_scanlines OK */
+#define DSTATE_RAW_OK    206    /* start_decompress done, read_raw_data OK */
+#define DSTATE_BUFIMAGE  207    /* expecting jpeg_start_output */
+#define DSTATE_BUFPOST   208    /* looking for SOS/EOI in jpeg_finish_output */
+#define DSTATE_RDCOEFS   209    /* reading file in jpeg_read_coefficients */
+#define DSTATE_STOPPING  210    /* looking for EOI in jpeg_finish_decompress */
 
 
 /* JLONG must hold at least signed 32-bit values. */
@@ -53,7 +53,7 @@ typedef long JLONG;
  * sanitizer warnings
  */
 
-#define LEFT_SHIFT(a, b) ((JLONG)((unsigned long)(a) << (b)))
+#define LEFT_SHIFT(a, b)  ((JLONG)((unsigned long)(a) << (b)))
 
 
 /* Declarations for compression modules */
@@ -274,9 +274,9 @@ struct jpeg_color_quantizer {
 /* Miscellaneous useful macros */
 
 #undef MAX
-#define MAX(a,b)        ((a) > (b) ? (a) : (b))
+#define MAX(a, b)       ((a) > (b) ? (a) : (b))
 #undef MIN
-#define MIN(a,b)        ((a) < (b) ? (a) : (b))
+#define MIN(a, b)       ((a) < (b) ? (a) : (b))
 
 
 /* We assume that right shift corresponds to signed division by 2 with
@@ -291,64 +291,64 @@ struct jpeg_color_quantizer {
 
 #ifdef RIGHT_SHIFT_IS_UNSIGNED
 #define SHIFT_TEMPS     JLONG shift_temp;
-#define RIGHT_SHIFT(x,shft)  \
-        ((shift_temp = (x)) < 0 ? \
-         (shift_temp >> (shft)) | ((~((JLONG) 0)) << (32-(shft))) : \
-         (shift_temp >> (shft)))
+#define RIGHT_SHIFT(x, shft) \
+  ((shift_temp = (x)) < 0 ? \
+   (shift_temp >> (shft)) | ((~((JLONG)0)) << (32 - (shft))) : \
+   (shift_temp >> (shft)))
 #else
 #define SHIFT_TEMPS
-#define RIGHT_SHIFT(x,shft)     ((x) >> (shft))
+#define RIGHT_SHIFT(x, shft)    ((x) >> (shft))
 #endif
 
 
 /* Compression module initialization routines */
-EXTERN(void) jinit_compress_master (j_compress_ptr cinfo);
-EXTERN(void) jinit_c_master_control (j_compress_ptr cinfo,
-                                     boolean transcode_only);
-EXTERN(void) jinit_c_main_controller (j_compress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_c_prep_controller (j_compress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_c_coef_controller (j_compress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_color_converter (j_compress_ptr cinfo);
-EXTERN(void) jinit_downsampler (j_compress_ptr cinfo);
-EXTERN(void) jinit_forward_dct (j_compress_ptr cinfo);
-EXTERN(void) jinit_huff_encoder (j_compress_ptr cinfo);
-EXTERN(void) jinit_phuff_encoder (j_compress_ptr cinfo);
-EXTERN(void) jinit_arith_encoder (j_compress_ptr cinfo);
-EXTERN(void) jinit_marker_writer (j_compress_ptr cinfo);
+EXTERN(void) jinit_compress_master(j_compress_ptr cinfo);
+EXTERN(void) jinit_c_master_control(j_compress_ptr cinfo,
+                                    boolean transcode_only);
+EXTERN(void) jinit_c_main_controller(j_compress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_c_prep_controller(j_compress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_c_coef_controller(j_compress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_color_converter(j_compress_ptr cinfo);
+EXTERN(void) jinit_downsampler(j_compress_ptr cinfo);
+EXTERN(void) jinit_forward_dct(j_compress_ptr cinfo);
+EXTERN(void) jinit_huff_encoder(j_compress_ptr cinfo);
+EXTERN(void) jinit_phuff_encoder(j_compress_ptr cinfo);
+EXTERN(void) jinit_arith_encoder(j_compress_ptr cinfo);
+EXTERN(void) jinit_marker_writer(j_compress_ptr cinfo);
 /* Decompression module initialization routines */
-EXTERN(void) jinit_master_decompress (j_decompress_ptr cinfo);
-EXTERN(void) jinit_d_main_controller (j_decompress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_d_coef_controller (j_decompress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_d_post_controller (j_decompress_ptr cinfo,
-                                      boolean need_full_buffer);
-EXTERN(void) jinit_input_controller (j_decompress_ptr cinfo);
-EXTERN(void) jinit_marker_reader (j_decompress_ptr cinfo);
-EXTERN(void) jinit_huff_decoder (j_decompress_ptr cinfo);
-EXTERN(void) jinit_phuff_decoder (j_decompress_ptr cinfo);
-EXTERN(void) jinit_arith_decoder (j_decompress_ptr cinfo);
-EXTERN(void) jinit_inverse_dct (j_decompress_ptr cinfo);
-EXTERN(void) jinit_upsampler (j_decompress_ptr cinfo);
-EXTERN(void) jinit_color_deconverter (j_decompress_ptr cinfo);
-EXTERN(void) jinit_1pass_quantizer (j_decompress_ptr cinfo);
-EXTERN(void) jinit_2pass_quantizer (j_decompress_ptr cinfo);
-EXTERN(void) jinit_merged_upsampler (j_decompress_ptr cinfo);
+EXTERN(void) jinit_master_decompress(j_decompress_ptr cinfo);
+EXTERN(void) jinit_d_main_controller(j_decompress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_d_coef_controller(j_decompress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_d_post_controller(j_decompress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) jinit_input_controller(j_decompress_ptr cinfo);
+EXTERN(void) jinit_marker_reader(j_decompress_ptr cinfo);
+EXTERN(void) jinit_huff_decoder(j_decompress_ptr cinfo);
+EXTERN(void) jinit_phuff_decoder(j_decompress_ptr cinfo);
+EXTERN(void) jinit_arith_decoder(j_decompress_ptr cinfo);
+EXTERN(void) jinit_inverse_dct(j_decompress_ptr cinfo);
+EXTERN(void) jinit_upsampler(j_decompress_ptr cinfo);
+EXTERN(void) jinit_color_deconverter(j_decompress_ptr cinfo);
+EXTERN(void) jinit_1pass_quantizer(j_decompress_ptr cinfo);
+EXTERN(void) jinit_2pass_quantizer(j_decompress_ptr cinfo);
+EXTERN(void) jinit_merged_upsampler(j_decompress_ptr cinfo);
 /* Memory manager initialization */
-EXTERN(void) jinit_memory_mgr (j_common_ptr cinfo);
+EXTERN(void) jinit_memory_mgr(j_common_ptr cinfo);
 
 /* Utility routines in jutils.c */
-EXTERN(long) jdiv_round_up (long a, long b);
-EXTERN(long) jround_up (long a, long b);
-EXTERN(void) jcopy_sample_rows (JSAMPARRAY input_array, int source_row,
-                                JSAMPARRAY output_array, int dest_row,
-                                int num_rows, JDIMENSION num_cols);
-EXTERN(void) jcopy_block_row (JBLOCKROW input_row, JBLOCKROW output_row,
-                              JDIMENSION num_blocks);
-EXTERN(void) jzero_far (void *target, size_t bytestozero);
+EXTERN(long) jdiv_round_up(long a, long b);
+EXTERN(long) jround_up(long a, long b);
+EXTERN(void) jcopy_sample_rows(JSAMPARRAY input_array, int source_row,
+                               JSAMPARRAY output_array, int dest_row,
+                               int num_rows, JDIMENSION num_cols);
+EXTERN(void) jcopy_block_row(JBLOCKROW input_row, JBLOCKROW output_row,
+                             JDIMENSION num_blocks);
+EXTERN(void) jzero_far(void *target, size_t bytestozero);
 /* Constant tables in jutils.c */
 #if 0                           /* This table is not actually needed in v6a */
 extern const int jpeg_zigzag_order[]; /* natural coef order to zigzag order */

@@ -536,11 +536,9 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SobelTest::run_func()
 {
-    cvSobel( test_array[inplace ? OUTPUT : INPUT][0],
-             test_array[OUTPUT][0], dx, dy, _aperture_size );
-    /*cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
+    cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
                test_mat[OUTPUT][0], test_mat[OUTPUT][0].depth(),
-               dx, dy, _aperture_size, 1, 0, border );*/
+               dx, dy, _aperture_size, 1, 0, border );
 }
 
 
@@ -655,8 +653,9 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_LaplaceTest::run_func()
 {
-    cvLaplace( test_array[inplace ? OUTPUT : INPUT][0],
-               test_array[OUTPUT][0], _aperture_size );
+    cv::Laplacian( test_mat[inplace ? OUTPUT : INPUT][0],
+                   test_mat[OUTPUT][0],test_mat[OUTPUT][0].depth(),
+                   _aperture_size, 1, 0, cv::BORDER_REPLICATE );
 }
 
 
@@ -1667,12 +1666,11 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2, sum_depth;
-    int cn = cvtest::randInt(rng) % 3 + 1;
+    int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sum_size;
 
     depth = depth == 0 ? CV_8U : CV_32F;
-    cn += cn == 2;
     int b = (cvtest::randInt(rng) & 1) != 0;
     sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
 

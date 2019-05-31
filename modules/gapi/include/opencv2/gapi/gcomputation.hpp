@@ -315,7 +315,7 @@ public:
      * inputs/outputs which were used to define this GComputation.
      */
     void apply(const std::vector<cv::Mat>& ins,         // Compatibility overload
-               const std::vector<cv::Mat>& outs,
+                     std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
 #endif // !defined(GAPI_STANDALONE)
     // Various versions of compile(): //////////////////////////////////////////

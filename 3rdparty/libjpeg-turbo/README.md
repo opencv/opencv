@@ -2,8 +2,9 @@ Background
 ==========
 
 libjpeg-turbo is a JPEG image codec that uses SIMD instructions (MMX, SSE2,
-NEON, AltiVec) to accelerate baseline JPEG compression and decompression on
-x86, x86-64, ARM, and PowerPC systems.  On such systems, libjpeg-turbo is
+AVX2, NEON, AltiVec) to accelerate baseline JPEG compression and decompression
+on x86, x86-64, ARM, and PowerPC systems, as well as progressive JPEG
+compression on x86 and x86-64 systems.  On such systems, libjpeg-turbo is
 generally 2-6x as fast as libjpeg, all else being equal.  On other types of
 systems, libjpeg-turbo can still outperform libjpeg by a significant amount, by
 virtue of its highly-optimized Huffman coding routines.  In many cases, the
@@ -48,7 +49,10 @@ JPEG images:
   straightforward to achieve using the underlying libjpeg API, such as
   generating planar YUV images and performing multiple simultaneous lossless
   transforms on an image.  The Java interface for libjpeg-turbo is written on
-  top of the TurboJPEG API.
+  top of the TurboJPEG API.  The TurboJPEG API is recommended for first-time
+  users of libjpeg-turbo.  Refer to [tjexample.c](tjexample.c) and
+  [TJExample.java](java/TJExample.java) for examples of its usage and to
+  <http://libjpeg-turbo.org/Documentation/Documentation> for API documentation.
 
 - **libjpeg API**<br>
   This is the de facto industry-standard API for compressing and decompressing
@@ -56,7 +60,8 @@ JPEG images:
   more powerful.  The libjpeg API implementation in libjpeg-turbo is both
   API/ABI-compatible and mathematically compatible with libjpeg v6b.  It can
   also optionally be configured to be API/ABI-compatible with libjpeg v7 and v8
-  (see below.)
+  (see below.)  Refer to [cjpeg.c](cjpeg.c) and [djpeg.c](djpeg.c) for examples
+  of its usage and to [libjpeg.txt](libjpeg.txt) for API documentation.
 
 There is no significant performance advantage to either API when both are used
 to perform similar operations.

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
@@ -14,9 +14,17 @@
 #include <ie_plugin_dispatcher.hpp>
 #endif  // HAVE_INF_ENGINE
 
+#include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
+
+// For networks with input layer which has an empty name, IE generates a name id[some_number].
+// OpenCV lets users use an empty input name and to prevent unexpected naming,
+// we can use some predefined name.
+static std::string kDefaultInpLayerName = "empty_inp_layer_name";
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
@@ -90,7 +98,7 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
         it = layers.find(inpName);
         if (it == layers.end())
         {
-            InferenceEngine::Builder::InputLayer inpLayer(inpName);
+            InferenceEngine::Builder::InputLayer inpLayer(!inpName.empty() ? inpName : kDefaultInpLayerName);
 
             std::vector<size_t> shape(inp->blob->dims());
             std::reverse(shape.begin(), shape.end());
@@ -119,6 +127,14 @@ void InfEngineBackendNet::init(int targetId)
         for (int id : unconnectedLayersIds)
         {
             InferenceEngine::Builder::OutputLayer outLayer("myconv1");
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
+            // Inference Engine determines network precision by ports.
+            InferenceEngine::Precision p = (targetId == DNN_TARGET_MYRIAD ||
+                                            targetId == DNN_TARGET_OPENCL_FP16) ?
+                                           InferenceEngine::Precision::FP16 :
+                                           InferenceEngine::Precision::FP32;
+            outLayer.setPort(InferenceEngine::Port({}, p));
+#endif
             netBuilder.addLayer({InferenceEngine::PortInfo(id)}, outLayer);
         }
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
@@ -152,7 +168,6 @@ void InfEngineBackendNet::init(int targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-        inpBlobs[name] = blobIt->second;
         it.second->setPrecision(blobIt->second->precision());
     }
     for (const auto& it : cnn.getOutputsInfo())
@@ -160,19 +175,62 @@ void InfEngineBackendNet::init(int targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-        outBlobs[name] = blobIt->second;
         it.second->setPrecision(blobIt->second->precision());  // Should be always FP32
     }
 
     initPlugin(cnn);
 }
 
-void InfEngineBackendNet::addLayer(const InferenceEngine::Builder::Layer& layer)
+void InfEngineBackendNet::addLayer(InferenceEngine::Builder::Layer& layer)
 {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
+    // Add weights to network and connect them after input blobs.
+    std::map<std::string, InferenceEngine::Parameter>& params = layer.getParameters();
+    std::vector<int> blobsIds;
+    std::vector<int> portIds;
+    for (const std::string& name : {"weights", "biases"})
+    {
+        bool asInput = false;
+        int portId = 0;
+        for (int i = 0; i < layer.getInputPorts().size(); ++i)
+        {
+            const auto& port = layer.getInputPorts()[i];
+            auto it = port.getParameters().find("type");
+            if (it != port.getParameters().end() && it->second == name)
+            {
+                portId = i;
+                asInput = true;
+                break;
+            }
+        }
+
+        if (!asInput)
+            continue;
+
+        auto it = params.find(name);
+        if (it != params.end())
+        {
+            InferenceEngine::Blob::Ptr blob = it->second.as<InferenceEngine::Blob::Ptr>();
+            params.erase(it);
+            int blobId = netBuilder.addLayer(InferenceEngine::Builder::ConstLayer(name).setData(blob));
+            blobsIds.push_back(blobId);
+            portIds.push_back(portId);
+        }
+    }
+#endif
+
     int id = netBuilder.addLayer(layer);
     const std::string& layerName = layer.getName();
     CV_Assert(layers.insert({layerName, id}).second);
     unconnectedLayersIds.insert(id);
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
+    // By default, all the weights are connected to last ports ids.
+    for (int i = 0; i < blobsIds.size(); ++i)
+    {
+        netBuilder.connect((size_t)blobsIds[i], {(size_t)id, (size_t)portIds[i]});
+    }
+#endif
 }
 
 void InfEngineBackendNet::addOutput(const std::string& name)
@@ -226,6 +284,24 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::La
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
     std::reverse(reversedShape.begin(), reversedShape.end());
     return wrapToInfEngineBlob(m, reversedShape, layout);
+}
+
+InferenceEngine::Blob::Ptr cloneBlob(const InferenceEngine::Blob::Ptr& blob)
+{
+    InferenceEngine::Precision precision = blob->precision();
+    InferenceEngine::Blob::Ptr copy;
+    if (precision == InferenceEngine::Precision::FP32)
+    {
+        copy = InferenceEngine::make_shared_blob<float>(precision, blob->layout(), blob->dims());
+    }
+    else if (precision == InferenceEngine::Precision::U8)
+    {
+        copy = InferenceEngine::make_shared_blob<uint8_t>(precision, blob->layout(), blob->dims());
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    copy->allocate();
+    return copy;
 }
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr)
@@ -484,7 +560,6 @@ size_t InfEngineBackendNet::getBatchSize() const CV_NOEXCEPT
     return batchSize;
 }
 
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
 InferenceEngine::StatusCode InfEngineBackendNet::AddExtension(const InferenceEngine::IShapeInferExtensionPtr &extension, InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
 {
     CV_Error(Error::StsNotImplemented, "");
@@ -496,7 +571,6 @@ InferenceEngine::StatusCode InfEngineBackendNet::reshape(const InferenceEngine::
     CV_Error(Error::StsNotImplemented, "");
     return InferenceEngine::StatusCode::OK;
 }
-#endif
 
 void InfEngineBackendNet::init(int targetId)
 {
@@ -628,6 +702,63 @@ static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEngineP
     return sharedPlugins;
 }
 
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5) && !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+static bool detectMyriadX_()
+{
+    InferenceEngine::Builder::Network builder("");
+    InferenceEngine::idx_t inpId = builder.addLayer(
+                                   InferenceEngine::Builder::InputLayer().setPort(InferenceEngine::Port({1})));
+
+#if INF_ENGINE_RELEASE <= 2018050000
+    InferenceEngine::idx_t clampId;
+    {
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ClampLayer();
+        auto& blobs = l.getConstantData();
+        auto blob = InferenceEngine::make_shared_blob<int16_t>(
+                        InferenceEngine::Precision::FP16,
+                        InferenceEngine::Layout::C, {1});
+        blob->allocate();
+        blobs[""] = blob;
+        clampId = builder.addLayer({inpId}, l);
+    }
+    builder.addLayer({InferenceEngine::PortInfo(clampId)}, InferenceEngine::Builder::OutputLayer());
+#else
+    InferenceEngine::idx_t clampId = builder.addLayer({inpId}, InferenceEngine::Builder::ClampLayer());
+    builder.addLayer({InferenceEngine::PortInfo(clampId)},
+                      InferenceEngine::Builder::OutputLayer().setPort(InferenceEngine::Port({},
+                      InferenceEngine::Precision::FP16)));
+#endif
+
+    InferenceEngine::CNNNetwork cnn = InferenceEngine::CNNNetwork(
+                                      InferenceEngine::Builder::convertToICNNNetwork(builder.build()));
+
+    InferenceEngine::TargetDevice device = InferenceEngine::TargetDevice::eMYRIAD;
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    {
+        AutoLock lock(getInitializationMutex());
+        auto& sharedPlugins = getSharedPlugins();
+        auto pluginIt = sharedPlugins.find(device);
+        if (pluginIt != sharedPlugins.end()) {
+            enginePtr = pluginIt->second;
+        } else {
+            auto dispatcher = InferenceEngine::PluginDispatcher({""});
+            enginePtr = dispatcher.getSuitablePlugin(device);
+            sharedPlugins[device] = enginePtr;
+        }
+    }
+    auto plugin = InferenceEngine::InferencePlugin(enginePtr);
+    try
+    {
+        auto netExec = plugin.LoadNetwork(cnn, {{"VPU_PLATFORM", "VPU_2480"}});
+        auto infRequest = netExec.CreateInferRequest();
+    } catch(...) {
+        return false;
+    }
+    return true;
+}
+#endif // >= 2018R5
+
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
     CV_Assert(!isInitialized());
@@ -665,6 +796,8 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
                         continue;
     #ifdef _WIN32
                     std::string libName = "cpu_extension" + suffixes[i] + ".dll";
+    #elif defined(__APPLE__)
+                    std::string libName = "libcpu_extension" + suffixes[i] + ".dylib";
     #else
                     std::string libName = "libcpu_extension" + suffixes[i] + ".so";
     #endif  // _WIN32
@@ -683,9 +816,6 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         plugin = InferenceEngine::InferencePlugin(enginePtr);
 
         netExec = plugin.LoadNetwork(net, {});
-        infRequest = netExec.CreateInferRequest();
-        infRequest.SetInput(inpBlobs);
-        infRequest.SetOutput(outBlobs);
     }
     catch (const std::exception& ex)
     {
@@ -705,15 +835,122 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     {
         std::string name = wrapper->dataPtr->name;
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        name = name.empty() ? "id1" : name;  // TODO: drop the magic input name.
+        name = name.empty() ? kDefaultInpLayerName : name;
 #endif
         allBlobs.insert({name, wrapper->blob});
     }
 }
 
-void InfEngineBackendNet::forward()
+void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Ptr<BackendWrapper> >& outsWrappers)
 {
-    infRequest.Infer();
+    auto outs = infEngineWrappers(outsWrappers);
+    outProms.clear();
+    outProms.resize(outs.size());
+    outsNames.resize(outs.size());
+    for (int i = 0; i < outs.size(); ++i)
+    {
+        outs[i]->futureMat = outProms[i].get_future();
+        outsNames[i] = outs[i]->dataPtr->name;
+    }
+}
+
+void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                                  bool isAsync)
+{
+    // Look for finished requests.
+    Ptr<InfEngineReqWrapper> reqWrapper;
+    for (auto& wrapper : infRequests)
+    {
+        if (wrapper->isReady)
+        {
+            reqWrapper = wrapper;
+            break;
+        }
+    }
+    if (reqWrapper.empty())
+    {
+        reqWrapper = Ptr<InfEngineReqWrapper>(new InfEngineReqWrapper());
+        try
+        {
+            reqWrapper->req = netExec.CreateInferRequest();
+        }
+        catch (const std::exception& ex)
+        {
+            CV_Error(Error::StsAssert, format("Failed to initialize Inference Engine backend: %s", ex.what()));
+        }
+        infRequests.push_back(reqWrapper);
+
+        InferenceEngine::BlobMap inpBlobs, outBlobs;
+        for (const auto& it : cnn.getInputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            CV_Assert(blobIt != allBlobs.end());
+            inpBlobs[name] = isAsync ? cloneBlob(blobIt->second) : blobIt->second;
+        }
+        for (const auto& it : cnn.getOutputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            CV_Assert(blobIt != allBlobs.end());
+            outBlobs[name] = isAsync ? cloneBlob(blobIt->second) : blobIt->second;
+        }
+        reqWrapper->req.SetInput(inpBlobs);
+        reqWrapper->req.SetOutput(outBlobs);
+
+        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
+        infRequestPtr->SetUserData(reqWrapper.get(), 0);
+
+        infRequestPtr->SetCompletionCallback(
+            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
+            {
+                InfEngineReqWrapper* wrapper;
+                request->GetUserData((void**)&wrapper, 0);
+                CV_Assert(wrapper);
+
+                for (int i = 0; i < wrapper->outProms.size(); ++i)
+                {
+                    const std::string& name = wrapper->outsNames[i];
+                    Mat m = infEngineBlobToMat(wrapper->req.GetBlob(name));
+
+                    if (status == InferenceEngine::StatusCode::OK)
+                        wrapper->outProms[i].set_value(m.clone());
+                    else
+                    {
+                        try {
+                            std::runtime_error e("Async request failed");
+                            wrapper->outProms[i].set_exception(std::make_exception_ptr(e));
+                        } catch(...) {
+                            CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                        }
+                    }
+                }
+                wrapper->isReady = true;
+            }
+        );
+    }
+    if (isAsync)
+    {
+        // Copy actual data to infer request's input blobs.
+        for (const auto& it : cnn.getInputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            Mat srcMat = infEngineBlobToMat(blobIt->second);
+            Mat dstMat = infEngineBlobToMat(reqWrapper->req.GetBlob(name));
+            srcMat.copyTo(dstMat);
+        }
+
+        // Set promises to output blobs wrappers.
+        reqWrapper->makePromises(outBlobsWrappers);
+
+        reqWrapper->isReady = false;
+        reqWrapper->req.StartAsync();
+    }
+    else
+    {
+        reqWrapper->req.Infer();
+    }
 }
 
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
@@ -721,7 +958,16 @@ Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
     // NOTE: Inference Engine sizes are reversed.
     std::vector<size_t> dims = blob->dims();
     std::vector<int> size(dims.rbegin(), dims.rend());
-    return Mat(size, CV_32F, (void*)blob->buffer());
+
+    int type = -1;
+    switch (blob->precision())
+    {
+        case InferenceEngine::Precision::FP32: type = CV_32F; break;
+        case InferenceEngine::Precision::U8: type = CV_8U; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    }
+    return Mat(size, type, (void*)blob->buffer());
 }
 
 bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -729,7 +975,11 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R3)
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = const_cast<InferenceEngine::CNNNetwork&>(t_net).getInputShapes();
+#else
     InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+#endif
     InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
     bool equal_flag = true;
     size_t i = 0;
@@ -776,6 +1026,18 @@ InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
     return halfs;
 }
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
+                     InferenceEngine::Builder::Layer& l)
+{
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
+    l.getParameters()[name] = data;
+#else
+    l.addConstantData(name, data);
+#endif
+}
+#endif
+
 #endif  // HAVE_INF_ENGINE
 
 bool haveInfEngine()
@@ -787,14 +1049,15 @@ bool haveInfEngine()
 #endif  // HAVE_INF_ENGINE
 }
 
-void forwardInfEngine(Ptr<BackendNode>& node)
+void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                      Ptr<BackendNode>& node, bool isAsync)
 {
     CV_Assert(haveInfEngine());
 #ifdef HAVE_INF_ENGINE
     CV_Assert(!node.empty());
     Ptr<InfEngineBackendNode> ieNode = node.dynamicCast<InfEngineBackendNode>();
     CV_Assert(!ieNode.empty());
-    ieNode->net->forward();
+    ieNode->net->forward(outBlobsWrappers, isAsync);
 #endif  // HAVE_INF_ENGINE
 }
 
@@ -807,6 +1070,60 @@ void resetMyriadDevice()
     getSharedPlugins().erase(InferenceEngine::TargetDevice::eMYRIAD);
 #endif  // HAVE_INF_ENGINE
 }
+
+#ifdef HAVE_INF_ENGINE
+bool isMyriadX()
+{
+     static bool myriadX = getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+     return myriadX;
+}
+
+static std::string getInferenceEngineVPUType_()
+{
+    static std::string param_vpu_type = utils::getConfigurationParameterString("OPENCV_DNN_IE_VPU_TYPE", "");
+    if (param_vpu_type == "")
+    {
+#if defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+        param_vpu_type = OPENCV_DNN_IE_VPU_TYPE_DEFAULT;
+#elif INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+        CV_LOG_INFO(NULL, "OpenCV-DNN: running Inference Engine VPU autodetection: Myriad2/X. In case of other accelerator types specify 'OPENCV_DNN_IE_VPU_TYPE' parameter");
+        try {
+            bool isMyriadX_ = detectMyriadX_();
+            if (isMyriadX_)
+            {
+                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X;
+            }
+            else
+            {
+                param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2;
+            }
+        }
+        catch (...)
+        {
+            CV_LOG_WARNING(NULL, "OpenCV-DNN: Failed Inference Engine VPU autodetection. Specify 'OPENCV_DNN_IE_VPU_TYPE' parameter.");
+            param_vpu_type.clear();
+        }
+#else
+        CV_LOG_WARNING(NULL, "OpenCV-DNN: VPU auto-detection is not implemented. Consider specifying VPU type via 'OPENCV_DNN_IE_VPU_TYPE' parameter");
+        param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2;
+#endif
+    }
+    CV_LOG_INFO(NULL, "OpenCV-DNN: Inference Engine VPU type='" << param_vpu_type << "'");
+    return param_vpu_type;
+}
+
+cv::String getInferenceEngineVPUType()
+{
+    static cv::String vpu_type = getInferenceEngineVPUType_();
+    return vpu_type;
+}
+#else  // HAVE_INF_ENGINE
+cv::String getInferenceEngineVPUType()
+{
+    CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
+}
+#endif  // HAVE_INF_ENGINE
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

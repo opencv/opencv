@@ -12,6 +12,7 @@ Implementation of padding layer, which adds paddings to input blob.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
+#include "../op_inf_engine.hpp"
 #include <vector>
 
 namespace cv
@@ -68,28 +69,36 @@ public:
 
         // Compute dstRanges.
         const MatSize& inpShape = inputs[0].size;
-        dstRanges.resize(paddings.size());
 
-        int offset = 0;
         if (inputDims != -1 && inputs[0].dims != inputDims)
         {
-            dstRanges.insert(dstRanges.begin(), Range::all());
-            offset = 1;
+            paddings.insert(paddings.begin(), std::make_pair(0, 0));
         }
 
+        dstRanges.resize(paddings.size());
         for (int i = 0; i < paddings.size(); ++i)
         {
-            dstRanges[offset + i].start = paddings[i].first;
-            dstRanges[offset + i].end = paddings[i].first + inpShape[offset + i];
+            dstRanges[i].start = paddings[i].first;
+            dstRanges[i].end = paddings[i].first + inpShape[i];
         }
 
         // Add the rest of dimensions.
         for (int i = dstRanges.size(); i < inputs[0].dims; ++i)
+        {
             dstRanges.push_back(Range::all());
+            paddings.push_back(std::make_pair(0, 0));
+        }
+        inputDims = -1;  // Next time paddings are filled for all the dimensions.
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+                   (preferableTarget != DNN_TARGET_MYRIAD ||
+                    (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4);
     }
@@ -109,7 +118,7 @@ public:
             {
                 std::vector<float> paddingValue_fp32(1, paddingValue);
                 std::vector<int16_t> paddingValue_fp16(1);
-                convertFp16(paddingValue_fp32, paddingValue_fp16);
+                cv::convertFp16(paddingValue_fp32, paddingValue_fp16);
                 outputs[0].setTo(paddingValue_fp16[0]);
             }
             else
@@ -170,6 +179,32 @@ public:
         top(x, y, c, n) = padded(x - minX, y - minY, c - minC, n - minN);
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+#ifdef HAVE_INF_ENGINE
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        ieLayer.setType("Pad");
+
+        std::vector<int> begins(paddings.size(), 0), ends(paddings.size(), 0);
+        for (int i = 0; i < paddings.size(); ++i)
+        {
+            begins[i] = paddings[i].first;
+            ends[i] = paddings[i].second;
+        }
+        ieLayer.getParameters()["pads_begin"] = begins;
+        ieLayer.getParameters()["pads_end"] = ends;
+        ieLayer.getParameters()["pad_mode"] = paddingType;
+        if (paddingType == "constant")
+            ieLayer.getParameters()["pad_value"] = paddingValue;
+
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
         return Ptr<BackendNode>();
     }
 

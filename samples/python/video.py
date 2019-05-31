@@ -32,12 +32,12 @@ Keys:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import numpy as np
+import cv2 as cv
+
 import re
 
-import numpy as np
 from numpy import pi, sin, cos
-
-import cv2 as cv
 
 # built-in modules
 from time import clock

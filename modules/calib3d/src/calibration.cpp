@@ -1168,6 +1168,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         else
         {
             // non-planar structure. Use DLT method
+            CV_CheckGE(count, 6, "DLT algorithm needs at least 6 points for pose estimation from 3D-2D point correspondences.");
             double* L;
             double LL[12*12], LW[12], LV[12*12], sc;
             CvMat _LL = cvMat( 12, 12, CV_64F, LL );
@@ -1520,10 +1521,6 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     nparams = NINTRINSIC + nimages*6;
     if( releaseObject )
         nparams += maxPoints * 3;
-    Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
-    Mat _Je( maxPoints*2, 6, CV_64FC1 );
-    Mat _Jo( maxPoints*2, maxPoints*3, CV_64FC1, Scalar(0) );
-    Mat _err( maxPoints*2, 1, CV_64FC1 );
 
     _k = cvMat( distCoeffs->rows, distCoeffs->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k);
     if( distCoeffs->rows*distCoeffs->cols*CV_MAT_CN(distCoeffs->type) < 8 )
@@ -1586,6 +1583,13 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     }
 
     CvLevMarq solver( nparams, 0, termCrit );
+
+    Mat _Ji( maxPoints*2, NINTRINSIC, CV_64FC1, Scalar(0));
+    Mat _Je( maxPoints*2, 6, CV_64FC1 );
+    Mat _err( maxPoints*2, 1, CV_64FC1 );
+
+    const bool allocJo = (solver.state == CvLevMarq::CALC_J) || stdDevs;
+    Mat _Jo = allocJo ? Mat( maxPoints*2, maxPoints*3, CV_64FC1, Scalar(0) ) : Mat();
 
     if(flags & CALIB_USE_LU) {
         solver.solveMethod = DECOMP_LU;
@@ -1720,20 +1724,22 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
             _Je.resize(ni*2); _Ji.resize(ni*2); _err.resize(ni*2);
             _Jo.resize(ni*2);
-            CvMat _dpdr = cvMat(_Je.colRange(0, 3));
-            CvMat _dpdt = cvMat(_Je.colRange(3, 6));
-            CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
-            CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
-            CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
-            CvMat _dpdo = cvMat(_Jo.colRange(0, ni * 3));
+
             CvMat _mp = cvMat(_err.reshape(2, 1));
 
             if( calcJ )
             {
-                 cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
-                                  (flags & CALIB_FIX_FOCAL_LENGTH) ? 0 : &_dpdf,
-                                  (flags & CALIB_FIX_PRINCIPAL_POINT) ? 0 : &_dpdc, &_dpdk,
-                                  &_dpdo,
+                CvMat _dpdr = cvMat(_Je.colRange(0, 3));
+                CvMat _dpdt = cvMat(_Je.colRange(3, 6));
+                CvMat _dpdf = cvMat(_Ji.colRange(0, 2));
+                CvMat _dpdc = cvMat(_Ji.colRange(2, 4));
+                CvMat _dpdk = cvMat(_Ji.colRange(4, NINTRINSIC));
+                CvMat _dpdo = _Jo.empty() ? CvMat() : cvMat(_Jo.colRange(0, ni * 3));
+
+                cvProjectPoints2Internal( &_Mi, &_ri, &_ti, &matA, &_k, &_mp, &_dpdr, &_dpdt,
+                                  (flags & CALIB_FIX_FOCAL_LENGTH) ? nullptr : &_dpdf,
+                                  (flags & CALIB_FIX_PRINCIPAL_POINT) ? nullptr : &_dpdc, &_dpdk,
+                                  (_Jo.empty()) ? nullptr: &_dpdo,
                                   (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio : 0);
             }
             else
@@ -3555,7 +3561,13 @@ void cv::projectPoints( InputArray _opoints,
 {
     Mat opoints = _opoints.getMat();
     int npoints = opoints.checkVector(3), depth = opoints.depth();
+    if (npoints < 0)
+        opoints = opoints.t();
+    npoints = opoints.checkVector(3);
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
+
+    if (opoints.cols == 3)
+        opoints = opoints.reshape(3);
 
     CvMat dpdrot, dpdt, dpdf, dpdc, dpddist;
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;

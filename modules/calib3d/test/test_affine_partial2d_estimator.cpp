@@ -161,4 +161,46 @@ TEST_P(EstimateAffinePartial2D, testConversion)
 
 INSTANTIATE_TEST_CASE_P(Calib3d, EstimateAffinePartial2D, Method::all());
 
+
+// https://github.com/opencv/opencv/issues/14259
+TEST(EstimateAffinePartial2D, issue_14259_dont_change_inputs)
+{
+    /*const static*/ float pts0_[10] = {
+            0.0f, 0.0f,
+            0.0f, 8.0f,
+            4.0f, 0.0f, // outlier
+            8.0f, 8.0f,
+            8.0f, 0.0f
+    };
+    /*const static*/ float pts1_[10] = {
+            0.1f, 0.1f,
+            0.1f, 8.1f,
+            0.0f, 4.0f, // outlier
+            8.1f, 8.1f,
+            8.1f, 0.1f
+    };
+
+    Mat pts0(Size(1, 5), CV_32FC2, (void*)pts0_);
+    Mat pts1(Size(1, 5), CV_32FC2, (void*)pts1_);
+
+    Mat pts0_copy = pts0.clone();
+    Mat pts1_copy = pts1.clone();
+
+    Mat inliers;
+
+    cv::Mat A = cv::estimateAffinePartial2D(pts0, pts1, inliers);
+
+    for(int i = 0; i < pts0.rows; ++i)
+    {
+        EXPECT_EQ(pts0_copy.at<Vec2f>(i), pts0.at<Vec2f>(i)) << "pts0: i=" << i;
+    }
+
+    for(int i = 0; i < pts1.rows; ++i)
+    {
+        EXPECT_EQ(pts1_copy.at<Vec2f>(i), pts1.at<Vec2f>(i)) << "pts1: i=" << i;
+    }
+
+    EXPECT_EQ(0, (int)inliers.at<uchar>(2));
+}
+
 }} // namespace

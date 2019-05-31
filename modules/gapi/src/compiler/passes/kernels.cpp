@@ -20,6 +20,7 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gmodelbuilder.hpp"
 #include "logger.hpp"    // GAPI_LOG
+#include "api/gproto_priv.hpp" // is_dynamic, rewrap
 
 namespace
 {
@@ -100,8 +101,7 @@ namespace
 // This pass, given the kernel package, selects a kernel implementation
 // for every operation in the graph
 void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
-                                       const gapi::GKernelPackage &kernels,
-                                       const gapi::GLookupOrder   &order)
+                                       const gapi::GKernelPackage &kernels)
 {
     std::unordered_set<cv::gapi::GBackend> active_backends;
 
@@ -113,8 +113,7 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
             auto &op = gr.metadata(nh).get<Op>();
             cv::gapi::GBackend selected_backend;
             cv::GKernelImpl    selected_impl;
-            std::tie(selected_backend, selected_impl)
-                = kernels.lookup(op.k.name, order);
+            std::tie(selected_backend, selected_impl) = kernels.lookup(op.k.name);
 
             selected_backend.priv().unpackKernel(ctx.graph, nh, selected_impl);
             op.backend = selected_backend;

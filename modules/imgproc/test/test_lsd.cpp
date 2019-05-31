@@ -5,6 +5,8 @@
 
 namespace opencv_test { namespace {
 
+#if 0  // LSD implementation has been removed due original code license issues
+
 const Size img_size(640, 480);
 const int LSD_TEST_SEED = 0x134679;
 const int EPOCHS = 20;
@@ -401,5 +403,7 @@ TEST_F(Imgproc_LSD_Common, compareSegmentsVec4i)
 
     ASSERT_EQ(result2, 11);
 }
+
+#endif
 
 }} // namespace

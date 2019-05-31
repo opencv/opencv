@@ -42,8 +42,7 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
-namespace cv
-{
+namespace cv {
 
 int validateToInt(size_t sz)
 {
@@ -601,4 +600,4 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
     return data;
 }
 
-}
+}  // namespace

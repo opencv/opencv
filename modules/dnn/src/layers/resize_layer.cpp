@@ -54,12 +54,11 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            return (interpolation == "nearest" && preferableTarget != DNN_TARGET_MYRIAD) ||
+            return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
                    (interpolation == "bilinear" && INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R4));
         }
-        else
 #endif
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE

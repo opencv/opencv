@@ -224,6 +224,18 @@ INSTANTIATE_TEST_CASE_P(YUV2RGBTestCPU, YUV2RGBTest,
                             /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(NV12toRGBTestCPU, NV12toRGBTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(NV12toBGRTestCPU, NV12toBGRTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
 INSTANTIATE_TEST_CASE_P(RGB2LabTestCPU, RGB2LabTest,
                         Combine(Values(AbsExact().to_compare_f()),
                                 Values(cv::Size(1280, 720),

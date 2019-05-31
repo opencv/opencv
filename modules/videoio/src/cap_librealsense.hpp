@@ -25,6 +25,7 @@ public:
     virtual bool retrieveFrame(int outputType, OutputArray frame) CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE;
+
 protected:
     rs2::pipeline mPipe;
     rs2::frameset mData;

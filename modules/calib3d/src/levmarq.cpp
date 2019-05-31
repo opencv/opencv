@@ -80,12 +80,9 @@ namespace cv
 class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
-    LMSolverImpl() : maxIters(100) { init(); }
-    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters) : cb(_cb), maxIters(_maxIters) { init(); }
-
-    void init()
+    LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters, double _eps = FLT_EPSILON)
+        : cb(_cb), epsx(_eps), epsf(_eps), maxIters(_maxIters)
     {
-        epsx = epsf = FLT_EPSILON;
         printInterval = 0;
     }
 
@@ -213,6 +210,11 @@ public:
 Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     return makePtr<LMSolverImpl>(cb, maxIters);
+}
+
+Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
+{
+    return makePtr<LMSolverImpl>(cb, maxIters, eps);
 }
 
 }

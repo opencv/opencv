@@ -1207,7 +1207,7 @@ Ptr<IVideoCapture> createGPhoto2Capture(int index)
  *
  * @param deviceName is a substring in digital camera model name.
  */
-Ptr<IVideoCapture> createGPhoto2Capture(const String & deviceName)
+Ptr<IVideoCapture> createGPhoto2Capture(const std::string & deviceName)
 {
     Ptr<IVideoCapture> capture = makePtr<gphoto2::DigitalCameraCapture>(deviceName);
 

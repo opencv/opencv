@@ -144,6 +144,11 @@ static cv::String getModuleLocation(const void* addr)
     return cv::String();
 }
 
+std::string getBinLocation()
+{
+    return getModuleLocation((void*)getModuleLocation); // use code addr, doesn't work with static linkage!
+}
+
 cv::String findDataFile(const cv::String& relative_path,
                         const char* configuration_parameter,
                         const std::vector<String>* search_paths,
@@ -287,7 +292,7 @@ cv::String findDataFile(const cv::String& relative_path,
         }
     }
 
-    cv::String module_path = getModuleLocation((void*)getModuleLocation);  // use code addr, doesn't work with static linkage!
+    cv::String module_path = getBinLocation();
     CV_LOG_DEBUG(NULL, "Detected module path: '" << module_path << '\'');
 
     if (!has_tested_build_directory &&

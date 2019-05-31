@@ -27,8 +27,8 @@ lein run
 Preamble
 --------
 
-For detailed instruction on installing OpenCV with desktop Java support refer to the [corresponding
-tutorial](http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html).
+For detailed instruction on installing OpenCV with desktop Java support refer to the @ref tutorial_java_dev_intro "corresponding
+tutorial".
 
 If you are in hurry, here is a minimum quick start guide to install OpenCV on Mac OS X:
 
@@ -302,7 +302,7 @@ Then you can start interacting with OpenCV by just referencing the fully qualifi
 classes.
 
 @note
-[Here](http://docs.opencv.org/java/) you can find the full OpenCV Java API.
+[Here](https://docs.opencv.org/master/javadoc/index.html) you can find the full OpenCV Java API.
 
 @code{.clojure}
 user=> (org.opencv.core.Point. 0 0)
@@ -387,8 +387,7 @@ user=> (javadoc Rect)
 @endcode
 ### Mimic the OpenCV Java Tutorial Sample in the REPL
 
-Let's now try to port to Clojure the [opencv java tutorial
-sample](http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html).
+Let's now try to port to Clojure the @ref tutorial_java_dev_intro "OpenCV Java tutorial sample".
 Instead of writing it in a source file we're going to evaluate it at the REPL.
 
 Following is the original Java source code of the cited sample.

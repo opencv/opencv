@@ -42,10 +42,27 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
+#include <opencv2/core/utils/logger.hpp>
+
+#define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "alloc.cpp: " << __VA_ARGS__)
+#include "opencv2/core/utils/allocator_stats.impl.hpp"
+#undef CV__ALLOCATOR_STATS_LOG
+
+//#define OPENCV_ALLOC_ENABLE_STATISTICS
+#define OPENCV_ALLOC_STATISTICS_LIMIT 4096  // don't track buffers less than N bytes
+
+
 #ifdef HAVE_POSIX_MEMALIGN
 #include <stdlib.h>
 #elif defined HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+#include <map>
 #endif
 
 namespace cv {
@@ -55,8 +72,21 @@ static void* OutOfMemoryError(size_t size)
     CV_Error_(CV_StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
 }
 
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics();
 
-void* fastMalloc( size_t size )
+static cv::utils::AllocatorStatistics allocator_stats;
+
+cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
+{
+    return allocator_stats;
+}
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+static inline
+void* fastMalloc_(size_t size)
+#else
+void* fastMalloc(size_t size)
+#endif
 {
 #ifdef HAVE_POSIX_MEMALIGN
     void* ptr = NULL;
@@ -80,7 +110,12 @@ void* fastMalloc( size_t size )
 #endif
 }
 
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+static inline
+void fastFree_(void* ptr)
+#else
 void fastFree(void* ptr)
+#endif
 {
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
     free(ptr);
@@ -94,6 +129,47 @@ void fastFree(void* ptr)
     }
 #endif
 }
+
+#ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+
+static
+Mutex& getAllocationStatisticsMutex()
+{
+    static Mutex* p_alloc_mutex = allocSingletonNew<Mutex>();
+    CV_Assert(p_alloc_mutex);
+    return *p_alloc_mutex;
+}
+
+static std::map<void*, size_t> allocated_buffers;  // guarded by getAllocationStatisticsMutex()
+
+void* fastMalloc(size_t size)
+{
+    void* res = fastMalloc_(size);
+    if (res && size >= OPENCV_ALLOC_STATISTICS_LIMIT)
+    {
+        cv::AutoLock lock(getAllocationStatisticsMutex());
+        allocated_buffers.insert(std::make_pair(res, size));
+        allocator_stats.onAllocate(size);
+    }
+    return res;
+}
+
+void fastFree(void* ptr)
+{
+    {
+        cv::AutoLock lock(getAllocationStatisticsMutex());
+        std::map<void*, size_t>::iterator i = allocated_buffers.find(ptr);
+        if (i != allocated_buffers.end())
+        {
+            size_t size = i->second;
+            allocator_stats.onFree(size);
+            allocated_buffers.erase(i);
+        }
+    }
+    fastFree_(ptr);
+}
+
+#endif // OPENCV_ALLOC_ENABLE_STATISTICS
 
 } // namespace
 

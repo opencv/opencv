@@ -67,14 +67,10 @@ public:
         {
             if (pnorm != 2)
                 return false;
-            if (!blobs.empty())
-                return true;
-            if (preferableTarget == DNN_TARGET_MYRIAD)
-                return !acrossSpatial;
-            return startAxis == 1 && (!acrossSpatial || endAxis > 1);
+
+            return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
-        else
-            return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -279,13 +275,13 @@ public:
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                auto onesBlob = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                         InferenceEngine::Layout::C,
-                                                                         {(size_t)numChannels});
-                onesBlob->allocate();
-                std::vector<float> ones(numChannels, 1);
-                onesBlob->set(ones);
-                weights = onesBlob;
+                weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
+                                                                   InferenceEngine::Layout::C,
+                                                                   {(size_t)numChannels});
+                weights->allocate();
+
+                Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
+                Mat(numChannels, 1, CV_32F, Scalar(1)).copyTo(weightsMat);
                 l.getParameters()["channel_shared"] = false;
             }
             else
@@ -294,11 +290,7 @@ public:
                 weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
                 l.getParameters()["channel_shared"] = blobs[0].total() == 1;
             }
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R5)
-            l.getParameters()["weights"] = (InferenceEngine::Blob::CPtr)weights;
-#else
-            l.addConstantData("weights", weights);
-#endif
+            addConstantData("weights", weights, l);
             l.getParameters()["across_spatial"] = acrossSpatial;
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }

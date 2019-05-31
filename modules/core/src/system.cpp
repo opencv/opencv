@@ -71,6 +71,8 @@ static bool param_dumpErrors = utils::getConfigurationParameterBool("OPENCV_DUMP
 );
 
 void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
+void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
+
 
 } // namespace cv
 
@@ -94,7 +96,7 @@ void* allocSingletonBuffer(size_t size) { return fastMalloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __HAIKU__ || defined __Fuchsia__
+#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
 #  include <elf.h>
@@ -354,6 +356,12 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_512PF] = "AVX512PF";
         g_hwFeatureNames[CPU_AVX_512VBMI] = "AVX512VBMI";
         g_hwFeatureNames[CPU_AVX_512VL] = "AVX512VL";
+        g_hwFeatureNames[CPU_AVX_512VBMI2] = "AVX512VBMI2";
+        g_hwFeatureNames[CPU_AVX_512VNNI] = "AVX512VNNI";
+        g_hwFeatureNames[CPU_AVX_512BITALG] = "AVX512BITALG";
+        g_hwFeatureNames[CPU_AVX_512VPOPCNTDQ] = "AVX512VPOPCNTDQ";
+        g_hwFeatureNames[CPU_AVX_5124VNNIW] = "AVX5124VNNIW";
+        g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
 
@@ -361,6 +369,11 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
+        g_hwFeatureNames[CPU_AVX512_KNL] = "AVX512-KNL";
+        g_hwFeatureNames[CPU_AVX512_KNM] = "AVX512-KNM";
+        g_hwFeatureNames[CPU_AVX512_CNL] = "AVX512-CNL";
+        g_hwFeatureNames[CPU_AVX512_CEL] = "AVX512-CEL";
+        g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
     }
 
     void initialize(void)
@@ -402,15 +415,21 @@ struct HWFeatures
 
             have[CV_CPU_AVX2]   = (cpuid_data_ex[1] & (1<<5)) != 0;
 
-            have[CV_CPU_AVX_512F]       = (cpuid_data_ex[1] & (1<<16)) != 0;
-            have[CV_CPU_AVX_512DQ]      = (cpuid_data_ex[1] & (1<<17)) != 0;
-            have[CV_CPU_AVX_512IFMA512] = (cpuid_data_ex[1] & (1<<21)) != 0;
-            have[CV_CPU_AVX_512PF]      = (cpuid_data_ex[1] & (1<<26)) != 0;
-            have[CV_CPU_AVX_512ER]      = (cpuid_data_ex[1] & (1<<27)) != 0;
-            have[CV_CPU_AVX_512CD]      = (cpuid_data_ex[1] & (1<<28)) != 0;
-            have[CV_CPU_AVX_512BW]      = (cpuid_data_ex[1] & (1<<30)) != 0;
-            have[CV_CPU_AVX_512VL]      = (cpuid_data_ex[1] & (1<<31)) != 0;
-            have[CV_CPU_AVX_512VBMI]    = (cpuid_data_ex[2] & (1<<1)) != 0;
+            have[CV_CPU_AVX_512F]         = (cpuid_data_ex[1] & (1<<16)) != 0;
+            have[CV_CPU_AVX_512DQ]        = (cpuid_data_ex[1] & (1<<17)) != 0;
+            have[CV_CPU_AVX_512IFMA]      = (cpuid_data_ex[1] & (1<<21)) != 0;
+            have[CV_CPU_AVX_512PF]        = (cpuid_data_ex[1] & (1<<26)) != 0;
+            have[CV_CPU_AVX_512ER]        = (cpuid_data_ex[1] & (1<<27)) != 0;
+            have[CV_CPU_AVX_512CD]        = (cpuid_data_ex[1] & (1<<28)) != 0;
+            have[CV_CPU_AVX_512BW]        = (cpuid_data_ex[1] & (1<<30)) != 0;
+            have[CV_CPU_AVX_512VL]        = (cpuid_data_ex[1] & (1<<31)) != 0;
+            have[CV_CPU_AVX_512VBMI]      = (cpuid_data_ex[2] & (1<<1))  != 0;
+            have[CV_CPU_AVX_512VBMI2]     = (cpuid_data_ex[2] & (1<<6))  != 0;
+            have[CV_CPU_AVX_512VNNI]      = (cpuid_data_ex[2] & (1<<11)) != 0;
+            have[CV_CPU_AVX_512BITALG]    = (cpuid_data_ex[2] & (1<<12)) != 0;
+            have[CV_CPU_AVX_512VPOPCNTDQ] = (cpuid_data_ex[2] & (1<<14)) != 0;
+            have[CV_CPU_AVX_5124VNNIW]    = (cpuid_data_ex[3] & (1<<2))  != 0;
+            have[CV_CPU_AVX_5124FMAPS]    = (cpuid_data_ex[3] & (1<<3))  != 0;
 
             bool have_AVX_OS_support = true;
             bool have_AVX512_OS_support = true;
@@ -444,15 +463,38 @@ struct HWFeatures
                 have[CV_CPU_AVX_512CD] = false;
                 have[CV_CPU_AVX_512DQ] = false;
                 have[CV_CPU_AVX_512ER] = false;
-                have[CV_CPU_AVX_512IFMA512] = false;
+                have[CV_CPU_AVX_512IFMA] = false;
                 have[CV_CPU_AVX_512PF] = false;
                 have[CV_CPU_AVX_512VBMI] = false;
                 have[CV_CPU_AVX_512VL] = false;
+                have[CV_CPU_AVX_512VBMI2] = false;
+                have[CV_CPU_AVX_512VNNI] = false;
+                have[CV_CPU_AVX_512BITALG] = false;
+                have[CV_CPU_AVX_512VPOPCNTDQ] = false;
+                have[CV_CPU_AVX_5124VNNIW] = false;
+                have[CV_CPU_AVX_5124FMAPS] = false;
             }
 
-            if (have[CV_CPU_AVX_512F])
+            have[CV_CPU_AVX512_COMMON] = have[CV_CPU_AVX_512F] && have[CV_CPU_AVX_512CD];
+            if (have[CV_CPU_AVX512_COMMON])
             {
-                have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512F] & have[CV_CPU_AVX_512CD] & have[CV_CPU_AVX_512BW] & have[CV_CPU_AVX_512DQ] & have[CV_CPU_AVX_512VL];
+                have[CV_CPU_AVX512_KNL] = have[CV_CPU_AVX_512ER]  && have[CV_CPU_AVX_512PF];
+                have[CV_CPU_AVX512_KNM] = have[CV_CPU_AVX512_KNL] && have[CV_CPU_AVX_5124FMAPS] &&
+                                          have[CV_CPU_AVX_5124VNNIW] && have[CV_CPU_AVX_512VPOPCNTDQ];
+                have[CV_CPU_AVX512_SKX] = have[CV_CPU_AVX_512BW] && have[CV_CPU_AVX_512DQ] && have[CV_CPU_AVX_512VL];
+                have[CV_CPU_AVX512_CNL] = have[CV_CPU_AVX512_SKX] && have[CV_CPU_AVX_512IFMA] && have[CV_CPU_AVX_512VBMI];
+                have[CV_CPU_AVX512_CEL] = have[CV_CPU_AVX512_CNL] && have[CV_CPU_AVX_512VNNI];
+                have[CV_CPU_AVX512_ICL] = have[CV_CPU_AVX512_CEL] && have[CV_CPU_AVX_512VBMI2] &&
+                                          have[CV_CPU_AVX_512BITALG] && have[CV_CPU_AVX_512VPOPCNTDQ];
+            }
+            else
+            {
+                have[CV_CPU_AVX512_KNL] = false;
+                have[CV_CPU_AVX512_KNM] = false;
+                have[CV_CPU_AVX512_SKX] = false;
+                have[CV_CPU_AVX512_CNL] = false;
+                have[CV_CPU_AVX512_CEL] = false;
+                have[CV_CPU_AVX512_ICL] = false;
             }
         }
     #endif // CV_CPUID_X86
@@ -619,11 +661,14 @@ struct HWFeatures
                         }
                         if (isBaseline)
                         {
-                            if (dump) fprintf(stderr, "OPENCV: Trying to disable baseline CPU feature: '%s'. This has very limited effect, because code optimizations for this feature are executed unconditionally in the most cases.\n", getHWFeatureNameSafe(i));
+                            if (dump) fprintf(stderr, "OPENCV: Trying to disable baseline CPU feature: '%s'."
+                                                      "This has very limited effect, because code optimizations for this feature are executed unconditionally "
+                                                      "in the most cases.\n", getHWFeatureNameSafe(i));
                         }
                         if (!have[i])
                         {
-                            if (dump) fprintf(stderr, "OPENCV: Trying to disable unavailable CPU feature on the current platform: '%s'.\n", getHWFeatureNameSafe(i));
+                            if (dump) fprintf(stderr, "OPENCV: Trying to disable unavailable CPU feature on the current platform: '%s'.\n",
+                                getHWFeatureNameSafe(i));
                         }
                         have[i] = false;
 
@@ -1150,7 +1195,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_BadDepth :               return "Input image depth is not supported by function";
     case CV_StsUnmatchedFormats :    return "Formats of input arguments do not match";
     case CV_StsUnmatchedSizes :      return "Sizes of input arguments do not match";
-    case CV_StsOutOfRange :          return "One of arguments\' values is out of range";
+    case CV_StsOutOfRange :          return "One of the arguments\' values is out of range";
     case CV_StsUnsupportedFormat :   return "Unsupported format or combination of formats";
     case CV_BadCOI :                 return "Input COI is not supported";
     case CV_BadNumChannels :         return "Bad number of channels";

@@ -5,7 +5,7 @@
 # - https://wiki.debian.org/Hardening
 # - https://wiki.gentoo.org/wiki/Hardened/Toolchain
 # - https://docs.microsoft.com/en-us/cpp/build/reference/sdl-enable-additional-security-checks
-
+# - https://developer.apple.com/library/archive/documentation/Security/Conceptual/SecureCodingGuide/Articles/BufferOverflows.html
 
 set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "")
 
@@ -43,6 +43,12 @@ if(MSVC)
   set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "${OPENCV_LINKER_DEFENSES_FLAGS_COMMON} /guard:cf /dynamicbase" )
   if(NOT X86_64)
     set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "${OPENCV_LINKER_DEFENSES_FLAGS_COMMON} /safeseh")
+  endif()
+elseif(CV_CLANG)
+  ocv_add_defense_compiler_flag("-fstack-protector-strong")
+  ocv_add_defense_compiler_flag_release("-D_FORTIFY_SOURCE=2")
+  if (NOT APPLE)
+    set(OPENCV_LINKER_DEFENSES_FLAGS_COMMON "${OPENCV_LINKER_DEFENSES_FLAGS_COMMON} -z noexecstack -z relro -z now" )
   endif()
 elseif(CV_GCC)
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9")

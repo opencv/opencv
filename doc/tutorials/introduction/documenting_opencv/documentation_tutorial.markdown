@@ -32,11 +32,11 @@ Generate documentation {#tutorial_documentation_generate}
 -   Create build directory near the sources folder(s) and go into it
 -   Run cmake (assuming you put sources to _opencv_ folder):
     @code{.sh}
-    cmake ../opencv
+    cmake -DBUILD_DOCS=ON ../opencv
     @endcode
     Or if you get contrib sources too:
     @code{.sh}
-    cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules ../opencv
+    cmake -DBUILD_DOCS=ON -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules ../opencv
     @endcode
 -   Run make:
     @code{.sh}

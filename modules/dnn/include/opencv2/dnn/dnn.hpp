@@ -44,6 +44,9 @@
 
 #include <vector>
 #include <opencv2/core.hpp>
+#ifdef CV_CXX11
+#include <future>
+#endif
 
 #include "../dnn/version.hpp"
 
@@ -57,6 +60,18 @@ CV__DNN_INLINE_NS_BEGIN
 
     typedef std::vector<int> MatShape;
 
+#if defined(CV_CXX11) || defined(CV_DOXYGEN)
+    typedef std::future<Mat> AsyncMat;
+#else
+    // Just a workaround for bindings.
+    struct AsyncMat
+    {
+        Mat get() { return Mat(); }
+        void wait() const {}
+        size_t wait_for(size_t milliseconds) const { CV_UNUSED(milliseconds); return -1; }
+    };
+#endif
+
     /**
      * @brief Enum of computation backends supported by layers.
      * @see Net::setPreferableBackend
@@ -68,7 +83,7 @@ CV__DNN_INLINE_NS_BEGIN
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,
+        DNN_BACKEND_INFERENCE_ENGINE,  //!< Intel's Inference Engine computational backend.
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM
     };
@@ -84,8 +99,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
         DNN_TARGET_VULKAN,
-        //! FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
-        DNN_TARGET_FPGA
+        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -381,6 +395,16 @@ CV__DNN_INLINE_NS_BEGIN
         /** Returns true if there are no layers in the network. */
         CV_WRAP bool empty() const;
 
+        /** @brief Dump net to String
+         *  @returns String with structure, hyperparameters, backend, target and fusion
+         *  To see correct backend, target and fusion run after forward().
+         */
+        CV_WRAP String dump();
+        /** @brief Dump net structure, hyperparameters, backend, target and fusion to dot file
+         *  @param path   path to output file with .dot extension
+         *  @see dump()
+         */
+        CV_WRAP void dumpToFile(const String& path);
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).
@@ -447,6 +471,15 @@ CV__DNN_INLINE_NS_BEGIN
          *  @details By default runs forward pass for the whole network.
          */
         CV_WRAP Mat forward(const String& outputName = String());
+
+        /** @brief Runs forward pass to compute output of layer with name @p outputName.
+         *  @param outputName name for layer which output is needed to get
+         *  @details By default runs forward pass for the whole network.
+         *
+         *  This is an asynchronous version of forward(const String&).
+         *  dnn::DNN_BACKEND_INFERENCE_ENGINE backend is required.
+         */
+        CV_WRAP AsyncMat forwardAsync(const String& outputName = String());
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputBlobs contains all output blobs for specified layer.
@@ -783,6 +816,7 @@ CV__DNN_INLINE_NS_BEGIN
       *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
+      *                  * `*.onnx` (ONNX, https://onnx.ai/)
       * @param[in] config Text file contains network configuration. It could be a
       *                   file with the following extensions:
       *                  * `*.prototxt` (Caffe, http://caffe.berkeleyvision.org/)
@@ -830,6 +864,23 @@ CV__DNN_INLINE_NS_BEGIN
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
     CV_EXPORTS_W Net readNetFromONNX(const String &onnxFile);
+
+    /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
+     *         in-memory buffer.
+     *  @param buffer memory address of the first byte of the buffer.
+     *  @param sizeBuffer size of the buffer.
+     *  @returns Network object that ready to do forward, throw an exception
+     *        in failure cases.
+     */
+    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer);
+
+    /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
+     *         in-memory buffer.
+     *  @param buffer in-memory buffer that stores the ONNX model bytes.
+     *  @returns Network object that ready to do forward, throw an exception
+     *        in failure cases.
+     */
+    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer);
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.
@@ -955,13 +1006,6 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
-    /** @brief Release a Myriad device is binded by OpenCV.
-     *
-     * Single Myriad device cannot be shared across multiple processes which uses
-     * Inference Engine's Myriad plugin.
-     */
-    CV_EXPORTS_W void resetMyriadDevice();
-
 //! @}
 CV__DNN_INLINE_NS_END
 }
@@ -969,5 +1013,8 @@ CV__DNN_INLINE_NS_END
 
 #include <opencv2/dnn/layer.hpp>
 #include <opencv2/dnn/dnn.inl.hpp>
+
+/// @deprecated Include this header directly from application. Automatic inclusion will be removed
+#include <opencv2/dnn/utils/inference_engine.hpp>
 
 #endif  /* OPENCV_DNN_DNN_HPP */

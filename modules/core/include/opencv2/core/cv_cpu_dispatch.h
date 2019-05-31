@@ -15,6 +15,7 @@
 #define CV_CPU_OPTIMIZATION_NAMESPACE cpu_baseline
 #define CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN namespace cpu_baseline {
 #define CV_CPU_OPTIMIZATION_NAMESPACE_END }
+#define CV_CPU_BASELINE_MODE 1
 #endif
 
 
@@ -86,9 +87,41 @@
 #  include <immintrin.h>
 #  define CV_AVX_512F 1
 #endif
+#ifdef CV_CPU_COMPILE_AVX512_COMMON
+#  define CV_AVX512_COMMON 1
+#  define CV_AVX_512CD 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_KNL
+#  define CV_AVX512_KNL 1
+#  define CV_AVX_512ER 1
+#  define CV_AVX_512PF 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_KNM
+#  define CV_AVX512_KNM 1
+#  define CV_AVX_5124FMAPS 1
+#  define CV_AVX_5124VNNIW 1
+#  define CV_AVX_512VPOPCNTDQ 1
+#endif
 #ifdef CV_CPU_COMPILE_AVX512_SKX
-#  include <immintrin.h>
 #  define CV_AVX512_SKX 1
+#  define CV_AVX_512VL 1
+#  define CV_AVX_512BW 1
+#  define CV_AVX_512DQ 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_CNL
+#  define CV_AVX512_CNL 1
+#  define CV_AVX_512IFMA 1
+#  define CV_AVX_512VBMI 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_CEL
+#  define CV_AVX512_CEL 1
+#  define CV_AVX_512VNNI 1
+#endif
+#ifdef CV_CPU_COMPILE_AVX512_ICL
+#  define CV_AVX512_ICL 1
+#  define CV_AVX_512VBMI2 1
+#  define CV_AVX_512BITALG 1
+#  define CV_AVX_512VPOPCNTDQ 1
 #endif
 #ifdef CV_CPU_COMPILE_FMA3
 #  define CV_FMA3 1
@@ -123,6 +156,10 @@
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
 struct VZeroUpperGuard {
+#ifdef __GNUC__
+    __attribute__((always_inline))
+#endif
+    inline VZeroUpperGuard() { _mm256_zeroupper(); }
 #ifdef __GNUC__
     __attribute__((always_inline))
 #endif
@@ -218,9 +255,10 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX_512ER
 #  define CV_AVX_512ER 0
 #endif
-#ifndef CV_AVX_512IFMA512
-#  define CV_AVX_512IFMA512 0
+#ifndef CV_AVX_512IFMA
+#  define CV_AVX_512IFMA 0
 #endif
+#define CV_AVX_512IFMA512 CV_AVX_512IFMA // deprecated
 #ifndef CV_AVX_512PF
 #  define CV_AVX_512PF 0
 #endif
@@ -230,8 +268,44 @@ struct VZeroUpperGuard {
 #ifndef CV_AVX_512VL
 #  define CV_AVX_512VL 0
 #endif
+#ifndef CV_AVX_5124FMAPS
+#  define CV_AVX_5124FMAPS 0
+#endif
+#ifndef CV_AVX_5124VNNIW
+#  define CV_AVX_5124VNNIW 0
+#endif
+#ifndef CV_AVX_512VPOPCNTDQ
+#  define CV_AVX_512VPOPCNTDQ 0
+#endif
+#ifndef CV_AVX_512VNNI
+#  define CV_AVX_512VNNI 0
+#endif
+#ifndef CV_AVX_512VBMI2
+#  define CV_AVX_512VBMI2 0
+#endif
+#ifndef CV_AVX_512BITALG
+#  define CV_AVX_512BITALG 0
+#endif
+#ifndef CV_AVX512_COMMON
+#  define CV_AVX512_COMMON 0
+#endif
+#ifndef CV_AVX512_KNL
+#  define CV_AVX512_KNL 0
+#endif
+#ifndef CV_AVX512_KNM
+#  define CV_AVX512_KNM 0
+#endif
 #ifndef CV_AVX512_SKX
 #  define CV_AVX512_SKX 0
+#endif
+#ifndef CV_AVX512_CNL
+#  define CV_AVX512_CNL 0
+#endif
+#ifndef CV_AVX512_CEL
+#  define CV_AVX512_CEL 0
+#endif
+#ifndef CV_AVX512_ICL
+#  define CV_AVX512_ICL 0
 #endif
 
 #ifndef CV_NEON

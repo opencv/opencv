@@ -1,5 +1,3 @@
-/* $Id: tif_getimage.c,v 1.114 2017-11-17 20:21:00 erouault Exp $ */
-
 /*
  * Copyright (c) 1991-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

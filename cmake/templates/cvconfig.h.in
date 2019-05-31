@@ -100,6 +100,9 @@
 #cmakedefine HAVE_OPENCL_STATIC
 #cmakedefine HAVE_OPENCL_SVM
 
+/* NVIDIA OpenCL D3D Extensions support */
+#cmakedefine HAVE_OPENCL_D3D11_NV
+
 /* OpenEXR codec */
 #cmakedefine HAVE_OPENEXR
 
