@@ -37,6 +37,7 @@ set_property(TARGET ${FLUID_TARGET} PROPERTY CXX_STANDARD 11)
 
 if(MSVC)
   target_compile_options(${FLUID_TARGET} PUBLIC "/wd4251")
+  target_compile_options(${FLUID_TARGET} PUBLIC "/wd4275")
   target_compile_definitions(${FLUID_TARGET} PRIVATE _CRT_SECURE_NO_DEPRECATE)
 endif()
 
