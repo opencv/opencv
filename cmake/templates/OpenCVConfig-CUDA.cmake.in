@@ -17,16 +17,6 @@ else()
   endif()
 endif()
 
-if(OpenCV_USE_CUDNN)
-    if(NOT CUDNN_FOUND)
-        find_host_package(CUDNN ${OpenCV_CUDNN_VERSION} EXACT REQUIRED)
-    else()
-      if(NOT CUDNN_VERSION VERSION_EQUAL OpenCV_CUDNN_VERSION)
-        message(FATAL_ERROR "OpenCV static library was compiled with cuDNN ${OpenCV_CUDNN_VERSION} support. Please, use the same version or rebuild OpenCV with cuDNN ${CUDNN_VERSION_STRING}")
-      endif()
-    endif()
-endif()
-
 set(OpenCV_CUDA_LIBS_ABSPATH ${CUDA_LIBRARIES})
 
 if(CUDA_VERSION VERSION_LESS "5.5")
@@ -40,10 +30,6 @@ endif()
 
 if(OpenCV_USE_CUBLAS)
   list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUBLAS_LIBRARIES})
-endif()
-
-if(OpenCV_USE_CUDNN)
-  list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDNN_LIBRARIES})
 endif()
 
 if(OpenCV_USE_CUFFT)
