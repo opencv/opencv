@@ -249,6 +249,9 @@ OCV_OPTION(WITH_CUFFT "Include NVidia Cuda Fast Fourier Transform (FFT) library 
 OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUBLAS)
+OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
+  VISIBLE_IF WITH_CUDA
+  VERIFY HAVE_CUDNN)
 OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
@@ -918,6 +921,9 @@ if(HAVE_CUDA)
   if(HAVE_CUBLAS)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
   endif()
+  if(HAVE_CUDNN)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDNN_LIBRARIES})
+  endif()
   if(HAVE_CUFFT)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
   endif()
@@ -1573,6 +1579,11 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   endif()
+ endif()
+
+ if(WITH_CUDNN OR HAVE_CUDNN)
+    status("")
+    status("  cuDNN:" HAVE_CUDNN THEN "YES (ver ${CUDNN_VERSION})" ELSE NO)
 endif()
 
 if(WITH_VULKAN OR HAVE_VULKAN)

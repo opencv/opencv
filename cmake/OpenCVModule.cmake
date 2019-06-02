@@ -33,7 +33,7 @@
 # The verbose template for OpenCV module:
 #
 #   ocv_add_module(modname <dependencies>)
-#   ocv_glob_module_sources(([EXCLUDE_CUDA] <extra sources&headers>)
+#   ocv_glob_module_sources(([EXCLUDE_OPENCL] [EXCLUDE_CUDA] <extra sources&headers>)
 #                          or glob them manually and ocv_set_module_sources(...)
 #   ocv_module_include_directories(<extra include directories>)
 #   ocv_create_module()
