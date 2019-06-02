@@ -1,3 +1,5 @@
+package org.opencv.test.features2d;
+
 import java.util.Arrays;
 
 import org.opencv.core.CvType;
