@@ -12,7 +12,7 @@
 #   error "CUDA files should not be compiled if CUDA was not enabled"
 #endif
 
-__global__ void cuda4dnn_build_test_kernel() {
+__global__ void cuda4dnn_build_test_kernel(float* addr) {
     int idx = threadIdx.x;
-    CV_UNUSED(idx);
+    addr[idx] = 0.0;
 }
