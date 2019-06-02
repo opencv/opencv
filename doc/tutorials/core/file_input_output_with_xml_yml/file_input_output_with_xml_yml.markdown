@@ -189,7 +189,7 @@ you may access it. For sequences you need to go through them to query a specific
     @end_toggle
     @add_toggle_python
     @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIOi
-    @snippet cpp/tutorial_code/core/file_input_output/file_input_output.py customIOw
+    @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIOw
     @snippet python/tutorial_code/core/file_input_output/file_input_output.py customIO
     @end_toggle
     Or to try out reading a non-existing read:

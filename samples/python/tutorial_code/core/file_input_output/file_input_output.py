@@ -4,7 +4,7 @@ import sys
 
 def help(filename):
     print (filename, 'shows the usage of the OpenCV serialization functionality.',
-            '\n\nusage: ', 
+            '\n\nusage: ',
             '\n    python3', filename, 'outputfile.yml.gz',
             '\n\nThe output file may be either in XML, YAML or JSON. You can even compress it',
             '\nby specifying this in its extension like xml.gz yaml.gz etc... With',
@@ -13,10 +13,10 @@ def help(filename):
             '\n             - use it to read and write matrices.\n'
             )
 
-class MyData: 
+class MyData:
     A = 97
     X = np.pi
-    name = 'mydata1234' 
+    name = 'mydata1234'
 
     def __repr__(self):
         s = '{ name = ' + self.name + ', X = ' + str(self.X)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     print ('\nReading: ')
     s = cv.FileStorage()
     s.open(filename, cv.FileStorage_READ)
-    
+
     ## [readNum]
     n = s.getNode('iterationNr')
     itNr = int(n.real())
