@@ -76,48 +76,48 @@ int main(int ac, char** av)
 
     string filename = av[1];
     { //write
-	//! [iomati]
+        //! [iomati]
         Mat R = Mat_<uchar>::eye(3, 3),
             T = Mat_<double>::zeros(3, 1);
-	//! [iomati]
-	//! [customIOi]
+        //! [iomati]
+        //! [customIOi]
         MyData m(1);
-	//! [customIOi]
+        //! [customIOi]
 
-	//! [open]
+        //! [open]
         FileStorage fs(filename, FileStorage::WRITE);
-	// or:
-	// FileStorage fs;
-	// fs.open(filename, FileStorage::WRITE);
-	//! [open]
+        // or:
+        // FileStorage fs;
+        // fs.open(filename, FileStorage::WRITE);
+        //! [open]
 
-	//! [writeNum]
+        //! [writeNum]
         fs << "iterationNr" << 100;
-	//! [writeNum]
-	//! [writeStr]
+        //! [writeNum]
+        //! [writeStr]
         fs << "strings" << "[";                              // text - string sequence
         fs << "image1.jpg" << "Awesomeness" << "../data/baboon.jpg";
         fs << "]";                                           // close sequence
-	//! [writeStr]
+        //! [writeStr]
 
-	//! [writeMap]
+        //! [writeMap]
         fs << "Mapping";                              // text - mapping
         fs << "{" << "One" << 1;
         fs <<        "Two" << 2 << "}";
-	//! [writeMap]
+        //! [writeMap]
 
-	//! [iomatw]
+        //! [iomatw]
         fs << "R" << R;                                      // cv::Mat
         fs << "T" << T;
-	//! [iomatw]
+        //! [iomatw]
 
-	//! [customIOw]
+        //! [customIOw]
         fs << "MyData" << m;                                // your own data structures
-	//! [customIOw]
+        //! [customIOw]
 
-	//! [close]
+        //! [close]
         fs.release();                                       // explicit close
-	//! [close]
+        //! [close]
         cout << "Write Done." << endl;
     }
 
@@ -126,11 +126,11 @@ int main(int ac, char** av)
         FileStorage fs;
         fs.open(filename, FileStorage::READ);
 
-	//! [readNum]
+        //! [readNum]
         int itNr;
         //fs["iterationNr"] >> itNr;
         itNr = (int) fs["iterationNr"];
-	//! [readNum]
+        //! [readNum]
         cout << itNr;
         if (!fs.isOpened())
         {
@@ -139,7 +139,7 @@ int main(int ac, char** av)
             return 1;
         }
 
-	//! [readStr]
+        //! [readStr]
         FileNode n = fs["strings"];                         // Read string sequence - Get node
         if (n.type() != FileNode::SEQ)
         {
@@ -150,26 +150,26 @@ int main(int ac, char** av)
         FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
         for (; it != it_end; ++it)
             cout << (string)*it << endl;
-	//! [readStr]
+        //! [readStr]
 
 
-	//! [readMap]
+        //! [readMap]
         n = fs["Mapping"];                                // Read mappings from a sequence
         cout << "Two  " << (int)(n["Two"]) << "; ";
         cout << "One  " << (int)(n["One"]) << endl << endl;
-	//! [readMap]
+        //! [readMap]
 
 
         MyData m;
         Mat R, T;
 
-	//! [iomat]
+        //! [iomat]
         fs["R"] >> R;                                      // Read cv::Mat
         fs["T"] >> T;
-	//! [iomat]
-	//! [customIO]
+        //! [iomat]
+        //! [customIO]
         fs["MyData"] >> m;                                 // Read your own structure_
-	//! [customIO]
+        //! [customIO]
 
         cout << endl
             << "R = " << R << endl;
@@ -177,11 +177,11 @@ int main(int ac, char** av)
         cout << "MyData = " << endl << m << endl << endl;
 
         //Show default behavior for non existing nodes
-	//! [nonexist]
+        //! [nonexist]
         cout << "Attempt to read NonExisting (should initialize the data structure with its default).";
         fs["NonExisting"] >> m;
         cout << endl << "NonExisting = " << endl << m << endl;
-	//! [nonexist]
+        //! [nonexist]
     }
 
     cout << endl
