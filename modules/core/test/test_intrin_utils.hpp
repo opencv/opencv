@@ -811,7 +811,9 @@ template<typename R> struct TheTest
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
 
         EXPECT_EQ(2, v_signmask(a));
+#if CV_SIMD_WIDTH <= 32
         EXPECT_EQ(2 | (1 << (R::nlanes / 2)) | (1 << (R::nlanes - 1)), v_signmask(b));
+#endif
 
         EXPECT_EQ(false, v_check_all(a));
         EXPECT_EQ(false, v_check_all(b));

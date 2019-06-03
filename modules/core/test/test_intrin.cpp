@@ -7,10 +7,14 @@
 #include "test_intrin128.simd_declarations.hpp"
 
 #undef CV_CPU_DISPATCH_MODES_ALL
-
 #include "opencv2/core/cv_cpu_dispatch.h"
 #include "test_intrin256.simd.hpp"
 #include "test_intrin256.simd_declarations.hpp"
+
+#undef CV_CPU_DISPATCH_MODES_ALL
+#include "opencv2/core/cv_cpu_dispatch.h"
+#include "test_intrin512.simd.hpp"
+#include "test_intrin512.simd_declarations.hpp"
 
 #ifdef _MSC_VER
 # pragma warning(disable:4702)  // unreachable code
@@ -28,6 +32,11 @@ namespace opencv_test { namespace hal {
 #define DISPATCH_SIMD256(fn, cpu_opt) do { \
     CV_CPU_CALL_ ## cpu_opt ## _(fn, ()); \
     throw SkipTestException("SIMD256 (" #cpu_opt ") is not available or disabled"); \
+} while(0)
+
+#define DISPATCH_SIMD512(fn, cpu_opt) do { \
+    CV_CPU_CALL_ ## cpu_opt ## _(fn, ()); \
+    throw SkipTestException("SIMD512 (" #cpu_opt ") is not available or disabled"); \
 } while(0)
 
 #define DEFINE_SIMD_TESTS(simd_size, cpu_opt) \
@@ -67,6 +76,9 @@ DEFINE_SIMD_TESTS(128, AVX)
 #if defined CV_CPU_DISPATCH_COMPILE_AVX2 || defined CV_CPU_BASELINE_COMPILE_AVX2
 DEFINE_SIMD_TESTS(128, AVX2)
 #endif
+#if defined CV_CPU_DISPATCH_COMPILE_AVX512_SKX || defined CV_CPU_BASELINE_COMPILE_AVX512_SKX
+DEFINE_SIMD_TESTS(128, AVX512_SKX)
+#endif
 
 TEST(hal_intrin128, float16x8_FP16)
 {
@@ -91,6 +103,10 @@ namespace intrin256 {
 DEFINE_SIMD_TESTS(256, AVX2)
 #endif
 
+#if defined CV_CPU_DISPATCH_COMPILE_AVX512_SKX || defined CV_CPU_BASELINE_COMPILE_AVX512_SKX
+DEFINE_SIMD_TESTS(256, AVX512_SKX)
+#endif
+
 TEST(hal_intrin256, float16x16_FP16)
 {
     //CV_CPU_CALL_FP16_(test_hal_intrin_float16, ());
@@ -100,5 +116,20 @@ TEST(hal_intrin256, float16x16_FP16)
 
 
 } // namespace intrin256
+
+namespace intrin512 {
+
+#if defined CV_CPU_DISPATCH_COMPILE_AVX512_SKX || defined CV_CPU_BASELINE_COMPILE_AVX512_SKX
+    DEFINE_SIMD_TESTS(512, AVX512_SKX)
+#endif
+
+TEST(hal_intrin512, float16x32_FP16)
+{
+    CV_CPU_CALL_AVX512_SKX_(test_hal_intrin_float16, ());
+    throw SkipTestException("Unsupported hardware: FP16 is not available");
+}
+
+
+} // namespace intrin512
 
 }} // namespace
