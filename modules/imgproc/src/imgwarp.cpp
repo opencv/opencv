@@ -436,6 +436,9 @@ struct RemapNoVec
 
 #if CV_SIMD128
 
+typedef unsigned short CV_DECL_ALIGNED(1) unaligned_ushort;
+typedef int CV_DECL_ALIGNED(1) unaligned_int;
+
 struct RemapVec_8u
 {
     int operator()( const Mat& _src, void* _dst, const short* XY,
@@ -461,8 +464,8 @@ struct RemapVec_8u
             {                                      \
                 v_uint8x16 rrggbb, dummy;          \
                 v_uint16x8 rrggbb8, dummy8;        \
-                v_uint8x16 rgb0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
-                v_uint8x16 rgb1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + 3), 0, 0, 0)); \
+                v_uint8x16 rgb0 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p), 0, 0, 0)); \
+                v_uint8x16 rgb1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + 3), 0, 0, 0)); \
                 v_zip(rgb0, rgb1, rrggbb, dummy);  \
                 v_expand(rrggbb, rrggbb8, dummy8); \
                 result = v_reinterpret_as_s16(rrggbb8); \
@@ -480,15 +483,15 @@ struct RemapVec_8u
             CV_DbgAssert(p <= src_limit_8bytes);   \
             v_uint8x16 rrggbbaa, dummy;            \
             v_uint16x8 rrggbbaa8, dummy8;          \
-            v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
-            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
+            v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p), 0, 0, 0)); \
+            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
             v_zip(rgba0, rgba1, rrggbbaa, dummy);  \
             v_expand(rrggbbaa, rrggbbaa8, dummy8); \
             result = v_reinterpret_as_s16(rrggbbaa8); \
         }
 #define CV_PICK_AND_PACK4(base,offset)             \
-            v_uint16x8(*(ushort*)(base + offset[0]), *(ushort*)(base + offset[1]), \
-                       *(ushort*)(base + offset[2]), *(ushort*)(base + offset[3]), \
+            v_uint16x8(*(unaligned_ushort*)(base + offset[0]), *(unaligned_ushort*)(base + offset[1]), \
+                       *(unaligned_ushort*)(base + offset[2]), *(unaligned_ushort*)(base + offset[3]), \
                        0, 0, 0, 0)
 
         if( cn == 1 )
