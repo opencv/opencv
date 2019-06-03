@@ -406,14 +406,8 @@ public:
                 addInput(layer.bottom(0), scaleId, 1, dstNet);
                 addOutput(layer, scaleId, 0);
                 net.mutable_layer(li)->set_bottom(0, layer.top(0));
-
-                LayerParams eltwiseParams;
-                eltwiseParams.set("operation", "sum");
-                int eltwiseId = dstNet.addLayer(name, "Eltwise", eltwiseParams);
-                addInput(layer.top(0), eltwiseId, 0, dstNet);
-                addInput(layer.bottom(1), eltwiseId, 1, dstNet);
-                addOutput(layer, eltwiseId, 0);
-                continue;
+                net.mutable_layer(li)->mutable_bottom()->RemoveLast();
+                type = "Eltwise";
             }
             else if ("ConvolutionDepthwise" == type)
             {
