@@ -247,8 +247,6 @@ TEST_P(Test_ONNX_layers, Reshape)
 
 TEST_P(Test_ONNX_layers, Slice)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("Only OCV backend is supported");
     testONNXModels("slice");
 }
 

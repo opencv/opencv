@@ -403,20 +403,35 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Slice")
         {
-            replaceLayerParam(layerParams, "axes", "axis");
-            replaceLayerParam(layerParams, "starts", "begin");
-            int end = layerParams.get<int>("ends");
-            if (end < 0) {
-                layerParams.set("ends", end - 1);
+            if (layerParams.has("axes")) {
+                DictValue axes = layerParams.get("axes");
+                for (int i = 1; i < axes.size(); ++i) {
+                    CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
+                }
+                layerParams.set("axis", axes.get<int>(0));
             }
-            replaceLayerParam(layerParams, "ends", "end");
+            replaceLayerParam(layerParams, "starts", "begin");
+
+            DictValue ends = layerParams.get("ends");
+            std::vector<int> end(ends.size());
+            for (int i = 0; i < ends.size(); ++i) {
+                int finish = ends.get<int>(i);
+                if (ends.get<int>(i) < 0) {
+                    --finish;
+                }
+                end[i] = finish;
+            }
+            layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
+
             if (layerParams.has("steps")) {
-                int step = layerParams.get<int>("steps");
-                if (step != 1) {
-                    CV_Error(Error::StsNotImplemented,
-                             "Slice layer only supports steps = 1");
+                DictValue steps = layerParams.get("steps");
+                for (int i = 0; i < steps.size(); ++i) {
+                    if (steps.get<int>(i) != 1)
+                        CV_Error(Error::StsNotImplemented,
+                                 "Slice layer only supports steps = 1");
                 }
             }
+
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {

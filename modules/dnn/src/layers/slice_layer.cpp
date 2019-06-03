@@ -170,6 +170,17 @@ public:
         else
             CV_Assert(outputs.size() == sliceRanges.size());
 
+        for (int i = 0; i < sliceRanges.size(); ++i)
+        {
+            int rangeSize = sliceRanges[i].size();
+            int dims = inpShape.dims();
+            if (rangeSize < dims) {
+                for (int j = rangeSize; j < dims; j++) {
+                    sliceRanges[i].push_back(Range(0, -1));
+                }
+            }
+        }
+
         for (int i = 0; i < outputs.size(); ++i)
         {
             CV_Assert(sliceRanges[i].size() <= inpShape.dims());
