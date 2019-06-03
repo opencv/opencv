@@ -36,8 +36,8 @@ TEST_F(RenderTestFixture, PutText)
 
     for (int i = 0; i < 5; ++i)
     {
-        float pos_x = 30 + i * 60;
-        float pos_y = 40 + i * 50;
+        int pos_x = 30 + i * 60;
+        int pos_y = 40 + i * 50;
 
         cv::putText(ref_mat, text, cv::Point(pos_x, pos_y), ff, fs, color, thick);
         events.emplace_back(cv::gapi::TextEvent{text, pos_x, pos_y, ff, fs, color, thick, lt, false});
@@ -54,8 +54,8 @@ TEST_F(RenderTestFixture, Rectangle)
 
     for (int i = 0; i < 5; ++i)
     {
-        float pos_x = 30 + i * 60;
-        float pos_y = 40 + i * 50;
+        int pos_x = 30 + i * 60;
+        int pos_y = 40 + i * 50;
 
         cv::rectangle(ref_mat, cv::Rect(pos_x, pos_y, w, h), color, thick);
         events.emplace_back(cv::gapi::RectEvent{pos_x, pos_y, w, h, color, thick, lt, 0});

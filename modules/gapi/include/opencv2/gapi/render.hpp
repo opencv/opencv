@@ -16,8 +16,8 @@ namespace gapi
 struct TextEvent
 {
     std::string text;
-    float x;
-    float y;
+    int x;
+    int y;
     int ff;
     double fs;
     cv::Scalar color;
@@ -28,8 +28,8 @@ struct TextEvent
 
 struct RectEvent
 {
-    float x;
-    float y;
+    int x;
+    int y;
     int widht;
     int height;
     cv::Scalar color;
