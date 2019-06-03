@@ -16,41 +16,42 @@ namespace
 {
 using GMat2 = std::tuple<GMat, GMat>;
 using GMat3 = std::tuple<GMat, GMat, GMat>;
+using GMat = cv::GMat;
 
-GAPI_TRANSFORM(my_transform, <cv::GMat(GMat2)>, "does nothing")
+GAPI_TRANSFORM(my_transform, <GMat(GMat, GMat)>, "does nothing")
 {
-    static cv::GMat pattern(GMat2)
+    static GMat pattern(GMat, GMat)
     {
         return {};
     };
 
-    static cv::GMat substitute(GMat2)
+    static GMat substitute(GMat, GMat)
     {
         return {};
     }
 };
 
-GAPI_TRANSFORM_M(another_transform, <GMat3(GMat2)>, "does nothing")
+GAPI_TRANSFORM(another_transform, <GMat3(GMat, GMat)>, "does nothing")
 {
-    static GMat3 pattern(GMat2)
+    static GMat3 pattern(GMat, GMat)
     {
         return {};
     };
 
-    static GMat3 substitute(GMat2)
+    static GMat3 substitute(GMat, GMat)
     {
         return {};
     }
 };
 
-GAPI_TRANSFORM_M(copy_transform, <GMat3(GMat2)>, "does nothing")
+GAPI_TRANSFORM(copy_transform, <GMat3(GMat, GMat)>, "does nothing")
 {
-    static GMat3 pattern(GMat2)
+    static GMat3 pattern(GMat, GMat)
     {
         return {};
     };
 
-    static GMat3 substitute(GMat2)
+    static GMat3 substitute(GMat, GMat)
     {
         return {};
     }
@@ -94,6 +95,16 @@ TEST(KernelPackageTransform, Combine)
         cv::gapi::combine(pkg1, pkg2);
 
     EXPECT_EQ(2u, pkg_comb.size());
+}
+
+TEST(KernelPackageTransform, GArgsSize)
+{
+    auto tr = copy_transform::transformation();
+    GMat a, b;
+    auto subst = tr.substitute({cv::GArg(a), cv::GArg(b)});
+
+    // return type of 'copy_transform' is GMat3
+    EXPECT_EQ(3u, subst.size());
 }
 
 } // namespace opencv_test

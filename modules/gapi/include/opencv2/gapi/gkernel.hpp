@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -302,7 +302,7 @@ namespace gapi {
      * implementation collections and graph transformations.
      *
      * GKernelPackage is a special container class which stores kernel
-     * _implementations_ and graph transformations. Objects of this class
+     * _implementations_ and graph _transformations_. Objects of this class
      * are created and passed to cv::GComputation::compile() to specify
      * which kernels to use and which transformations to apply in the
      * compiled graph. GKernelPackage may contain kernels of
@@ -347,8 +347,8 @@ namespace gapi {
 
         /// @private
         // Partial includes() specialization for kernels
-        template <typename KImpl, cv::detail::PackageObjectTag Val>
-        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), bool>::type
+        template <typename KImpl>
+        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), bool>::type
         includesHelper() const {
             auto kernel_it = m_id_kernels.find(KImpl::API::id());
             return kernel_it != m_id_kernels.end() &&
@@ -357,8 +357,8 @@ namespace gapi {
 
         /// @private
         // Partial include() specialization for kernels
-        template <typename KImpl, cv::detail::PackageObjectTag Val>
-        typename std::enable_if<(Val == cv::detail::PackageObjectTag::KERNEL), void>::type
+        template <typename KImpl>
+        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), void>::type
         includeHelper()
         {
             auto backend     = KImpl::backend();
@@ -371,13 +371,11 @@ namespace gapi {
 
         /// @private
         // Partial include() specialization for transformations
-        template <typename TImpl, cv::detail::PackageObjectTag Val>
-        typename std::enable_if<(Val == cv::detail::PackageObjectTag::TRANSFORMATION), void>::type
+        template <typename TImpl>
+        typename std::enable_if<(std::is_base_of<detail::TransformTag, TImpl>::value), void>::type
         includeHelper()
         {
-            auto transform_impl = GTransform{transformation<TImpl>()};
-
-            m_transformations.push_back(std::move(transform_impl));
+            m_transformations.emplace_back(TImpl::transformation());
         }
 
     public:
@@ -400,7 +398,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            return includesHelper<KImpl, KImpl::object_entity()>();
+            return includesHelper<KImpl>();
         }
 
         /**
@@ -460,18 +458,11 @@ namespace gapi {
         /**
          * @brief Put a new kernel implementation or a new transformation
          * KImpl into the package.
-         *
-         * @param up unite policy to use. If the package has already
-         * implementation for this kernel (probably from another
-         * backend), and cv::unite_policy::KEEP is passed, the
-         * existing implementation remains in package; on
-         * cv::unite_policy::REPLACE all other existing
-         * implementations are first dropped from the package.
          */
         template<typename KImpl>
         void include()
         {
-            includeHelper<KImpl, KImpl::object_entity()>();
+            includeHelper<KImpl>();
         }
 
         /**

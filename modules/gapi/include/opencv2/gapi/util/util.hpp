@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_UTIL_HPP
@@ -98,6 +98,22 @@ namespace detail
     struct all_unique<T1, Ts...> : std::integral_constant<bool, !contains<T1, Ts...>::value &&
                                                                  all_unique<Ts...>::value> {};
 
+    template<typename>
+    struct tuple_wrap_helper;
+
+    template<typename T> struct tuple_wrap_helper
+    {
+        using type = std::tuple<T>;
+        static type get(T&& obj) { return std::make_tuple(std::move(obj)); }
+    };
+
+    template<typename... Objs>
+    struct tuple_wrap_helper<std::tuple<Objs...>>
+    {
+        using type = std::tuple<Objs...>;
+        static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
+    };
+
     enum class PackageObjectTag {
         KERNEL,
         TRANSFORMATION
@@ -105,18 +121,10 @@ namespace detail
 
     struct KernelTag
     {
-        static constexpr PackageObjectTag object_entity()
-        {
-            return PackageObjectTag::KERNEL;
-        };
     };
 
     struct TransformTag
     {
-        static constexpr PackageObjectTag object_entity()
-        {
-            return PackageObjectTag::TRANSFORMATION;
-        };
     };
 
 } // namespace detail

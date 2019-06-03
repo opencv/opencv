@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCOMPOUNDKERNEL_HPP
@@ -63,22 +63,6 @@ template<typename U> struct get_compound_in<cv::GArray<U>>
         ctx.m_args[idx] = GArg(array);
         return array;
     }
-};
-
-// Kernel may return one object(GMat, GScalar) or a tuple of objects.
-// This helper is needed to cast return value to the same form(tuple)
-template<typename>
-struct tuple_wrap_helper;
-
-template<typename T> struct tuple_wrap_helper
-{
-    static std::tuple<T> get(T&& obj) { return std::make_tuple(std::move(obj)); }
-};
-
-template<typename... Objs>
-struct tuple_wrap_helper<std::tuple<Objs...>>
-{
-    static std::tuple<Objs...> get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
 };
 
 template<typename, typename, typename>
