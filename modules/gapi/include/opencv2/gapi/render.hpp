@@ -7,6 +7,7 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/own/exports.hpp>
+#include <opencv2/gapi/own/scalar.hpp>
 
 namespace cv
 {
@@ -20,7 +21,7 @@ struct TextEvent
     int y;
     int ff;
     double fs;
-    cv::Scalar color;
+    cv::gapi::own::Scalar color;
     int thick;
     int lt;
     bool bottom_left_origin;
@@ -32,7 +33,7 @@ struct RectEvent
     int y;
     int widht;
     int height;
-    cv::Scalar color;
+    cv::gapi::own::Scalar color;
     int thick;
     int lt;
     int shift;

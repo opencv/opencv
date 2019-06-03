@@ -4,9 +4,11 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-#include <opencv2/imgproc.hpp>
 #include "test_precomp.hpp"
-#include "opencv2/gapi/render.hpp"
+
+#include <opencv2/imgproc.hpp>
+#include <opencv2/gapi/render.hpp>
+#include <opencv2/gapi/own/scalar.hpp>
 
 namespace opencv_test
 {
@@ -22,10 +24,10 @@ namespace
         int lt    = LINE_8;
         double fs = 1;
 
-        cv::Mat     ref_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
-        cv::Mat     out_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
-        cv::Scalar  color   {0, 255, 0};
-        std::string text    {"some text"};
+        cv::Mat               ref_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
+        cv::Mat               out_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
+        cv::gapi::own::Scalar color   {0, 255, 0};
+        std::string           text    {"some text"};
 
     };
 } // namespace
@@ -39,7 +41,7 @@ TEST_F(RenderTestFixture, PutText)
         int pos_x = 30 + i * 60;
         int pos_y = 40 + i * 50;
 
-        cv::putText(ref_mat, text, cv::Point(pos_x, pos_y), ff, fs, color, thick);
+        cv::putText(ref_mat, text, cv::Point(pos_x, pos_y), ff, fs, cv::Scalar{color[0], color[1], color[2]}, thick);
         events.emplace_back(cv::gapi::TextEvent{text, pos_x, pos_y, ff, fs, color, thick, lt, false});
     }
 
@@ -57,7 +59,7 @@ TEST_F(RenderTestFixture, Rectangle)
         int pos_x = 30 + i * 60;
         int pos_y = 40 + i * 50;
 
-        cv::rectangle(ref_mat, cv::Rect(pos_x, pos_y, w, h), color, thick);
+        cv::rectangle(ref_mat, cv::Rect(pos_x, pos_y, w, h), cv::Scalar{color[0], color[1], color[2]}, thick);
         events.emplace_back(cv::gapi::RectEvent{pos_x, pos_y, w, h, color, thick, lt, 0});
     }
 
