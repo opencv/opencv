@@ -37,7 +37,9 @@ using DrawEvent  = util::variant<TextEvent, RectEvent>;
 using DrawEvents = std::vector<DrawEvent>;
 
 GAPI_EXPORTS void render(cv::Mat& bgrx, const std::vector<DrawEvent>& events);
-//GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const std::vector<DrawEvent>& events);
+
+// FIXME Specify the signature for NV12 case
+GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const std::vector<DrawEvent>& events);
 
 } // namespace gapi
 } // namespace cv
