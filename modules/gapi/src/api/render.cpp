@@ -1,4 +1,5 @@
-#include <opencv2/gapi/render.hpp>
+#include <opencv2/imgproc.hpp>
+#include "opencv2/gapi/render.hpp"
 
 // FXIME util::visitor ?
 void cv::gapi::render(cv::Mat& bgr, const std::vector<cv::gapi::DrawEvent>& events)

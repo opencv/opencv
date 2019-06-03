@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
+#include <opencv2/imgproc.hpp>
 #include "test_precomp.hpp"
 #include "opencv2/gapi/render.hpp"
 
