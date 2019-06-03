@@ -78,32 +78,31 @@ public:
         }
         else if (params.has("begin"))
         {
+            axis = params.get<int>("axis", 0);
             CV_Assert(params.has("size") ^ params.has("end"));
             const DictValue &begins = params.get("begin");
             const DictValue &sizesOrEnds = params.has("size") ? params.get("size") : params.get("end");
             CV_Assert(begins.size() == sizesOrEnds.size());
 
             sliceRanges.resize(1);
-            sliceRanges[0].resize(begins.size(), Range::all());
-            for (int i = 0; i < begins.size(); ++i)
+            if (axis > 0)
+                sliceRanges[0].resize(axis, Range::all());
+
+            for (int i = 0; i < begins.size(); i++)
             {
                 int start = begins.get<int>(i);
-                int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
                 CV_Assert(start >= 0);
-
-                sliceRanges[0][i].start = start;
+                int sizeOrEnd = sizesOrEnds.get<int>(i);
                 if (params.has("size"))
                 {
-                    int size = sizeOrEnd;
-                    CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
-                    sliceRanges[0][i].end = size > 0 ? (start + size) : -1;  // We'll finalize a negative value later.
+                    CV_Assert(sizeOrEnd == -1 || sizeOrEnd > 0);  // -1 value means range [start, axis_size).
+                    sizeOrEnd = sizeOrEnd > 0 ? (start + sizeOrEnd) : -1;  // We'll finalize a negative value later.
                 }
                 else
                 {
-                    int end = sizeOrEnd;
-                    CV_Assert(end < 0 || end > start);  // End index is excluded.
-                    sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
+                    CV_Assert(sizeOrEnd < 0 || sizeOrEnd > start);  // End index is excluded.
                 }
+                sliceRanges[0].push_back(Range(start, sizeOrEnd));
             }
         }
     }

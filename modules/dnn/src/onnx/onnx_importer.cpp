@@ -401,6 +401,23 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("pool", layer_type == "GlobalAveragePool" ? "AVE" : "MAX");
             layerParams.set("global_pooling", true);
         }
+        else if (layer_type == "Slice")
+        {
+            replaceLayerParam(layerParams, "axes", "axis");
+            replaceLayerParam(layerParams, "starts", "begin");
+            int end = layerParams.get<int>("ends");
+            if (end < 0) {
+                layerParams.set("ends", end - 1);
+            }
+            replaceLayerParam(layerParams, "ends", "end");
+            if (layerParams.has("steps")) {
+                int step = layerParams.get<int>("steps");
+                if (step != 1) {
+                    CV_Error(Error::StsNotImplemented,
+                             "Slice layer only supports steps = 1");
+                }
+            }
+        }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
             if (layer_id.find(node_proto.input(1)) == layer_id.end())
