@@ -1,6 +1,27 @@
 CHANGE LOG for Independent JPEG Group's JPEG software
 
 
+Version 9c  14-Jan-2018
+-----------------------
+
+jpegtran: add an option to the -wipe switch to fill the region
+with the average of adjacent blocks, instead of gray out.
+Thank to Caitlyn Feddock and Maddie Ziegler for inspiration.
+
+Make range extension bits adjustable (in jpegint.h).
+Thank to Robin Watts for suggestion.
+
+Provide macros for fflush() and ferror() in jinclude.h in order
+to facilitate adaption by applications using an own FILE class.
+Thank to Gerhard Huber for suggestion.
+
+Add libjpeg pkg-config file.  Thank to Mark Lavi, Vincent Torri,
+Patrick McMunn, and Huw Davies for suggestion.
+
+Add sanity checks in cjpeg image reader modules.
+Thank to Bingchang, Liu for reports.
+
+
 Version 9b  17-Jan-2016
 -----------------------
 
