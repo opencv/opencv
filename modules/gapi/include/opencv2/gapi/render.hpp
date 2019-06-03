@@ -1,7 +1,11 @@
 #ifndef OPENCV_GAPI_RENDER_HPP
 #define OPENCV_GAPI_RENDER_HPP
 
-#include "opencv2/gapi/util/variant.hpp"
+#include <string>
+#include <vector>
+
+#include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/util/variant.hpp>
 
 namespace cv
 {
@@ -18,7 +22,7 @@ struct TextEvent
     cv::Scalar color;
     int thick;
     int lt;
-    bool bottom_left_origin_;
+    bool bottom_left_origin;
 };
 
 struct RectEvent
@@ -27,10 +31,10 @@ struct RectEvent
     float y;
     int widht;
     int height;
-    cv::Scalar color_;
-    int thickness_;
-    int line_type_;
-    int shift_;
+    cv::Scalar color;
+    int thick;
+    int lt;
+    int shift;
 };
 
 using DrawEvent  = util::variant<TextEvent, RectEvent>;
