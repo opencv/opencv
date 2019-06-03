@@ -376,7 +376,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToCPU, ConvertToTest,
                                        cv::Size(128, 128)),
                                 Values(3.0, 1.0, 0.5, 0.0, -1.0),
                                 Values(256.0, 32.0, 0.0, -128.0),
-                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+                                Values(AbsExact().to_compare_f()),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ConcatHorTestCPU, ConcatHorTest,
