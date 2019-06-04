@@ -358,8 +358,8 @@ INSTANTIATE_TEST_CASE_P(ConvertToGPU, ConvertToTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(3.0, 1.0, 0.5, 0.0, -1.0),
-                                Values(256.0, 32.0, 0.0, -128.0),
+                                Values(2.5, 1.0, -1.0),
+                                Values(250.0, 0.0, -128.0),
                                 Values(AbsExact().to_compare_f()),
                                 Values(cv::compile_args(CORE_GPU))));
 
