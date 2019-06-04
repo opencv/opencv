@@ -69,7 +69,7 @@ def main(argv):
 
     dst0 = sharpen(src)
 
-    t = (time.time() - t) / 1000
+    t = (time.time() - t)
     print("Hand written function time passed in seconds: %s" % t)
 
     cv.imshow("Output", dst0)
@@ -86,7 +86,7 @@ def main(argv):
     # ddepth = -1, means destination image has depth same as input image
     ## [filter2D]
 
-    t = (time.time() - t) / 1000
+    t = (time.time() - t)
     print("Built-in filter2D time passed in seconds:     %s" % t)
 
     cv.imshow("Output", dst1)
