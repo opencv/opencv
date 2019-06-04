@@ -12,9 +12,9 @@
 
 #include <opencv2/imgproc.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 /** \defgroup gapi_core G-API core (basic) functionality
 @{

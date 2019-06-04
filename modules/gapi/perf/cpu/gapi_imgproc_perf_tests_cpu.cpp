@@ -7,8 +7,7 @@
 
 #include "../perf_precomp.hpp"
 #include "../common/gapi_imgproc_perf_tests.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
-
+#include <opencv2/gapi/cpu/imgproc.hpp>
 
 #define IMGPROC_CPU cv::gapi::imgproc::cpu::kernels()
 

@@ -8,7 +8,7 @@
 
 #if !defined(GAPI_STANDALONE)
 
-#include "opencv2/core.hpp"
+#include <opencv2/core.hpp>
 
 namespace cv {
 namespace gapi {

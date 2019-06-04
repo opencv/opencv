@@ -6,7 +6,7 @@
 
 
 #include "../test_precomp.hpp"
-#include "opencv2/gapi/util/any.hpp"
+#include <opencv2/gapi/util/any.hpp>
 
 namespace opencv_test
 {

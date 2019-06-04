@@ -8,18 +8,18 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/core/traits.hpp"
-#include "opencv2/imgproc/types_c.h"
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/core/traits.hpp>
+#include <opencv2/imgproc/types_c.h>
 
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
-#include "opencv2/gapi/own/types.hpp"
+#include <opencv2/gapi/own/types.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/imgproc.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/imgproc.hpp>
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
@@ -27,8 +27,8 @@
 
 #include "gfluidimgproc_func.hpp"
 
-#include "opencv2/imgproc/hal/hal.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/imgproc/hal/hal.hpp>
+#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>

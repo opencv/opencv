@@ -11,7 +11,7 @@
 #include <future>           //for std::future
 #include <exception>        //for std::exception_ptr
 #include <functional>       //for std::function
-#include "opencv2/gapi/garg.hpp"
+#include <opencv2/gapi/garg.hpp>
 
 namespace cv {
     //fwd declaration

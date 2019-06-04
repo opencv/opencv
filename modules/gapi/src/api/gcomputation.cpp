@@ -12,8 +12,8 @@
 
 #include "logger.hpp" // GAPI_LOG
 
-#include "opencv2/gapi/gcomputation.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gcomputation.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "api/gcomputation_priv.hpp"
 #include "api/gcall_priv.hpp"

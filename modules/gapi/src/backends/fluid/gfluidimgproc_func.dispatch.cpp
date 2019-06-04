@@ -12,8 +12,8 @@
 
 #include "gfluidutils.hpp"
 
-#include "opencv2/core/cvdef.h"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/core/cvdef.h>
+#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>

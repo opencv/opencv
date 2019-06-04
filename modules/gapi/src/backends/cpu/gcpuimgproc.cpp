@@ -7,9 +7,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/imgproc.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/gapi/cpu/imgproc.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 namespace {
     cv::Mat add_border(const cv::Mat& in, const int ksize, const int borderType, const cv::Scalar& bordVal){

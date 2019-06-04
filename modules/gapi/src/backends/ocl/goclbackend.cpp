@@ -18,9 +18,9 @@
 
 #include <ade/typed_graph.hpp>
 
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/util/any.hpp"
-#include "opencv2/gapi/gtype_traits.hpp"
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/gtype_traits.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"

@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_UTIL_OPTIONAL_HPP
 #define OPENCV_GAPI_UTIL_OPTIONAL_HPP
 
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 
 // A poor man's `optional` implementation, incompletely modeled against C++17 spec.
 namespace cv

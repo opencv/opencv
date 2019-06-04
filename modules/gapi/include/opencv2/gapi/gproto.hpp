@@ -12,13 +12,13 @@
 #include <vector>
 #include <ostream>
 
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/garray.hpp"
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gmetaarg.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gmetaarg.hpp>
 
 namespace cv {
 
