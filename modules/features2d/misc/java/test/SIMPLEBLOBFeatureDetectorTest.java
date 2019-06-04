@@ -12,6 +12,7 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.features2d.Feature2D;
+import org.opencv.features2d.SimpleBlobDetector;
 
 public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
 
@@ -40,9 +41,10 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         return img;
     }
 
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
-        detector = createClassInstance(XFEATURES2D+"StarDetector", DEFAULT_FACTORY, null, null);
+        detector = SimpleBlobDetector.create();
         matSize = 200;
         truth = new KeyPoint[] {
                 new KeyPoint( 140, 100, 41.036568f, -1, 0, 0, -1),
