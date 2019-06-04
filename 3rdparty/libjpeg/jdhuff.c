@@ -2,7 +2,7 @@
  * jdhuff.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2006-2013 by Guido Vollbeding.
+ * Modified 2006-2016 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -799,10 +799,6 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
    */
   if (! entropy->insufficient_data) {
 
-    Se = cinfo->Se;
-    Al = cinfo->Al;
-    natural_order = cinfo->natural_order;
-
     /* Load up working state.
      * We can avoid loading/saving bitread state if in an EOB run.
      */
@@ -814,6 +810,9 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       EOBRUN--;			/* ...process it now (we do nothing) */
     else {
       BITREAD_LOAD_STATE(cinfo,entropy->bitstate);
+      Se = cinfo->Se;
+      Al = cinfo->Al;
+      natural_order = cinfo->natural_order;
       block = MCU_data[0];
       tbl = entropy->ac_derived_tbl;
 
