@@ -962,16 +962,16 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
         short u =  c3*(b - y1) >> 16;
         short v =  c4*(r - y1) >> 16;
 
-        out[j]     = static_cast<uchar>((u + (128 << 3) + (1 << 2)) >> 3); // u
-        out[j + 1] = static_cast<uchar>((y1 + (1 << 6)) >> 7); // y1
-        out[j + 2] = static_cast<uchar>((v + (128 << 3) + (1 << 2)) >> 3); // v
+        out[j]     = cv::saturate_cast<uchar>((u + (128 << 3) + (1 << 2)) >> 3); // u
+        out[j + 1] = cv::saturate_cast<uchar>((y1 + (1 << 6)) >> 7); // y1
+        out[j + 2] = cv::saturate_cast<uchar>((v + (128 << 3) + (1 << 2)) >> 3); // v
 
         r = in[w + 3] << 7;
         g = in[w + 4] << 7;
         b = in[w + 5] << 7;
         short y2 = (c0 * r + c1 * g + c2 * b) >> 16;
 
-        out[j + 3] = static_cast<uchar>((y2 + (1 << 6)) >> 7); // y2
+        out[j + 3] = cv::saturate_cast<uchar>((y2 + (1 << 6)) >> 7); // y2
 
         // offset for output buffer
         j += 4;
