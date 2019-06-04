@@ -1361,27 +1361,30 @@ TEST_P(LUTTest, AccuracyTest)
 
 TEST_P(ConvertToTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type_mat = std::get<0>(param);
-    int depth_to = std::get<1>(param);
-    cv::Size sz_in = std::get<2>(param);
+    int type_mat = -1, depth_to = -1;
+    double alpha = 1.0, beta = 0.0;
+    cv::Size sz_in;
+    cv::GCompileArgs compile_args;
+    compare_f cmpF;
+
+    std::tie(type_mat, depth_to, sz_in, alpha, beta, cmpF, compile_args) = GetParam();
+
     int type_out = CV_MAKETYPE(depth_to, CV_MAT_CN(type_mat));
     initMatrixRandU(type_mat, sz_in, type_out);
-    auto compile_args = std::get<3>(GetParam());
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::convertTo(in, depth_to);
+    auto out = cv::gapi::convertTo(in, depth_to, alpha, beta);
 
     cv::GComputation c(in, out);
     c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        in_mat1.convertTo(out_mat_ocv, depth_to);
+        in_mat1.convertTo(out_mat_ocv, depth_to, alpha, beta);
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz_in);
     }
 }

@@ -142,6 +142,9 @@ INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(2.5, 1.0, -1.0),
+                                Values(250.0, 0.0, -128.0),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Split3TestFluid, Split3Test,
