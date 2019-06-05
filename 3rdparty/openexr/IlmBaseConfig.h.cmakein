@@ -1,9 +1,14 @@
+#cmakedefine PLATFORM_WINDOWS
+
 //
 // Define and set to 1 if the target system has c++11/14 support
 // and you want IlmBase to NOT use it's features
 //
 
 #cmakedefine01 ILMBASE_FORCE_CXX03
+#if ILMBASE_FORCE_CXX03 == 0
+#undef ILMBASE_FORCE_CXX03
+#endif
 
 //
 // Define and set to 1 if the target system has POSIX thread support

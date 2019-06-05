@@ -1381,7 +1381,11 @@ if(WITH_JASPER OR HAVE_JASPER)
 endif()
 
 if(WITH_OPENEXR OR HAVE_OPENEXR)
-  status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+  if(HAVE_OPENEXR)
+    status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+  else()
+    status("    OpenEXR:" "NO")
+  endif()
 endif()
 
 if(WITH_GDAL OR HAVE_GDAL)

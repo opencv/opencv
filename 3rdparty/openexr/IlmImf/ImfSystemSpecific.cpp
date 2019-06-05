@@ -39,7 +39,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 namespace {
-#if defined(IMF_HAVE_SSE2) &&  defined(__GNUC__)
+#if defined(IMF_HAVE_SSE2) && defined(__GNUC__) && !defined(__ANDROID__)
 
     // Helper functions for gcc + SSE enabled
     void cpuid(int n, int &eax, int &ebx, int &ecx, int &edx)
@@ -124,6 +124,15 @@ CpuId::CpuId():
             }
         }
     }
+
+#if defined(IMF_HAVE_SSE2) && defined(__ANDROID__)
+    sse2 = true;
+    sse3 = true;
+#ifdef __x86_64__
+    ssse3 = true;
+    sse4_1 = true;
+#endif
+#endif
 }
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

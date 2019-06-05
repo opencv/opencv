@@ -86,7 +86,7 @@ class ILMTHREAD_EXPORT Semaphore
 
 	mutable HANDLE _semaphore;
 
-#elif defined(HAVE_POSIX_SEMAPHORES)
+#elif HAVE_POSIX_SEMAPHORES
 
 	mutable sem_t _semaphore;
 

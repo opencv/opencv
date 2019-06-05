@@ -65,6 +65,8 @@ static void* EXRAllocAligned(size_t size, size_t alignment)
     // GNUC is used for things like mingw to (cross-)compile for windows
 #ifdef _WIN32
     return _aligned_malloc(size, alignment);
+#elif defined(__ANDROID__)
+    return memalign(alignment, size);
 #else
     void* ptr = 0;
     posix_memalign(&ptr, alignment, size);

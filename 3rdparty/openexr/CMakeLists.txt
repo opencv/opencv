@@ -5,6 +5,21 @@
 
 project(openexr CXX)
 
+
+if(NOT HAVE_CXX11)
+  ocv_check_compiler_flag(CXX "-std=c++11" HAVE_STD_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
+  if(HAVE_STD_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  else()
+    if(BUILD_OPENEXR)
+      message(WARNING "OpenCV: builtin OpenEXR requires C++11 support. OpenEXR is disabled.")
+    endif()
+    return()
+  endif()
+endif()
+
+
+
 set(ILMBASE_VERSION_MAJOR "2")
 set(ILMBASE_VERSION_MINOR "3")
 set(ILMBASE_VERSION_PATCH "0")
@@ -24,6 +39,7 @@ set(OPENEXR_VERSION "${OPENEXR_VERSION}" PARENT_SCOPE)
 if(WIN32)
   set(HAVE_COMPLETE_IOMANIP 1)
   set(OPENEXR_IMF_HAVE_COMPLETE_IOMANIP 1)
+  set(PLATFORM_WINDOWS 1)
 elseif(APPLE)
   set(HAVE_POSIX_SEMAPHORES 0)  # Unnamed semaphores are not supported: https://github.com/opencv/opencv/issues/9361
   if(DARWIN)
@@ -92,6 +108,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -W
                                      -Wtautological-compare  # clang
                                      -Wmissing-prototypes  # gcc/clang
                                      -Wreorder
+                                     -Wunused-result
 )
 if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)
@@ -128,6 +145,6 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(IlmImf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr fix_msvc2013_errors.patch)
+ocv_install_3rdparty_licenses(openexr LICENSE AUTHORS.ilmbase AUTHORS.openexr)
 
 set(OPENEXR_INCLUDE_PATHS ${OPENEXR_INCLUDE_PATHS} PARENT_SCOPE)
