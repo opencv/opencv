@@ -285,7 +285,7 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
     #if CV_SIMD128
         const int vectorStep = 16;
 
-        char ff = static_cast<char>(0xff);
+        uint8_t ff = 0xff;
         v_uint8x16 mask1(ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0);
         v_uint8x16 mask2(0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0);
         v_uint8x16 mask3(0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0);
@@ -933,7 +933,7 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
             v = v_pack_u((v1 + v_setall_s16(257 << 2)) >> 3,
                          (v2 + v_setall_s16(257 << 2)) >> 3);
 
-            char ff = static_cast<char>(0xff);
+            uint8_t ff = 0xff;
             v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
             v_uint8x16 uu = u & mask;
             v_uint8x16 vv = v & mask;
