@@ -78,31 +78,32 @@ public:
         }
         else if (params.has("begin"))
         {
-            axis = params.get<int>("axis", 0);
             CV_Assert(params.has("size") ^ params.has("end"));
             const DictValue &begins = params.get("begin");
             const DictValue &sizesOrEnds = params.has("size") ? params.get("size") : params.get("end");
             CV_Assert(begins.size() == sizesOrEnds.size());
 
             sliceRanges.resize(1);
-            if (axis > 0)
-                sliceRanges[0].resize(axis, Range::all());
-
-            for (int i = 0; i < begins.size(); i++)
+            sliceRanges[0].resize(begins.size(), Range::all());
+            for (int i = 0; i < begins.size(); ++i)
             {
                 int start = begins.get<int>(i);
+                int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
                 CV_Assert(start >= 0);
-                int sizeOrEnd = sizesOrEnds.get<int>(i);
+
+                sliceRanges[0][i].start = start;
                 if (params.has("size"))
                 {
-                    CV_Assert(sizeOrEnd == -1 || sizeOrEnd > 0);  // -1 value means range [start, axis_size).
-                    sizeOrEnd = sizeOrEnd > 0 ? (start + sizeOrEnd) : -1;  // We'll finalize a negative value later.
+                    int size = sizeOrEnd;
+                    CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
+                    sliceRanges[0][i].end = size > 0 ? (start + size) : -1;  // We'll finalize a negative value later.
                 }
                 else
                 {
-                    CV_Assert(sizeOrEnd < 0 || sizeOrEnd > start);  // End index is excluded.
+                    int end = sizeOrEnd;
+                    CV_Assert(end < 0 || end > start);  // End index is excluded.
+                    sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
                 }
-                sliceRanges[0].push_back(Range(start, sizeOrEnd));
             }
         }
     }
@@ -170,29 +171,18 @@ public:
         else
             CV_Assert(outputs.size() == sliceRanges.size());
 
-        for (int i = 0; i < sliceRanges.size(); ++i)
-        {
-            int rangeSize = sliceRanges[i].size();
-            int dims = inpShape.dims();
-            if (rangeSize < dims) {
-                for (int j = rangeSize; j < dims; j++) {
-                    sliceRanges[i].push_back(Range(0, -1));
-                }
-            }
-        }
-
         for (int i = 0; i < outputs.size(); ++i)
         {
             CV_Assert(sliceRanges[i].size() <= inpShape.dims());
-            // Clamp.
-            for (int j = 0; j < sliceRanges[i].size(); ++j)
-            {
-                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
-            }
             // Fill the rest of ranges.
             for (int j = sliceRanges[i].size(); j < inpShape.dims(); ++j)
             {
                 sliceRanges[i].push_back(Range::all());
+            }
+            // Clamp.
+            for (int j = 0; j < sliceRanges[i].size(); ++j)
+            {
+                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
             }
         }
     }

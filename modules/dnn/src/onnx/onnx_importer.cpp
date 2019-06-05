@@ -403,26 +403,6 @@ void ONNXImporter::populateNet(Net dstNet)
         }
         else if (layer_type == "Slice")
         {
-            if (layerParams.has("axes")) {
-                DictValue axes = layerParams.get("axes");
-                for (int i = 1; i < axes.size(); ++i) {
-                    CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
-                }
-                layerParams.set("axis", axes.get<int>(0));
-            }
-            replaceLayerParam(layerParams, "starts", "begin");
-
-            DictValue ends = layerParams.get("ends");
-            std::vector<int> end(ends.size());
-            for (int i = 0; i < ends.size(); ++i) {
-                int finish = ends.get<int>(i);
-                if (ends.get<int>(i) < 0) {
-                    --finish;
-                }
-                end[i] = finish;
-            }
-            layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
-
             if (layerParams.has("steps")) {
                 DictValue steps = layerParams.get("steps");
                 for (int i = 0; i < steps.size(); ++i) {
@@ -432,6 +412,35 @@ void ONNXImporter::populateNet(Net dstNet)
                 }
             }
 
+            if (layerParams.has("axes")) {
+                DictValue axes = layerParams.get("axes");
+                for (int i = 1; i < axes.size(); ++i) {
+                    CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
+                }
+                layerParams.set("axis", axes.get<int>(0));
+            } else
+                layerParams.set("axis", 0);
+
+            int axis = layerParams.get<int>("axis");
+            if (axis > 0)
+            {
+                DictValue starts = layerParams.get("starts");
+                DictValue ends = layerParams.get("ends");
+                CV_Assert(starts.size() == ends.size());
+                std::vector<int> begin(axis, 0);
+                std::vector<int> end(axis, -1);
+
+                for (int i = 0; i < starts.size(); ++i) {
+                    begin.push_back(starts.get<int>(i));
+                    int finish = ends.get<int>(i);
+                    end.push_back((finish < 0) ? --finish : finish);
+                }
+                layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
+                layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
+            } else {
+                replaceLayerParam(layerParams, "starts", "begin");
+                replaceLayerParam(layerParams, "ends", "end");
+            }
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
