@@ -1061,10 +1061,16 @@ cvFindNextContour( CvContourScanner scanner )
                 }
                 else
                 {
-                    v_uint8 v_prev = vx_setall_u8((uchar)prev);
-                    for (; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
+#if CV_SIMD_WIDTH > 16
+                    v_uint8 vx_prev = vx_setall_u8((uchar)prev);
+                    while (x <= width - v_uint8::nlanes &&
+                           v_check_all(vx_load((uchar*)(img + x)) == vx_prev))
+                        x += v_uint8::nlanes;
+#endif
+                    v_uint8x16 v_prev = v_setall_u8((uchar)prev);
+                    for (; x <= width - v_uint8x16::nlanes; x += v_uint8x16::nlanes)
                     {
-                        unsigned int mask = (unsigned int)v_signmask(vx_load((uchar*)(img + x)) != v_prev);
+                        unsigned int mask = (unsigned int)v_signmask(v_load((uchar*)(img + x)) != v_prev);
                         if (mask)
                         {
                             p = img[(x += cv::trailingZeros32(mask))];
@@ -1328,10 +1334,16 @@ CvLinkedRunPoint;
 inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j)
 {
 #if CV_SIMD
-    v_uint8 v_zero = vx_setzero_u8();
-    for (; j <= img_size.width - v_uint8::nlanes; j += v_uint8::nlanes)
+#if CV_SIMD_WIDTH > 16
+    v_uint8 vx_zero = vx_setzero_u8();
+    while (j <= img_size.width - v_uint8::nlanes &&
+           v_check_all(vx_load((uchar*)(src_data + j)) == vx_zero))
+        j += v_uint8::nlanes;
+#endif
+    v_uint8x16 v_zero = v_setzero_u8();
+    for (; j <= img_size.width - v_uint8x16::nlanes; j += v_uint8x16::nlanes)
     {
-        unsigned int mask = (unsigned int)v_signmask(vx_load((uchar*)(src_data + j)) != v_zero);
+        unsigned int mask = (unsigned int)v_signmask(v_load((uchar*)(src_data + j)) != v_zero);
         if (mask)
         {
             j += cv::trailingZeros32(mask);
@@ -1353,10 +1365,16 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j)
     }
     else
     {
-        v_uint8 v_zero = vx_setzero_u8();
+#if CV_SIMD_WIDTH > 16
+        v_uint8 vx_zero = vx_setzero_u8();
+        while (j <= img_size.width - v_uint8::nlanes &&
+               v_check_all(vx_load((uchar*)(src_data + j)) != vx_zero))
+            j += v_uint8::nlanes;
+#endif
+        v_uint8x16 v_zero = v_setzero_u8();
         for (; j <= img_size.width - v_uint8::nlanes; j += v_uint8::nlanes)
         {
-            unsigned int mask = (unsigned int)v_signmask(vx_load((uchar*)(src_data + j)) == v_zero);
+            unsigned int mask = (unsigned int)v_signmask(v_load((uchar*)(src_data + j)) == v_zero);
             if (mask)
             {
                 j += cv::trailingZeros32(mask);

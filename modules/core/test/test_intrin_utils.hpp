@@ -772,6 +772,9 @@ template<typename R> struct TheTest
         EXPECT_EQ((LaneType)1, v_reduce_min(a));
         EXPECT_EQ((LaneType)R::nlanes, v_reduce_max(a));
         EXPECT_EQ((LaneType)((1 + R::nlanes)*R::nlanes/2), v_reduce_sum(a));
+        dataA[0] += R::nlanes;
+        R an = dataA;
+        EXPECT_EQ((LaneType)2, v_reduce_min(an));
         return *this;
     }
 
@@ -808,7 +811,9 @@ template<typename R> struct TheTest
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
 
         EXPECT_EQ(2, v_signmask(a));
+#if CV_SIMD_WIDTH <= 32
         EXPECT_EQ(2 | (1 << (R::nlanes / 2)) | (1 << (R::nlanes - 1)), v_signmask(b));
+#endif
 
         EXPECT_EQ(false, v_check_all(a));
         EXPECT_EQ(false, v_check_all(b));

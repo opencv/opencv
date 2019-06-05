@@ -1083,7 +1083,7 @@ OPENCV_HAL_IMPL_AVX_REDUCE_8(v_int32x8,  int,      max, _mm_max_epi32)
         __m128 v1 = _v256_extract_high(a.val);                        \
         v0 = intrin(v0, v1);                                          \
         v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 3, 2))); \
-        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 0, 3))); \
+        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 0, 1))); \
         return _mm_cvtss_f32(v0);                                     \
     }
 
