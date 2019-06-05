@@ -52,10 +52,11 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT TileOffsets
+class TileOffsets
 {
   public:
 
+    IMF_EXPORT
     TileOffsets (LevelMode mode = ONE_LEVEL,
 		 int numXLevels = 0,
 		 int numYLevels = 0,
@@ -66,8 +67,11 @@ class IMF_EXPORT TileOffsets
     // File I/O
     // --------
 
+    IMF_EXPORT
     void		readFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,  bool &complete,bool isMultiPart,bool isDeep);
-    void                readFrom (std::vector<Int64> chunkOffsets,bool &complete);
+    IMF_EXPORT
+    void        readFrom (std::vector<Int64> chunkOffsets,bool &complete);
+    IMF_EXPORT
     Int64		writeTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os) const;
 
 
@@ -75,6 +79,7 @@ class IMF_EXPORT TileOffsets
     // Test if the tileOffsets array is empty (all entries are 0)
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     bool		isEmpty () const;
     
     
@@ -84,6 +89,7 @@ class IMF_EXPORT TileOffsets
     // in the offset table (assumes full table!
     // each array myst be at leat totalTiles long
     //-----------------------------------------------------------
+    IMF_EXPORT
     void getTileOrder(int dx_table[], int dy_table[], int lx_table[], int ly_table[]) const;
     
     
@@ -91,11 +97,17 @@ class IMF_EXPORT TileOffsets
     // Access to the elements
     //-----------------------
 
+    IMF_EXPORT
     Int64 &		operator () (int dx, int dy, int lx, int ly);
+    IMF_EXPORT
     Int64 &		operator () (int dx, int dy, int l);
+    IMF_EXPORT
     const Int64 &	operator () (int dx, int dy, int lx, int ly) const;
+    IMF_EXPORT
     const Int64 &	operator () (int dx, int dy, int l) const;
+    IMF_EXPORT
     bool        isValidTile (int dx, int dy, int lx, int ly) const;
+    IMF_EXPORT
     const std::vector<std::vector<std::vector <Int64> > >& getOffsets() const;
     
   private:

@@ -107,7 +107,7 @@ FastHufDecoder::FastHufDecoder
     for (int i = 0; i <= MAX_CODE_LEN; ++i)
     {
         codeCount[i] = 0;
-        base[i]      = 0xffffffffffffffffL;
+        base[i]      = 0xffffffffffffffffULL;
         offset[i]    = 0;
     }
 
@@ -129,8 +129,8 @@ FastHufDecoder::FastHufDecoder
     {
         if (currByte - table > numBytes)
         {
-            throw Iex::InputExc ("Error decoding Huffman table "
-                                 "(Truncated table data).");
+            throw IEX_NAMESPACE::InputExc ("Error decoding Huffman table "
+                                           "(Truncated table data).");
         }
 
         //
@@ -146,8 +146,8 @@ FastHufDecoder::FastHufDecoder
         {
             if (currByte - table > numBytes)
             {
-                throw Iex::InputExc ("Error decoding Huffman table "
-                                     "(Truncated table data).");
+                throw IEX_NAMESPACE::InputExc ("Error decoding Huffman table "
+                                               "(Truncated table data).");
             }
 
             int runLen = readBits (8, currBits, currBitCount, currByte) +
@@ -155,8 +155,8 @@ FastHufDecoder::FastHufDecoder
 
             if (symbol + runLen > maxSymbol + 1)
             {
-                throw Iex::InputExc ("Error decoding Huffman table "
-                                     "(Run beyond end of table).");
+                throw IEX_NAMESPACE::InputExc ("Error decoding Huffman table "
+                                               "(Run beyond end of table).");
             }
             
             symbol += runLen - 1;
@@ -168,8 +168,8 @@ FastHufDecoder::FastHufDecoder
 
             if (symbol + runLen > maxSymbol + 1)
             {
-                throw Iex::InputExc ("Error decoding Huffman table "
-                                     "(Run beyond end of table).");
+                throw IEX_NAMESPACE::InputExc ("Error decoding Huffman table "
+                                               "(Run beyond end of table).");
             }
 
             symbol += runLen - 1;
@@ -256,8 +256,8 @@ FastHufDecoder::FastHufDecoder
         int symbol  = *i >> 6;
 
         if (mapping[codeLen] >= _numSymbols)
-            throw Iex::InputExc ("Huffman decode error "
-                                  "(Invalid symbol in header).");
+            throw IEX_NAMESPACE::InputExc ("Huffman decode error "
+                                           "(Invalid symbol in header).");
         
         _idToSymbol[mapping[codeLen]] = symbol;
         mapping[codeLen]++;
@@ -352,7 +352,7 @@ FastHufDecoder::buildTables (Int64 *base, Int64 *offset)
 
     for (int i = 0; i <= MAX_CODE_LEN; ++i)
     {
-        if (base[i] != 0xffffffffffffffffL)
+        if (base[i] != 0xffffffffffffffffULL)
         {
             _ljBase[i] = base[i] << (64 - i);
         }
@@ -362,7 +362,7 @@ FastHufDecoder::buildTables (Int64 *base, Int64 *offset)
             // Unused code length - insert dummy values
             //
 
-            _ljBase[i] = 0xffffffffffffffffL;
+            _ljBase[i] = 0xffffffffffffffffULL;
         }
     }
 
@@ -401,8 +401,8 @@ FastHufDecoder::buildTables (Int64 *base, Int64 *offset)
                 }
                 else
                 {
-                    throw Iex::InputExc ("Huffman decode error "
-                                          "(Overrun).");
+                    throw IEX_NAMESPACE::InputExc ("Huffman decode error "
+                                                   "(Overrun).");
                 }
                 break;
             }
@@ -417,7 +417,7 @@ FastHufDecoder::buildTables (Int64 *base, Int64 *offset)
 
     int minIdx = TABLE_LOOKUP_BITS;
 
-    while (minIdx > 0 && _ljBase[minIdx] == 0xffffffffffffffffL)
+    while (minIdx > 0 && _ljBase[minIdx] == 0xffffffffffffffffULL)
         minIdx--;
 
     if (minIdx < 0)
@@ -427,7 +427,7 @@ FastHufDecoder::buildTables (Int64 *base, Int64 *offset)
         // Set the min value such that the table is never tested.
         //
 
-        _tableMin = 0xffffffffffffffffL;
+        _tableMin = 0xffffffffffffffffULL;
     }
     else
     {
@@ -578,8 +578,8 @@ FastHufDecoder::decode
      int numDstElems)
 {
     if (numSrcBits < 128)
-        throw Iex::InputExc ("Error choosing Huffman decoder implementation "
-                             "(insufficient number of bits).");
+        throw IEX_NAMESPACE::InputExc ("Error choosing Huffman decoder implementation "
+                                       "(insufficient number of bits).");
 
     //
     // Current position (byte/bit) in the src data stream
@@ -662,8 +662,8 @@ FastHufDecoder::decode
 
             if (codeLen > _maxCodeLength)
             {
-                throw Iex::InputExc ("Huffman decode error "
-                                     "(Decoded an invalid symbol).");
+                throw IEX_NAMESPACE::InputExc ("Huffman decode error "
+                                               "(Decoded an invalid symbol).");
             }
 
             Int64 id = _ljOffset[codeLen] + (buffer >> (64 - codeLen));
@@ -673,8 +673,8 @@ FastHufDecoder::decode
             }
             else
             {
-                throw Iex::InputExc ("Huffman decode error "
-                                     "(Decoded an invalid symbol).");
+                throw IEX_NAMESPACE::InputExc ("Huffman decode error "
+                                               "(Decoded an invalid symbol).");
             }
         }
 
@@ -710,20 +710,20 @@ FastHufDecoder::decode
 
             if (dstIdx < 1)
             {
-                throw Iex::InputExc ("Huffman decode error (RLE code "
-                                     "with no previous symbol).");
+                throw IEX_NAMESPACE::InputExc ("Huffman decode error (RLE code "
+                                               "with no previous symbol).");
             }
 
             if (dstIdx + rleCount > numDstElems)
             {
-                throw Iex::InputExc ("Huffman decode error (Symbol run "
-                                     "beyond expected output buffer length).");
+                throw IEX_NAMESPACE::InputExc ("Huffman decode error (Symbol run "
+                                               "beyond expected output buffer length).");
             }
 
             if (rleCount <= 0) 
             {
-                throw Iex::InputExc("Huffman decode error"
-                                    " (Invalid RLE length)");
+                throw IEX_NAMESPACE::InputExc("Huffman decode error"
+                                              " (Invalid RLE length)");
             }
 
             for (int i = 0; i < rleCount; ++i)
@@ -760,8 +760,8 @@ FastHufDecoder::decode
 
     if (numSrcBits != 0)
     {
-        throw Iex::InputExc ("Huffman decode error (Compressed data remains "
-                             "after filling expected output buffer).");
+        throw IEX_NAMESPACE::InputExc ("Huffman decode error (Compressed data remains "
+                                       "after filling expected output buffer).");
     }
 }
 

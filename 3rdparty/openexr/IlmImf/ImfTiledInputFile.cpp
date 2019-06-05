@@ -740,7 +740,7 @@ TiledInputFile::TiledInputFile (const char fileName[], int numThreads):
             delete is;
 
 	REPLACE_EXC (e, "Cannot open image file "
-			"\"" << fileName << "\". " << e);
+                 "\"" << fileName << "\". " << e.what());
 	throw;
     }
     catch (...)
@@ -803,7 +803,7 @@ TiledInputFile::TiledInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int
 	delete _data;
 
 	REPLACE_EXC (e, "Cannot open image file "
-			"\"" << is.fileName() << "\". " << e);
+                 "\"" << is.fileName() << "\". " << e.what());
 	throw;
     }
     catch (...)
@@ -1248,7 +1248,7 @@ TiledInputFile::readTiles (int dx1, int dx2, int dy1, int dy2, int lx, int ly)
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading pixel data from image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1318,7 +1318,7 @@ TiledInputFile::rawTileData (int &dx, int &dy,
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading pixel data from image "
-			"file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1406,7 +1406,7 @@ TiledInputFile::levelWidth (int lx) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error calling levelWidth() on image "
-			"file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }
@@ -1423,7 +1423,7 @@ TiledInputFile::levelHeight (int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error calling levelHeight() on image "
-			"file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }
@@ -1479,7 +1479,7 @@ TiledInputFile::dataWindowForLevel (int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error calling dataWindowForLevel() on image "
-			"file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }
@@ -1509,7 +1509,7 @@ TiledInputFile::dataWindowForTile (int dx, int dy, int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error calling dataWindowForTile() on image "
-			"file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }

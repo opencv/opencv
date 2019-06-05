@@ -98,7 +98,7 @@ typedef struct ImfRgba ImfRgba;
 
 #define IMF_INCREASING_Y	0
 #define IMF_DECREASING_Y	1
-#define IMF_RAMDOM_Y		2
+#define IMF_RANDOM_Y		2
 
 
 /*

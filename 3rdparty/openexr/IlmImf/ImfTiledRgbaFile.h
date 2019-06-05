@@ -65,7 +65,7 @@ OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 // Tiled RGBA output file.
 //
 
-class IMF_EXPORT TiledRgbaOutputFile
+class TiledRgbaOutputFile
 {
   public:
 
@@ -77,6 +77,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     // constructor.
     //---------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaOutputFile (const char name[],
 			 const Header &header,
 			 RgbaChannels rgbaChannels,
@@ -96,6 +97,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     // corresponding files.
     //---------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
 			 const Header &header,
 			 RgbaChannels rgbaChannels,
@@ -112,6 +114,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     // "same as displayWindow")
     //------------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaOutputFile (const char name[],
 			 int tileXSize,
 			 int tileYSize,
@@ -135,6 +138,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     // Box2i (V2i (0, 0), V2i (width - 1, height -1))
     //-----------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaOutputFile (const char name[],
 			 int width,
 			 int height,
@@ -151,7 +155,7 @@ class IMF_EXPORT TiledRgbaOutputFile
 			 Compression compression = ZIP_COMPRESSION,
                          int numThreads = globalThreadCount ());
 
-
+    IMF_EXPORT
     virtual ~TiledRgbaOutputFile ();
 
 
@@ -163,6 +167,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     //
     //------------------------------------------------
 
+    IMF_EXPORT
     void		setFrameBuffer (const Rgba *base,
 					size_t xStride,
 					size_t yStride);
@@ -171,15 +176,25 @@ class IMF_EXPORT TiledRgbaOutputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const FrameBuffer &		frameBuffer () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
 
 
@@ -187,28 +202,44 @@ class IMF_EXPORT TiledRgbaOutputFile
     // Utility functions (same as in Imf::TiledOutputFile)
     //----------------------------------------------------
 
+    IMF_EXPORT
     unsigned int	tileXSize () const;
+    IMF_EXPORT
     unsigned int	tileYSize () const;
+    IMF_EXPORT
     LevelMode		levelMode () const;
+    IMF_EXPORT
     LevelRoundingMode	levelRoundingMode () const;
 
+    IMF_EXPORT
     int			numLevels () const;
+    IMF_EXPORT
     int			numXLevels () const;
+    IMF_EXPORT
     int			numYLevels () const;
+    IMF_EXPORT
     bool		isValidLevel (int lx, int ly) const;
 
+    IMF_EXPORT
     int			levelWidth  (int lx) const;
+    IMF_EXPORT
     int			levelHeight (int ly) const;
 
+    IMF_EXPORT
     int			numXTiles (int lx = 0) const;
+    IMF_EXPORT
     int			numYTiles (int ly = 0) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForLevel (int l = 0) const;
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForLevel (int lx, int ly) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
 					   int l = 0) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
 					   int lx, int ly) const;
 
@@ -240,12 +271,16 @@ class IMF_EXPORT TiledRgbaOutputFile
     //
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     void		writeTile (int dx, int dy, int l = 0);
+    IMF_EXPORT
     void		writeTile (int dx, int dy, int lx, int ly);
 
+    IMF_EXPORT
     void		writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
                                     int lx, int ly);
 
+    IMF_EXPORT
     void		writeTiles (int dxMin, int dxMax, int dyMin, int dyMax,
                                     int l = 0);
 
@@ -254,6 +289,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     // Update the preview image (see Imf::TiledOutputFile::updatePreviewImage())
     // -------------------------------------------------------------------------
 
+    IMF_EXPORT
     void		updatePreviewImage (const PreviewRgba[]);
 
 
@@ -268,6 +304,7 @@ class IMF_EXPORT TiledRgbaOutputFile
     //
     //------------------------------------------------
 
+    IMF_EXPORT
     void		breakTile  (int dx, int dy,
 				    int lx, int ly,
 				    int offset,
@@ -294,7 +331,7 @@ class IMF_EXPORT TiledRgbaOutputFile
 // Tiled RGBA input file
 //
 
-class IMF_EXPORT TiledRgbaInputFile
+class TiledRgbaInputFile
 {
   public:
 
@@ -305,6 +342,7 @@ class IMF_EXPORT TiledRgbaInputFile
     // files.
     //--------------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaInputFile (const char name[],
                         int numThreads = globalThreadCount ());
 
@@ -318,6 +356,7 @@ class IMF_EXPORT TiledRgbaInputFile
     // corresponding files.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int numThreads = globalThreadCount ());
 
 
@@ -327,10 +366,12 @@ class IMF_EXPORT TiledRgbaInputFile
     // expected to be layerName.R, layerName.G, etc.
     //------------------------------------------------------------
 
+    IMF_EXPORT
     TiledRgbaInputFile (const char name[],
 		        const std::string &layerName,
 		        int numThreads = globalThreadCount());
 
+    IMF_EXPORT
     TiledRgbaInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
 		        const std::string &layerName,
 		        int numThreads = globalThreadCount());
@@ -339,6 +380,7 @@ class IMF_EXPORT TiledRgbaInputFile
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~TiledRgbaInputFile ();
 
 
@@ -350,6 +392,7 @@ class IMF_EXPORT TiledRgbaInputFile
     //
     //-----------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (Rgba *base,
 						size_t xStride,
 						size_t yStride);
@@ -361,6 +404,7 @@ class IMF_EXPORT TiledRgbaInputFile
     // at least once before the next call to readTile() or readTiles().
     //-------------------------------------------------------------------
 
+    IMF_EXPORT
     void			setLayerName (const std::string &layerName);
 
 
@@ -368,23 +412,36 @@ class IMF_EXPORT TiledRgbaInputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const FrameBuffer &		frameBuffer () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
+    IMF_EXPORT
     const char *                fileName () const;
+    IMF_EXPORT
     bool			isComplete () const;
 
     //----------------------------------
     // Access to the file format version
     //----------------------------------
 
+    IMF_EXPORT
     int				version () const;
 
 
@@ -392,28 +449,44 @@ class IMF_EXPORT TiledRgbaInputFile
     // Utility functions (same as in Imf::TiledInputFile)
     //---------------------------------------------------
 
+    IMF_EXPORT
     unsigned int	tileXSize () const;
+    IMF_EXPORT
     unsigned int	tileYSize () const;
+    IMF_EXPORT
     LevelMode		levelMode () const;
+    IMF_EXPORT
     LevelRoundingMode	levelRoundingMode () const;
 
+    IMF_EXPORT
     int			numLevels () const;
+    IMF_EXPORT
     int			numXLevels () const;
+    IMF_EXPORT
     int			numYLevels () const;
+    IMF_EXPORT
     bool		isValidLevel (int lx, int ly) const;
 
+    IMF_EXPORT
     int			levelWidth  (int lx) const;
+    IMF_EXPORT
     int			levelHeight (int ly) const;
 
+    IMF_EXPORT
     int			numXTiles (int lx = 0) const;
+    IMF_EXPORT
     int			numYTiles (int ly = 0) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForLevel (int l = 0) const;
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForLevel (int lx, int ly) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
 					   int l = 0) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i	dataWindowForTile (int dx, int dy,
 					   int lx, int ly) const;
 					   
@@ -447,12 +520,16 @@ class IMF_EXPORT TiledRgbaInputFile
     //
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     void           	readTile (int dx, int dy, int l = 0);
+    IMF_EXPORT
     void           	readTile (int dx, int dy, int lx, int ly);
 
+    IMF_EXPORT
     void		readTiles (int dxMin, int dxMax,
                                    int dyMin, int dyMax, int lx, int ly);
 
+    IMF_EXPORT
     void		readTiles (int dxMin, int dxMax,
                                    int dyMin, int dyMax, int l = 0);
 

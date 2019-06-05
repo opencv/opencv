@@ -101,7 +101,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
    
-class IMF_EXPORT KeyCode
+class KeyCode
 {
   public:
 
@@ -109,6 +109,7 @@ class IMF_EXPORT KeyCode
     // Constructors and assignment operator
     //-------------------------------------
 
+    IMF_EXPORT
     KeyCode (int filmMfcCode = 0,
 	     int filmType = 0,
 	     int prefix = 0,
@@ -117,7 +118,9 @@ class IMF_EXPORT KeyCode
 	     int perfsPerFrame = 4,
 	     int perfsPerCount = 64);
 
+    IMF_EXPORT
     KeyCode (const KeyCode &other);
+    IMF_EXPORT
     KeyCode & operator = (const KeyCode &other);
 
 
@@ -125,25 +128,39 @@ class IMF_EXPORT KeyCode
     // Access to individual fields
     //----------------------------
 
+    IMF_EXPORT
     int		filmMfcCode () const;
+    IMF_EXPORT
     void	setFilmMfcCode (int filmMfcCode);
 
+    IMF_EXPORT
     int		filmType () const;
+    IMF_EXPORT
     void	setFilmType (int filmType);
 
+    IMF_EXPORT
     int		prefix () const;
+    IMF_EXPORT
     void	setPrefix (int prefix);
 
+    IMF_EXPORT
     int		count () const;
+    IMF_EXPORT
     void	setCount (int count);
 
+    IMF_EXPORT
     int		perfOffset () const;
+    IMF_EXPORT
     void	setPerfOffset (int perfOffset);
 
+    IMF_EXPORT
     int		perfsPerFrame () const;
+    IMF_EXPORT
     void	setPerfsPerFrame (int perfsPerFrame);
 
+    IMF_EXPORT
     int		perfsPerCount () const;
+    IMF_EXPORT
     void	setPerfsPerCount (int perfsPerCount);
 
   private:

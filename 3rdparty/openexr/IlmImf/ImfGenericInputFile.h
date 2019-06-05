@@ -42,13 +42,16 @@
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-class IMF_EXPORT GenericInputFile
+class GenericInputFile
 {
     public:
+        IMF_EXPORT
         virtual ~GenericInputFile() {}
 
     protected:
+        IMF_EXPORT
         GenericInputFile() {}
+        IMF_EXPORT
         void readMagicNumberAndVersionField(OPENEXR_IMF_INTERNAL_NAMESPACE::IStream& is, int& version);
 };
 

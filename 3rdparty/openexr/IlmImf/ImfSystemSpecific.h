@@ -35,8 +35,8 @@
 #ifndef INCLUDED_IMF_COMPILER_SPECIFIC_H
 #define INCLUDED_IMF_COMPILER_SPECIFIC_H
 
-#include <ImfNamespace.h>
-#include <ImfSimd.h>
+#include "ImfNamespace.h"
+#include "ImfSimd.h"
 #include <stdlib.h>
 #include "ImfExport.h"
 
@@ -54,7 +54,7 @@ static bool GLOBAL_SYSTEM_LITTLE_ENDIAN =
 
 #ifdef IMF_HAVE_SSE2
 
-#ifdef __GNUC__
+#if defined(__GNUC__)
 // Causes issues on certain gcc versions
 //#define EXR_FORCEINLINE inline __attribute__((always_inline))
 #define EXR_FORCEINLINE inline
@@ -62,15 +62,24 @@ static bool GLOBAL_SYSTEM_LITTLE_ENDIAN =
 
 static void* EXRAllocAligned(size_t size, size_t alignment)
 {
+    // GNUC is used for things like mingw to (cross-)compile for windows
+#ifdef _WIN32
+    return _aligned_malloc(size, alignment);
+#else
     void* ptr = 0;
     posix_memalign(&ptr, alignment, size);
     return ptr;
+#endif
 }
 
 
 static void EXRFreeAligned(void* ptr)
 {
+#ifdef _WIN32
+    _aligned_free(ptr);
+#else
     free(ptr);
+#endif
 }
 
 #elif defined _MSC_VER

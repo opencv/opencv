@@ -51,6 +51,8 @@
 #include <half.h>
 #include <assert.h>
 
+#include <algorithm>
+
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 #define _SSE_ALIGNMENT        32
@@ -91,9 +93,31 @@ class SimdAlignedBuffer64
             memcpy (_buffer, rhs._buffer, 64 * sizeof (T));
         }
 
+        SimdAlignedBuffer64 &operator=(const SimdAlignedBuffer64 &rhs)
+        {
+            memcpy (_buffer, rhs._buffer, 64 * sizeof (T));
+            return *this;
+        }
+
+#if __cplusplus >= 201103L
+        SimdAlignedBuffer64(SimdAlignedBuffer64 &&rhs) noexcept
+            : _handle(rhs._handle), _buffer(rhs._buffer)
+        {
+            rhs._handle = nullptr;
+            rhs._buffer = nullptr;
+        }
+
+        SimdAlignedBuffer64 &operator=(SimdAlignedBuffer64 &&rhs) noexcept
+        {
+            std::swap(_handle, rhs._handle);
+            std::swap(_buffer, rhs._buffer);
+            return *this;
+        }
+#endif
         ~SimdAlignedBuffer64 ()
         {
-            EXRFreeAligned (_handle);
+            if (_handle)
+                EXRFreeAligned (_handle);
             _handle = 0;
             _buffer = 0;
         }
@@ -334,34 +358,37 @@ interleaveByte2 (char *dst, char *src0, char *src1, int numBytes)
         // use aligned loads
         //
     
-        for (int x = 0; x < 8; ++x)
+        for (int x = 0; x < std::min (numBytes, 8); ++x)
         {
             dst[2 * x]     = src0[x];
             dst[2 * x + 1] = src1[x];
         }
 
-        dst_epi8  = (__m128i*)&dst[16];
-        src0_epi8 = (__m128i*)&src0[8];
-        src1_epi8 = (__m128i*)&src1[8];
-        sseWidth  =  (numBytes - 8) / 16;
-
-        for (int x=0; x<sseWidth; ++x)
+        if (numBytes > 8) 
         {
-            _mm_stream_si128 (&dst_epi8[2 * x],
-                              _mm_unpacklo_epi8 (src0_epi8[x], src1_epi8[x]));
+            dst_epi8  = (__m128i*)&dst[16];
+            src0_epi8 = (__m128i*)&src0[8];
+            src1_epi8 = (__m128i*)&src1[8];
+            sseWidth  =  (numBytes - 8) / 16;
 
-            _mm_stream_si128 (&dst_epi8[2 * x + 1],
-                              _mm_unpackhi_epi8 (src0_epi8[x], src1_epi8[x]));
-        }
+            for (int x=0; x<sseWidth; ++x)
+            {
+                _mm_stream_si128 (&dst_epi8[2 * x],
+                                  _mm_unpacklo_epi8 (src0_epi8[x], src1_epi8[x]));
 
-        //
-        // Then do run the leftovers one at a time
-        //
+                _mm_stream_si128 (&dst_epi8[2 * x + 1],
+                                  _mm_unpackhi_epi8 (src0_epi8[x], src1_epi8[x]));
+            }
 
-        for (int x = 16 * sseWidth + 8; x < numBytes; ++x)
-        {
-            dst[2 * x]     = src0[x];
-            dst[2 * x + 1] = src1[x];
+            //
+            // Then do run the leftovers one at a time
+            //
+
+            for (int x = 16 * sseWidth + 8; x < numBytes; ++x)
+            {
+                dst[2 * x]     = src0[x];
+                dst[2 * x + 1] = src1[x];
+            }
         }
     }
     else

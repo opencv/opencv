@@ -375,6 +375,8 @@ readPixelData (InputStreamMutex *streamData,
     //
 
     int lineBufferNumber = (minY - ifd->minY) / ifd->linesInBuffer;
+    if (lineBufferNumber < 0 || lineBufferNumber >= int(ifd->lineOffsets.size()))
+        THROW (IEX_NAMESPACE::InputExc, "Invalid scan line " << minY << " requested or missing.");
 
     Int64 lineOffset = ifd->lineOffsets[lineBufferNumber];
 
@@ -1264,7 +1266,7 @@ detectOptimizationMode (const vector<sliceOptimizationData>& optData)
     OptimizationMode w;
     
     // need to be compiled with SSE optimisations: if not, just returns false
-#if IMF_HAVE_SSE2
+#ifdef IMF_HAVE_SSE2
     
     
     // only handle reading 3,4,6 or 8 channels
@@ -1655,7 +1657,7 @@ ScanLineInputFile::readPixels (int scanLine1, int scanLine2)
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error reading pixel data from image "
-		        "file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }
@@ -1694,9 +1696,43 @@ ScanLineInputFile::rawPixelData (int firstScanLine,
     catch (IEX_NAMESPACE::BaseExc &e)
     {
 	REPLACE_EXC (e, "Error reading pixel data from image "
-		        "file \"" << fileName() << "\". " << e);
+                 "file \"" << fileName() << "\". " << e.what());
 	throw;
     }
 }
+
+
+void ScanLineInputFile::rawPixelDataToBuffer(int scanLine,
+                                             char *pixelData,
+                                             int &pixelDataSize) const
+{
+  if (_data->memoryMapped) {
+    throw IEX_NAMESPACE::ArgExc ("Reading raw pixel data to a buffer "
+                                 "is not supported for memory mapped "
+                                 "streams." );
+  }
+
+  try 
+  {
+    Lock lock (*_streamData);
+    
+    if (scanLine < _data->minY || scanLine > _data->maxY) 
+    {
+      throw IEX_NAMESPACE::ArgExc ("Tried to read scan line outside "
+                                   "the image file's data window.");
+    }
+    
+    readPixelData
+      (_streamData, _data, scanLine, pixelData, pixelDataSize);
+    
+  }
+  catch (IEX_NAMESPACE::BaseExc &e) 
+  {
+    REPLACE_EXC (e, "Error reading pixel data from image "
+                 "file \"" << fileName() << "\". " << e.what());
+    throw;
+  }
+}
+
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

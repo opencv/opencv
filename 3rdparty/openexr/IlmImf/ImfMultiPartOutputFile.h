@@ -67,15 +67,17 @@ OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 //  numThreads - number of threads that should be used in encoding the data.
 //
     
-class IMF_EXPORT MultiPartOutputFile : public GenericOutputFile
+class MultiPartOutputFile : public GenericOutputFile
 {
     public:
+        IMF_EXPORT
         MultiPartOutputFile(const char fileName[],
                             const Header * headers,
                             int parts,
                             bool overrideSharedAttributes = false,
                             int numThreads = globalThreadCount());
                             
+        IMF_EXPORT
         MultiPartOutputFile(OStream & os,
                             const Header * headers,
                             int parts,
@@ -85,15 +87,17 @@ class IMF_EXPORT MultiPartOutputFile : public GenericOutputFile
         //
         // return number of parts in file
         //
-        int parts() const ;
-        
+        IMF_EXPORT
+        int parts() const;
         
         //
         // return header for part n
         // (note: may have additional attributes compared to that passed to constructor)
         //
+        IMF_EXPORT
         const Header & header(int n) const;
                             
+        IMF_EXPORT
         ~MultiPartOutputFile();
 
         struct Data;

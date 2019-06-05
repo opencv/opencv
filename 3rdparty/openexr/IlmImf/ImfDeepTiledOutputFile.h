@@ -54,7 +54,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
+class DeepTiledOutputFile : public GenericOutputFile
 {
   public:
 
@@ -80,6 +80,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // below).
     //-------------------------------------------------------------------
 
+    IMF_EXPORT
     DeepTiledOutputFile (const char fileName[],
                          const Header &header,
                          int numThreads = globalThreadCount ());
@@ -92,6 +93,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // close the corresponding files.
     // ----------------------------------------------------------------
 
+    IMF_EXPORT
     DeepTiledOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
                          const Header &header,
                          int numThreads = globalThreadCount ());
@@ -104,6 +106,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // have been written results in an incomplete file.
     //-----------------------------------------------------
 
+    IMF_EXPORT
     virtual ~DeepTiledOutputFile ();
 
 
@@ -111,6 +114,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // Access to the file name
     //------------------------
 
+    IMF_EXPORT
     const char *        fileName () const;
 
 
@@ -118,6 +122,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &      header () const;
 
 
@@ -132,6 +137,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // after each call to writeTile().
     //-------------------------------------------------------
 
+    IMF_EXPORT
     void                setFrameBuffer (const DeepFrameBuffer &frameBuffer);
 
 
@@ -139,6 +145,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // Access to the current frame buffer
     //-----------------------------------
 
+    IMF_EXPORT
     const DeepFrameBuffer & frameBuffer () const;
 
 
@@ -152,9 +159,13 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // fields of the file header's TileDescriptionAttribute.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     unsigned int        tileXSize () const;
+    IMF_EXPORT
     unsigned int        tileYSize () const;
+    IMF_EXPORT
     LevelMode           levelMode () const;
+    IMF_EXPORT
     LevelRoundingMode   levelRoundingMode () const;
 
 
@@ -201,9 +212,13 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //--------------------------------------------------------------------
 
+    IMF_EXPORT
     int                 numLevels () const;
+    IMF_EXPORT
     int                 numXLevels () const;
+    IMF_EXPORT
     int                 numYLevels () const;
+    IMF_EXPORT
     bool                isValidLevel (int lx, int ly) const;
 
 
@@ -225,7 +240,9 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //---------------------------------------------------------
 
+    IMF_EXPORT
     int                 levelWidth  (int lx) const;
+    IMF_EXPORT
     int                 levelHeight (int ly) const;
 
 
@@ -249,7 +266,9 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //----------------------------------------------------------
 
+    IMF_EXPORT
     int                 numXTiles (int lx = 0) const;
+    IMF_EXPORT
     int                 numYTiles (int ly = 0) const;
 
 
@@ -273,7 +292,9 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //---------------------------------------------------------
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i        dataWindowForLevel (int l = 0) const;
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i        dataWindowForLevel (int lx, int ly) const;
 
 
@@ -298,9 +319,11 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //-------------------------------------------------------------------
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i        dataWindowForTile (int dx, int dy,
                                            int l = 0) const;
 
+    IMF_EXPORT
     IMATH_NAMESPACE::Box2i        dataWindowForTile (int dx, int dy,
                                            int lx, int ly) const;
 
@@ -376,12 +399,16 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     void                writeTile  (int dx, int dy, int l = 0);
+    IMF_EXPORT
     void                writeTile  (int dx, int dy, int lx, int ly);
 
+    IMF_EXPORT
     void                writeTiles (int dx1, int dx2, int dy1, int dy2,
                                     int lx, int ly);
 
+    IMF_EXPORT
     void                writeTiles (int dx1, int dx2, int dy1, int dy2,
                                     int l = 0);
 
@@ -394,7 +421,9 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     // "lineOrder", "channels", and "tiles" attributes must be the same.
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     void                copyPixels (DeepTiledInputFile &in);
+    IMF_EXPORT
     void                copyPixels (DeepTiledInputPart &in);
 
 
@@ -417,6 +446,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //--------------------------------------------------------------
 
+    IMF_EXPORT
     void                updatePreviewImage (const PreviewRgba newPixels[]);
 
 
@@ -434,6 +464,7 @@ class IMF_EXPORT DeepTiledOutputFile : public GenericOutputFile
     //
     //-------------------------------------------------------------
 
+    IMF_EXPORT
     void                breakTile  (int dx, int dy,
                                     int lx, int ly,
                                     int offset,

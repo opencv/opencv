@@ -60,7 +60,7 @@ public:
 };
 
 
-#if IMF_HAVE_SSE2
+#ifdef IMF_HAVE_SSE2
 
 
 //------------------------------------------------------------------------
@@ -70,7 +70,7 @@ EXR_FORCEINLINE
 bool
 isPointerSSEAligned (const void* EXR_RESTRICT pPointer)
 {
-    unsigned long trailingBits = ((unsigned long)pPointer) & 15;
+    uintptr_t trailingBits = ((uintptr_t)pPointer) & 15;
     return trailingBits == 0;
 }
 

@@ -42,7 +42,7 @@
 
 #include "IlmBaseConfig.h"
 
-#if HAVE_PTHREAD && !HAVE_POSIX_SEMAPHORES
+#if (!HAVE_POSIX_SEMAPHORES) && !defined (_WIN32) && ! defined (_WIN64)
 
 #include "IlmThreadSemaphore.h"
 #include "Iex.h"
@@ -50,7 +50,7 @@
 
 ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-
+#if ILMBASE_FORCE_CXX03 && HAVE_PTHREAD
 Semaphore::Semaphore (unsigned int value)
 {
     if (int error = ::pthread_mutex_init (&_semaphore.mutex, 0))
@@ -126,7 +126,16 @@ Semaphore::post ()
 
     if (_semaphore.numWaiting > 0)
     {
-        if (int error = ::pthread_cond_signal (&_semaphore.nonZero))
+        int error;
+        if (_semaphore.numWaiting > 1 && _semaphore.count > 1)
+        {
+            error =  ::pthread_cond_broadcast (&_semaphore.nonZero);
+        }
+        else
+        {
+            error = ::pthread_cond_signal (&_semaphore.nonZero);
+        }
+        if (error)
         {
             ::pthread_mutex_unlock (&_semaphore.mutex);
 
@@ -148,7 +157,70 @@ Semaphore::value () const
     ::pthread_mutex_unlock (&_semaphore.mutex);
     return value;
 }
+#else
+Semaphore::Semaphore (unsigned int value)
+{
+    _semaphore.count = value;
+    _semaphore.numWaiting = 0;
+}
 
+
+Semaphore::~Semaphore ()
+{
+}
+
+
+void
+Semaphore::wait ()
+{
+    std::unique_lock<std::mutex> lk(_semaphore.mutex);
+
+    _semaphore.numWaiting++;
+
+    while (_semaphore.count == 0)
+        _semaphore.nonZero.wait (lk);
+
+    _semaphore.numWaiting--;
+    _semaphore.count--;
+}
+
+
+bool
+Semaphore::tryWait ()
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+    
+    if (_semaphore.count == 0)
+        return false;
+
+    _semaphore.count--;
+    return true;
+}
+
+
+void
+Semaphore::post ()
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+
+    _semaphore.count++;
+    if (_semaphore.numWaiting > 0)
+    {
+        if (_semaphore.count > 1)
+            _semaphore.nonZero.notify_all();
+        else
+            _semaphore.nonZero.notify_one();
+    }
+}
+
+
+int
+Semaphore::value () const
+{
+    std::lock_guard<std::mutex> lk(_semaphore.mutex);
+    return _semaphore.count;
+}
+#endif
 
 ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_EXIT
 

@@ -34,21 +34,56 @@
 
 //-----------------------------------------------------------------------------
 //
-//	class Thread -- dummy implementation for
-//	platforms that do not support threading
+//	class Thread -- this file contains two implementations of thread:
+//	- dummy implementation for platforms that do not support threading
+//	  when OPENEXR_FORCE_CXX03 is on
+//	- c++11 and newer version
 //
 //-----------------------------------------------------------------------------
 
 #include "IlmBaseConfig.h"
-
-#if !defined (_WIN32) &&!(_WIN64) && !(HAVE_PTHREAD)
-
 #include "IlmThread.h"
 #include "Iex.h"
 
 ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_ENTER
 
+#ifndef ILMBASE_FORCE_CXX03
+//-----------------------------------------------------------------------------
+// C++11 and newer implementation
+//-----------------------------------------------------------------------------
+bool
+supportsThreads ()
+{
+    return true;
+}
 
+Thread::Thread ()
+{
+    // empty
+}
+
+
+Thread::~Thread ()
+{
+    // hopefully the thread has basically exited and we are just
+    // cleaning up, because run is a virtual function, so the v-table
+    // has already been partly destroyed...
+    if ( _thread.joinable () )
+        _thread.join ();
+}
+
+
+void
+Thread::start ()
+{
+    _thread = std::thread (&Thread::run, this);
+}
+
+#else
+#   if !defined (_WIN32) &&!(_WIN64) && !(HAVE_PTHREAD)
+//-----------------------------------------------------------------------------
+// OPENEXR_FORCE_CXX03 with no windows / pthread support
+//-----------------------------------------------------------------------------
 bool
 supportsThreads ()
 {
@@ -73,8 +108,9 @@ Thread::start ()
 {
     throw IEX_NAMESPACE::NoImplExc ("Threads not supported on this platform.");
 }
+#   endif
+#endif
 
 
 ILMTHREAD_INTERNAL_NAMESPACE_SOURCE_EXIT
 
-#endif

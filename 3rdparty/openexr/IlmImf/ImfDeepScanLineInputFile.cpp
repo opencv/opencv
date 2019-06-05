@@ -980,7 +980,7 @@ DeepScanLineInputFile::DeepScanLineInputFile
         if (_data)       delete _data;
 
         REPLACE_EXC (e, "Cannot read image file "
-                        "\"" << fileName << "\". " << e);
+                     "\"" << fileName << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -1366,7 +1366,7 @@ DeepScanLineInputFile::readPixels (int scanLine1, int scanLine2)
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading pixel data from image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1994,7 +1994,7 @@ DeepScanLineInputFile::readPixelSampleCounts (int scanline1, int scanline2)
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading sample count data from image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
 
         _data->_streamData->is->seekg(savedFilePos);
 

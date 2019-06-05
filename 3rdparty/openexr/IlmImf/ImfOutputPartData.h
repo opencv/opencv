@@ -42,18 +42,19 @@
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-struct IMF_EXPORT OutputPartData
+struct OutputPartData
 {
-        Header                  header;
-        Int64                   chunkOffsetTablePosition;
-        Int64                   previewPosition;
-        int                     numThreads;
-        int                     partNumber;
-	bool                    multipart;
-        OutputStreamMutex*      mutex;
+    Header                  header;
+    Int64                   chunkOffsetTablePosition;
+    Int64                   previewPosition;
+    int                     numThreads;
+    int                     partNumber;
+    bool                    multipart;
+    OutputStreamMutex*      mutex;
 
-        OutputPartData(OutputStreamMutex* mutex, const Header &header,
-                       int partNumber, int numThreads, bool multipart);
+    IMF_EXPORT
+    OutputPartData(OutputStreamMutex* mutex, const Header &header,
+                   int partNumber, int numThreads, bool multipart);
 
 };
 

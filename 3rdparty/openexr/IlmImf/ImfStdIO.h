@@ -58,7 +58,7 @@ OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 // class OPENEXR_IMF_INTERNAL_NAMESPACE::IStream based on class std::ifstream
 //-------------------------------------------
 
-class IMF_EXPORT StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
+class StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
 {
   public:
 
@@ -67,6 +67,7 @@ class IMF_EXPORT StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     StdIFStream (const char fileName[]);
 
     
@@ -76,14 +77,20 @@ class IMF_EXPORT StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
     // will not close the std::ifstream.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     StdIFStream (std::ifstream &is, const char fileName[]);
 
 
+    IMF_EXPORT
     virtual ~StdIFStream ();
 
+    IMF_EXPORT
     virtual bool	read (char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellg ();
+    IMF_EXPORT
     virtual void	seekg (Int64 pos);
+    IMF_EXPORT
     virtual void	clear ();
 
   private:
@@ -98,7 +105,7 @@ class IMF_EXPORT StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
 // class OPENEXR_IMF_INTERNAL_NAMESPACE::OStream based on class std::ofstream
 //-------------------------------------------
 
-class IMF_EXPORT StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
+class StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
 {
   public:
 
@@ -107,6 +114,7 @@ class IMF_EXPORT StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     StdOFStream (const char fileName[]);
     
 
@@ -116,13 +124,18 @@ class IMF_EXPORT StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
     // will not close the std::ofstream.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     StdOFStream (std::ofstream &os, const char fileName[]);
 
 
+    IMF_EXPORT
     virtual ~StdOFStream ();
 
+    IMF_EXPORT
     virtual void	write (const char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellp ();
+    IMF_EXPORT
     virtual void	seekp (Int64 pos);
 
   private:
@@ -137,16 +150,21 @@ class IMF_EXPORT StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
 // OPENEXR_IMF_INTERNAL_NAMESPACE::OStream, based on class std::ostringstream
 //------------------------------------------------
 
-class IMF_EXPORT StdOSStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
+class StdOSStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
 {
   public:
 
+    IMF_EXPORT
     StdOSStream ();
 
+    IMF_EXPORT
     virtual void	write (const char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellp ();
+    IMF_EXPORT
     virtual void	seekp (Int64 pos);
 
+    IMF_EXPORT
     std::string		str () const {return _os.str();}
 
   private:

@@ -55,7 +55,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT Compressor
+class Compressor
 {
   public:
 
@@ -64,6 +64,7 @@ class IMF_EXPORT Compressor
     // that will be compressed or uncompressed
     //---------------------------------------------
 
+    IMF_EXPORT
     Compressor (const Header &hdr);
 
 
@@ -71,6 +72,7 @@ class IMF_EXPORT Compressor
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~Compressor ();
 
 
@@ -79,6 +81,7 @@ class IMF_EXPORT Compressor
     // a single call to compress() and uncompress().
     //----------------------------------------------
 
+    IMF_EXPORT
     virtual int		numScanLines () const = 0;
 
 
@@ -91,10 +94,11 @@ class IMF_EXPORT Compressor
 
     enum Format
     {
-	NATIVE,		// the machine's native format
-	XDR		// Xdr format
+        NATIVE,		// the machine's native format
+        XDR		// Xdr format
     };
 
+    IMF_EXPORT
     virtual Format	format () const;
 
 
@@ -158,11 +162,13 @@ class IMF_EXPORT Compressor
     //
     //-------------------------------------------------------------------------
 
+    IMF_EXPORT
     virtual int		compress (const char *inPtr,
 				  int inSize,
 				  int minY,
 				  const char *&outPtr) = 0;
 
+    IMF_EXPORT
     virtual int		compressTile (const char *inPtr,
 				      int inSize,
 				      IMATH_NAMESPACE::Box2i range,
@@ -184,11 +190,13 @@ class IMF_EXPORT Compressor
     //
     //-------------------------------------------------------------------------
 
+    IMF_EXPORT
     virtual int		uncompress (const char *inPtr,
 				    int inSize,
 				    int minY,
 				    const char *&outPtr) = 0;
 
+    IMF_EXPORT
     virtual int		uncompressTile (const char *inPtr,
 					int inSize,
 					IMATH_NAMESPACE::Box2i range,

@@ -75,7 +75,7 @@ stackTracer ()
 
 
 BaseExc::BaseExc (const char* s) throw () :
-    std::string (s? s: ""),
+    _message (s? s: ""),
     _stackTrace (currentStackTracer? currentStackTracer(): "")
 {
     // empty
@@ -83,7 +83,7 @@ BaseExc::BaseExc (const char* s) throw () :
 
 
 BaseExc::BaseExc (const std::string &s) throw () :
-    std::string (s),
+    _message (s),
     _stackTrace (currentStackTracer? currentStackTracer(): "")
 {
     // empty
@@ -91,7 +91,7 @@ BaseExc::BaseExc (const std::string &s) throw () :
 
 
 BaseExc::BaseExc (std::stringstream &s) throw () :
-    std::string (s.str()),
+    _message (s.str()),
     _stackTrace (currentStackTracer? currentStackTracer(): "")
 {
     // empty
@@ -99,7 +99,7 @@ BaseExc::BaseExc (std::stringstream &s) throw () :
 
 
 BaseExc::BaseExc (const BaseExc &be) throw () :
-    std::string (be),
+    _message (be._message),
     _stackTrace (be._stackTrace)
 {
     // empty
@@ -115,23 +115,80 @@ BaseExc::~BaseExc () throw ()
 const char *
 BaseExc::what () const throw ()
 {
-    return c_str();
+    return _message.c_str();
 }
 
 
 BaseExc &
 BaseExc::assign (std::stringstream &s)
 {
-    std::string::assign (s.str());
+    _message.assign (s.str());
     return *this;
 }
 
 BaseExc &
 BaseExc::append (std::stringstream &s)
 {
-    std::string::append (s.str());
+    _message.append (s.str());
     return *this;
 }
+
+const std::string &
+BaseExc::message() const
+{
+	return _message;
+}
+
+BaseExc &
+BaseExc::operator = (std::stringstream &s)
+{
+    return assign (s);
+}
+
+
+BaseExc &
+BaseExc::operator += (std::stringstream &s)
+{
+    return append (s);
+}
+
+
+BaseExc &
+BaseExc::assign (const char *s)
+{
+    _message.assign(s);
+    return *this;
+}
+
+
+BaseExc &
+BaseExc::operator = (const char *s)
+{
+    return assign(s);
+}
+
+
+BaseExc &
+BaseExc::append (const char *s)
+{
+    _message.append(s);
+    return *this;
+}
+
+
+BaseExc &
+BaseExc::operator += (const char *s)
+{
+    return append(s);
+}
+
+
+const std::string &
+BaseExc::stackTrace () const
+{
+    return _stackTrace;
+}
+
 
 IEX_INTERNAL_NAMESPACE_SOURCE_EXIT
 

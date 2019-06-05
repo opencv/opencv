@@ -829,7 +829,7 @@ DeepTiledInputFile::DeepTiledInputFile (const char fileName[], int numThreads):
         if (_data)       delete _data;
 
         REPLACE_EXC (e, "Cannot open image file "
-                        "\"" << fileName << "\". " << e);
+                     "\"" << fileName << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -883,7 +883,7 @@ DeepTiledInputFile::DeepTiledInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream 
         if (_data)       delete _data;
 
         REPLACE_EXC (e, "Cannot open image file "
-                        "\"" << is.fileName() << "\". " << e);
+                     "\"" << is.fileName() << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -1363,7 +1363,7 @@ DeepTiledInputFile::readTiles (int dx1, int dx2, int dy1, int dy2, int lx, int l
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading pixel data from image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1588,7 +1588,7 @@ DeepTiledInputFile::levelWidth (int lx) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling levelWidth() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1605,7 +1605,7 @@ DeepTiledInputFile::levelHeight (int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling levelHeight() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1661,7 +1661,7 @@ DeepTiledInputFile::dataWindowForLevel (int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling dataWindowForLevel() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1691,7 +1691,7 @@ DeepTiledInputFile::dataWindowForTile (int dx, int dy, int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling dataWindowForTile() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1900,7 +1900,7 @@ DeepTiledInputFile::readPixelSampleCounts (int dx1, int dx2,
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error reading sample count data from image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
 
          _data->_streamData->is->seekg(savedFilePos);
 

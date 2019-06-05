@@ -54,6 +54,7 @@ struct InputPartData
         std::vector<Int64>      chunkOffsets;
         bool                    completed;
 
+        IMF_EXPORT
         InputPartData(InputStreamMutex* mutex, const Header &header,
                       int partNumber, int numThreads, int version);
 

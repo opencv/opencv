@@ -90,7 +90,7 @@ DeepTiledInputPart::isComplete () const
 unsigned int
 DeepTiledInputPart::tileXSize () const
 {
-    return file->isComplete();
+    return file->tileXSize();
 }
 
 

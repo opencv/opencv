@@ -37,10 +37,18 @@
 
 #include "IlmThreadNamespace.h"
 
+#ifndef ILMBASE_FORCE_CXX03
+namespace std { class mutex; }
+#endif
+
 ILMTHREAD_INTERNAL_NAMESPACE_HEADER_ENTER
 
 class Thread;
+#ifdef ILMBASE_FORCE_CXX03
 class Mutex;
+#else
+using Mutex = std::mutex;
+#endif
 class Lock;
 class ThreadPool;
 class Task;

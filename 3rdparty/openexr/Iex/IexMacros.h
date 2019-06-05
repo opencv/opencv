@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2018, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
 // 
 // All rights reserved.
@@ -60,14 +60,14 @@
 
 IEX_EXPORT void iex_debugTrap();
 
-#define THROW(type, text)       \
-    do                          \
-    {                           \
-        iex_debugTrap();        \
-        std::stringstream s;	\
-        s << text;              \
-        throw type (s);         \
-    }                           \
+#define THROW(type, text)                  \
+    do                                     \
+    {                                      \
+        iex_debugTrap();                   \
+        std::stringstream _iex_throw_s;	   \
+        _iex_throw_s << text;              \
+        throw type (_iex_throw_s);         \
+    }                                      \
     while (0)
 
 
@@ -94,22 +94,22 @@ IEX_EXPORT void iex_debugTrap();
 //	}
 //----------------------------------------------------------------------------
 
-#define APPEND_EXC(exc, text)   \
-    do                          \
-    {                           \
-        std::stringstream s;    \
-        s << text;              \
-        exc.append (s);         \
-    }                           \
+#define APPEND_EXC(exc, text)               \
+    do                                      \
+    {                                       \
+        std::stringstream _iex_append_s;    \
+        _iex_append_s << text;              \
+        exc.append (_iex_append_s);         \
+    }                                       \
     while (0)
 
-#define REPLACE_EXC(exc, text)  \
-    do                          \
-    {                           \
-        std::stringstream s;    \
-        s << text;              \
-        exc.assign (s);         \
-    }                           \
+#define REPLACE_EXC(exc, text)               \
+    do                                       \
+    {                                        \
+        std::stringstream _iex_replace_s;    \
+        _iex_replace_s << text;              \
+        exc.assign (_iex_replace_s);         \
+    }                                        \
     while (0)
 
 
@@ -123,13 +123,13 @@ IEX_EXPORT void iex_debugTrap();
 //
 //-------------------------------------------------------------
 
-#define THROW_ERRNO(text)                         \
-    do                                            \
-    {                                             \
-        std::stringstream s;                      \
-        s << text;                                \
-        ::IEX_NAMESPACE::throwErrnoExc (s.str()); \
-    }                                             \
+#define THROW_ERRNO(text)                                          \
+    do                                                             \
+    {                                                              \
+        std::stringstream _iex_throw_errno_s;                      \
+        _iex_throw_errno_s << text;                                \
+        ::IEX_NAMESPACE::throwErrnoExc (_iex_throw_errno_s.str()); \
+    }                                                              \
     while (0)
 
 
@@ -145,7 +145,7 @@ IEX_EXPORT void iex_debugTrap();
 #define ASSERT(assertion, type, text)   \
     do                                  \
     {                                   \
-        if( (assertion) == false )      \
+        if( bool(assertion) == false )      \
         {                               \
             THROW( type, text );        \
         }                               \

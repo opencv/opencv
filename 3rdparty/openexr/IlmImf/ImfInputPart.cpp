@@ -104,6 +104,14 @@ InputPart::rawPixelData (int firstScanLine, const char *&pixelData, int &pixelDa
     file->rawPixelData(firstScanLine, pixelData, pixelDataSize);
 }
 
+
+void
+InputPart::rawPixelDataToBuffer (int scanLine, char *pixelData, int &pixelDataSize) const
+{
+    file->rawPixelDataToBuffer(scanLine, pixelData, pixelDataSize);
+}
+
+
 void
 InputPart::rawTileData (int &dx, int &dy, int &lx, int &ly,
              const char *&pixelData, int &pixelDataSize)

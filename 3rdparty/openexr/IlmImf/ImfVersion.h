@@ -109,8 +109,8 @@ const int ALL_FLAGS		= TILED_FLAG | LONG_NAMES_FLAG |
 //
 
 inline bool  isTiled (int version)	{return !!(version & TILED_FLAG);}
-inline bool  isMultiPart (int version)  {return version & MULTI_PART_FILE_FLAG; }
-inline bool  isNonImage(int version)    {return version & NON_IMAGE_FLAG; }
+inline bool  isMultiPart (int version)  {return !!(version & MULTI_PART_FILE_FLAG); }
+inline bool  isNonImage(int version)    {return !!(version & NON_IMAGE_FLAG); }
 inline int   makeTiled (int version)	{return version | TILED_FLAG;}
 inline int   makeNotTiled (int version) {return version & ~TILED_FLAG;}
 inline int   getVersion (int version)	{return version & VERSION_NUMBER_FIELD;}

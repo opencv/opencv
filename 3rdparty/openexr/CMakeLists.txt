@@ -6,15 +6,15 @@
 project(openexr CXX)
 
 set(ILMBASE_VERSION_MAJOR "2")
-set(ILMBASE_VERSION_MINOR "2")
-set(ILMBASE_VERSION_PATCH "1")
+set(ILMBASE_VERSION_MINOR "3")
+set(ILMBASE_VERSION_PATCH "0")
 
 set(ILMBASE_VERSION "${ILMBASE_VERSION_MAJOR}.${ILMBASE_VERSION_MINOR}.${ILMBASE_VERSION_PATCH}")
 set(ILMBASE_VERSION_API ${ILMBASE_VERSION_MAJOR}_${ILMBASE_VERSION_MINOR})
 
 set(OPENEXR_VERSION_MAJOR "2")
-set(OPENEXR_VERSION_MINOR "2")
-set(OPENEXR_VERSION_PATCH "1")
+set(OPENEXR_VERSION_MINOR "3")
+set(OPENEXR_VERSION_PATCH "0")
 
 set(OPENEXR_VERSION "${OPENEXR_VERSION_MAJOR}.${OPENEXR_VERSION_MINOR}.${OPENEXR_VERSION_PATCH}")
 set(OPENEXR_VERSION_API ${OPENEXR_VERSION_MAJOR}_${OPENEXR_VERSION_MINOR})
@@ -91,6 +91,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -W
                                      -Wimplicit-fallthrough
                                      -Wtautological-compare  # clang
                                      -Wmissing-prototypes  # gcc/clang
+                                     -Wreorder
 )
 if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)

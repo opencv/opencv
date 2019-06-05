@@ -1079,7 +1079,7 @@ DeepTiledOutputFile::DeepTiledOutputFile
         if (_data)           delete _data;
 
         REPLACE_EXC (e, "Cannot open image file "
-                        "\"" << fileName << "\". " << e);
+                     "\"" << fileName << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -1122,7 +1122,7 @@ DeepTiledOutputFile::DeepTiledOutputFile
         if (_data)       delete _data;
 
         REPLACE_EXC (e, "Cannot open image file "
-                        "\"" << os.fileName() << "\". " << e);
+                     "\"" << os.fileName() << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -1157,7 +1157,7 @@ DeepTiledOutputFile::DeepTiledOutputFile(const OutputPartData* part)
         if (_data) delete _data;
 
         REPLACE_EXC (e, "Cannot initialize output part "
-                        "\"" << part->partNumber << "\". " << e);
+                     "\"" << part->partNumber << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -1625,7 +1625,7 @@ DeepTiledOutputFile::writeTiles (int dx1, int dx2, int dy1, int dy2,
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Failed to write pixel data to image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1864,7 +1864,7 @@ DeepTiledOutputFile::levelWidth (int lx) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling levelWidth() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1881,7 +1881,7 @@ DeepTiledOutputFile::levelHeight (int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling levelHeight() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1932,7 +1932,7 @@ DeepTiledOutputFile::dataWindowForLevel (int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling dataWindowForLevel() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -1963,7 +1963,7 @@ DeepTiledOutputFile::dataWindowForTile (int dx, int dy, int lx, int ly) const
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Error calling dataWindowForTile() on image "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }
@@ -2020,7 +2020,7 @@ DeepTiledOutputFile::updatePreviewImage (const PreviewRgba newPixels[])
     catch (IEX_NAMESPACE::BaseExc &e)
     {
         REPLACE_EXC (e, "Cannot update preview image pixels for "
-                        "file \"" << fileName() << "\". " << e);
+                     "file \"" << fileName() << "\". " << e.what());
         throw;
     }
 }

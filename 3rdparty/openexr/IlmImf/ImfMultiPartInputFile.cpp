@@ -140,7 +140,7 @@ MultiPartInputFile::MultiPartInputFile(const char fileName[],
         delete _data;
 
         REPLACE_EXC (e, "Cannot read image file "
-                        "\"" << fileName << "\". " << e);
+                     "\"" << fileName << "\". " << e.what());
         throw;
     }
     catch (...)
@@ -165,7 +165,7 @@ MultiPartInputFile::MultiPartInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream&
         delete _data;
 
         REPLACE_EXC (e, "Cannot read image file "
-                        "\"" << is.fileName() << "\". " << e);
+                     "\"" << is.fileName() << "\". " << e.what());
         throw;
     }
     catch (...)

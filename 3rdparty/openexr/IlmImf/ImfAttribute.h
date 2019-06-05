@@ -53,7 +53,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT Attribute
+class Attribute
 {
   public:
 
@@ -61,7 +61,9 @@ class IMF_EXPORT Attribute
     // Constructor and destructor
     //---------------------------
 
+    IMF_EXPORT
     Attribute ();
+    IMF_EXPORT
     virtual ~Attribute ();
 
 
@@ -97,6 +99,7 @@ class IMF_EXPORT Attribute
     // Attribute factory
     //------------------
 
+    IMF_EXPORT
     static Attribute *		newAttribute (const char typeName[]);
 
 
@@ -104,6 +107,7 @@ class IMF_EXPORT Attribute
     // Test if a given attribute type has already been registered
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     static bool			knownType (const char typeName[]);
 
 
@@ -114,6 +118,7 @@ class IMF_EXPORT Attribute
     // knows how to make objects of this type.
     //--------------------------------------------------
 
+    IMF_EXPORT
     static void		registerAttributeType (const char typeName[],
 					       Attribute *(*newAttribute)());
 
@@ -123,6 +128,7 @@ class IMF_EXPORT Attribute
     // debugging only).
     //------------------------------------------------------
 
+    IMF_EXPORT
     static void		unRegisterAttributeType (const char typeName[]);
 };
 

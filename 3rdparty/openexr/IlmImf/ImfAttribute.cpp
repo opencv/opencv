@@ -88,6 +88,11 @@ class LockedTypeMap: public TypeMap
 LockedTypeMap &
 typeMap ()
 {
+    // c++11 requires thread-safe static variable initialization
+#if __cplusplus >= 201103L
+    static LockedTypeMap tMap;
+    return tMap;
+#else
     static Mutex criticalSection;
     Lock lock (criticalSection);
 
@@ -97,6 +102,7 @@ typeMap ()
 	typeMap = new LockedTypeMap ();
 
     return *typeMap;
+#endif
 }
 
 

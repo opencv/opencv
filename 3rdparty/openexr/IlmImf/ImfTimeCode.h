@@ -116,7 +116,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
    
-class IMF_EXPORT TimeCode
+class TimeCode
 {
   public:
 
@@ -136,8 +136,10 @@ class IMF_EXPORT TimeCode
     // Constructors and assignment operator
     //-------------------------------------
 
+    IMF_EXPORT
     TimeCode ();  // all fields set to 0 or false
 
+    IMF_EXPORT
     TimeCode (int hours,
 	      int minutes,
 	      int seconds,
@@ -157,12 +159,15 @@ class IMF_EXPORT TimeCode
 	      int binaryGroup7 = 0,
 	      int binaryGroup8 = 0);
 
+    IMF_EXPORT
     TimeCode (unsigned int timeAndFlags,
 	      unsigned int userData = 0,
 	      Packing packing = TV60_PACKING);
 
+    IMF_EXPORT
     TimeCode (const TimeCode &other);
 
+    IMF_EXPORT
     TimeCode & operator = (const TimeCode &other);
 
 
@@ -170,37 +175,59 @@ class IMF_EXPORT TimeCode
     // Access to individual fields
     //----------------------------
 
+    IMF_EXPORT
     int		hours () const;
+    IMF_EXPORT
     void	setHours (int value);
 
+    IMF_EXPORT
     int		minutes () const;
+    IMF_EXPORT
     void	setMinutes (int value);
 
+    IMF_EXPORT
     int		seconds () const;
+    IMF_EXPORT
     void	setSeconds (int value);
 
+    IMF_EXPORT
     int		frame () const;
+    IMF_EXPORT
     void	setFrame (int value);
 
+    IMF_EXPORT
     bool	dropFrame () const;
+    IMF_EXPORT
     void	setDropFrame (bool value);
 
+    IMF_EXPORT
     bool	colorFrame () const;
+    IMF_EXPORT
     void	setColorFrame (bool value);
 
+    IMF_EXPORT
     bool	fieldPhase () const;
+    IMF_EXPORT
     void	setFieldPhase (bool value);
 
+    IMF_EXPORT
     bool	bgf0 () const;
+    IMF_EXPORT
     void	setBgf0 (bool value);
 
+    IMF_EXPORT
     bool	bgf1 () const;
+    IMF_EXPORT
     void	setBgf1 (bool value);
 
+    IMF_EXPORT
     bool	bgf2 () const;
+    IMF_EXPORT
     void	setBgf2 (bool value);
 
+    IMF_EXPORT
     int		binaryGroup (int group) const; // group must be between 1 and 8
+    IMF_EXPORT
     void	setBinaryGroup (int group, int value);
 
     
@@ -208,13 +235,17 @@ class IMF_EXPORT TimeCode
     // Access to packed representations
     //---------------------------------
 
+    IMF_EXPORT
     unsigned int	timeAndFlags (Packing packing = TV60_PACKING) const;
 
+    IMF_EXPORT
     void		setTimeAndFlags (unsigned int value,
 					 Packing packing = TV60_PACKING);
 
+    IMF_EXPORT
     unsigned int	userData () const;
 
+    IMF_EXPORT
     void		setUserData (unsigned int value);
     
     
@@ -222,7 +253,9 @@ class IMF_EXPORT TimeCode
     // Equality
     //---------
     
+    IMF_EXPORT
     bool		operator == (const TimeCode &v) const;    
+    IMF_EXPORT
     bool		operator != (const TimeCode &v) const;
     
   private:

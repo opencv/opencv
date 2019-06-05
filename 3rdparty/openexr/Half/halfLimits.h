@@ -94,6 +94,15 @@ class numeric_limits <half>
     static const bool traps = true;
     static const bool tinyness_before = false;
     static const float_round_style round_style = round_to_nearest;
+
+#if __cplusplus >= 201103L
+
+    // C++11 additions.
+    static constexpr int max_digits10 = HALF_DECIMAL_DIG;
+    static half lowest () {return -HALF_MAX;}
+
+#endif
+
 };
 
 

@@ -102,7 +102,7 @@ const Chromaticities &	acesChromaticities ();
 // ACES output file.
 //
 
-class IMF_EXPORT AcesOutputFile
+class AcesOutputFile
 {
   public:
 
@@ -110,6 +110,7 @@ class IMF_EXPORT AcesOutputFile
     // Constructor -- header is constructed by the caller
     //---------------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
 		    const Header &header,
 		    RgbaChannels rgbaChannels = WRITE_RGBA,
@@ -122,6 +123,7 @@ class IMF_EXPORT AcesOutputFile
     // automatically close the file.
     //----------------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
 		    const Header &header,
 		    RgbaChannels rgbaChannels = WRITE_RGBA,
@@ -133,6 +135,7 @@ class IMF_EXPORT AcesOutputFile
     // call arguments (empty dataWindow means "same as displayWindow")
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
 		    const IMATH_NAMESPACE::Box2i &displayWindow,
 		    const IMATH_NAMESPACE::Box2i &dataWindow = IMATH_NAMESPACE::Box2i(),
@@ -151,6 +154,7 @@ class IMF_EXPORT AcesOutputFile
     // Box2i (V2i (0, 0), V2i (width - 1, height -1))
     //-----------------------------------------------
 
+    IMF_EXPORT
     AcesOutputFile (const std::string &name,
 		    int width,
 		    int height,
@@ -167,6 +171,7 @@ class IMF_EXPORT AcesOutputFile
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~AcesOutputFile ();
 
 
@@ -178,6 +183,7 @@ class IMF_EXPORT AcesOutputFile
     //
     //------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (const Rgba *base,
 						size_t xStride,
 						size_t yStride);
@@ -196,14 +202,23 @@ class IMF_EXPORT AcesOutputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
 
 
@@ -211,6 +226,7 @@ class IMF_EXPORT AcesOutputFile
     // Update the preview image (see Imf::OutputFile::updatePreviewImage())
     // --------------------------------------------------------------------
 
+    IMF_EXPORT
     void			updatePreviewImage (const PreviewRgba[]);
 
 
@@ -229,7 +245,7 @@ class IMF_EXPORT AcesOutputFile
 // ACES input file
 //
 
-class IMF_EXPORT AcesInputFile
+class AcesInputFile
 {
   public:
 
@@ -238,6 +254,7 @@ class IMF_EXPORT AcesInputFile
     // destructor will automatically close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     AcesInputFile (const std::string &name,
 		   int numThreads = globalThreadCount());
 
@@ -249,6 +266,7 @@ class IMF_EXPORT AcesInputFile
     // close the file.
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     AcesInputFile (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
 		   int numThreads = globalThreadCount());
 
@@ -257,6 +275,7 @@ class IMF_EXPORT AcesInputFile
     // Destructor
     //-----------
 
+    IMF_EXPORT
     virtual ~AcesInputFile ();
 
 
@@ -268,6 +287,7 @@ class IMF_EXPORT AcesInputFile
     //
     //-----------------------------------------------------
 
+    IMF_EXPORT
     void			setFrameBuffer (Rgba *base,
 						size_t xStride,
 						size_t yStride);
@@ -278,7 +298,9 @@ class IMF_EXPORT AcesInputFile
     // Pixels returned will contain ACES RGB data.
     //--------------------------------------------
 
+    IMF_EXPORT
     void			readPixels (int scanLine1, int scanLine2);
+    IMF_EXPORT
     void			readPixels (int scanLine);
 
 
@@ -286,16 +308,27 @@ class IMF_EXPORT AcesInputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &		header () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	displayWindow () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::Box2i &	dataWindow () const;
+    IMF_EXPORT
     float			pixelAspectRatio () const;
+    IMF_EXPORT
     const IMATH_NAMESPACE::V2f		screenWindowCenter () const;
+    IMF_EXPORT
     float			screenWindowWidth () const;
+    IMF_EXPORT
     LineOrder			lineOrder () const;
+    IMF_EXPORT
     Compression			compression () const;
+    IMF_EXPORT
     RgbaChannels		channels () const;
+    IMF_EXPORT
     const char *                fileName () const;
+    IMF_EXPORT
     bool			isComplete () const;
 
 
@@ -303,6 +336,7 @@ class IMF_EXPORT AcesInputFile
     // Access to the file format version
     //----------------------------------
 
+    IMF_EXPORT
     int				version () const;
 
   private:

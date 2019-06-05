@@ -52,7 +52,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
+class DeepScanLineInputFile : public GenericInputFile
 {
   public:
 
@@ -60,9 +60,11 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // Constructor
     //------------
 
+    IMF_EXPORT
     DeepScanLineInputFile (const char fileName[],
                            int numThreads = globalThreadCount());
 
+    IMF_EXPORT
     DeepScanLineInputFile (const Header &header, OPENEXR_IMF_INTERNAL_NAMESPACE::IStream *is,
                            int version, /*version field from file*/
                            int numThreads = globalThreadCount());
@@ -73,6 +75,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // structures, but does not close the file.
     //-----------------------------------------
 
+    IMF_EXPORT
     virtual ~DeepScanLineInputFile ();
 
 
@@ -80,6 +83,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // Access to the file name
     //------------------------
 
+    IMF_EXPORT
     const char *        fileName () const;
 
 
@@ -87,6 +91,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // Access to the file header
     //--------------------------
 
+    IMF_EXPORT
     const Header &      header () const;
 
 
@@ -94,6 +99,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // Access to the file format version
     //----------------------------------
 
+    IMF_EXPORT
     int                 version () const;
 
 
@@ -108,6 +114,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // to readPixels().
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     void                setFrameBuffer (const DeepFrameBuffer &frameBuffer);
 
 
@@ -115,6 +122,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // Access to the current frame buffer
     //-----------------------------------
 
+    IMF_EXPORT
     const DeepFrameBuffer & frameBuffer () const;
 
 
@@ -127,6 +135,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // writing may have been aborted prematurely.)
     //---------------------------------------------------------------
 
+    IMF_EXPORT
     bool                isComplete () const;
 
 
@@ -152,7 +161,9 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     //
     //---------------------------------------------------------------
 
+    IMF_EXPORT
     void                readPixels (int scanLine1, int scanLine2);
+    IMF_EXPORT
     void                readPixels (int scanLine);
 
     
@@ -182,6 +193,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     //
     //---------------------------------------------------------------
     
+    IMF_EXPORT
     void                readPixels (const char * rawPixelData,
                                     const DeepFrameBuffer & frameBuffer,
                                     int scanLine1,
@@ -198,6 +210,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // 
     //----------------------------------------------
 
+    IMF_EXPORT
     void                rawPixelData (int firstScanLine,
                                       char * pixelData,
                                       Int64 &pixelDataSize);
@@ -212,7 +225,9 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // The last chunk in the file may be smaller than all the others
     //
     //------------------------------------------------
+    IMF_EXPORT
     int                 firstScanLineInChunk(int y) const;
+    IMF_EXPORT
     int                 lastScanLineInChunk (int y) const;
                                       
     //-----------------------------------------------------------
@@ -230,8 +245,10 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // 
     //-----------------------------------------------------------
 
+    IMF_EXPORT
     void                readPixelSampleCounts (int scanline1,
                                                int scanline2);
+    IMF_EXPORT
     void                readPixelSampleCounts (int scanline);
     
     
@@ -248,6 +265,7 @@ class IMF_EXPORT DeepScanLineInputFile : public GenericInputFile
     // readPixelSampleCounts(header().dataWindow().min.y, header.dataWindow().max.y)
     //
     //----------------------------------------------------------
+    IMF_EXPORT
     void                readPixelSampleCounts (const char * rawdata , 
                                                const DeepFrameBuffer & frameBuffer,
                                                int scanLine1 , 

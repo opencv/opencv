@@ -36,6 +36,7 @@
 
 #include "ImfInt64.h"
 #include "ImfNamespace.h"
+#include "ImfExport.h"
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
@@ -81,16 +82,20 @@ class FastHufDecoder
 
     static const int TABLE_LOOKUP_BITS = 12;
 
+    IMF_EXPORT
     FastHufDecoder (const char*& table,
                     int numBytes,
                     int minSymbol,
                     int maxSymbol,
                     int rleSymbol);
 
+    IMF_EXPORT
     ~FastHufDecoder ();
 
+    IMF_EXPORT
     static bool enabled ();
 
+    IMF_EXPORT
     void decode (const unsigned char *src,
                  int numSrcBits,
                  unsigned short *dst,

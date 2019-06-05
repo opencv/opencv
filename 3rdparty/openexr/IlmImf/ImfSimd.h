@@ -40,6 +40,7 @@
 //
 // Compile time SSE detection:
 //    IMF_HAVE_SSE2 - Defined if it's safe to compile SSE2 optimizations
+//    IMF_HAVE_SSE4_1 - Defined if it's safe to compile SSE4.1 optimizations
 //
 
 
@@ -48,11 +49,19 @@
     #define IMF_HAVE_SSE2 1
 #endif
 
+#if defined __SSE4_1__
+    #define IMF_HAVE_SSE4_1 1
+#endif
+
 extern "C"
 {
-#if IMF_HAVE_SSE2
+#ifdef IMF_HAVE_SSE2
     #include <emmintrin.h>
     #include <mmintrin.h>
+#endif
+
+#ifdef IMF_HAVE_SSE4_1
+    #include <smmintrin.h>
 #endif
 }
 

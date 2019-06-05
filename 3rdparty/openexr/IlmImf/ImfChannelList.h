@@ -57,7 +57,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-struct IMF_EXPORT Channel
+struct Channel
 {
     //------------------------------
     // Data type; see ImfPixelType.h
@@ -100,6 +100,7 @@ struct IMF_EXPORT Channel
     // Constructor
     //------------
     
+    IMF_EXPORT
     Channel (PixelType type = HALF,
 	     int xSampling = 1,
 	     int ySampling = 1,
@@ -110,11 +111,12 @@ struct IMF_EXPORT Channel
     // Operator ==
     //------------
 
+    IMF_EXPORT
     bool		operator == (const Channel &other) const;
 };
 
 
-class IMF_EXPORT ChannelList
+class ChannelList
 {
   public:
 
@@ -122,9 +124,11 @@ class IMF_EXPORT ChannelList
     // Add a channel
     //--------------
 
+    IMF_EXPORT
     void			insert (const char name[],
 					const Channel &channel);
 
+    IMF_EXPORT
     void			insert (const std::string &name,
 					const Channel &channel);
 
@@ -140,16 +144,24 @@ class IMF_EXPORT ChannelList
     //
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     Channel &			operator [] (const char name[]);
+    IMF_EXPORT
     const Channel &		operator [] (const char name[]) const;
 
+    IMF_EXPORT
     Channel &			operator [] (const std::string &name);
+    IMF_EXPORT
     const Channel &		operator [] (const std::string &name) const;
 
+    IMF_EXPORT
     Channel *			findChannel (const char name[]);
+    IMF_EXPORT
     const Channel *		findChannel (const char name[]) const;
 
+    IMF_EXPORT
     Channel *			findChannel (const std::string &name);
+    IMF_EXPORT
     const Channel *		findChannel (const std::string &name) const;
 
 
@@ -162,16 +174,24 @@ class IMF_EXPORT ChannelList
     class Iterator;
     class ConstIterator;
 
+    IMF_EXPORT
     Iterator			begin ();
+    IMF_EXPORT
     ConstIterator		begin () const;
 
+    IMF_EXPORT
     Iterator			end ();
+    IMF_EXPORT
     ConstIterator		end () const;
 
+    IMF_EXPORT
     Iterator			find (const char name[]);
+    IMF_EXPORT
     ConstIterator		find (const char name[]) const;
 
+    IMF_EXPORT
     Iterator			find (const std::string &name);
+    IMF_EXPORT
     ConstIterator		find (const std::string &name) const;
 
     
@@ -215,12 +235,15 @@ class IMF_EXPORT ChannelList
     //
     //-----------------------------------------------------------------
 
+    IMF_EXPORT
     void		layers (std::set <std::string> &layerNames) const;
 
+    IMF_EXPORT
     void		channelsInLayer (const std::string &layerName,
 	    				 Iterator &first,
 					 Iterator &last);
 
+    IMF_EXPORT
     void		channelsInLayer (const std::string &layerName,
 	    				 ConstIterator &first,
 					 ConstIterator &last) const;
@@ -238,18 +261,22 @@ class IMF_EXPORT ChannelList
     //
     //-------------------------------------------------------------------
 
+    IMF_EXPORT
     void			channelsWithPrefix (const char prefix[],
 						    Iterator &first,
 						    Iterator &last);
 
+    IMF_EXPORT
     void			channelsWithPrefix (const char prefix[],
 						    ConstIterator &first,
 						    ConstIterator &last) const;
 
+    IMF_EXPORT
     void			channelsWithPrefix (const std::string &prefix,
 						    Iterator &first,
 						    Iterator &last);
 
+    IMF_EXPORT
     void			channelsWithPrefix (const std::string &prefix,
 						    ConstIterator &first,
 						    ConstIterator &last) const;
@@ -258,6 +285,7 @@ class IMF_EXPORT ChannelList
     // Operator ==
     //------------
 
+    IMF_EXPORT
     bool			operator == (const ChannelList &other) const;
 
   private:
@@ -274,13 +302,19 @@ class ChannelList::Iterator
 {
   public:
 
+    IMF_EXPORT
     Iterator ();
+    IMF_EXPORT
     Iterator (const ChannelList::ChannelMap::iterator &i);
 
+    IMF_EXPORT
     Iterator &			operator ++ ();
+    IMF_EXPORT
     Iterator 			operator ++ (int);
 
+    IMF_EXPORT
     const char *		name () const;
+    IMF_EXPORT
     Channel &			channel () const;
 
   private:
@@ -295,14 +329,21 @@ class ChannelList::ConstIterator
 {
   public:
 
+    IMF_EXPORT
     ConstIterator ();
+    IMF_EXPORT
     ConstIterator (const ChannelList::ChannelMap::const_iterator &i);
+    IMF_EXPORT
     ConstIterator (const ChannelList::Iterator &other);
 
+    IMF_EXPORT
     ConstIterator &		operator ++ ();
+    IMF_EXPORT
     ConstIterator 		operator ++ (int);
 
+    IMF_EXPORT
     const char *		name () const;
+    IMF_EXPORT
     const Channel &		channel () const;
 
   private:

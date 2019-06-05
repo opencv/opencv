@@ -56,7 +56,7 @@
 OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class IMF_EXPORT OpaqueAttribute: public Attribute
+class OpaqueAttribute: public Attribute
 {
   public:
 
@@ -64,8 +64,11 @@ class IMF_EXPORT OpaqueAttribute: public Attribute
     // Constructors and destructor
     //----------------------------
 
+    IMF_EXPORT
     OpaqueAttribute (const char typeName[]);
+    IMF_EXPORT
     OpaqueAttribute (const OpaqueAttribute &other);
+    IMF_EXPORT
     virtual ~OpaqueAttribute ();
 
 
@@ -73,6 +76,7 @@ class IMF_EXPORT OpaqueAttribute: public Attribute
     // Get this attribute's type name
     //-------------------------------
 
+    IMF_EXPORT
     virtual const char *	typeName () const;
     
 
@@ -80,6 +84,7 @@ class IMF_EXPORT OpaqueAttribute: public Attribute
     // Make a copy of this attribute
     //------------------------------
 
+    IMF_EXPORT
     virtual Attribute *		copy () const;
 
 
@@ -87,13 +92,16 @@ class IMF_EXPORT OpaqueAttribute: public Attribute
     // I/O and copying
     //----------------
 
+    IMF_EXPORT
     virtual void		writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
 					      int version) const;
 
+    IMF_EXPORT
     virtual void		readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
 					       int size,
 					       int version);
 
+    IMF_EXPORT
     virtual void		copyValueFrom (const Attribute &other);
 
 

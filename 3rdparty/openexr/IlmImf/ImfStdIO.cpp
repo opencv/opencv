@@ -43,6 +43,11 @@
 #include <ImfStdIO.h>
 #include "Iex.h"
 #include <errno.h>
+#ifdef _MSC_VER
+# define VC_EXTRALEAN
+# include <Windows.h>
+# include <string.h>
+#endif
 
 using namespace std;
 #include "ImfNamespace.h"
@@ -50,6 +55,21 @@ using namespace std;
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 namespace {
+
+#ifdef _MSC_VER
+std::wstring WidenFilename (const char *filename)
+{
+    std::wstring ret;
+    int fnlen = static_cast<int>( strlen(filename) );
+    int len = MultiByteToWideChar(CP_UTF8, 0, filename, fnlen, NULL, 0 );
+    if (len > 0)
+    {
+        ret.resize(len);
+        MultiByteToWideChar(CP_UTF8, 0, filename, fnlen, &ret[0], len);
+    }
+    return ret;
+}
+#endif
 
 void
 clearError ()
@@ -95,7 +115,13 @@ checkError (ostream &os)
 
 StdIFStream::StdIFStream (const char fileName[]):
     OPENEXR_IMF_INTERNAL_NAMESPACE::IStream (fileName),
-    _is (new ifstream (fileName, ios_base::binary)),
+    _is (new ifstream (
+#ifdef _MSC_VER
+             WidenFilename(fileName).c_str(),
+#else
+             fileName,
+#endif
+             ios_base::binary)),
     _deleteStream (true)
 {
     if (!*_is)
@@ -158,7 +184,13 @@ StdIFStream::clear ()
 
 StdOFStream::StdOFStream (const char fileName[]):
     OPENEXR_IMF_INTERNAL_NAMESPACE::OStream (fileName),
-    _os (new ofstream (fileName, ios_base::binary)),
+    _os (new ofstream (
+#ifdef _MSC_VER
+             WidenFilename(fileName).c_str(),
+#else
+             fileName,
+#endif
+             ios_base::binary)),
     _deleteStream (true)
 {
     if (!*_os)
