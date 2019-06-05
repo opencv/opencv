@@ -1795,7 +1795,6 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
         auto borderValue = cv::Scalar();
 
         return { borderType, borderValue };
-        //return {cv::BORDER_CONSTANT, cv::gapi::own::Scalar{0, 0, 0}};
     }
 };
 
