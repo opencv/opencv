@@ -50,5 +50,4 @@ GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const std::vector
 } // namespace gapi
 } // namespace cv
 
-
 #endif // OPENCV_GAPI_RENDER_HPP
