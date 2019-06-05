@@ -32,6 +32,8 @@ endif()
 option(ENABLE_PIC "Generate position independent code (necessary for shared libraries)" TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
+set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
+
 # Following block can break build in case of cross-compiling
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect cross-compiling by the presence of CMAKE_TOOLCHAIN_FILE
