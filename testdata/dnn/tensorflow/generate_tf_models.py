@@ -779,6 +779,23 @@ bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch
                                    moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
 save(inp, bn, 'batch_norm3d', optimize=False)
 ################################################################################
+inp_node = 'activation_8/Elu'
+out_node = 'batch_normalization_1/cond/FusedBatchNorm'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('switch_identity_net.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 6, 64], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'switch_identity_in')
+    writeBlob(outputData, 'switch_identity_out')
+
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
 #     graph_def = tf.GraphDef()
