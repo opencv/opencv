@@ -285,7 +285,7 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
     #if CV_SIMD128
         const int vectorStep = 16;
 
-        char ff = 0x7f;
+        char ff = static_cast<char>(0xff);
         v_uint8x16 mask1(ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0);
         v_uint8x16 mask2(0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0);
         v_uint8x16 mask3(0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0);
@@ -498,7 +498,7 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
         v_uint16x8 l_1, r_1, l_2, r_2;
         v_uint16x8 l_3, r_3, l_4, r_4;
 
-        for (int w = 0;; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
+        for (int w = 0; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
         {
             v_uint8x16 g1, r1, g1_offset, r1_offset; // 1 line
             v_uint8x16 b2, g2, b2_offset, g2_offset; // 2 line
@@ -933,7 +933,7 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
             v = v_pack_u((v1 + v_setall_s16(257 << 2)) >> 3,
                          (v2 + v_setall_s16(257 << 2)) >> 3);
 
-            char ff = 0x7f;
+            char ff = static_cast<char>(0xff);
             v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
             v_uint8x16 uu = u & mask;
             v_uint8x16 vv = v & mask;
