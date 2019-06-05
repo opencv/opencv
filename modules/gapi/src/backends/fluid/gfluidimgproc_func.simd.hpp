@@ -280,18 +280,18 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
     const int hsv_shift = 12;
     const int hr = 180;
 
-    int w = 0, j = 0;
+    int j = 0;
 
     #if CV_SIMD128
         const int vectorStep = 16;
 
-        char ff = static_cast<char>(0xff);
+        char ff = 0x7f;
         v_uint8x16 mask1(ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0);
         v_uint8x16 mask2(0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0);
         v_uint8x16 mask3(0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0);
         v_uint8x16 mask4(0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff);
 
-        for (; w <= 3 * (width - vectorStep); w += 3 * vectorStep)
+        for (int w = 0; w <= 3 * (width - vectorStep); w += 3 * vectorStep)
         {
             v_uint8x16 r, g, b;
             v_load_deinterleave(in + w, r, g, b);
@@ -490,7 +490,7 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
 void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
 {
 
-    int w = 0, j = 0;
+    int j = 0;
 
     #if CV_SIMD128
         const int vectorStep = 16;
@@ -498,7 +498,7 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
         v_uint16x8 l_1, r_1, l_2, r_2;
         v_uint16x8 l_3, r_3, l_4, r_4;
 
-        for (; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
+        for (int w = 0;; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
         {
             v_uint8x16 g1, r1, g1_offset, r1_offset; // 1 line
             v_uint8x16 b2, g2, b2_offset, g2_offset; // 2 line
@@ -603,7 +603,7 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
 void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
 {
 
-    int w = 0, j = 0;
+    int j = 0;
 
     #if CV_SIMD128
         const int vectorStep = 16;
@@ -611,7 +611,7 @@ void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
         v_uint16x8 l_1, r_1, l_2, r_2;
         v_uint16x8 l_3, r_3, l_4, r_4;
 
-        for (; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
+        for (int w = 0; w <= width - 2 * vectorStep - 2; w += 2 * vectorStep) // -2 for offset vectors
         {
             v_uint8x16 b1, g1, b1_offset, g1_offset; // 1 line
             v_uint8x16 g2, r2, g2_offset, r2_offset; // 2 line
@@ -671,7 +671,6 @@ void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
         }
     #endif
 
-    // Anatoly's scalar code
     bool curr_blue = false;
     int t0, t1, t2;
 
@@ -934,7 +933,7 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
             v = v_pack_u((v1 + v_setall_s16(257 << 2)) >> 3,
                          (v2 + v_setall_s16(257 << 2)) >> 3);
 
-            char ff = static_cast<char>(0xff);
+            char ff = 0x7f;
             v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
             v_uint8x16 uu = u & mask;
             v_uint8x16 vv = v & mask;
