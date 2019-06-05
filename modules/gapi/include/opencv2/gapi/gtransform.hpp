@@ -28,7 +28,7 @@ struct GAPI_EXPORTS GTransform
     F pattern;
     F substitute;
 
-    explicit GTransform(const char *d, const F &p, const F &s) : description(d), pattern(p), substitute(s){};
+    GTransform(const char *d, const F &p, const F &s) : description(d), pattern(p), substitute(s){};
 };
 
 namespace detail
@@ -41,21 +41,21 @@ template <typename K, typename... Ins, typename Out>
 struct TransHelper<K, std::tuple<Ins...>, Out>
 {
     template <typename Callable, int... IIs, int... OIs>
-    static GArgs get_impl(Callable f, const GArgs &in_args, detail::Seq<IIs...>, detail::Seq<OIs...>)
+    static GArgs get_impl(Callable f, const GArgs &in_args, Seq<IIs...>, Seq<OIs...>)
     {
-        const auto r = detail::tuple_wrap_helper<Out>::get(f(in_args.at(IIs).template get<Ins>()...));
+        const auto r = tuple_wrap_helper<Out>::get(f(in_args.at(IIs).template get<Ins>()...));
         return GArgs{GArg(std::get<OIs>(r))...};
     }
 
     static GArgs get_pattern(const GArgs &in_args)
     {
-        return get_impl(K::pattern, in_args, typename detail::MkSeq<sizeof...(Ins)>::type(),
-                        typename detail::MkSeq<std::tuple_size<typename detail::tuple_wrap_helper<Out>::type>::value>::type());
+        return get_impl(K::pattern, in_args, typename MkSeq<sizeof...(Ins)>::type(),
+                        typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
     }
     static GArgs get_substitute(const GArgs &in_args)
     {
-        return get_impl(K::substitute, in_args, typename detail::MkSeq<sizeof...(Ins)>::type(),
-                        typename detail::MkSeq<std::tuple_size<typename detail::tuple_wrap_helper<Out>::type>::value>::type());
+        return get_impl(K::substitute, in_args, typename MkSeq<sizeof...(Ins)>::type(),
+                        typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
     }
 };
 } // namespace detail
@@ -64,7 +64,7 @@ template <typename, typename>
 class GTransformImpl;
 
 template <typename K, typename R, typename... Args>
-class GTransformImpl<K, std::function<R(Args...)>> : public detail::TransHelper<K, std::tuple<Args...>, R>,
+class GTransformImpl<K, std::function<R(Args...)>> : public cv::detail::TransHelper<K, std::tuple<Args...>, R>,
                                                      public cv::detail::TransformTag
 {
 public:

@@ -380,12 +380,20 @@ namespace gapi {
 
     public:
         /**
-         * @brief Returns total number of kernels and transformations
+         * @brief Returns total number of kernels
          * in the package (across all backends included)
          *
-         * @return a number of kernels and transformations in the package
+         * @return a number of kernels in the package
          */
         std::size_t size() const;
+
+        /**
+         * @brief Returns total number of transformations
+         * in the package (across all backends included)
+         *
+         * @return a number of transformations in the package
+         */
+        std::size_t transform_size() const;
 
         /**
          * @brief Test if a particular kernel _implementation_ KImpl is

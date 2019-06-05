@@ -47,7 +47,12 @@ void cv::gapi::GKernelPackage::removeAPI(const std::string &id)
 
 std::size_t cv::gapi::GKernelPackage::size() const
 {
-    return m_id_kernels.size() + m_transformations.size();
+    return m_id_kernels.size();
+}
+
+std::size_t cv::gapi::GKernelPackage::transform_size() const
+{
+    return m_transformations.size();
 }
 
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,

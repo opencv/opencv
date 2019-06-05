@@ -62,7 +62,7 @@ TEST(KernelPackageTransform, SingleOutInclude)
 {
     cv::gapi::GKernelPackage pkg;
     pkg.include<my_transform>();
-    EXPECT_EQ(1u, pkg.size());
+    EXPECT_EQ(1u, pkg.transform_size());
 }
 
 TEST(KernelPackageTransform, MultiOutInclude)
@@ -70,21 +70,21 @@ TEST(KernelPackageTransform, MultiOutInclude)
     cv::gapi::GKernelPackage pkg;
     pkg.include<my_transform>();
     pkg.include<another_transform>();
-    EXPECT_EQ(2u, pkg.size());
+    EXPECT_EQ(2u, pkg.transform_size());
 }
 
 TEST(KernelPackageTransform, MultiOutConstructor)
 {
     cv::gapi::GKernelPackage pkg = cv::gapi::kernels<my_transform,
                                                      another_transform>();
-    EXPECT_EQ(2u, pkg.size());
+    EXPECT_EQ(2u, pkg.transform_size());
 }
 
 TEST(KernelPackageTransform, CopyClass)
 {
     cv::gapi::GKernelPackage pkg = cv::gapi::kernels<copy_transform,
                                                      another_transform>();
-    EXPECT_EQ(2u, pkg.size());
+    EXPECT_EQ(2u, pkg.transform_size());
 }
 
 TEST(KernelPackageTransform, Combine)
@@ -94,7 +94,7 @@ TEST(KernelPackageTransform, Combine)
     cv::gapi::GKernelPackage pkg_comb =
         cv::gapi::combine(pkg1, pkg2);
 
-    EXPECT_EQ(2u, pkg_comb.size());
+    EXPECT_EQ(2u, pkg_comb.transform_size());
 }
 
 TEST(KernelPackageTransform, GArgsSize)

@@ -113,20 +113,6 @@ namespace detail
         using type = std::tuple<Objs...>;
         static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
     };
-
-    enum class PackageObjectTag {
-        KERNEL,
-        TRANSFORMATION
-    };
-
-    struct KernelTag
-    {
-    };
-
-    struct TransformTag
-    {
-    };
-
 } // namespace detail
 } // namespace cv
 
