@@ -1283,7 +1283,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
             levels1 /= 2;
         }
 
-        // ensure that pyramid has reqired padding
+        // ensure that pyramid has required padding
         if(levels1 > 0)
         {
             Size fullSize;
@@ -1311,7 +1311,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
             levels2 /= 2;
         }
 
-        // ensure that pyramid has reqired padding
+        // ensure that pyramid has required padding
         if(levels2 > 0)
         {
             Size fullSize;
