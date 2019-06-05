@@ -21,6 +21,11 @@ if(ANDROID AND ARMEABI_V7A AND NOT NEON)
   endforeach()
 endif()
 
+# FIX for quant.h - requires C99 for() loops
+ocv_check_flag_support(C "-std=c99" _varname "${CMAKE_C_FLAGS}")
+if(${_varname})
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+endif()
 
 
 # ----------------------------------------------------------------------------------

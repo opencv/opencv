@@ -1,7 +1,7 @@
 The Independent JPEG Group's JPEG software
 ==========================================
 
-README for release 9b of 17-Jan-2016
+README for release 9c of 14-Jan-2018
 ====================================
 
 This distribution contains the ninth public release of the Independent JPEG
@@ -115,7 +115,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2016, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2018, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this
@@ -246,8 +246,8 @@ ARCHIVE LOCATIONS
 The "official" archive site for this software is www.ijg.org.
 The most recent released version can always be found there in
 directory "files".  This particular version will be archived as
-http://www.ijg.org/files/jpegsrc.v9b.tar.gz, and in Windows-compatible
-"zip" archive format as http://www.ijg.org/files/jpegsr9b.zip.
+http://www.ijg.org/files/jpegsrc.v9c.tar.gz, and in Windows-compatible
+"zip" archive format as http://www.ijg.org/files/jpegsr9c.zip.
 
 The JPEG FAQ (Frequently Asked Questions) article is a source of some
 general information about JPEG.
@@ -293,8 +293,11 @@ communication about JPEG configuration in Sigma Photo Pro software.
 
 Thank to Andrew Finkenstadt for hosting the ijg.org site.
 
-Last but not least special thank to Thomas G. Lane for the original
-design and development of this singular software package.
+Thank to Thomas G. Lane for the original design and development of
+this singular software package.
+
+Thank to Lars Goehler, Andreas Heinecke, Sebastian Fuss, Yvonne Roebert,
+Andrej Werner, and Ulf-Dietrich Braumann for support and public relations.
 
 
 FILE FORMAT WARS

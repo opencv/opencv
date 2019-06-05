@@ -96,17 +96,17 @@ public:
         if (memoryLoad)
         {
             // Load files into a memory buffers
-            string dataModel;
-            ASSERT_TRUE(readFileInMemory(netPath, dataModel));
+            std::vector<char> dataModel;
+            readFileContent(netPath, dataModel);
 
-            string dataConfig;
+            std::vector<char> dataConfig;
             if (hasText)
             {
-                ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+                readFileContent(netConfig, dataConfig);
             }
 
-            net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
-                                        dataConfig.c_str(), dataConfig.size());
+            net = readNetFromTensorflow(dataModel.data(), dataModel.size(),
+                                        dataConfig.data(), dataConfig.size());
         }
         else
             net = readNetFromTensorflow(netPath, netConfig);
@@ -186,6 +186,7 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("unfused_batch_norm_no_gamma");
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
+    runTensorFlowNet("switch_identity");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)

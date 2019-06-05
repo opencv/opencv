@@ -13,8 +13,9 @@ ocv_add_dispatched_file(split SSE2 AVX2)
 ocv_add_dispatched_file(sum SSE2 AVX2)
 
 # dispatching for accuracy tests
-ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE4_2 AVX FP16 AVX2)
-ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2)
+ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE4_2 AVX FP16 AVX2 AVX512_SKX)
+ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2 AVX512_SKX)
+ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
 ocv_add_module(core
                OPTIONAL opencv_cudev

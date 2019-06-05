@@ -143,7 +143,7 @@ public:
             CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 4, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
             CV_Assert(coeffs.empty() || coeffs.size() == (size_t)nsrcs);
 
-            for( int i = 0; i > nsrcs; i++ )
+            for( int i = 0; i < nsrcs; i++ )
             {
                 CV_Assert(srcs[i].size == dst.size &&
                           srcs[i].type() == dst.type() &&
