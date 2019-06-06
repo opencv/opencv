@@ -579,7 +579,7 @@ CvNArrayIterator;
 #define CV_NO_CN_CHECK        2
 #define CV_NO_SIZE_CHECK      4
 
-/** initializes iterator that traverses through several arrays simulteneously
+/** initializes iterator that traverses through several arrays simultaneously
    (the function together with cvNextArraySlice is used for
     N-ari element-wise operations) */
 CVAPI(int) cvInitNArrayIterator( int count, CvArr** arrs,
