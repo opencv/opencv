@@ -20,7 +20,7 @@ public class KeyPointTest extends OpenCVTestCase {
     private float y;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         keyPoint = null;

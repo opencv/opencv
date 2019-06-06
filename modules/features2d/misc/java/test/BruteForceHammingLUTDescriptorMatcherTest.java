@@ -72,7 +72,8 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
         return img;
     }
 
-    public void setUp() throws Exception {
+    @Override
+    public void setUp() {
         super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMINGLUT);
         matSize = 100;

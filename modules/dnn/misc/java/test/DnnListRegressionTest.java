@@ -1,6 +1,7 @@
 package org.opencv.test.dnn;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 import java.io.File;
@@ -35,7 +36,7 @@ public class DnnListRegressionTest extends OpenCVTestCase {
     Net net;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         String envDnnTestDataPath = System.getenv(ENV_OPENCV_DNN_TEST_DATA_PATH);
@@ -46,13 +47,14 @@ public class DnnListRegressionTest extends OpenCVTestCase {
 
         String envTestDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
 
-        if(envTestDataPath == null) throw new Exception(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!");
+        assertNotNull(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!", envTestDataPath);
 
         File testDataPath = new File(envTestDataPath);
 
         File f = new File(testDataPath, "dnn/grace_hopper_227.png");
         sourceImageFile = f.toString();
-        if(!f.exists()) throw new Exception("Test image is missing: " + sourceImageFile);
+        
+        assertTrue("Test image is missing: " + sourceImageFile, f.exists());
 
         net = Dnn.readNetFromTensorflow(modelFileName);
 

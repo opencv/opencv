@@ -58,7 +58,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         matSize = 100;

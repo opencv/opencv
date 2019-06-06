@@ -16,7 +16,7 @@ public class Point3Test extends OpenCVTestCase {
     private Point3 p2;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         p1 = new Point3(2, 2, 2);

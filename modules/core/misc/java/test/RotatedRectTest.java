@@ -23,7 +23,7 @@ public class RotatedRectTest extends OpenCVTestCase {
     private Size size;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         center = new Point(matSize / 2, matSize / 2);

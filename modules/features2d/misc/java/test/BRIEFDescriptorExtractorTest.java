@@ -31,7 +31,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
         matSize = 100;

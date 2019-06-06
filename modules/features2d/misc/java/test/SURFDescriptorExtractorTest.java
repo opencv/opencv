@@ -31,7 +31,7 @@ public class SURFDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         Class<?>[] cParams = {double.class, int.class, int.class, boolean.class, boolean.class};

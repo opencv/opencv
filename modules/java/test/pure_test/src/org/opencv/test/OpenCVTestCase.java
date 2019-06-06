@@ -104,7 +104,7 @@ public class OpenCVTestCase {
     protected Mat v2;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         try {
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         } catch (SecurityException e) {

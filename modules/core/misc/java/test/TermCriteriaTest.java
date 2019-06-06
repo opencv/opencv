@@ -15,7 +15,7 @@ public class TermCriteriaTest extends OpenCVTestCase {
     private TermCriteria tc2;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         tc1 = new TermCriteria();

@@ -33,7 +33,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         extractor = createClassInstance(XFEATURES2D+"SIFT", DEFAULT_FACTORY, null, null);
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);

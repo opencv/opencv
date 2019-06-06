@@ -164,7 +164,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matSize = 100;

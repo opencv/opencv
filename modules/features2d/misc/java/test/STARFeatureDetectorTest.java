@@ -49,7 +49,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         detector = createClassInstance(XFEATURES2D+"StarDetector", DEFAULT_FACTORY, null, null);
         matSize = 200;

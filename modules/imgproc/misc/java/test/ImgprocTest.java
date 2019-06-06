@@ -35,7 +35,7 @@ public class ImgprocTest extends OpenCVTestCase {
     Size size;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         imgprocSz = 2;

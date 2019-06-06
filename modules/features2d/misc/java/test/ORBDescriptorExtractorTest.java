@@ -38,7 +38,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         extractor = ORB.create();
         matSize = 100;

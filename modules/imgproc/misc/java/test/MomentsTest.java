@@ -16,7 +16,7 @@ public class MomentsTest extends OpenCVTestCase {
     Mat data;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         data = new Mat(3,3, CvType.CV_8UC1, new Scalar(1));

@@ -16,7 +16,7 @@ public class RangeTest extends OpenCVTestCase {
     Range range;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         range = new Range();

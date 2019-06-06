@@ -31,7 +31,7 @@ public class VideoTest extends OpenCVTestCase {
     private int w;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         shift1 = 10;

@@ -15,7 +15,7 @@ public class ScalarTest extends OpenCVTestCase {
     private Scalar s2;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         s1 = new Scalar(1.0);

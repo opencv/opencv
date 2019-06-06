@@ -87,7 +87,8 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         return cross;
     }
 
-    public void setUp() throws Exception {
+    @Override
+    public void setUp() {
         super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_L1);
         matSize = 100;

@@ -17,7 +17,7 @@ public class SizeTest extends OpenCVTestCase {
     Size sz2;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         sz1 = new Size(10.0, 10.0);

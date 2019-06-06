@@ -17,7 +17,7 @@ public class RectTest extends OpenCVTestCase {
     private Rect rect;
 
     @Override
-    public void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
 
         r = new Rect();
