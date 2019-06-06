@@ -50,9 +50,9 @@ std::size_t cv::gapi::GKernelPackage::size() const
     return m_id_kernels.size();
 }
 
-std::size_t cv::gapi::GKernelPackage::transform_size() const
+const std::vector<cv::GTransform> &cv::gapi::GKernelPackage::get_transformations() const
 {
-    return m_transformations.size();
+    return m_transformations;
 }
 
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,

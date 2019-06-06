@@ -388,12 +388,11 @@ namespace gapi {
         std::size_t size() const;
 
         /**
-         * @brief Returns total number of transformations
-         * in the package (across all backends included)
+         * @brief Returns vector of transformations included in the package
          *
-         * @return a number of transformations in the package
+         * @return vector of transformations included in the package
          */
-        std::size_t transform_size() const;
+        const std::vector<GTransform> &get_transformations() const;
 
         /**
          * @brief Test if a particular kernel _implementation_ KImpl is

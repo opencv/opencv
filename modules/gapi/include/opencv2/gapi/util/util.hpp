@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_UTIL_HPP
 #define OPENCV_GAPI_UTIL_HPP
 
-#include <utility> // std::tuple
+#include <tuple>
 
 // \cond HIDDEN_SYMBOLS
 // This header file contains some generic utility functions which are
