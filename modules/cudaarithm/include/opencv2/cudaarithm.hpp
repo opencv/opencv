@@ -505,9 +505,9 @@ CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
 @param src Source image. CV_8UC1 , CV_8UC4 , CV_32SC1 , and CV_32FC1 types are supported.
 @param dst Destination image with the same type as src. The size is
 Size(src.cols+left+right, src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
+@param top Number of top pixels
+@param bottom Number of bottom pixels
+@param left Number of left pixels
 @param right Number of pixels in each direction from the source image rectangle to extrapolate.
 For example: top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs to be built.
 @param borderType Border type. See borderInterpolate for details. BORDER_REFLECT101 ,

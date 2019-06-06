@@ -19,8 +19,6 @@ if(DOXYGEN_FOUND)
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
 
-  set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
-
   # gathering headers
   set(paths_include)
   set(paths_doc)

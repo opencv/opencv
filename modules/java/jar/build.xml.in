@@ -29,6 +29,9 @@
   </target>
 
   <target name="javadoc">
+    <copy file="@OpenCV_SOURCE_DIR@/doc/mymath.js"
+      todir="@OpenCV_BINARY_DIR@/doc/doxygen/html/javadoc" />
+
     <javadoc
       packagenames="org.opencv.*"
       sourcepath="java"
@@ -36,7 +39,23 @@
       Windowtitle="OpenCV @OPENCV_VERSION_PLAIN@ Java documentation"
       Doctitle="OpenCV Java documentation (@OPENCV_VERSION@)"
       bottom="Generated on ${timestamp} / OpenCV @OPENCV_VCSVERSION@"
-      />
+      failonerror="true"
+      encoding="UTF-8" charset="UTF-8" docencoding="UTF-8"
+      link="https://docs.oracle.com/javase/6/docs/api/"
+      additionalparam="--allow-script-in-comments"
+      >
+      <Header>
+         <![CDATA[
+            <script>
+              var url = window.location.href;
+              url = url.substring(0, url.lastIndexOf('/', url.indexOf('.html'))) + '/../../../mymath.js';
+              var script = document.createElement('script');
+              script.src = '@OPENCV_MATHJAX_RELPATH@/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
+              document.getElementsByTagName('head')[0].appendChild(script);
+            </script>
+         ]]>
+      </Header>
+    </javadoc>
   </target>
 
 </project>
