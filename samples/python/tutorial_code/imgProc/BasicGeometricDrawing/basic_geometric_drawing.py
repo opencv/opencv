@@ -6,7 +6,7 @@ W = 400
 def my_ellipse(img, angle):
     thickness = 2
     line_type = 8
-    
+
     cv.ellipse(img,
                 (W // 2, W // 2),
                 (W // 4, W // 16),
@@ -21,7 +21,7 @@ def my_ellipse(img, angle):
 def my_filled_circle(img, center):
     thickness = -1
     line_type = 8
-    
+
     cv.circle(img,
                center,
                W // 32,
@@ -32,7 +32,7 @@ def my_filled_circle(img, center):
 ## [my_polygon]
 def my_polygon(img):
     line_type = 8
-    
+
     # Create some points
     ppt = np.array([[W / 4, 7 * W / 8], [3 * W / 4, 7 * W / 8],
                     [3 * W / 4, 13 * W / 16], [11 * W / 16, 13 * W / 16],
