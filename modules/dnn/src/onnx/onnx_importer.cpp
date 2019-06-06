@@ -412,35 +412,35 @@ void ONNXImporter::populateNet(Net dstNet)
                 }
             }
 
+            int axis = 0;
             if (layerParams.has("axes")) {
                 DictValue axes = layerParams.get("axes");
                 for (int i = 1; i < axes.size(); ++i) {
                     CV_Assert(axes.get<int>(i - 1) == axes.get<int>(i) - 1);
                 }
-                layerParams.set("axis", axes.get<int>(0));
-            } else
-                layerParams.set("axis", 0);
-
-            int axis = layerParams.get<int>("axis");
-            if (axis > 0)
-            {
-                DictValue starts = layerParams.get("starts");
-                DictValue ends = layerParams.get("ends");
-                CV_Assert(starts.size() == ends.size());
-                std::vector<int> begin(axis, 0);
-                std::vector<int> end(axis, -1);
-
-                for (int i = 0; i < starts.size(); ++i) {
-                    begin.push_back(starts.get<int>(i));
-                    int finish = ends.get<int>(i);
-                    end.push_back((finish < 0) ? --finish : finish);
-                }
-                layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
-                layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
-            } else {
-                replaceLayerParam(layerParams, "starts", "begin");
-                replaceLayerParam(layerParams, "ends", "end");
+                axis = axes.get<int>(0);
             }
+            layerParams.set("axis", axis);
+
+            DictValue starts = layerParams.get("starts");
+            DictValue ends = layerParams.get("ends");
+            CV_Assert(starts.size() == ends.size());
+
+            std::vector<int> begin;
+            std::vector<int> end;
+            if (axis > 0) {
+                begin.resize(axis, 0);
+                end.resize(axis, -1);
+            }
+
+            for (int i = 0; i < starts.size(); ++i)
+            {
+                begin.push_back(starts.get<int>(i));
+                int finish = ends.get<int>(i);
+                end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
+            }
+            layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
+            layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
         }
         else if (layer_type == "Add" || layer_type == "Sum")
         {
