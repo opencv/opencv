@@ -30,12 +30,13 @@
 
   <target name="javadoc">
     <copy file="@OpenCV_SOURCE_DIR@/doc/mymath.js"
-      todir="@OpenCV_BINARY_DIR@/doc/doxygen/html/javadoc" />
+      todir="@OPENCV_JAVADOC_DESTINATION@" />
 
+    <!-- synchronize with platforms\android\build_sdk.py -->
     <javadoc
       packagenames="org.opencv.*"
       sourcepath="java"
-      destdir="@OpenCV_BINARY_DIR@/doc/doxygen/html/javadoc"
+      destdir="@OPENCV_JAVADOC_DESTINATION@"
       Windowtitle="OpenCV @OPENCV_VERSION_PLAIN@ Java documentation"
       Doctitle="OpenCV Java documentation (@OPENCV_VERSION@)"
       bottom="Generated on ${timestamp} / OpenCV @OPENCV_VCSVERSION@"
@@ -48,7 +49,8 @@
          <![CDATA[
             <script>
               var url = window.location.href;
-              url = url.substring(0, url.lastIndexOf('/', url.indexOf('.html'))) + '/../../../mymath.js';
+              var pos = url.lastIndexOf('/javadoc/');
+              url = pos >= 0 ? (url.substring(0, pos) + '/javadoc/mymath.js') : (window.location.origin + '/mymath.js');
               var script = document.createElement('script');
               script.src = '@OPENCV_MATHJAX_RELPATH@/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
               document.getElementsByTagName('head')[0].appendChild(script);
