@@ -3,13 +3,12 @@
 package org.opencv.test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -23,6 +22,7 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.runner.RunWith;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.DMatch;
@@ -36,6 +36,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 
+@RunWith(OpenCVJUnitRunner.class)
 public class OpenCVTestCase {
 
     protected static final String XFEATURES2D = "org.opencv.xfeatures2d.";
