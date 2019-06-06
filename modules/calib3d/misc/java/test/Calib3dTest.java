@@ -1,5 +1,11 @@
 package org.opencv.test.calib3d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.junit.Test;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -9,23 +15,31 @@ import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.imgproc.Imgproc;
 
 public class Calib3dTest extends OpenCVTestCase {
 
+    @Test
+    @NotYetImplemented
     public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMatInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalibrationMatrixValues() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testComposeRTMatMatMatMatMatMat() {
         Mat rvec1 = new Mat(3, 1, CvType.CV_32F);
         rvec1.put(0, 0, 0.5302828, 0.19925919, 0.40105945);
@@ -50,34 +64,50 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(outTvec, tvec3, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testComposeRTMatMatMatMatMatMatMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
         // Mat dr3dr1;
@@ -115,50 +145,73 @@ public class Calib3dTest extends OpenCVTestCase {
         // 0, 0, 1]
     }
 
+    @Test
+    @NotYetImplemented
     public void testConvertPointsFromHomogeneous() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testConvertPointsToHomogeneous() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDecomposeProjectionMatrixMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDecomposeProjectionMatrixMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDecomposeProjectionMatrixMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDecomposeProjectionMatrixMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDecomposeProjectionMatrixMatMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawChessboardCorners() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testEstimateAffine3DMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testEstimateAffine3DMatMatMatMatDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testEstimateAffine3DMatMatMatMatDoubleDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testFilterSpecklesMatDoubleIntDouble() {
         gray_16s_1024.copyTo(dst);
         Point center = new Point(gray_16s_1024.rows() / 2., gray_16s_1024.cols() / 2.);
@@ -169,10 +222,13 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(gray_16s_1024, dst);
     }
 
+    @Test
+    @NotYetImplemented
     public void testFilterSpecklesMatDoubleIntDoubleMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testFindChessboardCornersMatSizeMat() {
         Size patternSize = new Size(9, 6);
         MatOfPoint2f corners = new MatOfPoint2f();
@@ -180,6 +236,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertFalse(corners.empty());
     }
 
+    @Test
     public void testFindChessboardCornersMatSizeMatInt() {
         Size patternSize = new Size(9, 6);
         MatOfPoint2f corners = new MatOfPoint2f();
@@ -188,6 +245,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertFalse(corners.empty());
     }
 
+    @Test
     public void testFind4QuadCornerSubpix() {
         Size patternSize = new Size(9, 6);
         MatOfPoint2f corners = new MatOfPoint2f();
@@ -197,6 +255,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertFalse(corners.empty());
     }
 
+    @Test
     public void testFindCirclesGridMatSizeMat() {
         int size = 300;
         Mat img = new Mat(size, size, CvType.CV_8U);
@@ -218,6 +277,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
+    @Test
     public void testFindCirclesGridMatSizeMatInt() {
         int size = 300;
         Mat img = new Mat(size, size, CvType.CV_8U);
@@ -244,6 +304,8 @@ public class Calib3dTest extends OpenCVTestCase {
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindFundamentalMatListOfPointListOfPoint() {
         fail("Not yet implemented");
 /*
@@ -266,22 +328,31 @@ public class Calib3dTest extends OpenCVTestCase {
 */
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindFundamentalMatListOfPointListOfPointInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindFundamentalMatListOfPointListOfPointIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindFundamentalMatListOfPointListOfPointIntDoubleDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindFundamentalMatListOfPointListOfPointIntDoubleDoubleMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testFindHomographyListOfPointListOfPoint() {
         final int NUM = 20;
 
@@ -305,66 +376,97 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, hmg, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindHomographyListOfPointListOfPointInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindHomographyListOfPointListOfPointIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFindHomographyListOfPointListOfPointIntDoubleMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetOptimalNewCameraMatrixMatMatSizeDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSize() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSizeRect() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetOptimalNewCameraMatrixMatMatSizeDoubleSizeRectBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetValidDisparityROI() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitCameraMatrix2DListOfMatListOfMatSize() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitCameraMatrix2DListOfMatListOfMatSizeDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMatMulDeriv() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testProjectPointsMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testProjectPointsMatMatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testProjectPointsMatMatMatMatMatMatMatDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRectify3Collinear() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testReprojectImageTo3DMatMatMat() {
         Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
         transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -399,6 +501,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, _3dPoints, EPS);
     }
 
+    @Test
     public void testReprojectImageTo3DMatMatMatBoolean() {
         Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
         transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -435,6 +538,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, _3dPoints, EPS);
     }
 
+    @Test
     public void testReprojectImageTo3DMatMatMatBooleanInt() {
         Mat transformMatrix = new Mat(4, 4, CvType.CV_64F);
         transformMatrix.put(0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -469,6 +573,7 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, _3dPoints, EPS);
     }
 
+    @Test
     public void testRodriguesMatMat() {
         Mat r = new Mat(3, 1, CvType.CV_32F);
         Mat R = new Mat(3, 3, CvType.CV_32F);
@@ -487,26 +592,37 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(r, r2, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testRodriguesMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRQDecomp3x3MatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRQDecomp3x3MatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRQDecomp3x3MatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRQDecomp3x3MatMatMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMat() {
         Mat intrinsics = Mat.eye(3, 3, CvType.CV_64F);
         intrinsics.put(0, 0, 400);
@@ -542,64 +658,92 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth_tvec, tvec, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloatInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSolvePnPRansacListOfPoint3ListOfPointMatMatMatMatBooleanIntFloatIntMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMatTermCriteria() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testStereoCalibrateListOfMatListOfMatListOfMatMatMatMatMatSizeMatMatMatMatTermCriteriaInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testStereoRectifyUncalibratedMatMatMatSizeMatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testStereoRectifyUncalibratedMatMatMatSizeMatMatDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testValidateDisparityMatMatIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testValidateDisparityMatMatIntIntInt() {
         fail("Not yet implemented");
     }
 
-    public void testComputeCorrespondEpilines()
-    {
+    @Test
+    public void testComputeCorrespondEpilines() {
         Mat fundamental = new Mat(3, 3, CvType.CV_64F);
         fundamental.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
         MatOfPoint2f left = new MatOfPoint2f();
@@ -612,8 +756,8 @@ public class Calib3dTest extends OpenCVTestCase {
         assertMatEqual(truth, lines, EPS);
     }
 
-    public void testConstants()
-    {
+    @Test
+    public void testConstants() {
         // calib3d.hpp: some constants have conflict with constants from 'fisheye' namespace
         assertEquals(1, Calib3d.CALIB_USE_INTRINSIC_GUESS);
         assertEquals(2, Calib3d.CALIB_FIX_ASPECT_RATIO);

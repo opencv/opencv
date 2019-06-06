@@ -1,17 +1,24 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -51,7 +58,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
     }
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
         detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         matSize = 100;
@@ -63,10 +70,12 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
             };
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(detector);
     }
 
+    @Test
     public void testDetectListOfMatListOfListOfKeyPoint() {
 
         setProperty(detector, "hessianThreshold", "double", 8000);
@@ -92,10 +101,13 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         }
     }
 
+    @Test
+    @NotYetImplemented
     public void testDetectListOfMatListOfListOfKeyPointListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testDetectMatListOfKeyPoint() {
 
         setProperty(detector, "hessianThreshold", "double", 8000);
@@ -113,6 +125,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth), lkp, EPS);
     }
 
+    @Test
     public void testDetectMatListOfKeyPointMat() {
 
         setProperty(detector, "hessianThreshold", "double", 8000);
@@ -131,11 +144,14 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth[1], truth[2]), lkp, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testEmpty() {
 //        assertFalse(detector.empty());
         fail("Not yet implemented");
     }
 
+    @Test
     public void testRead() {
         Mat cross = getTestImg();
 
@@ -152,6 +168,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
@@ -162,6 +179,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertEquals(truth, readFile(filename));
     }
 
+    @Test
     public void testWriteYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 

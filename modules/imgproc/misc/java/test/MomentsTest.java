@@ -1,7 +1,10 @@
 package org.opencv.test.imgproc;
 
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.core.Core;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
 import org.opencv.core.Scalar;
@@ -13,13 +16,14 @@ public class MomentsTest extends OpenCVTestCase {
     Mat data;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         data = new Mat(3,3, CvType.CV_8UC1, new Scalar(1));
         data.row(1).setTo(new Scalar(5));
     }
 
+    @Test
     public void testAll() {
         Moments res = Imgproc.moments(data);
         assertEquals(res.m00, 21.0, EPS);

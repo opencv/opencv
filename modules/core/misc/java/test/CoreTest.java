@@ -1,40 +1,46 @@
 package org.opencv.test.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.core.Core;
 import org.opencv.core.Core.MinMaxLocResult;
-import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
-import org.opencv.core.Rect;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.imgproc.Imgproc;
 
 public class CoreTest extends OpenCVTestCase {
 
+    @Test
     public void testAbsdiff() {
         Core.absdiff(gray128, gray255, dst);
 
         assertMatEqual(gray127, dst);
     }
 
+    @Test
     public void testAddMatMatMat() {
         Core.add(gray128, gray128, dst);
 
         assertMatEqual(gray255, dst);
     }
 
+    @Test
     public void testAddMatMatMatMatInt() {
         Core.add(gray0, gray1, dst, gray1, CvType.CV_32F);
 
@@ -42,12 +48,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray1_32f, dst, EPS);
     }
 
+    @Test
     public void testAddWeightedMatDoubleMatDoubleDoubleMat() {
         Core.addWeighted(gray1, 120.0, gray127, 1.0, 10.0, dst);
 
         assertMatEqual(gray255, dst);
     }
 
+    @Test
     public void testAddWeightedMatDoubleMatDoubleDoubleMatInt() {
         Core.addWeighted(gray1, 126.0, gray127, 1.0, 2.0, dst, CvType.CV_32F);
 
@@ -55,54 +63,63 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray255_32f, dst, EPS);
     }
 
+    @Test
     public void testBitwise_andMatMatMat() {
         Core.bitwise_and(gray127, gray3, dst);
 
         assertMatEqual(gray3, dst);
     }
 
+    @Test
     public void testBitwise_andMatMatMatMat() {
         Core.bitwise_and(gray3, gray1, dst, gray255);
 
         assertMatEqual(gray1, dst);
     }
 
+    @Test
     public void testBitwise_notMatMat() {
         Core.bitwise_not(gray255, dst);
 
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testBitwise_notMatMatMat() {
         Core.bitwise_not(gray0, dst, gray1);
 
         assertMatEqual(gray255, dst);
     }
 
+    @Test
     public void testBitwise_orMatMatMat() {
         Core.bitwise_or(gray1, gray2, dst);
 
         assertMatEqual(gray3, dst);
     }
 
+    @Test
     public void testBitwise_orMatMatMatMat() {
         Core.bitwise_or(gray127, gray3, dst, gray255);
 
         assertMatEqual(gray127, dst);
     }
 
+    @Test
     public void testBitwise_xorMatMatMat() {
         Core.bitwise_xor(gray3, gray2, dst);
 
         assertMatEqual(gray1, dst);
     }
 
+    @Test
     public void testBitwise_xorMatMatMatMat() {
         Core.bitwise_or(gray127, gray128, dst, gray255);
 
         assertMatEqual(gray255, dst);
     }
 
+    @Test
     public void testCalcCovarMatrixMatMatMatInt() {
         Mat covar = new Mat(matSize, matSize, CvType.CV_64FC1);
         Mat mean = new Mat(1, matSize, CvType.CV_64FC1);
@@ -113,6 +130,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray0_64f_1d, mean, EPS);
     }
 
+    @Test
     public void testCalcCovarMatrixMatMatMatIntInt() {
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
         Mat mean = new Mat(1, matSize, CvType.CV_32F);
@@ -123,6 +141,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray0_32f_1d, mean, EPS);
     }
 
+    @Test
     public void testCartToPolarMatMatMatMat() {
         Mat x = new Mat(1, 3, CvType.CV_32F) {
             {
@@ -152,6 +171,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected_angle, dst_angle, EPS);
     }
 
+    @Test
     public void testCartToPolarMatMatMatMatBoolean() {
         Mat x = new Mat(1, 3, CvType.CV_32F) {
             {
@@ -182,6 +202,7 @@ public class CoreTest extends OpenCVTestCase {
     }
 
 
+    @Test
     public void testCheckRangeMat() {
         Mat outOfRange = new Mat(2, 2, CvType.CV_64F);
         outOfRange.put(0, 0, Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0);
@@ -192,6 +213,7 @@ public class CoreTest extends OpenCVTestCase {
     }
 
 
+    @Test
     public void testCheckRangeMatBooleanPointDoubleDouble() {
         Mat inRange = new Mat(2, 3, CvType.CV_64F) {
             {
@@ -210,6 +232,7 @@ public class CoreTest extends OpenCVTestCase {
         assertFalse(Core.checkRange(outOfRange, true, 5, 100));
     }
 
+    @Test
     public void testCompare() {
         Core.compare(gray0, gray0, dst, Core.CMP_EQ);
 
@@ -227,12 +250,14 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(expected, Core.countNonZero(dst));
     }
 
+    @Test
     public void testCompleteSymmMat() {
         Core.completeSymm(grayRnd_32f);
 
         assertMatEqual(grayRnd_32f, grayRnd_32f.t(), EPS);
     }
 
+    @Test
     public void testCompleteSymmMatBoolean() {
         Mat grayRnd_32f2 = grayRnd_32f.clone();
 
@@ -243,6 +268,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatNotEqual(grayRnd_32f2, grayRnd_32f, EPS);
     }
 
+    @Test
     public void testConvertScaleAbsMatMat() {
         Core.convertScaleAbs(gray0, dst);
 
@@ -253,12 +279,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray255, dst, EPS);
     }
 
+    @Test
     public void testConvertScaleAbsMatMatDoubleDouble() {
         Core.convertScaleAbs(gray_16u_256, dst, 2, -513);
 
         assertMatEqual(gray1, dst);
     }
 
+    @Test
     public void testCountNonZero() {
         assertEquals(0, Core.countNonZero(gray0));
 
@@ -268,12 +296,14 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(2, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testCubeRoot() {
         float res = Core.cubeRoot(-27.0f);
 
-        assertEquals(-3.0f, res);
+        assertEquals(-3.0f, res, 0);
     }
 
+    @Test
     public void testDctMatMat() {
         Mat in = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -295,6 +325,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst2, EPS);
     }
 
+    @Test
     public void testDctMatMatInt() {
         Mat in = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -316,6 +347,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst2, EPS);
     }
 
+    @Test
     public void testDeterminant() {
         Mat mat = new Mat(2, 2, CvType.CV_32F) {
             {
@@ -328,15 +360,17 @@ public class CoreTest extends OpenCVTestCase {
 
         double det = Core.determinant(mat);
 
-        assertEquals(8.0, det);
+        assertEquals(8.0, det, 0);
     }
 
+    @Test
     public void testDftMatMat() {
         Core.dft(gray0_32f_1d, dst);
 
         assertMatEqual(gray0_32f_1d, dst, EPS);
     }
 
+    @Test
     public void testDftMatMatIntInt() {
         Mat src1 = new Mat(2, 4, CvType.CV_32F) {
             {
@@ -359,6 +393,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(dst2, dst1, EPS);
     }
 
+    @Test
     public void testDivideDoubleMatMat() {
         Core.divide(4.0, gray2, dst);
 
@@ -369,30 +404,35 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testDivideDoubleMatMatInt() {
         Core.divide(9.0, gray3, dst, CvType.CV_32F);
 
         assertMatEqual(gray3_32f, dst, EPS);
     }
 
+    @Test
     public void testDivideMatMatMat() {
         Core.divide(gray9, gray3, dst);
 
         assertMatEqual(gray3, dst);
     }
 
+    @Test
     public void testDivideMatMatMatDouble() {
         Core.divide(gray1, gray2, dst, 6.0);
 
         assertMatEqual(gray3, dst);
     }
 
+    @Test
     public void testDivideMatMatMatDoubleInt() {
         Core.divide(gray1, gray2, dst, 6.0, CvType.CV_32F);
 
         assertMatEqual(gray3_32f, dst, EPS);
     }
 
+    @Test
     public void testEigen() {
         Mat src = new Mat(3, 3, CvType.CV_32FC1) {
             {
@@ -426,18 +466,21 @@ public class CoreTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testExp() {
         Core.exp(gray0_32f, dst);
 
         assertMatEqual(gray1_32f, dst, EPS);
     }
 
+    @Test
     public void testExtractChannel() {
         Core.extractChannel(rgba128, dst, 0);
 
         assertMatEqual(gray128, dst);
     }
 
+    @Test
     public void testFastAtan2() {
         double eps = 0.3;
 
@@ -450,6 +493,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(Math.atan2(80, 20) * 180 / Math.PI, res2, eps);
     }
 
+    @Test
     public void testFillConvexPolyMatListOfPointScalar() {
         MatOfPoint polyline = new MatOfPoint(new Point[]{new Point(1, 1), new Point(5, 0), new Point(6, 8), new Point(0, 9)});
 
@@ -459,6 +503,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(gray0.total() > Core.countNonZero(gray0));
     }
 
+    @Test
     public void testFillConvexPolyMatListOfPointScalarIntInt() {
         MatOfPoint polyline1 = new MatOfPoint(new Point(2, 1), new Point(5, 1), new Point(5, 7), new Point(2, 7));
         MatOfPoint polyline2 = new MatOfPoint(new Point(4, 2), new Point(10, 2), new Point(10, 14), new Point(4, 14));
@@ -476,6 +521,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals("see http://code.opencv.org/issues/1284", 0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testFillPolyMatListOfListOfPointScalar() {
         int matSize = 10;
         Mat gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
@@ -504,6 +550,7 @@ public class CoreTest extends OpenCVTestCase {
         }, gray0);
     }
 
+    @Test
     public void testFillPolyMatListOfListOfPointScalarIntIntPoint() {
         MatOfPoint polyline1 = new MatOfPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
         MatOfPoint polyline2 = new MatOfPoint(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
@@ -523,6 +570,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testFlip() {
         Mat src = new Mat(2, 2, CvType.CV_32F) {
             {
@@ -558,6 +606,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(dst_f2, dst2, EPS);
     }
 
+    @Test
     public void testGemmMatMatDoubleMatDoubleMat() {
         Mat m1 = new Mat(2, 2, CvType.CV_32FC1) {
             {
@@ -589,6 +638,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testGemmMatMatDoubleMatDoubleMatInt() {
         Mat m1 = new Mat(2, 2, CvType.CV_32FC1) {
             {
@@ -620,6 +670,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testGetCPUTickCount() {
         long cpuCountStart = 0, actualTickCount;
 
@@ -631,18 +682,21 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(expectedTickCount > 0);
     }
 
+    @Test
     public void testGetNumberOfCPUs() {
         int cpus = Core.getNumberOfCPUs();
 
         assertTrue(Runtime.getRuntime().availableProcessors() <= cpus);
     }
 
+    @Test
     public void testGetOptimalDFTSize() {
         assertEquals(1, Core.getOptimalDFTSize(0));
         assertEquals(135, Core.getOptimalDFTSize(133));
         assertEquals(15, Core.getOptimalDFTSize(13));
     }
 
+    @Test
     public void testGetTickCount() {
         long startCount, endCount, count;
 
@@ -654,15 +708,17 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(count > 0);
     }
 
+    @Test
     public void testGetTickFrequency() {
         double freq1 = Core.getTickFrequency();
         Core.divide(gray2, gray1, dst);
         double freq2 = Core.getTickFrequency();
 
         assertTrue(0 < freq1);
-        assertEquals(freq1, freq2);
+        assertEquals(freq1, freq2, 0);
     }
 
+    @Test
     public void testHconcat() {
         List<Mat> mats = Arrays.asList(Mat.eye(3, 3, CvType.CV_8U), Mat.zeros(3, 2, CvType.CV_8U));
 
@@ -671,6 +727,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(Mat.eye(3, 5, CvType.CV_8U), dst);
     }
 
+    @Test
     public void testIdctMatMat() {
         Mat in = new Mat(1, 8, CvType.CV_32F) {
             {
@@ -688,6 +745,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testIdctMatMatInt() {
         Mat in = new Mat(2, 8, CvType.CV_32F) {
             {
@@ -707,6 +765,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testIdftMatMat() {
         Mat in = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -724,6 +783,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testIdftMatMatIntInt() {
         Mat in = new Mat(2, 4, CvType.CV_32F) {
             {
@@ -744,6 +804,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testInRange() {
         gray0.put(1, 1, 100, 150, 200);
 
@@ -758,6 +819,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(1, Core.countNonZero(dst));
     }
 
+    @Test
     public void testInsertChannel() {
         Core.insertChannel(gray0, rgba128, 0);
         Core.insertChannel(gray0, rgba128, 1);
@@ -767,6 +829,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(rgba0, rgba128);
     }
 
+    @Test
     public void testInvertMatMat() {
         Mat src = new Mat(2, 2, CvType.CV_32F) {
             {
@@ -790,6 +853,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testInvertMatMatInt() {
         Mat src = Mat.eye(3, 3, CvType.CV_32FC1);
         src.put(0, 2, 1);
@@ -802,6 +866,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(0.3819660544395447, cond, EPS);
     }
 
+    @Test
     public void testKmeansMatIntMatTermCriteriaIntInt() {
         Mat data = new Mat(4, 5, CvType.CV_32FC1) {
             {
@@ -827,6 +892,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected_labels, labels);
     }
 
+    @Test
     public void testKmeansMatIntMatTermCriteriaIntIntMat() {
         Mat data = new Mat(4, 5, CvType.CV_32FC1) {
             {
@@ -860,6 +926,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected_centers, centers, EPS);
     }
 
+    @Test
     public void testLineMatPointPointScalar() {
         int nPoints = Math.min(gray0.cols(), gray0.rows());
         Point point1 = new Point(0, 0);
@@ -871,6 +938,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
 
+    @Test
     public void testLineMatPointPointScalarInt() {
         int nPoints = Math.min(gray0.cols(), gray0.rows());
         Point point1 = new Point(0, 0);
@@ -881,6 +949,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(nPoints == Core.countNonZero(gray0));
     }
 
+    @Test
     public void testLineMatPointPointScalarIntIntInt() {
         int nPoints = Math.min(gray0.cols(), gray0.rows());
         Point point1 = new Point(3, 4);
@@ -897,6 +966,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testLog() {
         Mat in = new Mat(1, 4, CvType.CV_32FC1) {
             {
@@ -914,6 +984,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testLUTMatMatMat() {
         Mat lut = new Mat(1, 256, CvType.CV_8UC1);
         lut.setTo(new Scalar(0));
@@ -929,6 +1000,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray255, dst);
     }
 
+    @Test
     public void testMagnitude() {
         Mat x = new Mat(1, 4, CvType.CV_32F);
         Mat y = new Mat(1, 4, CvType.CV_32F);
@@ -946,6 +1018,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray255_32f, dst, EPS);
     }
 
+    @Test
     public void testMahalanobis() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32F);
         Core.randu(src, -128, 128);
@@ -960,13 +1033,14 @@ public class CoreTest extends OpenCVTestCase {
 
         double d = Core.Mahalanobis(line1, line1, covar);
 
-        assertEquals(0.0, d);
+        assertEquals(0.0, d, 0);
 
         d = Core.Mahalanobis(line1, line2, covar);
 
         assertTrue(d > 0.0);
     }
 
+    @Test
     public void testMax() {
         Core.max(gray0, gray255, dst);
 
@@ -984,12 +1058,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testMeanMat() {
         Scalar mean = Core.mean(makeMask(gray128));
 
         assertScalarEqual(new Scalar(64), mean, EPS);
     }
 
+    @Test
     public void testMeanMatMat() {
         Mat mask1 = makeMask(gray1.clone());
         Mat mask2 = makeMask(gray0, 1);
@@ -1001,6 +1077,7 @@ public class CoreTest extends OpenCVTestCase {
         assertScalarEqual(mean, new Scalar(0.5 * (mean1.val[0] + mean2.val[0])), EPS);
     }
 
+    @Test
     public void testMeanStdDevMatMatMat() {
         MatOfDouble mean   = new MatOfDouble();
         MatOfDouble stddev = new MatOfDouble();
@@ -1016,6 +1093,7 @@ public class CoreTest extends OpenCVTestCase {
         assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
 
+    @Test
     public void testMeanStdDevMatMatMatMat() {
         Mat submat = grayRnd.submat(0, grayRnd.rows() / 2, 0, grayRnd.cols() / 2);
         submat.setTo(new Scalar(33));
@@ -1034,6 +1112,7 @@ public class CoreTest extends OpenCVTestCase {
         assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
 
+    @Test
     public void testMerge() {
         Mat src1 = new Mat(2, 2, CvType.CV_32FC1, new Scalar(1));
         Mat src2 = new Mat(2, 2, CvType.CV_32FC1, new Scalar(2));
@@ -1046,12 +1125,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testMin() {
         Core.min(gray0, gray255, dst);
 
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testMinMaxLocMat() {
         double minVal = 1;
         double maxVal = 10;
@@ -1062,12 +1143,13 @@ public class CoreTest extends OpenCVTestCase {
 
         Core.MinMaxLocResult mmres = Core.minMaxLoc(gray3);
 
-        assertEquals(minVal, mmres.minVal);
-        assertEquals(maxVal, mmres.maxVal);
+        assertEquals(minVal, mmres.minVal, 0);
+        assertEquals(maxVal, mmres.maxVal, 0);
         assertPointEquals(minLoc, mmres.minLoc, EPS);
         assertPointEquals(maxLoc, mmres.maxLoc, EPS);
     }
 
+    @Test
     public void testMinMaxLocMatMat() {
         Mat src = new Mat(4, 4, CvType.CV_8U) {
             {
@@ -1082,12 +1164,13 @@ public class CoreTest extends OpenCVTestCase {
 
         MinMaxLocResult res = Core.minMaxLoc(src, mask);
 
-        assertEquals(4.0, res.minVal);
-        assertEquals(130.0, res.maxVal);
+        assertEquals(4.0, res.minVal, 0);
+        assertEquals(130.0, res.maxVal, 0);
         assertPointEquals(new Point(1, 2), res.minLoc, EPS);
         assertPointEquals(new Point(3, 1), res.maxLoc, EPS);
     }
 
+    @Test
     public void testMixChannels() {
         rgba0.setTo(new Scalar(10, 20, 30, 40));
         List<Mat> src = Arrays.asList(rgba0);
@@ -1111,6 +1194,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_8UC3, 30, 20, 10), dst.get(4));
     }
 
+    @Test
     public void testMulSpectrumsMatMatMatInt() {
         Mat src1 = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1133,6 +1217,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testMulSpectrumsMatMatMatIntBoolean() {
         Mat src1 = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1155,12 +1240,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testMultiplyMatMatMat() {
         Core.multiply(gray0, gray255, dst);
 
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testMultiplyMatMatMatDouble() {
         Core.multiply(gray1, gray1, dst, 2.0);
 
@@ -1168,18 +1255,21 @@ public class CoreTest extends OpenCVTestCase {
 
     }
 
+    @Test
     public void testMultiplyMatMatMatDoubleInt() {
         Core.multiply(gray1, gray2, dst, 1.5, CvType.CV_32F);
 
         assertMatEqual(gray3_32f, dst, EPS);
     }
 
+    @Test
     public void testMulTransposedMatMatBoolean() {
         Core.mulTransposed(grayE_32f, dst, true);
 
         assertMatEqual(grayE_32f, dst, EPS);
     }
 
+    @Test
     public void testMulTransposedMatMatBooleanMatDouble() {
         Core.mulTransposed(grayE_32f, dst, true, gray0_32f, 2);
 
@@ -1188,6 +1278,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testMulTransposedMatMatBooleanMatDoubleInt() {
         Mat a = getMat(CvType.CV_32F, 1);
 
@@ -1196,6 +1287,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 3 * a.rows()), dst, EPS);
     }
 
+    @Test
     public void testNormalizeMatMat() {
         Mat m = gray0.clone();
         m.diag().setTo(new Scalar(2));
@@ -1205,6 +1297,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testNormalizeMatMatDoubleDoubleInt() {
         Mat src = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1222,6 +1315,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testNormalizeMatMatDoubleDoubleIntInt() {
         Mat src = new Mat(1, 5, CvType.CV_32F) {
             {
@@ -1239,6 +1333,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testNormalizeMatMatDoubleDoubleIntIntMat() {
         Mat src = new Mat(1, 5, CvType.CV_32F) {
             {
@@ -1262,42 +1357,49 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(expected, dst, EPS);
     }
 
+    @Test
     public void testNormMat() {
         double n = Core.norm(gray1);
 
-        assertEquals(10., n);
+        assertEquals(10., n, 0);
     }
 
+    @Test
     public void testNormMatInt() {
         double n = Core.norm(gray127, Core.NORM_INF);
 
-        assertEquals(127., n);
+        assertEquals(127., n, 0);
     }
 
+    @Test
     public void testNormMatIntMat() {
         double n = Core.norm(gray3, Core.NORM_L1, gray0);
 
-        assertEquals(0.0, n);
+        assertEquals(0.0, n, 0);
     }
 
+    @Test
     public void testNormMatMat() {
         double n = Core.norm(gray0, gray1);
 
-        assertEquals(10.0, n);
+        assertEquals(10.0, n, 0);
     }
 
+    @Test
     public void testNormMatMatInt() {
         double n = Core.norm(gray127, gray1, Core.NORM_INF);
 
-        assertEquals(126.0, n);
+        assertEquals(126.0, n, 0);
     }
 
+    @Test
     public void testNormMatMatIntMat() {
         double n = Core.norm(gray3, gray0, Core.NORM_L1, makeMask(gray0.clone(), 1));
 
-        assertEquals(150.0, n);
+        assertEquals(150.0, n, 0);
     }
 
+    @Test
     public void testPCABackProject() {
         Mat mean = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1328,6 +1430,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, result, EPS);
     }
 
+    @Test
     public void testPCAComputeMatMatMat() {
         Mat data = new Mat(3, 4, CvType.CV_32F) {
             {
@@ -1370,6 +1473,7 @@ public class CoreTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testPCAComputeMatMatMatInt() {
         Mat data = new Mat(3, 4, CvType.CV_32F) {
             {
@@ -1410,6 +1514,7 @@ public class CoreTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testPCAProject() {
         Mat mean = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1440,6 +1545,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, result, EPS);
     }
 
+    @Test
     public void testPerspectiveTransform() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC2);
         Core.randu(src, 0, 256);
@@ -1449,6 +1555,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(src, dst, EPS);
     }
 
+    @Test
     public void testPerspectiveTransform3D() {
         Mat src = new Mat(matSize, matSize, CvType.CV_32FC3);
         Core.randu(src, 0, 256);
@@ -1475,6 +1582,7 @@ public class CoreTest extends OpenCVTestCase {
         return res;
     }
 
+    @Test
     public void testPhaseMatMatMat() {
         Mat x = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1497,6 +1605,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gold, dst, EPS);
     }
 
+    @Test
     public void testPhaseMatMatMatBoolean() {
         Mat x = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1519,6 +1628,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gold, dst, EPS * 180 / Math.PI);
     }
 
+    @Test
     public void testPolarToCartMatMatMatMat() {
         Mat magnitude = new Mat(1, 3, CvType.CV_32F) {
             {
@@ -1549,6 +1659,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(y, yCoordinate, EPS);
     }
 
+    @Test
     public void testPolarToCartMatMatMatMatBoolean() {
         Mat magnitude = new Mat(1, 3, CvType.CV_32F) {
             {
@@ -1579,18 +1690,21 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(y, yCoordinate, EPS);
     }
 
+    @Test
     public void testPow() {
         Core.pow(gray2, 7, dst);
 
         assertMatEqual(gray128, dst);
     }
 
+    @Test
     public void testRandn() {
         Core.randn(gray0, 100, 23);
 
         assertEquals(100., Core.mean(gray0).val[0], 23 / 2);
     }
 
+    @Test
     public void testRandShuffleMat() {
         Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
@@ -1609,6 +1723,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(dst1, dst2, EPS);
     }
 
+    @Test
     public void testRandShuffleMatDouble() {
         Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
@@ -1627,12 +1742,15 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(dst1, dst2, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testRandu() {
         Core.randu(gray0, 3, 23);
         fail("Not yet implemented");
         //assertTrue(Core.checkRange(gray0, true, null, 3, 23));
     }
 
+    @Test
     public void testRectangleMatPointPointScalar() {
         Point bottomRight = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Point topLeft = new Point(0, 0);
@@ -1643,6 +1761,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testRectangleMatPointPointScalarInt() {
         Point bottomRight = new Point(gray0.cols(), gray0.rows());
         Point topLeft = new Point(0, 0);
@@ -1654,6 +1773,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testRectangleMatPointPointScalarIntInt() {
         Point bottomRight = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Point topLeft = new Point(0, 0);
@@ -1665,6 +1785,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testRectangleMatPointPointScalarIntIntInt() {
         Point bottomRight1 = new Point(gray0.cols(), gray0.rows());
         Point bottomRight2 = new Point(gray0.cols() / 2, gray0.rows() / 2);
@@ -1680,6 +1801,7 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testReduceMatMatIntInt() {
         Mat src = new Mat(2, 2, CvType.CV_32F) {
             {
@@ -1698,6 +1820,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(out, dst, EPS);
     }
 
+    @Test
     public void testReduceMatMatIntIntInt() {
         Mat src = new Mat(2, 2, CvType.CV_32F) {
             {
@@ -1716,6 +1839,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(out, dst, EPS);
     }
 
+    @Test
     public void testRepeat() {
         Mat src = new Mat(1, 2, CvType.CV_32F, new Scalar(0));
 
@@ -1724,18 +1848,21 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray0_32f, dst, EPS);
     }
 
+    @Test
     public void testScaleAdd() {
         Core.scaleAdd(gray3, 2.0, gray3, dst);
 
         assertMatEqual(gray9, dst);
     }
 
+    @Test
     public void testSetIdentityMat() {
         Core.setIdentity(gray0_32f);
 
         assertMatEqual(grayE_32f, gray0_32f, EPS);
     }
 
+    @Test
     public void testSetIdentityMatScalar() {
         Mat m = gray0_32f;
 
@@ -1746,6 +1873,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, m, EPS);
     }
 
+    @Test
     public void testSolveCubic() {
         Mat coeffs = new Mat(1, 4, CvType.CV_32F) {
             {
@@ -1763,6 +1891,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(roots, dst, EPS);
     }
 
+    @Test
     public void testSolveMatMatMat() {
         Mat a = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1787,6 +1916,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(res, dst, EPS);
     }
 
+    @Test
     public void testSolveMatMatMatInt() {
         Mat a = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1811,6 +1941,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(res, dst, EPS);
     }
 
+    @Test
     public void testSolvePolyMatMat() {
         Mat coeffs = new Mat(4, 1, CvType.CV_32F) {
             {
@@ -1829,6 +1960,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, roots, EPS);
     }
 
+    @Test
     public void testSolvePolyMatMatInt() {
         Mat coeffs = new Mat(4, 1, CvType.CV_32F) {
             {
@@ -1837,7 +1969,7 @@ public class CoreTest extends OpenCVTestCase {
         };
         Mat roots = new Mat();
 
-        assertEquals(10.198039027185569, Core.solvePoly(coeffs, roots, 1));
+        assertEquals(10.198039027185569, Core.solvePoly(coeffs, roots, 1), 0);
 
         truth = new Mat(3, 1, CvType.CV_32FC2) {
             {
@@ -1847,6 +1979,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, roots, EPS);
     }
 
+    @Test
     public void testSort() {
         Mat submat = gray0.submat(0, gray0.rows() / 2, 0, gray0.cols() / 2);
         submat.setTo(new Scalar(1.0));
@@ -1863,6 +1996,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(submat.total() == Core.countNonZero(submat));
     }
 
+    @Test
     public void testSortIdx() {
         Mat a = Mat.eye(3, 3, CvType.CV_8UC1);
         Mat b = new Mat();
@@ -1879,6 +2013,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, b);
     }
 
+    @Test
     public void testSplit() {
         Mat m = getMat(CvType.CV_8UC3, 1, 2, 3);
         ArrayList<Mat> cois = new ArrayList<Mat>();
@@ -1890,6 +2025,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(gray3, cois.get(2));
     }
 
+    @Test
     public void testSqrt() {
         Core.sqrt(gray9_32f, dst);
 
@@ -1903,12 +2039,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(rgba12, dst, EPS);
     }
 
+    @Test
     public void testSubtractMatMatMat() {
         Core.subtract(gray128, gray1, dst);
 
         assertMatEqual(gray127, dst);
     }
 
+    @Test
     public void testSubtractMatMatMatMat() {
         Mat mask = makeMask(gray1.clone());
         dst = gray128.clone();
@@ -1918,12 +2056,14 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(makeMask(gray127, 128), dst);
     }
 
+    @Test
     public void testSubtractMatMatMatMatInt() {
         Core.subtract(gray3, gray2, dst, gray1, CvType.CV_32F);
 
         assertMatEqual(gray1_32f, dst, EPS);
     }
 
+    @Test
     public void testSumElems() {
         Mat src = new Mat(4, 4, CvType.CV_8U, new Scalar(10));
 
@@ -1932,6 +2072,7 @@ public class CoreTest extends OpenCVTestCase {
         assertScalarEqual(new Scalar(160), res1, EPS);
     }
 
+    @Test
     public void testSVBackSubst() {
         Mat w = new Mat(2, 2, CvType.CV_32FC1, new Scalar(2));
         Mat u = new Mat(2, 2, CvType.CV_32FC1, new Scalar(4));
@@ -1944,6 +2085,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testSVDecompMatMatMatMat() {
         Mat src = new Mat(1, 4, CvType.CV_32FC1) {
             {
@@ -1968,6 +2110,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truthVT, vt, EPS);
     }
 
+    @Test
     public void testSVDecompMatMatMatMatInt() {
         Mat src = new Mat(1, 4, CvType.CV_32FC1) {
             {
@@ -1986,12 +2129,14 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(vt.empty());
     }
 
+    @Test
     public void testTrace() {
         Scalar s = Core.trace(gray1);
 
         assertEquals(new Scalar(matSize), s);
     }
 
+    @Test
     public void testTransform() {
         Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(55));
         Mat m = Mat.eye(2, 2, CvType.CV_32FC1);
@@ -2002,6 +2147,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testTranspose() {
         gray0.submat(0, gray0.rows() / 2, 0, gray0.cols()).setTo(new Scalar(1));
         Mat destination = getMat(CvType.CV_8U, 0);
@@ -2012,6 +2158,7 @@ public class CoreTest extends OpenCVTestCase {
         assertTrue(subdst.total() == Core.countNonZero(subdst));
     }
 
+    @Test
     public void testVconcat() {
         List<Mat> mats = Arrays.asList(Mat.eye(3, 3, CvType.CV_8U), Mat.zeros(2, 3, CvType.CV_8U));
 
@@ -2021,6 +2168,7 @@ public class CoreTest extends OpenCVTestCase {
 
     }
 
+    @Test
     public void testCopyMakeBorderMatMatIntIntIntIntInt() {
         Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
         int border = 2;
@@ -2031,6 +2179,7 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testCopyMakeBorderMatMatIntIntIntIntIntScalar() {
         Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
 
@@ -2044,14 +2193,16 @@ public class CoreTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testBorderInterpolate() {
         float val1 = Core.borderInterpolate(100, 150, Core.BORDER_REFLECT_101);
-        assertEquals(100f, val1);
+        assertEquals(100f, val1, 0);
 
         float val2 = Core.borderInterpolate(-5, 10, Core.BORDER_WRAP);
-        assertEquals(5f, val2);
+        assertEquals(5f, val2, 0);
     }
 
+    @Test
     public void testVersion() {
         assertEquals(Core.VERSION_MAJOR, Core.getVersionMajor());
         assertEquals(Core.VERSION_MINOR, Core.getVersionMinor());

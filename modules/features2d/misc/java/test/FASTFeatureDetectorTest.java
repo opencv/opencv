@@ -1,8 +1,13 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Arrays;
 
-import org.opencv.core.Core;
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
@@ -10,6 +15,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -33,25 +39,31 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
     }
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
         detector = FeatureDetector.create(FeatureDetector.FAST);
         truth = new KeyPoint[] { new KeyPoint(32, 27, 7, -1, 254, 0, -1), new KeyPoint(27, 32, 7, -1, 254, 0, -1), new KeyPoint(73, 68, 7, -1, 254, 0, -1),
                 new KeyPoint(68, 73, 7, -1, 254, 0, -1) };
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(detector);
     }
 
+    @Test
+    @NotYetImplemented
     public void testDetectListOfMatListOfListOfKeyPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDetectListOfMatListOfListOfKeyPointListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testDetectMatListOfKeyPoint() {
         Mat img = getTestImg();
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
@@ -65,6 +77,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         // OpenCVTestRunner.Log(kp.toString());
     }
 
+    @Test
     public void testDetectMatListOfKeyPointMat() {
         Mat img = getTestImg();
         Mat mask = getMaskImg();
@@ -75,11 +88,14 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth[0], truth[1]), keypoints.toList(), EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testEmpty() {
 //        assertFalse(detector.empty());
         fail("Not yet implemented"); //FAST does not override empty() method
     }
 
+    @Test
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
@@ -100,6 +116,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
+    @Test
     public void testReadYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 
@@ -122,6 +139,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
@@ -134,6 +152,7 @@ public class FASTFeatureDetectorTest extends OpenCVTestCase {
         assertEquals(truth, data);
     }
 
+    @Test
     public void testWriteYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 

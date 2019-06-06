@@ -1,11 +1,17 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -27,7 +33,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
         extractor = createClassInstance(XFEATURES2D+"SIFT", DEFAULT_FACTORY, null, null);
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
@@ -47,10 +53,13 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         };
     }
 
+    @Test
+    @NotYetImplemented
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testComputeMatListOfKeyPointMat() {
         MatOfKeyPoint keypoints = new MatOfKeyPoint(keypoint);
         Mat img = getTestImg();
@@ -61,27 +70,35 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         assertMatEqual(truth, descriptors, EPS);
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(extractor);
     }
 
+    @Test
     public void testDescriptorSize() {
         assertEquals(128, extractor.descriptorSize());
     }
 
+    @Test
     public void testDescriptorType() {
         assertEquals(CvType.CV_32F, extractor.descriptorType());
     }
 
+    @Test
+    @NotYetImplemented
     public void testEmpty() {
 //        assertFalse(extractor.empty());
         fail("Not yet implemented"); //SIFT does not override empty() method
     }
 
+    @Test
+    @NotYetImplemented
     public void testRead() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
@@ -94,6 +111,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         assertEquals(truth, actual);
     }
 
+    @Test
     public void testWriteYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 

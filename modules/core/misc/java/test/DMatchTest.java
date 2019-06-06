@@ -1,5 +1,6 @@
 package org.opencv.test.core;
 
+import org.junit.Test;
 import org.opencv.core.DMatch;
 
 import junit.framework.TestCase;
@@ -9,6 +10,7 @@ public class DMatchTest extends TestCase {
         new DMatch();
     }
 
+    @Test
     public void testDMatchIntIntFloat() {
         DMatch dm1 = new DMatch(1, 4, 4.0f);
 
@@ -17,6 +19,7 @@ public class DMatchTest extends TestCase {
         assertEquals(4.0f, dm1.distance);
     }
 
+    @Test
     public void testDMatchIntIntIntFloat() {
         DMatch dm2 = new DMatch(2, 6, -1, 8.0f);
 
@@ -26,12 +29,14 @@ public class DMatchTest extends TestCase {
         assertEquals(8.0f, dm2.distance);
     }
 
+    @Test
     public void testLessThan() {
         DMatch dm1 = new DMatch(1, 4, 4.0f);
         DMatch dm2 = new DMatch(2, 6, -1, 8.0f);
         assertTrue(dm1.lessThan(dm2));
     }
 
+    @Test
     public void testToString() {
         DMatch dm2 = new DMatch(2, 6, -1, 8.0f);
 

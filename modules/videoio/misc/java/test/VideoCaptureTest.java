@@ -1,9 +1,10 @@
 package org.opencv.test.videoio;
 
-import java.util.List;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 
-import org.opencv.core.Size;
-import org.opencv.videoio.Videoio;
+import org.junit.Test;
 import org.opencv.videoio.VideoCapture;
 
 import org.opencv.test.OpenCVTestCase;
@@ -15,26 +16,29 @@ public class VideoCaptureTest extends OpenCVTestCase {
     private boolean isSucceed;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         capture = null;
-        isTestCaseEnabled = false;
+        assumeTrue(false);
         isSucceed = false;
         isOpened = false;
     }
 
+    @Test
     public void testGrab() {
         capture = new VideoCapture();
         isSucceed = capture.grab();
         assertFalse(isSucceed);
     }
 
+    @Test
     public void testIsOpened() {
         capture = new VideoCapture();
         assertFalse(capture.isOpened());
     }
 
+    @Test
     public void testVideoCapture() {
         capture = new VideoCapture();
         assertNotNull(capture);

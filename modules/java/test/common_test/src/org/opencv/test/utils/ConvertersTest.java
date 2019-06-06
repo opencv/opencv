@@ -1,5 +1,6 @@
 package org.opencv.test.utils;
 
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -9,14 +10,19 @@ import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.DMatch;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.utils.Converters;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ConvertersTest extends OpenCVTestCase {
 
+    @Test
     public void testMat_to_vector_char() {
         Mat src = new Mat(3, 1, CvType.CV_8SC1);
         src.put(0, 0, 2, 4, 3);
@@ -34,6 +40,8 @@ public class ConvertersTest extends OpenCVTestCase {
         assertEquals(truth, bs);
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_DMatch() {
         Mat src = new Mat(4, 1, CvType.CV_64FC4);
         src.put(0, 0, 1, 4, 4, 10, 2, 3, 5, 6, 3, 1, 8, 12, 4, 9, 5, 15);
@@ -50,6 +58,7 @@ public class ConvertersTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMat_to_vector_float() {
         Mat src = new Mat(4, 1, CvType.CV_32FC1);
         src.put(0, 0, 2, 4, 3, 9);
@@ -65,6 +74,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListEquals(truth, fs, EPS);
     }
 
+    @Test
     public void testMat_to_vector_int() {
         Mat src = new Mat(4, 1, CvType.CV_32SC1);
         src.put(0, 0, 2, 4, 3, 9);
@@ -79,6 +89,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListEquals(truth, fs);
     }
 
+    @Test
     public void testMat_to_vector_KeyPoint() {
         Mat src = new Mat(1, 1, CvType.CV_64FC(7));
         src.put(0, 0, 2, 4, 3, 9, 10, 12, 7);
@@ -91,6 +102,8 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListKeyPointEquals(truth, kps, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_Mat() {
         // Mat src = new Mat(4, 1, CvType.CV_32SC2);
         // src.put(0, 0, 2, 2, 3, 3, 4, 4, 5, 5);
@@ -107,6 +120,7 @@ public class ConvertersTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMat_to_vector_Point() {
         Mat src = new Mat(4, 1, CvType.CV_32SC2);
         src.put(0, 0, 2, 4, 3, 9, 10, 4, 35, 54);
@@ -122,6 +136,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPointEquals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point2d() {
         Mat src = new Mat(4, 1, CvType.CV_64FC2);
         src.put(0, 0, 12.0, 4.0, 3.0, 29.0, 10.0, 24.0, 35.0, 54.0);
@@ -137,6 +152,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPointEquals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point2f() {
         Mat src = new Mat(4, 1, CvType.CV_32FC2);
         src.put(0, 0, 2, 14, 31, 19, 10, 44, 5, 41);
@@ -152,6 +168,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPointEquals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point3() {
         Mat src = new Mat(4, 1, CvType.CV_32SC3);
         src.put(0, 0, 2, 14, 12, 31, 19, 22, 10, 44, 45, 5, 41, 31);
@@ -167,6 +184,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPoint3Equals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point3d() {
         Mat src = new Mat(4, 1, CvType.CV_64FC3);
         src.put(0, 0, 2.0, 4.0, 3.0, 5.0, 9.0, 12.0, 10.0, 14.0, 15.0, 5.0, 11.0, 31.0);
@@ -182,6 +200,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPoint3Equals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point3f() {
         Mat src = new Mat(4, 1, CvType.CV_32FC3);
         src.put(0, 0, 2.0, 4.0, 3.0, 5.0, 9.0, 12.0, 10.0, 14.0, 15.0, 5.0, 11.0, 31.0);
@@ -197,6 +216,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPoint3Equals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Point3i() {
         Mat src = new Mat(4, 1, CvType.CV_32SC3);
         src.put(0, 0, 2, 14, 12, 31, 19, 22, 10, 44, 45, 5, 41, 31);
@@ -212,6 +232,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListPoint3Equals(truth, points, EPS);
     }
 
+    @Test
     public void testMat_to_vector_Rect() {
         Mat src = new Mat(2, 1, CvType.CV_32SC4);
         src.put(0, 0, 2, 2, 5, 2, 0, 0, 6, 4);
@@ -224,6 +245,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListRectEquals(truth, rectangles);
     }
 
+    @Test
     public void testMat_to_vector_RotatedRect() {
         Mat src = new Mat(2, 1, CvType.CV_32FC(5));
         src.put(0, 0, 2, 2, 5, 2, 7,
@@ -237,6 +259,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertListRotatedRectEquals(truth, rectangles);
     }
 
+    @Test
     public void testMat_to_vector_uchar() {
         Mat src = new Mat(3, 1, CvType.CV_8UC1);
         src.put(0, 0, 2, 4, 3);
@@ -254,22 +277,31 @@ public class ConvertersTest extends OpenCVTestCase {
         assertEquals(truth, bs);
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_vector_char() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_vector_DMatch() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_vector_KeyPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMat_to_vector_vector_Point2f() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testVector_char_to_Mat() {
         List<Byte> bytes = new ArrayList<Byte>();
         byte value1 = 1;
@@ -288,6 +320,7 @@ public class ConvertersTest extends OpenCVTestCase {
 
     }
 
+    @Test
     public void testVector_DMatch_to_Mat() {
         List<DMatch> matches = new ArrayList<DMatch>();
         matches.add(new DMatch(1, 4, 4, 10));
@@ -302,6 +335,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_double_to_Mat() {
         List<Double> inputVector = new ArrayList<Double>();
         inputVector.add(2.0);
@@ -315,6 +349,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_float_to_Mat() {
         List<Float> inputVector = new ArrayList<Float>();
         inputVector.add(2.0f);
@@ -328,6 +363,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_int_to_Mat() {
         List<Integer> inputVector = new ArrayList<Integer>();
         inputVector.add(2);
@@ -341,6 +377,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testVector_KeyPoint_to_Mat() {
         List<KeyPoint> kps = new ArrayList<KeyPoint>();
         kps.add(new KeyPoint(2, 4, 3, 9, 10, 12, 7));
@@ -353,6 +390,8 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_Mat_to_Mat() {
         // List<Mat> mats = new ArrayList<Mat>();
         // mats.add(new Mat(2, 1, CvType.CV_32SC1, Scalar.all(2.0)));
@@ -366,6 +405,7 @@ public class ConvertersTest extends OpenCVTestCase {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testVector_Point_to_Mat() {
         List<Point> points = new ArrayList<Point>();
         points.add(new Point(2, 4));
@@ -380,14 +420,19 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_Point_to_MatListOfPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_Point_to_MatListOfPointInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testVector_Point2d_to_Mat() {
         List<Point> points = new ArrayList<Point>();
         points.add(new Point(12.0, 4.0));
@@ -401,6 +446,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_Point2f_to_Mat() {
         List<Point> points = new ArrayList<Point>();
         points.add(new Point(2.0, 3.0));
@@ -414,6 +460,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_Point3_to_Mat() {
         List<Point3> points = new ArrayList<Point3>();
         points.add(new Point3(2, 4, 3));
@@ -428,6 +475,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testVector_Point3d_to_Mat() {
         List<Point3> points = new ArrayList<Point3>();
         points.add(new Point3(2.0, 4.0, 3.0));
@@ -441,6 +489,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_Point3f_to_Mat() {
         List<Point3> points = new ArrayList<Point3>();
         points.add(new Point3(2.0, 4.0, 3.0));
@@ -454,6 +503,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_Point3i_to_Mat() {
         List<Point3> points = new ArrayList<Point3>();
         points.add(new Point3(2, 4, 3));
@@ -468,6 +518,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testVector_Rect_to_Mat() {
         List<Rect> rectangles = new ArrayList<Rect>();
         rectangles.add(new Rect(2, 2, 5, 2));
@@ -480,6 +531,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testVector_RotatedRect_to_Mat() {
         List<RotatedRect> rectangles = new ArrayList<RotatedRect>();
         rectangles.add(new RotatedRect(new Point(2, 2), new Size(5, 2), 7));
@@ -493,6 +545,7 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testVector_uchar_to_Mat() {
         List<Byte> bytes = new ArrayList<Byte>();
         byte value1 = 1;
@@ -510,18 +563,26 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_vector_char_to_Mat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_vector_DMatch_to_Mat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_vector_KeyPoint_to_Mat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testVector_vector_Point_to_Mat() {
         fail("Not yet implemented");
 

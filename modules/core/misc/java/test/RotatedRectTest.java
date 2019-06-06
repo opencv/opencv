@@ -1,5 +1,6 @@
 package org.opencv.test.core;
 
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -8,7 +9,11 @@ import org.opencv.core.MatOfRotatedRect;
 import org.opencv.core.Size;
 import org.opencv.test.OpenCVTestCase;
 
-import java.util.Arrays;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 
 public class RotatedRectTest extends OpenCVTestCase {
@@ -18,7 +23,7 @@ public class RotatedRectTest extends OpenCVTestCase {
     private Size size;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         center = new Point(matSize / 2, matSize / 2);
@@ -26,9 +31,10 @@ public class RotatedRectTest extends OpenCVTestCase {
         angle = 40;
     }
 
+    @Test
     public void testBoundingRect() {
         size = new Size(matSize / 2, matSize / 2);
-        assertEquals(size.height, size.width);
+        assertEquals(size.height, size.width, 0);
         double length = size.height;
 
         angle = 45;
@@ -44,6 +50,7 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertTrue((r.br().x - Math.ceil(center.x + halfDiagonal)) <= 1 && (r.br().y - Math.ceil(center.y + halfDiagonal)) <= 1);
     }
 
+    @Test
     public void testClone() {
         RotatedRect rrect = new RotatedRect(center, size, angle);
         RotatedRect clone = rrect.clone();
@@ -54,6 +61,7 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertTrue(rrect.angle == clone.angle);
     }
 
+    @Test
     public void testEqualsObject() {
         Point center2 = new Point(matSize / 3, matSize / 1.5);
         Size size2 = new Size(matSize / 2, matSize / 4);
@@ -86,11 +94,13 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertFalse(rrect1.equals(size));
     }
 
+    @Test
     public void testHashCode() {
         RotatedRect rr = new RotatedRect(center, size, angle);
         assertEquals(rr.hashCode(), rr.hashCode());
     }
 
+    @Test
     public void testPoints() {
         RotatedRect rrect = new RotatedRect(center, size, angle);
 
@@ -137,43 +147,47 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertTrue("Angle of the vector 21 with the axes", Math.abs((p[2].x - p[1].x) / size.width - Math.cos(angle * Math.PI / 180)) < EPS);
     }
 
+    @Test
     public void testRotatedRect() {
         RotatedRect rr = new RotatedRect();
 
         assertNotNull(rr);
         assertNotNull(rr.center);
         assertNotNull(rr.size);
-        assertEquals(0.0, rr.angle);
+        assertEquals(0.0, rr.angle, 0);
     }
 
+    @Test
     public void testRotatedRectDoubleArray() {
         double[] vals = { 1.5, 2.6, 3.7, 4.2, 5.1 };
         RotatedRect rr = new RotatedRect(vals);
 
         assertNotNull(rr);
-        assertEquals(1.5, rr.center.x);
-        assertEquals(2.6, rr.center.y);
-        assertEquals(3.7, rr.size.width);
-        assertEquals(4.2, rr.size.height);
-        assertEquals(5.1, rr.angle);
+        assertEquals(1.5, rr.center.x, 0);
+        assertEquals(2.6, rr.center.y, 0);
+        assertEquals(3.7, rr.size.width, 0);
+        assertEquals(4.2, rr.size.height, 0);
+        assertEquals(5.1, rr.angle, 0);
     }
 
+    @Test
     public void testRotatedRectPointSizeDouble() {
         RotatedRect rr = new RotatedRect(center, size, 40);
 
         assertNotNull(rr);
         assertNotNull(rr.center);
         assertNotNull(rr.size);
-        assertEquals(40.0, rr.angle);
+        assertEquals(40.0, rr.angle, 0);
     }
 
+    @Test
     public void testSet() {
         double[] vals1 = {};
         RotatedRect r1 = new RotatedRect(center, size, 40);
 
         r1.set(vals1);
 
-        assertEquals(0., r1.angle);
+        assertEquals(0., r1.angle, 0);
         assertPointEquals(new Point(0, 0), r1.center, EPS);
         assertSizeEquals(new Size(0, 0), r1.size, EPS);
 
@@ -182,17 +196,19 @@ public class RotatedRectTest extends OpenCVTestCase {
 
         r2.set(vals2);
 
-        assertEquals(5., r2.angle);
+        assertEquals(5., r2.angle, 0);
         assertPointEquals(new Point(1, 2), r2.center, EPS);
         assertSizeEquals(new Size(3, 4), r2.size, EPS);
     }
 
+    @Test
     public void testToString() {
         String actual = new RotatedRect(new Point(1, 2), new Size(10, 12), 4.5).toString();
         String expected = "{ {1.0, 2.0} 10x12 * 4.5 }";
         assertEquals(expected, actual);
     }
 
+    @Test
     public void testMatOfRotatedRect() {
         RotatedRect a = new RotatedRect(new Point(1,2),new Size(3,4),5.678);
         RotatedRect b = new RotatedRect(new Point(9,8),new Size(7,6),5.432);
@@ -202,12 +218,12 @@ public class RotatedRectTest extends OpenCVTestCase {
         assertEquals(m.type(), CvType.CV_32FC(5));
         RotatedRect[] arr = m.toArray();
         assertEquals(arr[2].angle, a.angle, EPS);
-        assertEquals(arr[3].center.x, b.center.x);
-        assertEquals(arr[3].size.width, b.size.width);
+        assertEquals(arr[3].center.x, b.center.x, 0);
+        assertEquals(arr[3].size.width, b.size.width, 0);
         List<RotatedRect> li = m.toList();
         assertEquals(li.size(), 8);
         RotatedRect rr = li.get(7);
         assertEquals(rr.angle, b.angle, EPS);
-        assertEquals(rr.center.y, b.center.y);
+        assertEquals(rr.center.y, b.center.y, 0);
     }
 }

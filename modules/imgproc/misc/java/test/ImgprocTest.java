@@ -1,9 +1,15 @@
 package org.opencv.test.imgproc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -19,6 +25,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 
 public class ImgprocTest extends OpenCVTestCase {
@@ -28,7 +35,7 @@ public class ImgprocTest extends OpenCVTestCase {
     Size size;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         imgprocSz = 2;
@@ -36,6 +43,7 @@ public class ImgprocTest extends OpenCVTestCase {
         size = new Size(3, 3);
     }
 
+    @Test
     public void testAccumulateMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat dst = getMat(CvType.CV_64F, 0);
@@ -48,6 +56,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 4), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateMatMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat mask = makeMask(getMat(CvType.CV_8U, 1));
@@ -61,6 +70,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(makeMask(getMat(CvType.CV_64F, 4), 2), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateProductMatMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat dst = getMat(CvType.CV_64F, 0);
@@ -73,6 +83,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 10), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateProductMatMatMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat mask = makeMask(getMat(CvType.CV_8U, 1));
@@ -86,6 +97,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(makeMask(getMat(CvType.CV_64F, 10), 2), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateSquareMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat dst = getMat(CvType.CV_64F, 0);
@@ -98,6 +110,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 6), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateSquareMatMatMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat mask = makeMask(getMat(CvType.CV_8U, 1));
@@ -111,6 +124,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(makeMask(getMat(CvType.CV_64F, 6), 2), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateWeightedMatMatDouble() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat dst = getMat(CvType.CV_64F, 4);
@@ -123,6 +137,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 2), dst2, EPS);
     }
 
+    @Test
     public void testAccumulateWeightedMatMatDoubleMat() {
         Mat src = getMat(CvType.CV_64F, 2);
         Mat mask = makeMask(getMat(CvType.CV_8U, 1));
@@ -136,6 +151,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_64F, 2), dst2, EPS);
     }
 
+    @Test
     public void testAdaptiveThreshold() {
         Mat src = makeMask(getMat(CvType.CV_8U, 50), 20);
         Mat dst = new Mat();
@@ -145,6 +161,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(src.rows(), Core.countNonZero(dst));
     }
 
+    @Test
     public void testApproxPolyDP() {
         MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
 
@@ -160,6 +177,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertListPointEquals(approxCurve.toList(), approxCurveGold, EPS);
     }
 
+    @Test
     public void testArcLength() {
         MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
 
@@ -168,6 +186,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(5.656854249, arcLength, 0.000001);
     }
 
+    @Test
     public void testBilateralFilterMatMatIntDoubleDouble() {
         Imgproc.bilateralFilter(gray255, dst, 5, 10, 5);
 
@@ -175,6 +194,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testBilateralFilterMatMatIntDoubleDoubleInt() {
         Imgproc.bilateralFilter(gray255, dst, 5, 10, 5, Core.BORDER_REFLECT);
 
@@ -182,6 +202,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testBlurMatMatSize() {
         Imgproc.blur(gray0, dst, size);
         assertMatEqual(gray0, dst);
@@ -191,18 +212,21 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testBlurMatMatSizePoint() {
         Imgproc.blur(gray0, dst, size, anchorPoint);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testBlurMatMatSizePointInt() {
         Imgproc.blur(gray0, dst, size, anchorPoint, Core.BORDER_REFLECT);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testBoundingRect() {
         MatOfPoint points = new MatOfPoint(new Point(0, 0), new Point(0, 4), new Point(4, 0), new Point(4, 4));
         Point p1 = new Point(1, 1);
@@ -214,6 +238,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertFalse(bbox.contains(p2));
     }
 
+    @Test
     public void testBoxFilterMatMatIntSize() {
         Size size = new Size(3, 3);
         Imgproc.boxFilter(gray0, dst, 8, size);
@@ -221,18 +246,21 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testBoxFilterMatMatIntSizePointBoolean() {
         Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false);
         assertMatEqual(gray255, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testBoxFilterMatMatIntSizePointBooleanInt() {
         Imgproc.boxFilter(gray255, dst, 8, size, anchorPoint, false, Core.BORDER_REFLECT);
         assertMatEqual(gray255, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testCalcBackProject() {
         List<Mat> images = Arrays.asList(grayChess);
         MatOfInt channels = new MatOfInt(0);
@@ -250,6 +278,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertFalse(0 == Core.countNonZero(dst));
     }
 
+    @Test
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat() {
         List<Mat> images = Arrays.asList(gray128);
         MatOfInt channels = new MatOfInt(0);
@@ -267,6 +296,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, hist, EPS);
     }
 
+    @Test
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat2D() {
         List<Mat> images = Arrays.asList(gray255, gray128);
         MatOfInt channels = new MatOfInt(0, 1);
@@ -284,6 +314,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, hist, EPS);
     }
 
+    @Test
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat3D() {
         List<Mat> images = Arrays.asList(rgbLena);
 
@@ -322,6 +353,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, hist3D, EPS);
     }
 
+    @Test
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloatBoolean() {
         List<Mat> images = Arrays.asList(gray255, gray128);
         MatOfInt channels = new MatOfInt(0, 1);
@@ -339,18 +371,21 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, hist, EPS);
     }
 
+    @Test
     public void testCannyMatMatDoubleDouble() {
         Imgproc.Canny(gray255, dst, 5, 10);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testCannyMatMatDoubleDoubleIntBoolean() {
         Imgproc.Canny(gray0, dst, 5, 10, 5, true);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testCompareHist() {
         Mat H1 = new Mat(3, 1, CvType.CV_32F);
         Mat H2 = new Mat(3, 1, CvType.CV_32F);
@@ -362,6 +397,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(1., distance, EPS);
     }
 
+    @Test
     public void testContourAreaMat() {
         Mat contour = new Mat(1, 4, CvType.CV_32FC2);
         contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
@@ -371,6 +407,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(45., area, EPS);
     }
 
+    @Test
     public void testContourAreaMatBoolean() {
         Mat contour = new Mat(1, 4, CvType.CV_32FC2);
         contour.put(0, 0, 0, 0, 10, 0, 10, 10, 5, 4);
@@ -381,6 +418,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testConvertMapsMatMatMatMatInt() {
         Mat map1 = new Mat(1, 4, CvType.CV_32FC1, new Scalar(1));
         Mat map2 = new Mat(1, 4, CvType.CV_32FC1, new Scalar(2));
@@ -396,6 +434,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truthMap2, dstmap2);
     }
 
+    @Test
     public void testConvertMapsMatMatMatMatIntBoolean() {
         Mat map1 = new Mat(1, 3, CvType.CV_32FC1, new Scalar(2));
         Mat map2 = new Mat(1, 3, CvType.CV_32FC1, new Scalar(4));
@@ -412,6 +451,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truthMap2, dstmap2);
     }
 
+    @Test
     public void testConvexHullMatMat() {
         MatOfPoint points = new MatOfPoint(
                 new Point(20, 0),
@@ -432,6 +472,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expHull, hull, EPS);
     }
 
+    @Test
     public void testConvexHullMatMatBooleanBoolean() {
         MatOfPoint points = new MatOfPoint(
                 new Point(2, 0),
@@ -452,6 +493,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expHull, hull, EPS);
     }
 
+    @Test
     public void testConvexityDefects() {
         MatOfPoint points = new MatOfPoint(
                 new Point(20, 0),
@@ -471,6 +513,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCornerEigenValsAndVecsMatMatIntInt() {
         fail("Not yet implemented");
         // TODO: write better test
@@ -487,6 +531,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCornerEigenValsAndVecsMatMatIntIntInt() {
         fail("Not yet implemented");
         // TODO: write better test
@@ -501,6 +547,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCornerHarrisMatMatIntIntDouble() {
         fail("Not yet implemented");
         // TODO: write better test
@@ -513,6 +561,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCornerHarrisMatMatIntIntDoubleInt() {
         fail("Not yet implemented");
         // TODO: write better test
@@ -525,6 +575,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCornerMinEigenValMatMatInt() {
         fail("Not yet implemented");
         // TODO: write better test
@@ -545,6 +597,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testCornerMinEigenValMatMatIntInt() {
         Mat src = Mat.eye(3, 3, CvType.CV_32FC1);
         int blockSize = 3;
@@ -562,6 +615,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testCornerMinEigenValMatMatIntIntInt() {
         Mat src = Mat.eye(3, 3, CvType.CV_32FC1);
         int blockSize = 3;
@@ -579,6 +633,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testCornerSubPix() {
         Mat img = new Mat(matSize, matSize, CvType.CV_8U, new Scalar(128));
         Point truthPosition = new Point(img.cols() / 2, img.rows() / 2);
@@ -595,14 +650,19 @@ public class ImgprocTest extends OpenCVTestCase {
         assertPointEquals(truthPosition, corners.toList().get(0), weakEPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testCvtColorMatMatInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCvtColorMatMatIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testDilateMatMatMat() {
         Mat kernel = new Mat();
 
@@ -616,22 +676,31 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
+    @NotYetImplemented
     public void testDilateMatMatMatPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDilateMatMatMatPointInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDilateMatMatMatPointIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDilateMatMatMatPointIntIntScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testDistanceTransformWithLabels() {
         Mat dstLables = getMat(CvType.CV_32SC1, 0);
         Mat labels = new Mat();
@@ -642,6 +711,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(getMat(CvType.CV_32FC1, 8192), dst, EPS);
     }
 
+    @Test
     public void testDrawContoursMatListOfMatIntScalar() {
         Imgproc.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -652,6 +722,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testDrawContoursMatListOfMatIntScalarInt() {
         Imgproc.rectangle(gray0, new Point(1, 2), new Point(7, 8), new Scalar(100));
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
@@ -663,10 +734,13 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
 
+    @Test
+    @NotYetImplemented
     public void testDrawContoursMatListOfMatIntScalarIntIntMatIntPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testEqualizeHist() {
         Imgproc.equalizeHist(gray0, dst);
         assertMatEqual(gray0, dst);
@@ -676,6 +750,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testErodeMatMatMat() {
         Mat kernel = new Mat();
 
@@ -684,6 +759,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(gray128, dst);
     }
 
+    @Test
     public void testErodeMatMatMatPointInt() {
         Mat src = new Mat(3, 3, CvType.CV_8U) {
             {
@@ -700,6 +776,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testErodeMatMatMatPointIntIntScalar() {
         Mat src = new Mat(3, 3, CvType.CV_8U) {
             {
@@ -717,6 +794,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testFilter2DMatMatIntMat() {
         Mat src = Mat.eye(4, 4, CvType.CV_32F);
         Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(1));
@@ -734,10 +812,13 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testFilter2DMatMatIntMatPointDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testFilter2DMatMatIntMatPointDoubleInt() {
         Mat kernel = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(0));
         Point point = new Point(0, 0);
@@ -747,6 +828,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(gray2, dst);
     }
 
+    @Test
     public void testFindContoursMatListOfMatMatIntInt() {
         Mat img = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>(5);
@@ -768,6 +850,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(contours.size(), hierarchy.total());
     }
 
+    @Test
     public void testFindContoursMatListOfMatMatIntIntPoint() {
         Mat img = new Mat(50, 50, CvType.CV_8UC1, new Scalar(0));
         Mat img2 = img.submat(5, 50, 3, 50);
@@ -791,6 +874,7 @@ public class ImgprocTest extends OpenCVTestCase {
         */
     }
 
+    @Test
     public void testFitEllipse() {
         MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-1, 1), new Point(1, 1), new Point(1, -1), new Point(-1, -1));
         RotatedRect rrect = new RotatedRect();
@@ -802,6 +886,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(2.828, rrect.size.height, EPS);
     }
 
+    @Test
     public void testFitLine() {
         Mat points = new Mat(1, 4, CvType.CV_32FC2);
         points.put(0, 0, 0, 0, 2, 3, 3, 4, 5, 8);
@@ -814,6 +899,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(linePoints, dst, EPS);
     }
 
+    @Test
     public void testFloodFillMatMatPointScalar() {
         Mat mask = new Mat(matSize + 2, matSize + 2, CvType.CV_8U, new Scalar(0));
         Mat img = gray0;
@@ -827,6 +913,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(mask.submat(1, matSize + 1, 1, matSize + 1), img);
     }
 
+    @Test
     public void testFloodFillMatMatPointScalar_WithoutMask() {
         Mat img = gray0;
         Imgproc.circle(img, new Point(matSize / 2, matSize / 2), 3, new Scalar(2));
@@ -838,22 +925,31 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(Core.countNonZero(img), retval);
     }
 
+    @Test
+    @NotYetImplemented
     public void testFloodFillMatMatPointScalarRect() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFloodFillMatMatPointScalarRectScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFloodFillMatMatPointScalarRectScalarScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testFloodFillMatMatPointScalarRectScalarScalarInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testGaussianBlurMatMatSizeDouble() {
         Imgproc.GaussianBlur(gray0, dst, size, 1);
         assertMatEqual(gray0, dst);
@@ -862,6 +958,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(gray2, dst);
     }
 
+    @Test
     public void testGaussianBlurMatMatSizeDoubleDouble() {
         Imgproc.GaussianBlur(gray2, dst, size, 0, 0);
 
@@ -869,6 +966,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testGaussianBlurMatMatSizeDoubleDoubleInt() {
         Imgproc.GaussianBlur(gray2, dst, size, 1, 3, Core.BORDER_REFLECT);
 
@@ -876,6 +974,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testGetAffineTransform() {
         MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
         MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
@@ -891,6 +990,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, transform, EPS);
     }
 
+    @Test
     public void testGetDefaultNewCameraMatrixMat() {
         Mat mtx = Imgproc.getDefaultNewCameraMatrix(gray0);
 
@@ -898,6 +998,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(mtx));
     }
 
+    @Test
     public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
         Mat mtx = Imgproc.getDefaultNewCameraMatrix(gray0, size, true);
 
@@ -906,6 +1007,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testGetDerivKernelsMatMatIntIntInt() {
         Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
         Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
@@ -924,6 +1026,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expKy, ky, EPS);
     }
 
+    @Test
     public void testGetDerivKernelsMatMatIntIntIntBooleanInt() {
         Mat kx = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
         Mat ky = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
@@ -943,6 +1046,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testGetGaussianKernelIntDouble() {
         dst = Imgproc.getGaussianKernel(1, 0.5);
 
@@ -950,6 +1054,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testGetGaussianKernelIntDoubleInt() {
         dst = Imgproc.getGaussianKernel(3, 0.8, CvType.CV_32F);
 
@@ -958,10 +1063,13 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testGetPerspectiveTransform() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testGetRectSubPixMatSizePointMat() {
         Size size = new Size(3, 3);
         Point center = new Point(gray255.cols() / 2, gray255.rows() / 2);
@@ -972,6 +1080,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testGetRectSubPixMatSizePointMatInt() {
         Mat src = new Mat(10, 10, CvType.CV_32F, new Scalar(2));
         Size patchSize = new Size(5, 5);
@@ -983,6 +1092,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testGetRotationMatrix2D() {
         Point center = new Point(0, 0);
 
@@ -998,6 +1108,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testGetStructuringElementIntSize() {
         dst = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, size);
 
@@ -1005,6 +1116,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testGetStructuringElementIntSizePoint() {
         dst = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, size, anchorPoint);
 
@@ -1018,6 +1130,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testGoodFeaturesToTrackMatListOfPointIntDoubleDouble() {
         Mat src = gray0;
         Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
@@ -1028,6 +1141,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(4, lp.total());
     }
 
+    @Test
     public void testGoodFeaturesToTrackMatListOfPointIntDoubleDoubleMatIntBooleanDouble() {
         Mat src = gray0;
         Imgproc.rectangle(src, new Point(2, 2), new Point(8, 8), new Scalar(100), -1);
@@ -1038,14 +1152,19 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(4, lp.total());
     }
 
+    @Test
+    @NotYetImplemented
     public void testGrabCutMatMatRectMatMatInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testGrabCutMatMatRectMatMatIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testHoughCirclesMatMatIntDoubleDouble() {
         int sz = 512;
         Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
@@ -1056,6 +1175,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, circles.cols());
     }
 
+    @Test
     public void testHoughCirclesMatMatIntDoubleDouble1() {
         int sz = 512;
         Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
@@ -1070,10 +1190,13 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(1, circles.cols());
     }
 
+    @Test
+    @NotYetImplemented
     public void testHoughCirclesMatMatIntDoubleDoubleDoubleDoubleIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testHoughLinesMatMatDoubleDoubleInt() {
         int sz = 512;
         Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(0));
@@ -1095,14 +1218,19 @@ public class ImgprocTest extends OpenCVTestCase {
         */
     }
 
+    @Test
+    @NotYetImplemented
     public void testHoughLinesMatMatDoubleDoubleIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testHoughLinesMatMatDoubleDoubleIntDoubleDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testHoughLinesPMatMatDoubleDoubleInt() {
         int sz = 512;
         Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(0));
@@ -1127,18 +1255,26 @@ public class ImgprocTest extends OpenCVTestCase {
         */
     }
 
+    @Test
+    @NotYetImplemented
     public void testHoughLinesPMatMatDoubleDoubleIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testHoughLinesPMatMatDoubleDoubleIntDoubleDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testHuMoments() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitUndistortRectifyMap() {
         fail("Not yet implemented");
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
@@ -1157,6 +1293,8 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
         fail("Not yet implemented");
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
@@ -1177,14 +1315,19 @@ public class ImgprocTest extends OpenCVTestCase {
         // 5, m1type, truthput1, truthput2);
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitWideAngleProjMapMatMatSizeIntIntMatMatInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testInitWideAngleProjMapMatMatSizeIntIntMatMatIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testIntegral2MatMatMat() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
         Mat expSum = new Mat(4, 4, CvType.CV_64F);
@@ -1208,6 +1351,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expSqsum, sqsum, EPS);
     }
 
+    @Test
     public void testIntegral2MatMatMatInt() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
         Mat expSum = new Mat(4, 4, CvType.CV_64F);
@@ -1231,6 +1375,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expSqsum, sqsum, EPS);
     }
 
+    @Test
     public void testIntegral3MatMatMatMat() {
         Mat src = new Mat(1, 1, CvType.CV_32F, new Scalar(1));
         Mat expSum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
@@ -1256,6 +1401,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expTilted, tilted, EPS);
     }
 
+    @Test
     public void testIntegral3MatMatMatMatInt() {
         Mat src = new Mat(1, 1, CvType.CV_32F, new Scalar(1));
         Mat expSum = new Mat(imgprocSz, imgprocSz, CvType.CV_64F);
@@ -1281,6 +1427,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(expTilted, tilted, EPS);
     }
 
+    @Test
     public void testIntegralMatMat() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2));
 
@@ -1296,6 +1443,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testIntegralMatMatInt() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2));
 
@@ -1311,6 +1459,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testInvertAffineTransform() {
         Mat src = new Mat(2, 3, CvType.CV_64F, new Scalar(1));
 
@@ -1320,6 +1469,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testIsContourConvex() {
         MatOfPoint contour1 = new MatOfPoint(new Point(0, 0), new Point(10, 0), new Point(10, 10), new Point(5, 4));
 
@@ -1330,12 +1480,14 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(Imgproc.isContourConvex(contour2));
     }
 
+    @Test
     public void testLaplacianMatMatInt() {
         Imgproc.Laplacian(gray0, dst, CvType.CV_8U);
 
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testLaplacianMatMatIntIntDoubleDouble() {
         Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
@@ -1350,6 +1502,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testLaplacianMatMatIntIntDoubleDoubleInt() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(2));
 
@@ -1359,6 +1512,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testMatchShapes() {
         Mat contour1 = new Mat(1, 4, CvType.CV_32FC2);
         Mat contour2 = new Mat(1, 4, CvType.CV_32FC2);
@@ -1370,6 +1524,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(2.81109697365334, distance, EPS);
     }
 
+    @Test
     public void testMatchTemplate() {
         Mat image = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
         Mat templ = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
@@ -1387,6 +1542,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testMedianBlur() {
         Imgproc.medianBlur(gray255, dst, 5);
         assertMatEqual(gray255, dst);
@@ -1396,16 +1552,18 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testMinAreaRect() {
         MatOfPoint2f points = new MatOfPoint2f(new Point(1, 1), new Point(5, 1), new Point(4, 3), new Point(6, 2));
 
         RotatedRect rrect = Imgproc.minAreaRect(points);
 
         assertEquals(new Size(2, 5), rrect.size);
-        assertEquals(-90., rrect.angle);
+        assertEquals(-90., rrect.angle, 0);
         assertEquals(new Point(3.5, 2), rrect.center);
     }
 
+    @Test
     public void testMinEnclosingCircle() {
         MatOfPoint2f points = new MatOfPoint2f(new Point(0, 0), new Point(-100, 0), new Point(0, -100), new Point(100, 0), new Point(0, 100));
         Point actualCenter = new Point();
@@ -1417,14 +1575,19 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(100.0f, radius[0], 1.0);
     }
 
+    @Test
+    @NotYetImplemented
     public void testMomentsMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMomentsMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMorphologyExMatMatIntMat() {
         Imgproc.morphologyEx(gray255, dst, Imgproc.MORPH_GRADIENT, gray0);
 
@@ -1432,6 +1595,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testMorphologyExMatMatIntMatPointInt() {
         Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_8U);
 
@@ -1446,6 +1610,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
 
+    @Test
     public void testMorphologyExMatMatIntMatPointIntIntScalar() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8U);
         src.put(0, 0, 2, 1);
@@ -1466,15 +1631,17 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testPointPolygonTest() {
         MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
         double sign1 = Imgproc.pointPolygonTest(contour, new Point(2, 2), false);
-        assertEquals(1.0, sign1);
+        assertEquals(1.0, sign1, 0);
 
         double sign2 = Imgproc.pointPolygonTest(contour, new Point(4, 4), true);
-        assertEquals(-Math.sqrt(0.5), sign2);
+        assertEquals(-Math.sqrt(0.5), sign2, 0);
     }
 
+    @Test
     public void testPreCornerDetectMatMatInt() {
         Mat src = new Mat(4, 4, CvType.CV_32F, new Scalar(1));
         int ksize = 3;
@@ -1485,6 +1652,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testPreCornerDetectMatMatIntInt() {
         Mat src = new Mat(4, 4, CvType.CV_32F, new Scalar(1));
         int ksize = 3;
@@ -1496,6 +1664,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testPyrDownMatMat() {
         Mat src = new Mat(4, 4, CvType.CV_32F) {
             {
@@ -1517,6 +1686,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testPyrDownMatMatSize() {
         Mat src = new Mat(4, 4, CvType.CV_32F) {
             {
@@ -1540,6 +1710,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testPyrMeanShiftFilteringMatMatDoubleDouble() {
         Mat src = new Mat(matSize, matSize, CvType.CV_8UC3, new Scalar(0));
 
@@ -1549,14 +1720,19 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
+    @NotYetImplemented
     public void testPyrMeanShiftFilteringMatMatDoubleDoubleInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testPyrMeanShiftFilteringMatMatDoubleDoubleIntTermCriteria() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testPyrUpMatMat() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F);
         src.put(0, 0, 2, 1);
@@ -1575,10 +1751,14 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testPyrUpMatMatSize() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRemapMatMatMatMatInt() {
         fail("Not yet implemented");
         // this test does something weird
@@ -1595,6 +1775,8 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testRemapMatMatMatMatIntIntScalar() {
         fail("Not yet implemented");
         // this test does something weird
@@ -1613,6 +1795,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testResizeMatMatSize() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_8UC1, new Scalar(1));
         Size dsize = new Size(1, 1);
@@ -1623,6 +1806,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    @Test
     public void testResizeMatMatSizeDoubleDoubleInt() {
         Imgproc.resize(gray255, dst, new Size(2, 2), 0, 0, Imgproc.INTER_AREA);
 
@@ -1631,6 +1815,7 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testScharrMatMatIntIntInt() {
         Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
@@ -1640,6 +1825,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testScharrMatMatIntIntIntDoubleDouble() {
         Mat src = Mat.eye(imgprocSz, imgprocSz, CvType.CV_32F);
 
@@ -1649,6 +1835,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testScharrMatMatIntIntIntDoubleDoubleInt() {
         Mat src = Mat.eye(3, 3, CvType.CV_32F);
 
@@ -1664,6 +1851,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testSepFilter2DMatMatIntMatMat() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32F, new Scalar(2));
         Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
@@ -1677,6 +1865,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testSepFilter2DMatMatIntMatMatPointDouble() {
         Mat src = new Mat(imgprocSz, imgprocSz, CvType.CV_32FC1, new Scalar(2));
         Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
@@ -1690,6 +1879,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testSepFilter2DMatMatIntMatMatPointDoubleInt() {
         Mat kernelX = new Mat(1, 3, CvType.CV_32FC1);
         kernelX.put(0, 0, 2, 2, 2);
@@ -1704,18 +1894,21 @@ public class ImgprocTest extends OpenCVTestCase {
         // TODO_: write better test
     }
 
+    @Test
     public void testSobelMatMatIntIntInt() {
         Imgproc.Sobel(gray255, dst, CvType.CV_8U, 1, 0);
 
         assertMatEqual(gray0, dst);
     }
 
+    @Test
     public void testSobelMatMatIntIntIntIntDoubleDouble() {
         Imgproc.Sobel(gray255, dst, CvType.CV_8U, 1, 0, 3, 2, 0.001);
         assertMatEqual(gray0, dst);
         // TODO_: write better test
     }
 
+    @Test
     public void testSobelMatMatIntIntIntIntDoubleDoubleInt() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1737,6 +1930,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testThreshold() {
         Imgproc.threshold(makeMask(gray0.clone(), 10), dst, 5, 255, Imgproc.THRESH_TRUNC);
         assertMatEqual(makeMask(gray0.clone(), 5), dst);
@@ -1748,6 +1942,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(makeMask(gray255.clone(), 0), dst);
     }
 
+    @Test
     public void testUndistortMatMatMatMat() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
@@ -1775,6 +1970,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testUndistortMatMatMatMatMat() {
         Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
@@ -1814,6 +2010,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
 
+    @Test
     public void testWarpAffineMatMatMatSize() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1841,6 +2038,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
     public void testWarpAffineMatMatMatSizeInt() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1867,14 +2065,19 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testWarpAffineMatMatMatSizeIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testWarpAffineMatMatMatSizeIntIntScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testWarpPerspectiveMatMatMatSize() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {
@@ -1903,18 +2106,25 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testWarpPerspectiveMatMatMatSizeInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testWarpPerspectiveMatMatMatSizeIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testWarpPerspectiveMatMatMatSizeIntIntScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testWatershed() {
         Mat image = Mat.eye(4, 4, CvType.CV_8UC(3));
         Mat markers = new Mat(4, 4, CvType.CV_32SC1, new Scalar(0));
@@ -1932,6 +2142,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertMatEqual(truth, markers);
     }
 
+    @Test
     public void testGetTextSize() {
         String text = "Android all the way";
         double fontScale = 2;
@@ -1941,11 +2152,12 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, null);
         Size res = Imgproc.getTextSize(text, Core.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, baseLine);
 
-        assertEquals(543.0, res.width);
-        assertEquals(44.0, res.height);
+        assertEquals(543.0, res.width, 0);
+        assertEquals(44.0, res.height, 0);
         assertEquals(20, baseLine[0]);
     }
 
+    @Test
     public void testCircleMatPointIntScalar() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
@@ -1956,6 +2168,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testCircleMatPointIntScalarInt() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
@@ -1966,6 +2179,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testCircleMatPointIntScalarIntIntInt() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Point center2 = new Point(gray0.cols(), gray0.rows());
@@ -1986,6 +2200,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 == Core.countNonZero(gray0));
     }
 
+    @Test
     public void testClipLine() {
         Rect r = new Rect(10, 10, 10, 10);
         Point pt1 = new Point(5.0, 15.0);
@@ -2009,6 +2224,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(pt2Clipped, pt2);
     }
 
+    @Test
     public void testEllipse2Poly() {
         Point center = new Point(4, 4);
         Size axes = new Size(2, 2);
@@ -2027,6 +2243,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertArrayPointsEquals(truth, pts.toArray(), EPS);
     }
 
+    @Test
     public void testEllipseMatPointSizeDoubleDoubleDoubleScalar() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Size axes = new Size(2, 2);
@@ -2037,6 +2254,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testEllipseMatPointSizeDoubleDoubleDoubleScalarInt() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Size axes = new Size(2, 2);
@@ -2047,6 +2265,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 != Core.countNonZero(gray0));
     }
 
+    @Test
     public void testEllipseMatPointSizeDoubleDoubleDoubleScalarIntIntInt() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         Size axes = new Size(2, 2);
@@ -2063,6 +2282,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(gray0));
     }
 
+    @Test
     public void testEllipseMatRotatedRectScalar() {
         int matSize = 10;
         Mat gray0 = Mat.zeros(matSize, matSize, CvType.CV_8U);
@@ -2091,6 +2311,7 @@ public class ImgprocTest extends OpenCVTestCase {
         }, gray0);
     }
 
+    @Test
     public void testEllipseMatRotatedRectScalarInt() {
         Point center = new Point(matSize / 2, matSize / 2);
         Size size = new Size(matSize / 4, matSize / 2);
@@ -2102,6 +2323,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 < Core.countNonZero(gray0));
     }
 
+    @Test
     public void testEllipseMatRotatedRectScalarIntInt() {
         Point center = new Point(matSize / 2, matSize / 2);
         Size size = new Size(2, matSize * 2 / 3);
@@ -2113,6 +2335,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertTrue(0 < Core.countNonZero(gray0));
     }
 
+    @Test
     public void testPolylinesMatListOfListOfPointBooleanScalar() {
         Mat img = gray0;
         List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
@@ -2127,6 +2350,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(4, Core.countNonZero(img));
     }
 
+    @Test
     public void testPolylinesMatListOfListOfPointBooleanScalarInt() {
         Mat img = gray0;
         List<MatOfPoint> polyline = new ArrayList<MatOfPoint>();
@@ -2137,6 +2361,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(62, Core.countNonZero(img));
     }
 
+    @Test
     public void testPolylinesMatListOfListOfPointBooleanScalarIntIntInt() {
         Mat img = gray0;
         List<MatOfPoint> polyline1 = new ArrayList<MatOfPoint>();
@@ -2153,6 +2378,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(img));
     }
 
+    @Test
     public void testPutTextMatStringPointIntDoubleScalar() {
         String text = "Hello World";
         Size labelSize = new Size(175, 22);
@@ -2167,6 +2393,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(img));
     }
 
+    @Test
     public void testPutTextMatStringPointIntDoubleScalarInt() {
         String text = "Hello World";
         Size labelSize = new Size(176, 22);
@@ -2181,6 +2408,7 @@ public class ImgprocTest extends OpenCVTestCase {
         assertEquals(0, Core.countNonZero(img));
     }
 
+    @Test
     public void testPutTextMatStringPointIntDoubleScalarIntIntBoolean() {
         String text = "Hello World";
         Size labelSize = new Size(175, 22);

@@ -1,13 +1,20 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Arrays;
 
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -42,7 +49,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
     }
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() {
         super.setUp();
         detector = SimpleBlobDetector.create();
         matSize = 200;
@@ -55,18 +62,24 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
             };
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(detector);
     }
 
+    @Test
+    @NotYetImplemented
     public void testDetectListOfMatListOfListOfKeyPoint() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDetectListOfMatListOfListOfKeyPointListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testDetectMatListOfKeyPoint() {
         Mat img = getTestImg();
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
@@ -76,6 +89,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth), keypoints.toList(), EPS);
     }
 
+    @Test
     public void testDetectMatListOfKeyPointMat() {
         Mat img = getTestImg();
         Mat mask = getMaskImg();
@@ -86,11 +100,14 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         assertListKeyPointEquals(Arrays.asList(truth[1]), keypoints.toList(), EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testEmpty() {
 //        assertFalse(detector.empty());
         fail("Not yet implemented");
     }
 
+    @Test
     public void testRead() {
         Mat img = getTestImg();
 
@@ -107,6 +124,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         assertTrue(keypoints2.total() <= keypoints1.total());
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 

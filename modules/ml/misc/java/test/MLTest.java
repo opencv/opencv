@@ -5,12 +5,17 @@ import org.opencv.ml.SVM;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
-import org.opencv.core.CvType;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
 public class MLTest extends OpenCVTestCase {
 
+    @Test
     public void testSaveLoad() {
         Mat samples = new MatOfFloat(new float[] {
             5.1f, 3.5f, 1.4f, 0.2f,

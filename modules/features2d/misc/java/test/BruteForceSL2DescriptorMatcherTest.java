@@ -1,8 +1,15 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDMatch;
@@ -12,6 +19,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -84,7 +92,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         return cross;
     }
 
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_SL2);
         matSize = 100;
@@ -98,11 +106,13 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
                 };
     }
 
+    @Test
     public void testAdd() {
         matcher.add(Arrays.asList(new Mat()));
         assertFalse(matcher.empty());
     }
 
+    @Test
     public void testClear() {
         matcher.add(Arrays.asList(new Mat()));
 
@@ -111,6 +121,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(matcher.empty());
     }
 
+    @Test
     public void testClone() {
         Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
         Mat truth = train.clone();
@@ -125,6 +136,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertMatEqual(truth, descriptors.get(0));
     }
 
+    @Test
     public void testCloneBoolean() {
         matcher.add(Arrays.asList(new Mat()));
 
@@ -134,14 +146,17 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(cloned.empty());
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(matcher);
     }
 
+    @Test
     public void testEmpty() {
         assertTrue(matcher.empty());
     }
 
+    @Test
     public void testGetTrainDescriptors() {
         Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
         Mat truth = train.clone();
@@ -153,34 +168,48 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertMatEqual(truth, descriptors.get(0));
     }
 
+    @Test
     public void testIsMaskSupported() {
         assertTrue(matcher.isMaskSupported());
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchIntListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchIntListOfMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchIntMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchIntMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -195,6 +224,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
+    @Test
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -207,6 +237,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
+    @Test
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -221,6 +252,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         // OpenCVTestRunner.Log(m.toString());
     }
 
+    @Test
     public void testMatchMatMatListOfDMatchMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -232,30 +264,43 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertListDMatchEquals(Arrays.asList(truth[0], truth[1]), matches.toList(), EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloatMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testRead() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
         writeFile(filename, "%YAML:1.0\n---\n");
@@ -264,10 +309,12 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(true);// BruteforceMatcher has no settings
     }
 
+    @Test
     public void testTrain() {
         matcher.train();// BruteforceMatcher does not need to train
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 

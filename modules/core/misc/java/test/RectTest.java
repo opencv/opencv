@@ -1,5 +1,11 @@
 package org.opencv.test.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
@@ -11,19 +17,21 @@ public class RectTest extends OpenCVTestCase {
     private Rect rect;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         r = new Rect();
         rect = new Rect(0, 0, 10, 10);
     }
 
+    @Test
     public void testArea() {
         double area;
         area = rect.area();
-        assertEquals(100.0, area);
+        assertEquals(100.0, area, 0);
     }
 
+    @Test
     public void testBr() {
         Point p_br = new Point();
         p_br = rect.br();
@@ -31,11 +39,13 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(truth, p_br);
     }
 
+    @Test
     public void testClone() {
         r = rect.clone();
         assertEquals(rect, r);
     }
 
+    @Test
     public void testContains() {
         Rect rect = new Rect(0, 0, 10, 10);
 
@@ -55,6 +65,7 @@ public class RectTest extends OpenCVTestCase {
         assertFalse(rect.contains(p_tr));
     }
 
+    @Test
     public void testEqualsObject() {
         boolean flag;
         flag = rect.equals(r);
@@ -65,10 +76,12 @@ public class RectTest extends OpenCVTestCase {
         assertTrue(flag);
     }
 
+    @Test
     public void testHashCode() {
         assertEquals(rect.hashCode(), rect.hashCode());
     }
 
+    @Test
     public void testRect() {
         r = new Rect();
 
@@ -78,6 +91,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(0, r.height);
     }
 
+    @Test
     public void testRectDoubleArray() {
         double[] vals = { 1, 3, 5, 2 };
         r = new Rect(vals);
@@ -88,6 +102,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(2, r.height);
     }
 
+    @Test
     public void testRectIntIntIntInt() {
         r = new Rect(1, 3, 5, 2);
 
@@ -98,6 +113,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(10, rect.height);
     }
 
+    @Test
     public void testRectPointPoint() {
         Point p1 = new Point(4, 4);
         Point p2 = new Point(2, 3);
@@ -110,6 +126,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(1, r.height);
     }
 
+    @Test
     public void testRectPointSize() {
         Point p1 = new Point(4, 4);
         Size sz = new Size(3, 1);
@@ -121,6 +138,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(1, r.height);
     }
 
+    @Test
     public void testSet() {
         double[] vals1 = {};
         Rect r1 = new Rect(vals1);
@@ -139,6 +157,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(5, r.height);
     }
 
+    @Test
     public void testSize() {
         Size s1 = new Size(0, 0);
         assertEquals(s1, r.size());
@@ -147,6 +166,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(s2, rect.size());
     }
 
+    @Test
     public void testTl() {
         Point p_tl = new Point();
         p_tl = rect.tl();
@@ -154,6 +174,7 @@ public class RectTest extends OpenCVTestCase {
         assertEquals(truth, p_tl);
     }
 
+    @Test
     public void testToString() {
         String actual = rect.toString();
         String expected = "{0, 0, 10x10}";

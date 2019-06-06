@@ -1,8 +1,15 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -13,6 +20,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.core.KeyPoint;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -155,7 +163,8 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         return cross;
     }
 
-    protected void setUp() throws Exception {
+    @Override
+    public void setUp() throws Exception {
         super.setUp();
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matSize = 100;
@@ -168,11 +177,13 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
                 };
     }
 
+    @Test
     public void testAdd() {
         matcher.add(Arrays.asList(new Mat()));
         assertFalse(matcher.empty());
     }
 
+    @Test
     public void testClear() {
         matcher.add(Arrays.asList(new Mat()));
 
@@ -181,6 +192,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(matcher.empty());
     }
 
+    @Test
     public void testClone() {
         Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
         matcher.add(Arrays.asList(train));
@@ -193,6 +205,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testCloneBoolean() {
         matcher.add(Arrays.asList(new Mat()));
 
@@ -202,14 +215,17 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertTrue(cloned.empty());
     }
 
+    @Test
     public void testCreate() {
         assertNotNull(matcher);
     }
 
+    @Test
     public void testEmpty() {
         assertTrue(matcher.empty());
     }
 
+    @Test
     public void testGetTrainDescriptors() {
         Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
         Mat truth = train.clone();
@@ -221,34 +237,48 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertMatEqual(truth, descriptors.get(0));
     }
 
+    @Test
     public void testIsMaskSupported() {
         assertFalse(matcher.isMaskSupported());
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchIntListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatListOfListOfDMatchIntListOfMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchIntMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testKnnMatchMatMatListOfListOfDMatchIntMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMatchMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -261,6 +291,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
+    @Test
     public void testMatchMatListOfDMatchListOfMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -274,6 +305,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 
+    @Test
     public void testMatchMatMatListOfDMatch() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -287,6 +319,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         // OpenCVTestRunner.Log(matches);
     }
 
+    @Test
     public void testMatchMatMatListOfDMatchMat() {
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
@@ -298,30 +331,43 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertListDMatchEquals(Arrays.asList(truth), matches.toList(), EPS);
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatListOfListOfDMatchFloatListOfMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloatMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testRadiusMatchMatMatListOfListOfDMatchFloatMatBoolean() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testRead() {
         String filenameR = OpenCVTestRunner.getTempFileName("yml");
         String filenameW = OpenCVTestRunner.getTempFileName("yml");
@@ -333,12 +379,14 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertEquals(ymlParamsModified, readFile(filenameW));
     }
 
+    @Test
     public void testTrain() {
         Mat train = getTrainDescriptors();
         matcher.add(Arrays.asList(train));
         matcher.train();
     }
 
+    @Test
     public void testTrainNoData() {
         try {
             matcher.train();
@@ -348,6 +396,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testWrite() {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
@@ -356,6 +405,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
         assertEquals(xmlParamsDefault, readFile(filename));
     }
 
+    @Test
     public void testWriteYml() {
         String filename = OpenCVTestRunner.getTempFileName("yml");
 

@@ -2,6 +2,14 @@
 
 package org.opencv.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -12,10 +20,12 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.List;
 
-import junit.framework.TestCase;
-
+import org.junit.After;
+import org.junit.Before;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
@@ -23,20 +33,9 @@ import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.core.DMatch;
-import org.opencv.core.KeyPoint;
 import org.opencv.imgcodecs.Imgcodecs;
 
-public class OpenCVTestCase extends TestCase {
-
-    public static class TestSkipException extends RuntimeException {
-        public TestSkipException() {}
-    }
-
-    //change to 'true' to unblock fail on fail("Not yet implemented")
-    public static final boolean passNYI = true;
-
-    protected static boolean isTestCaseEnabled = true;
+public class OpenCVTestCase {
 
     protected static final String XFEATURES2D = "org.opencv.xfeatures2d.";
     protected static final String DEFAULT_FACTORY = "create";
@@ -102,10 +101,8 @@ public class OpenCVTestCase extends TestCase {
     protected Mat v1;
     protected Mat v2;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-
+    @Before
+    public void setUp() throws Exception {
         try {
             System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         } catch (SecurityException e) {
@@ -185,9 +182,8 @@ public class OpenCVTestCase extends TestCase {
         v2.put(0, 0, 2.0, 1.0, 3.0);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-
+    @After
+    public void tearDown() throws Exception {
         gray0.release();
         gray1.release();
         gray2.release();
@@ -217,63 +213,15 @@ public class OpenCVTestCase extends TestCase {
         gray255_32f_3d.release();
         v1.release();
         v2.release();
-
-        super.tearDown();
     }
 
-    @Override
-    protected void runTest() throws Throwable {
-        // Do nothing if the precondition does not hold.
-        if (isTestCaseEnabled) {
-            try {
-                super.runTest();
-            } catch (TestSkipException ex) {
-                OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
-                assertTrue(true);
-            }
-        } else {
-            OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" disabled!");
-        }
-    }
-
-    public void runBare() throws Throwable {
-        Throwable exception = null;
-        try {
-            setUp();
-        } catch (TestSkipException ex) {
-            OpenCVTestRunner.Log(TAG + " :: " + "Test case \"" + this.getClass().getName() + "\" skipped!");
-            assertTrue(true);
-            return;
-        }
-        try {
-            runTest();
-        } catch (Throwable running) {
-            exception = running;
-        } finally {
-            try {
-                tearDown();
-            } catch (Throwable tearingDown) {
-                if (exception == null) exception = tearingDown;
-            }
-        }
-        if (exception != null) throw exception;
-    }
-
-    protected Mat getMat(int type, double... vals)
-    {
+    protected Mat getMat(int type, double... vals){
         return new Mat(matSize, matSize, type, new Scalar(vals));
     }
 
-    protected Mat makeMask(Mat m, double... vals)
-    {
+    protected Mat makeMask(Mat m, double... vals) {
         m.submat(0, m.rows(), 0, m.cols() / 2).setTo(new Scalar(vals));
         return m;
-    }
-
-    public static void fail(String msg) {
-        if(msg == "Not yet implemented" && passNYI)
-            return;
-        TestCase.fail(msg);
     }
 
     public static void assertGE(double v1, double v2) {
@@ -285,8 +233,7 @@ public class OpenCVTestCase extends TestCase {
             throw new UnsupportedOperationException();
         }
 
-        if (!list1.isEmpty())
-        {
+        if (!list1.isEmpty()){
             if (list1.get(0) instanceof Float || list1.get(0) instanceof Double)
                 throw new UnsupportedOperationException();
         }
@@ -309,9 +256,10 @@ public class OpenCVTestCase extends TestCase {
             fail("Arrays have different sizes.");
         }
 
-        for (int i = 0; i < ar1.length; i++)
+        for (int i = 0; i < ar1.length; i++) {
             assertEquals(ar1[i].doubleValue(), ar2[i].doubleValue(), epsilon);
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
+        }
     }
 
     public static void assertArrayEquals(double[] ar1, double[] ar2, double epsilon) {
@@ -319,9 +267,10 @@ public class OpenCVTestCase extends TestCase {
             fail("Arrays have different sizes.");
         }
 
-        for (int i = 0; i < ar1.length; i++)
+        for (int i = 0; i < ar1.length; i++) {
             assertEquals(ar1[i], ar2[i], epsilon);
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
+        }
     }
 
     public static void assertListMatEquals(List<Mat> list1, List<Mat> list2, double epsilon) {
@@ -387,11 +336,11 @@ public class OpenCVTestCase extends TestCase {
 
     public static void assertRotatedRectEquals(RotatedRect expected, RotatedRect actual) {
         String msg = "expected:<" + expected + "> but was:<" + actual + ">";
-        assertEquals(msg, expected.center.x, actual.center.x);
-        assertEquals(msg, expected.center.y, actual.center.y);
-        assertEquals(msg, expected.size.width, actual.size.width);
-        assertEquals(msg, expected.size.height, actual.size.height);
-        assertEquals(msg, expected.angle, actual.angle);
+        assertEquals(msg, expected.center.x, actual.center.x, 0);
+        assertEquals(msg, expected.center.y, actual.center.y, 0);
+        assertEquals(msg, expected.size.width, actual.size.width, 0);
+        assertEquals(msg, expected.size.height, actual.size.height, 0);
+        assertEquals(msg, expected.angle, actual.angle, 0);
     }
 
     public static void assertMatEqual(Mat m1, Mat m2) {
@@ -512,9 +461,9 @@ public class OpenCVTestCase extends TestCase {
         diff.release();
 
         if (isEqualityMeasured)
-            assertTrue("Mats are different in " + mistakes + " points", 0 == mistakes);
+            assertEquals("Mats are different in " + mistakes + " points", 0, mistakes);
         else
-            assertFalse("Mats are equal", 0 == mistakes);
+            assertNotEquals("Mats are equal", 0, mistakes);
     }
 
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
@@ -536,14 +485,16 @@ public class OpenCVTestCase extends TestCase {
 
     protected static String readFile(String path) {
         try {
-        BufferedReader br = new BufferedReader(new FileReader(path));
-        String line;
-        StringBuffer result = new StringBuffer();
-        while ((line = br.readLine()) != null) {
-            result.append(line);
-            result.append("\n");
-        }
-        return result.toString();
+            BufferedReader br = new BufferedReader(new FileReader(path));
+            String line;
+            StringBuilder result = new StringBuilder();
+            while ((line = br.readLine()) != null) {
+                result.append(line);
+                result.append("\n");
+            }
+            String value = result.toString();
+            br.close();
+            return value;
         } catch (IOException e) {
             OpenCVTestRunner.Log("Failed to read file \"" + path
                     + "\". Exception is thrown: " + e);
@@ -570,14 +521,15 @@ public class OpenCVTestCase extends TestCase {
         }
     }
 
-    protected <T> T createClassInstance(String cname, String factoryName, Class cParams[], Object oValues[]) {
+    @SuppressWarnings("unchecked")
+    protected <T> T createClassInstance(String cname, String factoryName, Class<?> cParams[], Object oValues[]) {
         T instance = null;
 
         assertFalse("Class name should not be empty", "".equals(cname));
 
         String message="";
         try {
-            Class algClass = getClassForName(cname);
+            Class<?> algClass = getClassForName(cname);
             Method factory = null;
 
             if(cParams!=null && cParams.length>0) {
@@ -600,10 +552,7 @@ public class OpenCVTestCase extends TestCase {
             }
         }
         catch(Exception ex) {
-            if (cname.startsWith(XFEATURES2D))
-            {
-                throw new TestSkipException();
-            }
+            assumeFalse(cname.startsWith(XFEATURES2D));
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
@@ -626,7 +575,7 @@ public class OpenCVTestCase extends TestCase {
         assertTrue(message, "".equals(message));
     }
 
-    protected Class getClassForName(String sclass) throws ClassNotFoundException{
+    protected Class<?> getClassForName(String sclass) throws ClassNotFoundException{
         if("int".equals(sclass))
             return Integer.TYPE;
         else if("long".equals(sclass))

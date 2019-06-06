@@ -1,5 +1,11 @@
 package org.opencv.test.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 import org.opencv.core.Range;
 import org.opencv.test.OpenCVTestCase;
 
@@ -10,7 +16,7 @@ public class RangeTest extends OpenCVTestCase {
     Range range;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         range = new Range();
@@ -18,18 +24,21 @@ public class RangeTest extends OpenCVTestCase {
         r2 = new Range(1, 1);
     }
 
+    @Test
     public void testAll() {
         range = Range.all();
         assertEquals(Integer.MIN_VALUE, range.start);
         assertEquals(Integer.MAX_VALUE, range.end);
     }
 
+    @Test
     public void testClone() {
         Range dstRange = new Range();
         dstRange = r1.clone();
         assertEquals(r1, dstRange);
     }
 
+    @Test
     public void testEmpty() {
         boolean flag;
 
@@ -40,6 +49,7 @@ public class RangeTest extends OpenCVTestCase {
         assertTrue(flag);
     }
 
+    @Test
     public void testEqualsObject() {
         assertFalse(r2.equals(r1));
 
@@ -47,15 +57,18 @@ public class RangeTest extends OpenCVTestCase {
         assertTrue(r1.equals(range));
     }
 
+    @Test
     public void testHashCode() {
         assertEquals(r1.hashCode(), r1.hashCode());
     }
 
+    @Test
     public void testIntersection() {
         range = r1.intersection(r2);
         assertEquals(r2, range);
     }
 
+    @Test
     public void testRange() {
         range = new Range();
 
@@ -64,6 +77,7 @@ public class RangeTest extends OpenCVTestCase {
         assertEquals(0, range.end);
     }
 
+    @Test
     public void testRangeDoubleArray() {
         double[] vals = { 2, 4 };
         Range r = new Range(vals);
@@ -72,6 +86,7 @@ public class RangeTest extends OpenCVTestCase {
         assertTrue(4 == r.end);
     }
 
+    @Test
     public void testRangeIntInt() {
         r1 = new Range(12, 13);
 
@@ -80,6 +95,7 @@ public class RangeTest extends OpenCVTestCase {
         assertEquals(13, r1.end);
     }
 
+    @Test
     public void testSet() {
         double[] vals1 = {};
         r1.set(vals1);
@@ -92,18 +108,21 @@ public class RangeTest extends OpenCVTestCase {
         assertEquals(10, r2.end);
     }
 
+    @Test
     public void testShift() {
         int delta = 1;
         range = range.shift(delta);
         assertEquals(r2, range);
     }
 
+    @Test
     public void testSize() {
         assertEquals(10, r1.size());
 
         assertEquals(0, r2.size());
     }
 
+    @Test
     public void testToString() {
         String actual = r1.toString();
         String expected = "[1, 11)";

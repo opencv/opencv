@@ -55,6 +55,10 @@
       <batchtest fork="yes" todir="${test.dir}">
         <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*">
           <exclude name="**/*$*.class"/>
+          <exclude name="**/NotYetImplemented*.class"/>
+          <exclude name="**/OpenCVJUnitRunner.class"/>
+          <exclude name="**/OpenCVTestCase.class"/>
+          <exclude name="**/OpenCVTestRunner.class"/>
         </zipfileset>
       </batchtest>
     </junit>

@@ -1,5 +1,9 @@
 package org.opencv.test.video;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import org.junit.Test;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -7,6 +11,7 @@ import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.video.Video;
 
@@ -26,7 +31,7 @@ public class VideoTest extends OpenCVTestCase {
     private int w;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         shift1 = 10;
@@ -44,27 +49,37 @@ public class VideoTest extends OpenCVTestCase {
         err = new MatOfFloat();
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalcGlobalOrientation() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalcMotionGradientMatMatMatDoubleDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalcMotionGradientMatMatMatDoubleDoubleInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCalcOpticalFlowFarneback() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloat() {
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err);
         assertEquals(3, Core.countNonZero(status));
     }
 
+    @Test
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSize() {
         Size sz = new Size(3, 3);
         Video.calcOpticalFlowPyrLK(subLena1, subLena2, prevPts, nextPts, status, err, sz, 3);
@@ -72,26 +87,38 @@ public class VideoTest extends OpenCVTestCase {
     }
 
 
+    @Test
+    @NotYetImplemented
     public void testCalcOpticalFlowPyrLKMatMatListOfPointListOfPointListOfByteListOfFloatSizeIntTermCriteriaDoubleIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testCamShift() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testEstimateRigidTransform() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testMeanShift() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testSegmentMotion() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testUpdateMotionHistory() {
         fail("Not yet implemented");
     }

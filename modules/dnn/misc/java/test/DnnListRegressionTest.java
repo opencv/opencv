@@ -1,23 +1,20 @@
 package org.opencv.test.dnn;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNotNull;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.opencv.core.Core;
+
+import org.junit.Test;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
-import org.opencv.core.MatOfFloat;
-import org.opencv.core.MatOfByte;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.dnn.DictValue;
 import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Layer;
 import org.opencv.dnn.Net;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
 import org.opencv.test.OpenCVTestCase;
 
 /*
@@ -38,15 +35,11 @@ public class DnnListRegressionTest extends OpenCVTestCase {
     Net net;
 
     @Override
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         super.setUp();
 
         String envDnnTestDataPath = System.getenv(ENV_OPENCV_DNN_TEST_DATA_PATH);
-
-        if(envDnnTestDataPath == null){
-            isTestCaseEnabled = false;
-            return;
-        }
+        assumeNotNull(envDnnTestDataPath);
 
         File dnnTestDataPath = new File(envDnnTestDataPath);
         modelFileName =  new File(dnnTestDataPath, "dnn/tensorflow_inception_graph.pb").toString();
@@ -72,8 +65,9 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         net.setInput(inputBlob, "input");
     }
 
+    @Test
     public void testSetInputsNames() {
-        List<String> inputs = new ArrayList();
+        List<String> inputs = new ArrayList<String>();
         inputs.add("input");
         try {
             net.setInputsNames(inputs);
@@ -82,9 +76,10 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testForward() {
-        List<Mat> outs = new ArrayList();
-        List<String> outNames = new ArrayList();
+        List<Mat> outs = new ArrayList<Mat>();
+        List<String> outNames = new ArrayList<String>();
         outNames.add("softmax2");
         try {
             net.forward(outs,outNames);
@@ -93,9 +88,10 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testGetMemoryConsumption() {
         int layerId = 1;
-        List<MatOfInt> netInputShapes = new ArrayList();
+        List<MatOfInt> netInputShapes = new ArrayList<MatOfInt>();
         netInputShapes.add(new MatOfInt(1, 3, 224, 224));
         long[] weights=null;
         long[] blobs=null;
@@ -106,9 +102,10 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         }
     }
 
+    @Test
     public void testGetFLOPS() {
         int layerId = 1;
-        List<MatOfInt> netInputShapes = new ArrayList();
+        List<MatOfInt> netInputShapes = new ArrayList<MatOfInt>();
         netInputShapes.add(new MatOfInt(1, 3, 224, 224));
         try {
             net.getFLOPS(layerId, netInputShapes);

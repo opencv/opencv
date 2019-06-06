@@ -1,9 +1,12 @@
 package org.opencv.test.features2d;
 
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.Test;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -17,66 +20,93 @@ import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.Features2d;
 import org.opencv.core.KeyPoint;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.features2d.Feature2D;
 
 public class Features2dTest extends OpenCVTestCase {
 
+    @Test
+    @NotYetImplemented
     public void testDrawKeypointsMatListOfKeyPointMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawKeypointsMatListOfKeyPointMatScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawKeypointsMatListOfKeyPointMatScalarInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatches2MatListOfKeyPointMatListOfKeyPointListOfListOfDMatchMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatches2MatListOfKeyPointMatListOfKeyPointListOfListOfDMatchMatScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatches2MatListOfKeyPointMatListOfKeyPointListOfListOfDMatchMatScalarScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatches2MatListOfKeyPointMatListOfKeyPointListOfListOfDMatchMatScalarScalarListOfListOfByte() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatches2MatListOfKeyPointMatListOfKeyPointListOfListOfDMatchMatScalarScalarListOfListOfByteInt() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatchesMatListOfKeyPointMatListOfKeyPointListOfDMatchMat() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatchesMatListOfKeyPointMatListOfKeyPointListOfDMatchMatScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatchesMatListOfKeyPointMatListOfKeyPointListOfDMatchMatScalarScalar() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatchesMatListOfKeyPointMatListOfKeyPointListOfDMatchMatScalarScalarListOfByte() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testDrawMatchesMatListOfKeyPointMatListOfKeyPointListOfDMatchMatScalarScalarListOfByteInt() {
         fail("Not yet implemented");
     }
 
-    public void testPTOD()
-    {
+    @Test
+    public void testPTOD() {
         String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
         String extractorCfg = "%YAML:1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 0\nupright: 0\n";
 

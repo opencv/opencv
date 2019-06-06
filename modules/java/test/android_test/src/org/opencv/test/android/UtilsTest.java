@@ -17,6 +17,7 @@ import android.util.Log;
 
 public class UtilsTest extends OpenCVTestCase {
 
+    @Test
     public void testBitmapToMat() {
         BitmapFactory.Options opt16 = new BitmapFactory.Options();
         opt16.inPreferredConfig = Bitmap.Config.RGB_565;
@@ -40,22 +41,27 @@ public class UtilsTest extends OpenCVTestCase {
         assertTrue(maxDiff <= 8 /* 8 == 2^8 / 2^5 */);
     }
 
+    @Test
     public void testExportResourceContextInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testExportResourceContextIntString() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testLoadResourceContextInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testLoadResourceContextIntInt() {
         fail("Not yet implemented");
     }
 
+    @Test
     public void testMatToBitmap() {
         Mat imgBGR = Imgcodecs.imread( OpenCVTestRunner.LENA_PATH );
         assertTrue(imgBGR != null && !imgBGR.empty() && imgBGR.channels() == 3);
@@ -130,6 +136,7 @@ public class UtilsTest extends OpenCVTestCase {
 
     }
 
+    @Test
     public void testAlphaPremultiplication() {
         final int size = 256;
         Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);

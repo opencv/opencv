@@ -1,5 +1,6 @@
 package org.opencv.test.photo;
 
+import org.junit.Test;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Point;
@@ -9,6 +10,7 @@ import org.opencv.imgproc.Imgproc;
 
 public class PhotoTest extends OpenCVTestCase {
 
+    @Test
     public void testInpaint() {
         Point p = new Point(matSize / 2, matSize / 2);
         Imgproc.circle(gray255, p, 2, colorBlack, Core.FILLED);

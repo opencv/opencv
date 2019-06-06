@@ -1,9 +1,15 @@
 package org.opencv.test.video;
 
+import static org.junit.Assert.fail;
+
+import org.junit.Test;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 
 public class BackgroundSubtractorMOGTest extends OpenCVTestCase {
 
+    @Test
+    @NotYetImplemented
     public void testApplyMatMat() {
         fail("Not yet implemented");
         /*
@@ -24,18 +30,26 @@ public class BackgroundSubtractorMOGTest extends OpenCVTestCase {
         */
     }
 
+    @Test
+    @NotYetImplemented
     public void testApplyMatMatDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testBackgroundSubtractorMOG() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testBackgroundSubtractorMOGIntIntDouble() {
         fail("Not yet implemented");
     }
 
+    @Test
+    @NotYetImplemented
     public void testBackgroundSubtractorMOGIntIntDoubleDouble() {
         fail("Not yet implemented");
     }

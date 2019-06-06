@@ -1,9 +1,15 @@
 package org.opencv.test.objdetect;
 
+import static org.junit.Assert.fail;
+
+import org.junit.Test;
+import org.opencv.test.NotYetImplemented;
 import org.opencv.test.OpenCVTestCase;
 
 public class ObjdetectTest extends OpenCVTestCase {
 
+    @Test
+    @NotYetImplemented
     public void testGroupRectanglesListOfRectListOfIntegerInt() {
         fail("Not yet implemented");
         /*
@@ -20,6 +26,8 @@ public class ObjdetectTest extends OpenCVTestCase {
         */
     }
 
+    @Test
+    @NotYetImplemented
     public void testGroupRectanglesListOfRectListOfIntegerIntDouble() {
         fail("Not yet implemented");
         /*
