@@ -10,7 +10,7 @@ layer {
   type: "MVN"
 
   mvn_param {
-  	eps: 0.1
+  	eps: 1e-5
     across_channels: false
     normalize_variance: true
   }

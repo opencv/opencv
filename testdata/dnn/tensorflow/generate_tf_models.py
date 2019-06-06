@@ -51,7 +51,7 @@ def writeBlob(data, name):
         # Save raw data.
         np.save(name + '.npy', data.astype(np.float32))
 
-def runModel(inp, out, name):
+def runModel(inpName, outName, name):
     with tf.Session(graph=tf.Graph()) as localSession:
         localSession.graph.as_default()
 
@@ -61,7 +61,7 @@ def runModel(inp, out, name):
         tf.import_graph_def(graph_def, name='')
 
         inputData = gen_data(inp)
-        outputData = localSession.run(localSession.graph.get_tensor_by_name(out.name),
+        outputData = localSession.run(localSession.graph.get_tensor_by_name(outName),
                                       feed_dict={localSession.graph.get_tensor_by_name(inp.name): inputData})
         writeBlob(inputData, name + '_in')
         writeBlob(outputData, name + '_out')
@@ -349,7 +349,7 @@ conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
                         activation=tf.nn.relu,
                         bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'uint8_single_conv', quantize=True)
-runModel(inp, conv, 'uint8_single_conv')
+runModel(inp, conv.name, 'uint8_single_conv')
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 4, 4, 1], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[3, 3], padding='SAME')
@@ -779,22 +779,15 @@ bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch
                                    moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
 save(inp, bn, 'batch_norm3d', optimize=False)
 ################################################################################
-inp_node = 'activation_8/Elu'
-out_node = 'batch_normalization_1/cond/FusedBatchNorm'
-with tf.Session(graph=tf.Graph()) as localSession:
-    localSession.graph.as_default()
+inp = tf.placeholder(tf.float32, [1, 4, 6, 64], 'activation_8/Elu')
+runModel(inp, 'batch_normalization_1/cond/FusedBatchNorm:0', 'switch_identity')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 64], 'Relu_8')
+runModel(inp, 'conv2d_transpose_1:0', 'keras_deconv_same_v2')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 4, 3], 'ContentImage')
+runModel(inp, 'Relu:0', 'keras_batch_norm_training')
 
-    with tf.gfile.FastGFile('switch_identity_net.pb') as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-
-    tf.import_graph_def(graph_def, name='')
-
-    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 6, 64], inp_node))
-    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
-                                  feed_dict={inp_node + ':0': inputData})
-    writeBlob(inputData, 'switch_identity_in')
-    writeBlob(outputData, 'switch_identity_out')
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
