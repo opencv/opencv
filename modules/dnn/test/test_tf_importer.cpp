@@ -190,6 +190,7 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
     runTensorFlowNet("switch_identity");
+    runTensorFlowNet("keras_batch_norm_training");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)
@@ -259,6 +260,7 @@ TEST_P(Test_TensorFlow_layers, deconvolution)
     runTensorFlowNet("deconvolution_adj_pad_same");
     runTensorFlowNet("keras_deconv_valid");
     runTensorFlowNet("keras_deconv_same");
+    runTensorFlowNet("keras_deconv_same_v2");
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
