@@ -82,7 +82,7 @@ my_ellipse(atom_image, 45)
 my_ellipse(atom_image, -45)
 
 # 1.b. Creating circles
-my_filled_circle(atom_image, (W // 2, W // 2) )
+my_filled_circle(atom_image, (W // 2, W // 2))
 ## [draw_atom]
 ## [draw_rook]
 
