@@ -14,9 +14,16 @@ public:
     FN_createCaptureFile fn_createCaptureFile_;
     FN_createCaptureCamera fn_createCaptureCamera_;
     FN_createWriter fn_createWriter_;
+    FN_createWriterWithProperties fn_createWriterWithProperties_;
 
-    StaticBackend(FN_createCaptureFile fn_createCaptureFile, FN_createCaptureCamera fn_createCaptureCamera, FN_createWriter fn_createWriter)
-        : fn_createCaptureFile_(fn_createCaptureFile), fn_createCaptureCamera_(fn_createCaptureCamera), fn_createWriter_(fn_createWriter)
+    StaticBackend(FN_createCaptureFile fn_createCaptureFile,
+                  FN_createCaptureCamera fn_createCaptureCamera,
+                  FN_createWriter fn_createWriter,
+                  FN_createWriterWithProperties fn_createWriterWithProperties)
+        : fn_createCaptureFile_(fn_createCaptureFile),
+        fn_createCaptureCamera_(fn_createCaptureCamera),
+        fn_createWriter_(fn_createWriter),
+        fn_createWriterWithProperties_(fn_createWriterWithProperties)
     {
         // nothing
     }
@@ -36,6 +43,13 @@ public:
     }
     Ptr<IVideoWriter> createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor) const CV_OVERRIDE
     {
+        VideoWriterPropertyList emptyProperties;
+        return createWriter(filename, fourcc, fps, sz, isColor, emptyProperties);
+    }
+    Ptr<IVideoWriter> createWriter(const std::string &filename, int fourcc, double fps, const cv::Size &sz, bool isColor, const VideoWriterPropertyList& properties) const CV_OVERRIDE
+    {
+        if (fn_createWriterWithProperties_)
+            return fn_createWriterWithProperties_(filename, fourcc, fps, sz, isColor, properties);
         if (fn_createWriter_)
             return fn_createWriter_(filename, fourcc, fps, sz, isColor);
         return Ptr<IVideoWriter>();
@@ -48,8 +62,8 @@ protected:
     Ptr<StaticBackend> backend;
 
 public:
-    StaticBackendFactory(FN_createCaptureFile createCaptureFile, FN_createCaptureCamera createCaptureCamera, FN_createWriter createWriter)
-        : backend(makePtr<StaticBackend>(createCaptureFile, createCaptureCamera, createWriter))
+    StaticBackendFactory(FN_createCaptureFile createCaptureFile, FN_createCaptureCamera createCaptureCamera, FN_createWriter createWriter, FN_createWriterWithProperties createWriterWithProperties)
+        : backend(makePtr<StaticBackend>(createCaptureFile, createCaptureCamera, createWriter, createWriterWithProperties))
     {
         // nothing
     }
@@ -64,9 +78,15 @@ public:
 
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile,
                                           FN_createCaptureCamera createCaptureCamera,
-                                          FN_createWriter createWriter)
+                                          FN_createWriter createWriter,
+                                          FN_createWriterWithProperties createWriterWithProperties)
 {
-    return makePtr<StaticBackendFactory>(createCaptureFile, createCaptureCamera, createWriter).staticCast<IBackendFactory>();
+    return makePtr<StaticBackendFactory>(
+        createCaptureFile,
+        createCaptureCamera,
+        createWriter,
+        createWriterWithProperties)
+        .staticCast<IBackendFactory>();
 }
 
 } // namespace
