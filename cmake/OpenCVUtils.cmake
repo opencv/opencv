@@ -1763,7 +1763,7 @@ endif()
 
 macro(ocv_git_describe var_name path)
   if(GIT_FOUND)
-    execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --exact-match --dirty
+    execute_process(COMMAND "${GIT_EXECUTABLE}" --work-tree="${path}" describe --tags --exact-match --dirty
       WORKING_DIRECTORY "${path}"
       OUTPUT_VARIABLE ${var_name}
       RESULT_VARIABLE GIT_RESULT
@@ -1771,7 +1771,7 @@ macro(ocv_git_describe var_name path)
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(NOT GIT_RESULT EQUAL 0)
-      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
+      execute_process(COMMAND "${GIT_EXECUTABLE}" --work-tree="${path}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
         WORKING_DIRECTORY "${path}"
         OUTPUT_VARIABLE ${var_name}
         RESULT_VARIABLE GIT_RESULT
@@ -1780,7 +1780,7 @@ macro(ocv_git_describe var_name path)
       )
       if(NOT GIT_RESULT EQUAL 0)  # --exclude is not supported by 'git'
         # match only tags with complete OpenCV versions (ignores -alpha/-beta/-rc suffixes)
-        execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9]*[0-9]"
+        execute_process(COMMAND "${GIT_EXECUTABLE}" --work-tree="${path}" describe --tags --always --dirty --match "[0-9].[0-9]*[0-9]"
           WORKING_DIRECTORY "${path}"
           OUTPUT_VARIABLE ${var_name}
           RESULT_VARIABLE GIT_RESULT
