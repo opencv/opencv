@@ -11,6 +11,8 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 
 ref = 60
 
+#for images
+
 while True:
 	start = time.time()
 
@@ -25,5 +27,16 @@ while True:
 	if k==27:
 		break
 
+'''
+# for videos
+while True:
+    ret, frame = cap.read()
+    fps = video.get(cv2.CAP_PROP_FPS)
+    print(fps)
+    k=cv2.waitKey(0)
+	if k==27:
+		break
+'''
+        
 cap.release()
 cv2.destroyAllWindows()
