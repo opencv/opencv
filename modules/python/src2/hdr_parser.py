@@ -827,7 +827,7 @@ class CppHeaderParser(object):
             if state == DOCSTRING:
                 pos = l.find("*/")
                 if pos < 0:
-                    docstring += l + "\n"
+                    docstring += l0
                     continue
                 docstring += l[:pos] + "\n"
                 l = l[pos+2:]
