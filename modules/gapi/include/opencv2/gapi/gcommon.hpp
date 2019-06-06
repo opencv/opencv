@@ -30,7 +30,7 @@ namespace detail
         static const char* tag() { return ""; };
     };
 
-    // These structures are tags which suppose to separate kernels and transformations
+    // These structures are tags which separate kernels and transformations
     struct KernelTag
     {};
     struct TransformTag

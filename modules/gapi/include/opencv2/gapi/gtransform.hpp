@@ -41,7 +41,7 @@ template <typename K, typename... Ins, typename Out>
 struct TransHelper<K, std::tuple<Ins...>, Out>
 {
     template <typename Callable, int... IIs, int... OIs>
-    static GArgs get_impl(Callable f, const GArgs &in_args, Seq<IIs...>, Seq<OIs...>)
+    static GArgs invoke(Callable f, const GArgs &in_args, Seq<IIs...>, Seq<OIs...>)
     {
         const auto r = tuple_wrap_helper<Out>::get(f(in_args.at(IIs).template get<Ins>()...));
         return GArgs{GArg(std::get<OIs>(r))...};
@@ -49,13 +49,13 @@ struct TransHelper<K, std::tuple<Ins...>, Out>
 
     static GArgs get_pattern(const GArgs &in_args)
     {
-        return get_impl(K::pattern, in_args, typename MkSeq<sizeof...(Ins)>::type(),
-                        typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
+        return invoke(K::pattern, in_args, typename MkSeq<sizeof...(Ins)>::type(),
+                      typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
     }
     static GArgs get_substitute(const GArgs &in_args)
     {
-        return get_impl(K::substitute, in_args, typename MkSeq<sizeof...(Ins)>::type(),
-                        typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
+        return invoke(K::substitute, in_args, typename MkSeq<sizeof...(Ins)>::type(),
+                      typename MkSeq<std::tuple_size<typename tuple_wrap_helper<Out>::type>::value>::type());
     }
 };
 } // namespace detail

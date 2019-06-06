@@ -400,11 +400,15 @@ namespace gapi {
          *
          * @sa includesAPI()
          *
+         * @note cannot be applied to transformations
+         *
          * @return true if there is such kernel, false otherwise.
          */
         template<typename KImpl>
         bool includes() const
         {
+            static_assert(!(std::is_base_of<detail::TransformTag, KImpl>::value),
+                          "includes() cannot be applied to transformations");
             return includesHelper<KImpl>();
         }
 
