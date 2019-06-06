@@ -71,8 +71,17 @@ public:
     virtual bool readHeader() = 0;
     virtual bool readData( Mat& img ) = 0;
 
+    /// Inquire multipage ability.
+    virtual bool supportMultiPage() const { return false; }
+
     /// Called after readData to advance to the next page, if any.
     virtual bool nextPage() { return false; }
+
+    /// Called to access an arbitrary page (first == 0).
+    virtual bool gotoPage(int page) { return page == 0; }
+
+    /// The maximal page number to be expected. Not all pages need to be actually readable, not even 1.
+    virtual int maxPageNum() { return 1; }
 
     virtual size_t signatureLength() const;
     virtual bool checkSignature( const String& signature ) const;

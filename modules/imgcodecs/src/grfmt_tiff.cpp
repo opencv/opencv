@@ -326,11 +326,35 @@ bool TiffDecoder::readHeader()
     return result;
 }
 
+int TiffDecoder::maxPageNum() {
+    if (m_tif.empty()) return 0;
+    TIFF *tif = static_cast<TIFF *>(m_tif.get());
+
+    int remain = 1;
+    for (; TIFFReadDirectory(tif); remain++);
+
+    if (TIFFSetDirectory(tif, 0)) return 0;
+    int page_num = 1;
+    for (; TIFFReadDirectory(tif); page_num++);
+
+    if (TIFFSetDirectory(tif, 0)) return 0;
+    for (int skip = page_num - remain; skip > 0 && TIFFReadDirectory(tif); skip--);
+
+    return page_num;
+}
+
 bool TiffDecoder::nextPage()
 {
     // Prepare the next page, if any.
     return !m_tif.empty() &&
            TIFFReadDirectory(static_cast<TIFF*>(m_tif.get())) &&
+           readHeader();
+}
+
+bool TiffDecoder::gotoPage(int page) {
+    // Prepare the page, if any.
+    return !m_tif.empty() &&
+           TIFFSetDirectory(static_cast<TIFF*>(m_tif.get()), page) &&
            readHeader();
 }
 

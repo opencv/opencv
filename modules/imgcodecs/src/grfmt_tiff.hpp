@@ -99,7 +99,10 @@ public:
     bool  readHeader() CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     void  close();
+    bool  supportMultiPage() const CV_OVERRIDE { return true; }
+    int   maxPageNum() CV_OVERRIDE;
     bool  nextPage() CV_OVERRIDE;
+    bool  gotoPage(int page) CV_OVERRIDE;
 
     size_t signatureLength() const CV_OVERRIDE;
     bool checkSignature( const String& signature ) const CV_OVERRIDE;

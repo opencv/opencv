@@ -52,7 +52,7 @@
 #include <iostream>
 #include <fstream>
 #include <opencv2/core/utils/configuration.private.hpp>
-
+#include <opencv2/iterload.hpp>
 
 /****************************************************************************************\
 *                                      Image Codecs                                      *
@@ -922,6 +922,84 @@ bool haveImageWriter( const String& filename )
 {
     cv::ImageEncoder encoder = cv::findEncoder(filename);
     return !encoder.empty();
+}
+
+IterLoad::IterLoad(bool no_throw) : m_no_throw(no_throw) {
+}
+
+void IterLoad::read(const String &filename, int flags) {
+    load(&filename, nullptr, flags);
+}
+
+void IterLoad::decode(InputArray buf, int flags) {
+    load(nullptr, &buf, flags);
+}
+
+IterLoad::~IterLoad() {
+    if (m_decoder) {
+        m_decoder.release();
+    }
+
+    if (!m_tempfile.empty()) {
+        if (0 != remove(m_tempfile.c_str())) {
+            std::cerr << "unable to remove temporary file:" << m_tempfile << std::endl << std::flush;
+        }
+        m_tempfile.clear();
+    }
+}
+
+void IterLoad::load(const String *filename, const _InputArray *_buf, int flags) {
+    if (_buf) {
+        Mat buf = _buf->getMat();
+        m_decoder = findDecoder(buf);
+        if (!m_decoder)
+            return;
+
+        if (!m_decoder->setSource(buf)) {
+            m_tempfile = tempfile();
+            FILE *f = fopen(m_tempfile.c_str(), "wb");
+            if (!f)
+                return;
+            size_t bufSize = buf.cols * buf.rows * buf.elemSize();
+            if (fwrite(buf.ptr(), 1, bufSize, f) != bufSize) {
+                fclose(f);
+                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile);
+            }
+            if (fclose(f) != 0) {
+                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile);
+            }
+            filename = &m_tempfile;
+        }
+    }
+
+    if (filename) {
+#ifdef HAVE_GDAL
+        if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
+            m_decoder = GdalDecoder().newDecoder();
+        }else{
+#endif
+        m_decoder = findDecoder(*filename);
+#ifdef HAVE_GDAL
+        }
+#endif
+    }
+
+    /// if no decoder was found, return nothing.
+    if (!m_decoder) {
+        return;
+    }
+}
+
+std::size_t IterLoad::size() const {
+    return 0;
+}
+
+Mat IterLoad::at(int idx, int flags, std::map<String, String> *properties, Mat *dst) const {
+    return Mat();
+}
+
+Mat IterLoad::next(int flags, std::map<String, String> *properties, Mat *dst) const {
+    return Mat();
 }
 
 }
