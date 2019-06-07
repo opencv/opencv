@@ -26,6 +26,14 @@ namespace detail
     template<int Sz>   struct MkSeq   { using type = typename MkSeq<Sz-1>::type::next; };
     template<>         struct MkSeq<0>{ using type = Seq<>; };
 
+    // Recursive integer sequence type that starts from an arbitrary user-defined value
+    template<int First, int... I>
+    struct Range { using next = Range<First, I..., sizeof...(I) + First>; };
+    template<int First, int Sz>
+    struct MkRange { using type = typename MkRange<First, Sz-1>::type::next; };
+    template<int First>
+    struct MkRange<First, 0> { using type = Range<First>; };
+
     // Checks if elements of variadic template satisfy the given Predicate.
     // Implemented via tuple, with an interface to accept plain type lists
     template<template<class> class, typename, typename...> struct all_satisfy;

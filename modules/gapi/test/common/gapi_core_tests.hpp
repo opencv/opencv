@@ -46,16 +46,19 @@ struct PrintMathOpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        cv::Size sz = std::get<4>(info.param);
-        ss<<MathOperations[std::get<0>(info.param)]
-                    <<"_"<<std::get<1>(info.param)
-                    <<"_"<<std::get<2>(info.param)
-                    <<"_"<<(int)std::get<3>(info.param)
+        Params<mathOp,bool,double,bool> params = info.param;
+        const auto& common_params = params.commonParams();
+        const auto& specific_params = params.specificParams();
+        cv::Size sz = std::get<1>(common_params);  // size
+        ss<<MathOperations[std::get<0>(specific_params)]  // mathOp
+                    <<"_"<<std::get<1>(specific_params)  // testWithScalar
+                    <<"_"<<std::get<0>(common_params)  // type
+                    <<"_"<<(int)std::get<2>(specific_params)  // scale
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<(std::get<5>(info.param)+1)
-                    <<"_"<<std::get<6>(info.param)
-                    <<"_"<<std::get<7>(info.param);
+                    <<"_"<<(std::get<2>(common_params)+1)  // dtype
+                    <<"_"<<std::get<3>(common_params)  // createOutputMatrices
+                    <<"_"<<std::get<3>(specific_params);  // doReverseOp
         return ss.str();
    }
 };
@@ -66,13 +69,16 @@ struct PrintCmpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        cv::Size sz = std::get<3>(info.param);
-        ss<<CompareOperations[std::get<0>(info.param)]
-                    <<"_"<<std::get<1>(info.param)
-                    <<"_"<<std::get<2>(info.param)
+        Params<CmpTypes,bool> params = info.param;
+        const auto& common_params = params.commonParams();
+        const auto& specific_params = params.specificParams();
+        cv::Size sz = std::get<1>(common_params);  // size
+        ss<<CompareOperations[std::get<0>(specific_params)]  // CmpType
+                    <<"_"<<std::get<1>(specific_params)  // testWithScalar
+                    <<"_"<<std::get<0>(common_params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<std::get<4>(info.param);
+                    <<"_"<<std::get<3>(common_params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -83,12 +89,15 @@ struct PrintBWCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        cv::Size sz = std::get<2>(info.param);
-        ss<<BitwiseOperations[std::get<0>(info.param)]
-                    <<"_"<<std::get<1>(info.param)
+        Params<bitwiseOp> params = info.param;
+        const auto& common_params = params.commonParams();
+        const auto& specific_params = params.specificParams();
+        cv::Size sz = std::get<1>(common_params);  // size
+        ss<<BitwiseOperations[std::get<0>(specific_params)]  // bitwiseOp
+                    <<"_"<<std::get<0>(common_params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<std::get<3>(info.param);
+                    <<"_"<<std::get<3>(common_params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -99,56 +108,197 @@ struct PrintNormCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        cv::Size sz = std::get<2>(info.param);
-        ss<<NormOperations[std::get<0>(info.param)]
-                    <<"_"<<std::get<1>(info.param)
+        Params<compare_scalar_f,NormTypes> params = info.param;
+        const auto& common_params = params.commonParams();
+        const auto& specific_params = params.specificParams();
+        cv::Size sz = std::get<1>(common_params);  // size
+        ss<<NormOperations[std::get<1>(specific_params)]  // NormTypes
+                    <<"_"<<std::get<0>(common_params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height;
         return ss.str();
    }
 };
 
-struct MathOpTest        : public TestParams<std::tuple<mathOp,bool,int,double,cv::Size,int,bool,bool,cv::GCompileArgs>>{};
-struct MulDoubleTest     : public TestParams<std::tuple<int,cv::Size,int,bool,cv::GCompileArgs>>{};
-struct DivTest           : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>>{};
-struct DivCTest          : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>>{};
-struct MeanTest          : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct MaskTest          : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct Polar2CartTest    : public TestParams<std::tuple<cv::Size,bool, cv::GCompileArgs>> {};
-struct Cart2PolarTest    : public TestParams<std::tuple<cv::Size,bool, cv::GCompileArgs>> {};
-struct CmpTest           : public TestParams<std::tuple<CmpTypes,bool,int,cv::Size,bool, cv::GCompileArgs>>{};
-struct BitwiseTest       : public TestParams<std::tuple<bitwiseOp,int,cv::Size,bool, cv::GCompileArgs>>{};
-struct NotTest           : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct SelectTest        : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct MinTest           : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>>{};
-struct MaxTest           : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>>{};
-struct AbsDiffTest       : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>>{};
-struct AbsDiffCTest      : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct SumTest           : public TestParams<std::tuple<int, cv::Size,bool, compare_scalar_f, cv::GCompileArgs>> {};
-struct AddWeightedTest   : public TestParams<std::tuple<int,cv::Size,int,bool, compare_f,cv::GCompileArgs>>{};
-struct NormTest          : public TestParams<std::tuple<NormTypes,int,cv::Size, compare_scalar_f, cv::GCompileArgs>>{};
-struct IntegralTest      : public TestWithParam<std::tuple<int,cv::Size, cv::GCompileArgs>> {};
-struct ThresholdTest     : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>> {};
-struct ThresholdOTTest   : public TestParams<std::tuple<int,cv::Size,int,bool, cv::GCompileArgs>> {};
-struct InRangeTest       : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct Split3Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
-struct Split4Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
-struct ResizeTest        : public TestWithParam<std::tuple<compare_f, int, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
-struct ResizeTestFxFy    : public TestWithParam<std::tuple<compare_f, int, int, cv::Size, double, double, cv::GCompileArgs>> {};
-struct Merge3Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
-struct Merge4Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
-struct RemapTest         : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
-struct FlipTest          : public TestParams<std::tuple<int, int, cv::Size,bool, cv::GCompileArgs>> {};
-struct CropTest          : public TestParams<std::tuple<int,cv::Rect,cv::Size,bool, cv::GCompileArgs>> {};
-struct ConcatHorTest     : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
-struct ConcatVertTest    : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
-struct ConcatVertVecTest : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
-struct ConcatHorVecTest  : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
-struct LUTTest           : public TestParams<std::tuple<int, int, cv::Size,bool, cv::GCompileArgs>> {};
-struct ConvertToTest     : public TestParams<std::tuple<int, int, cv::Size, double, double, compare_f, cv::GCompileArgs>> {};
-struct PhaseTest         : public TestParams<std::tuple<int, cv::Size, bool, cv::GCompileArgs>> {};
-struct SqrtTest          : public TestParams<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
-struct NormalizeTest : public TestParams<std::tuple<compare_f,MatType,cv::Size,double,double,int,MatType,bool,cv::GCompileArgs>> {};
+struct MathOpTest        : public TestWithParamBase<mathOp,bool,double,bool>
+{
+    DEFINE_SPECIFIC_PARAMS_4(opType, testWithScalar, scale, doReverseOp);
+    USE_UNIFORM_INIT(MathOpTest);
+};
+struct MulDoubleTest     : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(MulDoubleTest);
+};
+struct DivTest           : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(DivTest);
+};
+struct DivCTest          : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(DivCTest);
+};
+struct MeanTest          : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(MeanTest);
+};
+struct MaskTest          : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(MaskTest);
+};
+struct Polar2CartTest    : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Polar2CartTest);
+};
+struct Cart2PolarTest    : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Cart2PolarTest);
+};
+struct CmpTest           : public TestWithParamBase<CmpTypes,bool>
+{
+    DEFINE_SPECIFIC_PARAMS_2(opType, testWithScalar);
+    USE_UNIFORM_INIT(CmpTest);
+};
+struct BitwiseTest       : public TestWithParamBase<bitwiseOp>
+{
+    DEFINE_SPECIFIC_PARAMS_1(opType);
+    USE_UNIFORM_INIT(BitwiseTest);
+};
+struct NotTest           : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(NotTest);
+};
+struct SelectTest        : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(SelectTest);
+};
+struct MinTest           : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(MinTest);
+};
+struct MaxTest           : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(MaxTest);
+};
+struct AbsDiffTest       : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(AbsDiffTest);
+};
+struct AbsDiffCTest      : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(AbsDiffCTest);
+};
+struct SumTest           : public TestWithParamBase<compare_scalar_f>
+{
+    DEFINE_SPECIFIC_PARAMS_1(cmpF);
+    USE_UNIFORM_INIT(SumTest);
+};
+struct AddWeightedTest   : public TestWithParamBase<compare_f>
+{
+    DEFINE_SPECIFIC_PARAMS_1(cmpF);
+    USE_UNIFORM_INIT(AddWeightedTest);
+};
+struct NormTest          : public TestWithParamBase<compare_scalar_f,NormTypes>
+{
+    DEFINE_SPECIFIC_PARAMS_2(cmpF, opType);
+    USE_UNIFORM_INIT(NormTest);
+};
+struct IntegralTest      : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(IntegralTest);
+};
+struct ThresholdTest     : public TestWithParamBase<int>
+{
+    DEFINE_SPECIFIC_PARAMS_1(tt);
+    USE_UNIFORM_INIT(ThresholdTest);
+};
+struct ThresholdOTTest   : public TestWithParamBase<int>
+{
+    DEFINE_SPECIFIC_PARAMS_1(tt);
+    USE_UNIFORM_INIT(ThresholdOTTest);
+};
+struct InRangeTest       : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(InRangeTest);
+};
+struct Split3Test        : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Split3Test);
+};
+struct Split4Test        : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Split4Test);
+};
+struct ResizeTest        : public TestWithParamBase<compare_f,int,cv::Size>
+{
+    DEFINE_SPECIFIC_PARAMS_3(cmpF, interp, sz_out);
+    USE_UNIFORM_INIT(ResizeTest);
+};
+struct ResizeTestFxFy    : public TestWithParamBase<compare_f,int,double,double>
+{
+    DEFINE_SPECIFIC_PARAMS_4(cmpF, interp, fx, fy);
+    USE_UNIFORM_INIT(ResizeTestFxFy);
+};
+struct Merge3Test        : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Merge3Test);
+};
+struct Merge4Test        : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(Merge4Test);
+};
+struct RemapTest         : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(RemapTest);
+};
+struct FlipTest          : public TestWithParamBase<int>
+{
+    DEFINE_SPECIFIC_PARAMS_1(flipCode);
+    USE_UNIFORM_INIT(FlipTest);
+};
+struct CropTest          : public TestWithParamBase<cv::Rect>
+{
+    DEFINE_SPECIFIC_PARAMS_1(rect_to);
+    USE_UNIFORM_INIT(CropTest);
+};
+struct ConcatHorTest     : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(ConcatHorTest);
+};
+struct ConcatVertTest    : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(ConcatVertTest);
+};
+struct ConcatVertVecTest : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(ConcatVertVecTest);
+};
+struct ConcatHorVecTest  : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(ConcatHorVecTest);
+};
+struct LUTTest           : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(LUTTest);
+};
+struct ConvertToTest     : public TestWithParamBase<compare_f, double, double>
+{
+    DEFINE_SPECIFIC_PARAMS_3(cmpF, alpha, beta);
+    USE_UNIFORM_INIT(ConvertToTest);
+};
+struct PhaseTest         : public TestWithParamBase<bool>
+{
+    DEFINE_SPECIFIC_PARAMS_1(angle_in_degrees);
+    USE_UNIFORM_INIT(PhaseTest);
+};
+struct SqrtTest          : public TestWithParamBase<>
+{
+    USE_UNIFORM_INIT(SqrtTest);
+};
+struct NormalizeTest : public TestWithParamBase<compare_f,double,double,int,MatType>
+{
+    DEFINE_SPECIFIC_PARAMS_5(cmpF, a, b, norm_type, ddepth);
+    USE_NORMAL_INIT(NormalizeTest);
+};
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

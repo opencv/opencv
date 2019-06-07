@@ -16,18 +16,18 @@ namespace opencv_test
 
 // FIXME: Windows accuracy problems after recent update!
 INSTANTIATE_TEST_CASE_P(MathOpTestFluid, MathOpTest,
-                        Combine(Values(ADD, SUB, DIV, MUL),
-                                testing::Bool(),
-                                Values(CV_8UC3, CV_8UC1, CV_16SC1, CV_32FC1),
-                                Values(1.0),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 testing::Bool(),
+                                Values(cv::compile_args(CORE_FLUID)),
+                                Values(ADD, SUB, DIV, MUL),
                                 testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))),
+                                Values(1.0),
+                                testing::Bool()),
                         opencv_test::PrintMathOpCoreParams());
 
 INSTANTIATE_TEST_CASE_P(MulSTestFluid, MulDoubleTest,
@@ -53,6 +53,7 @@ INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
@@ -61,18 +62,20 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCTestFluid, AbsDiffCTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestFluid, BitwiseTest,
-                        Combine(Values(AND, OR, XOR),
-                                Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))),
+                                Values(cv::compile_args(CORE_FLUID)),
+                                Values(AND, OR, XOR)),
                         opencv_test::PrintBWCoreParams());
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestFluid, NotTest,
@@ -81,6 +84,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotTestFluid, NotTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
@@ -90,6 +94,7 @@ INSTANTIATE_TEST_CASE_P(MinTestFluid, MinTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
@@ -99,19 +104,21 @@ INSTANTIATE_TEST_CASE_P(MaxTestFluid, MaxTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(CompareTestFluid, CmpTest,
-                        Combine(Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool(),
-                                Values(CV_8UC3, CV_8UC1, CV_16SC1, CV_32FC1),
+                        Combine(Values(CV_8UC3, CV_8UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8U),
                                 testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))),
+                                Values(cv::compile_args(CORE_FLUID)),
+                                Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
+                                testing::Bool()),
                         opencv_test::PrintCmpCoreParams());
 
 INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
@@ -121,56 +128,69 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 testing::Bool(),
-                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
                                 //Values(0.5000005),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(cv::compile_args(CORE_FLUID)),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f())));
 
 INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
-                                Values(CV_8UC1),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8UC1),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_32FC1),
-                                Values(CV_8U, CV_16U, CV_32F),
                                 Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(2.5, 1.0, -1.0),
-                                Values(250.0, 0.0, -128.0),
+                                Values(CV_8U, CV_16U, CV_32F),
+                                Values(true),
+                                Values(cv::compile_args(CORE_FLUID)),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(2.5, 1.0, -1.0),
+                                Values(250.0, 0.0, -128.0)));
 
 INSTANTIATE_TEST_CASE_P(Split3TestFluid, Split3Test,
-                        Combine(Values(cv::Size(1280, 720),
+                        Combine(Values(CV_8UC3),
+                                Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8UC1),
+                                Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Split4TestFluid, Split4Test,
-                        Combine(Values(cv::Size(1280, 720),
+                        Combine(Values(CV_8UC4),
+                                Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8UC1),
+                                Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Merge3TestFluid, Merge3Test,
-                        Combine(Values(cv::Size(1920, 1080),
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8UC3),
+                                Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Merge4TestFluid, Merge4Test,
-                        Combine(Values(cv::Size(1920, 1080),
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1920, 1080),
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_8UC4),
+                                Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(SelectTestFluid, SelectTest,
@@ -179,20 +199,25 @@ INSTANTIATE_TEST_CASE_P(SelectTestFluid, SelectTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartFluid, Polar2CartTest,
-                        Combine(Values(cv::Size(1280, 720),
+                        Combine(Values(CV_32FC1),
+                                Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_32FC1),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Cart2PolarFluid, Cart2PolarTest,
-                        Combine(Values(cv::Size(1280, 720),
+                        Combine(Values(CV_32FC1),
+                                Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(CV_32FC1),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
@@ -201,14 +226,18 @@ INSTANTIATE_TEST_CASE_P(PhaseFluid, PhaseTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                Values(ALIGNED_TYPE),
+                                Values(true),
+                                Values(cv::compile_args(CORE_FLUID)),
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(SqrtFluid, SqrtTest,
                         Combine(Values(CV_32F, CV_32FC3),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
+                                Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
@@ -217,11 +246,12 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
+                                testing::Bool(),
+                                Values(cv::compile_args(CORE_FLUID)),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV,
                                        cv::THRESH_TRUNC,
-                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
-                                testing::Bool(),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                       cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)));
 
 INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
@@ -229,25 +259,27 @@ INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
+                                Values(ALIGNED_TYPE),
                                 testing::Bool(),
                                 Values(cv::compile_args(CORE_FLUID))));
 
-INSTANTIATE_TEST_CASE_P(
-                        ResizeTestFluid, ResizeTest,
-                        Combine(Values(AbsExact().to_compare_f()),
-                                Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
+                        Combine(Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128),
+                                       cv::Size(64, 64),
+                                       cv::Size(30, 30)),
+                                Values(-1),
+                                Values(false),
+                                Values(cv::compile_args(CORE_FLUID)),
+                                Values(AbsExact().to_compare_f()),
                                 Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128),
                                        cv::Size(64, 64),
-                                       cv::Size(30, 30)),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128),
-                                       cv::Size(64, 64),
-                                       cv::Size(30, 30)),
-                                Values(cv::compile_args(CORE_FLUID))));
+                                       cv::Size(30, 30))));
 
 //----------------------------------------------------------------------
 // FIXME: Clean-up test configurations which are enabled already

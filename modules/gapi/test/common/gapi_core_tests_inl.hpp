@@ -16,15 +16,6 @@ namespace opencv_test
 
 TEST_P(MathOpTest, MatricesAccuracyTest )
 {
-    mathOp opType = ADD;
-    int type = 0, dtype = 0;
-    cv::Size sz;
-    double scale = 1; // mul, div
-    bool testWithScalar = false, initOutMatr = false, doReverseOp = false;
-    cv::GCompileArgs compile_args;
-    std::tie(opType, testWithScalar, type, scale, sz, dtype, initOutMatr, doReverseOp, compile_args) = GetParam();
-    initMatsRandU(type, sz, dtype, initOutMatr);
-
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, in2, out;
     if( testWithScalar )
@@ -148,16 +139,8 @@ TEST_P(MathOpTest, MatricesAccuracyTest )
 
 TEST_P(MulDoubleTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    int dtype = std::get<2>(param);
-    cv::Size sz_in = std::get<1>(param);
-    bool initOut = std::get<3>(param);
-
     auto& rng = cv::theRNG();
     double d = rng.uniform(0.0, 10.0);
-    auto compile_args = std::get<4>(param);
-    initMatrixRandU(type, sz_in, dtype, initOut);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, out;
@@ -187,19 +170,12 @@ TEST_P(MulDoubleTest, AccuracyTest)
 #else
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 #endif
-    EXPECT_EQ(out_mat_gapi.size(), sz_in);
+    EXPECT_EQ(out_mat_gapi.size(), sz);
 }
 
 TEST_P(DivTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pull/12826
 {
-    int type = 0, dtype = 0;
-    cv::Size sz_in;
-    bool initOut = false;
-    cv::GCompileArgs compile_args;
-    std::tie(type, sz_in, dtype, initOut, compile_args) = GetParam();
-
-    initMatrixRandU(type, sz_in, dtype, initOut);
-    in_mat2 = cv::Mat(sz_in, type);
+    in_mat2 = cv::Mat(sz, type);
     in_mat2.setTo(cv::Scalar::all(0));
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -216,19 +192,12 @@ TEST_P(DivTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pul
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(DivCTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pull/12826
 {
-    int type = 0, dtype = 0;
-    cv::Size sz_in;
-    bool initOut = false;
-    cv::GCompileArgs compile_args;
-    std::tie(type, sz_in, dtype, initOut, compile_args) = GetParam();
-
-    initMatrixRandU(type, sz_in, dtype, initOut);
     sc = cv::Scalar::all(0);
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -247,19 +216,13 @@ TEST_P(DivCTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pu
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        cv::Mat zeros = cv::Mat::zeros(sz_in, type);
+        cv::Mat zeros = cv::Mat::zeros(sz, type);
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != zeros));
     }
 }
 
 TEST_P(MeanTest, AccuracyTest)
 {
-    int type = 0;
-    bool initOut = false;
-    cv::Size sz_in;
-    cv::GCompileArgs compile_args;
-    std::tie(type, sz_in, initOut, compile_args) = GetParam();
-    initMatrixRandU(type, sz_in, initOut);
     cv::Scalar out_norm;
     cv::Scalar out_norm_ocv;
 
@@ -281,14 +244,7 @@ TEST_P(MeanTest, AccuracyTest)
 
 TEST_P(MaskTest, AccuracyTest)
 {
-    int type = 0;
-    bool initOut = false;
-    cv::Size sz_in;
-    cv::GCompileArgs compile_args;
-    std::tie(type, sz_in, initOut, compile_args) = GetParam();
-    initMatrixRandU(type, sz_in, type, initOut);
-
-    in_mat2 = cv::Mat(sz_in, CV_8UC1);
+    in_mat2 = cv::Mat(sz, CV_8UC1);
     cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
     in_mat2 = in_mat2 > 128;
 
@@ -311,17 +267,12 @@ TEST_P(MaskTest, AccuracyTest)
 
 TEST_P(Polar2CartTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<0>(param);
-    auto compile_args = std::get<2>(param);
-    initMatsRandU(CV_32FC1, sz_in, CV_32FC1, std::get<1>(param));
-
     cv::Mat out_mat2;
     cv::Mat out_mat_ocv2;
-    if(std::get<1>(param) == true)
+    if(createOutputMatrices)
     {
-        out_mat2 = cv::Mat(sz_in, CV_32FC1);
-        out_mat_ocv2 = cv::Mat(sz_in, CV_32FC1);
+        out_mat2 = cv::Mat(sz, dtype);
+        out_mat_ocv2 = cv::Mat(sz, dtype);
     }
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -361,19 +312,14 @@ TEST_P(Polar2CartTest, AccuracyTest)
 
         EXPECT_EQ(0, cv::countNonZero(difx > 1e-6*absx));
         EXPECT_EQ(0, cv::countNonZero(dify > 1e-6*absy));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(Cart2PolarTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<0>(param);
-    auto compile_args = std::get<2>(param);
-    initMatsRandU(CV_32FC1, sz_in, CV_32FC1, std::get<1>(param));
-
-    cv::Mat out_mat2(sz_in, CV_32FC1);
-    cv::Mat out_mat_ocv2(sz_in, CV_32FC1);
+    cv::Mat out_mat2(sz, dtype);
+    cv::Mat out_mat_ocv2(sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out1, out2;
@@ -414,20 +360,12 @@ TEST_P(Cart2PolarTest, AccuracyTest)
         //        (expected relative accuracy like 1e-6)
         EXPECT_EQ(0, cv::countNonZero(difm > 1e-6*absm));
         EXPECT_EQ(0, cv::countNonZero(difa > 1e-3*absa));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(CmpTest, AccuracyTest)
 {
-    CmpTypes opType = CMP_EQ;
-    int type = 0;
-    cv::Size sz;
-    bool testWithScalar = false, initOutMatr = false;
-    cv::GCompileArgs compile_args;
-    std::tie(opType, testWithScalar, type, sz, initOutMatr, compile_args) = GetParam();
-    initMatsRandU(type, sz, CV_8U, initOutMatr);
-
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, out;
     if( testWithScalar )
@@ -478,14 +416,6 @@ TEST_P(CmpTest, AccuracyTest)
 
 TEST_P(BitwiseTest, AccuracyTest)
 {
-    bitwiseOp opType = AND;
-    int type = 0;
-    cv::Size sz;
-    bool initOutMatr = false;
-    cv::GCompileArgs compile_args;
-    std::tie(opType, type, sz, initOutMatr, compile_args) = GetParam();
-    initMatsRandU(type, sz, type, initOutMatr);
-
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, in2, out;
     switch(opType)
@@ -525,11 +455,6 @@ TEST_P(BitwiseTest, AccuracyTest)
 
 TEST_P(NotTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatrixRandU(std::get<0>(param), sz_in, std::get<0>(param), std::get<2>(param));
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = cv::gapi::bitwise_not(in);
@@ -544,18 +469,13 @@ TEST_P(NotTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(SelectTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatsRandU(type, sz_in, type, std::get<2>(param));
-    cv::Mat in_mask(sz_in, CV_8UC1);
+    cv::Mat in_mask(sz, CV_8UC1);
     cv::randu(in_mask, cv::Scalar::all(0), cv::Scalar::all(255));
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -573,17 +493,12 @@ TEST_P(SelectTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(MinTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatsRandU(std::get<0>(param), sz_in, std::get<0>(param), std::get<2>(param));
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
     auto out = cv::gapi::min(in1, in2);
@@ -598,17 +513,12 @@ TEST_P(MinTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(MaxTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatsRandU(std::get<0>(param), sz_in, std::get<0>(param), std::get<2>(param));
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
     auto out = cv::gapi::max(in1, in2);
@@ -623,17 +533,12 @@ TEST_P(MaxTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(AbsDiffTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatsRandU(std::get<0>(param), sz_in, std::get<0>(param), std::get<2>(param));
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
     auto out = cv::gapi::absDiff(in1, in2);
@@ -648,17 +553,12 @@ TEST_P(AbsDiffTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(AbsDiffCTest, AccuracyTest)
 {
-    auto param = GetParam();
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatsRandU(std::get<0>(param), sz_in, std::get<0>(param), std::get<2>(param));
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1;
     cv::GScalar sc1;
@@ -674,20 +574,12 @@ TEST_P(AbsDiffCTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(SumTest, AccuracyTest)
 {
-    auto param = GetParam();
-    compare_scalar_f cmpF = get<3>(GetParam());
-    MatType type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<4>(param);
-    initMatrixRandU(type, sz_in, type, std::get<2>(param));
-
-
     cv::Scalar out_sum;
     cv::Scalar out_sum_ocv;
 
@@ -709,18 +601,10 @@ TEST_P(SumTest, AccuracyTest)
 
 TEST_P(AddWeightedTest, AccuracyTest)
 {
-    int type = 0, dtype = 0;
-    cv::Size sz_in;
-    bool initOut = false;
-    cv::GCompileArgs compile_args;
-    compare_f cmpF;
-    std::tie(type, sz_in, dtype, initOut, cmpF, compile_args) = GetParam();
-
     auto& rng = cv::theRNG();
     double alpha = rng.uniform(0.0, 1.0);
     double beta = rng.uniform(0.0, 1.0);
     double gamma = rng.uniform(0.0, 1.0);
-    initMatsRandU(type, sz_in, dtype, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
@@ -735,20 +619,11 @@ TEST_P(AddWeightedTest, AccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz_in);
-
+    EXPECT_EQ(out_mat_gapi.size(), sz);
 }
 
 TEST_P(NormTest, AccuracyTest)
 {
-    compare_scalar_f cmpF;
-    NormTypes opType = NORM_INF;
-    int type = 0;
-    cv::Size sz;
-    cv::GCompileArgs compile_args;
-    std::tie(opType, type, sz, cmpF, compile_args) = GetParam();
-    initMatrixRandU(type, sz, type, false);
-
     cv::Scalar out_norm;
     cv::Scalar out_norm_ocv;
 
@@ -774,16 +649,12 @@ TEST_P(NormTest, AccuracyTest)
 
 TEST_P(IntegralTest, AccuracyTest)
 {
-    int type = std::get<0>(GetParam());
-    cv::Size sz_in = std::get<1>(GetParam());
-    auto compile_args = std::get<2>(GetParam());
-
     int type_out = (type == CV_8U) ? CV_32SC1 : CV_64FC1;
-    cv::Mat in_mat1(sz_in, type);
+    cv::Mat in_mat1(sz, type);
 
     cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
 
-    cv::Size sz_out = cv::Size(sz_in.width + 1, sz_in.height + 1);
+    cv::Size sz_out = cv::Size(sz.width + 1, sz.height + 1);
     cv::Mat out_mat1(sz_out, type_out);
     cv::Mat out_mat_ocv1(sz_out, type_out);
 
@@ -810,15 +681,8 @@ TEST_P(IntegralTest, AccuracyTest)
 
 TEST_P(ThresholdTest, AccuracyTestBinary)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-    int tt = std::get<2>(param);
-
-    auto compile_args = std::get<4>(param);
     cv::Scalar thr = initScalarRandU(50);
     cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
-    initMatrixRandU(type, sz_in, type, std::get<3>(param));
     cv::Scalar out_scalar;
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -835,21 +699,14 @@ TEST_P(ThresholdTest, AccuracyTestBinary)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        ASSERT_EQ(out_mat_gapi.size(), sz_in);
+        ASSERT_EQ(out_mat_gapi.size(), sz);
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_L1));
     }
 }
 
 TEST_P(ThresholdOTTest, AccuracyTestOtsu)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-    int tt = std::get<2>(param);
-
-    auto compile_args = std::get<4>(param);
     cv::Scalar maxval = initScalarRandU(50) + cv::Scalar(50, 50, 50, 50);
-    initMatrixRandU(type, sz_in, type, std::get<3>(param));
     cv::Scalar out_gapi_scalar;
     double ocv_res;
 
@@ -868,21 +725,15 @@ TEST_P(ThresholdOTTest, AccuracyTestOtsu)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
         EXPECT_EQ(ocv_res, out_gapi_scalar.val[0]);
     }
 }
 
 TEST_P(InRangeTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-
-    auto compile_args = std::get<3>(param);
     cv::Scalar thrLow = initScalarRandU(100);
     cv::Scalar thrUp = initScalarRandU(100) + cv::Scalar(100, 100, 100, 100);
-    initMatrixRandU(type, sz_in, type, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1;
@@ -899,20 +750,16 @@ TEST_P(InRangeTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(Split3Test, AccuracyTest)
 {
-    cv::Size sz_in = std::get<0>(GetParam());
-    auto compile_args = std::get<1>(GetParam());
-    initMatrixRandU(CV_8UC3, sz_in, CV_8UC1);
-
-    cv::Mat out_mat2 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat3 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat_ocv2 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat_ocv3 = cv::Mat(sz_in, CV_8UC1);
+    cv::Mat out_mat2 = cv::Mat(sz, dtype);
+    cv::Mat out_mat3 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv3 = cv::Mat(sz, dtype);
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, out1, out2, out3;
     std::tie(out1, out2, out3)  = cv::gapi::split3(in1);
@@ -934,15 +781,12 @@ TEST_P(Split3Test, AccuracyTest)
 
 TEST_P(Split4Test, AccuracyTest)
 {
-    cv::Size sz_in = std::get<0>(GetParam());
-    auto compile_args = std::get<1>(GetParam());
-    initMatrixRandU(CV_8UC4, sz_in, CV_8UC1);
-    cv::Mat out_mat2 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat3 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat4 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat_ocv2 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat_ocv3 = cv::Mat(sz_in, CV_8UC1);
-    cv::Mat out_mat_ocv4 = cv::Mat(sz_in, CV_8UC1);
+    cv::Mat out_mat2 = cv::Mat(sz, dtype);
+    cv::Mat out_mat3 = cv::Mat(sz, dtype);
+    cv::Mat out_mat4 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv2 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv3 = cv::Mat(sz, dtype);
+    cv::Mat out_mat_ocv4 = cv::Mat(sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, out1, out2, out3, out4;
@@ -996,31 +840,17 @@ static void ResizeAccuracyTest(compare_f cmpF, int type, int interp, cv::Size sz
 
 TEST_P(ResizeTest, AccuracyTest)
 {
-    compare_f cmpF;
-    int type = 0, interp = 0;
-    cv::Size sz_in, sz_out;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, interp, sz_in, sz_out, compile_args) = GetParam();
-    ResizeAccuracyTest(cmpF, type, interp, sz_in, sz_out, 0.0, 0.0, std::move(compile_args));
+    ResizeAccuracyTest(cmpF, type, interp, sz, sz_out, 0.0, 0.0, std::move(compile_args));
 }
 
 TEST_P(ResizeTestFxFy, AccuracyTest)
 {
-    compare_f cmpF;
-    int type = 0, interp = 0;
-    cv::Size sz_in;
-    double fx = 0.0, fy = 0.0;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, interp, sz_in, fx, fy, compile_args) = GetParam();
-    ResizeAccuracyTest(cmpF, type, interp, sz_in, cv::Size{0, 0}, fx, fy, std::move(compile_args));
+    ResizeAccuracyTest(cmpF, type, interp, sz, cv::Size{0, 0}, fx, fy, std::move(compile_args));
 }
 
 TEST_P(Merge3Test, AccuracyTest)
 {
-    cv::Size sz_in = std::get<0>(GetParam());
-    initMatsRandU(CV_8UC1, sz_in, CV_8UC3);
-    auto compile_args = std::get<1>(GetParam());
-    cv::Mat in_mat3(sz_in,  CV_8UC1);
+    cv::Mat in_mat3(sz, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
 
@@ -1045,11 +875,8 @@ TEST_P(Merge3Test, AccuracyTest)
 
 TEST_P(Merge4Test, AccuracyTest)
 {
-    cv::Size sz_in = std::get<0>(GetParam());
-    initMatsRandU(CV_8UC1, sz_in, CV_8UC4);
-    auto compile_args = std::get<1>(GetParam());
-    cv::Mat in_mat3(sz_in,  CV_8UC1);
-    cv::Mat in_mat4(sz_in,  CV_8UC1);
+    cv::Mat in_mat3(sz, type);
+    cv::Mat in_mat4(sz, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
 
@@ -1075,12 +902,7 @@ TEST_P(Merge4Test, AccuracyTest)
 
 TEST_P(RemapTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_in = std::get<1>(param);
-    auto compile_args = std::get<3>(param);
-    initMatrixRandU(type, sz_in, type, std::get<2>(param));
-    cv::Mat in_map1(sz_in,  CV_16SC2);
+    cv::Mat in_map1(sz, CV_16SC2);
     cv::Mat in_map2 = cv::Mat();
     cv::randu(in_map1, cv::Scalar::all(0), cv::Scalar::all(255));
     cv::Scalar bv = cv::Scalar();
@@ -1099,19 +921,12 @@ TEST_P(RemapTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(FlipTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    int flipCode =  std::get<1>(param);
-    cv::Size sz_in = std::get<2>(param);
-    initMatrixRandU(type, sz_in, type, false);
-    auto compile_args = std::get<4>(GetParam());
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = cv::gapi::flip(in, flipCode);
@@ -1125,24 +940,17 @@ TEST_P(FlipTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(CropTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Rect rect_to = std::get<1>(param);
-    cv::Size sz_in = std::get<2>(param);
-    auto compile_args = std::get<4>(param);
-
-    initMatrixRandU(type, sz_in, type, false);
     cv::Size sz_out = cv::Size(rect_to.width, rect_to.height);
-    if( std::get<3>(param) == true )
+    if(createOutputMatrices)
     {
-        out_mat_gapi = cv::Mat(sz_out, type);
-        out_mat_ocv = cv::Mat(sz_out, type);
+        out_mat_gapi = cv::Mat(sz_out, dtype);
+        out_mat_ocv = cv::Mat(sz_out, dtype);
     }
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -1164,10 +972,7 @@ TEST_P(CropTest, AccuracyTest)
 
 TEST_P(ConcatHorTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_out = std::get<1>(param);
-    auto compile_args = std::get<2>(param);
+    cv::Size sz_out = sz;
 
     int wpart = sz_out.width / 4;
     cv::Size sz_in1 = cv::Size(wpart, sz_out.height);
@@ -1192,7 +997,7 @@ TEST_P(ConcatHorTest, AccuracyTest)
     c.apply(gin(in_mat1, in_mat2), gout(out_mat), std::move(compile_args));
     // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::hconcat(in_mat1, in_mat2, out_mat_ocv );
+        cv::hconcat(in_mat1, in_mat2, out_mat_ocv);
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
@@ -1202,10 +1007,7 @@ TEST_P(ConcatHorTest, AccuracyTest)
 
 TEST_P(ConcatVertTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_out = std::get<1>(param);
-    auto compile_args = std::get<2>(param);
+    cv::Size sz_out = sz;
 
     int hpart = sz_out.height * 2/3;
     cv::Size sz_in1 = cv::Size(sz_out.width, hpart);
@@ -1240,10 +1042,7 @@ TEST_P(ConcatVertTest, AccuracyTest)
 
 TEST_P(ConcatVertVecTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_out = std::get<1>(param);
-    auto compile_args = std::get<2>(param);
+    cv::Size sz_out = sz;
 
     int hpart1 = sz_out.height * 2/5;
     int hpart2 = sz_out.height / 5;
@@ -1285,10 +1084,7 @@ TEST_P(ConcatVertVecTest, AccuracyTest)
 
 TEST_P(ConcatHorVecTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type = std::get<0>(param);
-    cv::Size sz_out = std::get<1>(param);
-    auto compile_args = std::get<2>(param);
+    cv::Size sz_out = sz;
 
     int wpart1 = sz_out.width / 3;
     int wpart2 = sz_out.width / 4;
@@ -1330,14 +1126,11 @@ TEST_P(ConcatHorVecTest, AccuracyTest)
 
 TEST_P(LUTTest, AccuracyTest)
 {
-    auto param = GetParam();
-    int type_mat = std::get<0>(param);
-    int type_lut = std::get<1>(param);
+    int type_mat = type;
+    int type_lut = dtype;
     int type_out = CV_MAKETYPE(CV_MAT_DEPTH(type_lut), CV_MAT_CN(type_mat));
-    cv::Size sz_in = std::get<2>(param);
-    auto compile_args = std::get<4>(GetParam());
 
-    initMatrixRandU(type_mat, sz_in, type_out);
+    initMatrixRandU(type_mat, sz, type_out);
     cv::Size sz_lut = cv::Size(1, 256);
     cv::Mat in_lut(sz_lut, type_lut);
     cv::randu(in_lut, cv::Scalar::all(0), cv::Scalar::all(255));
@@ -1355,22 +1148,17 @@ TEST_P(LUTTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(ConvertToTest, AccuracyTest)
 {
-    int type_mat = -1, depth_to = -1;
-    double alpha = 1.0, beta = 0.0;
-    cv::Size sz_in;
-    cv::GCompileArgs compile_args;
-    compare_f cmpF;
-
-    std::tie(type_mat, depth_to, sz_in, alpha, beta, cmpF, compile_args) = GetParam();
-
+    auto param = GetParam();
+    int type_mat = type;
+    int depth_to = dtype;
     int type_out = CV_MAKETYPE(depth_to, CV_MAT_CN(type_mat));
-    initMatrixRandU(type_mat, sz_in, type_out);
+    initMatrixRandU(type_mat, sz, type_out);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -1385,19 +1173,12 @@ TEST_P(ConvertToTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 
 TEST_P(PhaseTest, AccuracyTest)
 {
-    int img_type = -1;
-    cv::Size img_size;
-    bool angle_in_degrees = false;
-    cv::GCompileArgs compile_args;
-    std::tie(img_type, img_size, angle_in_degrees, compile_args) = GetParam();
-    initMatsRandU(img_type, img_size, img_type);
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in_x, in_y;
     auto out = cv::gapi::phase(in_x, in_y, angle_in_degrees);
@@ -1417,12 +1198,6 @@ TEST_P(PhaseTest, AccuracyTest)
 
 TEST_P(SqrtTest, AccuracyTest)
 {
-    int img_type = -1;
-    cv::Size img_size;
-    cv::GCompileArgs compile_args;
-    std::tie(img_type, img_size, compile_args) = GetParam();
-    initMatrixRandU(img_type, img_size, img_type);
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = cv::gapi::sqrt(in);
@@ -1442,20 +1217,7 @@ TEST_P(SqrtTest, AccuracyTest)
 
 TEST_P(NormalizeTest, Test)
 {
-    auto param = GetParam();
-
-    compare_f cmpF;
-    MatType type, ddepth;
-    cv::Size sz;
-    double a = 0 , b = 0;
-    int norm_type = 0;
-    bool createOut = 0;
-    cv::GCompileArgs compile_args;
-
-    std::tie(cmpF, type, sz, a, b, norm_type, ddepth, createOut, compile_args) = GetParam();
-    int dtype = CV_MAKETYPE(ddepth, CV_MAT_CN(type));
-
-    initMatsRandN(type, sz, dtype, createOut);
+    initMatsRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)), createOutputMatrices);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
