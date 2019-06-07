@@ -4,22 +4,26 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import android.util.Log;
 
 import junit.framework.TestCase;
 
 public class UtilsTest extends TestCase {
 
     public void testDebug() throws IOException {
+        StringBuilder builder = new StringBuilder();
         File file = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getFile());
         System.out.println("Initial location " + file);
-        Log.e("Bmp->Mat", "Initial location " + file);
+        builder.append("Initial location " + file).append("\n");
+        
         File build = getBuild(file);
         System.out.println("Build " + build);
+        System.err.println("Build " + build);
+        builder.append("Build " + build).append("\n");
         if (build != null) {
-            print(build.getParentFile());
-            printContent(build);
+            print(builder, build.getParentFile());
+            printContent(builder, build);
         }
+        assertEquals("", builder.toString());
     }
 
     private static File getBuild(File f) {
@@ -34,21 +38,23 @@ public class UtilsTest extends TestCase {
         return null;
     }
 
-    private static void print(File f) {
+    private static void print(StringBuilder builder, File f) {
         for (File child : f.listFiles()) {
             System.out.println(child);
-            Log.e("Bmp->Mat", child.toString());
+            System.err.println(child);
+            builder.append(child).append("\n");
             if (child.isDirectory()) {
-                print(child);
+                print(builder, child);
             }
         }
     }
-    private static void printContent(File f) throws IOException {
+    private static void printContent(StringBuilder builder, File f) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(f));
         String line;
         while ((line = reader.readLine()) != null) {
-            Log.e("Bmp->Mat", line);
             System.out.println(line);
+            System.err.println(line);
+            builder.append(line).append("\n");
         }
         reader.close();
     }
