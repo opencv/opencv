@@ -61,12 +61,14 @@ void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
                                Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
+        short cRGB0 = cR;
+        short cRGB2 = cB;
+        if (_swap_rb) std::swap(cRGB0, cRGB2);
         for( i = 0; i < size.width; i++, rgb += 3 )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
             gray[i] = (uchar)t;
         }
 
@@ -80,12 +82,14 @@ void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
                                 Size size, int ncn, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
+        short cRGB0 = cR;
+        short cRGB2 = cB;
+        if (_swap_rb) std::swap(cRGB0, cRGB2);
         for( i = 0; i < size.width; i++, rgb += ncn )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
             gray[i] = (ushort)t;
         }
 
@@ -99,12 +103,14 @@ void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
                                 Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
+        short cRGB0 = cR;
+        short cRGB2 = cB;
+        if (_swap_rb) std::swap(cRGB0, cRGB2);
         for( i = 0; i < size.width; i++, rgba += 4 )
         {
-            int t = descale( rgba[swap_rb]*cB + rgba[1]*cG + rgba[swap_rb^2]*cR, SCALE );
+            int t = descale( rgba[0]*cRGB0 + rgba[1]*cG + rgba[2]*cRGB2, SCALE );
             gray[i] = (uchar)t;
         }
 
