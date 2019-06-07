@@ -47,7 +47,7 @@
 // Load OpenCV native library before using:
 //
 // - avoid using of "OpenCVLoader.initAsync()" approach - it is deprecated
-//   It may load library with different version (from OpenCV Android Manager, which is installed separatelly on device)
+//   It may load library with different version (from OpenCV Android Manager, which is installed separately on device)
 //
 // - use "System.loadLibrary("opencv_java3")" or "OpenCVLoader.initDebug()"
 //   TODO: Add accurate API to load OpenCV native library

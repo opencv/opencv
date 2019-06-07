@@ -53,7 +53,7 @@ public class DnnListRegressionTest extends OpenCVTestCase {
 
         File f = new File(testDataPath, "dnn/grace_hopper_227.png");
         sourceImageFile = f.toString();
-        
+
         assertTrue("Test image is missing: " + sourceImageFile, f.exists());
 
         net = Dnn.readNetFromTensorflow(modelFileName);
