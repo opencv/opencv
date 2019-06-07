@@ -177,7 +177,7 @@ int main( int argc, char* argv[] )
     else
         capture.set(CAP_OPENNI_IR_GENERATOR_PRESENT, false);
 
-    // Print some avalible device settings.
+    // Print some available device settings.
     if (capture.get(CAP_OPENNI_DEPTH_GENERATOR_PRESENT))
     {
         cout << "\nDepth generator output mode:" << endl <<

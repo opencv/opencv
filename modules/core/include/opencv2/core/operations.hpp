@@ -398,7 +398,7 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-//! returns the next unifomly-distributed random number of the specified type
+//! returns the next uniformly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {
   return (_Tp)theRNG();

@@ -1004,7 +1004,7 @@ public:
     @param samples Samples from which the Gaussian mixture model will be estimated. It should be a
         one-channel matrix, each row of which is a sample. If the matrix does not have CV_64F type
         it will be converted to the inner matrix of such type for the further computing.
-    @param probs0
+    @param probs0 the probabilities
     @param logLikelihoods The optional output matrix that contains a likelihood logarithm value for
         each sample. It has \f$nsamples \times 1\f$ size and CV_64FC1 type.
     @param labels The optional output "class label" for each sample:

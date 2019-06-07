@@ -266,7 +266,10 @@ int main(int argc, char *argv[])
         cout << "Unsupported mode: " << mode << endl;
         return -1;
     }
-    file_name = samples::findFile(file_name);
+    if (mode == "decode")
+    {
+        file_name = samples::findFile(file_name);
+    }
     cout << "Mode: " << mode << ", Backend: " << backend << ", File: " << file_name << ", Codec: " << codec << endl;
 
     TickMeter total;

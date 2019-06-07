@@ -550,7 +550,7 @@ double cv::findTransformECC(InputArray templateImage,
 
         const double correlation = templateZM.dot(imageWarped);
 
-        // calculate enhanced correlation coefficiont (ECC)->rho
+        // calculate enhanced correlation coefficient (ECC)->rho
         last_rho = rho;
         rho = correlation/(imgNorm*tmpNorm);
         if (cvIsNaN(rho)) {

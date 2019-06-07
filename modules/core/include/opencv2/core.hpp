@@ -291,9 +291,9 @@ if src was not a ROI, use borderType | #BORDER_ISOLATED.
 @param src Source image.
 @param dst Destination image of the same type as src and the size Size(src.cols+left+right,
 src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
+@param top the top pixels
+@param bottom the bottom pixels
+@param left the left pixels
 @param right Parameter specifying how many pixels in each direction from the source image rectangle
 to extrapolate. For example, top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs
 to be built.
