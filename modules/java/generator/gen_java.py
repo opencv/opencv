@@ -11,7 +11,12 @@ from string import Template
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
-    from cStringIO import StringIO
+    import io
+    class StringIO(io.StringIO):
+        def write(self, s):
+            if isinstance(s, str):
+                s = unicode(s)  # noqa: F821
+            return super(StringIO, self).write(s)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
