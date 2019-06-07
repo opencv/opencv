@@ -1084,7 +1084,6 @@ cv::String QRCodeDetector::decode(InputArray in, InputArray points,
         inarr = gray;
     }
 
-    CV_Assert(points.isVector());
     vector<Point2f> src_points;
     points.copyTo(src_points);
     CV_Assert(src_points.size() == 4);
