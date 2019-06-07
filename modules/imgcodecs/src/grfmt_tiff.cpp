@@ -335,16 +335,14 @@ bool TiffDecoder::nextPage()
 {
     // Prepare the next page, if any.
     return !m_tif.empty() &&
-           TIFFReadDirectory(static_cast<TIFF*>(m_tif.get())) &&
-           readHeader();
+           TIFFReadDirectory(static_cast<TIFF*>(m_tif.get()));
 }
 
 bool TiffDecoder::gotoPage(int page)
 {
     // Prepare the page, if any.
     return !m_tif.empty() &&
-           TIFFSetDirectory(static_cast<TIFF*>(m_tif.get()), page) &&
-           readHeader();
+           TIFFSetDirectory(static_cast<TIFF*>(m_tif.get()), page);
 }
 
 static void fixOrientationPartial(Mat &img, uint16 orientation)

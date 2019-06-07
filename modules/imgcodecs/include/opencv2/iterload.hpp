@@ -16,34 +16,45 @@ namespace cv
     class CV_EXPORTS IterLoad
     {
     public:
-        explicit IterLoad(bool no_throw = true) : m_no_throw(no_throw) {}
+        IterLoad();
 
         ~IterLoad();
 
-        void read(const String &filename, int flags = 0);
+        /// flags: only IMREAD_UNCHANGED, IMREAD_LOAD_GDAL are recognized here
+        bool read(const String &filename, int flags = IMREAD_UNCHANGED);
 
-        void decode(InputArray buf, int flags = 0);
+        /// flags: only IMREAD_UNCHANGED, IMREAD_LOAD_GDAL are recognized here
+        bool decode(InputArray buf, int flags = IMREAD_UNCHANGED);
 
-        bool empty() const { return size() == 0; }
+        bool empty() const;
 
         std::size_t size() const;
 
-        Mat next(int flags = IMREAD_COLOR, std::map<String, String> *properties = nullptr,
-                 Mat *dst = nullptr) const;
+        // sequential access
+        bool hasNext() const;
 
-        Mat at(int idx = 0, int flags = IMREAD_COLOR, std::map<String, String> *properties = nullptr,
-               Mat *dst = nullptr) const;
+        // sequential access
+        Mat next(int flags = IMREAD_COLOR, Mat *dst = 0);
+
+        // random access
+        Mat at(int idx, int flags = IMREAD_COLOR, Mat *dst = 0);
 
     private:
-        bool m_no_throw;
+        String m_file;
+        Mat m_buf;
         String m_tempfile;
         Ptr <BaseImageDecoder> m_decoder;
+        bool m_has_next;
 
-        IterLoad(const IterLoad &);
+        IterLoad(const IterLoad &); ///< deny copy
 
-        IterLoad &operator=(const IterLoad &);
+        IterLoad &operator=(const IterLoad &); ///< deny copy
 
-        void load(const String *filename, const _InputArray *buf, int flags);
+        /// filename XOR buf
+        /// flags: only IMREAD_UNCHANGED, IMREAD_LOAD_GDAL are recognized here
+        bool load(const String *filename, const _InputArray *buf, int flags);
+
+        void clear();
     };
 }
 

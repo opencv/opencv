@@ -54,6 +54,9 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/iterload.hpp>
 
+// imread(), imreadmulti(), imdecode() all use IterLoad
+#define ALWAYS_ITERLOAD 1
+
 /****************************************************************************************\
 *                                      Image Codecs                                      *
 \****************************************************************************************/
@@ -339,48 +342,32 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
+static void ApplyExifOrientation(std::istream &stream, Mat& img)
+{
+    ExifReader reader(stream);
+    if (reader.parse()) {
+        ExifEntry_t entry = reader.getTag(ORIENTATION);
+        if (entry.tag != INVALID_TAG) {
+            ExifTransform(entry.field_u16, img); //orientation is unsigned short, so check field_u16
+        }
+    }
+}
+
 static void ApplyExifOrientation(const String& filename, Mat& img)
 {
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if (filename.size() > 0)
-    {
-        std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-        stream.close();
+    if (filename.size() > 0) {
+        std::ifstream stream(filename.c_str(), std::ios_base::in | std::ios_base::binary);
+        ApplyExifOrientation(stream, img);
     }
-
-    ExifTransform(orientation, img);
 }
 
 static void ApplyExifOrientation(const Mat& buf, Mat& img)
 {
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if( buf.isContinuous() )
-    {
-        ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
-        std::istream stream( &bsb );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
+    if (buf.isContinuous()) {
+        ByteStreamBuffer bsb(reinterpret_cast<char *>(buf.data), buf.total() * buf.elemSize());
+        std::istream stream(&bsb);
+        ApplyExifOrientation(stream, img);
     }
-
-    ExifTransform(orientation, img);
 }
 
 /**
@@ -534,26 +521,26 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     /// set the filename in the driver
     decoder->setSource(filename);
 
-    // read the header to make sure it succeeds
-    try
-    {
-        // read the header to make sure it succeeds
-        if( !decoder->readHeader() )
-            return 0;
-    }
-    catch (const cv::Exception& e)
-    {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-        return 0;
-    }
-    catch (...)
-    {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
-        return 0;
-    }
-
     for (;;)
     {
+        // read the header to make sure it succeeds
+        try
+        {
+            // read the header to make sure it succeeds
+            if( !decoder->readHeader() )
+                return 0;
+        }
+        catch (const cv::Exception& e)
+        {
+            std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+            return 0;
+        }
+        catch (...)
+        {
+            std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+            return 0;
+        }
+
         // grab the decoded type
         int type = decoder->type();
         if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
@@ -618,6 +605,11 @@ Mat imread( const String& filename, int flags )
 {
     CV_TRACE_FUNCTION();
 
+#if ALWAYS_ITERLOAD
+    (void)&imread_; // suppress warning
+    IterLoad load;
+    return load.read(filename, flags) ? load.next(flags) : Mat();
+#else
     /// create the basic container
     Mat img;
 
@@ -632,6 +624,7 @@ Mat imread( const String& filename, int flags )
 
     /// return a reference to the data
     return img;
+#endif
 }
 
 /**
@@ -648,7 +641,20 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
+#if ALWAYS_ITERLOAD
+    (void)&imreadmulti_; // suppress warning
+    IterLoad load;
+    bool ready = load.read(filename, flags);
+    if(!ready) return false;
+
+    while(load.hasNext()) {
+        mats.push_back(load.next(flags));
+    }
+
+    return !mats.empty();
+#else
     return imreadmulti_(filename, flags, mats);
+#endif
 }
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
@@ -831,6 +837,9 @@ Mat imdecode( InputArray _buf, int flags )
 {
     CV_TRACE_FUNCTION();
 
+#if ALWAYS_ITERLOAD
+    return imdecode(_buf, flags, 0);
+#else
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, img );
 
@@ -841,12 +850,19 @@ Mat imdecode( InputArray _buf, int flags )
     }
 
     return img;
+#endif
 }
 
 Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
     CV_TRACE_FUNCTION();
 
+#if ALWAYS_ITERLOAD
+    (void)&imdecode_; // suppress warning
+    std::cerr << __FILE__ << ":" << __LINE__ << ": iterLoad-single" << std::endl;
+    IterLoad load;
+    return load.decode(_buf, flags) ? load.next(flags, dst) : Mat();
+#else
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
     imdecode_( buf, flags, *dst );
@@ -858,6 +874,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     }
 
     return *dst;
+#endif
 }
 
 bool imencode( const String& ext, InputArray _image,
@@ -924,16 +941,44 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
-void IterLoad::read(const String &filename, int flags)
+IterLoad::IterLoad() : m_has_next(false)
 {
-    load(&filename, nullptr, flags);
+    CV_TRACE_FUNCTION();
 }
 
-void IterLoad::decode(InputArray buf, int flags) {
-    load(nullptr, &buf, flags);
+IterLoad::~IterLoad()
+{
+    CV_TRACE_FUNCTION();
+    clear();
 }
 
-IterLoad::~IterLoad() {
+bool IterLoad::read(const String &filename, int flags)
+{
+    CV_TRACE_FUNCTION();
+    return load(&filename, 0, flags);
+}
+
+bool IterLoad::decode(InputArray buf, int flags)
+{
+    CV_TRACE_FUNCTION();
+    return load(0, &buf, flags);
+}
+
+bool IterLoad::empty() const
+{
+    CV_TRACE_FUNCTION();
+    return size() == 0;
+}
+
+bool IterLoad::hasNext() const
+{
+    CV_TRACE_FUNCTION();
+    return m_has_next;
+}
+
+void IterLoad::clear()
+{
+    CV_TRACE_FUNCTION();
     if (m_decoder) {
         m_decoder.release();
     }
@@ -944,22 +989,27 @@ IterLoad::~IterLoad() {
         }
         m_tempfile.clear();
     }
+
+    m_file.clear();
+    m_buf.release();
+    m_has_next = false;
 }
 
-void IterLoad::load(const String *filename, const _InputArray *_buf, int flags) {
-    if (_buf) {
-        Mat buf = _buf->getMat();
-        m_decoder = findDecoder(buf);
-        if (!m_decoder)
-            return;
+bool IterLoad::load(const String *filename, const _InputArray *buf, int flags) {
+    clear();
 
-        if (!m_decoder->setSource(buf)) {
+    if (buf) {
+        m_buf = buf->getMat();
+        m_decoder = findDecoder(m_buf);
+        if (!m_decoder) return false;
+
+        if (!m_decoder->setSource(m_buf)) {
             m_tempfile = tempfile();
             FILE *f = fopen(m_tempfile.c_str(), "wb");
             if (!f)
-                return;
-            size_t bufSize = buf.cols * buf.rows * buf.elemSize();
-            if (fwrite(buf.ptr(), 1, bufSize, f) != bufSize) {
+                return false;
+            size_t bufSize = m_buf.cols * m_buf.rows * m_buf.elemSize();
+            if (fwrite(m_buf.ptr(), 1, bufSize, f) != bufSize) {
                 fclose(f);
                 CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile);
             }
@@ -971,33 +1021,122 @@ void IterLoad::load(const String *filename, const _InputArray *_buf, int flags) 
     }
 
     if (filename) {
+        m_file = *filename;
 #ifdef HAVE_GDAL
         if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
             m_decoder = GdalDecoder().newDecoder();
         }else{
-#endif
-        m_decoder = findDecoder(*filename);
-#ifdef HAVE_GDAL
+            m_decoder = findDecoder(m_file);
         }
+#else
+        (void) flags; // suppress "unused" warning
+        m_decoder = findDecoder(m_file);
 #endif
+
+        if (!m_decoder) return false;
+        m_decoder->setSource(m_file);
     }
 
-    /// if no decoder was found, return nothing.
-    if (!m_decoder) {
-        return;
-    }
+    m_has_next = true;
+    return true;
 }
 
 std::size_t IterLoad::size() const {
-    return 0;
+    CV_TRACE_FUNCTION();
+    return m_decoder ? m_decoder->pageNum() : 0;
 }
 
-Mat IterLoad::at(int idx, int flags, std::map<String, String> *properties, Mat *dst) const {
-    return Mat();
+static Mat released(Mat mat) {
+    mat.release();
+    return mat;
 }
 
-Mat IterLoad::next(int flags, std::map<String, String> *properties, Mat *dst) const {
-    return Mat();
+static Mat released(Mat *mat) {
+    return mat ? released(*mat) : Mat();
+}
+
+Mat IterLoad::at(int idx, int flags, Mat *dst) {
+    CV_TRACE_FUNCTION();
+    if (!m_decoder || !m_decoder->gotoPage(idx)) return released(dst);
+    return next(flags, dst);
+}
+
+Mat IterLoad::next(int flags, Mat *dst) {
+    CV_TRACE_FUNCTION();
+
+    if (!m_decoder || !m_has_next) return released(dst);
+    m_has_next = false;
+
+    Mat dft;
+    Mat &mat = dst ? *dst : dft;
+
+    int scale_denom = 1;
+    if (flags > IMREAD_LOAD_GDAL) {
+        if (flags & IMREAD_REDUCED_GRAYSCALE_2)
+            scale_denom = 2;
+        else if (flags & IMREAD_REDUCED_GRAYSCALE_4)
+            scale_denom = 4;
+        else if (flags & IMREAD_REDUCED_GRAYSCALE_8)
+            scale_denom = 8;
+    }
+
+    /// set the scale_denom in the driver
+    m_decoder->setScale(scale_denom);
+
+    try {
+        // read the header to make sure it succeeds
+        if (!m_decoder->readHeader()) return released(mat);
+    } catch (const cv::Exception &e) {
+        std::cerr << m_file << ": can't read header: " << e.what() << std::endl << std::flush;
+        return released(mat);
+    } catch (...) {
+        std::cerr << m_file << ": can't read header: unknown exception" << std::endl << std::flush;
+        return released(mat);
+    }
+
+    // established the required input image size
+    Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
+
+    // grab the decoded type
+    int type = m_decoder->type();
+    if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED) {
+        if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
+            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+        if ((flags & CV_LOAD_IMAGE_COLOR) != 0 ||
+            ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+        else
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    }
+
+    mat.create(size.height, size.width, type);
+
+    // read the image data
+    bool success = false;
+    try {
+        if (m_decoder->readData(mat)) success = true;
+    } catch (const cv::Exception &e) {
+        std::cerr << m_file << ": can't read data: " << e.what() << std::endl << std::flush;
+    } catch (...) {
+        std::cerr << m_file << ": can't read data: unknown exception" << std::endl << std::flush;
+    }
+
+    if (!success) return released(mat);
+
+    // if decoder is JpegDecoder then decoder->setScale always returns 1
+    if (m_decoder->setScale(scale_denom) > 1) {
+        resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
+    }
+
+    // optionally rotate the data if EXIF' orientation flag says so
+    if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED) {
+        if (!m_file.empty()) ApplyExifOrientation(m_file, mat);
+        else ApplyExifOrientation(m_buf, mat);
+    }
+
+    m_has_next = m_decoder->nextPage();
+    return mat;
 }
 
 }
