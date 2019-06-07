@@ -1,4 +1,5 @@
 <project name="OpenCV-Test">
+  <echo message="In build: pure_test"/>
   <property environment="env"/>
   <property file="ant-${opencv.build.type}.properties"/>
   <property name="test.dir" value="testResults"/>
