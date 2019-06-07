@@ -924,10 +924,8 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
-IterLoad::IterLoad(bool no_throw) : m_no_throw(no_throw) {
-}
-
-void IterLoad::read(const String &filename, int flags) {
+void IterLoad::read(const String &filename, int flags)
+{
     load(&filename, nullptr, flags);
 }
 

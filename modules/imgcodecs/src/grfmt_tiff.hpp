@@ -100,7 +100,7 @@ public:
     bool  readData( Mat& img ) CV_OVERRIDE;
     void  close();
     bool  supportMultiPage() const CV_OVERRIDE { return true; }
-    int   maxPageNum() CV_OVERRIDE;
+    int   pageNum() const CV_OVERRIDE;
     bool  nextPage() CV_OVERRIDE;
     bool  gotoPage(int page) CV_OVERRIDE;
 

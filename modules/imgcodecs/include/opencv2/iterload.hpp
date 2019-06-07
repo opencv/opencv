@@ -9,16 +9,19 @@
 
 #include <map>
 
-namespace cv {
+namespace cv
+{
     class BaseImageDecoder;
 
-    class CV_EXPORTS IterLoad {
+    class CV_EXPORTS IterLoad
+    {
     public:
-        explicit IterLoad(bool no_throw = true);
+        explicit IterLoad(bool no_throw = true) : m_no_throw(no_throw) {}
 
         ~IterLoad();
 
         void read(const String &filename, int flags = 0);
+
         void decode(InputArray buf, int flags = 0);
 
         bool empty() const { return size() == 0; }
@@ -26,7 +29,7 @@ namespace cv {
         std::size_t size() const;
 
         Mat next(int flags = IMREAD_COLOR, std::map<String, String> *properties = nullptr,
-               Mat *dst = nullptr) const;
+                 Mat *dst = nullptr) const;
 
         Mat at(int idx = 0, int flags = IMREAD_COLOR, std::map<String, String> *properties = nullptr,
                Mat *dst = nullptr) const;
