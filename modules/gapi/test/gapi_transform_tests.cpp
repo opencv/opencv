@@ -56,13 +56,47 @@ GAPI_TRANSFORM(copy_transform, <GMat3(GMat, GMat)>, "does nothing")
         return {};
     }
 };
+
+GAPI_TRANSFORM(simple_transform, <GMat(GMat)>, "does nothing")
+{
+    static GMat pattern(GMat)
+    {
+        return {};
+    };
+
+    static GMat substitute(GMat)
+    {
+        return {};
+    }
+};
+
+GAPI_TRANSFORM(another_simple_transform, <GMat2(GMat)>, "does nothing too")
+{
+    static GMat2 pattern(GMat)
+    {
+        return {};
+    };
+
+    static GMat2 substitute(GMat)
+    {
+        return {};
+    }
+};
 } // namespace
+
+TEST(KernelPackageTransform, SimpleInclude)
+{
+    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<simple_transform,
+                                                     another_simple_transform>();
+    auto tr = pkg.get_transformations();
+    EXPECT_EQ(2u, tr.size());
+}
 
 TEST(KernelPackageTransform, SingleOutInclude)
 {
     cv::gapi::GKernelPackage pkg;
     pkg.include<my_transform>();
-    auto tr= pkg.get_transformations();
+    auto tr = pkg.get_transformations();
     EXPECT_EQ(1u, tr.size());
 }
 
@@ -71,7 +105,7 @@ TEST(KernelPackageTransform, MultiOutInclude)
     cv::gapi::GKernelPackage pkg;
     pkg.include<my_transform>();
     pkg.include<another_transform>();
-    auto tr= pkg.get_transformations();
+    auto tr = pkg.get_transformations();
     EXPECT_EQ(2u, tr.size());
 }
 
@@ -79,7 +113,7 @@ TEST(KernelPackageTransform, MultiOutConstructor)
 {
     cv::gapi::GKernelPackage pkg = cv::gapi::kernels<my_transform,
                                                      another_transform>();
-    auto tr= pkg.get_transformations();
+    auto tr = pkg.get_transformations();
     EXPECT_EQ(2u, tr.size());
 }
 
@@ -87,7 +121,7 @@ TEST(KernelPackageTransform, CopyClass)
 {
     cv::gapi::GKernelPackage pkg = cv::gapi::kernels<copy_transform,
                                                      another_transform>();
-    auto tr= pkg.get_transformations();
+    auto tr = pkg.get_transformations();
     EXPECT_EQ(2u, tr.size());
 }
 
@@ -97,7 +131,7 @@ TEST(KernelPackageTransform, Combine)
     cv::gapi::GKernelPackage pkg2 = cv::gapi::kernels<another_transform>();
     cv::gapi::GKernelPackage pkg_comb =
         cv::gapi::combine(pkg1, pkg2);
-    auto tr= pkg_comb.get_transformations();
+    auto tr = pkg_comb.get_transformations();
     EXPECT_EQ(2u, tr.size());
 }
 
