@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 
-import os, sys, subprocess, argparse, shutil, glob, re
+import os, sys
+import argparse
+import glob
+import re
+import shutil
+import subprocess
+import time
+
 import logging as log
 import xml.etree.ElementTree as ET
 
@@ -245,14 +252,34 @@ class Builder:
             for f in files:
                 if f == "android.jar" or f == "annotations.jar":
                     classpaths.append(os.path.join(dir, f))
+        srcdir = os.path.join(self.resultdest, 'sdk', 'java', 'src')
+        dstdir = self.docdest
+        # synchronize with modules/java/jar/build.xml.in
+        shutil.copy2(os.path.join(SCRIPT_DIR, '../../doc/mymath.js'), dstdir)
         cmd = [
             "javadoc",
-            "-header", "OpenCV %s" % self.opencv_version,
+            '-windowtitle', 'OpenCV %s Java documentation' % self.opencv_version,
+            '-doctitle', 'OpenCV Java documentation (%s)' % self.opencv_version,
             "-nodeprecated",
-            "-footer", '<a href="http://docs.opencv.org">OpenCV %s Documentation</a>' % self.opencv_version,
             "-public",
-            '-sourcepath', os.path.join(self.resultdest, 'sdk', 'java', 'src'),
-            "-d", self.docdest,
+            '-sourcepath', srcdir,
+            '-encoding', 'UTF-8',
+            '-charset', 'UTF-8',
+            '-docencoding', 'UTF-8',
+            '--allow-script-in-comments',
+            '-header',
+'''
+            <script>
+              var url = window.location.href;
+              var pos = url.lastIndexOf('/javadoc/');
+              url = pos >= 0 ? (url.substring(0, pos) + '/javadoc/mymath.js') : (window.location.origin + '/mymath.js');
+              var script = document.createElement('script');
+              script.src = '%s/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
+              document.getElementsByTagName('head')[0].appendChild(script);
+            </script>
+''' % 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0',
+            '-bottom', 'Generated on %s / OpenCV %s' % (time.strftime("%Y-%m-%d %H:%M:%S"), self.opencv_version),
+            "-d", dstdir,
             "-classpath", ":".join(classpaths),
             '-subpackages', 'org.opencv',
         ]

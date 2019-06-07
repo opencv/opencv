@@ -3368,7 +3368,7 @@ cvTreeToNodeSeq( const void* first, int header_size, CvMemStorage* storage )
 
 typedef struct CvTreeNode
 {
-    int       flags;         /* micsellaneous flags */
+    int       flags;         /* miscellaneous flags */
     int       header_size;   /* size of sequence header */
     struct    CvTreeNode* h_prev; /* previous sequence */
     struct    CvTreeNode* h_next; /* next sequence */

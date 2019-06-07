@@ -3,9 +3,7 @@ package org.opencv.test.objdetect;
 import org.opencv.core.Mat;
 import org.opencv.objdetect.QRCodeDetector;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.objdetect.Objdetect;
 import org.opencv.test.OpenCVTestCase;
-import org.opencv.test.OpenCVTestRunner;
 
 public class QRCodeDetectorTest extends OpenCVTestCase {
 

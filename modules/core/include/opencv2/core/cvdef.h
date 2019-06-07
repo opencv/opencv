@@ -357,10 +357,10 @@ Cv64suf;
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
-#ifdef CVAPI_EXPORTS
-# if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#ifndef CV_EXPORTS
+# if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined(CVAPI_EXPORTS)
 #   define CV_EXPORTS __declspec(dllexport)
-# elif defined __GNUC__ && __GNUC__ >= 4
+# elif defined __GNUC__ && __GNUC__ >= 4 && (defined(CVAPI_EXPORTS) || defined(__APPLE__))
 #   define CV_EXPORTS __attribute__ ((visibility ("default")))
 # endif
 #endif
