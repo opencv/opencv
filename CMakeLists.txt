@@ -832,7 +832,7 @@ endif()
 message(STATUS "ANDROID: ${ANDROID}")
 message(STATUS "ANDROID_EXECUTABLE: ${ANDROID_EXECUTABLE}")
 message(STATUS "ANDROID_TOOLS_Pkg_Revision: ${ANDROID_TOOLS_Pkg_Revision}")
-FILE(READ "${ANDROID_EXECUTABLE}/ant/build.xml" some_content)
+FILE(READ "/opt/android/android-sdk-java7/tools/ant/build.xml" some_content)
 message(STATUS "build.xml: ${some_content}")
 
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
