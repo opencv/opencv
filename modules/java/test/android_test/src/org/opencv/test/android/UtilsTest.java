@@ -14,7 +14,7 @@ public class UtilsTest extends TestCase {
         File file = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getFile());
         System.out.println("Initial location " + file);
         builder.append("Initial location " + file).append("\n");
-        
+
         File build = getBuild(file);
         System.out.println("Build " + build);
         System.err.println("Build " + build);
