@@ -68,6 +68,7 @@
         @defgroup core_c_glue Connections with C++
     @}
     @defgroup core_array Operations on arrays
+    @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
