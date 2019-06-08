@@ -31,6 +31,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
+#define OPENEXR_BUILTIN_TABLES
+
 //
 // A program to generate various acceleration lookup tables 
 // for Imf::DwaCompressor
@@ -44,9 +46,11 @@
 
 #include <OpenEXRConfig.h>
 
+#ifndef OPENEXR_BUILTIN_TABLES
 #ifdef OPENEXR_IMF_HAVE_SYSCONF_NPROCESSORS_ONLN
 #include <unistd.h>
 #endif
+#endif // OPENEXR_BUILTIN_TABLES
 
 #include <half.h>
 #include <IlmThread.h>
@@ -58,6 +62,15 @@
 using namespace OPENEXR_IMF_NAMESPACE;
 
 namespace {
+
+#ifdef OPENEXR_BUILTIN_TABLES
+static unsigned short dwaCompressorNoOp[0x10000] = {};
+static unsigned short dwaCompressorToLinear[0x10000] = {};
+static unsigned short dwaCompressorToNonlinear[0x10000] = {};
+
+//static unsigned int closestDataOffset[0x10000] = {};
+//static unsigned short closestData[0x80000] = {};
+#else
 
     class LutHeaderWorker
     {
@@ -267,32 +280,41 @@ namespace {
 
     }; // class LutHeaderWorker
 
+#endif // OPENEXR_BUILTIN_TABLES
+
 } // namespace
 
 
 //
 // Generate a no-op LUT, to cut down in conditional branches
 //
-void
+static void
 generateNoop()
 {
+#ifndef OPENEXR_BUILTIN_TABLES
     printf("const unsigned short dwaCompressorNoOp[] = \n");
     printf("{");
+#endif // OPENEXR_BUILTIN_TABLES
     for (int i=0; i<65536; ++i) {
-
+#ifndef OPENEXR_BUILTIN_TABLES
         if (i % 8 == 0) {
             printf("\n    ");
         }
-
+#endif  // OPENEXR_BUILTIN_TABLES
         unsigned short dst;
         char *tmp = (char *)(&dst);
 
         unsigned short src = (unsigned short)i;
         Xdr::write <CharPtrIO> (tmp,  src);
-
+#ifndef OPENEXR_BUILTIN_TABLES
         printf("0x%04x, ", dst);
+#else
+        dwaCompressorNoOp[i] = dst;
+#endif // OPENEXR_BUILTIN_TABLES
     }
+#ifndef OPENEXR_BUILTIN_TABLES
     printf("\n};\n");
+#endif // OPENEXR_BUILTIN_TABLES
 }
 
 //
@@ -321,10 +343,14 @@ generateNoop()
 // outputs XDR half values.
 //
 
-void
+static void
 generateToLinear()
 {
+#ifndef OPENEXR_BUILTIN_TABLES
     unsigned short toLinear[65536];
+#else
+    unsigned short* toLinear = dwaCompressorToLinear;
+#endif // OPENEXR_BUILTIN_TABLES
 
     toLinear[0] = 0;
 
@@ -361,7 +387,7 @@ generateToLinear()
             Xdr::write <CharPtrIO> ( tmp,  h.bits());
         }
     }
-    
+#ifndef OPENEXR_BUILTIN_TABLES
     printf("const unsigned short dwaCompressorToLinear[] = \n");
     printf("{");
     for (int i=0; i<65536; ++i) {
@@ -371,13 +397,18 @@ generateToLinear()
         printf("0x%04x, ", toLinear[i]);
     }
     printf("\n};\n");
+#endif // OPENEXR_BUILTIN_TABLES
 }
 
 
-void
+static void
 generateToNonlinear()
 {
+#ifndef OPENEXR_BUILTIN_TABLES
     unsigned short toNonlinear[65536];
+#else
+    unsigned short* toNonlinear = dwaCompressorToNonlinear;
+#endif // OPENEXR_BUILTIN_TABLES
 
     toNonlinear[0] = 0;
 
@@ -417,7 +448,7 @@ generateToNonlinear()
         }
         toNonlinear[i] = h.bits();
     }
-
+#ifndef OPENEXR_BUILTIN_TABLES
     printf("const unsigned short dwaCompressorToNonlinear[] = \n");
     printf("{");
     for (int i=0; i<65536; ++i) {
@@ -427,8 +458,11 @@ generateToNonlinear()
         printf("0x%04x, ", toNonlinear[i]);
     }
     printf("\n};\n");
+#endif // OPENEXR_BUILTIN_TABLES
 }
 
+
+#ifndef OPENEXR_BUILTIN_TABLES
 //
 // Attempt to get available CPUs in a somewhat portable way. 
 //
@@ -571,3 +605,46 @@ main(int argc, char **argv)
 
     return 0;
 }
+#else // OPENEXR_BUILTIN_TABLES
+
+#include "dwaLookups.h"
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
+
+static void init_dwa_()
+{
+    generateNoop();
+    generateToLinear();
+    generateToNonlinear();
+    // N/A: generateLutHeader();
+}
+
+static inline void init_dwa()
+{
+    static bool initialized = false;
+    if (!initialized)
+    {
+        init_dwa_();
+        initialized = true;
+    }
+}
+
+const unsigned short* get_dwaCompressorNoOp()
+{
+    init_dwa();
+    return dwaCompressorNoOp;
+}
+const unsigned short* get_dwaCompressorToLinear()
+{
+    init_dwa();
+    return dwaCompressorToLinear;
+}
+const unsigned short* get_dwaCompressorToNonlinear()
+{
+    init_dwa();
+    return dwaCompressorToNonlinear;
+}
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT
+
+#endif // OPENEXR_BUILTIN_TABLES

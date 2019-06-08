@@ -688,7 +688,7 @@ DwaCompressor::LossyDctDecoderBase::LossyDctDecoderBase
     _height(height)
 {
     if (_toLinear == 0)
-        _toLinear = dwaCompressorNoOp;
+        _toLinear = get_dwaCompressorNoOp();
 
     _isNativeXdr = GLOBAL_SYSTEM_LITTLE_ENDIAN;
 }
@@ -1662,7 +1662,7 @@ DwaCompressor::LossyDctEncoderBase::quantize (half src, float errorTolerance)
     half            tmp;
     float           srcFloat      = (float)src;
     int             numSetBits    = countSetBits(src.bits());
-    const unsigned short *closest = closestData + closestDataOffset[src.bits()];
+    const unsigned short *closest = get_dwaClosest(src.bits());
 
     for (int targetNumSetBits = numSetBits - 1;
          targetNumSetBits >= 0;
@@ -2041,7 +2041,7 @@ DwaCompressor::compress
              rowPtrs[_cscSets[csc].idx[2]],
              packedAcEnd,
              packedDcEnd,
-             dwaCompressorToNonlinear,
+             get_dwaCompressorToNonlinear(),
              _channelData[_cscSets[csc].idx[0]].width,
              _channelData[_cscSets[csc].idx[0]].height,
              _channelData[_cscSets[csc].idx[0]].type,
@@ -2081,7 +2081,7 @@ DwaCompressor::compress
                 const unsigned short *nonlinearLut = 0;
 
                 if (!cd->pLinear)
-                    nonlinearLut = dwaCompressorToNonlinear; 
+                    nonlinearLut = get_dwaCompressorToNonlinear(); 
 
                 LossyDctEncoder encoder
                     (_dwaCompressionLevel / 100000.f,
@@ -2684,7 +2684,7 @@ DwaCompressor::uncompress
              rowPtrs[bChan],
              packedAcBufferEnd,
              packedDcBufferEnd,
-             dwaCompressorToLinear,
+             get_dwaCompressorToLinear(),
              _channelData[rChan].width,
              _channelData[rChan].height,
              _channelData[rChan].type,
@@ -2729,7 +2729,7 @@ DwaCompressor::uncompress
                 const unsigned short *linearLut = 0;
 
                 if (!cd->pLinear)
-                    linearLut = dwaCompressorToLinear;
+                    linearLut = get_dwaCompressorToLinear();
 
                 LossyDctDecoder decoder
                     (rowPtrs[chan],
