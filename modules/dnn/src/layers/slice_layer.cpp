@@ -174,15 +174,15 @@ public:
         for (int i = 0; i < outputs.size(); ++i)
         {
             CV_Assert(sliceRanges[i].size() <= inpShape.dims());
-            // Clamp.
-            for (int j = 0; j < sliceRanges[i].size(); ++j)
-            {
-                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
-            }
             // Fill the rest of ranges.
             for (int j = sliceRanges[i].size(); j < inpShape.dims(); ++j)
             {
                 sliceRanges[i].push_back(Range::all());
+            }
+            // Clamp.
+            for (int j = 0; j < sliceRanges[i].size(); ++j)
+            {
+                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
             }
         }
     }
