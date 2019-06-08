@@ -2557,7 +2557,7 @@ struct Net::Impl
     }
 
 #ifdef CV_CXX11
-    std::future<Mat> getBlobAsync(const LayerPin& pin)
+    AsyncArray getBlobAsync(const LayerPin& pin)
     {
         CV_TRACE_FUNCTION();
 #ifdef HAVE_INF_ENGINE
@@ -2586,7 +2586,7 @@ struct Net::Impl
 #endif
     }
 
-    std::future<Mat> getBlobAsync(String outputName)
+    AsyncArray getBlobAsync(String outputName)
     {
         return getBlobAsync(getPinByAlias(outputName));
     }
@@ -2714,7 +2714,7 @@ Mat Net::forward(const String& outputName)
     return impl->getBlob(layerName);
 }
 
-AsyncMat Net::forwardAsync(const String& outputName)
+AsyncArray Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
 #ifdef CV_CXX11

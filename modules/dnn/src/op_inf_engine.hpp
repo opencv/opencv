@@ -12,6 +12,9 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/dnn.hpp"
 
+#include "opencv2/core/async.hpp"
+#include "opencv2/core/detail/async_promise.hpp"
+
 #include "opencv2/dnn/utils/inference_engine.hpp"
 
 #ifdef HAVE_INF_ENGINE
@@ -208,7 +211,7 @@ private:
         void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
 
         InferenceEngine::InferRequest req;
-        std::vector<std::promise<Mat> > outProms;
+        std::vector<cv::AsyncPromise> outProms;
         std::vector<std::string> outsNames;
         bool isReady;
     };
@@ -264,7 +267,7 @@ public:
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
-    std::future<Mat> futureMat;
+    AsyncArray futureMat;
 };
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);

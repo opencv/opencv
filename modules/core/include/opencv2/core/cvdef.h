@@ -622,6 +622,19 @@ Cv64suf;
 #  define CV_FINAL
 #endif
 
+/****************************************************************************************\
+*                                     C++11 noexcept                                     *
+\****************************************************************************************/
+
+#ifndef CV_NOEXCEPT
+#  ifdef CV_CXX11
+#    define CV_NOEXCEPT noexcept
+#  endif
+#endif
+#ifndef CV_NOEXCEPT
+#  define CV_NOEXCEPT
+#endif
+
 
 
 // Integer types portatibility
