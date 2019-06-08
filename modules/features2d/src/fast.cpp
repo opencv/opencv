@@ -64,7 +64,6 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 #if CV_SIMD128
     const int quarterPatternSize = patternSize/4;
     v_uint8x16 delta = v_setall_u8(0x80), t = v_setall_u8((char)threshold), K16 = v_setall_u8((char)K);
-    bool hasSimd = hasSIMD128();
 #if CV_TRY_AVX2
     Ptr<opt_AVX2::FAST_t_patternSize16_AVX2> fast_t_impl_avx2;
     if(CV_CPU_HAS_SUPPORT_AVX2)
@@ -102,7 +101,6 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
         {
             j = 3;
 #if CV_SIMD128
-            if( hasSimd )
             {
                 if( patternSize == 16 )
                 {
