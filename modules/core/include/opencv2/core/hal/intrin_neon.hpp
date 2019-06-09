@@ -1910,16 +1910,6 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 
 inline void v_cleanup() {}
 
-//! @name Check SIMD support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD128()
-{
-    return (CV_CPU_HAS_SUPPORT_NEON) ? true : false;
-}
-
-//! @}
-
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
