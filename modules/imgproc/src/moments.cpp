@@ -218,14 +218,13 @@ struct MomentsInTile_SIMD<uchar, int, int>
 {
     MomentsInTile_SIMD()
     {
-        useSIMD = checkHardwareSupport(CV_CPU_SSE2);
+        // nothing
     }
 
     int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
     {
         int x = 0;
 
-        if( useSIMD )
         {
             __m128i dx = _mm_set1_epi16(8);
             __m128i z = _mm_setzero_si128(), qx0 = z, qx1 = z, qx2 = z, qx3 = z, qx = _mm_setr_epi16(0, 1, 2, 3, 4, 5, 6, 7);
@@ -264,7 +263,6 @@ struct MomentsInTile_SIMD<uchar, int, int>
     }
 
     int CV_DECL_ALIGNED(16) buf[4];
-    bool useSIMD;
 };
 
 #elif CV_NEON
@@ -342,14 +340,13 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 {
     MomentsInTile_SIMD()
     {
-        useSIMD = checkHardwareSupport(CV_CPU_SSE4_1);
+        // nothing
     }
 
     int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
     {
         int x = 0;
 
-        if (useSIMD)
         {
             __m128i v_delta = _mm_set1_epi32(4), v_zero = _mm_setzero_si128(), v_x0 = v_zero,
                 v_x1 = v_zero, v_x2 = v_zero, v_x3 = v_zero, v_ix0 = _mm_setr_epi32(0, 1, 2, 3);
@@ -395,7 +392,6 @@ struct MomentsInTile_SIMD<ushort, int, int64>
 
     int CV_DECL_ALIGNED(16) buf[4];
     int64 CV_DECL_ALIGNED(16) buf64[2];
-    bool useSIMD;
 };
 
 #endif
