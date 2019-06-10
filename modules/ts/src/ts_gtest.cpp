@@ -8284,8 +8284,8 @@ DeathTest::TestRole WindowsDeathTest::AssumeRole() {
   GTEST_DEATH_TEST_CHECK_(::CreateProcessA(
       executable_path,
       const_cast<char*>(command_line.c_str()),
-      NULL,   // Retuned process handle is not inheritable.
-      NULL,   // Retuned thread handle is not inheritable.
+      NULL,   // Returned process handle is not inheritable.
+      NULL,   // Returned thread handle is not inheritable.
       TRUE,   // Child inherits all inheritable handles (for write_handle_).
       0x0,    // Default creation flags.
       NULL,   // Inherit the parent's environment.

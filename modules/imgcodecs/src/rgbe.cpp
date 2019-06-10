@@ -51,7 +51,7 @@
 // developed by Greg Ward.  It handles the conversions between rgbe and
 // pixels consisting of floats.  The data is assumed to be an array of floats.
 // By default there are three floats per pixel in the order red, green, blue.
-// (RGBE_DATA_??? values control this.)  Only the mimimal header reading and
+// (RGBE_DATA_??? values control this.)  Only the minimal header reading and
 // writing is implemented.  Each routine does error checking and will return
 // a status value as defined below.  This code is intended as a skeleton so
 // feel free to modify it to suit your needs.

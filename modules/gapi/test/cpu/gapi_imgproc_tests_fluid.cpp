@@ -56,6 +56,27 @@ INSTANTIATE_TEST_CASE_P(BGR2LUVTestFluid, BGR2LUVTest,
                                 Values(true, false),
                                 Values(cv::compile_args(IMGPROC_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(RGB2HSVTestFluid, RGB2HSVTest,
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(true, false),
+                                Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(BayerGR2RGBTestFluid, BayerGR2RGBTest,
+                        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(true, false),
+                                Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(RGB2YUV422TestFluid, RGB2YUV422Test,
+                        Combine(Values(AbsTolerance(1).to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(true, false),
+                                Values(cv::compile_args(IMGPROC_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(blurTestFluid, BlurTest,
                         Combine(Values(ToleranceFilter(1e-4f, 0.01).to_compare_f()),
                                 Values(CV_8UC1, CV_16UC1, CV_16SC1),

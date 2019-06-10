@@ -61,7 +61,6 @@ ocv_update(OPENCV_PYTHON_EXTENSION_BUILD_PATH "${LIBRARY_OUTPUT_PATH}/${MODULE_I
 set_target_properties(${the_module} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY  "${OPENCV_PYTHON_EXTENSION_BUILD_PATH}"
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
-                      DEFINE_SYMBOL CVAPI_EXPORTS
                       PREFIX ""
                       OUTPUT_NAME cv2
                       SUFFIX ${CVPY_SUFFIX})
