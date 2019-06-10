@@ -537,6 +537,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     }
                                     else
                                     {
+                                        CV_CheckEQ(wanted_channels, 3, "TIFF-8bpp: BGR/BGRA images are supported only");
                                         icvCvt_BGRA2BGR_8u_C4C3R(bstart + i*tile_width0*4, 0,
                                                 img.ptr(img_y + tile_height - i - 1, x), 0,
                                                 Size(tile_width, 1), 2);
@@ -544,6 +545,7 @@ bool  TiffDecoder::readData( Mat& img )
                                 }
                                 else
                                 {
+                                    CV_CheckEQ(wanted_channels, 1, "");
                                     icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
                                             img.ptr(img_y + tile_height - i - 1, x), 0,
                                             Size(tile_width, 1), 2);
@@ -569,12 +571,14 @@ bool  TiffDecoder::readData( Mat& img )
                                 {
                                     if (ncn == 1)
                                     {
+                                        CV_CheckEQ(wanted_channels, 3, "");
                                         icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                     }
                                     else if (ncn == 3)
                                     {
+                                        CV_CheckEQ(wanted_channels, 3, "");
                                         icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
@@ -589,6 +593,7 @@ bool  TiffDecoder::readData( Mat& img )
                                         }
                                         else
                                         {
+                                            CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
                                             icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1), 2);
@@ -596,13 +601,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1), 2);
+                                        CV_Error(Error::StsError, "Not supported");
                                     }
                                 }
                                 else
                                 {
+                                    CV_CheckEQ(wanted_channels, 1, "");
                                     if( ncn == 1 )
                                     {
                                         memcpy(img.ptr<ushort>(img_y + i, x),
