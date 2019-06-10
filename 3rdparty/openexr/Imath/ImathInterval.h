@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -50,11 +50,12 @@
 //-------------------------------------------------------------------
 
 #include "ImathVec.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-template <class T>
+template <class T>	
 class Interval
 {
   public:
@@ -70,14 +71,14 @@ class Interval
     //	Constructors - an "empty" Interval is created by default
     //-----------------------------------------------------
 
-    Interval();
+    Interval(); 
     Interval(const T& point);
     Interval(const T& minT, const T& maxT);
 
     //--------------------------------
     //  Operators:  we get != from STL
     //--------------------------------
-
+    
     bool                        operator == (const Interval<T> &src) const;
 
     //------------------
@@ -161,10 +162,10 @@ inline void
 Interval<T>::extendBy(const T& point)
 {
     if ( point < min )
-    min = point;
-
+	min = point;
+    
     if ( point > max )
-    max = point;
+	max = point;
 }
 
 template <class T>
@@ -172,10 +173,10 @@ inline void
 Interval<T>::extendBy(const Interval<T>& interval)
 {
     if ( interval.min < min )
-    min = interval.min;
+	min = interval.min;
 
     if ( interval.max > max )
-    max = interval.max;
+	max = interval.max;
 }
 
 template <class T>
@@ -192,17 +193,17 @@ Interval<T>::intersects(const Interval<T>& interval) const
     return interval.max >= min && interval.min <= max;
 }
 
-template <class T>
+template <class T> 
 inline T
-Interval<T>::size() const
-{
+Interval<T>::size() const 
+{ 
     return max-min;
 }
 
-template <class T>
+template <class T> 
 inline T
-Interval<T>::center() const
-{
+Interval<T>::center() const 
+{ 
     return (max+min)/2;
 }
 
@@ -219,6 +220,7 @@ inline bool Interval<T>::hasVolume() const
     return max > min;
 }
 
-} // namespace Imath
 
-#endif
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
+
+#endif // INCLUDED_IMATHINTERVAL_H
