@@ -44,9 +44,7 @@
 
 #include <vector>
 #include <opencv2/core.hpp>
-#ifdef CV_CXX11
-#include <future>
-#endif
+#include "opencv2/core/async.hpp"
 
 #include "../dnn/version.hpp"
 
@@ -59,18 +57,6 @@ CV__DNN_INLINE_NS_BEGIN
 //! @{
 
     typedef std::vector<int> MatShape;
-
-#if defined(CV_CXX11) || defined(CV_DOXYGEN)
-    typedef std::future<Mat> AsyncMat;
-#else
-    // Just a workaround for bindings.
-    struct AsyncMat
-    {
-        Mat get() { return Mat(); }
-        void wait() const {}
-        size_t wait_for(size_t milliseconds) const { CV_UNUSED(milliseconds); return -1; }
-    };
-#endif
 
     /**
      * @brief Enum of computation backends supported by layers.
@@ -479,7 +465,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  This is an asynchronous version of forward(const String&).
          *  dnn::DNN_BACKEND_INFERENCE_ENGINE backend is required.
          */
-        CV_WRAP AsyncMat forwardAsync(const String& outputName = String());
+        CV_WRAP AsyncArray forwardAsync(const String& outputName = String());
 
         /** @brief Runs forward pass to compute output of layer with name @p outputName.
          *  @param outputBlobs contains all output blobs for specified layer.

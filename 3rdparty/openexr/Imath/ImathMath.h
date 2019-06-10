@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -82,15 +82,16 @@
 
 #include "ImathPlatform.h"
 #include "ImathLimits.h"
+#include "ImathNamespace.h"
 #include <math.h>
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 template <class T>
 struct Math
 {
-   static T	acos  (T x)		{return ::acos (double(x));}
+   static T	acos  (T x)		{return ::acos (double(x));}	
    static T	asin  (T x)		{return ::asin (double(x));}
    static T	atan  (T x)		{return ::atan (double(x));}
    static T	atan2 (T x, T y)	{return ::atan2 (double(x), double(y));}
@@ -107,8 +108,8 @@ struct Math
    {
         double ival;
         T rval( ::modf (double(x),&ival));
-    *iptr = ival;
-    return rval;
+	*iptr = ival;
+	return rval;
    }
    static T	pow   (T x, T y)	{return ::pow (double(x), double(y));}
    static T	sqrt  (T x)		{return ::sqrt (double(x));}
@@ -123,7 +124,7 @@ struct Math
 template <>
 struct Math<float>
 {
-   static float	acos  (float x)			{return ::acosf (x);}
+   static float	acos  (float x)			{return ::acosf (x);}	
    static float	asin  (float x)			{return ::asinf (x);}
    static float	atan  (float x)			{return ::atanf (x);}
    static float	atan2 (float x, float y)	{return ::atan2f (x, y);}
@@ -161,9 +162,9 @@ inline T
 sinx_over_x (T x)
 {
     if (x * x < limits<T>::epsilon())
-    return T (1);
+	return T (1);
     else
-    return Math<T>::sin (x) / x;
+	return Math<T>::sin (x) / x;
 }
 
 
@@ -174,14 +175,14 @@ sinx_over_x (T x)
 //
 //	Returns true if x1 is the same as x2 with an absolute error of
 //	no more than e,
-//
+//	
 //	abs (x1 - x2) <= e
 //
 // equalWithRelError (x1, x2, e)
 //
 //	Returns true if x1 is the same as x2 with an relative error of
 //	no more than e,
-//
+//	
 //	abs (x1 - x2) <= e * x1
 //
 //--------------------------------------------------------------------------
@@ -202,7 +203,6 @@ equalWithRelError (T x1, T x2, T e)
 }
 
 
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-} // namespace Imath
-
-#endif
+#endif // INCLUDED_IMATHMATH_H

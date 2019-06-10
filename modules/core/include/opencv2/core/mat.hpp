@@ -372,6 +372,9 @@ public:
 
     void assign(const std::vector<UMat>& v) const;
     void assign(const std::vector<Mat>& v) const;
+
+    void move(UMat& u) const;
+    void move(Mat& m) const;
 };
 
 

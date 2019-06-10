@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,24 +43,22 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfAttribute.h>
-#include <ImfCompression.h>
+#include "ImfAttribute.h"
+#include "ImfCompression.h"
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-namespace Imf {
+typedef TypedAttribute<OPENEXR_IMF_INTERNAL_NAMESPACE::Compression> CompressionAttribute;
+template <> IMF_EXPORT const char *CompressionAttribute::staticTypeName ();
+template <> IMF_EXPORT void CompressionAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &,
+                                                     int) const;
+template <> IMF_EXPORT void CompressionAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &,
+                                                      int,
+                                                      int);
 
 
-typedef TypedAttribute<Compression> CompressionAttribute;
-template <> const char *CompressionAttribute::staticTypeName ();
-template <> void CompressionAttribute::writeValueTo (OStream &, int) const;
-template <> void CompressionAttribute::readValueFrom (IStream &, int, int);
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
-
-} // namespace Imf
-
-// Metrowerks compiler wants the .cpp file inlined, too
-#ifdef __MWERKS__
-#include <ImfCompressionAttribute.cpp>
-#endif
 
 #endif
