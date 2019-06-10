@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2005-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,23 +43,32 @@
 //-----------------------------------------------------------------------------
 
 #include "IlmBaseConfig.h"
+#include "IlmThreadExport.h"
+#include "IlmThreadNamespace.h"
 
 #if defined _WIN32 || defined _WIN64
-    #ifdef NOMINMAX
-        #undef NOMINMAX
-    #endif
-    #define NOMINMAX
-    #include <windows.h>
-#elif HAVE_PTHREAD && !HAVE_POSIX_SEMAPHORES
-    #include <pthread.h>
-#elif HAVE_PTHREAD && HAVE_POSIX_SEMAPHORES
-    #include <semaphore.h>
+#   ifdef NOMINMAX
+#      undef NOMINMAX
+#   endif
+#   define NOMINMAX
+#   include <windows.h>
+#elif HAVE_POSIX_SEMAPHORES
+#   include <semaphore.h>
+#else
+#   ifdef ILMBASE_FORCE_CXX03
+#      if HAVE_PTHREAD
+#         include <pthread.h>
+#      endif
+#   else
+#      include <mutex>
+#      include <condition_variable>
+#   endif
 #endif
 
-namespace IlmThread {
+ILMTHREAD_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
-class Semaphore
+class ILMTHREAD_EXPORT Semaphore
 {
   public:
 
@@ -73,38 +82,46 @@ class Semaphore
 
   private:
 
-    #if defined _WIN32 || defined _WIN64
+#if defined _WIN32 || defined _WIN64
 
-    mutable HANDLE _semaphore;
+	mutable HANDLE _semaphore;
 
-    #elif HAVE_PTHREAD && !HAVE_POSIX_SEMAPHORES
+#elif HAVE_POSIX_SEMAPHORES
 
-    //
-    // If the platform has Posix threads but no semapohores,
-    // then we implement them ourselves using condition variables
-    //
+	mutable sem_t _semaphore;
 
-    struct sema_t
-    {
-        unsigned int count;
-        unsigned long numWaiting;
-        pthread_mutex_t mutex;
-        pthread_cond_t nonZero;
-    };
+#else
+	//
+	// If the platform has Posix threads but no semapohores,
+	// then we implement them ourselves using condition variables
+	//
 
-    mutable sema_t _semaphore;
+	struct sema_t
+	{
+	    unsigned int count;
+	    unsigned long numWaiting;
+#   if ILMBASE_FORCE_CXX03
+#      if HAVE_PTHREAD
+	    pthread_mutex_t mutex;
+	    pthread_cond_t nonZero;
+#      else
+#         error unhandled legacy setup
+#      endif
+#   else
+        std::mutex mutex;
+        std::condition_variable nonZero;
+#   endif
+	};
 
-    #elif HAVE_PTHREAD && HAVE_POSIX_SEMAPHORES
-
-    mutable sem_t _semaphore;
-
-    #endif
+	mutable sema_t _semaphore;
+  
+#endif
 
     void operator = (const Semaphore& s);	// not implemented
     Semaphore (const Semaphore& s);		// not implemented
 };
 
 
-} // namespace IlmThread
+ILMTHREAD_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_ILM_THREAD_SEMAPHORE_H
