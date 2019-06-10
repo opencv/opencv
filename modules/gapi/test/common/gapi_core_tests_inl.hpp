@@ -650,7 +650,7 @@ TEST_P(NormTest, AccuracyTest)
 TEST_P(IntegralTest, AccuracyTest)
 {
     int type_out = (type == CV_8U) ? CV_32SC1 : CV_64FC1;
-    cv::Mat in_mat1(sz, type);
+    in_mat1 = cv::Mat(sz, type);
 
     cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
 
@@ -978,8 +978,8 @@ TEST_P(ConcatHorTest, AccuracyTest)
     cv::Size sz_in1 = cv::Size(wpart, sz_out.height);
     cv::Size sz_in2 = cv::Size(sz_out.width - wpart, sz_out.height);
 
-    cv::Mat in_mat1 (sz_in1, type );
-    cv::Mat in_mat2 (sz_in2, type);
+    in_mat1 = cv::Mat(sz_in1, type );
+    in_mat2 = cv::Mat(sz_in2, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
 
@@ -987,7 +987,7 @@ TEST_P(ConcatHorTest, AccuracyTest)
     cv::randn(in_mat2, mean, stddev);
 
     cv::Mat out_mat(sz_out, type);
-    cv::Mat out_mat_ocv(sz_out, type);
+    out_mat_ocv = cv::Mat(sz_out, type);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
@@ -1013,8 +1013,8 @@ TEST_P(ConcatVertTest, AccuracyTest)
     cv::Size sz_in1 = cv::Size(sz_out.width, hpart);
     cv::Size sz_in2 = cv::Size(sz_out.width, sz_out.height - hpart);
 
-    cv::Mat in_mat1 (sz_in1, type);
-    cv::Mat in_mat2 (sz_in2, type);
+    in_mat1 = cv::Mat(sz_in1, type);
+    in_mat2 = cv::Mat(sz_in2, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
 
@@ -1022,7 +1022,7 @@ TEST_P(ConcatVertTest, AccuracyTest)
     cv::randn(in_mat2, mean, stddev);
 
     cv::Mat out_mat(sz_out, type);
-    cv::Mat out_mat_ocv(sz_out, type);
+    out_mat_ocv = cv::Mat(sz_out, type);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2;
@@ -1050,9 +1050,9 @@ TEST_P(ConcatVertVecTest, AccuracyTest)
     cv::Size sz_in2 = cv::Size(sz_out.width, hpart2);
     cv::Size sz_in3 = cv::Size(sz_out.width, sz_out.height - hpart1 - hpart2);
 
-    cv::Mat in_mat1 (sz_in1, type);
-    cv::Mat in_mat2 (sz_in2, type);
-    cv::Mat in_mat3 (sz_in3, type);
+    in_mat1 = cv::Mat(sz_in1, type);
+    in_mat2 = cv::Mat(sz_in2, type);
+    cv::Mat in_mat3(sz_in3, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
 
@@ -1061,7 +1061,7 @@ TEST_P(ConcatVertVecTest, AccuracyTest)
     cv::randn(in_mat3, mean, stddev);
 
     cv::Mat out_mat(sz_out, type);
-    cv::Mat out_mat_ocv(sz_out, type);
+    out_mat_ocv = cv::Mat(sz_out, type);
 
     // G-API code //////////////////////////////////////////////////////////////
     std::vector <cv::GMat> mats(3);
@@ -1092,8 +1092,8 @@ TEST_P(ConcatHorVecTest, AccuracyTest)
     cv::Size sz_in2 = cv::Size(wpart2, sz_out.height);
     cv::Size sz_in3 = cv::Size(sz_out.width - wpart1 - wpart2, sz_out.height);
 
-    cv::Mat in_mat1 (sz_in1, type);
-    cv::Mat in_mat2 (sz_in2, type);
+    in_mat1 = cv::Mat(sz_in1, type);
+    in_mat2 = cv::Mat(sz_in2, type);
     cv::Mat in_mat3 (sz_in3, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
@@ -1103,7 +1103,7 @@ TEST_P(ConcatHorVecTest, AccuracyTest)
     cv::randn(in_mat3, mean, stddev);
 
     cv::Mat out_mat(sz_out, type);
-    cv::Mat out_mat_ocv(sz_out, type);
+    out_mat_ocv = cv::Mat(sz_out, type);
 
     // G-API code //////////////////////////////////////////////////////////////
     std::vector <cv::GMat> mats(3);
