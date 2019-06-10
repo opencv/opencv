@@ -11,6 +11,8 @@
 #include "opencv2/gapi/cpu/imgproc.hpp"
 #include "opencv2/gapi/cpu/gcpukernel.hpp"
 
+#include "backends/fluid/gfluidimgproc_func.hpp"
+
 namespace {
     cv::Mat add_border(const cv::Mat& in, const int ksize, const int borderType, const cv::Scalar& bordVal){
         if( borderType == cv::BORDER_CONSTANT )
@@ -276,6 +278,37 @@ GAPI_OCV_KERNEL(GCPURGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_BayerGR2RGB);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPURGB2HSV, cv::gapi::imgproc::GRGB2HSV)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_RGB2HSV);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        out.create(in.size(), CV_8UC2);
+
+        for (int i = 0; i < in.rows; ++i)
+        {
+            const uchar* in_line_p  = in.ptr<uchar>(i);
+            uchar* out_line_p = out.ptr<uchar>(i);
+            cv::gapi::fluid::run_rgb2yuv422_impl(out_line_p, in_line_p, in.cols);
+        }
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -303,6 +336,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBGR2Gray
         , GCPURGB2Gray
         , GCPURGB2GrayCustom
+        , GCPUBayerGR2RGB
+        , GCPURGB2HSV
+        , GCPURGB2YUV422
         >();
     return pkg;
 }
