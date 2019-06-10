@@ -314,3 +314,15 @@ class LogSoftmax(nn.Module):
 input = torch.randn(2, 3)
 model = LogSoftmax()
 save_data_and_model("log_softmax", input, model)
+
+class Slice(nn.Module):
+
+    def __init__(self):
+        super(Slice, self).__init__()
+
+    def forward(self, x):
+        return x[..., 1:-1, 0:3]
+
+input = Variable(torch.randn(1, 2, 4, 4))
+model = Slice()
+save_data_and_model("slice", input, model)
