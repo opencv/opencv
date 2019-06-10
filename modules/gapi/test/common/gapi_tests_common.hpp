@@ -154,8 +154,8 @@ private:
     common_params_t m_common;
     specific_params_t m_specific;
 
-    template<typename TIn, typename TOut, int First, int ...Indices>
-    static void copyValues(const TIn& in, TOut& out, cv::detail::Range<First, Indices...>)
+    template<typename TIn, typename TOut, int ...Indices>
+    static void copyValues(const TIn& in, TOut& out, cv::detail::Seq<Indices...>)
     {
         out = std::make_tuple(std::get<Indices>(in)...);
     }

@@ -26,9 +26,12 @@ namespace detail
     template<int Sz>   struct MkSeq   { using type = typename MkSeq<Sz-1>::type::next; };
     template<>         struct MkSeq<0>{ using type = Seq<>; };
 
-    // Recursive integer sequence type that starts from an arbitrary user-defined value
+    // Recursive integer sequence type that starts from an arbitrary user-defined value. Derived
+    // from Seq<> to allow implicit conversion from Range<> to Seq<>
     template<int First, int... I>
-    struct Range { using next = Range<First, I..., sizeof...(I) + First>; };
+    struct Range : Seq<I...> {
+        using next = Range<First, I..., sizeof...(I) + First>;
+    };
     template<int First, int Sz>
     struct MkRange { using type = typename MkRange<First, Sz-1>::type::next; };
     template<int First>
