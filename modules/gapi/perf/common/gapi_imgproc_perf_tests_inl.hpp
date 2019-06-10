@@ -18,6 +18,41 @@ namespace opencv_test
 
   using namespace perf;
 
+  namespace
+  {
+      void rgb2yuyv(const uchar* rgb_line, uchar* yuv422_line, int width)
+      {
+          CV_Assert(width % 2 == 0);
+          for (int i = 0; i < width; i += 2)
+          {
+              uchar r = rgb_line[i * 3    ];
+              uchar g = rgb_line[i * 3 + 1];
+              uchar b = rgb_line[i * 3 + 2];
+
+              yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436   * b + 128.f);  // U0
+              yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114   * b        );  // Y0
+              yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>(0.615    * r - 0.51499 * g - 0.10001 * b + 128.f);  // V0
+
+              r = rgb_line[i * 3 + 3];
+              g = rgb_line[i * 3 + 4];
+              b = rgb_line[i * 3 + 5];
+
+              yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587   * g + 0.114   * b);   // Y1
+          }
+      }
+
+      void convertRGB2YUV422Ref(const cv::Mat& in, cv::Mat &out)
+      {
+          out.create(in.size(), CV_8UC2);
+
+          for (int i = 0; i < in.rows; ++i)
+          {
+              const uchar* in_line_p  = in.ptr<uchar>(i);
+              uchar* out_line_p = out.ptr<uchar>(i);
+              rgb2yuyv(in_line_p, out_line_p, in.cols);
+          }
+      }
+  }
 //------------------------------------------------------------------------------
 
 PERF_TEST_P_(SepFilterPerfTest, TestPerformance)
@@ -933,6 +968,92 @@ PERF_TEST_P_(YUV2BGRPerfTest, TestPerformance)
 
     cv::GMat in;
     auto out = cv::gapi::YUV2BGR(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_EQ(out_mat_gapi.size(), sz);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BayerGR2RGBPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    Size sz = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+
+    initMatsRandN(CV_8UC1, sz, CV_8UC3, false);
+
+    cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BayerGR2RGB);
+
+    cv::GMat in;
+    auto out = cv::gapi::BayerGR2RGB(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_EQ(out_mat_gapi.size(), sz);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(RGB2HSVPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    Size sz = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+
+    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    cv::cvtColor(in_mat1, in_mat1, cv::COLOR_BGR2RGB);
+
+    cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_RGB2HSV);
+
+    cv::GMat in;
+    auto out = cv::gapi::RGB2HSV(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    EXPECT_EQ(out_mat_gapi.size(), sz);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    Size sz = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+
+    initMatsRandN(CV_8UC3, sz, CV_8UC2, false);
+    cv::cvtColor(in_mat1, in_mat1, cv::COLOR_BGR2RGB);
+
+    convertRGB2YUV422Ref(in_mat1, out_mat_ocv);
+
+    cv::GMat in;
+    auto out = cv::gapi::RGB2YUV422(in);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
