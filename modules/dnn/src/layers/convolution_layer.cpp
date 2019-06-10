@@ -256,7 +256,8 @@ public:
         }
         else
 #endif
-            return (kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
+            return (kernel_size.size() == 3 && preferableTarget == DNN_TARGET_CPU && backendId == DNN_BACKEND_OPENCV) ||
+                   (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -531,7 +532,7 @@ public:
         const Mat* weights_;
         Mat* output_;
         int outShape[4];
-        Size kernel_, pad_, stride_, dilation_;
+        std::vector<size_t> kernel_size, pads_begin, pads_end, strides, dilations;
         int ngroups_, nstripes_;
         std::vector<int> ofstab_;
         const std::vector<float>* biasvec_;
@@ -550,14 +551,18 @@ public:
         static void run( const Mat& input, Mat& output, const Mat& weights,
                          const std::vector<float>& biasvec,
                          const std::vector<float>& reluslope,
-                         Size kernel, Size pad, Size stride, Size dilation,
+                         const std::vector<size_t>& kernel_size, const std::vector<size_t>& strides,
+                         const std::vector<size_t>& pads_begin, const std::vector<size_t>& pads_end,
+                         const std::vector<size_t>& dilations,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
+            size_t kernel_total = std::accumulate(kernel_size.begin(), kernel_size.end(),
+                                                  1, std::multiplies<size_t>());
             CV_Assert_N(
-                       input.dims == 4 && output.dims == 4,
+                       (input.dims == 4 || input.dims == 5) && (input.dims == output.dims),
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
-                       weights.cols == (input.size[1]/ngroups)*kernel.width*kernel.height,
+                       weights.cols == (input.size[1]/ngroups)*kernel_total,
                        input.type() == output.type(),
                        input.type() == weights.type(),
                        input.type() == CV_32FC1,
@@ -571,26 +576,44 @@ public:
             p.output_ = &output;
             for( int i = 0; i < 4; i++ ) p.outShape[i] = output.size[i];
             p.outShape[1] /= ngroups;
-            p.kernel_ = kernel; p.pad_ = pad; p.stride_ = stride; p.dilation_ = dilation;
+
+            p.kernel_size = kernel_size; p.strides = strides; p.dilations = dilations;
+            p.pads_begin = pads_begin; p.pads_end = pads_end;
+
             p.ngroups_ = ngroups;
             p.nstripes_ = nstripes;
 
-            int inpCnAll = input.size[1], width = input.size[3], height = input.size[2];
+            int inpCnAll = input.size[1];
+            int depth = (input.dims == 5) ? input.size[2] : 1;
+            int width = input.size[input.dims - 1];
+            int height = input.size[input.dims - 2];
             int inpCn = inpCnAll / ngroups;
-            p.is1x1_ = kernel == Size(1,1) && pad == Size(0, 0);
-            p.useAVX = checkHardwareSupport(CPU_AVX);
-            p.useAVX2 = checkHardwareSupport(CPU_AVX2);
-            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+
+            p.is1x1_ = kernel_size.size() == 2 && kernel_size[0] == 1 && kernel_size[1] == 1 &&
+                       pads_begin.size() == 2 && pads_begin[0] == 0 && pads_begin[1] == 0;
+            p.useAVX = checkHardwareSupport(CPU_AVX) && kernel_size.size() == 2;
+            p.useAVX2 = checkHardwareSupport(CPU_AVX2) && kernel_size.size() == 2;
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX && kernel_size.size() == 2;
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
-            p.ofstab_.resize(kernel.width*kernel.height*ncn);
+
+            int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
+            int kernel_h = kernel_size[kernel_size.size() - 2];
+            int kernel_w = kernel_size.back();
+
+            int dil_d = (dilations.size() == 3) ? dilations[0] : 1;
+            int dil_h = dilations[dilations.size() - 2];
+            int dil_w = dilations.back();
+
+            p.ofstab_.resize(kernel_total * ncn);
             int* ofstab = &p.ofstab_[0];
 
             for( int k = 0; k < ncn; k++ )
-                for( int k_r = 0; k_r < kernel.height; k_r++ )
-                    for( int k_c = 0; k_c < kernel.width; k_c++ )
-                        ofstab[(k*kernel.height + k_r)*kernel.width + k_c] =
-                        (k*height + k_r*dilation.height)*width + k_c*dilation.width;
+                for (int k_d = 0; k_d < kernel_d; k_d++)
+                    for( int k_r = 0; k_r < kernel_h; k_r++ )
+                        for( int k_c = 0; k_c < kernel_w; k_c++ )
+                            ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
+                            (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
 
             p.biasvec_ = &biasvec;
             p.reluslope_ = &reluslope;
@@ -603,17 +626,39 @@ public:
         {
             const int valign = ConvolutionLayerImpl::VEC_ALIGN;
             int ngroups = ngroups_, batchSize = input_->size[0]*ngroups;
-            int outW = output_->size[3], outH = output_->size[2], outCn = output_->size[1]/ngroups;
-            int width = input_->size[3], height = input_->size[2], inpCn = input_->size[1]/ngroups;
+
+            int outD = (output_->dims == 5) ? output_->size[2] : 1;
+            int outW = output_->size[output_->dims - 1];
+            int outH = output_->size[output_->dims - 2];
+            int outCn = output_->size[1]/ngroups;
+
+            int depth = (input_->dims == 5) ? input_->size[2] : 1;
+            int height = input_->size[input_->dims - 2];
+            int width = input_->size[input_->dims - 1];
+            int inpCn = input_->size[1]/ngroups;
+
             const int nstripes = nstripes_;
-            int kernel_w = kernel_.width, kernel_h = kernel_.height;
-            int pad_w = pad_.width, pad_h = pad_.height;
-            int stride_w = stride_.width, stride_h = stride_.height;
-            int dilation_w = dilation_.width, dilation_h = dilation_.height;
-            int karea = kernel_w*kernel_h;
+
+            int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
+            int kernel_h = kernel_size[kernel_size.size() - 2];
+            int kernel_w = kernel_size.back();
+            int karea = kernel_w*kernel_h*kernel_d;
+
+            int pad_d = (pads_begin.size() == 3) ? pads_begin[0] : 0;
+            int pad_t = pads_begin[pads_begin.size() - 2];
+            int pad_l = pads_begin.back();
+
+            int stride_d = (strides.size() == 3) ? strides[0] : 0;
+            int stride_h = strides[strides.size() - 2];
+            int stride_w = strides.back();
+
+            int dilation_d = (dilations.size() == 3) ? dilations[0] : 1;
+            int dilation_h = dilations[dilations.size() - 2];
+            int dilation_w = dilations.back();
+
             int i, j, k;
-            size_t inpPlaneSize = width*height;
-            size_t outPlaneSize = outW*outH;
+            size_t inpPlaneSize = depth*height*width;
+            size_t outPlaneSize = outD*outH*outW;
             bool is1x1 = is1x1_;
 
             int stripesPerSample;
@@ -682,18 +727,23 @@ public:
                     for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += BLK_SIZE )
                     {
                         int ofs, ofs1 = std::min(ofs0 + BLK_SIZE, stripeEnd);
-                        int out_i = ofs0 / outW;
-                        int out_j = ofs0 - out_i * outW;
+                        int tmp = ofs0 / outW;
+                        int out_d = tmp / outH;
+                        int out_i = tmp - out_d * outH;
+                        int out_j = ofs0 - tmp * outW;
 
                         // do im2row for a part of input tensor
                         float* rowbuf = rowbuf0;
-                        for( ofs = ofs0; ofs < ofs1; out_j = 0, ++out_i )
+
+                        for( ofs = ofs0; ofs < ofs1; out_d += (out_i + 1) / outH, out_i = (out_i + 1) % outH, out_j = 0 )
                         {
                             int delta = std::min(ofs1 - ofs, outW - out_j);
                             int out_j1 = out_j + delta;
-                            int in_i = out_i * stride_h - pad_h;
-                            int in_j = out_j * stride_w - pad_w;
-                            const float* imgptr = data_inp0 + (cn0*height + in_i)*width + in_j;
+
+                            int in_d = out_d * stride_d - pad_d;
+                            int in_i = out_i * stride_h - pad_t;
+                            int in_j = out_j * stride_w - pad_l;
+                            const float* imgptr = data_inp0 + (cn0*depth*height + in_d*height + in_i)*width + in_j;
                             ofs += delta;
 
                             // do im2row for a part of input tensor
@@ -707,6 +757,9 @@ public:
                             }
                             else
                             {
+                                int d0 = std::max(0, (-in_d + dilation_d - 1) / dilation_d);
+                                int d1 = std::min(kernel_d, (depth - in_d + dilation_d - 1) / dilation_d);
+
                                 bool ok_i = 0 <= in_i && in_i < height - (kernel_h-1)*dilation_h;
                                 int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
                                 int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
@@ -715,7 +768,7 @@ public:
                                 {
                                     // this condition should be true for most of the tensor elements, i.e.
                                     // most of the time the kernel aperture is inside the tensor X-Y plane.
-                                    if( ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
+                                    if( kernel_size.size() == 2 && ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
                                     {
                                         for( k = 0; k < vsz; k++ )
                                         {
@@ -742,12 +795,15 @@ public:
                                         memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
                                         for( k = 0; k < ncn; k++ )
                                         {
-                                            for( i = i0; i < i1; i++ )
+                                            for (int d = d0; d < d1; d++)
                                             {
-                                                for( j = j0; j < j1; j++ )
+                                                for( i = i0; i < i1; i++ )
                                                 {
-                                                    int imgofs = k*(width*height) + i*(dilation_h*width) + j*dilation_w;
-                                                    rowbuf[(k*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
+                                                    for( j = j0; j < j1; j++ )
+                                                    {
+                                                        int imgofs = k*(depth*width*height) + d*dilation_d*width*height + i*(dilation_h*width) + j*dilation_w;
+                                                        rowbuf[(k*kernel_d*kernel_h + d*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
+                                                    }
                                                 }
                                             }
                                         }
@@ -1057,10 +1113,6 @@ public:
         CV_Assert_N(inputs.size() == (size_t)1, inputs[0].size[1] % blobs[0].size[1] == 0,
                     outputs.size() == 1, inputs[0].data != outputs[0].data);
 
-        if (inputs[0].dims == 5) {
-            CV_Error(Error::StsNotImplemented, "Convolution3D layer is not supported on OCV backend");
-        }
-
         int ngroups = inputs[0].size[1]/blobs[0].size[1];
         CV_Assert(outputs[0].size[1] % ngroups == 0);
         int outCn = blobs[0].size[0];
@@ -1089,7 +1141,7 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
 
         ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
-                          kernel, pad, stride, dilation, activ.get(), ngroups, nstripes);
+                          kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
