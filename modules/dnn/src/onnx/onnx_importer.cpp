@@ -799,27 +799,36 @@ void ONNXImporter::populateNet(Net dstNet)
             }
         }
 
+
         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
         layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
+        if (dstNet.getImporterErrors().empty())
+        {
 
-        std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
-        for (int j = 0; j < node_proto.input_size(); j++) {
-            layerId = layer_id.find(node_proto.input(j));
-            if (layerId != layer_id.end()) {
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
-                // Collect input shapes.
-                shapeIt = outShapes.find(node_proto.input(j));
-                CV_Assert(shapeIt != outShapes.end());
-                layerInpShapes.push_back(shapeIt->second);
+            std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
+            for (int j = 0; j < node_proto.input_size(); j++) {
+                layerId = layer_id.find(node_proto.input(j));
+                if (layerId != layer_id.end()) {
+                    dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, j);
+                    // Collect input shapes.
+                    shapeIt = outShapes.find(node_proto.input(j));
+                    CV_Assert(shapeIt != outShapes.end());
+                    layerInpShapes.push_back(shapeIt->second);
+                }
+            }
+
+            // Compute shape of output blob for this layer.
+            Ptr<Layer> layer = dstNet.getLayer(id);
+            if (dstNet.getImporterErrors().empty())
+            {
+                layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
+                CV_Assert(!layerOutShapes.empty());
+                outShapes[layerParams.name] = layerOutShapes[0];
             }
         }
-
-        // Compute shape of output blob for this layer.
-        Ptr<Layer> layer = dstNet.getLayer(id);
-        layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
-        CV_Assert(!layerOutShapes.empty());
-        outShapes[layerParams.name] = layerOutShapes[0];
+        else
+            Ptr<Layer> layer = dstNet.getLayer(id);
     }
 }
 
