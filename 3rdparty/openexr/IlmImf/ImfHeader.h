@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,44 +43,46 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfLineOrder.h>
-#include <ImfCompression.h>
-#include <ImfName.h>
-#include <ImfTileDescription.h>
-#include <ImfInt64.h>
+#include "ImfLineOrder.h"
+#include "ImfCompression.h"
+#include "ImfName.h"
+#include "ImfTileDescription.h"
+#include "ImfInt64.h"
 #include "ImathVec.h"
 #include "ImathBox.h"
 #include "IexBaseExc.h"
+
+#include "ImfForward.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+
 #include <map>
 #include <iosfwd>
 #include <string>
 
-namespace Imf {
 
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-class Attribute;
-class ChannelList;
-class IStream;
-class OStream;
-class PreviewImage;
+using std::string;
 
 
 class Header
 {
   public:
-
+    
     //----------------------------------------------------------------
     // Default constructor -- the display window and the data window
     // are both set to Box2i (V2i (0, 0), V2i (width-1, height-1).
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     Header (int width = 64,
-        int height = 64,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+	    int height = 64,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //--------------------------------------------------------------------
@@ -88,14 +90,15 @@ class Header
     // window is set to Box2i (V2i (0, 0), V2i (width-1, height-1).
     //--------------------------------------------------------------------
 
+    IMF_EXPORT
     Header (int width,
-        int height,
-        const Imath::Box2i &dataWindow,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+	    int height,
+	    const IMATH_NAMESPACE::Box2i &dataWindow,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //----------------------------------------------------------
@@ -103,19 +106,21 @@ class Header
     // both specified explicitly.
     //----------------------------------------------------------
 
-    Header (const Imath::Box2i &displayWindow,
-        const Imath::Box2i &dataWindow,
-        float pixelAspectRatio = 1,
-        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-        float screenWindowWidth = 1,
-        LineOrder lineOrder = INCREASING_Y,
-        Compression = ZIP_COMPRESSION);
+    IMF_EXPORT
+    Header (const IMATH_NAMESPACE::Box2i &displayWindow,
+	    const IMATH_NAMESPACE::Box2i &dataWindow,
+	    float pixelAspectRatio = 1,
+	    const IMATH_NAMESPACE::V2f &screenWindowCenter = IMATH_NAMESPACE::V2f (0, 0),
+	    float screenWindowWidth = 1,
+	    LineOrder lineOrder = INCREASING_Y,
+	    Compression = ZIP_COMPRESSION);
 
 
     //-----------------
     // Copy constructor
     //-----------------
 
+    IMF_EXPORT
     Header (const Header &other);
 
 
@@ -123,6 +128,7 @@ class Header
     // Destructor
     //-----------
 
+    IMF_EXPORT
     ~Header ();
 
 
@@ -130,6 +136,7 @@ class Header
     // Assignment
     //-----------
 
+    IMF_EXPORT
     Header &			operator = (const Header &other);
 
 
@@ -146,30 +153,50 @@ class Header
     //			is copied into this attribute.
     //
     //			If an attribute with name n exists, and its
-    //			type is different from attr, an Iex::TypeExc
+    //			type is different from attr, an IEX_NAMESPACE::TypeExc
     //			is thrown.
     //
     //---------------------------------------------------------------
 
+    IMF_EXPORT
     void			insert (const char name[],
-                        const Attribute &attribute);
+				        const Attribute &attribute);
 
+    IMF_EXPORT
     void			insert (const std::string &name,
-                        const Attribute &attribute);
+				        const Attribute &attribute);
 
+    //---------------------------------------------------------------
+    // Remove an attribute:
+    //
+    // remove(n)       If an attribute with name n exists, then it
+    //                 is removed from the map of present attributes.
+    //
+    //                 If no attribute with name n exists, then this
+    //                 functions becomes a 'no-op'
+    //
+    //---------------------------------------------------------------
+
+    IMF_EXPORT
+    void                        erase (const char name[]);
+    IMF_EXPORT
+    void                        erase (const std::string &name);
+
+    
+    
     //------------------------------------------------------------------
     // Access to existing attributes:
     //
     // [n]			Returns a reference to the attribute
     //				with name n.  If no attribute with
-    //				name n exists, an Iex::ArgExc is thrown.
+    //				name n exists, an IEX_NAMESPACE::ArgExc is thrown.
     //
     // typedAttribute<T>(n)	Returns a reference to the attribute
     //				with name n and type T.  If no attribute
-    //				with name n exists, an Iex::ArgExc is
+    //				with name n exists, an IEX_NAMESPACE::ArgExc is
     //				thrown.  If an attribute with name n
     //				exists, but its type is not T, an
-    //				Iex::TypeExc is thrown.
+    //				IEX_NAMESPACE::TypeExc is thrown.
     //
     // findTypedAttribute<T>(n)	Returns a pointer to the attribute with
     //				name n and type T, or 0 if no attribute
@@ -177,10 +204,14 @@ class Header
     //
     //------------------------------------------------------------------
 
+    IMF_EXPORT
     Attribute &			operator [] (const char name[]);
+    IMF_EXPORT
     const Attribute &		operator [] (const char name[]) const;
 
+    IMF_EXPORT
     Attribute &			operator [] (const std::string &name);
+    IMF_EXPORT
     const Attribute &		operator [] (const std::string &name) const;
 
     template <class T> T&	typedAttribute (const char name[]);
@@ -194,7 +225,7 @@ class Header
 
     template <class T> T*	findTypedAttribute (const std::string &name);
     template <class T> const T*	findTypedAttribute (const std::string &name)
-                                       const;
+								       const;
 
     //---------------------------------------------
     // Iterator-style access to existing attributes
@@ -205,16 +236,24 @@ class Header
     class Iterator;
     class ConstIterator;
 
+    IMF_EXPORT
     Iterator			begin ();
+    IMF_EXPORT
     ConstIterator		begin () const;
 
+    IMF_EXPORT
     Iterator			end ();
+    IMF_EXPORT
     ConstIterator		end () const;
 
+    IMF_EXPORT
     Iterator			find (const char name[]);
+    IMF_EXPORT
     ConstIterator		find (const char name[]) const;
 
+    IMF_EXPORT
     Iterator			find (const std::string &name);
+    IMF_EXPORT
     ConstIterator		find (const std::string &name) const;
 
 
@@ -222,30 +261,112 @@ class Header
     // Access to predefined attributes
     //--------------------------------
 
-    Imath::Box2i &		displayWindow ();
-    const Imath::Box2i &	displayWindow () const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i &		displayWindow ();
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	displayWindow () const;
 
-    Imath::Box2i &		dataWindow ();
-    const Imath::Box2i &	dataWindow () const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::Box2i &		dataWindow ();
+    IMF_EXPORT
+    const IMATH_NAMESPACE::Box2i &	dataWindow () const;
 
+    IMF_EXPORT
     float &			pixelAspectRatio ();
+    IMF_EXPORT
     const float &		pixelAspectRatio () const;
 
-    Imath::V2f &		screenWindowCenter ();
-    const Imath::V2f &		screenWindowCenter () const;
+    IMF_EXPORT
+    IMATH_NAMESPACE::V2f &		screenWindowCenter ();
+    IMF_EXPORT
+    const IMATH_NAMESPACE::V2f &		screenWindowCenter () const;
 
+    IMF_EXPORT
     float &			screenWindowWidth ();
+    IMF_EXPORT
     const float &		screenWindowWidth () const;
 
+    IMF_EXPORT
     ChannelList &		channels ();
+    IMF_EXPORT
     const ChannelList &		channels () const;
 
+    IMF_EXPORT
     LineOrder &			lineOrder ();
+    IMF_EXPORT
     const LineOrder &		lineOrder () const;
 
+    IMF_EXPORT
     Compression &		compression ();
+    IMF_EXPORT
     const Compression &		compression () const;
 
+
+    //-----------------------------------------------------
+    // Access to required attributes for multipart files
+    // They are optional to non-multipart files and mandatory
+    // for multipart files.
+    //-----------------------------------------------------
+    IMF_EXPORT
+    void                        setName (const string& name);
+
+    IMF_EXPORT
+    string&                     name();
+    IMF_EXPORT
+    const string&               name() const;
+
+    IMF_EXPORT
+    bool                        hasName() const;
+
+    IMF_EXPORT
+    void                        setType (const string& Type);
+
+    IMF_EXPORT
+    string&                     type();
+    IMF_EXPORT
+    const string&               type() const;
+
+    IMF_EXPORT
+    bool                        hasType() const;
+
+    IMF_EXPORT
+    void                        setVersion (const int version);
+
+    IMF_EXPORT
+    int&                        version();
+    IMF_EXPORT
+    const int&                  version() const;
+
+    IMF_EXPORT
+    bool                        hasVersion() const;
+
+    //
+    // the chunkCount attribute is set automatically when a file is written.
+    // There is no need to set it manually
+    //
+    IMF_EXPORT
+    void                        setChunkCount(int chunks);
+    IMF_EXPORT
+    bool                        hasChunkCount() const;
+    IMF_EXPORT
+    const int &                 chunkCount() const;
+    IMF_EXPORT
+    int &                       chunkCount();
+
+    
+    //
+    // for multipart files, return whether the file has a view string attribute
+    // (for the deprecated single part multiview format EXR, see ImfMultiView.h)
+    //
+    IMF_EXPORT
+    void                       setView(const string & view);
+    IMF_EXPORT
+    bool                       hasView() const;
+    IMF_EXPORT
+    string &                   view();
+    IMF_EXPORT
+    const string &             view() const;
+    
 
     //----------------------------------------------------------------------
     // Tile Description:
@@ -268,11 +389,15 @@ class Header
     //
     //----------------------------------------------------------------------
 
+    IMF_EXPORT
     void			setTileDescription (const TileDescription & td);
 
+    IMF_EXPORT
     TileDescription &		tileDescription ();
+    IMF_EXPORT
     const TileDescription &	tileDescription () const;
 
+    IMF_EXPORT
     bool			hasTileDescription() const;
 
 
@@ -297,11 +422,15 @@ class Header
     //
     //----------------------------------------------------------------------
 
+    IMF_EXPORT
     void			setPreviewImage (const PreviewImage &p);
 
+    IMF_EXPORT
     PreviewImage &		previewImage ();
+    IMF_EXPORT
     const PreviewImage &	previewImage () const;
 
+    IMF_EXPORT
     bool			hasPreviewImage () const;
 
 
@@ -314,7 +443,9 @@ class Header
     // header
     //-------------------------------------------------------------
 
-    void			sanityCheck (bool isTiled = false) const;
+    IMF_EXPORT
+    void			sanityCheck (bool isTiled = false,
+        			             bool isMultipartFile = false) const;
 
 
     //----------------------------------------------------------------
@@ -323,7 +454,7 @@ class Header
     // sanityCheck() will throw an exception if the width or height of
     // the data window exceeds the maximum image width or height, or
     // if the size of a tile exceeds the maximum tile width or height.
-    //
+    // 
     // At program startup the maximum image and tile width and height
     // are set to zero, meaning that width and height are unlimited.
     //
@@ -333,8 +464,16 @@ class Header
     // a damaged image file.
     //----------------------------------------------------------------
 
+    IMF_EXPORT
     static void			setMaxImageSize (int maxWidth, int maxHeight);
+    IMF_EXPORT
     static void			setMaxTileSize (int maxWidth, int maxHeight);
+
+    //
+    // Check if the header reads nothing.
+    //
+    IMF_EXPORT
+    bool                        readsNothing();
 
 
     //------------------------------------------------------------------
@@ -348,14 +487,20 @@ class Header
     //------------------------------------------------------------------
 
 
-    Int64			writeTo (OStream &os,
-                     bool isTiled = false) const;
+    IMF_EXPORT
+    Int64			writeTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os,
+					 bool isTiled = false) const;
 
-    void			readFrom (IStream &is, int &version);
+    IMF_EXPORT
+    void			readFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is,
+        			          int &version);
+    
 
   private:
 
     AttributeMap		_map;
+
+    bool                        _readsNothing;
 };
 
 
@@ -367,13 +512,19 @@ class Header::Iterator
 {
   public:
 
+    IMF_EXPORT
     Iterator ();
+    IMF_EXPORT
     Iterator (const Header::AttributeMap::iterator &i);
 
+    IMF_EXPORT
     Iterator &			operator ++ ();
+    IMF_EXPORT
     Iterator 			operator ++ (int);
 
+    IMF_EXPORT
     const char *		name () const;
+    IMF_EXPORT
     Attribute &			attribute () const;
 
   private:
@@ -388,14 +539,21 @@ class Header::ConstIterator
 {
   public:
 
+    IMF_EXPORT
     ConstIterator ();
+    IMF_EXPORT
     ConstIterator (const Header::AttributeMap::const_iterator &i);
+    IMF_EXPORT
     ConstIterator (const Header::Iterator &other);
 
+    IMF_EXPORT
     ConstIterator &		operator ++ ();
+    IMF_EXPORT
     ConstIterator 		operator ++ (int);
 
+    IMF_EXPORT
     const char *		name () const;
+    IMF_EXPORT
     const Attribute &		attribute () const;
 
   private:
@@ -421,7 +579,7 @@ class Header::ConstIterator
 //
 //------------------------------------------------------------------------
 
-void staticInitialize ();
+void IMF_EXPORT staticInitialize ();
 
 
 //-----------------
@@ -443,7 +601,7 @@ Header::Iterator::Iterator (const Header::AttributeMap::iterator &i): _i (i)
 }
 
 
-inline Header::Iterator &
+inline Header::Iterator &		
 Header::Iterator::operator ++ ()
 {
     ++_i;
@@ -451,7 +609,7 @@ Header::Iterator::operator ++ ()
 }
 
 
-inline Header::Iterator
+inline Header::Iterator 	
 Header::Iterator::operator ++ (int)
 {
     Iterator tmp = *this;
@@ -467,7 +625,7 @@ Header::Iterator::name () const
 }
 
 
-inline Attribute &
+inline Attribute &	
 Header::Iterator::attribute () const
 {
     return *_i->second;
@@ -503,7 +661,7 @@ Header::ConstIterator::operator ++ ()
 }
 
 
-inline Header::ConstIterator
+inline Header::ConstIterator 		
 Header::ConstIterator::operator ++ (int)
 {
     ConstIterator tmp = *this;
@@ -519,7 +677,7 @@ Header::ConstIterator::name () const
 }
 
 
-inline const Attribute &
+inline const Attribute &	
 Header::ConstIterator::attribute () const
 {
     return *_i->second;
@@ -552,7 +710,7 @@ Header::typedAttribute (const char name[])
     T *tattr = dynamic_cast <T*> (attr);
 
     if (tattr == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }
@@ -566,7 +724,7 @@ Header::typedAttribute (const char name[]) const
     const T *tattr = dynamic_cast <const T*> (attr);
 
     if (tattr == 0)
-    throw Iex::TypeExc ("Unexpected attribute type.");
+	throw IEX_NAMESPACE::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }
@@ -622,6 +780,6 @@ Header::findTypedAttribute (const std::string &name) const
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif
