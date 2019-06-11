@@ -294,6 +294,7 @@ if(X86 OR X86_64)
     else()
       ocv_update(CPU_SSE_SUPPORTED ON)
       ocv_update(CPU_SSE2_SUPPORTED ON)
+      ocv_update(CPU_AVX_512F_FLAGS_ON "/arch:AVX512")
     endif()
     # Other instruction sets are supported by default since MSVC 2008 at least
   else()
