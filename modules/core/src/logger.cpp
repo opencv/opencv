@@ -75,7 +75,7 @@ private:
 };
 
 LogLevel GlobalLoggingInitStruct::m_defaultUnconfiguredGlobalLevel = GlobalLoggingInitStruct::m_isDebugBuild
-                ? LOG_LEVEL_DEBUG
+                ? LOG_LEVEL_INFO
                 : LOG_LEVEL_WARNING;
 
 
