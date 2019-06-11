@@ -94,7 +94,7 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2018050000)
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
         && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
     )
@@ -195,7 +195,7 @@ TEST_P(Test_ONNX_layers, Constant)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+       throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
 #endif
     testONNXModels("constant");
 }

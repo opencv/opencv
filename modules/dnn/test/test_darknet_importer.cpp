@@ -332,10 +332,6 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
     }
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018040000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test with 'batch size 2' is disabled for Myriad target (fixed in 2018R5)");
-#endif
     {
     SCOPED_TRACE("batch size 2");
     testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
@@ -389,10 +385,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets, dnnBackendsAndTargets());
 
 TEST_P(Test_Darknet_layers, shortcut)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018040000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R4");
-#endif
     testDarknetLayer("shortcut");
 }
 
