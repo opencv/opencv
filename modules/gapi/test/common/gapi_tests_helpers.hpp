@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2019 Intel Corporation
 
 #ifndef OPENCV_GAPI_TESTS_HELPERS_HPP
 #define OPENCV_GAPI_TESTS_HELPERS_HPP
@@ -13,11 +13,10 @@
 namespace opencv_test
 {
 
-// TODO: can we use -1 instead?
-// TODO: better name
-// specifies that in_type == out_type in matrices initialization
+// out_type == in_type in matrices initialization if out_type is marked as SAME_TYPE
 enum {
-    ALIGNED_TYPE = std::numeric_limits<int>::max()
+    // TODO: why is it different from -1?
+    SAME_TYPE = std::numeric_limits<int>::max()
 };
 
 // implementation of recursive in-class declaration and initialization of member variables
@@ -44,7 +43,7 @@ enum {
     std::tuple_element<index, params_type>::type param_name = std::get<index>(params); \
     __DEFINE_PARAMS_IMPL5(params_type, params, index+1, __VA_ARGS__)
 
-// user interface
+// user interface to define member variables of specified names
 #define DEFINE_SPECIFIC_PARAMS_1(...) \
     __DEFINE_PARAMS_IMPL1(specific_params_t, GetParam().specificParams(), 0, __VA_ARGS__)
 

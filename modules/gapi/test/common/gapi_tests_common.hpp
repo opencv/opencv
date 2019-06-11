@@ -229,7 +229,7 @@ class TestWithParamBase : public TestFunctional,
         instance->m_params = instance->TestWithParamClass::GetParam();
         std::tie(instance->type, instance->sz, instance->dtype, instance->createOutputMatrices,
             instance->compile_args) = instance->m_params.commonParams();
-        if (instance->dtype == ALIGNED_TYPE)
+        if (instance->dtype == SAME_TYPE)
         {
             instance->dtype = instance->type;
         }
