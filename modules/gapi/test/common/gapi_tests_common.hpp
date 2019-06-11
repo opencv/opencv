@@ -142,6 +142,20 @@ using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
 
+namespace detail
+{
+    // Recursive integer sequence type that starts from an arbitrary user-defined value. Derived
+    // from Seq<> to allow implicit conversion from Range<> to Seq<>
+    template<int First, int... I>
+    struct Range : cv::detail::Seq<I...> {
+        using next = Range<First, I..., sizeof...(I) + First>;
+    };
+    template<int First, int Sz>
+    struct MkRange { using type = typename MkRange<First, Sz-1>::type::next; };
+    template<int First>
+    struct MkRange<First, 0> { using type = Range<First>; };
+}  // namespace detail
+
 // TODO: delete bool (createOutputMatrices)
 template<typename ...SpecificParams>
 class Params
@@ -165,9 +179,9 @@ private:
         constexpr int common_params_size = std::tuple_size<common_params_t>::value;
         constexpr int specific_params_size = std::tuple_size<specific_params_t>::value;
         copyValues(params, m_common,
-            typename cv::detail::MkRange<0, common_params_size>::type());
+            typename detail::MkRange<0, common_params_size>::type());
         copyValues(params, m_specific,
-            typename cv::detail::MkRange<common_params_size, specific_params_size>::type());
+            typename detail::MkRange<common_params_size, specific_params_size>::type());
     }
 public:
     Params() = default;

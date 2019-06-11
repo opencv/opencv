@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_UTIL_HPP
@@ -25,17 +25,6 @@ namespace detail
     template<int... I> struct Seq     { using next = Seq<I..., sizeof...(I)>; };
     template<int Sz>   struct MkSeq   { using type = typename MkSeq<Sz-1>::type::next; };
     template<>         struct MkSeq<0>{ using type = Seq<>; };
-
-    // Recursive integer sequence type that starts from an arbitrary user-defined value. Derived
-    // from Seq<> to allow implicit conversion from Range<> to Seq<>
-    template<int First, int... I>
-    struct Range : Seq<I...> {
-        using next = Range<First, I..., sizeof...(I) + First>;
-    };
-    template<int First, int Sz>
-    struct MkRange { using type = typename MkRange<First, Sz-1>::type::next; };
-    template<int First>
-    struct MkRange<First, 0> { using type = Range<First>; };
 
     // Checks if elements of variadic template satisfy the given Predicate.
     // Implemented via tuple, with an interface to accept plain type lists
