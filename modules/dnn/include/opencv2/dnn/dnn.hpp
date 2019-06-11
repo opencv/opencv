@@ -996,6 +996,34 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
+     class CV_EXPORTS_W_SIMPLE Model : public Net
+     {
+     public:
+         Model(const std::string& model, const std::string& config = "", int width = -1,
+               int height = -1, Scalar mean = Scalar(), float scale = 1.0,
+               bool swapRB = true, bool crop = false);
+
+         void setInputWidth(int width);
+         void setInputHeight(int height);
+         void setInputMean(Scalar mean);
+         void setInputScale(float scale);
+         void setInputCrop(bool crop);
+         void setInputSwapRB(bool swapRB);
+         std::pair<int, float> classify(const Mat& frame);
+         void detect(Mat& frame, std::vector<int>& classIds, std::vector<float>& confidences,
+                     std::vector<Rect2d>& boxes, float confThreshold, float nmsThreshold = 0.0);
+         void detect(Mat& frame, std::vector<int>& classIds, std::vector<float>& confidences,
+                     std::vector<Rect2i>& boxes, float confThreshold, float nmsThreshold = 0.0);
+
+     private:
+         int width_;
+         int height_;
+         Scalar mean_;
+         float scale_;
+         bool swapRB_;
+         bool crop_;
+     };
+
 //! @}
 CV__DNN_EXPERIMENTAL_NS_END
 }
