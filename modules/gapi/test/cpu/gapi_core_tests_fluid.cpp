@@ -139,7 +139,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(CV_8UC1),
-                                testing::Bool(),
+/*init output matrices or not*/ Values(true),
                                 Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
@@ -508,7 +508,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestCPU, LUTTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-/*init output matrices or not*/ testing::Bool()));
+/*init output matrices or not*/ Values(true)));
 
 INSTANTIATE_TEST_CASE_P(LUTTestCustomCPU, LUTTest,
                         Combine(Values(CV_8UC3),
@@ -516,7 +516,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestCustomCPU, LUTTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-/*init output matrices or not*/ testing::Bool()));
+/*init output matrices or not*/ Values(true)));
 
 INSTANTIATE_TEST_CASE_P(ConvertToCPU, ConvertToTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_32FC1),

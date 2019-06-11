@@ -99,15 +99,12 @@ INSTANTIATE_TEST_CASE_P(DivCTestCPU, DivCTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 
-// TODO(agolubev): there was a bug in test body originally with dtype in initMatsRand method:
-// boolean was used instead of dtype in initOut. Thus, dtype was in {0, 1}. Changing to: dtype ==
-// type
 INSTANTIATE_TEST_CASE_P(MeanTestCPU, MeanTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1, SAME_TYPE),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(CORE_CPU))));
 
@@ -385,7 +382,7 @@ INSTANTIATE_TEST_CASE_P(FlipTestCPU, FlipTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
-/*init output matrices or not*/ testing::Bool(),  // TODO(agolubev): always false in test body
+/*init output matrices or not*/ Values(false),
                                 Values(cv::compile_args(CORE_CPU)),
                                 Values(0,1,-1)));
 
@@ -395,7 +392,7 @@ INSTANTIATE_TEST_CASE_P(CropTestCPU, CropTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
-/*init output matrices or not*/ testing::Bool(),  // TODO(agolubev): always false in test body
+/*init output matrices or not*/ Values(false),
                                 Values(cv::compile_args(CORE_CPU)),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
@@ -404,8 +401,8 @@ INSTANTIATE_TEST_CASE_P(LUTTestCPU, LUTTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(CV_8UC1),  // TODO(agolubev): always true in test body
-/*init output matrices or not*/ testing::Bool(),
+                                Values(CV_8UC1),
+/*init output matrices or not*/ Values(true),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(LUTTestCustomCPU, LUTTest,
@@ -414,7 +411,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestCustomCPU, LUTTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(CV_8UC3),
-/*init output matrices or not*/ testing::Bool(),  // TODO(agolubev): always true in test body
+/*init output matrices or not*/ Values(true),
                                 Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ConvertToCPU, ConvertToTest,

@@ -361,7 +361,7 @@ INSTANTIATE_TEST_CASE_P(FlipTestGPU, FlipTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
-/*init output matrices or not*/ testing::Bool(),  // TODO(agolubev): always false in test body
+/*init output matrices or not*/ Values(false),
                                 Values(cv::compile_args(CORE_GPU)),
                                 Values(0,1,-1)));
 
@@ -371,7 +371,7 @@ INSTANTIATE_TEST_CASE_P(CropTestGPU, CropTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
-/*init output matrices or not*/ testing::Bool(),  // TODO(agolubev): always false in test body
+/*init output matrices or not*/ Values(false),
                                 Values(cv::compile_args(CORE_GPU)),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
@@ -381,7 +381,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestGPU, LUTTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(CV_8UC1),
-/*init output matrices or not*/ testing::Bool(),
+/*init output matrices or not*/ Values(true),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(LUTTestCustomGPU, LUTTest,
@@ -390,7 +390,7 @@ INSTANTIATE_TEST_CASE_P(LUTTestCustomGPU, LUTTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(CV_8UC3),
-/*init output matrices or not*/ testing::Bool(),
+/*init output matrices or not*/ Values(true),
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ConvertToGPU, ConvertToTest,
