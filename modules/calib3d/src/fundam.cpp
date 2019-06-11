@@ -72,7 +72,7 @@ public:
         // are geometrically consistent. We check if every 3 correspondences sets
         // fulfills the constraint.
         //
-        // The usefullness of this constraint is explained in the paper:
+        // The usefulness of this constraint is explained in the paper:
         //
         // "Speeding-up homography estimation in mobile devices"
         // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1

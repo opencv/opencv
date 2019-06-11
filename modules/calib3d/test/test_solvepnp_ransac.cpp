@@ -1211,6 +1211,7 @@ TEST(Calib3d_SolvePnP, translation)
     p3d.push_back(Point3f(0,10,10));
     p3d.push_back(Point3f(10,10,10));
     p3d.push_back(Point3f(2,5,5));
+    p3d.push_back(Point3f(-4,8,6));
 
     vector<Point2f> p2d;
     projectPoints(p3d, crvec, ctvec, cameraIntrinsic, noArray(), p2d);
@@ -1841,6 +1842,377 @@ TEST(Calib3d_SolvePnP, refine)
 
             EXPECT_LT(cvtest::norm(rvec_ground_truth, rvec_est_refine, NORM_INF), cvtest::norm(rvec_ground_truth, rvec_est, NORM_INF));
             EXPECT_LT(cvtest::norm(tvec_ground_truth, tvec_est_refine, NORM_INF), cvtest::norm(tvec_ground_truth, tvec_est, NORM_INF));
+        }
+    }
+}
+
+TEST(Calib3d_SolvePnPRansac, minPoints)
+{
+    //https://github.com/opencv/opencv/issues/14423
+    Mat matK = Mat::eye(3,3,CV_64FC1);
+    Mat distCoeff = Mat::zeros(1,5,CV_64FC1);
+    Matx31d true_rvec(0.9072420896651262, 0.09226497171882152, 0.8880772883671504);
+    Matx31d true_tvec(7.376333362427632, 8.434449036856979, 13.79801619778456);
+
+    {
+        //nb points = 5 --> ransac_kernel_method = SOLVEPNP_EPNP
+        Mat keypoints13D = (Mat_<float>(5, 3) << 12.00604, -2.8654366, 18.472504,
+                                                 7.6863389, 4.9355154, 11.146358,
+                                                 14.260933, 2.8320458, 12.582781,
+                                                 3.4562225, 8.2668982, 11.300434,
+                                                 15.316854, 3.7486348, 12.491116);
+        vector<Point2f> imagesPoints;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+        Mat keypoints22D(keypoints13D.rows, 2, CV_32FC1);
+        vector<Point3f> objectPoints;
+        for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+        {
+            keypoints22D.at<float>(i,0) = imagesPoints[i].x;
+            keypoints22D.at<float>(i,1) = imagesPoints[i].y;
+            objectPoints.push_back(Point3f(keypoints13D.at<float>(i,0), keypoints13D.at<float>(i,1), keypoints13D.at<float>(i,2)));
+        }
+
+        Mat rvec = Mat::zeros(1,3,CV_64FC1);
+        Mat Tvec = Mat::zeros(1,3,CV_64FC1);
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        Mat rvec2, Tvec2;
+        solvePnP(objectPoints, imagesPoints, matK, distCoeff, rvec2, Tvec2, false, SOLVEPNP_EPNP);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-4);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-4);
+        EXPECT_LE(cvtest::norm(rvec, rvec2, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(Tvec, Tvec2, NORM_INF), 1e-6);
+    }
+    {
+        //nb points = 4 --> ransac_kernel_method = SOLVEPNP_P3P
+        Mat keypoints13D = (Mat_<float>(4, 3) << 12.00604, -2.8654366, 18.472504,
+                                                 7.6863389, 4.9355154, 11.146358,
+                                                 14.260933, 2.8320458, 12.582781,
+                                                 3.4562225, 8.2668982, 11.300434);
+        vector<Point2f> imagesPoints;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+        Mat keypoints22D(keypoints13D.rows, 2, CV_32FC1);
+        vector<Point3f> objectPoints;
+        for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+        {
+            keypoints22D.at<float>(i,0) = imagesPoints[i].x;
+            keypoints22D.at<float>(i,1) = imagesPoints[i].y;
+            objectPoints.push_back(Point3f(keypoints13D.at<float>(i,0), keypoints13D.at<float>(i,1), keypoints13D.at<float>(i,2)));
+        }
+
+        Mat rvec = Mat::zeros(1,3,CV_64FC1);
+        Mat Tvec = Mat::zeros(1,3,CV_64FC1);
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        Mat rvec2, Tvec2;
+        solvePnP(objectPoints, imagesPoints, matK, distCoeff, rvec2, Tvec2, false, SOLVEPNP_P3P);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-4);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-4);
+        EXPECT_LE(cvtest::norm(rvec, rvec2, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(Tvec, Tvec2, NORM_INF), 1e-6);
+    }
+}
+
+TEST(Calib3d_SolvePnPRansac, inputShape)
+{
+    //https://github.com/opencv/opencv/issues/14423
+    Mat matK = Mat::eye(3,3,CV_64FC1);
+    Mat distCoeff = Mat::zeros(1,5,CV_64FC1);
+    Matx31d true_rvec(0.9072420896651262, 0.09226497171882152, 0.8880772883671504);
+    Matx31d true_tvec(7.376333362427632, 8.434449036856979, 13.79801619778456);
+
+    {
+        //Nx3 1-channel
+        Mat keypoints13D = (Mat_<float>(6, 3) << 12.00604, -2.8654366, 18.472504,
+                                                 7.6863389, 4.9355154, 11.146358,
+                                                 14.260933, 2.8320458, 12.582781,
+                                                 3.4562225, 8.2668982, 11.300434,
+                                                 10.00604,  2.8654366, 15.472504,
+                                                 -4.6863389, 5.9355154, 13.146358);
+        vector<Point2f> imagesPoints;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+        Mat keypoints22D(keypoints13D.rows, 2, CV_32FC1);
+        for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+        {
+            keypoints22D.at<float>(i,0) = imagesPoints[i].x;
+            keypoints22D.at<float>(i,1) = imagesPoints[i].y;
+        }
+
+        Mat rvec, Tvec;
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+    }
+    {
+        //1xN 3-channel
+        Mat keypoints13D(1, 6, CV_32FC3);
+        keypoints13D.at<Vec3f>(0,0) = Vec3f(12.00604f, -2.8654366f, 18.472504f);
+        keypoints13D.at<Vec3f>(0,1) = Vec3f(7.6863389f, 4.9355154f, 11.146358f);
+        keypoints13D.at<Vec3f>(0,2) = Vec3f(14.260933f, 2.8320458f, 12.582781f);
+        keypoints13D.at<Vec3f>(0,3) = Vec3f(3.4562225f, 8.2668982f, 11.300434f);
+        keypoints13D.at<Vec3f>(0,4) = Vec3f(10.00604f,  2.8654366f, 15.472504f);
+        keypoints13D.at<Vec3f>(0,5) = Vec3f(-4.6863389f, 5.9355154f, 13.146358f);
+
+        vector<Point2f> imagesPoints;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+        Mat keypoints22D(keypoints13D.rows, keypoints13D.cols, CV_32FC2);
+        for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+        {
+            keypoints22D.at<Vec2f>(0,i) = Vec2f(imagesPoints[i].x, imagesPoints[i].y);
+        }
+
+        Mat rvec, Tvec;
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+    }
+    {
+        //Nx1 3-channel
+        Mat keypoints13D(6, 1, CV_32FC3);
+        keypoints13D.at<Vec3f>(0,0) = Vec3f(12.00604f, -2.8654366f, 18.472504f);
+        keypoints13D.at<Vec3f>(1,0) = Vec3f(7.6863389f, 4.9355154f, 11.146358f);
+        keypoints13D.at<Vec3f>(2,0) = Vec3f(14.260933f, 2.8320458f, 12.582781f);
+        keypoints13D.at<Vec3f>(3,0) = Vec3f(3.4562225f, 8.2668982f, 11.300434f);
+        keypoints13D.at<Vec3f>(4,0) = Vec3f(10.00604f,  2.8654366f, 15.472504f);
+        keypoints13D.at<Vec3f>(5,0) = Vec3f(-4.6863389f, 5.9355154f, 13.146358f);
+
+        vector<Point2f> imagesPoints;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+        Mat keypoints22D(keypoints13D.rows, keypoints13D.cols, CV_32FC2);
+        for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+        {
+            keypoints22D.at<Vec2f>(i,0) = Vec2f(imagesPoints[i].x, imagesPoints[i].y);
+        }
+
+        Mat rvec, Tvec;
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+    }
+    {
+        //vector<Point3f>
+        vector<Point3f> keypoints13D;
+        keypoints13D.push_back(Point3f(12.00604f, -2.8654366f, 18.472504f));
+        keypoints13D.push_back(Point3f(7.6863389f, 4.9355154f, 11.146358f));
+        keypoints13D.push_back(Point3f(14.260933f, 2.8320458f, 12.582781f));
+        keypoints13D.push_back(Point3f(3.4562225f, 8.2668982f, 11.300434f));
+        keypoints13D.push_back(Point3f(10.00604f,  2.8654366f, 15.472504f));
+        keypoints13D.push_back(Point3f(-4.6863389f, 5.9355154f, 13.146358f));
+
+        vector<Point2f> keypoints22D;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, keypoints22D);
+
+        Mat rvec, Tvec;
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+    }
+    {
+        //vector<Point3d>
+        vector<Point3d> keypoints13D;
+        keypoints13D.push_back(Point3d(12.00604f, -2.8654366f, 18.472504f));
+        keypoints13D.push_back(Point3d(7.6863389f, 4.9355154f, 11.146358f));
+        keypoints13D.push_back(Point3d(14.260933f, 2.8320458f, 12.582781f));
+        keypoints13D.push_back(Point3d(3.4562225f, 8.2668982f, 11.300434f));
+        keypoints13D.push_back(Point3d(10.00604f,  2.8654366f, 15.472504f));
+        keypoints13D.push_back(Point3d(-4.6863389f, 5.9355154f, 13.146358f));
+
+        vector<Point2d> keypoints22D;
+        projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, keypoints22D);
+
+        Mat rvec, Tvec;
+        solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
+
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+    }
+}
+
+TEST(Calib3d_SolvePnP, inputShape)
+{
+    //https://github.com/opencv/opencv/issues/14423
+    Mat matK = Mat::eye(3,3,CV_64FC1);
+    Mat distCoeff = Mat::zeros(1,5,CV_64FC1);
+    Matx31d true_rvec(0.407, 0.092, 0.88);
+    Matx31d true_tvec(0.576, -0.43, 1.3798);
+
+    vector<Point3d> objectPoints;
+    const double L = 0.5;
+    objectPoints.push_back(Point3d(-L, -L,  L));
+    objectPoints.push_back(Point3d( L, -L,  L));
+    objectPoints.push_back(Point3d( L,  L,  L));
+    objectPoints.push_back(Point3d(-L,  L,  L));
+    objectPoints.push_back(Point3d(-L, -L, -L));
+    objectPoints.push_back(Point3d( L, -L, -L));
+
+    const int methodsCount = 6;
+    int methods[] = {SOLVEPNP_ITERATIVE, SOLVEPNP_EPNP, SOLVEPNP_P3P, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE};
+    for (int method = 0; method < methodsCount; method++)
+    {
+        if (methods[method] == SOLVEPNP_IPPE_SQUARE)
+        {
+            objectPoints[0] = Point3d(-L,  L,  0);
+            objectPoints[1] = Point3d( L,  L,  0);
+            objectPoints[2] = Point3d( L, -L,  0);
+            objectPoints[3] = Point3d(-L, -L,  0);
+        }
+
+        {
+            //Nx3 1-channel
+            Mat keypoints13D;
+            if (methods[method] == SOLVEPNP_P3P || methods[method] == SOLVEPNP_AP3P ||
+                methods[method] == SOLVEPNP_IPPE || methods[method] == SOLVEPNP_IPPE_SQUARE)
+            {
+                keypoints13D = Mat(4, 3, CV_32FC1);
+            }
+            else
+            {
+                keypoints13D = Mat(6, 3, CV_32FC1);
+            }
+
+            for (int i = 0; i < keypoints13D.rows; i++)
+            {
+                keypoints13D.at<float>(i,0) = static_cast<float>(objectPoints[i].x);
+                keypoints13D.at<float>(i,1) = static_cast<float>(objectPoints[i].y);
+                keypoints13D.at<float>(i,2) = static_cast<float>(objectPoints[i].z);
+            }
+
+            vector<Point2f> imagesPoints;
+            projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+            Mat keypoints22D(keypoints13D.rows, 2, CV_32FC1);
+            for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+            {
+                keypoints22D.at<float>(i,0) = imagesPoints[i].x;
+                keypoints22D.at<float>(i,1) = imagesPoints[i].y;
+            }
+
+            Mat rvec, Tvec;
+            solvePnP(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec, false, methods[method]);
+
+            EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
+            EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
+        }
+        {
+            //1xN 3-channel
+            Mat keypoints13D;
+            if (methods[method] == SOLVEPNP_P3P || methods[method] == SOLVEPNP_AP3P ||
+                methods[method] == SOLVEPNP_IPPE || methods[method] == SOLVEPNP_IPPE_SQUARE)
+            {
+                keypoints13D = Mat(1, 4, CV_32FC3);
+            }
+            else
+            {
+                keypoints13D = Mat(1, 6, CV_32FC3);
+            }
+
+            for (int i = 0; i < keypoints13D.cols; i++)
+            {
+                keypoints13D.at<Vec3f>(0,i) = Vec3f(static_cast<float>(objectPoints[i].x),
+                                                    static_cast<float>(objectPoints[i].y),
+                                                    static_cast<float>(objectPoints[i].z));
+            }
+
+            vector<Point2f> imagesPoints;
+            projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+            Mat keypoints22D(keypoints13D.rows, keypoints13D.cols, CV_32FC2);
+            for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+            {
+                keypoints22D.at<Vec2f>(0,i) = Vec2f(imagesPoints[i].x, imagesPoints[i].y);
+            }
+
+            Mat rvec, Tvec;
+            solvePnP(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec, false, methods[method]);
+
+            EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
+            EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
+        }
+        {
+            //Nx1 3-channel
+            Mat keypoints13D;
+            if (methods[method] == SOLVEPNP_P3P || methods[method] == SOLVEPNP_AP3P ||
+                methods[method] == SOLVEPNP_IPPE || methods[method] == SOLVEPNP_IPPE_SQUARE)
+            {
+                keypoints13D = Mat(4, 1, CV_32FC3);
+            }
+            else
+            {
+                keypoints13D = Mat(6, 1, CV_32FC3);
+            }
+
+            for (int i = 0; i < keypoints13D.rows; i++)
+            {
+                keypoints13D.at<Vec3f>(i,0) = Vec3f(static_cast<float>(objectPoints[i].x),
+                                                    static_cast<float>(objectPoints[i].y),
+                                                    static_cast<float>(objectPoints[i].z));
+            }
+
+            vector<Point2f> imagesPoints;
+            projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, imagesPoints);
+
+            Mat keypoints22D(keypoints13D.rows, keypoints13D.cols, CV_32FC2);
+            for (int i = 0; i < static_cast<int>(imagesPoints.size()); i++)
+            {
+                keypoints22D.at<Vec2f>(i,0) = Vec2f(imagesPoints[i].x, imagesPoints[i].y);
+            }
+
+            Mat rvec, Tvec;
+            solvePnP(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec, false, methods[method]);
+
+            EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
+            EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
+        }
+        {
+            //vector<Point3f>
+            vector<Point3f> keypoints13D;
+            const int nbPts = (methods[method] == SOLVEPNP_P3P || methods[method] == SOLVEPNP_AP3P ||
+                               methods[method] == SOLVEPNP_IPPE || methods[method] == SOLVEPNP_IPPE_SQUARE) ? 4 : 6;
+            for (int i = 0; i < nbPts; i++)
+            {
+                keypoints13D.push_back(Point3f(static_cast<float>(objectPoints[i].x),
+                                               static_cast<float>(objectPoints[i].y),
+                                               static_cast<float>(objectPoints[i].z)));
+            }
+
+            vector<Point2f> keypoints22D;
+            projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, keypoints22D);
+
+            Mat rvec, Tvec;
+            solvePnP(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec, false, methods[method]);
+
+            EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
+            EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
+        }
+        {
+            //vector<Point3d>
+            vector<Point3d> keypoints13D;
+            const int nbPts = (methods[method] == SOLVEPNP_P3P || methods[method] == SOLVEPNP_AP3P ||
+                               methods[method] == SOLVEPNP_IPPE || methods[method] == SOLVEPNP_IPPE_SQUARE) ? 4 : 6;
+            for (int i = 0; i < nbPts; i++)
+            {
+                keypoints13D.push_back(objectPoints[i]);
+            }
+
+            vector<Point2d> keypoints22D;
+            projectPoints(keypoints13D, true_rvec, true_tvec, matK, distCoeff, keypoints22D);
+
+            Mat rvec, Tvec;
+            solvePnP(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec, false, methods[method]);
+
+            EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
+            EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
         }
     }
 }

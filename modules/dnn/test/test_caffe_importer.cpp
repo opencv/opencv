@@ -83,17 +83,17 @@ TEST(Test_Caffe, memory_read)
     const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
-    string dataProto;
-    ASSERT_TRUE(readFileInMemory(proto, dataProto));
-    string dataModel;
-    ASSERT_TRUE(readFileInMemory(model, dataModel));
+    std::vector<char> dataProto;
+    readFileContent(proto, dataProto);
+    std::vector<char> dataModel;
+    readFileContent(model, dataModel);
 
-    Net net = readNetFromCaffe(dataProto.c_str(), dataProto.size());
+    Net net = readNetFromCaffe(dataProto.data(), dataProto.size());
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     ASSERT_FALSE(net.empty());
 
-    Net net2 = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                dataModel.c_str(), dataModel.size());
+    Net net2 = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                dataModel.data(), dataModel.size());
     ASSERT_FALSE(net2.empty());
 }
 
@@ -109,11 +109,57 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
+TEST_P(Test_Caffe_nets, Axpy)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        throw SkipTestException("");
+
+    String proto = _tf("axpy.prototxt");
+    Net net = readNetFromCaffe(proto);
+
+    checkBackend();
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int size[] = {1, 2, 3, 4};
+    int scale_size[] = {1, 2, 1, 1};
+    Mat scale(4, &scale_size[0], CV_32F);
+    Mat shift(4, &size[0], CV_32F);
+    Mat inp(4, &size[0], CV_32F);
+    randu(scale, -1.0f, 1.0f);
+    randu(shift, -1.0f, 1.0f);
+    randu(inp, -1.0f, 1.0f);
+
+    net.setInput(scale, "scale");
+    net.setInput(shift, "shift");
+    net.setInput(inp, "data");
+
+    Mat out = net.forward();
+
+    Mat ref(4, &size[0], inp.type());
+    for (int i = 0; i < inp.size[1]; i++) {
+        for (int h = 0; h < inp.size[2]; h++) {
+            for (int w = 0; w < inp.size[3]; w++) {
+                int idx[] = {0, i, h, w};
+                int scale_idx[] = {0, i, 0, 0};
+                ref.at<float>(idx) = inp.at<float>(idx) * scale.at<float>(scale_idx) +
+                                     shift.at<float>(idx);
+            }
+        }
+    }
+    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 2e-4 : 1e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1e-3 : 1e-4;
+    normAssert(ref, out, "", l1, lInf);
+}
+
 typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
     Target targetId = get<1>(GetParam());
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    if (!ocl::useOpenCL() && targetId != DNN_TARGET_CPU)
+        throw SkipTestException("OpenCL is disabled");
+
     bool readFromMemory = get<0>(GetParam());
     Net net;
     {
@@ -121,13 +167,13 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
         if (readFromMemory)
         {
-            string dataProto;
-            ASSERT_TRUE(readFileInMemory(proto, dataProto));
-            string dataModel;
-            ASSERT_TRUE(readFileInMemory(model, dataModel));
+            std::vector<char> dataProto;
+            readFileContent(proto, dataProto);
+            std::vector<char> dataModel;
+            readFileContent(model, dataModel);
 
-            net = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                   dataModel.c_str(), dataModel.size());
+            net = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                   dataModel.data(), dataModel.size());
         }
         else
             net = readNetFromCaffe(proto, model);
@@ -154,7 +200,8 @@ INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
 
 TEST(Reproducibility_FCN, Accuracy)
 {
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_2GB);
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
+
     Net net;
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
@@ -183,7 +230,7 @@ TEST(Reproducibility_FCN, Accuracy)
 
 TEST(Reproducibility_SSD, Accuracy)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
     Net net;
     {
         const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
@@ -281,6 +328,9 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
 {
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    if (!ocl::useOpenCL() && targetId != DNN_TARGET_CPU)
+        throw SkipTestException("OpenCL is disabled");
+
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
@@ -541,7 +591,11 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
 
 TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
@@ -559,7 +613,10 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 
 TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+        CV_TEST_TAG_DEBUG_LONG
+    );
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");
@@ -571,7 +628,11 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 
 TEST_P(Test_Caffe_nets, RFCN)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_2GB));
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
         (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
         throw SkipTestException("");

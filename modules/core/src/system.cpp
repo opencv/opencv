@@ -755,8 +755,7 @@ int64 getTickCount(void)
     return (int64)mach_absolute_time();
 #else
     struct timeval tv;
-    struct timezone tz;
-    gettimeofday( &tv, &tz );
+    gettimeofday(&tv, NULL);
     return (int64)tv.tv_sec*1000000 + tv.tv_usec;
 #endif
 }

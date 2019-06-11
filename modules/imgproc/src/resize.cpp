@@ -2148,6 +2148,7 @@ public:
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bl = s0 + s3; gl = s1 + s4; rl = s2 + s5;
 #elif CV_SIMD_WIDTH == 64
+                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
                 bl = t0 + t3; gl = t1 + t4; rl = t2 + t5;
 #endif
@@ -2167,6 +2168,7 @@ public:
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bh = s0 + s3; gh = s1 + s4; rh = s2 + s5;
 #elif CV_SIMD_WIDTH == 64
+                v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
                 bh = t0 + t3; gh = t1 + t4; rh = t2 + t5;
 #endif

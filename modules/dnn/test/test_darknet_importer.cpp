@@ -93,11 +93,11 @@ TEST(Test_Darknet, read_yolo_voc_stream)
     }
     // Import from bytes array.
     {
-        std::string cfg, weights;
-        readFileInMemory(cfgFile, cfg);
-        readFileInMemory(weightsFile, weights);
+        std::vector<char> cfg, weights;
+        readFileContent(cfgFile, cfg);
+        readFileContent(weightsFile, weights);
 
-        Net net = readNetFromDarknet(&cfg[0], cfg.size(), &weights[0], weights.size());
+        Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
         net.setInput(inp);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         Mat out = net.forward();

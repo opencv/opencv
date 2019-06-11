@@ -1293,4 +1293,180 @@ void CV_UndistortMapTest::prepare_to_validation( int )
 TEST(Calib3d_Undistort, accuracy) { CV_UndistortTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortMap, accuracy) { CV_UndistortMapTest test; test.safe_run(); }
 
+TEST(Calib3d_UndistortPoints, inputShape)
+{
+    //https://github.com/opencv/opencv/issues/14423
+    Matx33d cameraMatrix = Matx33d::eye();
+    {
+        //2xN 1-channel
+        Mat imagePoints(2, 3, CV_32FC1);
+        imagePoints.at<float>(0,0) = 320; imagePoints.at<float>(1,0) = 240;
+        imagePoints.at<float>(0,1) = 0;   imagePoints.at<float>(1,1) = 240;
+        imagePoints.at<float>(0,2) = 320; imagePoints.at<float>(1,2) = 0;
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.cols);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<float>(0,i), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<float>(1,i), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //Nx2 1-channel
+        Mat imagePoints(3, 2, CV_32FC1);
+        imagePoints.at<float>(0,0) = 320; imagePoints.at<float>(0,1) = 240;
+        imagePoints.at<float>(1,0) = 0;   imagePoints.at<float>(1,1) = 240;
+        imagePoints.at<float>(2,0) = 320; imagePoints.at<float>(2,1) = 0;
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.rows);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<float>(i,0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<float>(i,1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //1xN 2-channel
+        Mat imagePoints(1, 3, CV_32FC2);
+        imagePoints.at<Vec2f>(0,0) = Vec2f(320, 240);
+        imagePoints.at<Vec2f>(0,1) = Vec2f(0, 240);
+        imagePoints.at<Vec2f>(0,2) = Vec2f(320, 0);
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.cols);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<Vec2f>(0,i)(0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<Vec2f>(0,i)(1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //Nx1 2-channel
+        Mat imagePoints(3, 1, CV_32FC2);
+        imagePoints.at<Vec2f>(0,0) = Vec2f(320, 240);
+        imagePoints.at<Vec2f>(1,0) = Vec2f(0, 240);
+        imagePoints.at<Vec2f>(2,0) = Vec2f(320, 0);
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(normalized.size()), imagePoints.rows);
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints.at<Vec2f>(i,0)(0), std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints.at<Vec2f>(i,0)(1), std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //vector<Point2f>
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(normalized.size(), imagePoints.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        //vector<Point2d>
+        vector<Point2d> imagePoints;
+        imagePoints.push_back(Point2d(320, 240));
+        imagePoints.push_back(Point2d(0,   240));
+        imagePoints.push_back(Point2d(320, 0));
+
+        vector<Point2d> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(normalized.size(), imagePoints.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<double>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<double>::epsilon());
+        }
+    }
+}
+
+TEST(Calib3d_UndistortPoints, outputShape)
+{
+    Matx33d cameraMatrix = Matx33d::eye();
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //Mat --> will be Nx1 2-channel
+        Mat normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.rows);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //Nx1 2-channel
+        Mat normalized(static_cast<int>(imagePoints.size()), 1, CV_32FC2);
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.rows);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(i,0)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //1xN 2-channel
+        Mat normalized(1, static_cast<int>(imagePoints.size()), CV_32FC2);
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(static_cast<int>(imagePoints.size()), normalized.cols);
+        for (int i = 0; i < normalized.rows; i++) {
+            EXPECT_NEAR(normalized.at<Vec2f>(0,i)(0), imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized.at<Vec2f>(0,i)(1), imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2f> imagePoints;
+        imagePoints.push_back(Point2f(320, 240));
+        imagePoints.push_back(Point2f(0,   240));
+        imagePoints.push_back(Point2f(320, 0));
+
+        //vector<Point2f>
+        vector<Point2f> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(imagePoints.size(), normalized.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<float>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<float>::epsilon());
+        }
+    }
+    {
+        vector<Point2d> imagePoints;
+        imagePoints.push_back(Point2d(320, 240));
+        imagePoints.push_back(Point2d(0,   240));
+        imagePoints.push_back(Point2d(320, 0));
+
+        //vector<Point2d>
+        vector<Point2d> normalized;
+        undistortPoints(imagePoints, normalized, cameraMatrix, noArray());
+        EXPECT_EQ(imagePoints.size(), normalized.size());
+        for (int i = 0; i < static_cast<int>(normalized.size()); i++) {
+            EXPECT_NEAR(normalized[i].x, imagePoints[i].x, std::numeric_limits<double>::epsilon());
+            EXPECT_NEAR(normalized[i].y, imagePoints[i].y, std::numeric_limits<double>::epsilon());
+        }
+    }
+}
+
 }} // namespace

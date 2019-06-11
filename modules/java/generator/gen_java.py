@@ -3,6 +3,7 @@
 import sys, re, os.path, errno, fnmatch
 import json
 import logging
+import codecs
 from shutil import copyfile
 from pprint import pformat
 from string import Template
@@ -10,7 +11,12 @@ from string import Template
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
-    from cStringIO import StringIO
+    import io
+    class StringIO(io.StringIO):
+        def write(self, s):
+            if isinstance(s, str):
+                s = unicode(s)  # noqa: F821
+            return super(StringIO, self).write(s)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -114,13 +120,18 @@ class GeneralInfo():
         self.params={}
         self.annotation=[]
         if type == "class":
-            docstring="// C++: class " + self.name + "\n//javadoc: " + self.name
+            docstring="// C++: class " + self.name + "\n"
         else:
             docstring=""
+
         if len(decl)>5 and decl[5]:
-            #logging.info('docstring: %s', decl[5])
-            if re.search("(@|\\\\)deprecated", decl[5]):
+            doc = decl[5]
+
+            #logging.info('docstring: %s', doc)
+            if re.search("(@|\\\\)deprecated", doc):
                 self.annotation.append("@Deprecated")
+
+            docstring += sanitize_java_documentation_string(doc, type)
 
         self.docstring = docstring
 
@@ -231,7 +242,8 @@ class ClassInfo(GeneralInfo):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
 
     def getAllImports(self, module):
-        return ["import %s;" % c for c in sorted(self.imports) if not c.startswith('org.opencv.'+module)]
+        return ["import %s;" % c for c in sorted(self.imports) if not c.startswith('org.opencv.'+module)
+            and (not c.startswith('java.lang.') or c.count('.') != 2)]
 
     def addImports(self, ctype):
         if ctype in type_dict:
@@ -271,7 +283,7 @@ class ClassInfo(GeneralInfo):
     def initCodeStreams(self, Module):
         self.j_code = StringIO()
         self.jn_code = StringIO()
-        self.cpp_code = StringIO();
+        self.cpp_code = StringIO()
         if self.base:
             self.j_code.write(T_JAVA_START_INHERITED)
         else:
@@ -294,14 +306,14 @@ class ClassInfo(GeneralInfo):
         self.cpp_code.close()
 
     def generateJavaCode(self, m, M):
-        return Template(self.j_code.getvalue() + "\n\n" + \
-                         self.jn_code.getvalue() + "\n}\n").substitute(\
+        return Template(self.j_code.getvalue() + "\n\n" +
+                         self.jn_code.getvalue() + "\n}\n").substitute(
                             module = m,
                             name = self.name,
                             jname = self.jname,
                             imports = "\n".join(self.getAllImports(M)),
                             docs = self.docstring,
-                            annotation = "\n".join(self.annotation),
+                            annotation = "\n" + "\n".join(self.annotation) if self.annotation else "",
                             base = self.base)
 
     def generateCppCode(self):
@@ -489,7 +501,7 @@ class JavaWrapperGenerator(object):
                 content = f.read()
                 if content == buf:
                     return
-        with open(path, "wt") as f:
+        with codecs.open(path, "w", "utf-8") as f:
             f.write(buf)
         updated_files += 1
 
@@ -503,7 +515,7 @@ class JavaWrapperGenerator(object):
         self.add_class( ['class ' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
         # scan the headers and build more descriptive maps of classes, consts, functions
-        includes = [];
+        includes = []
         for hdr in common_headers:
             logging.info("\n===== Common header : %s =====", hdr)
             includes.append('#include "' + hdr + '"')
@@ -694,7 +706,7 @@ class JavaWrapperGenerator(object):
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         jni_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
                         j_prologue.append( "double[] %s_out = new double[%i];" % (a.name, len(fields)) )
-                        c_epilogue.append( \
+                        c_epilogue.append(
                             "jdouble tmp_%(n)s[%(cnt)i] = {%(args)s}; env->SetDoubleArrayRegion(%(n)s_out, 0, %(cnt)i, tmp_%(n)s);" %
                             { "n" : a.name, "cnt" : len(fields), "args" : ", ".join(["(jdouble)" + a.name + f[1] for f in fields]) } )
                         if type_dict[a.ctype]["j_type"] in ('bool', 'int', 'long', 'float', 'double'):
@@ -722,7 +734,7 @@ class JavaWrapperGenerator(object):
                 fi.jname + "(" + ", ".join(j_args) + ")"
             logging.info("java: " + j_signature)
 
-            if(j_signature in j_signatures):
+            if j_signature in j_signatures:
                 if args:
                     args.pop()
                     continue
@@ -733,25 +745,56 @@ class JavaWrapperGenerator(object):
             # private java NATIVE method decl
             # e.g.
             # private static native void add_0(long src1, long src2, long dst, long mask, int dtype);
-            jn_code.write( Template(\
-                "    private static native $type $name($args);\n").substitute(\
-                type = type_dict[fi.ctype].get("jn_type", "double[]"), \
-                name = fi.jname + '_' + str(suffix_counter), \
+            jn_code.write( Template(
+                "    private static native $type $name($args);\n").substitute(
+                type = type_dict[fi.ctype].get("jn_type", "double[]"),
+                name = fi.jname + '_' + str(suffix_counter),
                 args = ", ".join(["%s %s" % (type_dict[a.ctype]["jn_type"], normalize_field_name(a.name)) for a in jn_args])
-            ) );
+            ) )
 
             # java part:
 
             #java doc comment
-            f_name = fi.jname
-            if fi.classname:
-                f_name = fi.classname + "::" + fi.jname
-            java_doc = "//javadoc: " + f_name + "(%s)" % ", ".join([a.name for a in args if a.ctype])
-            j_code.write(" "*4 + java_doc + "\n")
-
             if fi.docstring:
-                lines = StringIO(fi.docstring)
-                for line in lines:
+                lines = fi.docstring.splitlines()
+                returnTag = False
+                javadocParams = []
+                toWrite = []
+                inCode = False
+                for index, line in enumerate(lines):
+                    p0 = line.find("@param")
+                    if p0 != -1:
+                        p0 += 7
+                        p1 = line.find(' ', p0)
+                        p1 = len(line) if p1 == -1 else p1
+                        name = line[p0:p1]
+                        javadocParams.append(name)
+                        for arg in j_args:
+                            if arg.endswith(" " + name):
+                                toWrite.append(line);
+                                break
+                    else:
+                        if "<code>" in line:
+                            inCode = True
+                        if "</code>" in line:
+                            inCode = False
+                        if "@return " in line:
+                            returnTag = True
+
+                        if (not inCode and toWrite and not toWrite[-1] and
+                                line and not line.startswith("\\") and not line.startswith("<ul>") and not line.startswith("@param")):
+                                toWrite.append("<p>");
+
+                        if index == len(lines) - 1:
+                            for arg in j_args:
+                                name = arg[arg.rfind(' ') + 1:]
+                                if not name in javadocParams:
+                                    toWrite.append(" * @param " + name + " automatically generated");
+                            if type_dict[fi.ctype]["j_type"] and not returnTag and fi.ctype != "void":
+                                toWrite.append(" * @return automatically generated");
+                        toWrite.append(line);
+
+                for line in toWrite:
                     j_code.write(" "*4 + line + "\n")
             if fi.annotation:
                 j_code.write(" "*4 + "\n".join(fi.annotation) + "\n")
@@ -763,9 +806,9 @@ class JavaWrapperGenerator(object):
             ret_type = fi.ctype
             if fi.ctype.endswith('*'):
                 ret_type = ret_type[:-1]
-            ret_val = type_dict[ret_type]["j_type"] + " retVal = "
+            ret_val = type_dict[ret_type]["j_type"] + " retVal = " if j_epilogue else "return "
             tail = ""
-            ret = "return retVal;"
+            ret = "return retVal;" if j_epilogue else ""
             if "v_type" in type_dict[ret_type]:
                 j_type = type_dict[ret_type]["j_type"]
                 if type_dict[ret_type]["v_type"] in ("Mat", "vector_Mat"):
@@ -776,70 +819,77 @@ class JavaWrapperGenerator(object):
                         ret_val = "Mat retValMat = new Mat("
                         j_prologue.append( j_type + ' retVal = new Array' + j_type+'();')
                         j_epilogue.append('Converters.Mat_to_' + ret_type + '(retValMat, retVal);')
+                        ret = "return retVal;"
             elif ret_type.startswith("Ptr_"):
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = " + type_dict[ret_type]["j_type"] + ".__fromPtr__("
+                constructor = type_dict[ret_type]["j_type"] + ".__fromPtr__("
+                if j_epilogue:
+                    ret_val = type_dict[fi.ctype]["j_type"] + " retVal = " + constructor
+                else:
+                    ret_val = "return " + constructor
                 tail = ")"
             elif ret_type == "void":
                 ret_val = ""
-                ret = "return;"
+                ret = ""
             elif ret_type == "": # c-tor
                 if fi.classname and ci.base:
-                    ret_val = "super( "
-                    tail = " )"
+                    ret_val = "super("
+                    tail = ")"
                 else:
                     ret_val = "nativeObj = "
-                ret = "return;"
+                ret = ""
             elif self.isWrapped(ret_type): # wrapped class
-                ret_val = type_dict[ret_type]["j_type"] + " retVal = new " + self.getClass(ret_type).jname + "("
+                constructor = self.getClass(ret_type).jname + "("
+                if j_epilogue:
+                    ret_val = type_dict[ret_type]["j_type"] + " retVal = new " + constructor
+                else:
+                    ret_val = "return new " + constructor
                 tail = ")"
             elif "jn_type" not in type_dict[ret_type]:
-                ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                constructor = type_dict[ret_type]["j_type"] + "("
+                if j_epilogue:
+                    ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + constructor
+                else:
+                    ret_val = "return new " + constructor
                 tail = ")"
 
             static = "static"
             if fi.classname:
                 static = fi.static
 
-            j_code.write( Template(\
-"""    public $static $j_type $j_name($j_args)
-    {
-        $prologue
-        $ret_val$jn_name($jn_args_call)$tail;
-        $epilogue
-        $ret
+            j_code.write( Template(
+"""    public $static$j_type$j_name($j_args) {$prologue
+        $ret_val$jn_name($jn_args_call)$tail;$epilogue$ret
     }
 
 """
-                ).substitute(\
-                    ret = ret, \
-                    ret_val = ret_val, \
-                    tail = tail, \
-                    prologue = "\n        ".join(j_prologue), \
-                    epilogue = "\n        ".join(j_epilogue), \
-                    static=static, \
-                    j_type=type_dict[fi.ctype]["j_type"], \
-                    j_name=fi.jname, \
-                    j_args=", ".join(j_args), \
-                    jn_name=fi.jname + '_' + str(suffix_counter), \
-                    jn_args_call=", ".join( [a.name for a in jn_args] ),\
+                ).substitute(
+                    ret = "\n        " + ret if ret else "",
+                    ret_val = ret_val,
+                    tail = tail,
+                    prologue = "\n        " + "\n        ".join(j_prologue) if j_prologue else "",
+                    epilogue = "\n        " + "\n        ".join(j_epilogue) if j_epilogue else "",
+                    static = static + " " if static else "",
+                    j_type=type_dict[fi.ctype]["j_type"] + " " if type_dict[fi.ctype]["j_type"] else "",
+                    j_name=fi.jname,
+                    j_args=", ".join(j_args),
+                    jn_name=fi.jname + '_' + str(suffix_counter),
+                    jn_args_call=", ".join( [a.name for a in jn_args] ),
                 )
             )
 
 
             # cpp part:
             # jni_func(..) { _retval_ = cv_func(..); return _retval_; }
-            ret = "return _retval_;"
+            ret = "return _retval_;" if c_epilogue else ""
             default = "return 0;"
             if fi.ctype == "void":
-                ret = "return;"
-                default = "return;"
+                ret = ""
+                default = ""
             elif not fi.ctype: # c-tor
                 ret = "return (jlong) _retval_;"
             elif "v_type" in type_dict[fi.ctype]: # c-tor
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):
                     ret = "return (jlong) _retval_;"
-                else: # returned as jobject
-                    ret = "return _retval_;"
             elif fi.ctype in ['String', 'string']:
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
@@ -862,21 +912,21 @@ class JavaWrapperGenerator(object):
                     name = prop_name + ";//"
 
             cvname = fi.fullName(isCPP=True)
-            retval = self.fullTypeName(fi.ctype) + " _retval_ = "
+            retval = self.fullTypeName(fi.ctype) + " _retval_ = " if ret else "return "
             if fi.ctype == "void":
                 retval = ""
             elif fi.ctype == "String":
-                retval = "cv::" + retval
+                retval = "cv::" + self.fullTypeName(fi.ctype) + " _retval_ = "
             elif fi.ctype == "string":
-                retval = "std::" + retval
+                retval = "std::string _retval_ = "
             elif "v_type" in type_dict[fi.ctype]: # vector is returned
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 if type_dict[fi.ctype]["v_type"] in ("Mat", "vector_Mat"):
                     c_epilogue.append("Mat* _retval_ = new Mat();")
                     c_epilogue.append(fi.ctype+"_to_Mat(_ret_val_vector_, *_retval_);")
                 else:
-                    c_epilogue.append("jobject _retval_ = " + fi.ctype + "_to_List(env, _ret_val_vector_);")
-            if len(fi.classname)>0:
+                    c_epilogue.append("return " + fi.ctype + "_to_List(env, _ret_val_vector_);")
+            if fi.classname:
                 if not fi.ctype: # c-tor
                     retval = fi.fullClass(isCPP=True) + "* _retval_ = "
                     cvname = "new " + fi.fullClass(isCPP=True)
@@ -884,9 +934,9 @@ class JavaWrapperGenerator(object):
                     cvname = fi.fullName(isCPP=True)
                 else:
                     cvname = ("me->" if  not self.isSmartClass(ci) else "(*me)->") + name
-                    c_prologue.append(\
-                        "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL" \
-                            % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))} \
+                    c_prologue.append(
+                        "%(cls)s* me = (%(cls)s*) self; //TODO: check for NULL"
+                            % { "cls" : self.smartWrap(ci, fi.fullClass(isCPP=True))}
                     )
             cvargs = []
             for a in args:
@@ -909,7 +959,7 @@ class JavaWrapperGenerator(object):
 
             rtype = type_dict[fi.ctype].get("jni_type", "jdoubleArray")
             clazz = ci.jname
-            cpp_code.write ( Template( \
+            cpp_code.write ( Template(
 """
 ${namespace}
 
@@ -920,37 +970,34 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 {
     static const char method_name[] = "$module::$fname()";
     try {
-        LOGD("%s", method_name);
-        $prologue
-        $retval$cvname( $cvargs );
-        $epilogue$ret
+        LOGD("%s", method_name);$prologue
+        $retval$cvname($cvargs);$epilogue$ret
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
     } catch (...) {
         throwJavaException(env, 0, method_name);
-    }
-    $default
+    }$default
 }
 
 
-""" ).substitute( \
-        rtype = rtype, \
-        module = self.module.replace('_', '_1'), \
-        clazz = clazz.replace('_', '_1'), \
-        fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'), \
-        args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]), \
-        argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]), \
-        prologue = "\n        ".join(c_prologue), \
-        epilogue = "  ".join(c_epilogue) + ("\n        " if c_epilogue else ""), \
-        ret = ret, \
-        cvname = cvname, \
-        cvargs = ", ".join(cvargs), \
-        default = default, \
-        retval = retval, \
+""" ).substitute(
+        rtype = rtype,
+        module = self.module.replace('_', '_1'),
+        clazz = clazz.replace('_', '_1'),
+        fname = (fi.jname + '_' + str(suffix_counter)).replace('_', '_1'),
+        args  = ", ".join(["%s %s" % (type_dict[a.ctype].get("jni_type"), a.name) for a in jni_args]),
+        argst = ", ".join([type_dict[a.ctype].get("jni_type") for a in jni_args]),
+        prologue = "\n        " + "\n        ".join(c_prologue) if c_prologue else "",
+        epilogue = "\n        " + "\n        ".join(c_epilogue) if c_epilogue else "",
+        ret = "\n        " + ret if ret else "",
+        cvname = cvname,
+        cvargs = " " + ", ".join(cvargs) + " " if cvargs else "",
+        default = "\n    " + default if default else "",
+        retval = retval,
         namespace = ('using namespace ' + ci.namespace.replace('.', '::') + ';') if ci.namespace else ''
     ) )
 
-            # adding method signature to dictionarry
+            # adding method signature to dictionary
             j_signatures.append(j_signature)
 
             # processing args with default values
@@ -1047,7 +1094,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 """ )
 
             # native support for java finalize()
-            ci.cpp_code.write( \
+            ci.cpp_code.write(
 """
 //
 //  native support for java finalize()
@@ -1135,6 +1182,122 @@ def copy_java_files(java_files_dir, java_base_path, default_package_path='org/op
             copyfile(src, dest)
             updated_files += 1
 
+def sanitize_java_documentation_string(doc, type):
+    if type == "class":
+        doc = doc.replace("@param ", "")
+
+    doc = re.sub(re.compile('\\\\f\\$(.*?)\\\\f\\$', re.DOTALL), '\\(' + r'\1' + '\\)', doc)
+    doc = re.sub(re.compile('\\\\f\\[(.*?)\\\\f\\]', re.DOTALL), '\\(' + r'\1' + '\\)', doc)
+    doc = re.sub(re.compile('\\\\f\\{(.*?)\\\\f\\}', re.DOTALL), '\\(' + r'\1' + '\\)', doc)
+
+    doc = doc.replace("&", "&amp;") \
+        .replace("\\<", "&lt;") \
+        .replace("\\>", "&gt;") \
+        .replace("<", "&lt;") \
+        .replace(">", "&gt;") \
+        .replace("$", "$$") \
+        .replace("@anchor", "") \
+        .replace("@brief ", "").replace("\\brief ", "") \
+        .replace("@cite", "CITE:") \
+        .replace("@code{.cpp}", "<code>") \
+        .replace("@code{.txt}", "<code>") \
+        .replace("@code", "<code>") \
+        .replace("@copydoc", "") \
+        .replace("@copybrief", "") \
+        .replace("@date", "") \
+        .replace("@defgroup", "") \
+        .replace("@details ", "") \
+        .replace("@endcode", "</code>") \
+        .replace("@endinternal", "") \
+        .replace("@file", "") \
+        .replace("@include", "INCLUDE:") \
+        .replace("@ingroup", "") \
+        .replace("@internal", "") \
+        .replace("@overload", "") \
+        .replace("@param[in]", "@param") \
+        .replace("@param[out]", "@param") \
+        .replace("@ref", "REF:") \
+        .replace("@returns", "@return") \
+        .replace("@sa", "SEE:") \
+        .replace("@see", "SEE:") \
+        .replace("@snippet", "SNIPPET:") \
+        .replace("@todo", "TODO:") \
+        .replace("@warning ", "WARNING: ")
+
+    doc = re.sub(re.compile('\\*\\*([^\\*]+?)\\*\\*', re.DOTALL), '<b>' + r'\1' + '</b>', doc)
+
+    lines = doc.splitlines()
+
+    lines = list(map(lambda x: x[x.find('*'):].strip() if x.lstrip().startswith("*") else x, lines))
+
+    listInd = [];
+    indexDiff = 0;
+    for index, line in enumerate(lines[:]):
+        if line.strip().startswith("-"):
+            i = line.find("-")
+            if not listInd or i > listInd[-1]:
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<ul>")
+                indexDiff += 1
+                listInd.append(i);
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<li>")
+                indexDiff += 1
+            elif i == listInd[-1]:
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
+                indexDiff += 1
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<li>")
+                indexDiff += 1
+            elif len(listInd) > 1 and i == listInd[-2]:
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
+                indexDiff += 1
+                del listInd[-1]
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</ul>")
+                indexDiff += 1
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<li>")
+                indexDiff += 1
+            else:
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
+                indexDiff += 1
+                del listInd[-1]
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</ul>")
+                indexDiff += 1
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<ul>")
+                indexDiff += 1
+                listInd.append(i);
+                lines.insert(index + indexDiff, "  "*len(listInd) + "<li>")
+                indexDiff += 1
+            lines[index + indexDiff] = lines[index + indexDiff][0:i] + lines[index + indexDiff][i + 1:]
+        else:
+            if listInd and (not line or line == "*" or line.startswith("@note")):
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
+                indexDiff += 1
+                del listInd[-1]
+                lines.insert(index + indexDiff, "  "*len(listInd) + "</ul>")
+                indexDiff += 1
+
+    i = len(listInd) - 1
+    for value in enumerate(listInd):
+        lines.append("  "*i + "  </li>")
+        lines.append("  "*i + "</ul>")
+        i -= 1;
+
+    lines = list(map(lambda x: "* " + x[1:].strip() if x.startswith("*") and x != "*" else x, lines))
+    lines = list(map(lambda x: x if x.startswith("*") else "* " + x if x and x != "*" else "*", lines))
+
+    lines = list(map(lambda x: x
+        .replace("@note", "<b>Note:</b>")
+    , lines))
+
+    lines = list(map(lambda x: re.sub('@b ([\\w:]+?)\\b', '<b>' + r'\1' + '</b>', x), lines))
+    lines = list(map(lambda x: re.sub('@c ([\\w:]+?)\\b', '<tt>' + r'\1' + '</tt>', x), lines))
+    lines = list(map(lambda x: re.sub('`(.*?)`', "{@code " + r'\1' + '}', x), lines))
+    lines = list(map(lambda x: re.sub('@p ([\\w:]+?)\\b', '{@code ' + r'\1' + '}', x), lines))
+
+    hasValues = False
+    for line in lines:
+        if line != "*":
+            hasValues = True
+            break
+    return "/**\n " + "\n ".join(lines) + "\n */" if hasValues else ""
 
 if __name__ == "__main__":
     # initialize logger

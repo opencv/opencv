@@ -1880,6 +1880,76 @@ void _OutputArray::assign(const Mat& m) const
 }
 
 
+void _OutputArray::move(UMat& u) const
+{
+    if (fixedSize())
+    {
+        // TODO Performance warning
+        assign(u);
+        return;
+    }
+    int k = kind();
+    if (k == UMAT)
+    {
+#ifdef CV_CXX11
+        *(UMat*)obj = std::move(u);
+#else
+        *(UMat*)obj = u;
+        u.release();
+#endif
+    }
+    else if (k == MAT)
+    {
+        u.copyTo(*(Mat*)obj); // TODO check u.getMat()
+        u.release();
+    }
+    else if (k == MATX)
+    {
+        u.copyTo(getMat()); // TODO check u.getMat()
+        u.release();
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::move(Mat& m) const
+{
+    if (fixedSize())
+    {
+        // TODO Performance warning
+        assign(m);
+        return;
+    }
+    int k = kind();
+    if (k == UMAT)
+    {
+        m.copyTo(*(UMat*)obj); // TODO check m.getUMat()
+        m.release();
+    }
+    else if (k == MAT)
+    {
+#ifdef CV_CXX11
+        *(Mat*)obj = std::move(m);
+#else
+        *(Mat*)obj = m;
+        m.release();
+#endif
+    }
+    else if (k == MATX)
+    {
+        m.copyTo(getMat());
+        m.release();
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
 void _OutputArray::assign(const std::vector<UMat>& v) const
 {
     _InputArray::KindFlag k = kind();

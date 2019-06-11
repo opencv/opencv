@@ -546,15 +546,14 @@ CV_EXPORTS_W void matMulDeriv( InputArray A, InputArray B, OutputArray dABdA, Ou
 @param tvec2 Second translation vector.
 @param rvec3 Output rotation vector of the superposition.
 @param tvec3 Output translation vector of the superposition.
-@param dr3dr1
-@param dr3dt1
-@param dr3dr2
-@param dr3dt2
-@param dt3dr1
-@param dt3dt1
-@param dt3dr2
-@param dt3dt2 Optional output derivatives of rvec3 or tvec3 with regard to rvec1, rvec2, tvec1 and
-tvec2, respectively.
+@param dr3dr1 Optional output derivative of rvec3 with regard to rvec1
+@param dr3dt1 Optional output derivative of rvec3 with regard to tvec1
+@param dr3dr2 Optional output derivative of rvec3 with regard to rvec2
+@param dr3dt2 Optional output derivative of rvec3 with regard to tvec2
+@param dt3dr1 Optional output derivative of tvec3 with regard to rvec1
+@param dt3dt1 Optional output derivative of tvec3 with regard to tvec1
+@param dt3dr2 Optional output derivative of tvec3 with regard to rvec2
+@param dt3dt2 Optional output derivative of tvec3 with regard to tvec2
 
 The functions compute:
 
@@ -586,7 +585,7 @@ vector\<Point3f\> ), where N is the number of points in the view.
 @param distCoeffs Input vector of distortion coefficients
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$ of
 4, 5, 8, 12 or 14 elements. If the vector is empty, the zero distortion coefficients are assumed.
-@param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
+@param imagePoints Output array of image points, 1xN/Nx1 2-channel, or
 vector\<Point2f\> .
 @param jacobian Optional output 2Nx(10+\<numDistCoeffs\>) jacobian matrix of derivatives of image
 points with respect to components of the rotation vector, translation vector, focal lengths,
@@ -3000,9 +2999,9 @@ point coordinates out of the normalized distorted point coordinates ("normalized
 coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-
-@param src Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
-@param dst Output ideal point coordinates after undistortion and reverse perspective
+@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
+vector\<Point2f\> ).
+@param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
 transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
@@ -3129,7 +3128,7 @@ namespace fisheye
     @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
     @param Knew Camera matrix of the distorted image. By default, it is the identity matrix but you
     may additionally scale and shift the result by using a different matrix.
-    @param new_size
+    @param new_size the new size
 
     The function transforms an image to compensate radial and tangential lens distortion.
 
@@ -3155,14 +3154,14 @@ namespace fisheye
     /** @brief Estimates new camera matrix for undistortion or rectification.
 
     @param K Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{_1}\f$.
-    @param image_size
+    @param image_size Size of the image
     @param D Input vector of distortion coefficients \f$(k_1, k_2, k_3, k_4)\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
     @param P New camera matrix (3x3) or new projection matrix (3x4)
     @param balance Sets the new focal length in range between the min focal length and the max focal
     length. Balance is in range of [0, 1].
-    @param new_size
+    @param new_size the new size
     @param fov_scale Divisor for new focal length.
      */
     CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,

@@ -32,6 +32,8 @@ endif()
 option(ENABLE_PIC "Generate position independent code (necessary for shared libraries)" TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
+set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
+
 # Following block can break build in case of cross-compiling
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect cross-compiling by the presence of CMAKE_TOOLCHAIN_FILE
@@ -249,6 +251,9 @@ OCV_OPTION(WITH_CUFFT "Include NVidia Cuda Fast Fourier Transform (FFT) library 
 OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUBLAS)
+OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
+  VISIBLE_IF WITH_CUDA
+  VERIFY HAVE_CUDNN)
 OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
@@ -288,8 +293,8 @@ OCV_OPTION(WITH_JPEG "Include JPEG support" ON
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
-OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ON
-  VISIBLE_IF NOT IOS AND NOT WINRT
+OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" BUILD_OPENEXR OR NOT CMAKE_CROSSCOMPILING
+  VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
   VISIBLE_IF NOT ANDROID AND NOT WINRT
@@ -460,7 +465,7 @@ OCV_OPTION(ENABLE_COVERAGE            "Enable coverage collection with  GCov"   
 OCV_OPTION(OPENCV_ENABLE_MEMORY_SANITIZER "Better support for memory/address sanitizers"         OFF)
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CV_GCC )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
-OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CV_GCC AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_FAST_MATH           "Enable compiler options for fast math optimizations on FP computations (not recommended)" OFF)
 if(NOT IOS AND (NOT ANDROID OR OPENCV_ANDROID_USE_LEGACY_FLAGS))  # Use CPU_BASELINE instead
 OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
@@ -918,6 +923,9 @@ if(HAVE_CUDA)
   if(HAVE_CUBLAS)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
   endif()
+  if(HAVE_CUDNN)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDNN_LIBRARIES})
+  endif()
   if(HAVE_CUFFT)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
   endif()
@@ -1354,7 +1362,11 @@ if(WITH_JASPER OR HAVE_JASPER)
 endif()
 
 if(WITH_OPENEXR OR HAVE_OPENEXR)
-  status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+  if(HAVE_OPENEXR)
+    status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+  else()
+    status("    OpenEXR:" "NO")
+  endif()
 endif()
 
 if(WITH_GDAL OR HAVE_GDAL)
@@ -1527,11 +1539,16 @@ if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
   if(INF_ENGINE_TARGET)
     set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
     get_target_property(_lib ${INF_ENGINE_TARGET} IMPORTED_LOCATION)
-    if(NOT _lib)
-      get_target_property(_lib_rel ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_RELEASE)
-      get_target_property(_lib_dbg ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_DEBUG)
-      set(_lib "${_lib_rel} / ${_lib_dbg}")
-    endif()
+    get_target_property(_lib_imp_rel ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_RELEASE)
+    get_target_property(_lib_imp_dbg ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_DEBUG)
+    get_target_property(_lib_rel ${INF_ENGINE_TARGET} IMPORTED_LOCATION_RELEASE)
+    get_target_property(_lib_dbg ${INF_ENGINE_TARGET} IMPORTED_LOCATION_DEBUG)
+    ocv_build_features_string(_lib
+      IF _lib THEN "${_lib}"
+      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+      ELSE "unknown"
+    )
     get_target_property(_inc ${INF_ENGINE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
     status("    Inference Engine:" "${__msg}")
     status("                libs:" "${_lib}")
@@ -1568,6 +1585,11 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   endif()
+ endif()
+
+ if(WITH_CUDNN OR HAVE_CUDNN)
+    status("")
+    status("  cuDNN:" HAVE_CUDNN THEN "YES (ver ${CUDNN_VERSION})" ELSE NO)
 endif()
 
 if(WITH_VULKAN OR HAVE_VULKAN)

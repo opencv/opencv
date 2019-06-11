@@ -1829,6 +1829,183 @@ void CV_StereoCalibrationTest_CPP::correct( const Mat& F,
 TEST(Calib3d_CalibrateCamera_CPP, regression) { CV_CameraCalibrationTest_CPP test; test.safe_run(); }
 TEST(Calib3d_CalibrationMatrixValues_CPP, accuracy) { CV_CalibrationMatrixValuesTest_CPP test; test.safe_run(); }
 TEST(Calib3d_ProjectPoints_CPP, regression) { CV_ProjectPointsTest_CPP test; test.safe_run(); }
+
+TEST(Calib3d_ProjectPoints_CPP, inputShape)
+{
+    Matx31d rvec = Matx31d::zeros();
+    Matx31d tvec(0, 0, 1);
+    Matx33d cameraMatrix = Matx33d::eye();
+    const float L = 0.1f;
+    {
+        //3xN 1-channel
+        Mat objectPoints = (Mat_<float>(3, 2) << -L,  L,
+                                                  L,  L,
+                                                  0,  0);
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.cols, static_cast<int>(imagePoints.size()));
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        //Nx2 1-channel
+        Mat objectPoints = (Mat_<float>(2, 3) << -L,  L, 0,
+                                                  L,  L, 0);
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.rows, static_cast<int>(imagePoints.size()));
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        //1xN 3-channel
+        Mat objectPoints(1, 2, CV_32FC3);
+        objectPoints.at<Vec3f>(0,0) = Vec3f(-L, L, 0);
+        objectPoints.at<Vec3f>(0,1) = Vec3f(L, L, 0);
+
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.cols, static_cast<int>(imagePoints.size()));
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        //Nx1 3-channel
+        Mat objectPoints(2, 1, CV_32FC3);
+        objectPoints.at<Vec3f>(0,0) = Vec3f(-L, L, 0);
+        objectPoints.at<Vec3f>(1,0) = Vec3f(L, L, 0);
+
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.rows, static_cast<int>(imagePoints.size()));
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        //vector<Point3f>
+        vector<Point3f> objectPoints;
+        objectPoints.push_back(Point3f(-L, L, 0));
+        objectPoints.push_back(Point3f(L, L, 0));
+
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.size(), imagePoints.size());
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        //vector<Point3d>
+        vector<Point3d> objectPoints;
+        objectPoints.push_back(Point3d(-L, L, 0));
+        objectPoints.push_back(Point3d(L, L, 0));
+
+        vector<Point2d> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.size(), imagePoints.size());
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<double>::epsilon());
+    }
+}
+
+TEST(Calib3d_ProjectPoints_CPP, outputShape)
+{
+    Matx31d rvec = Matx31d::zeros();
+    Matx31d tvec(0, 0, 1);
+    Matx33d cameraMatrix = Matx33d::eye();
+    const float L = 0.1f;
+    {
+        vector<Point3f> objectPoints;
+        objectPoints.push_back(Point3f(-L,  L, 0));
+        objectPoints.push_back(Point3f( L,  L, 0));
+        objectPoints.push_back(Point3f( L, -L, 0));
+
+        //Mat --> will be Nx1 2-channel
+        Mat imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.rows);
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(1,0)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(1,0)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(2,0)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(2,0)(1), -L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        vector<Point3f> objectPoints;
+        objectPoints.push_back(Point3f(-L,  L, 0));
+        objectPoints.push_back(Point3f( L,  L, 0));
+        objectPoints.push_back(Point3f( L, -L, 0));
+
+        //Nx1 2-channel
+        Mat imagePoints(3,1,CV_32FC2);
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.rows);
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(1,0)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(1,0)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(2,0)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(2,0)(1), -L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        vector<Point3f> objectPoints;
+        objectPoints.push_back(Point3f(-L,  L, 0));
+        objectPoints.push_back(Point3f( L,  L, 0));
+        objectPoints.push_back(Point3f( L, -L, 0));
+
+        //1xN 2-channel
+        Mat imagePoints(1,3,CV_32FC2);
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(static_cast<int>(objectPoints.size()), imagePoints.cols);
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(0), -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,0)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,1)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,1)(1),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,2)(0),  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints.at<Vec2f>(0,2)(1), -L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        vector<Point3f> objectPoints;
+        objectPoints.push_back(Point3f(-L, L, 0));
+        objectPoints.push_back(Point3f(L, L, 0));
+
+        //vector<Point2f>
+        vector<Point2f> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.size(), imagePoints.size());
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<float>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<float>::epsilon());
+    }
+    {
+        vector<Point3d> objectPoints;
+        objectPoints.push_back(Point3d(-L, L, 0));
+        objectPoints.push_back(Point3d(L, L, 0));
+
+        //vector<Point2d>
+        vector<Point2d> imagePoints;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, noArray(), imagePoints);
+        EXPECT_EQ(objectPoints.size(), imagePoints.size());
+        EXPECT_NEAR(imagePoints[0].x, -L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[0].y,  L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[1].x,  L, std::numeric_limits<double>::epsilon());
+        EXPECT_NEAR(imagePoints[1].y,  L, std::numeric_limits<double>::epsilon());
+    }
+}
+
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
 TEST(Calib3d_StereoCalibrateCorner, regression) { CV_StereoCalibrationCornerTest test; test.safe_run(); }
 
@@ -1908,6 +2085,44 @@ TEST(Calib3d_StereoCalibrate, regression_10791)
                   R1, R2, P1, P2, Q,
                   CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
 
+    EXPECT_GE(roi1.area(), 400*300) << roi1;
+    EXPECT_GE(roi2.area(), 400*300) << roi2;
+}
+
+TEST(Calib3d_StereoCalibrate, regression_11131)
+{
+    const Matx33d M1(
+        1457.572438721727, 0, 1212.945694211622,
+        0, 1457.522226502963, 1007.32058848921,
+        0, 0, 1
+    );
+    const Matx33d M2(
+        1460.868570835972, 0, 1215.024068023046,
+        0, 1460.791367088, 1011.107202932225,
+        0, 0, 1
+    );
+    const Matx<double, 5, 1> D1(0, 0, 0, 0, 0);
+    const Matx<double, 5, 1> D2(0, 0, 0, 0, 0);
+
+    const Matx33d R(
+        0.9985404059825475, 0.02963547172078553, -0.04515303352041626,
+        -0.03103795276460111, 0.9990471552537432, -0.03068268351343364,
+        0.04420071389006859, 0.03203935697372317, 0.9985087763742083
+    );
+    const Matx31d T(0.9995500167379527, 0.0116311595111068, 0.02764923448462666);
+
+    const Size imageSize(2456, 2058);
+
+    Mat R1, R2, P1, P2, Q;
+    Rect roi1, roi2;
+    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+                  R1, R2, P1, P2, Q,
+                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
+
+    EXPECT_GT(P1.at<double>(0, 0), 0);
+    EXPECT_GT(P2.at<double>(0, 0), 0);
+    EXPECT_GT(R1.at<double>(0, 0), 0);
+    EXPECT_GT(R2.at<double>(0, 0), 0);
     EXPECT_GE(roi1.area(), 400*300) << roi1;
     EXPECT_GE(roi2.area(), 400*300) << roi2;
 }

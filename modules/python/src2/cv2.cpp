@@ -1797,8 +1797,12 @@ static int to_ok(PyTypeObject *to)
 }
 
 
+#if defined(__GNUC__)
+#pragma GCC visibility push(default)
+#endif
+
 #if PY_MAJOR_VERSION >= 3
-extern "C" CV_EXPORTS PyObject* PyInit_cv2();
+PyMODINIT_FUNC PyInit_cv2();
 static struct PyModuleDef cv2_moduledef =
 {
     PyModuleDef_HEAD_INIT,
@@ -1811,7 +1815,7 @@ static struct PyModuleDef cv2_moduledef =
 
 PyObject* PyInit_cv2()
 #else
-extern "C" CV_EXPORTS void initcv2();
+PyMODINIT_FUNC initcv2();
 
 void initcv2()
 #endif

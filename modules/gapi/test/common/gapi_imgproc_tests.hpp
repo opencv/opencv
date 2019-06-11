@@ -40,6 +40,9 @@ struct BGR2LUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GC
 struct LUV2BGRTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct BGR2YUVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 struct YUV2BGRTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
+struct RGB2HSVTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
+struct BayerGR2RGBTest : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
+struct RGB2YUV422Test : public TestParams<std::tuple<compare_f,cv::Size,bool,cv::GCompileArgs>> {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_HPP
