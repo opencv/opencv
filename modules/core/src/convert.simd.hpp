@@ -166,10 +166,12 @@ static void cvtCopy( const uchar* src, size_t sstep,
 }
 
 #define DEF_CVT_FUNC(suffix, cvtfunc, _Ts, _Td, _Twvec) \
-static void cvt##suffix(const _Ts* src, size_t sstep, uchar*, size_t, \
-                        _Td* dst, size_t dstep, Size size, void*) \
+static void cvt##suffix(const uchar* src_, size_t sstep, const uchar*, size_t, \
+                        uchar* dst_, size_t dstep, Size size, void*) \
 { \
     CV_INSTRUMENT_REGION(); \
+    const _Ts* src = (const _Ts*)src_; \
+    _Td* dst = (_Td*)dst_; \
     cvtfunc<_Ts, _Td, _Twvec>(src, sstep, dst, dstep, size); \
 }
 
@@ -255,16 +257,16 @@ DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 
-static void cvt8u(const uchar* src, size_t sstep, uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
+static void cvt8u(const uchar* src, size_t sstep, const uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
 { CV_INSTRUMENT_REGION(); cvtCopy(src, sstep, dst, dstep, size, 1); }
 
-static void cvt16u(const ushort* src, size_t sstep, uchar*, size_t, ushort* dst, size_t dstep, Size size, void*)
+static void cvt16u(const uchar* src, size_t sstep, const uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
 { CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 2); }
 
-static void cvt32s(const int* src, size_t sstep, uchar*, size_t, int* dst, size_t dstep, Size size, void*)
+static void cvt32s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
 { CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 4); }
 
-static void cvt64s(const int64* src, size_t sstep, uchar*, size_t, int64* dst, size_t dstep, Size size, void*)
+static void cvt64s(const uchar* src, size_t sstep, const uchar*, size_t, uchar* dst, size_t dstep, Size size, void*)
 { CV_INSTRUMENT_REGION(); cvtCopy((const uchar*)src, sstep, (uchar*)dst, dstep, size, 8); }
 
 
@@ -368,43 +370,43 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
     static BinaryFunc cvtTab[][8] =
     {
         {
-            (BinaryFunc)(cvt8u), (BinaryFunc)GET_OPTIMIZED(cvt8s8u), (BinaryFunc)GET_OPTIMIZED(cvt16u8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8u), (BinaryFunc)GET_OPTIMIZED(cvt32s8u), (BinaryFunc)GET_OPTIMIZED(cvt32f8u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8u), (BinaryFunc)(cvt16f8u)
+            (cvt8u), (cvt8s8u), (cvt16u8u),
+            (cvt16s8u), (cvt32s8u), (cvt32f8u),
+            (cvt64f8u), (cvt16f8u)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u8s), (BinaryFunc)cvt8u, (BinaryFunc)GET_OPTIMIZED(cvt16u8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s8s), (BinaryFunc)GET_OPTIMIZED(cvt32s8s), (BinaryFunc)GET_OPTIMIZED(cvt32f8s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f8s), (BinaryFunc)(cvt16f8s)
+            (cvt8u8s), cvt8u, (cvt16u8s),
+            (cvt16s8s), (cvt32s8s), (cvt32f8s),
+            (cvt64f8s), (cvt16f8s)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16u), (BinaryFunc)GET_OPTIMIZED(cvt8s16u), (BinaryFunc)cvt16u,
-            (BinaryFunc)GET_OPTIMIZED(cvt16s16u), (BinaryFunc)GET_OPTIMIZED(cvt32s16u), (BinaryFunc)GET_OPTIMIZED(cvt32f16u),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16u), (BinaryFunc)(cvt16f16u)
+            (cvt8u16u), (cvt8s16u), cvt16u,
+            (cvt16s16u), (cvt32s16u), (cvt32f16u),
+            (cvt64f16u), (cvt16f16u)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u16s), (BinaryFunc)GET_OPTIMIZED(cvt8s16s), (BinaryFunc)GET_OPTIMIZED(cvt16u16s),
-            (BinaryFunc)cvt16u, (BinaryFunc)GET_OPTIMIZED(cvt32s16s), (BinaryFunc)GET_OPTIMIZED(cvt32f16s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f16s), (BinaryFunc)(cvt16f16s)
+            (cvt8u16s), (cvt8s16s), (cvt16u16s),
+            cvt16u, (cvt32s16s), (cvt32f16s),
+            (cvt64f16s), (cvt16f16s)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32s), (BinaryFunc)GET_OPTIMIZED(cvt8s32s), (BinaryFunc)GET_OPTIMIZED(cvt16u32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32s), (BinaryFunc)cvt32s, (BinaryFunc)GET_OPTIMIZED(cvt32f32s),
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32s), (BinaryFunc)(cvt16f32s)
+            (cvt8u32s), (cvt8s32s), (cvt16u32s),
+            (cvt16s32s), cvt32s, (cvt32f32s),
+            (cvt64f32s), (cvt16f32s)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u32f), (BinaryFunc)GET_OPTIMIZED(cvt8s32f), (BinaryFunc)GET_OPTIMIZED(cvt16u32f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s32f), (BinaryFunc)GET_OPTIMIZED(cvt32s32f), (BinaryFunc)cvt32s,
-            (BinaryFunc)GET_OPTIMIZED(cvt64f32f), (BinaryFunc)(cvt16f32f)
+            (cvt8u32f), (cvt8s32f), (cvt16u32f),
+            (cvt16s32f), (cvt32s32f), cvt32s,
+            (cvt64f32f), (cvt16f32f)
         },
         {
-            (BinaryFunc)GET_OPTIMIZED(cvt8u64f), (BinaryFunc)GET_OPTIMIZED(cvt8s64f), (BinaryFunc)GET_OPTIMIZED(cvt16u64f),
-            (BinaryFunc)GET_OPTIMIZED(cvt16s64f), (BinaryFunc)GET_OPTIMIZED(cvt32s64f), (BinaryFunc)GET_OPTIMIZED(cvt32f64f),
-            (BinaryFunc)(cvt64s), (BinaryFunc)(cvt16f64f)
+            (cvt8u64f), (cvt8s64f), (cvt16u64f),
+            (cvt16s64f), (cvt32s64f), (cvt32f64f),
+            (cvt64s), (cvt16f64f)
         },
         {
-            (BinaryFunc)(cvt8u16f), (BinaryFunc)(cvt8s16f), (BinaryFunc)(cvt16u16f), (BinaryFunc)(cvt16s16f),
-            (BinaryFunc)(cvt32s16f), (BinaryFunc)(cvt32f16f), (BinaryFunc)(cvt64f16f), (BinaryFunc)(cvt16u)
+            (cvt8u16f), (cvt8s16f), (cvt16u16f), (cvt16s16f),
+            (cvt32s16f), (cvt32f16f), (cvt64f16f), (cvt16u)
         }
     };
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
