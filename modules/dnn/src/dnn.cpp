@@ -498,6 +498,7 @@ struct LayerData
     std::vector<Mat> outputBlobs;
     std::vector<Mat*> inputBlobs;
     std::vector<Mat> internals;
+    std::string error = "0";
     // Computation nodes of implemented backends (except DEFAULT).
     std::map<int, Ptr<BackendNode> > backendNodes;
     // Flag for skip layer computation for specific backend.
@@ -516,7 +517,8 @@ struct LayerData
         layerInstance = LayerFactory::createLayerInstance(type, params);
         if (!layerInstance)
         {
-            CV_Error(Error::StsError, "Can't create layer \"" + name + "\" of type \"" + type + "\"");
+            error = "Can't create layer \"" + name + "\" of type \"" + type + "\"";
+            //CV_Error(Error::StsError, "Can't create layer \"" + name + "\" of type \"" + type + "\"");
         }
 
         return layerInstance;
@@ -2555,6 +2557,11 @@ Net::~Net()
 {
 }
 
+std::vector<std::string> Net::getImporterErrors()
+{
+    return this->importerErrors;
+}
+
 int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
@@ -3110,7 +3117,12 @@ void Net::dumpToFile(const String& path) {
 Ptr<Layer> Net::getLayer(LayerId layerId)
 {
     LayerData &ld = impl->getLayerData(layerId);
-    return ld.getLayerInstance();
+    Ptr<Layer> instance = ld.getLayerInstance();
+
+    if (ld.error != "0")
+        this->getImporterErrors().push_back(ld.error);
+
+    return instance; 
 }
 
 std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)
