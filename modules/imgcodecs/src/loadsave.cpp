@@ -370,6 +370,7 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
     }
 }
 
+#if !ALWAYS_ITERLOAD
 /**
  * Read an image into memory and return the information
  *
@@ -486,8 +487,9 @@ imread_( const String& filename, int flags, Mat& mat )
 
     return true;
 }
+#endif
 
-
+#if !ALWAYS_ITERLOAD
 /**
 * Read an image into memory and return the information
 *
@@ -592,6 +594,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 
     return !mats.empty();
 }
+#endif
 
 /**
  * Read an image
@@ -606,7 +609,6 @@ Mat imread( const String& filename, int flags )
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    (void)&imread_; // suppress warning
     IterLoad load;
     return load.read(filename, flags) ? load.next(flags) : Mat();
 #else
@@ -642,7 +644,6 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    (void)&imreadmulti_; // suppress warning
     IterLoad load;
     bool ready = load.read(filename, flags);
     if(!ready) return false;
@@ -726,6 +727,7 @@ bool imwrite( const String& filename, InputArray _img,
     return imwrite_(filename, img_vec, params, false);
 }
 
+#if !ALWAYS_ITERLOAD
 static bool
 imdecode_( const Mat& buf, int flags, Mat& mat )
 {
@@ -831,7 +833,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     return true;
 }
-
+#endif
 
 Mat imdecode( InputArray _buf, int flags )
 {
@@ -858,8 +860,6 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    (void)&imdecode_; // suppress warning
-    std::cerr << __FILE__ << ":" << __LINE__ << ": iterLoad-single" << std::endl;
     IterLoad load;
     return load.decode(_buf, flags) ? load.next(flags, dst) : Mat();
 #else
