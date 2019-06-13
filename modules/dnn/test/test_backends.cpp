@@ -406,7 +406,9 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.4 : 4e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.45 : 2e-3;
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
+#if defined(HAVE_INF_ENGINE) && INF_ENGINE_RELEASE >= 2019010000
     expectNoFallbacksFromIE(net);
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false));

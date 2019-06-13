@@ -112,6 +112,9 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+#ifdef HAVE_INF_ENGINE
+                INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+#endif
                 sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
     }
 
@@ -256,6 +259,7 @@ public:
     }
 
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         CV_Assert_N(sliceRanges.size() == 1, inputs.size() <= 2);
@@ -308,6 +312,7 @@ public:
         }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
+#endif
 #endif
 };
 
