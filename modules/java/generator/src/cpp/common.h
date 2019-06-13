@@ -16,6 +16,17 @@ extern "C" {
 #endif
 #include <jni.h>
 
+// make -fvisibility=hidden work with java 1.7
+#if defined(__linux__) && !defined(__ANDROID__) && !defined (JNI_VERSION_1_8)
+  // adapted from jdk1.8/jni.h
+  #if (defined(__GNUC__) && ((__GNUC__ > 4) || (__GNUC__ == 4) && (__GNUC_MINOR__ > 2))) || __has_attribute(visibility)
+    #undef  JNIEXPORT
+    #define JNIEXPORT     __attribute__((visibility("default")))
+    #undef  JNIIMPORT
+    #define JNIIMPORT     __attribute__((visibility("default")))
+  #endif
+#endif
+
 } // extern "C"
 
 #include "opencv_java.hpp"
