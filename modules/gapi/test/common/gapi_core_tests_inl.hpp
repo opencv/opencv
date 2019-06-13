@@ -1154,7 +1154,6 @@ TEST_P(LUTTest, AccuracyTest)
 
 TEST_P(ConvertToTest, AccuracyTest)
 {
-    auto param = GetParam();
     int type_mat = type;
     int depth_to = dtype;
     int type_out = CV_MAKETYPE(depth_to, CV_MAT_CN(type_mat));
