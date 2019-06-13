@@ -27,44 +27,35 @@ public:
                          const std::vector<Rect2d>& refBoxes,
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
-                         int width = -1, int height = -1, Scalar mean = Scalar(),
-                         float scale = 1.0, bool swapRB = true, bool crop = false)
+                         const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                         float scale = 1.0, bool swapRB = true, bool crop = false,
+                         bool absoluteCoords = true)
     {
         checkBackend();
 
         Mat frame = imread(imgPath);
-        Model model(weights, cfg, width, height, mean, scale, swapRB, crop);
-
-        CV_Assert(!refBoxes.empty());
+        Model model(weights, cfg, size, mean, scale, swapRB, crop);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<Rect2d> boxes;
 
-        if (refBoxes[0].width > 1 || refBoxes[0].height > 1) {
-            std::vector<Rect2i> intBoxes;
-            model.detect(frame, classIds, confidences, intBoxes, confThreshold, nmsThreshold);
-            for (int i = 0; i < intBoxes.size(); ++i) {
-                boxes.push_back(Rect2d(intBoxes[i]));
-            }
-        } else {
-            model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
-        }
-
+        model.detect(frame, classIds, confidences, boxes, confThreshold,
+                     nmsThreshold, absoluteCoords);
         normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
                          confidences, boxes, "",
                          confThreshold, scoreDiff, iouDiff);
     }
 
     void testClassifyModel(const std::string& weights, const std::string& cfg,
-                   const std::string& imgPath, std::pair<int, float> ref, float norm,
-                    int width = -1, int height = -1, Scalar mean = Scalar(),
+                    const std::string& imgPath, std::pair<int, float> ref, float norm,
+                    const Size& size = {-1, -1}, Scalar mean = Scalar(),
                     float scale = 1.0, bool swapRB = true, bool crop = false)
     {
         checkBackend();
 
         Mat frame = imread(imgPath);
-        Model model(weights, cfg, width, height, mean, scale, swapRB, crop);
+        Model model(weights, cfg, size, mean, scale, swapRB, crop);
 
         std::pair<int, float> prediction = model.classify(frame);
         EXPECT_EQ(prediction.first, ref.first);
@@ -81,14 +72,13 @@ TEST_P(Test_Model, Classify)
     std::string weights_file = _tf("bvlc_alexnet.caffemodel");
 
     float scale = 1.0;
-    int width = 227;
-    int height = 227;
+    Size size{227, 227};
     bool swapRB = false;
 
     float norm = 1e-4;
 
     testClassifyModel(weights_file, config_file, img_path, ref, norm,
-                      width, height, Scalar(), scale, swapRB);
+                      size, Scalar(), scale, swapRB);
 }
 
 TEST_P(Test_Model, DetectRegion)
@@ -104,16 +94,19 @@ TEST_P(Test_Model, DetectRegion)
     std::string config_file = _tf("yolo-voc.cfg");
 
     float scale = 1.0 / 255.0;
-    int width = 416;
-    int height = 416;
+    Size size{416, 416};
+    bool crop = false;
+    bool swapRB = true;
+    bool absoluteCoords = false;
 
     double confThreshold = 0.24;
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
-    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-              scoreDiff, iouDiff, confThreshold, nmsThreshold, width, height, Scalar(), scale);
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+                    refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
+                    Scalar(), scale, swapRB, crop, absoluteCoords);
 }
 
 TEST_P(Test_Model, DetectionOutput)
@@ -129,8 +122,7 @@ TEST_P(Test_Model, DetectionOutput)
 
     Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
     float scale = 1.0;
-    int width = 800;
-    int height = 600;
+    Size size{800, 600};
     bool swapRB = false;
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
@@ -140,7 +132,7 @@ TEST_P(Test_Model, DetectionOutput)
     float nmsThreshold = 0;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-              scoreDiff, iouDiff, confThreshold, nmsThreshold, width, height, mean, scale, swapRB);
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale, swapRB);
 }
 
 
