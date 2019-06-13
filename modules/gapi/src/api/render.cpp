@@ -1,6 +1,8 @@
 #include <opencv2/imgproc.hpp>
 
 #include "opencv2/gapi/render.hpp"
+#include "opencv2/gapi/own/assert.hpp"
+
 #include "api/render_priv.hpp"
 
 using namespace cv::gapi::wip::draw;

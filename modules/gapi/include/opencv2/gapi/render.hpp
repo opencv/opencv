@@ -48,7 +48,7 @@ struct Text
  */
 struct Rect
 {
-    cv::Rect   rect;  /** coordinates of the rectangle < */
+    cv::Rect   rect;  /** Coordinates of the rectangle < */
     cv::Scalar color; /** The rectangle color or brightness (grayscale image) < */
     int        thick; /** The thickness of lines that make up the rectangle. Negative values, like #FILLED, < */
     int        lt;    /** The type of the line. See #LineTypes< */
