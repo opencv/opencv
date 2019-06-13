@@ -23,8 +23,8 @@ namespace
         int      lt    = LINE_8;
         double   fs    = 1;
 
-        cv::Mat     ref_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
-        cv::Mat     out_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
+        cv::Mat     ref_mat {320, 480, CV_8UC3, cv::Scalar::all(255)};
+        cv::Mat     out_mat {320, 480, CV_8UC3, cv::Scalar::all(255)};
         cv::Scalar  color   {0, 255, 0};
         std::string text    {"some text"};
 
@@ -81,6 +81,32 @@ TEST_F(RenderTestFixture, PutTextAndRectangle)
     }
 
     cv::gapi::wip::draw::render(out_mat, prims);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST_F(RenderTestFixture, DISABLED_PutTextAndRectangleNV12)
+{
+    cv::Mat y;
+    cv::Mat uv;
+    cv::gapi::wip::draw::splitNV12TwoPlane(out_mat, y, uv);
+
+    std::vector<cv::gapi::wip::draw::Prim> prims;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cv::Point point {30 + i * 60, 40 + i * 50};
+        cv::Rect  rect {point, size};
+
+        cv::rectangle(ref_mat, rect, color, thick);
+        cv::putText(ref_mat, text, point, ff, fs, color, thick);
+
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
+        prims.emplace_back(cv::gapi::wip::draw::Text{text, point, ff, fs, color, thick, lt, false});
+    }
+
+    cv::gapi::wip::draw::render(y, uv, prims);
+    cv::cvtColorTwoPlane(y, uv, out_mat, cv::COLOR_YUV2BGR_NV12);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
