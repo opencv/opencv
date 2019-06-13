@@ -231,36 +231,47 @@ public:
     }
 };
 
+bool TiffDecoder::setSource( const String& filename ) {
+   return open(BaseImageDecoder::setSource(filename));
+}
+
+bool TiffDecoder::setSource( const Mat& buf ) {
+    return open(BaseImageDecoder::setSource(buf));
+}
+
+bool TiffDecoder::open(bool source_set) {
+    close();
+    if (!source_set) return false;
+
+    // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
+    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    TIFF *tif;
+    if (!m_buf.empty()) {
+        m_buf_pos = 0;
+        TiffDecoderBufHelper *buf_helper = new TiffDecoderBufHelper(this->m_buf, this->m_buf_pos);
+        tif = TIFFClientOpen("", "r", reinterpret_cast<thandle_t>(buf_helper), &TiffDecoderBufHelper::read,
+                             &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
+                             &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
+                             &TiffDecoderBufHelper::map, /*unmap=*/0);
+        if (!tif) delete buf_helper;
+    } else {
+        tif = TIFFOpen(m_filename.c_str(), "r");
+    }
+
+    if (tif) {
+        m_tif.reset(tif, cv_tiffCloseHandle);
+    } else {
+        m_tif.release();
+    }
+
+    return !m_tif.empty();
+}
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
 
     TIFF* tif = static_cast<TIFF*>(m_tif.get());
-    if (!tif)
-    {
-        // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
-        // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-        if ( !m_buf.empty() )
-        {
-            m_buf_pos = 0;
-            TiffDecoderBufHelper* buf_helper = new TiffDecoderBufHelper(this->m_buf, this->m_buf_pos);
-            tif = TIFFClientOpen( "", "r", reinterpret_cast<thandle_t>(buf_helper), &TiffDecoderBufHelper::read,
-                                  &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
-                                  &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
-                                  &TiffDecoderBufHelper::map, /*unmap=*/0 );
-            if (!tif)
-                delete buf_helper;
-        }
-        else
-        {
-            tif = TIFFOpen(m_filename.c_str(), "r");
-        }
-        if (tif)
-            m_tif.reset(tif, cv_tiffCloseHandle);
-        else
-            m_tif.release();
-    }
-
     if (tif)
     {
         uint32 wdth = 0, hght = 0;

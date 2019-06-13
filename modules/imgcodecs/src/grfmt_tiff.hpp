@@ -96,6 +96,8 @@ public:
     TiffDecoder();
     virtual ~TiffDecoder() CV_OVERRIDE;
 
+    bool setSource( const String& filename ) CV_OVERRIDE;
+    bool setSource( const Mat& buf ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
     bool  readData( Mat& img ) CV_OVERRIDE;
     void  close();
@@ -117,6 +119,7 @@ protected:
 private:
     TiffDecoder(const TiffDecoder &); // copy disabled
     TiffDecoder& operator=(const TiffDecoder &); // assign disabled
+    bool open(bool source_set);
 };
 
 // ... and writer
