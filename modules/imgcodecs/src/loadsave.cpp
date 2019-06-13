@@ -1058,6 +1058,7 @@ static Mat released(Mat *mat) {
 Mat MultiLoad::at(int idx, int flags, Mat *dst) {
     CV_TRACE_FUNCTION();
     if (!m_decoder || !m_decoder->gotoPage(idx)) return released(dst);
+    m_has_next = true;
     return next(flags, dst);
 }
 
