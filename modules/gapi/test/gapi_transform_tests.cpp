@@ -14,135 +14,170 @@ namespace opencv_test
 
 namespace
 {
+using GMat = cv::GMat;
 using GMat2 = std::tuple<GMat, GMat>;
 using GMat3 = std::tuple<GMat, GMat, GMat>;
-using GMat = cv::GMat;
+using GScalar = cv::GScalar;
+template <typename T> using GArray = cv::GArray<T>;
 
-GAPI_TRANSFORM(my_transform, <GMat(GMat, GMat)>, "does nothing")
+GAPI_TRANSFORM(gmat_in_gmat_out, <GMat(GMat)>, "gmat_in_gmat_out")
 {
-    static GMat pattern(GMat, GMat)
-    {
-        return {};
-    };
-
-    static GMat substitute(GMat, GMat)
-    {
-        return {};
-    }
+    static GMat pattern(GMat) { return {}; }
+    static GMat substitute(GMat) { return {}; }
 };
 
-GAPI_TRANSFORM(another_transform, <GMat3(GMat, GMat)>, "does nothing")
+GAPI_TRANSFORM(gmat2_in_gmat_out, <GMat(GMat, GMat)>, "gmat2_in_gmat_out")
 {
-    static GMat3 pattern(GMat, GMat)
-    {
-        return {};
-    };
-
-    static GMat3 substitute(GMat, GMat)
-    {
-        return {};
-    }
+    static GMat pattern(GMat, GMat) { return {}; }
+    static GMat substitute(GMat, GMat) { return {}; }
 };
 
-GAPI_TRANSFORM(copy_transform, <GMat3(GMat, GMat)>, "does nothing")
+GAPI_TRANSFORM(gmat2_in_gmat3_out, <GMat3(GMat, GMat)>, "gmat2_in_gmat3_out")
 {
-    static GMat3 pattern(GMat, GMat)
-    {
-        return {};
-    };
-
-    static GMat3 substitute(GMat, GMat)
-    {
-        return {};
-    }
+    static GMat3 pattern(GMat, GMat) { return {}; }
+    static GMat3 substitute(GMat, GMat) { return {}; }
 };
 
-GAPI_TRANSFORM(simple_transform, <GMat(GMat)>, "does nothing")
+GAPI_TRANSFORM(gmatp_in_gmatp_out, <GMatP(GMatP)>, "gmatp_in_gmatp_out")
 {
-    static GMat pattern(GMat)
-    {
-        return {};
-    };
-
-    static GMat substitute(GMat)
-    {
-        return {};
-    }
+    static GMatP pattern(GMatP) { return {}; }
+    static GMatP substitute(GMatP) { return {}; }
 };
 
-GAPI_TRANSFORM(another_simple_transform, <GMat2(GMat)>, "does nothing too")
+GAPI_TRANSFORM(gsc_in_gmat_out, <GMat(GScalar)>, "gsc_in_gmat_out")
 {
-    static GMat2 pattern(GMat)
-    {
-        return {};
-    };
-
-    static GMat2 substitute(GMat)
-    {
-        return {};
-    }
+    static GMat pattern(GScalar) { return {}; }
+    static GMat substitute(GScalar) { return {}; }
 };
-} // namespace
 
-TEST(KernelPackageTransform, SimpleInclude)
+GAPI_TRANSFORM(gmat_in_gsc_out, <GScalar(GMat)>, "gmat_in_gsc_out")
 {
-    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<simple_transform,
-                                                     another_simple_transform>();
+    static GScalar pattern(GMat) { return {}; }
+    static GScalar substitute(GMat) { return {}; }
+};
+
+GAPI_TRANSFORM(garr_in_gmat_out, <GMat(GArray<int>)>, "garr_in_gmat_out")
+{
+    static GMat pattern(GArray<int>) { return {}; }
+    static GMat substitute(GArray<int>) { return {}; }
+};
+
+GAPI_TRANSFORM(gmat_in_garr_out, <GArray<int>(GMat)>, "gmat_in_garr_out")
+{
+    static GArray<int> pattern(GMat) { return {}; }
+    static GArray<int> substitute(GMat) { return {}; }
+};
+
+} // anonymous namespace
+
+TEST(KernelPackageTransform, CreatePackage)
+{
+    auto pkg = cv::gapi::kernels
+        < gmat_in_gmat_out
+        , gmat2_in_gmat_out
+        , gmat2_in_gmat3_out
+        , gsc_in_gmat_out
+        , gmat_in_gsc_out
+        >();
+
     auto tr = pkg.get_transformations();
-    EXPECT_EQ(2u, tr.size());
+    EXPECT_EQ(5u, tr.size());
 }
 
-TEST(KernelPackageTransform, SingleOutInclude)
+TEST(KernelPackageTransform, Include)
 {
     cv::gapi::GKernelPackage pkg;
-    pkg.include<my_transform>();
+    pkg.include<gmat_in_gmat_out>();
+    pkg.include<gmat2_in_gmat_out>();
+    pkg.include<gmat2_in_gmat3_out>();
     auto tr = pkg.get_transformations();
-    EXPECT_EQ(1u, tr.size());
-}
-
-TEST(KernelPackageTransform, MultiOutInclude)
-{
-    cv::gapi::GKernelPackage pkg;
-    pkg.include<my_transform>();
-    pkg.include<another_transform>();
-    auto tr = pkg.get_transformations();
-    EXPECT_EQ(2u, tr.size());
-}
-
-TEST(KernelPackageTransform, MultiOutConstructor)
-{
-    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<my_transform,
-                                                     another_transform>();
-    auto tr = pkg.get_transformations();
-    EXPECT_EQ(2u, tr.size());
-}
-
-TEST(KernelPackageTransform, CopyClass)
-{
-    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<copy_transform,
-                                                     another_transform>();
-    auto tr = pkg.get_transformations();
-    EXPECT_EQ(2u, tr.size());
+    EXPECT_EQ(3u, tr.size());
 }
 
 TEST(KernelPackageTransform, Combine)
 {
-    cv::gapi::GKernelPackage pkg1 = cv::gapi::kernels<my_transform>();
-    cv::gapi::GKernelPackage pkg2 = cv::gapi::kernels<another_transform>();
-    cv::gapi::GKernelPackage pkg_comb =
-        cv::gapi::combine(pkg1, pkg2);
+    auto pkg1 = cv::gapi::kernels<gmat_in_gmat_out>();
+    auto pkg2 = cv::gapi::kernels<gmat2_in_gmat_out>();
+    auto pkg_comb = cv::gapi::combine(pkg1, pkg2);
     auto tr = pkg_comb.get_transformations();
     EXPECT_EQ(2u, tr.size());
 }
 
-TEST(KernelPackageTransform, GArgsSize)
+TEST(KernelPackageTransform, Pattern)
 {
-    auto tr = copy_transform::transformation();
+    auto tr = gmat2_in_gmat3_out::transformation();
+    GMat a, b;
+    auto pattern = tr.pattern({cv::GArg(a), cv::GArg(b)});
+
+    // return type of '2gmat_in_gmat3_out' is GMat3
+    EXPECT_EQ(3u, pattern.size());
+    for (const auto& p : pattern)
+    {
+        EXPECT_NO_THROW(p.get<GMat>());
+    }
+}
+
+TEST(KernelPackageTransform, Substitute)
+{
+    auto tr = gmat2_in_gmat3_out::transformation();
     GMat a, b;
     auto subst = tr.substitute({cv::GArg(a), cv::GArg(b)});
 
-    // return type of 'copy_transform' is GMat3
     EXPECT_EQ(3u, subst.size());
+    for (const auto& s : subst)
+    {
+        EXPECT_NO_THROW(s.get<GMat>());
+    }
+}
+
+template <typename Transformation, typename InType, typename OutType>
+static void transformTest()
+{
+    auto tr = Transformation::transformation();
+    InType in;
+    auto pattern = tr.pattern({cv::GArg(in)});
+    auto subst = tr.substitute({cv::GArg(in)});
+
+    EXPECT_EQ(1u, pattern.size());
+    EXPECT_EQ(1u, subst.size());
+
+    auto checkOut = [](GArg& garg) {
+        EXPECT_TRUE(garg.kind == cv::detail::GTypeTraits<OutType>::kind);
+        EXPECT_NO_THROW(garg.get<OutType>());
+    };
+
+    checkOut(pattern[0]);
+    checkOut(subst[0]);
+}
+
+TEST(KernelPackageTransform, GMat)
+{
+    transformTest<gmat_in_gmat_out, GMat, GMat>();
+}
+
+TEST(KernelPackageTransform, GMatP)
+{
+    transformTest<gmatp_in_gmatp_out, GMatP, GMatP>();
+}
+
+TEST(KernelPackageTransform, GScalarIn)
+{
+    transformTest<gsc_in_gmat_out, GScalar, GMat>();
+}
+
+TEST(KernelPackageTransform, GScalarOut)
+{
+    transformTest<gmat_in_gsc_out, GMat, GScalar>();
+}
+
+TEST(KernelPackageTransform, DISABLED_GArrayIn)
+{
+    transformTest<garr_in_gmat_out, GArray<int>, GMat>();
+}
+
+TEST(KernelPackageTransform, DISABLED_GArrayOut)
+{
+    transformTest<gmat_in_garr_out, GMat, GArray<int>>();
 }
 
 } // namespace opencv_test

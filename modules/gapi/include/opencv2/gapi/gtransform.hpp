@@ -24,11 +24,11 @@ struct GAPI_EXPORTS GTransform
 {
     using F = std::function<GArgs(const GArgs &)>;
 
-    const char *description;
+    std::string description;
     F pattern;
     F substitute;
 
-    GTransform(const char *d, const F &p, const F &s) : description(d), pattern(p), substitute(s){};
+    GTransform(const std::string& d, const F &p, const F &s) : description(d), pattern(p), substitute(s){};
 };
 
 namespace detail

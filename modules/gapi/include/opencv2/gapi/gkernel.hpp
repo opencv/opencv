@@ -176,8 +176,7 @@ namespace detail
 
 template<typename K, typename... R, typename... Args>
 class GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...> >,
-        public cv::detail::KernelTag
+        public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
 {
     template<int... IIs>
     static std::tuple<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
@@ -201,8 +200,7 @@ template<typename, typename> class GKernelType;
 
 template<typename K, typename R, typename... Args>
 class GKernelType<K, std::function<R(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, R >,
-        public cv::detail::KernelTag
+        public detail::MetaHelper<K, std::tuple<Args...>, R>
 {
 public:
     using InArgs  = std::tuple<Args...>;
@@ -346,16 +344,6 @@ namespace gapi {
         void removeAPI(const std::string &id);
 
         /// @private
-        // Partial includes() specialization for kernels
-        template <typename KImpl>
-        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), bool>::type
-        includesHelper() const {
-            auto kernel_it = m_id_kernels.find(KImpl::API::id());
-            return kernel_it != m_id_kernels.end() &&
-                   kernel_it->second.first == KImpl::backend();
-        }
-
-        /// @private
         // Partial include() specialization for kernels
         template <typename KImpl>
         typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), void>::type
@@ -392,7 +380,7 @@ namespace gapi {
          *
          * @return vector of transformations included in the package
          */
-        const std::vector<GTransform> &get_transformations() const;
+        const std::vector<GTransform>& get_transformations() const;
 
         /**
          * @brief Test if a particular kernel _implementation_ KImpl is
@@ -407,9 +395,12 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            static_assert(!(std::is_base_of<detail::TransformTag, KImpl>::value),
-                          "includes() cannot be applied to transformations");
-            return includesHelper<KImpl>();
+            static_assert(std::is_base_of<detail::KernelTag, KImpl>::value,
+                          "includes() can be applied to kernels only");
+
+            auto kernel_it = m_id_kernels.find(KImpl::API::id());
+            return kernel_it != m_id_kernels.end() &&
+                   kernel_it->second.first == KImpl::backend();
         }
 
         /**
