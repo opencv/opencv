@@ -160,23 +160,21 @@ void normAssertDetections(
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
-bool readFileInMemory(const std::string& filename, std::string& content)
+void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
-    std::ios::openmode mode = std::ios::in | std::ios::binary;
+    const std::ios::openmode mode = std::ios::in | std::ios::binary;
     std::ifstream ifs(filename.c_str(), mode);
-    if (!ifs.is_open())
-        return false;
+    ASSERT_TRUE(ifs.is_open());
 
     content.clear();
 
     ifs.seekg(0, std::ios::end);
-    content.reserve(ifs.tellg());
+    const size_t sz = ifs.tellg();
+    content.resize(sz);
     ifs.seekg(0, std::ios::beg);
 
-    content.assign((std::istreambuf_iterator<char>(ifs)),
-                   std::istreambuf_iterator<char>());
-
-    return true;
+    ifs.read((char*)content.data(), sz);
+    ASSERT_FALSE(ifs.fail());
 }
 
 

@@ -294,6 +294,7 @@ if(X86 OR X86_64)
     else()
       ocv_update(CPU_SSE_SUPPORTED ON)
       ocv_update(CPU_SSE2_SUPPORTED ON)
+      ocv_update(CPU_AVX_512F_FLAGS_ON "/arch:AVX512")
     endif()
     # Other instruction sets are supported by default since MSVC 2008 at least
   else()
@@ -635,10 +636,6 @@ macro(ocv_compiler_optimization_options_finalize)
   if(MSVC)
     # Generate Intrinsic Functions
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /Oi")
-
-    if((X86 OR X86_64) AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND ";${CPU_BASELINE_FINAL};" MATCHES ";SSE;")
-      set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /fp:fast") # !! important - be on the same wave with x64 compilers
-    endif()
   endif(MSVC)
 endmacro()
 

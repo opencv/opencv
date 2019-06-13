@@ -244,12 +244,12 @@ void convertFp16(InputArray _src, OutputArray _dst)
         }
         else
             ddepth =  CV_16S;
-        func = (BinaryFunc)getConvertFunc(CV_32F, CV_16F);
+        func = getConvertFunc(CV_32F, CV_16F);
         break;
     case CV_16S:
     case CV_16F:
         ddepth = CV_32F;
-        func = (BinaryFunc)getConvertFunc(CV_16F, CV_32F);
+        func = getConvertFunc(CV_16F, CV_32F);
         break;
     default:
         CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");

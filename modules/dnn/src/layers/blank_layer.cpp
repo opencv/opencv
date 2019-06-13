@@ -122,7 +122,7 @@ public:
         else
         {
             ieLayer.setType("Split");
-            ieLayer.getParameters()["axis"] = input->dims.size() - 1;
+            ieLayer.getParameters()["axis"] = (size_t)0;
             ieLayer.getParameters()["out_sizes"] = input->dims[0];
         }
         std::vector<size_t> shape(input->dims);

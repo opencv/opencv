@@ -180,6 +180,18 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #endif
 
+// AVX512 can be used together with SSE2 and AVX2, so
+// we define those sets of intrinsics at once.
+// For some of AVX512 intrinsics get v512_ prefix instead of v_, e.g. v512_load() vs v_load().
+// Wide intrinsics will be mapped to v512_ counterparts in this case(e.g. vx_load() => v512_load())
+#if CV_AVX512_SKX
+
+#define CV__SIMD_FORWARD 512
+#include "opencv2/core/hal/intrin_forward.hpp"
+#include "opencv2/core/hal/intrin_avx512.hpp"
+
+#endif
+
 //! @cond IGNORED
 
 namespace cv {
@@ -321,13 +333,41 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v256, v_float64x4, double, f64, v_float64x4, void, void, v_int64x4, v_int32x8);
 #endif
 
+#if CV_SIMD512
+    CV_DEF_REG_TRAITS(v512, v_uint8x64, uchar, u8, v_uint8x64, v_uint16x32, v_uint32x16, v_int8x64, void);
+    CV_DEF_REG_TRAITS(v512, v_int8x64, schar, s8, v_uint8x64, v_int16x32, v_int32x16, v_int8x64, void);
+    CV_DEF_REG_TRAITS(v512, v_uint16x32, ushort, u16, v_uint16x32, v_uint32x16, v_uint64x8, v_int16x32, void);
+    CV_DEF_REG_TRAITS(v512, v_int16x32, short, s16, v_uint16x32, v_int32x16, v_int64x8, v_int16x32, void);
+    CV_DEF_REG_TRAITS(v512, v_uint32x16, unsigned, u32, v_uint32x16, v_uint64x8, void, v_int32x16, void);
+    CV_DEF_REG_TRAITS(v512, v_int32x16, int, s32, v_uint32x16, v_int64x8, void, v_int32x16, void);
+    CV_DEF_REG_TRAITS(v512, v_float32x16, float, f32, v_float32x16, v_float64x8, void, v_int32x16, v_int32x16);
+    CV_DEF_REG_TRAITS(v512, v_uint64x8, uint64, u64, v_uint64x8, void, void, v_int64x8, void);
+    CV_DEF_REG_TRAITS(v512, v_int64x8, int64, s64, v_uint64x8, void, void, v_int64x8, void);
+    CV_DEF_REG_TRAITS(v512, v_float64x8, double, f64, v_float64x8, void, void, v_int64x8, v_int32x16);
+#endif
+
 #if CV_SIMD512 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 512)
 #define CV__SIMD_NAMESPACE simd512
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 1
     #define CV_SIMD_64F CV_SIMD512_64F
+    #define CV_SIMD_FP16 CV_SIMD512_FP16
     #define CV_SIMD_WIDTH 64
-    // TODO typedef v_uint8 / v_int32 / etc types here
+    typedef v_uint8x64    v_uint8;
+    typedef v_int8x64     v_int8;
+    typedef v_uint16x32   v_uint16;
+    typedef v_int16x32    v_int16;
+    typedef v_uint32x16   v_uint32;
+    typedef v_int32x16    v_int32;
+    typedef v_uint64x8    v_uint64;
+    typedef v_int64x8     v_int64;
+    typedef v_float32x16  v_float32;
+    CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(v512)
+#if CV_SIMD512_64F
+    typedef v_float64x8   v_float64;
+    CV_INTRIN_DEFINE_WIDE_INTRIN(double, v_float64, f64, v512, load)
+#endif
+        inline void vx_cleanup() { v512_cleanup(); }
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
 #elif CV_SIMD256 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 256)

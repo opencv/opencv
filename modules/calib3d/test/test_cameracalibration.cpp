@@ -2089,6 +2089,44 @@ TEST(Calib3d_StereoCalibrate, regression_10791)
     EXPECT_GE(roi2.area(), 400*300) << roi2;
 }
 
+TEST(Calib3d_StereoCalibrate, regression_11131)
+{
+    const Matx33d M1(
+        1457.572438721727, 0, 1212.945694211622,
+        0, 1457.522226502963, 1007.32058848921,
+        0, 0, 1
+    );
+    const Matx33d M2(
+        1460.868570835972, 0, 1215.024068023046,
+        0, 1460.791367088, 1011.107202932225,
+        0, 0, 1
+    );
+    const Matx<double, 5, 1> D1(0, 0, 0, 0, 0);
+    const Matx<double, 5, 1> D2(0, 0, 0, 0, 0);
+
+    const Matx33d R(
+        0.9985404059825475, 0.02963547172078553, -0.04515303352041626,
+        -0.03103795276460111, 0.9990471552537432, -0.03068268351343364,
+        0.04420071389006859, 0.03203935697372317, 0.9985087763742083
+    );
+    const Matx31d T(0.9995500167379527, 0.0116311595111068, 0.02764923448462666);
+
+    const Size imageSize(2456, 2058);
+
+    Mat R1, R2, P1, P2, Q;
+    Rect roi1, roi2;
+    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+                  R1, R2, P1, P2, Q,
+                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
+
+    EXPECT_GT(P1.at<double>(0, 0), 0);
+    EXPECT_GT(P2.at<double>(0, 0), 0);
+    EXPECT_GT(R1.at<double>(0, 0), 0);
+    EXPECT_GT(R2.at<double>(0, 0), 0);
+    EXPECT_GE(roi1.area(), 400*300) << roi1;
+    EXPECT_GE(roi2.area(), 400*300) << roi2;
+}
+
 TEST(Calib3d_Triangulate, accuracy)
 {
     // the testcase from http://code.opencv.org/issues/4334
