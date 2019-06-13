@@ -17,7 +17,7 @@ const char* LogTagManager::m_globalName = "global";
 LogTagManager::LogTagManager(LogLevel defaultUnconfiguredGlobalLevel)
     : m_mutex()
     , m_globalLogTag(new LogTag(m_globalName, defaultUnconfiguredGlobalLevel))
-    , m_config(std::make_shared<LogTagConfigParser>())
+    , m_config(std::make_shared<LogTagConfigParser>(defaultUnconfiguredGlobalLevel))
 {
     assign(m_globalName, m_globalLogTag.get());
 }
