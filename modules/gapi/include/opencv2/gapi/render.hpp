@@ -25,68 +25,52 @@ namespace wip
 namespace draw
 {
 
-/** @brief Parameters for drawing a text string.
-
-This structure is passed to cv::gapi::wip::draw::render function.
-
-@param text Text string to be drawn.
-@param org Bottom-left corner of the text string in the image.
-@param ff Font type, see #HersheyFonts.
-@param fs Font scale factor that is multiplied by the font-specific base size.
-@param color Text color.
-@param thick Thickness of the lines used to draw a text.
-@param lt Line type. See #LineTypes
-@param bottom_left_origin When true, the image data origin is at the bottom-left corner. Otherwise,
-it is at the top-left corner.
+/**
+ * A structure to represent parameters for drawing a text string.
  */
 struct Text
 {
-    std::string text;
-    cv::Point   org;
-
-    int         ff;
-    double      fs;
-    cv::Scalar  color;
-    int         thick;
-    int         lt;
-    bool        bottom_left_origin;
+    /*@{*/
+    std::string text;               /** < The text string to be drawn */
+    cv::Point   org;                /** < The bottom-left corner of the text string in the image */
+    int         ff;                 /** < The font type, see #HersheyFonts */
+    double      fs;                 /** < The font scale factor that is multiplied by the font-specific base size */
+    cv::Scalar  color;              /** < The text color */
+    int         thick;              /** < The thickness of the lines used to draw a text */
+    int         lt;                 /** < The line type. See #LineTypes */
+    bool        bottom_left_origin; /** < When true, the image data origin is at the bottom-left corner. Otherwise,
+                                          it is at the top-left corner. */
+    /*@{*/
 };
 
-/** @brief Parameters for drawing a simple, thick, or filled up-right rectangle.
-
-This structure is passed to cv::gapi::wip::draw::render function.
-
-@param rect Coordinates of the rectangle
-@param color Rectangle color or brightness (grayscale image).
-@param thick Thickness of lines that make up the rectangle. Negative values, like #FILLED,
-mean that the function has to draw a filled rectangle.
-@param lt Type of the line. See #LineTypes
-@param shift Number of fractional bits in the point coordinates.
+/**
+ * A structure to represent parameters for drawing a rectangle
  */
 struct Rect
 {
-    cv::Rect   rect;
-    cv::Scalar color;
-    int        thick;
-    int        lt;
-    int        shift;
+    cv::Rect   rect;  /** coordinates of the rectangle < */
+    cv::Scalar color; /** The rectangle color or brightness (grayscale image) < */
+    int        thick; /** The thickness of lines that make up the rectangle. Negative values, like #FILLED, < */
+    int        lt;    /** The type of the line. See #LineTypes< */
+    int        shift; /** The number of fractional bits in the point coordinates < */
 };
 
 using Prim  = util::variant<Text, Rect>;
 using Prims = std::vector<Prim>;
 
-/** @brief Parameters for drawing a simple, thick, or filled up-right rectangle.
+/** @brief The function renders on the input image passed drawing primitivies
 
-These parameters is passed to cv::gapi::wip::draw::render function.
-
-@param rect Coordinates of the rectangle
-@param color Rectangle color or brightness (grayscale image).
-@param thick Thickness of lines that make up the rectangle. Negative values, like #FILLED,
-mean that the function has to draw a filled rectangle.
-@param lt Type of the line. See #LineTypes
-@param shift Number of fractional bits in the point coordinates.
- */
+@param bgr input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+@param prims vector of drawing primitivies
+*/
 GAPI_EXPORTS void render(cv::Mat& bgr, const Prims& prims);
+
+/** @brief The function renders on two NV12 planes passed drawing primitivies
+
+@param y_plane input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+@param uv_plane input image: 8-bit unsigned 2-channel image @ref CV_8UC2.
+@param prims vector of drawing primitivies
+*/
 GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const Prims& prims);
 
 } // namespace draw

@@ -67,6 +67,9 @@ void cv::gapi::wip::draw::splitNV12TwoPlane(const cv::Mat& yuv, cv::Mat& y_plane
 
 void cv::gapi::wip::draw::BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane)
 {
+    GAPI_Assert(bgr.size().width  % 2 == 0);
+    GAPI_Assert(bgr.size().height % 2 == 0);
+
     cvtColor(bgr, bgr, cv::COLOR_BGR2YUV);
     splitNV12TwoPlane(bgr, y_plane, uv_plane);
 }

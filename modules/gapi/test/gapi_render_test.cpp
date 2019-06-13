@@ -33,6 +33,28 @@ namespace
     };
 } // namespace
 
+TEST(BGR2NV12Test, CorrectConversion)
+{
+    cv::Mat in_mat(320, 240, CV_8UC3);
+    cv::Mat out_y, out_uv, ref_y, yuv;
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+
+    cv::cvtColor(in_mat, yuv, cv::COLOR_BGR2YUV);
+    cv::Mat channels[3];
+    cv::split(yuv, channels);
+
+    ref_y = channels[0];
+    cv::Mat ref_uv(in_mat.size() / 2, CV_8UC2);
+    cv::resize(channels[1], channels[1], channels[1].size() / 2, 0, 0, cv::INTER_NEAREST);
+    cv::resize(channels[2], channels[2], channels[2].size() / 2, 0, 0, cv::INTER_NEAREST);
+    cv::merge(channels + 1, 2, ref_uv);
+
+    cv::gapi::wip::draw::BGR2NV12(in_mat, out_y, out_uv);
+
+    EXPECT_EQ(0, cv::countNonZero(out_y  != ref_y));
+    EXPECT_EQ(0, cv::countNonZero(out_uv != ref_uv));
+}
+
 TEST_F(RenderTestFixture, PutText)
 {
     std::vector<cv::gapi::wip::draw::Prim> prims;
@@ -87,13 +109,11 @@ TEST_F(RenderTestFixture, PutTextAndRectangle)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
-TEST_F(RenderTestFixture, DISABLE_PutTextAndRectangleNV12)
+TEST_F(RenderTestFixture, PutTextAndRectangleNV12)
 {
     cv::Mat y;
     cv::Mat uv;
-    cv::Mat yuv;
-    cvtColor(out_mat, yuv, cv::COLOR_BGR2YUV);
-    cv::gapi::wip::draw::splitNV12TwoPlane(yuv, y, uv);
+    cv::gapi::wip::draw::BGR2NV12(out_mat, y, uv);
 
     std::vector<cv::gapi::wip::draw::Prim> prims;
 
