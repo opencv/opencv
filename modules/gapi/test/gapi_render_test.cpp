@@ -17,74 +17,70 @@ namespace
 {
     struct RenderTestFixture : public ::testing::Test
     {
-        int w     = 30;
-        int h     = 40;
-        int thick = 2;
-        int ff    = cv::FONT_HERSHEY_SIMPLEX;
-        int lt    = LINE_8;
-        double fs = 1;
+        cv::Size size  = {30, 40};
+        int      thick = 2;
+        int      ff    = cv::FONT_HERSHEY_SIMPLEX;
+        int      lt    = LINE_8;
+        double   fs    = 1;
 
-        cv::Mat               ref_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
-        cv::Mat               out_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
-        cv::gapi::own::Scalar color   {0, 255, 0};
-        std::string           text    {"some text"};
+        cv::Mat     ref_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
+        cv::Mat     out_mat {320, 480, CV_8UC3, cv::Scalar::all(0)};
+        cv::Scalar  color   {0, 255, 0};
+        std::string text    {"some text"};
 
     };
 } // namespace
 
 TEST_F(RenderTestFixture, PutText)
 {
-    std::vector<cv::gapi::DrawEvent> events;
+    std::vector<cv::gapi::wip::draw::Prim> prims;
 
     for (int i = 0; i < 5; ++i)
     {
-        int pos_x = 30 + i * 60;
-        int pos_y = 40 + i * 50;
+        cv::Point point {30 + i * 60, 40 + i * 50};
 
-        cv::putText(ref_mat, text, cv::Point(pos_x, pos_y), ff, fs, cv::Scalar{color[0], color[1], color[2]}, thick);
-        events.emplace_back(cv::gapi::TextEvent{text, pos_x, pos_y, ff, fs, color, thick, lt, false});
+        cv::putText(ref_mat, text, point, ff, fs, color, thick);
+        prims.emplace_back(cv::gapi::wip::draw::Text{text, point, ff, fs, color, thick, lt, false});
     }
 
-    cv::gapi::render(out_mat, events);
+    cv::gapi::wip::draw::render(out_mat, prims);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST_F(RenderTestFixture, Rectangle)
 {
-    std::vector<cv::gapi::DrawEvent> events;
+    std::vector<cv::gapi::wip::draw::Prim> prims;
 
     for (int i = 0; i < 5; ++i)
     {
-        int pos_x = 30 + i * 60;
-        int pos_y = 40 + i * 50;
-
-        cv::rectangle(ref_mat, cv::Rect(pos_x, pos_y, w, h), cv::Scalar{color[0], color[1], color[2]}, thick);
-        events.emplace_back(cv::gapi::RectEvent{pos_x, pos_y, w, h, color, thick, lt, 0});
+        cv::Rect rect {30 + i * 60, 40 + i * 50, size.width, size.height};
+        cv::rectangle(ref_mat, rect, color, thick);
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
     }
 
-    cv::gapi::render(out_mat, events);
+    cv::gapi::wip::draw::render(out_mat, prims);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
 TEST_F(RenderTestFixture, PutTextAndRectangle)
 {
-    std::vector<cv::gapi::DrawEvent> events;
+    std::vector<cv::gapi::wip::draw::Prim> prims;
 
     for (int i = 0; i < 5; ++i)
     {
-        int pos_x = 30 + i * 60;
-        int pos_y = 40 + i * 50;
+        cv::Point point {30 + i * 60, 40 + i * 50};
+        cv::Rect  rect {point, size};
 
-        cv::rectangle(ref_mat, cv::Rect(pos_x, pos_y, w, h), cv::Scalar{color[0], color[1], color[2]}, thick);
-        cv::putText(ref_mat, text, cv::Point(pos_x, pos_y), ff, fs, cv::Scalar{color[0], color[1], color[2]}, thick);
+        cv::rectangle(ref_mat, rect, color, thick);
+        cv::putText(ref_mat, text, point, ff, fs, color, thick);
 
-        events.emplace_back(cv::gapi::RectEvent{pos_x, pos_y, w, h, color, thick, lt, 0});
-        events.emplace_back(cv::gapi::TextEvent{text, pos_x, pos_y, ff, fs, color, thick, lt, false});
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
+        prims.emplace_back(cv::gapi::wip::draw::Text{text, point, ff, fs, color, thick, lt, false});
     }
 
-    cv::gapi::render(out_mat, events);
+    cv::gapi::wip::draw::render(out_mat, prims);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }

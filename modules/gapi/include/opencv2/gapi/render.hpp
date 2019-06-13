@@ -13,40 +13,43 @@ namespace cv
 {
 namespace gapi
 {
+namespace wip
+{
+namespace draw
+{
 
-struct TextEvent
+struct Text
 {
     std::string text;
-    int x;
-    int y;
-    int ff;
-    double fs;
-    cv::gapi::own::Scalar color;
-    int thick;
-    int lt;
-    bool bottom_left_origin;
+    cv::Point   point;
+    int         ff;
+    double      fs;
+    cv::Scalar  color;
+    int         thick;
+    int         lt;
+    bool        bottom_left_origin;
 };
 
-struct RectEvent
+struct Rect
 {
-    int x;
-    int y;
-    int widht;
-    int height;
-    cv::gapi::own::Scalar color;
-    int thick;
-    int lt;
-    int shift;
+    cv::Rect   rect;
+    cv::Scalar color;
+    int        thick;
+    int        lt;
+    int        shift;
 };
 
-using DrawEvent  = util::variant<TextEvent, RectEvent>;
-using DrawEvents = std::vector<DrawEvent>;
+using Prim  = util::variant<Text, Rect>;
+using Prims = std::vector<Prim>;
 
-GAPI_EXPORTS void render(cv::Mat& bgrx, const std::vector<DrawEvent>& events);
+GAPI_EXPORTS void render(cv::Mat& bgrx, const Prims& prims);
 
 // FIXME Specify the signature for NV12 case
-GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const std::vector<DrawEvent>& events);
+GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const Prims& prims);
 
+
+} // namespace draw
+} // namespace wip
 } // namespace gapi
 } // namespace cv
 

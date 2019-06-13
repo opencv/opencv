@@ -1,28 +1,26 @@
 #include <opencv2/imgproc.hpp>
 #include "opencv2/gapi/render.hpp"
 
+using namespace cv::gapi::wip::draw;
 // FXIME util::visitor ?
-void cv::gapi::render(cv::Mat& bgr, const std::vector<cv::gapi::DrawEvent>& events)
+void cv::gapi::wip::draw::render(cv::Mat& bgr, const Prims& prims)
 {
-    for (const auto& e : events)
+    for (const auto& p : prims)
     {
-        switch (e.index())
+        switch (p.index())
         {
-            case cv::gapi::DrawEvent::index_of<cv::gapi::RectEvent>():
+            case Prim::index_of<Rect>():
             {
-                auto r_e = cv::util::get<cv::gapi::RectEvent>(e);
-                cv::Scalar color{r_e.color[0], r_e.color[1], r_e.color[2]};
-                cv::rectangle(bgr, cv::Rect{r_e.x, r_e.y, r_e.widht, r_e.height},
-                              color , r_e.thick, r_e.lt, r_e.shift);
+                auto t_p = cv::util::get<Rect>(p);
+                cv::rectangle(bgr, t_p.rect, t_p.color , t_p.thick, t_p.lt, t_p.shift);
                 break;
             }
 
-            case cv::gapi::DrawEvent::index_of<cv::gapi::TextEvent>():
+            case Prim::index_of<Text>():
             {
-                auto t_e = cv::util::get<cv::gapi::TextEvent>(e);
-                cv::Scalar color{t_e.color[0], t_e.color[1], t_e.color[2]};
-                cv::putText(bgr, t_e.text, cv::Point{t_e.x, t_e.y}, t_e.ff, t_e.fs,
-                            color, t_e.thick, t_e.bottom_left_origin);
+                auto t_p = cv::util::get<Text>(p);
+                cv::putText(bgr, t_p.text, t_p.point, t_p.ff, t_p.fs,
+                            t_p.color, t_p.thick, t_p.bottom_left_origin);
                 break;
             }
 
