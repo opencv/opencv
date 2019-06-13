@@ -52,9 +52,9 @@
 #include <iostream>
 #include <fstream>
 #include <opencv2/core/utils/configuration.private.hpp>
-#include <opencv2/iterload.hpp>
+#include <opencv2/multiload.hpp>
 
-// imread(), imreadmulti(), imdecode() all use IterLoad
+// imread(), imreadmulti(), imdecode() all use MultiLoad
 #define ALWAYS_ITERLOAD 1
 
 /****************************************************************************************\
@@ -609,7 +609,7 @@ Mat imread( const String& filename, int flags )
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    IterLoad load;
+    MultiLoad load;
     return load.read(filename, flags) ? load.next(flags) : Mat();
 #else
     /// create the basic container
@@ -644,7 +644,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    IterLoad load;
+    MultiLoad load;
     bool ready = load.read(filename, flags);
     if(!ready) return false;
 
@@ -860,7 +860,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     CV_TRACE_FUNCTION();
 
 #if ALWAYS_ITERLOAD
-    IterLoad load;
+    MultiLoad load;
     return load.decode(_buf, flags) ? load.next(flags, dst) : Mat();
 #else
     Mat buf = _buf.getMat(), img;
@@ -941,42 +941,42 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
-IterLoad::IterLoad() : m_has_next(false)
+MultiLoad::MultiLoad() : m_has_next(false)
 {
     CV_TRACE_FUNCTION();
 }
 
-IterLoad::~IterLoad()
+MultiLoad::~MultiLoad()
 {
     CV_TRACE_FUNCTION();
     clear();
 }
 
-bool IterLoad::read(const String &filename, int flags)
+bool MultiLoad::read(const String &filename, int flags)
 {
     CV_TRACE_FUNCTION();
     return load(&filename, 0, flags);
 }
 
-bool IterLoad::decode(InputArray buf, int flags)
+bool MultiLoad::decode(InputArray buf, int flags)
 {
     CV_TRACE_FUNCTION();
     return load(0, &buf, flags);
 }
 
-bool IterLoad::empty() const
+bool MultiLoad::empty() const
 {
     CV_TRACE_FUNCTION();
     return size() == 0;
 }
 
-bool IterLoad::hasNext() const
+bool MultiLoad::hasNext() const
 {
     CV_TRACE_FUNCTION();
     return m_has_next;
 }
 
-void IterLoad::clear()
+void MultiLoad::clear()
 {
     CV_TRACE_FUNCTION();
     if (m_decoder) {
@@ -995,7 +995,7 @@ void IterLoad::clear()
     m_has_next = false;
 }
 
-bool IterLoad::load(const String *filename, const _InputArray *buf, int flags) {
+bool MultiLoad::load(const String *filename, const _InputArray *buf, int flags) {
     clear();
 
     if (buf) {
@@ -1041,7 +1041,7 @@ bool IterLoad::load(const String *filename, const _InputArray *buf, int flags) {
     return true;
 }
 
-std::size_t IterLoad::size() const {
+std::size_t MultiLoad::size() const {
     CV_TRACE_FUNCTION();
     return m_decoder ? m_decoder->pageNum() : 0;
 }
@@ -1055,13 +1055,13 @@ static Mat released(Mat *mat) {
     return mat ? released(*mat) : Mat();
 }
 
-Mat IterLoad::at(int idx, int flags, Mat *dst) {
+Mat MultiLoad::at(int idx, int flags, Mat *dst) {
     CV_TRACE_FUNCTION();
     if (!m_decoder || !m_decoder->gotoPage(idx)) return released(dst);
     return next(flags, dst);
 }
 
-Mat IterLoad::next(int flags, Mat *dst) {
+Mat MultiLoad::next(int flags, Mat *dst) {
     CV_TRACE_FUNCTION();
 
     if (!m_decoder || !m_has_next) return released(dst);
