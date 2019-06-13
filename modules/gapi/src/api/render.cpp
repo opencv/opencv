@@ -1,5 +1,7 @@
 #include <opencv2/imgproc.hpp>
+
 #include "opencv2/gapi/render.hpp"
+#include "api/render_priv.hpp"
 
 using namespace cv::gapi::wip::draw;
 // FXIME util::visitor ?
@@ -34,8 +36,7 @@ void cv::gapi::wip::draw::render(cv::Mat& y_plane, cv::Mat& uv_plane , const Pri
     cv::Mat bgr;
     cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
     render(bgr, prims);
-    cvtColor(bgr, bgr, cv::COLOR_BGR2YUV);
-    splitNV12TwoPlane(bgr, y_plane, uv_plane);
+    BGR2NV12(bgr, y_plane, uv_plane);
 }
 
 void cv::gapi::wip::draw::splitNV12TwoPlane(const cv::Mat& yuv, cv::Mat& y_plane, cv::Mat& uv_plane) {
@@ -43,23 +44,29 @@ void cv::gapi::wip::draw::splitNV12TwoPlane(const cv::Mat& yuv, cv::Mat& y_plane
     uv_plane.create(yuv.size() / 2, CV_8UC2);
 
     // Fill Y plane
-    for (size_t i = 0; i < yuv.rows; ++i)
+    for (int i = 0; i < yuv.rows; ++i)
     {
         const uchar* in  = yuv.ptr<uchar>(i);
         uchar* out       = y_plane.ptr<uchar>(i);
-        for (size_t j = 0; j < yuv.cols; j++) {
+        for (int j = 0; j < yuv.cols; j++) {
             out[j] = in[3 * j];
         }
     }
 
     // Fill UV plane
-    for (size_t i = 0; i < uv_plane.rows; i++)
+    for (int i = 0; i < uv_plane.rows; i++)
     {
         const uchar* in = yuv.ptr<uchar>(2 * i);
         uchar* out      = uv_plane.ptr<uchar>(i);
-        for (size_t j = 0; j < uv_plane.cols; j++) {
+        for (int j = 0; j < uv_plane.cols; j++) {
             out[j * 2    ] = in[6 * j + 1];
             out[j * 2 + 1] = in[6 * j + 2];
         }
     }
+}
+
+void cv::gapi::wip::draw::BGR2NV12(const cv::Mat& bgr, cv::Mat& y_plane, cv::Mat& uv_plane)
+{
+    cvtColor(bgr, bgr, cv::COLOR_BGR2YUV);
+    splitNV12TwoPlane(bgr, y_plane, uv_plane);
 }

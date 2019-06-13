@@ -89,9 +89,6 @@ mean that the function has to draw a filled rectangle.
 GAPI_EXPORTS void render(cv::Mat& bgr, const Prims& prims);
 GAPI_EXPORTS void render(cv::Mat& y_plane, cv::Mat& uv_plane , const Prims& prims);
 
-// FIXME only for tests
-GAPI_EXPORTS void splitNV12TwoPlane(const cv::Mat& yuv, cv::Mat& y_plane, cv::Mat& uv_plane);
-
 } // namespace draw
 } // namespace wip
 } // namespace gapi

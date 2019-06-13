@@ -6,6 +6,8 @@
 
 #include "test_precomp.hpp"
 
+#include "api/render_priv.hpp"
+
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/render.hpp>
 #include <opencv2/gapi/own/scalar.hpp>
@@ -85,11 +87,13 @@ TEST_F(RenderTestFixture, PutTextAndRectangle)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
-TEST_F(RenderTestFixture, DISABLED_PutTextAndRectangleNV12)
+TEST_F(RenderTestFixture, DISABLE_PutTextAndRectangleNV12)
 {
     cv::Mat y;
     cv::Mat uv;
-    cv::gapi::wip::draw::splitNV12TwoPlane(out_mat, y, uv);
+    cv::Mat yuv;
+    cvtColor(out_mat, yuv, cv::COLOR_BGR2YUV);
+    cv::gapi::wip::draw::splitNV12TwoPlane(yuv, y, uv);
 
     std::vector<cv::gapi::wip::draw::Prim> prims;
 
@@ -107,6 +111,9 @@ TEST_F(RenderTestFixture, DISABLED_PutTextAndRectangleNV12)
 
     cv::gapi::wip::draw::render(y, uv, prims);
     cv::cvtColorTwoPlane(y, uv, out_mat, cv::COLOR_YUV2BGR_NV12);
+
+    cv::gapi::wip::draw::BGR2NV12(ref_mat, y, uv);
+    cv::cvtColorTwoPlane(y, uv, ref_mat, cv::COLOR_YUV2BGR_NV12);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
