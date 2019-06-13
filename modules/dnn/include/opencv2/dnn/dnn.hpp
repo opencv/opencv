@@ -999,25 +999,32 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      class CV_EXPORTS_W_SIMPLE Model : public Net
      {
      public:
-         Model(const std::string& model, const std::string& config = "", const Size& size = {-1, -1},
-               const Scalar& mean = {}, float scale = 1.0, bool swapRB = true, bool crop = false);
-
-         Model(const Net& network, const Size& size = {-1, -1},
-               const Scalar& mean = {}, float scale = 1.0, bool swapRB = true, bool crop = false);
+         Model(const std::string& model, const std::string& config = "");
+         Model(const Net& network);
 
          Model& setInputSize(const Size& size);
+         Model& setInputSize(int height, int width);
          Model& setInputMean(const Scalar& mean);
          Model& setInputScale(float scale);
          Model& setInputCrop(bool crop);
          Model& setInputSwapRB(bool swapRB);
          std::pair<int, float> classify(InputArray frame);
+         std::vector<Mat> predict(const Mat& frame);
+
+     protected:
+         struct Impl;
+         Ptr<Impl> impl_;
+     };
+
+     class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
+     {
+     public:
+         DetectionModel(const std::string& model, const std::string& config = "");
+         DetectionModel(const Net& network);
+
          void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                      CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
                      float confThreshold, float nmsThreshold = 0.4, bool absoluteCoords = true);
-
-     private:
-         struct Impl;
-         Ptr<Impl> impl_;
      };
 
 //! @}

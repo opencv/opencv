@@ -20,20 +20,23 @@ namespace dnn {
 struct Model::Impl {
     Size   size;
     Scalar mean;
-    float  scale;
-    bool   swapRB;
-    bool   crop;
+    float  scale = 1.0;
+    bool   swapRB = true;
+    bool   crop = false;
 };
 
-Model::Model(const std::string& model, const std::string& config, const Size& size,
-             const Scalar& mean, float scale, bool swapRB, bool crop)
-    : Net(readNet(model, config)), impl_(new Impl{size, mean, scale, swapRB, crop}) {};
+Model::Model(const std::string& model, const std::string& config)
+    : Net(readNet(model, config)), impl_(new Impl) {};
 
-Model::Model(const Net& network, const Size& size, const Scalar& mean, float scale, bool swapRB, bool crop)
-    : Net(network), impl_(new Impl{size, mean, scale, swapRB, crop}) {};
+Model::Model(const Net& network) : Net(network), impl_(new Impl) {};
 
 Model& Model::setInputSize(const Size& size) {
     impl_->size = size;
+    return *this;
+}
+
+Model& Model::setInputSize(int height, int width) {
+    impl_->size = Size(width, height);
     return *this;
 }
 
@@ -70,9 +73,25 @@ std::pair<int, float> Model::classify(InputArray frame) {
     return {maxLoc.x, static_cast<float>(conf)};
 }
 
-void Model::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
+std::vector<Mat> Model::predict(const Mat& frame) {
+    Mat blob;
+    blobFromImage(frame, blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
+    setInput(blob, "", impl_->scale, impl_->mean);
+
+    std::vector<String> outNames = getUnconnectedOutLayersNames();
+    std::vector<Mat> outs;
+    forward(outs, outNames);
+    return outs;
+}
+
+DetectionModel::DetectionModel(const std::string& model, const std::string& config)
+    : Model(model, config) {};
+
+DetectionModel::DetectionModel(const Net& network) : Model(network) {};
+
+void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                    CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
-                   float confThreshold, float nmsThreshold,  bool absoluteCoords)
+                   float confThreshold, float nmsThreshold, bool absoluteCoords)
 {
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
@@ -105,71 +124,68 @@ void Model::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     std::vector<float> predConf;
 
     if (lastLayer->type == "DetectionOutput") {
+        // Network produces output blob with a shape 1x1xNx7 where N is a number of
+        // detections and an every detection is a vector of values
+        // [batchId, classId, confidence, left, top, right, bottom]
         for (int i = 0; i < detections.size(); ++i)
         {
-            for (int j = 0; j < detections[i].size[2]; j++)
+            float* data = (float*)detections[i].data;
+            for (int j = 0; j < detections[i].total(); j += 7)
             {
-                std::vector<Range> coord = { Range::all(), Range::all(), Range(j, j + 1), Range::all() };
-                Mat detect;
-                detections[i](coord).copyTo(detect);
-                std::vector<float> detection = detect.reshape(1, 1);
-                float conf = detection[2];
-                if (conf > confThreshold)
-                {
-                    float left   = detection[3];
-                    float top    = detection[4];
-                    float right  = detection[5];
-                    float bottom = detection[6];
-                    float width  = right  - left + 1;
-                    float height = bottom - top  + 1;
+                float conf = data[j + 2];
+                if (conf < confThreshold)
+                    continue;
 
-                    if (absoluteCoords && width * height <= 1)
-                        boxes.emplace_back(left * frameWidth, top * frameHeight,
-                                           width * frameWidth, height * frameHeight);
-                    else
-                        boxes.emplace_back(left, top, width, height);
+                float left   = data[j + 3];
+                float top    = data[j + 4];
+                float right  = data[j + 5];
+                float bottom = data[j + 6];
+                float width  = right  - left + 1;
+                float height = bottom - top  + 1;
 
-                    classIds.push_back(static_cast<int>(detection[1]));
-                    confidences.push_back(conf);
-                }
+                if (absoluteCoords && width * height <= 1)
+                    boxes.emplace_back(left * frameWidth, top * frameHeight,
+                                       width * frameWidth, height * frameHeight);
+                else
+                    boxes.emplace_back(left, top, width, height);
+
+                classIds.push_back(static_cast<int>(data[j + 1]));
+                confidences.push_back(conf);
             }
         }
     } else if (lastLayer->type == "Region") {
         for (int i = 0; i < detections.size(); ++i) {
             for (int j = 0; j < detections[i].rows; ++j) {
 
-                Mat slice = detections[i].row(j).colRange(5, detections[i].cols);
+                Mat scores = detections[i].row(j).colRange(5, detections[i].cols);
+                Point classIdPoint;
+                double conf;
+                minMaxLoc(scores, nullptr, &conf, nullptr, &classIdPoint);
 
-                double max;
-                cv::Point maxLoc;
-                minMaxLoc(slice, nullptr, &max, nullptr, &maxLoc);
+                if (conf < confThreshold)
+                    continue;
 
-                float conf  = static_cast<float>(max);
-                int classId = maxLoc.x;
+                std::vector<Range> coord = {Range(j, j + 1), Range(0, 5)};
+                Mat coords;
+                detections[i](coord).copyTo(coords);
 
-                if (conf > confThreshold)
-                {
-                    std::vector<Range> coord = {Range(j, j + 1), Range(0, 5)};
-                    Mat coords;
-                    detections[i](coord).copyTo(coords);
-                    std::vector<float> bboxes = coords.reshape(1, 1);
+                std::vector<float> bboxes = coords.reshape(1, 1);
 
-                    float centerX = bboxes[0];
-                    float centerY = bboxes[1];
-                    float width   = bboxes[2];
-                    float height  = bboxes[3];
-                    float left    = centerX - width  / 2;
-                    float top     = centerY - height / 2;
+                float centerX = bboxes[0];
+                float centerY = bboxes[1];
+                float width   = bboxes[2];
+                float height  = bboxes[3];
+                float left    = centerX - width  / 2;
+                float top     = centerY - height / 2;
 
-                    predClassIds.push_back(classId);
-                    predConf.push_back(conf);
+                predClassIds.push_back(classIdPoint.x);
+                predConf.push_back(conf);
 
-                    if (absoluteCoords)
-                        predBoxes.emplace_back(left * frameWidth, top * frameHeight,
-                                               width * frameWidth, height * frameHeight);
-                    else
-                        predBoxes.emplace_back(left, top, width, height);
-                }
+                if (absoluteCoords)
+                    predBoxes.emplace_back(left * frameWidth, top * frameHeight,
+                                           width * frameWidth, height * frameHeight);
+                else
+                    predBoxes.emplace_back(left, top, width, height);
             }
         }
     } else {

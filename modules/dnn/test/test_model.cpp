@@ -34,7 +34,9 @@ public:
         checkBackend();
 
         Mat frame = imread(imgPath);
-        Model model(weights, cfg, size, mean, scale, swapRB, crop);
+        DetectionModel model(weights, cfg);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -55,7 +57,9 @@ public:
         checkBackend();
 
         Mat frame = imread(imgPath);
-        Model model(weights, cfg, size, mean, scale, swapRB, crop);
+        Model model(weights, cfg);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
 
         std::pair<int, float> prediction = model.classify(frame);
         EXPECT_EQ(prediction.first, ref.first);
@@ -74,7 +78,6 @@ TEST_P(Test_Model, Classify)
     float scale = 1.0;
     Size size{227, 227};
     bool swapRB = false;
-
     float norm = 1e-4;
 
     testClassifyModel(weights_file, config_file, img_path, ref, norm,
