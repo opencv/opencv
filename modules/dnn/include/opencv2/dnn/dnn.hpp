@@ -415,7 +415,6 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Returns pointer to layer with specified id or name which the network use. */
         CV_WRAP Ptr<Layer> getLayer(LayerId layerId);
-        CV_WRAP std::vector<std::string> getImporterErrors();
 
         /** @brief Returns pointers to input layers of specific layer. */
         std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
@@ -683,7 +682,6 @@ CV__DNN_INLINE_NS_BEGIN
     private:
         struct Impl;
         Ptr<Impl> impl;
-        std::vector<std::string> importerErrors;
     };
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.

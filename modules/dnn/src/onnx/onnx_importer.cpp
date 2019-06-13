@@ -322,6 +322,8 @@ Mat ONNXImporter::getBlob(const opencv_onnx::NodeProto& node_proto,
 
 void ONNXImporter::populateNet(Net dstNet)
 {
+    std::vector<std::string> op_error;
+
     CV_Assert(model_proto.has_graph());
     opencv_onnx::GraphProto graph_proto = model_proto.graph();
     std::map<std::string, Mat> constBlobs = getGraphTensors(graph_proto);
@@ -407,8 +409,9 @@ void ONNXImporter::populateNet(Net dstNet)
                 DictValue steps = layerParams.get("steps");
                 for (int i = 0; i < steps.size(); ++i) {
                     if (steps.get<int>(i) != 1)
-                        CV_Error(Error::StsNotImplemented,
-                                 "Slice layer only supports steps = 1");
+                        op_error.push_back("Slice layer only supports steps = 1");
+                        //CV_Error(Error::StsNotImplemented,
+                        //        "Slice layer only supports steps = 1");
                 }
             }
 
@@ -540,8 +543,9 @@ void ONNXImporter::populateNet(Net dstNet)
         else if (layer_type == "BatchNormalization")
         {
             if (node_proto.input_size() != 5)
-                CV_Error(Error::StsNotImplemented,
-                         "Expected input, scale, bias, mean and var");
+                op_error.push_back("Expected input, scale, bias, mean and var");
+                //CV_Error(Error::StsNotImplemented,
+                //        "Expected input, scale, bias, mean and var");
 
             layerParams.type = "BatchNorm";
             replaceLayerParam(layerParams, "epsilon", "eps");
@@ -641,7 +645,8 @@ void ONNXImporter::populateNet(Net dstNet)
                 const DictValue& outShape = layerParams.get("output_shape");
 
                 if (outShape.size() != 4)
-                    CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
+                    op_error.push_back("Output shape must have 4 elements.");
+                    //CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
 
                 DictValue stride = layerParams.get("stride");
                 const int strideY = stride.getIntValue(0);
@@ -657,8 +662,9 @@ void ONNXImporter::populateNet(Net dstNet)
                 else if (layerParams.get<String>("pad_mode") == "VALID")
                 {
                     if (!layerParams.has("kernel_size"))
-                        CV_Error(Error::StsNotImplemented,
-                                 "Required attribute 'kernel_size' is not present.");
+                        op_error.push_back("Required attribute 'kernel_size' is not present.");
+                        //CV_Error(Error::StsNotImplemented,
+                        //         "Required attribute 'kernel_size' is not present.");
 
                     DictValue kernel = layerParams.get("kernel_size");
                     layerParams.set("adj_h", (outH - kernel.getIntValue(0)) % strideY);
@@ -669,7 +675,8 @@ void ONNXImporter::populateNet(Net dstNet)
             {
                 const DictValue& adj_pad = layerParams.get("output_padding");
                 if (adj_pad.size() != 2)
-                    CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
+                    op_error.push_back("Deconvolution3D layer is not supported");
+                    //CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
                 layerParams.set("adj_w", adj_pad.get<int>(1));
                 layerParams.set("adj_h", adj_pad.get<int>(0));
             }
@@ -704,7 +711,8 @@ void ONNXImporter::populateNet(Net dstNet)
 
             // Variable input.
             if (axes.size() != 1)
-                CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
+                op_error.push_back("Multidimensional unsqueeze");
+                //CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
 
             int dims[] = {1, -1};
             layerParams.type = "Reshape";
@@ -844,9 +852,9 @@ void ONNXImporter::populateNet(Net dstNet)
         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
         layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
 
-        if (dstNet.getImporterErrors().empty())
+        // If no unsupported layers have been found
+        if (op_error.empty())
         {
-
             std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
             for (int j = 0; j < node_proto.input_size(); j++) {
                 layerId = layer_id.find(node_proto.input(j));
@@ -858,18 +866,50 @@ void ONNXImporter::populateNet(Net dstNet)
                     layerInpShapes.push_back(shapeIt->second);
                 }
             }
-
-            // Compute shape of output blob for this layer.
-            Ptr<Layer> layer = dstNet.getLayer(id);
-            if (dstNet.getImporterErrors().empty())
+            try
             {
+                // Compute shape of output blob for this layer.
+                Ptr<Layer> layer = dstNet.getLayer(id);
                 layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
                 CV_Assert(!layerOutShapes.empty());
                 outShapes[layerParams.name] = layerOutShapes[0];
             }
+            catch(cv::Exception& e)
+            {
+                op_error.push_back(e.what());
+
+            }
+
         }
+
+        // At this point we have found at least one unsupported operations
+        // however we will continue traversing the graph to find them all before
+        // throwing an exception
         else
-            Ptr<Layer> layer = dstNet.getLayer(id);
+            try
+            {
+                Ptr<Layer> layer = dstNet.getLayer(id);
+            }
+            catch(cv::Exception& e)
+            {
+                op_error.push_back(e.what());
+
+            }
+    }
+
+    //If the graph contains unsupported layers
+    if (!op_error.empty()){
+
+            std::string err_msg;
+
+        // Prepare error message and throw error
+        for(auto it = op_error.begin(); it != op_error.end(); it++)
+        {
+            err_msg.append(*it);
+            err_msg.append("\n");
+        }
+
+        CV_Error(Error::StsNotImplemented, err_msg);
     }
 }
 
