@@ -2,10 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-
-
 #include "precomp.hpp"
 #include <algorithm>
 #include <iostream>
@@ -21,8 +17,18 @@ struct Model::Impl {
     Size   size;
     Scalar mean;
     float  scale = 1.0;
-    bool   swapRB = true;
+    bool   swapRB = false;
     bool   crop = false;
+    Mat    blob;
+    std::vector<String> outNames;
+
+    void predict(Net* net, const Mat& frame, std::vector<Mat> outs) {
+        blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
+        net->setInput(blob, "", scale, mean);
+
+        outNames = net->getUnconnectedOutLayersNames();
+        net->forward(outs, outNames);
+    }
 };
 
 Model::Model(const std::string& model, const std::string& config)
@@ -35,7 +41,7 @@ Model& Model::setInputSize(const Size& size) {
     return *this;
 }
 
-Model& Model::setInputSize(int height, int width) {
+Model& Model::setInputSize(int width, int height) {
     impl_->size = Size(width, height);
     return *this;
 }
@@ -60,10 +66,18 @@ Model& Model::setInputSwapRB(bool swapRB) {
     return *this;
 }
 
-std::pair<int, float> Model::classify(InputArray frame) {
-    Mat blob;
-    blobFromImage(frame, blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
-    setInput(blob, "", impl_->scale, impl_->mean);
+void Model::predict(InputArray frame, OutputArray outs) {
+    impl_->predict(this, frame.getMat(), outs.getMat());
+}
+
+ClassificationModel::ClassificationModel(const std::string& model, const std::string& config)
+    : Model(model, config) {};
+
+ClassificationModel::ClassificationModel(const Net& network) : Model(network) {};
+
+std::pair<int, float> ClassificationModel::classify(InputArray frame) {
+    blobFromImage(frame, impl_->blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
+    setInput(impl_->blob, "", impl_->scale, impl_->mean);
     Mat out = forward();
 
     double conf;
@@ -71,17 +85,6 @@ std::pair<int, float> Model::classify(InputArray frame) {
     minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
 
     return {maxLoc.x, static_cast<float>(conf)};
-}
-
-std::vector<Mat> Model::predict(const Mat& frame) {
-    Mat blob;
-    blobFromImage(frame, blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
-    setInput(blob, "", impl_->scale, impl_->mean);
-
-    std::vector<String> outNames = getUnconnectedOutLayersNames();
-    std::vector<Mat> outs;
-    forward(outs, outNames);
-    return outs;
 }
 
 DetectionModel::DetectionModel(const std::string& model, const std::string& config)
@@ -99,9 +102,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     if (impl_->size.width <= 0) impl_->size.width = frame.cols();
     if (impl_->size.height <= 0) impl_->size.height = frame.rows();
 
-    Mat blob;
-    blobFromImage(frame, blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
-    setInput(blob, "", impl_->scale, impl_->mean);
+    blobFromImage(frame, impl_->blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
+    setInput(impl_->blob, "", impl_->scale, impl_->mean);
 
     if (getLayer(0)->outputNameToIndex("im_info") != -1) {  // Faster-RCNN or R-FCN
         frameWidth  = impl_->size.width;
@@ -111,8 +113,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     }
 
     std::vector<Mat> detections;
-    std::vector<String> outNames = getUnconnectedOutLayersNames();
-    forward(detections, outNames);
+    impl_->outNames = getUnconnectedOutLayersNames();
+    forward(detections, impl_->outNames);
     CV_Assert(detections.size() > 0);
 
     std::vector<String> layerNames = getLayerNames();

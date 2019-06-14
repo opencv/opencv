@@ -996,27 +996,35 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
-     class CV_EXPORTS_W_SIMPLE Model : public Net
+     class CV_EXPORTS_W Model : public Net
      {
      public:
          Model(const std::string& model, const std::string& config = "");
          Model(const Net& network);
 
          Model& setInputSize(const Size& size);
-         Model& setInputSize(int height, int width);
+         Model& setInputSize(int width, int height);
          Model& setInputMean(const Scalar& mean);
          Model& setInputScale(float scale);
          Model& setInputCrop(bool crop);
          Model& setInputSwapRB(bool swapRB);
-         std::pair<int, float> classify(InputArray frame);
-         std::vector<Mat> predict(const Mat& frame);
+         void predict(InputArray frame, OutputArray outs);
 
      protected:
          struct Impl;
          Ptr<Impl> impl_;
      };
 
-     class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
+     class CV_EXPORTS_W ClassificationModel : public Model
+     {
+     public:
+         ClassificationModel(const std::string& model, const std::string& config = "");
+         ClassificationModel(const Net& network);
+
+         std::pair<int, float> classify(InputArray frame);
+     };
+
+     class CV_EXPORTS_W DetectionModel : public Model
      {
      public:
          DetectionModel(const std::string& model, const std::string& config = "");
@@ -1024,7 +1032,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
          void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                      CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
-                     float confThreshold, float nmsThreshold = 0.4, bool absoluteCoords = true);
+                     float confThreshold = 0.5, float nmsThreshold = 0.4, bool absoluteCoords = true);
      };
 
 //! @}

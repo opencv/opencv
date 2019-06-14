@@ -2,10 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-
-
 #include "test_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 namespace opencv_test { namespace {
@@ -28,13 +24,14 @@ public:
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                         float scale = 1.0, bool swapRB = true, bool crop = false,
+                         float scale = 1.0, bool swapRB = false, bool crop = false,
                          bool absoluteCoords = true)
     {
         checkBackend();
 
         Mat frame = imread(imgPath);
         DetectionModel model(weights, cfg);
+
         model.setInputSize(size).setInputMean(mean).setInputScale(scale)
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
@@ -52,12 +49,12 @@ public:
     void testClassifyModel(const std::string& weights, const std::string& cfg,
                     const std::string& imgPath, std::pair<int, float> ref, float norm,
                     const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                    float scale = 1.0, bool swapRB = true, bool crop = false)
+                    float scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
         Mat frame = imread(imgPath);
-        Model model(weights, cfg);
+        ClassificationModel model(weights, cfg);
         model.setInputSize(size).setInputMean(mean).setInputScale(scale)
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
@@ -75,13 +72,10 @@ TEST_P(Test_Model, Classify)
     std::string config_file = _tf("bvlc_alexnet.prototxt");
     std::string weights_file = _tf("bvlc_alexnet.caffemodel");
 
-    float scale = 1.0;
     Size size{227, 227};
-    bool swapRB = false;
     float norm = 1e-4;
 
-    testClassifyModel(weights_file, config_file, img_path, ref, norm,
-                      size, Scalar(), scale, swapRB);
+    testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
 }
 
 TEST_P(Test_Model, DetectRegion)
@@ -124,9 +118,7 @@ TEST_P(Test_Model, DetectionOutput)
     std::string config_file = _tf("rfcn_pascal_voc_resnet50.prototxt");
 
     Scalar mean = Scalar(102.9801, 115.9465, 122.7717);
-    float scale = 1.0;
     Size size{800, 600};
-    bool swapRB = false;
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
                         4e-3 : default_l1;
@@ -135,7 +127,7 @@ TEST_P(Test_Model, DetectionOutput)
     float nmsThreshold = 0;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
-                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale, swapRB);
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
 }
 
 
