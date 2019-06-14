@@ -8,13 +8,13 @@
 #ifndef OPENCV_GAPI_IMGPROC_HPP
 #define OPENCV_GAPI_IMGPROC_HPP
 
-#include "opencv2/imgproc.hpp"
+#include <opencv2/imgproc.hpp>
 
 #include <utility> // std::tuple
 
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
 
 
 /** \defgroup gapi_imgproc G-API image processing functionality

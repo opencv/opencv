@@ -18,7 +18,7 @@
 
 #include <opencv2/gapi/util/variant.hpp>
 #include <opencv2/gapi/util/throw.hpp>
-#include "opencv2/gapi/own/assert.hpp"
+#include <opencv2/gapi/own/assert.hpp>
 
 namespace cv
 {

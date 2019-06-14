@@ -7,7 +7,7 @@
 
 #include <cassert>
 
-#include "opencv2/gapi/ocl/goclkernel.hpp"
+#include <opencv2/gapi/ocl/goclkernel.hpp>
 
 const cv::UMat& cv::GOCLContext::inMat(int input)
 {

@@ -7,10 +7,10 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/imgproc.hpp"
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/operators.hpp"
+#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/operators.hpp>
 
 cv::GMat operator+(const cv::GMat& lhs, const cv::GMat& rhs)
 {

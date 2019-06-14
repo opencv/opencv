@@ -18,16 +18,16 @@
 
 #include <ade/typed_graph.hpp>
 
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/util/any.hpp"
-#include "opencv2/gapi/gtype_traits.hpp"
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/gtype_traits.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
 #include "backends/cpu/gcpubackend.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
+#include <opencv2/gapi/cpu/imgproc.hpp>
+#include <opencv2/gapi/cpu/core.hpp>
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 

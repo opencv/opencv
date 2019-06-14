@@ -9,9 +9,9 @@
 #define OPENCV_GAPI_GCOMPILER_HPP
 
 
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/gcomputation.hpp"
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcomputation.hpp>
 
 #include <ade/execution_engine/execution_engine.hpp>
 
