@@ -118,7 +118,7 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-            return !zeroDev && eps <= 1e-7f;
+            return !zeroDev && (preferableTarget != DNN_TARGET_MYRIAD || eps <= 1e-7f);
         else
 #endif  // HAVE_INF_ENGINE
             return backendId == DNN_BACKEND_OPENCV;
@@ -347,7 +347,11 @@ public:
                     bias = i < shift.cols ? ((float*)shift.data)[i] : bias;
                 }
                 cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
-                double alpha = (normVariance) ? 1/(eps + dev[0]) : 1;
+                double alpha = 1;
+                if (normVariance)
+                {
+                    alpha = 1 / std::sqrt(eps + dev[0]*dev[0]);
+                }
                 double normalizationScale = 1.0;
                 double normalizationShift = 0.0;
                 if (fuse_batch_norm)
