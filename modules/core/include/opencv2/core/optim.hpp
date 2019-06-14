@@ -219,10 +219,10 @@ converge to it. Another obvious restriction is that it should be possible to com
 a function at any point, thus it is preferable to have analytic expression for gradient and
 computational burden should be born by the user.
 
-The latter responsibility is accompilished via the getGradient method of a
+The latter responsibility is accomplished via the getGradient method of a
 MinProblemSolver::Function interface (which represents function being optimized). This method takes
 point a point in *n*-dimensional space (first argument represents the array of coordinates of that
-point) and comput its gradient (it should be stored in the second argument as an array).
+point) and compute its gradient (it should be stored in the second argument as an array).
 
 @note class ConjGradSolver thus does not add any new methods to the basic MinProblemSolver interface.
 

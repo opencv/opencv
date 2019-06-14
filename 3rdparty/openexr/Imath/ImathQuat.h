@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -57,10 +57,11 @@
 
 #include "ImathExc.h"
 #include "ImathMatrix.h"
+#include "ImathNamespace.h"
 
 #include <iostream>
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 #if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
 // Disable MS VC++ warnings about conversion from double to float
@@ -136,7 +137,7 @@ class Quat
     Quat<T> &		setAxisAngle (const Vec3<T> &axis, T radians);
 
     Quat<T> &		setRotation (const Vec3<T> &fromDirection,
-                     const Vec3<T> &toDirection);
+				     const Vec3<T> &toDirection);
 
     T			angle () const;
     Vec3<T>		axis () const;
@@ -151,8 +152,8 @@ class Quat
   private:
 
     void		setRotationInternal (const Vec3<T> &f0,
-                         const Vec3<T> &t0,
-                         Quat<T> &q);
+					     const Vec3<T> &t0,
+					     Quat<T> &q);
 };
 
 
@@ -165,13 +166,13 @@ Quat<T>			slerpShortestArc
 
 
 template<class T>
-Quat<T>			squad (const Quat<T> &q1, const Quat<T> &q2,
-                   const Quat<T> &qa, const Quat<T> &qb, T t);
+Quat<T>			squad (const Quat<T> &q1, const Quat<T> &q2, 
+			       const Quat<T> &qa, const Quat<T> &qb, T t);
 
 template<class T>
-void			intermediate (const Quat<T> &q0, const Quat<T> &q1,
-                      const Quat<T> &q2, const Quat<T> &q3,
-                      Quat<T> &qa, Quat<T> &qb);
+void			intermediate (const Quat<T> &q0, const Quat<T> &q1, 
+				      const Quat<T> &q2, const Quat<T> &q3,
+				      Quat<T> &qa, Quat<T> &qb);
 
 template<class T>
 Matrix33<T>		operator * (const Matrix33<T> &M, const Quat<T> &q);
@@ -391,13 +392,13 @@ Quat<T>::normalize ()
 {
     if (T l = length())
     {
-    r /= l;
-    v /= l;
+	r /= l;
+	v /= l;
     }
     else
     {
-    r = 1;
-    v = Vec3<T> (0);
+	r = 1;
+	v = Vec3<T> (0);
     }
 
     return *this;
@@ -409,7 +410,7 @@ inline Quat<T>
 Quat<T>::normalized () const
 {
     if (T l = length())
-    return Quat (r / l, v / l);
+	return Quat (r / l, v / l);
 
     return Quat();
 }
@@ -463,7 +464,7 @@ Quat<T>::rotateVector(const Vec3<T>& original) const
 
 
 template<class T>
-inline T
+inline T 
 Quat<T>::euclideanInnerProduct (const Quat<T> &q) const
 {
     return r * q.r + v.x * q.v.x + v.y * q.v.y + v.z * q.v.z;
@@ -516,7 +517,7 @@ slerp (const Quat<T> &q1, const Quat<T> &q2, T t)
     T s = 1 - t;
 
     Quat<T> q = sinx_over_x (s * a) / sinx_over_x (a) * s * q1 +
-            sinx_over_x (t * a) / sinx_over_x (a) * t * q2;
+	        sinx_over_x (t * a) / sinx_over_x (a) * t * q2;
 
     return q.normalized();
 }
@@ -543,7 +544,7 @@ template<class T>
 Quat<T>
 spline (const Quat<T> &q0, const Quat<T> &q1,
         const Quat<T> &q2, const Quat<T> &q3,
-    T t)
+	T t)
 {
     //
     // Spherical Cubic Spline Interpolation -
@@ -555,17 +556,17 @@ spline (const Quat<T> &q0, const Quat<T> &q1,
     // Given a set of quaternion keys: q0, q1, q2, q3,
     // this routine does the interpolation between
     // q1 and q2 by constructing two intermediate
-    // quaternions: qa and qb. The qa and qb are
-    // computed by the intermediate function to
+    // quaternions: qa and qb. The qa and qb are 
+    // computed by the intermediate function to 
     // guarantee the continuity of tangents across
     // adjacent cubic segments. The qa represents in-tangent
     // for q1 and the qb represents the out-tangent for q2.
-    //
-    // The q1 q2 is the cubic segment being interpolated.
-    // The q0 is from the previous adjacent segment and q3 is
+    // 
+    // The q1 q2 is the cubic segment being interpolated. 
+    // The q0 is from the previous adjacent segment and q3 is 
     // from the next adjacent segment. The q0 and q3 are used
     // in computing qa and qb.
-    //
+    // 
 
     Quat<T> qa = intermediate (q0, q1, q2);
     Quat<T> qb = intermediate (q1, q2, q3);
@@ -585,11 +586,11 @@ squad (const Quat<T> &q1, const Quat<T> &qa,
     // Spherical Quadrangle Interpolation -
     // from Advanced Animation and Rendering
     // Techniques by Watt and Watt, Page 366:
-    // It constructs a spherical cubic interpolation as
-    // a series of three spherical linear interpolations
-    // of a quadrangle of unit quaternions.
-    //
-
+    // It constructs a spherical cubic interpolation as 
+    // a series of three spherical linear interpolations 
+    // of a quadrangle of unit quaternions. 
+    //     
+  
     Quat<T> r1 = slerp (q1, q2, t);
     Quat<T> r2 = slerp (qa, qb, t);
     Quat<T> result = slerp (r1, r2, 2 * t * (1 - t));
@@ -605,10 +606,10 @@ intermediate (const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2)
     //
     // From advanced Animation and Rendering
     // Techniques by Watt and Watt, Page 366:
-    // computing the inner quadrangle
+    // computing the inner quadrangle 
     // points (qa and qb) to guarantee tangent
     // continuity.
-    //
+    // 
 
     Quat<T> q1inv = q1.inverse();
     Quat<T> c1 = q1inv * q2;
@@ -625,22 +626,22 @@ inline Quat<T>
 Quat<T>::log () const
 {
     //
-    // For unit quaternion, from Advanced Animation and
+    // For unit quaternion, from Advanced Animation and 
     // Rendering Techniques by Watt and Watt, Page 366:
     //
 
     T theta = Math<T>::acos (std::min (r, (T) 1.0));
 
     if (theta == 0)
-    return Quat<T> (0, v);
-
+	return Quat<T> (0, v);
+    
     T sintheta = Math<T>::sin (theta);
-
+    
     T k;
     if (abs (sintheta) < 1 && abs (theta) >= limits<T>::max() * abs (sintheta))
-    k = 1;
+	k = 1;
     else
-    k = theta / sintheta;
+	k = theta / sintheta;
 
     return Quat<T> ((T) 0, v.x * k, v.y * k, v.z * k);
 }
@@ -658,12 +659,12 @@ Quat<T>::exp () const
 
     T theta = v.length();
     T sintheta = Math<T>::sin (theta);
-
+    
     T k;
     if (abs (theta) < 1 && abs (sintheta) >= limits<T>::max() * abs (theta))
-    k = 1;
+	k = 1;
     else
-    k = sintheta / theta;
+	k = sintheta / theta;
 
     T costheta = Math<T>::cos (theta);
 
@@ -722,50 +723,50 @@ Quat<T>::setRotation (const Vec3<T> &from, const Vec3<T> &to)
 
     if ((f0 ^ t0) >= 0)
     {
-    //
-    // The rotation angle is less than or equal to pi/2.
-    //
+	//
+	// The rotation angle is less than or equal to pi/2.
+	//
 
-    setRotationInternal (f0, t0, *this);
+	setRotationInternal (f0, t0, *this);
     }
     else
     {
-    //
-    // The angle is greater than pi/2.  After computing h0,
-    // which is halfway between f0 and t0, we rotate first
-    // from f0 to h0, then from h0 to t0.
-    //
+	//
+	// The angle is greater than pi/2.  After computing h0,
+	// which is halfway between f0 and t0, we rotate first
+	// from f0 to h0, then from h0 to t0.
+	//
 
-    Vec3<T> h0 = (f0 + t0).normalized();
+	Vec3<T> h0 = (f0 + t0).normalized();
 
-    if ((h0 ^ h0) != 0)
-    {
-        setRotationInternal (f0, h0, *this);
+	if ((h0 ^ h0) != 0)
+	{
+	    setRotationInternal (f0, h0, *this);
 
-        Quat<T> q;
-        setRotationInternal (h0, t0, q);
+	    Quat<T> q;
+	    setRotationInternal (h0, t0, q);
 
-        *this *= q;
-    }
-    else
-    {
-        //
-        // f0 and t0 point in exactly opposite directions.
-        // Pick an arbitrary axis that is orthogonal to f0,
-        // and rotate by pi.
-        //
+	    *this *= q;
+	}
+	else
+	{
+	    //
+	    // f0 and t0 point in exactly opposite directions.
+	    // Pick an arbitrary axis that is orthogonal to f0,
+	    // and rotate by pi.
+	    //
 
-        r = T (0);
+	    r = T (0);
 
-        Vec3<T> f02 = f0 * f0;
+	    Vec3<T> f02 = f0 * f0;
 
-        if (f02.x <= f02.y && f02.x <= f02.z)
-        v = (f0 % Vec3<T> (1, 0, 0)).normalized();
-        else if (f02.y <= f02.z)
-        v = (f0 % Vec3<T> (0, 1, 0)).normalized();
-        else
-        v = (f0 % Vec3<T> (0, 0, 1)).normalized();
-    }
+	    if (f02.x <= f02.y && f02.x <= f02.z)
+		v = (f0 % Vec3<T> (1, 0, 0)).normalized();
+	    else if (f02.y <= f02.z)
+		v = (f0 % Vec3<T> (0, 1, 0)).normalized();
+	    else
+		v = (f0 % Vec3<T> (0, 0, 1)).normalized();
+	}
     }
 
     return *this;
@@ -809,16 +810,16 @@ Matrix33<T>
 Quat<T>::toMatrix33() const
 {
     return Matrix33<T> (1 - 2 * (v.y * v.y + v.z * v.z),
-                2 * (v.x * v.y + v.z * r),
-                2 * (v.z * v.x - v.y * r),
+			    2 * (v.x * v.y + v.z * r),
+			    2 * (v.z * v.x - v.y * r),
 
-                2 * (v.x * v.y - v.z * r),
-                1 - 2 * (v.z * v.z + v.x * v.x),
-                2 * (v.y * v.z + v.x * r),
+			    2 * (v.x * v.y - v.z * r),
+		        1 - 2 * (v.z * v.z + v.x * v.x),
+			    2 * (v.y * v.z + v.x * r),
 
-                2 * (v.z * v.x + v.y * r),
-                2 * (v.y * v.z - v.x * r),
-                1 - 2 * (v.y * v.y + v.x * v.x));
+			    2 * (v.z * v.x + v.y * r),
+			    2 * (v.y * v.z - v.x * r),
+		        1 - 2 * (v.y * v.y + v.x * v.x));
 }
 
 template<class T>
@@ -826,21 +827,21 @@ Matrix44<T>
 Quat<T>::toMatrix44() const
 {
     return Matrix44<T> (1 - 2 * (v.y * v.y + v.z * v.z),
-                2 * (v.x * v.y + v.z * r),
-                2 * (v.z * v.x - v.y * r),
-                0,
-                2 * (v.x * v.y - v.z * r),
-                1 - 2 * (v.z * v.z + v.x * v.x),
-                2 * (v.y * v.z + v.x * r),
-                0,
-                2 * (v.z * v.x + v.y * r),
-                2 * (v.y * v.z - v.x * r),
-                1 - 2 * (v.y * v.y + v.x * v.x),
-                0,
-                0,
-                0,
-                0,
-                1);
+			    2 * (v.x * v.y + v.z * r),
+			    2 * (v.z * v.x - v.y * r),
+			    0,
+			    2 * (v.x * v.y - v.z * r),
+		        1 - 2 * (v.z * v.z + v.x * v.x),
+			    2 * (v.y * v.z + v.x * r),
+			    0,
+			    2 * (v.z * v.x + v.y * r),
+			    2 * (v.y * v.z - v.x * r),
+		        1 - 2 * (v.y * v.y + v.x * v.x),
+			    0,
+			    0,
+			    0,
+			    0,
+			    1);
 }
 
 
@@ -865,10 +866,10 @@ std::ostream &
 operator << (std::ostream &o, const Quat<T> &q)
 {
     return o << "(" << q.r
-         << " " << q.v.x
-         << " " << q.v.y
-         << " " << q.v.z
-         << ")";
+	     << " " << q.v.x
+	     << " " << q.v.y
+	     << " " << q.v.z
+	     << ")";
 }
 
 
@@ -877,7 +878,7 @@ inline Quat<T>
 operator * (const Quat<T> &q1, const Quat<T> &q2)
 {
     return Quat<T> (q1.r * q2.r - (q1.v ^ q2.v),
-            q1.r * q2.v + q1.v * q2.r + q1.v % q2.v);
+		    q1.r * q2.v + q1.v * q2.r + q1.v % q2.v);
 }
 
 
@@ -958,6 +959,6 @@ operator * (const Vec3<T> &v, const Quat<T> &q)
 #pragma warning(default:4244)
 #endif
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHQUAT_H

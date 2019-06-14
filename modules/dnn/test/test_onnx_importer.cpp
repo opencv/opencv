@@ -245,6 +245,11 @@ TEST_P(Test_ONNX_layers, Reshape)
     testONNXModels("unsqueeze");
 }
 
+TEST_P(Test_ONNX_layers, Slice)
+{
+    testONNXModels("slice");
+}
+
 TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");

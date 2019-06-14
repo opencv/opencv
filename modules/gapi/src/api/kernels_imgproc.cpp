@@ -157,5 +157,17 @@ GMat RGB2Lab(const GMat& src)
     return imgproc::GRGB2Lab::on(src);
 }
 
+GMat BayerGR2RGB(const GMat& src_gr) {
+    return imgproc::GBayerGR2RGB::on(src_gr);
+}
+
+GMat RGB2HSV(const GMat& src) {
+    return imgproc::GRGB2HSV::on(src);
+}
+
+GMat RGB2YUV422(const GMat& src) {
+    return imgproc::GRGB2YUV422::on(src);
+}
+
 } //namespace gapi
 } //namespace cv

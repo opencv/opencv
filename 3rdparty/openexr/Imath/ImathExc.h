@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -33,7 +33,6 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-
 #ifndef INCLUDED_IMATHEXC_H
 #define INCLUDED_IMATHEXC_H
 
@@ -44,30 +43,31 @@
 //
 //-----------------------------------------------
 
+#include "ImathNamespace.h"
 #include "IexBaseExc.h"
+#include "ImathExport.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
+
+// Attempt to normalize null vector
+DEFINE_EXC_EXP (IMATH_EXPORT, NullVecExc, ::IEX_NAMESPACE::MathExc)
+
+// Attempt to normalize a point at infinity
+DEFINE_EXC_EXP (IMATH_EXPORT, InfPointExc, ::IEX_NAMESPACE::MathExc)
+
+// Attempt to normalize null quaternion
+DEFINE_EXC_EXP (IMATH_EXPORT, NullQuatExc, ::IEX_NAMESPACE::MathExc)
+
+// Attempt to invert singular matrix
+DEFINE_EXC_EXP (IMATH_EXPORT, SingMatrixExc, ::IEX_NAMESPACE::MathExc)
+
+// Attempt to remove zero scaling from matrix
+DEFINE_EXC_EXP (IMATH_EXPORT, ZeroScaleExc, ::IEX_NAMESPACE::MathExc)
+
+// Attempt to normalize a vector of whose elementsare an integer type
+DEFINE_EXC_EXP (IMATH_EXPORT, IntVecNormalizeExc, ::IEX_NAMESPACE::MathExc)
 
 
-DEFINE_EXC (NullVecExc, ::Iex::MathExc)		// Attempt to normalize
-                        // null vector
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-DEFINE_EXC (InfPointExc, ::Iex::MathExc)	// Attempt to normalize
-                                                // a point at infinity
-
-DEFINE_EXC (NullQuatExc, ::Iex::MathExc) 	// Attempt to normalize
-                        // null quaternion
-
-DEFINE_EXC (SingMatrixExc, ::Iex::MathExc)	// Attempt to invert
-                        // singular matrix
-
-DEFINE_EXC (ZeroScaleExc, ::Iex::MathExc)	// Attempt to remove zero
-                        // scaling from matrix
-
-DEFINE_EXC (IntVecNormalizeExc, ::Iex::MathExc)	// Attempt to normalize
-                        // a vector of whose elements
-                                                // are an integer type
-
-} // namespace Imath
-
-#endif
+#endif // INCLUDED_IMATHEXC_H

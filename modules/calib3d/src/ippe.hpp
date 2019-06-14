@@ -122,10 +122,10 @@ private:
      *                                  For highest accuracy the Jacobian should be computed at the centroid of the point correspondences (see the IPPE paper for the explanation of this).
      *                                  For a point (ux,uy) on the object plane, suppose the homography H maps (ux,uy) to a point (p,q) in the image (in normalized pixel coordinates).
      *                                  The Jacobian matrix [J00, J01; J10,J11] is the Jacobian of the mapping evaluated at (ux,uy).
-     * @param j00                       Homography jacobian coefficent at (ux,uy)
-     * @param j01                       Homography jacobian coefficent at (ux,uy)
-     * @param j10                       Homography jacobian coefficent at (ux,uy)
-     * @param j11                       Homography jacobian coefficent at (ux,uy)
+     * @param j00                       Homography jacobian coefficient at (ux,uy)
+     * @param j01                       Homography jacobian coefficient at (ux,uy)
+     * @param j10                       Homography jacobian coefficient at (ux,uy)
+     * @param j11                       Homography jacobian coefficient at (ux,uy)
      * @param p                         The x coordinate of point (ux,uy) mapped into the image (undistorted and normalized position)
      * @param q                         The y coordinate of point (ux,uy) mapped into the image (undistorted and normalized position)
     */

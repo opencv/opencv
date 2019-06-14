@@ -126,7 +126,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
         d[k] = (short)(v - ptr[pixel[k]]);
 
 #if CV_SIMD128
-    if (hasSIMD128())
+    if (true)
     {
         v_int16x8 q0 = v_setall_s16(-1000), q1 = v_setall_s16(1000);
         for (k = 0; k < 16; k += 8)
@@ -223,7 +223,7 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 #endif
 
 #if CV_SIMD128
-    if (hasSIMD128())
+    if (true)
     {
         v_int16x8 q0 = v_setall_s16(-1000), q1 = v_setall_s16(1000);
         for (k = 0; k < 16; k += 8)
@@ -304,7 +304,7 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
         d[k] = (short)(v - ptr[pixel[k]]);
 
 #if CV_SIMD128
-    if (hasSIMD128())
+    if (true)
     {
         v_int16x8 v0 = v_load(d + 1);
         v_int16x8 v1 = v_load(d + 2);

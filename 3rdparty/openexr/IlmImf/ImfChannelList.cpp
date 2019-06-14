@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -47,8 +47,9 @@
 
 using std::string;
 using std::set;
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 
 Channel::Channel (PixelType t, int xs, int ys, bool pl):
@@ -61,27 +62,27 @@ Channel::Channel (PixelType t, int xs, int ys, bool pl):
 }
 
 
-bool
+bool	
 Channel::operator == (const Channel &other) const
 {
     return type == other.type &&
-       xSampling == other.xSampling &&
-       ySampling == other.ySampling &&
-       pLinear == other.pLinear;
+	   xSampling == other.xSampling &&
+	   ySampling == other.ySampling &&
+	   pLinear == other.pLinear;
 }
 
 
-void
+void	
 ChannelList::insert (const char name[], const Channel &channel)
 {
     if (name[0] == 0)
-    THROW (Iex::ArgExc, "Image channel name cannot be an empty string.");
+	THROW (IEX_NAMESPACE::ArgExc, "Image channel name cannot be an empty string.");
 
     _map[name] = channel;
 }
 
 
-void
+void	
 ChannelList::insert (const string &name, const Channel &channel)
 {
     insert (name.c_str(), channel);
@@ -94,7 +95,7 @@ ChannelList::operator [] (const char name[])
     ChannelMap::iterator i = _map.find (name);
 
     if (i == _map.end())
-    THROW (Iex::ArgExc, "Cannot find image channel \"" << name << "\".");
+	THROW (IEX_NAMESPACE::ArgExc, "Cannot find image channel \"" << name << "\".");
 
     return i->second;
 }
@@ -106,7 +107,7 @@ ChannelList::operator [] (const char name[]) const
     ChannelMap::const_iterator i = _map.find (name);
 
     if (i == _map.end())
-    THROW (Iex::ArgExc, "Cannot find image channel \"" << name << "\".");
+	THROW (IEX_NAMESPACE::ArgExc, "Cannot find image channel \"" << name << "\".");
 
     return i->second;
 }
@@ -156,14 +157,14 @@ ChannelList::findChannel (const string &name) const
 }
 
 
-ChannelList::Iterator
+ChannelList::Iterator		
 ChannelList::begin ()
 {
     return _map.begin();
 }
 
 
-ChannelList::ConstIterator
+ChannelList::ConstIterator	
 ChannelList::begin () const
 {
     return _map.begin();
@@ -177,7 +178,7 @@ ChannelList::end ()
 }
 
 
-ChannelList::ConstIterator
+ChannelList::ConstIterator	
 ChannelList::end () const
 {
     return _map.end();
@@ -219,22 +220,22 @@ ChannelList::layers (set <string> &layerNames) const
 
     for (ConstIterator i = begin(); i != end(); ++i)
     {
-    string layerName = i.name();
-    size_t pos = layerName.rfind ('.');
+	string layerName = i.name();
+	size_t pos = layerName.rfind ('.');
 
-    if (pos != string::npos && pos != 0 && pos + 1 < layerName.size())
-    {
-        layerName.erase (pos);
-        layerNames.insert (layerName);
-    }
+	if (pos != string::npos && pos != 0 && pos + 1 < layerName.size())
+	{
+	    layerName.erase (pos);
+	    layerNames.insert (layerName);
+	}
     }
 }
 
 
 void
 ChannelList::channelsInLayer (const string &layerName,
-                  Iterator &first,
-                  Iterator &last)
+			      Iterator &first,
+			      Iterator &last)
 {
     channelsWithPrefix (layerName + '.', first, last);
 }
@@ -242,49 +243,49 @@ ChannelList::channelsInLayer (const string &layerName,
 
 void
 ChannelList::channelsInLayer (const string &layerName,
-                  ConstIterator &first,
-                  ConstIterator &last) const
+			      ConstIterator &first,
+			      ConstIterator &last) const
 {
     channelsWithPrefix (layerName + '.', first, last);
 }
 
 
-void
+void		
 ChannelList::channelsWithPrefix (const char prefix[],
-                 Iterator &first,
-                 Iterator &last)
+				 Iterator &first,
+				 Iterator &last)
 {
     first = last = _map.lower_bound (prefix);
-    int n = strlen (prefix);
+    size_t n = int(strlen (prefix));
 
     while (last != Iterator (_map.end()) &&
-       strncmp (last.name(), prefix, n) <= 0)
+	   strncmp (last.name(), prefix, n) <= 0)
     {
-    ++last;
+	++last;
     }
 }
 
 
 void
 ChannelList::channelsWithPrefix (const char prefix[],
-                 ConstIterator &first,
-                 ConstIterator &last) const
+				 ConstIterator &first,
+				 ConstIterator &last) const
 {
     first = last = _map.lower_bound (prefix);
-    int n = strlen (prefix);
+    size_t n = strlen (prefix);
 
     while (last != ConstIterator (_map.end()) &&
-       strncmp (last.name(), prefix, n) <= 0)
+	   strncmp (last.name(), prefix, n) <= 0)
     {
-    ++last;
+	++last;
     }
 }
 
 
-void
+void		
 ChannelList::channelsWithPrefix (const string &prefix,
-                 Iterator &first,
-                 Iterator &last)
+				 Iterator &first,
+				 Iterator &last)
 {
     return channelsWithPrefix (prefix.c_str(), first, last);
 }
@@ -292,14 +293,14 @@ ChannelList::channelsWithPrefix (const string &prefix,
 
 void
 ChannelList::channelsWithPrefix (const string &prefix,
-                 ConstIterator &first,
-                 ConstIterator &last) const
+				 ConstIterator &first,
+				 ConstIterator &last) const
 {
     return channelsWithPrefix (prefix.c_str(), first, last);
 }
 
 
-bool
+bool		
 ChannelList::operator == (const ChannelList &other) const
 {
     ConstIterator i = begin();
@@ -307,15 +308,15 @@ ChannelList::operator == (const ChannelList &other) const
 
     while (i != end() && j != other.end())
     {
-    if (!(i.channel() == j.channel()))
-        return false;
+	if (!(i.channel() == j.channel()))
+	    return false;
 
-    ++i;
-    ++j;
+	++i;
+	++j;
     }
 
     return i == end() && j == other.end();
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

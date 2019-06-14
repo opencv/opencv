@@ -2357,16 +2357,6 @@ inline void v_cleanup() {}
 
 //! @}
 
-//! @name Check SIMD support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD128()
-{
-    return false;
-}
-
-//! @}
-
 #ifndef CV_DOXYGEN
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
