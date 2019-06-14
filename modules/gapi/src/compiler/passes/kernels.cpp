@@ -11,7 +11,7 @@
 #include <ade/graph.hpp>
 #include <ade/passes/check_cycles.hpp>
 
-#include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
+#include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 
 #include "compiler/gmodel.hpp"
 #include "compiler/passes/passes.hpp"

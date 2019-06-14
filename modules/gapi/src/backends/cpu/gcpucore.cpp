@@ -7,9 +7,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/cpu/core.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 GAPI_OCV_KERNEL(GCPUAdd, cv::gapi::core::GAdd)
 {

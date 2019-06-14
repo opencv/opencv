@@ -7,7 +7,7 @@
 
 #include "../test_precomp.hpp"
 #include "../common/gapi_operators_tests.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
+#include <opencv2/gapi/cpu/core.hpp>
 
 #define CORE_CPU cv::gapi::core::cpu::kernels()
 

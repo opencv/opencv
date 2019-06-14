@@ -8,7 +8,7 @@
 #include "precomp.hpp"
 
 #include <ade/util/zip_range.hpp>   // util::indexed
-#include "opencv2/gapi/gcompoundkernel.hpp"
+#include <opencv2/gapi/gcompoundkernel.hpp>
 #include "compiler/gobjref.hpp"
 
 // FIXME move to backends

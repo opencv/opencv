@@ -6,8 +6,8 @@
 
 
 #include "test_precomp.hpp"
-#include "opencv2/gapi/gcomputation_async.hpp"
-#include "opencv2/gapi/gcompiled_async.hpp"
+#include <opencv2/gapi/gcomputation_async.hpp>
+#include <opencv2/gapi/gcompiled_async.hpp>
 
 #include <condition_variable>
 #include <stdexcept>

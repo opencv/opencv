@@ -7,8 +7,8 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/ocl/core.hpp"
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/ocl/core.hpp>
 #include "backends/ocl/goclcore.hpp"
 
 GAPI_OCL_KERNEL(GOCLAdd, cv::gapi::core::GAdd)

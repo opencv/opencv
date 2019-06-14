@@ -9,8 +9,8 @@
 
 #include <ade/graph.hpp>
 
-#include "opencv2/gapi/gproto.hpp" // can_describe
-#include "opencv2/gapi/gcompiled.hpp"
+#include <opencv2/gapi/gproto.hpp> // can_describe
+#include <opencv2/gapi/gcompiled.hpp>
 
 #include "compiler/gcompiled_priv.hpp"
 #include "backends/common/gbackend.hpp"

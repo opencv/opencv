@@ -8,8 +8,8 @@
 #include "precomp.hpp"
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
+#include <opencv2/gapi/gmat.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
 #include "api/gorigin.hpp"
 
 // cv::GMat public implementation //////////////////////////////////////////////

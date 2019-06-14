@@ -8,7 +8,7 @@
 #ifndef GAPI_FLUID_TEST_KERNELS_HPP
 #define GAPI_FLUID_TEST_KERNELS_HPP
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
 namespace cv
 {
