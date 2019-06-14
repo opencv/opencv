@@ -86,6 +86,9 @@ TEST_P(Test_ONNX_layers, Convolution)
 
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     testONNXModels("conv3d");
@@ -94,7 +97,7 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2018050000)
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
         && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
     )
@@ -150,6 +153,9 @@ TEST_P(Test_ONNX_layers, AveragePooling)
 
 TEST_P(Test_ONNX_layers, MaxPooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     testONNXModels("max_pool3d");
@@ -157,6 +163,9 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 
 TEST_P(Test_ONNX_layers, AvePooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     testONNXModels("ave_pool3d");
@@ -195,14 +204,18 @@ TEST_P(Test_ONNX_layers, Constant)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+       throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
 #endif
     testONNXModels("constant");
 }
 
 TEST_P(Test_ONNX_layers, Padding)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    testONNXModels("padding", npy, 0, 0, false, false);
+#else
     testONNXModels("padding");
+#endif
 }
 
 TEST_P(Test_ONNX_layers, Resize)
@@ -247,7 +260,11 @@ TEST_P(Test_ONNX_layers, Reshape)
 
 TEST_P(Test_ONNX_layers, Slice)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    testONNXModels("slice", npy, 0, 0, false, false);
+#else
     testONNXModels("slice");
+#endif
 }
 
 TEST_P(Test_ONNX_layers, Softmax)
@@ -504,6 +521,9 @@ TEST_P(Test_ONNX_nets, Shufflenet)
 
 TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
 

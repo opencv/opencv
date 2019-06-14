@@ -322,10 +322,9 @@ public:
         layerOutputs[0].col(2).copyTo(dst);
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ProposalLayer ieLayer(name);
 
         ieLayer.setBaseSize(baseSize);
@@ -346,36 +345,8 @@ public:
         ieLayer.setRatio(ratiosVec);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Proposal";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        ieLayer->params["base_size"] = format("%d", baseSize);
-        ieLayer->params["feat_stride"] = format("%d", featStride);
-        ieLayer->params["min_size"] = "16";
-        ieLayer->params["nms_thresh"] = format("%f", nmsThreshold);
-        ieLayer->params["post_nms_topn"] = format("%d", keepTopAfterNMS);
-        ieLayer->params["pre_nms_topn"] = format("%d", keepTopBeforeNMS);
-        if (ratios.size())
-        {
-            ieLayer->params["ratio"] = format("%f", ratios.get<float>(0));
-            for (int i = 1; i < ratios.size(); ++i)
-                ieLayer->params["ratio"] += format(",%f", ratios.get<float>(i));
-        }
-        if (scales.size())
-        {
-            ieLayer->params["scale"] = format("%f", scales.get<float>(0));
-            for (int i = 1; i < scales.size(); ++i)
-                ieLayer->params["scale"] += format(",%f", scales.get<float>(i));
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
 private:
     // A first half of channels are background scores. We need only a second one.
