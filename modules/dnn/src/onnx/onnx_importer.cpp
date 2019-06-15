@@ -397,10 +397,10 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("ceil_mode", layerParams.has("pad_mode"));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
-        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool")
+        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool" || layer_type == "ReduceMean")
         {
             layerParams.type = "Pooling";
-            layerParams.set("pool", layer_type == "GlobalAveragePool" ? "AVE" : "MAX");
+            layerParams.set("pool", layer_type == "GlobalAveragePool" || layer_type == "ReduceMean" ? "AVE" : "MAX");
             layerParams.set("global_pooling", true);
         }
         else if (layer_type == "Slice")
