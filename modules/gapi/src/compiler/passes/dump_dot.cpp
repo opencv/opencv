@@ -14,7 +14,7 @@
 
 #include <ade/passes/check_cycles.hpp>
 
-#include "opencv2/gapi/gproto.hpp"
+#include <opencv2/gapi/gproto.hpp>
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/passes/passes.hpp"

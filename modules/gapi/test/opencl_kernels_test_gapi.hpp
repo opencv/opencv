@@ -4,9 +4,9 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/core/ocl_genbase.hpp"
-#include "opencv2/core/opencl/ocl_defs.hpp"
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/core/ocl_genbase.hpp>
+#include <opencv2/core/opencl/ocl_defs.hpp>
 
 #ifdef HAVE_OPENCL
 const char* opencl_symm7x7_src =

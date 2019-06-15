@@ -8,9 +8,9 @@
 #include "precomp.hpp"
 
 #include <ade/util/algorithm.hpp>
-#include "opencv2/gapi/util/throw.hpp"
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gproto.hpp"
+#include <opencv2/gapi/util/throw.hpp>
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gproto.hpp>
 
 #include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"

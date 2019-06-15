@@ -22,11 +22,11 @@
 #include <ade/typed_graph.hpp>
 #include <ade/execution_engine/execution_engine.hpp>
 
-#include "opencv2/gapi/gcommon.hpp"
+#include <opencv2/gapi/gcommon.hpp>
 #include "logger.hpp"
 
-#include "opencv2/gapi/own/convert.hpp"
-#include "opencv2/gapi/gmat.hpp"    //for version of descr_of
+#include <opencv2/gapi/own/convert.hpp>
+#include <opencv2/gapi/gmat.hpp>    //for version of descr_of
 // PRIVATE STUFF!
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"

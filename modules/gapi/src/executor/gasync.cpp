@@ -4,10 +4,10 @@
 //
 // Copyright (C) 2019 Intel Corporation
 
-#include "opencv2/gapi/gcomputation_async.hpp"
-#include "opencv2/gapi/gcomputation.hpp"
-#include "opencv2/gapi/gcompiled_async.hpp"
-#include "opencv2/gapi/gcompiled.hpp"
+#include <opencv2/gapi/gcomputation_async.hpp>
+#include <opencv2/gapi/gcomputation.hpp>
+#include <opencv2/gapi/gcompiled_async.hpp>
+#include <opencv2/gapi/gcompiled.hpp>
 
 #include <condition_variable>
 

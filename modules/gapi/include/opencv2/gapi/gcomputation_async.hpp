@@ -11,8 +11,8 @@
 #include <future>
 #include <exception>                        //for std::exception_ptr
 #include <functional>                       //for std::function
-#include "opencv2/gapi/garg.hpp"            //for GRunArgs, GRunArgsP
-#include "opencv2/gapi/gcommon.hpp"         //for GCompileArgs
+#include <opencv2/gapi/garg.hpp>            //for GRunArgs, GRunArgsP
+#include <opencv2/gapi/gcommon.hpp>         //for GCompileArgs
 
 namespace cv {
     //fwd declaration

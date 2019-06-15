@@ -7,10 +7,10 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gcall.hpp"
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gcall.hpp>
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 namespace cv { namespace gapi {
 

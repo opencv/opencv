@@ -10,10 +10,10 @@
 // FIXME? Actually gfluidbackend.hpp is not included anywhere
 // and can be placed in gfluidbackend.cpp
 
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
 // PRIVATE STUFF!
 #include "backends/common/gbackend.hpp"
