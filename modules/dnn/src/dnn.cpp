@@ -735,20 +735,9 @@ struct DataLayer : public Layer
         }
         biases->set(biasesVec);
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         addConstantData("weights", weights, ieLayer);
         addConstantData("biases", biases, ieLayer);
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
-
-        ieLayer->_weights = weights;
-        ieLayer->_biases = biases;
-#endif
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
 #endif  // HAVE_INF_ENGINE
         return Ptr<BackendNode>();
@@ -1488,11 +1477,7 @@ struct Net::Impl
                 if (layerNet != ieInpNode->net)
                 {
                     // layerNet is empty or nodes are from different graphs.
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
                     ieInpNode->net->addOutput(ieInpNode->layer.getName());
-#else
-                    ieInpNode->net->addOutput(ieInpNode->layer->name);
-#endif
                 }
             }
         }
@@ -1642,25 +1627,6 @@ struct Net::Impl
                 }
             }
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
-            // The same blobs wrappers cannot be shared between two Inference Engine
-            // networks because of explicit references between layers and blobs.
-            // So we need to rewrap all the external blobs.
-            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
-            {
-                LayerPin inPin = ld.inputBlobsId[i];
-                auto it = netBlobsWrappers.find(inPin);
-                if (it == netBlobsWrappers.end())
-                {
-                    ld.inputBlobsWrappers[i] = InfEngineBackendWrapper::create(ld.inputBlobsWrappers[i]);
-                    netBlobsWrappers[inPin] = ld.inputBlobsWrappers[i];
-                }
-                else
-                    ld.inputBlobsWrappers[i] = it->second;
-            }
-            netBlobsWrappers[LayerPin(ld.id, 0)] = ld.outputBlobsWrappers[0];
-#endif  // IE < R5
-
             Ptr<BackendNode> node;
             if (!net.empty())
             {
@@ -1691,7 +1657,6 @@ struct Net::Impl
             ieNode->net = net;
 
             // Convert weights in FP16 for specific targets.
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                  preferableTarget == DNN_TARGET_MYRIAD ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
@@ -1733,47 +1698,6 @@ struct Net::Impl
             net->addBlobs(ld.inputBlobsWrappers);
             net->addBlobs(ld.outputBlobsWrappers);
             addInfEngineNetOutputs(ld);
-
-#else  // IE >= R5
-
-            auto weightableLayer = std::dynamic_pointer_cast<InferenceEngine::WeightableLayer>(ieNode->layer);
-            if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
-                 preferableTarget == DNN_TARGET_MYRIAD ||
-                 preferableTarget == DNN_TARGET_FPGA) && !fused)
-            {
-                ieNode->layer->precision = InferenceEngine::Precision::FP16;
-                if (weightableLayer)
-                {
-                    if (weightableLayer->_weights)
-                        weightableLayer->_weights = convertFp16(weightableLayer->_weights);
-                    if (weightableLayer->_biases)
-                        weightableLayer->_biases = convertFp16(weightableLayer->_biases);
-                }
-                else
-                {
-                    for (const auto& weights : {"weights", "biases"})
-                    {
-                        auto it = ieNode->layer->blobs.find(weights);
-                        if (it != ieNode->layer->blobs.end())
-                            it->second = convertFp16(it->second);
-                    }
-                }
-            }
-            if (weightableLayer)
-            {
-                if (weightableLayer->_weights)
-                    weightableLayer->blobs["weights"] = weightableLayer->_weights;
-                if (weightableLayer->_biases)
-                    weightableLayer->blobs["biases"] = weightableLayer->_biases;
-            }
-            ieNode->connect(ld.inputBlobsWrappers, ld.outputBlobsWrappers);
-            net->addBlobs(ld.inputBlobsWrappers);
-            net->addBlobs(ld.outputBlobsWrappers);
-
-            if (!fused)
-                net->addLayer(ieNode->layer);
-            addInfEngineNetOutputs(ld);
-#endif  // IE >= R5
         }
 
         // Initialize all networks.
@@ -1795,23 +1719,6 @@ struct Net::Impl
 
             if (!ieNode->net->isInitialized())
             {
-#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R4)
-                // For networks which is built in runtime we need to specify a
-                // version of it's hyperparameters.
-                std::string versionTrigger = "<net name=\"TestInput\" version=\"3\" batch=\"1\">"
-                                               "<layers>"
-                                                 "<layer name=\"data\" type=\"Input\" precision=\"FP32\" id=\"0\">"
-                                                   "<output>"
-                                                     "<port id=\"0\">"
-                                                       "<dim>1</dim>"
-                                                     "</port>"
-                                                   "</output>"
-                                                 "</layer>"
-                                               "</layers>"
-                                             "</net>";
-                InferenceEngine::CNNNetReader reader;
-                reader.ReadNetwork(versionTrigger.data(), versionTrigger.size());
-#endif
                 ieNode->net->init(preferableTarget);
                 ld.skip = false;
             }
@@ -2693,11 +2600,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     Net cvNet;
     cvNet.setInputsNames(inputsNames);
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
     Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(InferenceEngine::Builder::Layer("")));
-#else
-    Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(0));
-#endif
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
     for (auto& it : ieNet.getOutputsInfo())
     {

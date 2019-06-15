@@ -482,6 +482,12 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                     break;
                 double r2 = x*x + y*y;
                 double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
+                if (icdist < 0)  // test: undistortPoints.regression_14583
+                {
+                    x = (u - cx)*ifx;
+                    y = (v - cy)*ify;
+                    break;
+                }
                 double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
                 double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
                 x = (x0 - deltaX)*icdist;
