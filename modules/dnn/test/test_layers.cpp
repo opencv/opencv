@@ -141,10 +141,8 @@ TEST_P(Test_Caffe_layers, Convolution)
 
 TEST_P(Test_Caffe_layers, DeConvolution)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_CPU)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
+        throw SkipTestException("Test is disabled for DLIE/CPU");
     testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
@@ -254,8 +252,7 @@ TEST_P(Test_Caffe_layers, Fused_Concat)
 
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE
-        && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16
-            || (INF_ENGINE_RELEASE < 2018040000 && target == DNN_TARGET_CPU))
+        && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
     )
         throw SkipTestException("Test is disabled for DLIE");
 #endif
@@ -1044,11 +1041,6 @@ TEST_P(Test_DLDT_two_inputs_3dim, as_IR)
     int firstInpType = get<0>(GetParam());
     int secondInpType = get<1>(GetParam());
     Target targetId = get<2>(GetParam());
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE < 2018040000
-    if (secondInpType == CV_8U)
-        throw SkipTestException("Test is enabled starts from OpenVINO 2018R4");
-#endif
 
     std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     Net net = readNet(_tf("net_two_inputs" + suffix + ".xml"), _tf("net_two_inputs.bin"));

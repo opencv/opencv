@@ -133,6 +133,9 @@ TEST_P(Test_TensorFlow_layers, conv)
 
 TEST_P(Test_TensorFlow_layers, Convolution3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
             throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("conv3d");
@@ -187,6 +190,7 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
     runTensorFlowNet("switch_identity");
+    runTensorFlowNet("keras_batch_norm_training");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)
@@ -229,6 +233,9 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
 
 TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("max_pool3d");
@@ -236,6 +243,9 @@ TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 
 TEST_P(Test_TensorFlow_layers, AvePooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("ave_pool3d");
@@ -250,6 +260,7 @@ TEST_P(Test_TensorFlow_layers, deconvolution)
     runTensorFlowNet("deconvolution_adj_pad_same");
     runTensorFlowNet("keras_deconv_valid");
     runTensorFlowNet("keras_deconv_same");
+    runTensorFlowNet("keras_deconv_same_v2");
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
@@ -337,10 +348,15 @@ class Test_TensorFlow_nets : public DNNTestLayer {};
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 {
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
-        throw SkipTestException("Test is disabled for MyriadX");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    {
+#if INF_ENGINE_VER_MAJOR_GE(2019010000)
+        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            throw SkipTestException("Test is disabled for MyriadX");
+#else
+            throw SkipTestException("Test is disabled for Myriad");
+#endif
+    }
 #endif
 
     checkBackend();
@@ -364,7 +380,9 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0043 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.037 : default_lInf;
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2019010000
     expectNoFallbacksFromIE(net);
+#endif
 }
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)

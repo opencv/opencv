@@ -159,12 +159,6 @@ TEST_P(Deconvolution, Accuracy)
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018040000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_CPU
-            && hasBias && group != 1)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
-
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
@@ -278,17 +272,11 @@ TEST_P(AvePooling, Accuracy)
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2018050000)
+#if defined(INF_ENGINE_RELEASE)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
             && kernel == Size(1, 1) && (stride == Size(1, 1) || stride == Size(2, 2)))
         throw SkipTestException("Test is disabled for MyriadX target");
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2018040000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_MYRIAD &&
-        stride == Size(3, 2) && kernel == Size(3, 3) && outSize != Size(1, 1))
-        throw SkipTestException("Test is fixed in OpenVINO 2018R4");
 #endif
 
     const int inWidth = (outSize.width - 1) * stride.width + kernel.width;
