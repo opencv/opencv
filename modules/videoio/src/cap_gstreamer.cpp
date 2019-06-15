@@ -763,7 +763,7 @@ bool GStreamerCapture::open(const String &filename_)
 
     //TODO: is 1 single buffer really high enough?
     gst_app_sink_set_max_buffers (GST_APP_SINK(sink), 1);
-//    gst_app_sink_set_drop (GST_APP_SINK(sink), stream);
+    gst_app_sink_set_drop (GST_APP_SINK(sink), TRUE);
     //do not emit signals: all calls will be synchronous and blocking
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink), FALSE);
 //    gst_base_sink_set_sync(GST_BASE_SINK(sink), FALSE);
