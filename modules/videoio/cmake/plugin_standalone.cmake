@@ -61,6 +61,10 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
     target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE ${OpenCV_LIBS})
   endif()
 
+  if(NOT OpenCV_FOUND)  # build against sources (Linux)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/opencv2/opencv_modules.hpp" "#pragma once")
+  endif()
+
   if(OPENCV_PLUGIN_DESTINATION)
     set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${OPENCV_PLUGIN_DESTINATION}")
     message(STATUS "Output destination: ${OPENCV_PLUGIN_DESTINATION}")
