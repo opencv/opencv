@@ -39,7 +39,7 @@ def bootstrap():
     l_vars = locals()
 
     if sys.version_info[:2] < (3, 0):
-        from cv2.load_config_py2 import exec_file_wrapper
+        from . load_config_py2 import exec_file_wrapper
     else:
         from . load_config_py3 import exec_file_wrapper
 
