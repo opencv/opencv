@@ -91,6 +91,14 @@ CV_EXPORTS cv::String getParent(const cv::String &path)
     return std::string(path, 0, loc);
 }
 
+CV_EXPORTS std::wstring getParent(const std::wstring& path)
+{
+    std::wstring::size_type loc = path.find_last_of(L"/\\");
+    if (loc == std::wstring::npos)
+        return std::wstring();
+    return std::wstring(path, 0, loc);
+}
+
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 cv::String canonical(const cv::String& path)

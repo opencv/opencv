@@ -28,7 +28,7 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
     message(FATAL_ERROR "${target_desc} was not found!")
   endif()
 
-  set(modules_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../..")
+  get_filename_component(modules_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
   set(videoio_ROOT "${modules_ROOT}/videoio")
   set(core_ROOT "${modules_ROOT}/core")
   set(imgproc_ROOT "${modules_ROOT}/imgproc")
@@ -45,28 +45,32 @@ function(ocv_create_videoio_plugin default_name target target_desc videoio_src_f
   )
   target_compile_definitions(${OPENCV_PLUGIN_NAME} PRIVATE BUILD_PLUGIN)
 
-  # Fixes for build
-  target_compile_definitions(${OPENCV_PLUGIN_NAME} PRIVATE __OPENCV_BUILD)
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cvconfig.h" "#pragma once")
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cv_cpu_config.h" "#pragma once")
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/opencv2/opencv_modules.hpp" "#pragma once")
-
   target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE ${target})
   set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES
     CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
   )
 
+  if(DEFINED OPENCV_PLUGIN_MODULE_PREFIX)
+    set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES PREFIX "${OPENCV_PLUGIN_MODULE_PREFIX}")
+  endif()
+
   # Hack for Windows
   if(WIN32)
     find_package(OpenCV REQUIRED core imgproc videoio)
-    target_link_libraries(${OPENCV_PLUGIN_NAME} ${OpenCV_LIBS})
+    target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE ${OpenCV_LIBS})
+  endif()
+
+  if(NOT OpenCV_FOUND)  # build against sources (Linux)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/opencv2/opencv_modules.hpp" "#pragma once")
   endif()
 
   if(OPENCV_PLUGIN_DESTINATION)
     set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${OPENCV_PLUGIN_DESTINATION}")
     message(STATUS "Output destination: ${OPENCV_PLUGIN_DESTINATION}")
   endif()
+
+  install(TARGETS ${OPENCV_PLUGIN_NAME} LIBRARY DESTINATION . COMPONENT plugins)
 
   message(STATUS "Library name: ${OPENCV_PLUGIN_NAME}")
 
