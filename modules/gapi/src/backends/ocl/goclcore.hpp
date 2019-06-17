@@ -11,7 +11,7 @@
 #include <map>
 #include <string>
 
-#include "opencv2/gapi/ocl/goclkernel.hpp"
+#include <opencv2/gapi/ocl/goclkernel.hpp>
 
 namespace cv { namespace gimpl {
 

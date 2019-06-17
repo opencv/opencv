@@ -26,33 +26,8 @@ namespace cv { namespace dnn {
 // we can use some predefined name.
 static std::string kDefaultInpLayerName = "empty_inp_layer_name";
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
-#else
-InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& _layer)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
-
-void InfEngineBackendNode::connect(std::vector<Ptr<BackendWrapper> >& inputs,
-                                   std::vector<Ptr<BackendWrapper> >& outputs)
-{
-    layer->insData.resize(inputs.size());
-    for (int i = 0; i < inputs.size(); ++i)
-    {
-        InferenceEngine::DataPtr dataPtr = infEngineDataNode(inputs[i]);
-        layer->insData[i] = InferenceEngine::DataWeakPtr(dataPtr);
-        dataPtr->inputTo[layer->name] = layer;
-    }
-
-    CV_Assert(!outputs.empty());
-
-    layer->outData.resize(1);
-    InferenceEngine::DataPtr dataPtr = infEngineDataNode(outputs[0]);
-    dataPtr->name = layer->name;
-    layer->outData[0] = dataPtr;
-    dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(layer);
-}
-#endif
 
 static std::vector<Ptr<InfEngineBackendWrapper> >
 infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -66,8 +41,6 @@ infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     }
     return wrappers;
 }
-
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 
 InfEngineBackendNet::InfEngineBackendNet() : netBuilder("")
 {
@@ -238,8 +211,6 @@ void InfEngineBackendNet::addOutput(const std::string& name)
     requestedOutputs.push_back(name);
 }
 
-#endif  // IE >= R5
-
 static InferenceEngine::Layout estimateLayout(const Mat& m)
 {
     if (m.dims == 4)
@@ -352,349 +323,6 @@ void InfEngineBackendWrapper::setHostDirty()
 
 }
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
-InfEngineBackendNet::InfEngineBackendNet()
-{
-    targetDevice = InferenceEngine::TargetDevice::eCPU;
-    precision = InferenceEngine::Precision::FP32;
-    hasNetOwner = false;
-}
-
-InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net)
-{
-    targetDevice = InferenceEngine::TargetDevice::eCPU;
-    precision = InferenceEngine::Precision::FP32;
-    inputs = net.getInputsInfo();
-    outputs = net.getOutputsInfo();
-    layers.resize(net.layerCount());  // A hack to execute InfEngineBackendNet::layerCount correctly.
-    netOwner = net;
-    hasNetOwner = true;
-}
-
-void InfEngineBackendNet::Release() CV_NOEXCEPT
-{
-    layers.clear();
-    inputs.clear();
-    outputs.clear();
-}
-
-void InfEngineBackendNet::setPrecision(InferenceEngine::Precision p) CV_NOEXCEPT
-{
-    precision = p;
-}
-
-InferenceEngine::Precision InfEngineBackendNet::getPrecision() CV_NOEXCEPT
-{
-    return hasNetOwner ? netOwner.getPrecision() : precision;
-}
-
-InferenceEngine::Precision InfEngineBackendNet::getPrecision() const CV_NOEXCEPT
-{
-    return hasNetOwner ? netOwner.getPrecision() : precision;
-}
-
-// Assume that outputs of network is unconnected blobs.
-void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) CV_NOEXCEPT
-{
-    const_cast<const InfEngineBackendNet*>(this)->getOutputsInfo(outputs_);
-}
-void InfEngineBackendNet::getOutputsInfo(InferenceEngine::OutputsDataMap &outputs_) const CV_NOEXCEPT
-{
-    outputs_ = outputs;
-}
-
-// Returns input references that aren't connected to internal outputs.
-void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) CV_NOEXCEPT
-{
-    const_cast<const InfEngineBackendNet*>(this)->getInputsInfo(inputs_);
-}
-
-// Returns input references that aren't connected to internal outputs.
-void InfEngineBackendNet::getInputsInfo(InferenceEngine::InputsDataMap &inputs_) const CV_NOEXCEPT
-{
-    inputs_ = inputs;
-}
-
-InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) CV_NOEXCEPT
-{
-    return const_cast<const InfEngineBackendNet*>(this)->getInput(inputName);
-}
-
-InferenceEngine::InputInfo::Ptr InfEngineBackendNet::getInput(const std::string &inputName) const CV_NOEXCEPT
-{
-    const auto& it = inputs.find(inputName);
-    CV_Assert(it != inputs.end());
-    return it->second;
-}
-
-void InfEngineBackendNet::getName(char*, size_t) CV_NOEXCEPT
-{
-}
-
-void InfEngineBackendNet::getName(char*, size_t) const CV_NOEXCEPT
-{
-}
-
-const std::string& InfEngineBackendNet::getName() const CV_NOEXCEPT
-{
-    return name;
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::serialize(const std::string&, const std::string&, InferenceEngine::ResponseDesc*) const CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
-}
-
-size_t InfEngineBackendNet::layerCount() CV_NOEXCEPT
-{
-    return const_cast<const InfEngineBackendNet*>(this)->layerCount();
-}
-
-size_t InfEngineBackendNet::layerCount() const CV_NOEXCEPT
-{
-    return layers.size();
-}
-
-InferenceEngine::DataPtr& InfEngineBackendNet::getData(const char *dname) CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return outputs.begin()->second;  // Just return something.
-}
-
-void InfEngineBackendNet::addLayer(const InferenceEngine::CNNLayerPtr &layer) CV_NOEXCEPT
-{
-    layers.push_back(layer);
-    inputs.clear();
-    outputs.clear();
-}
-
-InferenceEngine::StatusCode
-InfEngineBackendNet::addOutput(const std::string &layerName, size_t outputIndex,
-                               InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
-{
-    for (const auto& l : layers)
-    {
-        for (const InferenceEngine::DataPtr& out : l->outData)
-        {
-            if (out->name == layerName)
-            {
-                outputs[out->name] = out;
-                return InferenceEngine::StatusCode::OK;
-            }
-        }
-    }
-    CV_Error(Error::StsObjectNotFound, "Cannot find a layer " + layerName);
-    return InferenceEngine::StatusCode::OK;
-}
-
-InferenceEngine::StatusCode
-InfEngineBackendNet::getLayerByName(const char *layerName, InferenceEngine::CNNLayerPtr &out,
-                                    InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
-{
-    return const_cast<const InfEngineBackendNet*>(this)->getLayerByName(layerName, out, resp);
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::getLayerByName(const char *layerName,
-                                                                InferenceEngine::CNNLayerPtr &out,
-                                                                InferenceEngine::ResponseDesc *resp) const CV_NOEXCEPT
-{
-    for (auto& l : layers)
-    {
-        if (l->name == layerName)
-        {
-            out = l;
-            return InferenceEngine::StatusCode::OK;
-        }
-    }
-    CV_Error(Error::StsObjectNotFound, cv::format("Cannot find a layer %s", layerName));
-    return InferenceEngine::StatusCode::NOT_FOUND;
-}
-
-void InfEngineBackendNet::setTargetDevice(InferenceEngine::TargetDevice device) CV_NOEXCEPT
-{
-    if (device != InferenceEngine::TargetDevice::eCPU &&
-        device != InferenceEngine::TargetDevice::eGPU &&
-        device != InferenceEngine::TargetDevice::eMYRIAD &&
-        device != InferenceEngine::TargetDevice::eFPGA)
-        CV_Error(Error::StsNotImplemented, "");
-    targetDevice = device;
-}
-
-InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() CV_NOEXCEPT
-{
-    return const_cast<const InfEngineBackendNet*>(this)->getTargetDevice();
-}
-
-InferenceEngine::TargetDevice InfEngineBackendNet::getTargetDevice() const CV_NOEXCEPT
-{
-    return targetDevice == InferenceEngine::TargetDevice::eFPGA ?
-           InferenceEngine::TargetDevice::eHETERO : targetDevice;
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(const size_t) CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::setBatchSize(size_t size, InferenceEngine::ResponseDesc *responseDesc) CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
-}
-
-size_t InfEngineBackendNet::getBatchSize() const CV_NOEXCEPT
-{
-    size_t batchSize = 0;
-    for (const auto& inp : inputs)
-    {
-        CV_Assert(inp.second);
-        std::vector<size_t> dims = inp.second->getDims();
-        CV_Assert(!dims.empty());
-        if (batchSize != 0)
-            CV_Assert(batchSize == dims.back());
-        else
-            batchSize = dims.back();
-    }
-    return batchSize;
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::AddExtension(const InferenceEngine::IShapeInferExtensionPtr &extension, InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
-}
-
-InferenceEngine::StatusCode InfEngineBackendNet::reshape(const InferenceEngine::ICNNNetwork::InputShapes &inputShapes, InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT
-{
-    CV_Error(Error::StsNotImplemented, "");
-    return InferenceEngine::StatusCode::OK;
-}
-
-void InfEngineBackendNet::init(int targetId)
-{
-    if (inputs.empty())
-    {
-        // Collect all external input blobs.
-        inputs.clear();
-        std::map<std::string, InferenceEngine::DataPtr> internalOutputs;
-        for (const auto& l : layers)
-        {
-            for (const InferenceEngine::DataWeakPtr& ptr : l->insData)
-            {
-                InferenceEngine::DataPtr inp(ptr);
-                if (internalOutputs.find(inp->name) == internalOutputs.end())
-                {
-                    InferenceEngine::InputInfo::Ptr inpInfo(new InferenceEngine::InputInfo());
-                    inpInfo->setInputData(inp);
-                    if (inputs.find(inp->name) == inputs.end())
-                        inputs[inp->name] = inpInfo;
-                }
-            }
-            for (const InferenceEngine::DataPtr& out : l->outData)
-            {
-                // TODO: Replace to uniqueness assertion.
-                if (internalOutputs.find(out->name) == internalOutputs.end())
-                    internalOutputs[out->name] = out;
-            }
-        }
-        CV_Assert(!inputs.empty());
-
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
-        for (const auto& inp : inputs)
-        {
-            InferenceEngine::LayerParams lp;
-            lp.name = inp.first;
-            lp.type = "Input";
-            lp.precision = InferenceEngine::Precision::FP32;
-            std::shared_ptr<InferenceEngine::CNNLayer> inpLayer(new InferenceEngine::CNNLayer(lp));
-
-            layers.push_back(inpLayer);
-
-            InferenceEngine::DataPtr dataPtr = inp.second->getInputData();
-            // TODO: remove precision dependency (see setInput.normalization tests)
-            if (dataPtr->precision == InferenceEngine::Precision::FP32)
-            {
-                inpLayer->outData.assign(1, dataPtr);
-                dataPtr->creatorLayer = InferenceEngine::CNNLayerWeakPtr(inpLayer);
-            }
-        }
-#endif
-    }
-
-    if (outputs.empty())
-    {
-        // Add all unconnected blobs to output blobs.
-        InferenceEngine::OutputsDataMap unconnectedOuts;
-        for (const auto& l : layers)
-        {
-            if (l->type == "Input")
-                continue;
-            // Add all outputs.
-            for (const InferenceEngine::DataPtr& out : l->outData)
-            {
-                // TODO: Replace to uniqueness assertion.
-                if (unconnectedOuts.find(out->name) == unconnectedOuts.end())
-                    unconnectedOuts[out->name] = out;
-            }
-            // Remove internally connected outputs.
-            for (const InferenceEngine::DataWeakPtr& inp : l->insData)
-            {
-                unconnectedOuts.erase(InferenceEngine::DataPtr(inp)->name);
-            }
-        }
-        CV_Assert(!unconnectedOuts.empty());
-
-        for (auto it = unconnectedOuts.begin(); it != unconnectedOuts.end(); ++it)
-        {
-            outputs[it->first] = it->second;
-        }
-    }
-
-    // Set up input blobs.
-    inpBlobs.clear();
-    for (const auto& it : inputs)
-    {
-        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
-        inpBlobs[it.first] = allBlobs[it.first];
-        it.second->setPrecision(inpBlobs[it.first]->precision());
-    }
-
-    // Set up output blobs.
-    outBlobs.clear();
-    for (const auto& it : outputs)
-    {
-        CV_Assert(allBlobs.find(it.first) != allBlobs.end());
-        outBlobs[it.first] = allBlobs[it.first];
-    }
-
-    switch (targetId)
-    {
-    case DNN_TARGET_CPU: setTargetDevice(InferenceEngine::TargetDevice::eCPU); break;
-    case DNN_TARGET_OPENCL_FP16:
-        setPrecision(InferenceEngine::Precision::FP16);
-        /* Falls through. */
-    case DNN_TARGET_OPENCL: setTargetDevice(InferenceEngine::TargetDevice::eGPU); break;
-    case DNN_TARGET_MYRIAD:
-    {
-        setPrecision(InferenceEngine::Precision::FP16);
-        setTargetDevice(InferenceEngine::TargetDevice::eMYRIAD); break;
-    }
-    case DNN_TARGET_FPGA:
-    {
-        setPrecision(InferenceEngine::Precision::FP16);
-        setTargetDevice(InferenceEngine::TargetDevice::eFPGA); break;
-    }
-    default:
-        CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
-    }
-
-    if (!isInitialized())
-        initPlugin(*this);
-}
-
-#endif  // IE < R5
 
 static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
 {
@@ -703,7 +331,7 @@ static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEngineP
 }
 
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5) && !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
+#if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
     InferenceEngine::Builder::Network builder("");
@@ -724,6 +352,7 @@ static bool detectMyriadX_()
     }
     builder.addLayer({InferenceEngine::PortInfo(clampId)}, InferenceEngine::Builder::OutputLayer());
 #else
+
     InferenceEngine::idx_t clampId = builder.addLayer({inpId}, InferenceEngine::Builder::ClampLayer());
     builder.addLayer({InferenceEngine::PortInfo(clampId)},
                       InferenceEngine::Builder::OutputLayer().setPort(InferenceEngine::Port({},
@@ -757,7 +386,7 @@ static bool detectMyriadX_()
     }
     return true;
 }
-#endif // >= 2018R5
+#endif  // !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
@@ -834,9 +463,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs
     for (const auto& wrapper : wrappers)
     {
         std::string name = wrapper->dataPtr->name;
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         name = name.empty() ? kDefaultInpLayerName : name;
-#endif
         allBlobs.insert({name, wrapper->blob});
     }
 }
@@ -993,11 +620,7 @@ bool InfEngineBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
-#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2018R3)
-    InferenceEngine::ICNNNetwork::InputShapes inShapes = const_cast<InferenceEngine::CNNNetwork&>(t_net).getInputShapes();
-#else
     InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
-#endif
     InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
     bool equal_flag = true;
     size_t i = 0;
@@ -1044,7 +667,6 @@ InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
     return halfs;
 }
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
                      InferenceEngine::Builder::Layer& l)
 {
@@ -1054,7 +676,6 @@ void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data,
     l.addConstantData(name, data);
 #endif
 }
-#endif
 
 #endif  // HAVE_INF_ENGINE
 
@@ -1103,7 +724,7 @@ static std::string getInferenceEngineVPUType_()
     {
 #if defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
         param_vpu_type = OPENCV_DNN_IE_VPU_TYPE_DEFAULT;
-#elif INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+#else
         CV_LOG_INFO(NULL, "OpenCV-DNN: running Inference Engine VPU autodetection: Myriad2/X. In case of other accelerator types specify 'OPENCV_DNN_IE_VPU_TYPE' parameter");
         try {
             bool isMyriadX_ = detectMyriadX_();
@@ -1121,9 +742,6 @@ static std::string getInferenceEngineVPUType_()
             CV_LOG_WARNING(NULL, "OpenCV-DNN: Failed Inference Engine VPU autodetection. Specify 'OPENCV_DNN_IE_VPU_TYPE' parameter.");
             param_vpu_type.clear();
         }
-#else
-        CV_LOG_WARNING(NULL, "OpenCV-DNN: VPU auto-detection is not implemented. Consider specifying VPU type via 'OPENCV_DNN_IE_VPU_TYPE' parameter");
-        param_vpu_type = CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2;
 #endif
     }
     CV_LOG_INFO(NULL, "OpenCV-DNN: Inference Engine VPU type='" << param_vpu_type << "'");

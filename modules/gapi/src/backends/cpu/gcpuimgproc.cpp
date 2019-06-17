@@ -7,9 +7,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/imgproc.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/gapi/cpu/imgproc.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 #include "backends/fluid/gfluidimgproc_func.hpp"
 

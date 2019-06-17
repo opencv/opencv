@@ -136,10 +136,8 @@ TEST_P(Test_Torch_layers, run_reshape_change_batch_size)
 
 TEST_P(Test_Torch_layers, run_reshape)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
+        throw SkipTestException("Test is disabled for Myriad targets");
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_channels", "", false, true);
 }
@@ -220,10 +218,6 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 
 TEST_P(Test_Torch_layers, net_inception_block)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
-#endif
     runTorchNet("net_inception_block", "", false, true);
 }
 

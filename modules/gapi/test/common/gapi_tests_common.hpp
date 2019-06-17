@@ -10,9 +10,9 @@
 #include <iostream>
 #include <tuple>
 
-#include "opencv2/ts.hpp"
-#include "opencv2/gapi.hpp"
-#include "opencv2/gapi/util/util.hpp"
+#include <opencv2/ts.hpp>
+#include <opencv2/gapi.hpp>
+#include <opencv2/gapi/util/util.hpp>
 
 #include "gapi_tests_helpers.hpp"
 

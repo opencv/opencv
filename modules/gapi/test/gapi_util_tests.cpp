@@ -9,7 +9,7 @@
 
 #include <type_traits>
 
-#include "opencv2/gapi/util/util.hpp"
+#include <opencv2/gapi/util/util.hpp>
 
 namespace opencv_test
 {

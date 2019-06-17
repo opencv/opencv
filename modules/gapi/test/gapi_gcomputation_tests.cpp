@@ -6,7 +6,7 @@
 
 
 #include "test_precomp.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <ade/util/zip_range.hpp>
 
 namespace opencv_test

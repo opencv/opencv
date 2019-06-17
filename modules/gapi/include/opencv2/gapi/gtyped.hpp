@@ -11,10 +11,10 @@
 
 #include <vector>
 
-#include "opencv2/gapi/gcomputation.hpp"
-#include "opencv2/gapi/gcompiled.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/gcommon.hpp"
+#include <opencv2/gapi/gcomputation.hpp>
+#include <opencv2/gapi/gcompiled.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 
 namespace cv {
 

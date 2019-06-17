@@ -495,10 +495,9 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         if (_explicitSizes)
         {
             InferenceEngine::Builder::PriorBoxClusteredLayer ieLayer(name);
@@ -556,66 +555,8 @@ public:
             l.getParameters()["variance"] = _variance;
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = _explicitSizes ? "PriorBoxClustered" : "PriorBox";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        if (_explicitSizes)
-        {
-            CV_Assert(!_boxWidths.empty()); CV_Assert(!_boxHeights.empty());
-            CV_Assert(_boxWidths.size() == _boxHeights.size());
-            ieLayer->params["width"] = format("%f", _boxWidths[0]);
-            ieLayer->params["height"] = format("%f", _boxHeights[0]);
-            for (int i = 1; i < _boxWidths.size(); ++i)
-            {
-                ieLayer->params["width"] += format(",%f", _boxWidths[i]);
-                ieLayer->params["height"] += format(",%f", _boxHeights[i]);
-            }
-        }
-        else
-        {
-            ieLayer->params["min_size"] = format("%f", _minSize);
-            ieLayer->params["max_size"] = _maxSize > 0 ? format("%f", _maxSize) : "";
-
-            if (!_aspectRatios.empty())
-            {
-                ieLayer->params["aspect_ratio"] = format("%f", _aspectRatios[0]);
-                for (int i = 1; i < _aspectRatios.size(); ++i)
-                    ieLayer->params["aspect_ratio"] += format(",%f", _aspectRatios[i]);
-            }
-        }
-
-        ieLayer->params["flip"] = "0";  // We already flipped aspect ratios.
-        ieLayer->params["clip"] = _clip ? "1" : "0";
-
-        CV_Assert(!_variance.empty());
-        ieLayer->params["variance"] = format("%f", _variance[0]);
-        for (int i = 1; i < _variance.size(); ++i)
-            ieLayer->params["variance"] += format(",%f", _variance[i]);
-
-        if (_stepX == _stepY)
-        {
-            ieLayer->params["step"] = format("%f", _stepX);
-            ieLayer->params["step_h"] = "0.0";
-            ieLayer->params["step_w"] = "0.0";
-        }
-        else
-        {
-            ieLayer->params["step"] = "0.0";
-            ieLayer->params["step_h"] = format("%f", _stepY);
-            ieLayer->params["step_w"] = format("%f", _stepX);
-        }
-        CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
-        ieLayer->params["offset"] = format("%f", _offsetsX[0]);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

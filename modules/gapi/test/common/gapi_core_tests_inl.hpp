@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_CORE_TESTS_INL_HPP
 #define OPENCV_GAPI_CORE_TESTS_INL_HPP
 
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 #include "gapi_core_tests.hpp"
 
 namespace opencv_test

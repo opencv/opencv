@@ -13,7 +13,7 @@
 #include <ade/util/algorithm.hpp>
 
 #include "logger.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "api/gbackend_priv.hpp"
 

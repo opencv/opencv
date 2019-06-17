@@ -946,7 +946,8 @@ if(CV_TRACE)
   include(cmake/OpenCVDetectTrace.cmake)
 endif()
 
-ocv_cmake_hook(POST_DETECT_DEPENDECIES)
+ocv_cmake_hook(POST_DETECT_DEPENDECIES)  # typo, deprecated (2019-06)
+ocv_cmake_hook(POST_DETECT_DEPENDENCIES)
 
 # ----------------------------------------------------------------------------
 # Solution folders:

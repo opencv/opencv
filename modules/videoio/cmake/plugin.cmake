@@ -29,7 +29,12 @@ function(ocv_create_builtin_videoio_plugin name target)
     CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
   )
-  install(TARGETS ${name} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins OPTIONAL)
+
+  if(WIN32)
+    install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT plugins)
+  else()
+    install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins)
+  endif()
 
   add_dependencies(opencv_videoio_plugins ${name})
 

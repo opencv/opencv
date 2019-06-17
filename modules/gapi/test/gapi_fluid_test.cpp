@@ -7,10 +7,10 @@
 
 #include "test_precomp.hpp"
 
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
  // FIXME: move these tests with priv() to internal suite
 #include "backends/fluid/gfluidbuffer_priv.hpp"

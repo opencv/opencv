@@ -8,7 +8,7 @@
 #include "test_precomp.hpp"
 #include "gapi_mock_kernels.hpp"
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
 
 namespace opencv_test
 {
