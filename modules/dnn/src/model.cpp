@@ -22,19 +22,23 @@ struct Model::Impl {
     Mat    blob;
     std::vector<String> outNames;
 
-    void predict(Net* net, const Mat& frame, std::vector<Mat> outs) {
+    void predict(Net& net, const Mat& frame, std::vector<Mat>& outs) {
         blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
-        net->setInput(blob, "", scale, mean);
+        net.setInput(blob, "", scale, mean);
 
-        outNames = net->getUnconnectedOutLayersNames();
-        net->forward(outs, outNames);
+        outNames = net.getUnconnectedOutLayersNames();
+        net.forward(outs, outNames);
     }
 };
 
 Model::Model(const std::string& model, const std::string& config)
-    : Net(readNet(model, config)), impl_(new Impl) {};
+    : Net(readNet(model, config)), impl_(new Impl) {
+        impl_->outNames = getUnconnectedOutLayersNames();
+    };
 
-Model::Model(const Net& network) : Net(network), impl_(new Impl) {};
+Model::Model(const Net& network) : Net(network), impl_(new Impl) {
+    impl_->outNames = getUnconnectedOutLayersNames();
+};
 
 Model& Model::setInputSize(const Size& size) {
     impl_->size = size;
@@ -66,8 +70,10 @@ Model& Model::setInputSwapRB(bool swapRB) {
     return *this;
 }
 
-void Model::predict(InputArray frame, OutputArray outs) {
-    impl_->predict(this, frame.getMat(), outs.getMat());
+void Model::predict(InputArray frame, OutputArrayOfArrays outs) {
+    std::vector<Mat> outputs;
+    outs.getMatVector(outputs);
+    impl_->predict(*this, frame.getMat(), outputs);
 }
 
 ClassificationModel::ClassificationModel(const std::string& model, const std::string& config)
@@ -75,16 +81,19 @@ ClassificationModel::ClassificationModel(const std::string& model, const std::st
 
 ClassificationModel::ClassificationModel(const Net& network) : Model(network) {};
 
-std::pair<int, float> ClassificationModel::classify(InputArray frame) {
-    blobFromImage(frame, impl_->blob, 1.0, impl_->size, Scalar(), impl_->swapRB, impl_->crop, CV_8U);
-    setInput(impl_->blob, "", impl_->scale, impl_->mean);
-    Mat out = forward();
+std::vector<std::pair<int, float>> ClassificationModel::classify(InputArray frame) {
+    std::vector<Mat> outs;
+    impl_->predict(*this, frame.getMat(), outs);
+    CV_Assert(!outs.empty());
 
-    double conf;
-    cv::Point maxLoc;
-    minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
-
-    return {maxLoc.x, static_cast<float>(conf)};
+    std::vector<std::pair<int, float>> predicts;
+    for (auto out : outs) {
+        double conf;
+        cv::Point maxLoc;
+        minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
+        predicts.emplace_back(maxLoc.x, static_cast<float>(conf));
+    }
+    return predicts;
 }
 
 DetectionModel::DetectionModel(const std::string& model, const std::string& config)
@@ -112,10 +121,14 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         setInput(imInfo, "im_info");
     }
 
+    boxes.clear();
+    confidences.clear();
+    classIds.clear();
+
     std::vector<Mat> detections;
     impl_->outNames = getUnconnectedOutLayersNames();
     forward(detections, impl_->outNames);
-    CV_Assert(detections.size() > 0);
+    CV_Assert(!detections.empty());
 
     std::vector<String> layerNames = getLayerNames();
     int lastLayerId = getLayerId(layerNames.back());

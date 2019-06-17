@@ -1008,7 +1008,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          Model& setInputScale(float scale);
          Model& setInputCrop(bool crop);
          Model& setInputSwapRB(bool swapRB);
-         void predict(InputArray frame, OutputArray outs);
+         void predict(InputArray frame, OutputArrayOfArrays outs);
 
      protected:
          struct Impl;
@@ -1021,7 +1021,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          ClassificationModel(const std::string& model, const std::string& config = "");
          ClassificationModel(const Net& network);
 
-         std::pair<int, float> classify(InputArray frame);
+         std::vector<std::pair<int, float>> classify(InputArray frame);
      };
 
      class CV_EXPORTS_W DetectionModel : public Model
