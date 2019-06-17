@@ -19,11 +19,13 @@ namespace
 {
     struct RenderTestFixture : public ::testing::Test
     {
-        cv::Size size  = {30, 40};
-        int      thick = 2;
-        int      ff    = cv::FONT_HERSHEY_SIMPLEX;
-        int      lt    = LINE_8;
-        double   fs    = 1;
+        cv::Size size   = {30, 40};
+        int      thick  = 2;
+        int      ff     = cv::FONT_HERSHEY_SIMPLEX;
+        int      lt     = LINE_8;
+        double   fs     = 1;
+        int      radius = 15;
+        int      shift  = 0;
 
         cv::Mat     ref_mat {320, 480, CV_8UC3, cv::Scalar::all(255)};
         cv::Mat     out_mat {320, 480, CV_8UC3, cv::Scalar::all(255)};
@@ -79,8 +81,42 @@ TEST_F(RenderTestFixture, Rectangle)
     for (int i = 0; i < 5; ++i)
     {
         cv::Rect rect {30 + i * 60, 40 + i * 50, size.width, size.height};
-        cv::rectangle(ref_mat, rect, color, thick);
-        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
+        cv::rectangle(ref_mat, rect, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, shift});
+    }
+
+    cv::gapi::wip::draw::render(out_mat, prims);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST_F(RenderTestFixture, Circle)
+{
+    std::vector<cv::gapi::wip::draw::Prim> prims;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cv::Point center {30 + i * 60, 40 + i * 50};
+        cv::circle(ref_mat, center, radius, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Circle{center, radius, color, thick, lt, shift});
+    }
+
+    cv::gapi::wip::draw::render(out_mat, prims);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST_F(RenderTestFixture, Line)
+{
+    std::vector<cv::gapi::wip::draw::Prim> prims;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cv::Point pt1{30 + i * 60     , 40 + i * 50};
+        cv::Point pt2{30 + i * 60 + 40, 40 + i * 50};
+
+        cv::line(ref_mat, pt1, pt2, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Line{pt1, pt2, color, thick, lt, shift});
     }
 
     cv::gapi::wip::draw::render(out_mat, prims);
@@ -100,7 +136,7 @@ TEST_F(RenderTestFixture, PutTextAndRectangle)
         cv::rectangle(ref_mat, rect, color, thick);
         cv::putText(ref_mat, text, point, ff, fs, color, thick);
 
-        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, shift});
         prims.emplace_back(cv::gapi::wip::draw::Text{text, point, ff, fs, color, thick, lt, false});
     }
 
@@ -125,8 +161,58 @@ TEST_F(RenderTestFixture, PutTextAndRectangleNV12)
         cv::rectangle(ref_mat, rect, color, thick);
         cv::putText(ref_mat, text, point, ff, fs, color, thick);
 
-        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, 0});
+        prims.emplace_back(cv::gapi::wip::draw::Rect{rect, color, thick, lt, shift});
         prims.emplace_back(cv::gapi::wip::draw::Text{text, point, ff, fs, color, thick, lt, false});
+    }
+
+    cv::gapi::wip::draw::render(y, uv, prims);
+    cv::cvtColorTwoPlane(y, uv, out_mat, cv::COLOR_YUV2BGR_NV12);
+
+    cv::gapi::wip::draw::BGR2NV12(ref_mat, y, uv);
+    cv::cvtColorTwoPlane(y, uv, ref_mat, cv::COLOR_YUV2BGR_NV12);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST_F(RenderTestFixture, CircleNV12)
+{
+    cv::Mat y;
+    cv::Mat uv;
+    cv::gapi::wip::draw::BGR2NV12(out_mat, y, uv);
+
+    std::vector<cv::gapi::wip::draw::Prim> prims;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cv::Point center {30 + i * 60, 40 + i * 50};
+        cv::circle(ref_mat, center, radius, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Circle{center, radius, color, thick, lt, shift});
+    }
+
+    cv::gapi::wip::draw::render(y, uv, prims);
+    cv::cvtColorTwoPlane(y, uv, out_mat, cv::COLOR_YUV2BGR_NV12);
+
+    cv::gapi::wip::draw::BGR2NV12(ref_mat, y, uv);
+    cv::cvtColorTwoPlane(y, uv, ref_mat, cv::COLOR_YUV2BGR_NV12);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+}
+
+TEST_F(RenderTestFixture, LineNV12)
+{
+    cv::Mat y;
+    cv::Mat uv;
+    cv::gapi::wip::draw::BGR2NV12(out_mat, y, uv);
+
+    std::vector<cv::gapi::wip::draw::Prim> prims;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        cv::Point pt1{30 + i * 60     , 40 + i * 50};
+        cv::Point pt2{30 + i * 60 + 40, 40 + i * 50};
+
+        cv::line(ref_mat, pt1, pt2, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Line{pt1, pt2, color, thick, lt, shift});
     }
 
     cv::gapi::wip::draw::render(y, uv, prims);

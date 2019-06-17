@@ -28,7 +28,21 @@ void cv::gapi::wip::draw::render(cv::Mat& bgr, const Prims& prims)
                 break;
             }
 
-            default: util::throw_error(std::logic_error("Unsupported draw event"));
+            case Prim::index_of<Circle>():
+            {
+                auto c_p = cv::util::get<Circle>(p);
+                cv::circle(bgr, c_p.center, c_p.radius, c_p.color, c_p.thick, c_p.lt, c_p.shift);
+                break;
+            }
+
+            case Prim::index_of<Line>():
+            {
+                auto l_p = cv::util::get<Line>(p);
+                cv::line(bgr, l_p.pt1, l_p.pt2, l_p.color, l_p.thick, l_p.lt, l_p.shift);
+                break;
+            }
+
+            default: util::throw_error(std::logic_error("Unsupported draw operation"));
         }
     }
 }

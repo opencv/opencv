@@ -50,12 +50,41 @@ struct Rect
 {
     cv::Rect   rect;  /** Coordinates of the rectangle < */
     cv::Scalar color; /** The rectangle color or brightness (grayscale image) < */
-    int        thick; /** The thickness of lines that make up the rectangle. Negative values, like #FILLED, < */
+    int        thick; /** The thickness of lines that make up the rectangle. Negative values, like #FILLED,
+                          mean that the function has to draw a filled rectangle < */
     int        lt;    /** The type of the line. See #LineTypes< */
     int        shift; /** The number of fractional bits in the point coordinates < */
 };
 
-using Prim  = util::variant<Text, Rect>;
+/**
+ * A structure to represent parameters for drawing a circle
+ */
+struct Circle
+{
+    cv::Point  center; /** The center of the circle  < */
+    int        radius; /** The radius of the circle  < */
+    cv::Scalar color;  /** The color of the  circle <  */
+    int        thick;  /** The thickness of the circle outline, if positive. Negative values, like #FILLED,
+                           mean that a filled circle is to be drawn */
+    int        lt;     /** The Type of the circle boundary. See #LineTypes< */
+    int        shift;  /** The Number of fractional bits in the coordinates of the center and in the radius value < */
+};
+
+/**
+ * A structure to represent parameters for drawing a line
+ */
+struct Line
+{
+    cv::Point  pt1;    /** The first point of the line segment  < */
+    cv::Point  pt2;    /** The second point of the line segment < */
+    cv::Scalar color;  /** The line color                       < */
+    int        thick;  /** The thickness of line                < */
+    int        lt;     /** The Type of the line. See #LineTypes < */
+    int        shift;  /** The number of fractional bits in the point coordinates */
+
+};
+
+using Prim  = util::variant<Text, Rect, Circle, Line>;
 using Prims = std::vector<Prim>;
 
 /** @brief The function renders on the input image passed drawing primitivies
