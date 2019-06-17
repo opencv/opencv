@@ -29,6 +29,12 @@ namespace detail
     {
         static const char* tag() { return ""; };
     };
+
+    // These structures are tags which separate kernels and transformations
+    struct KernelTag
+    {};
+    struct TransformTag
+    {};
 }
 
 // This definition is here because it is reused by both public(?) and internal

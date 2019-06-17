@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCOMPOUNDKERNEL_HPP
@@ -65,22 +65,6 @@ template<typename U> struct get_compound_in<cv::GArray<U>>
     }
 };
 
-// Kernel may return one object(GMat, GScalar) or a tuple of objects.
-// This helper is needed to cast return value to the same form(tuple)
-template<typename>
-struct tuple_wrap_helper;
-
-template<typename T> struct tuple_wrap_helper
-{
-    static std::tuple<T> get(T&& obj) { return std::make_tuple(std::move(obj)); }
-};
-
-template<typename... Objs>
-struct tuple_wrap_helper<std::tuple<Objs...>>
-{
-    static std::tuple<Objs...> get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
-};
-
 template<typename, typename, typename>
 struct GCompoundCallHelper;
 
@@ -104,7 +88,8 @@ struct GCompoundCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 };
 
 template<class Impl, class K>
-class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                           public cv::detail::KernelTag
 {
     using P = cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 

@@ -35,7 +35,7 @@ namespace
     // 1. Get GCompoundKernel implementation
     // 2. Create GCompoundContext
     // 3. Run GCompoundKernel with GCompoundContext
-    // 4. Build subgraph from imputs/outputs GCompoundKernel
+    // 4. Build subgraph from inputs/outputs GCompoundKernel
     // 5. Replace compound node to subgraph
 
     void expand(ade::Graph& g, ade::NodeHandle nh, const ImplInfo& impl_info)
