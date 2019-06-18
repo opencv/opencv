@@ -113,8 +113,8 @@ public:
         esz1 /= sizeof(int);
         esz2 /= sizeof(int);
 
-        int count = m1.checkVector(d1);
-        int count2 = m2.checkVector(d2);
+        const int count = m1.checkVector(d1);
+        const int count2 = m2.checkVector(d2);
         CV_Assert(count >= modelPoints && count == count2);
 
         const int *m1ptr = m1.ptr<int>();
