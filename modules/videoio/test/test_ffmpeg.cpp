@@ -227,7 +227,7 @@ public:
     const static Size FrameSize;
     static std::string TmpDirectory;
 
-    CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
+    CreateVideoWriterInvoker(std::vector< cv::Ptr<VideoWriter> >& _writers, std::vector<std::string>& _files) :
         writers(_writers), files(_files)
     {
     }
@@ -241,14 +241,14 @@ public:
             std::string fileName = tempfile(stream.str().c_str());
 
             files[i] = fileName;
-            writers[i] = new VideoWriter(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
+            writers[i] = makePtr<VideoWriter>(fileName, CAP_FFMPEG, VideoWriter::fourcc('X','V','I','D'), 25.0f, FrameSize);
 
             CV_Assert(writers[i]->isOpened());
         }
     }
 
 private:
-    std::vector<VideoWriter*>& writers;
+    std::vector< cv::Ptr<VideoWriter> >& writers;
     std::vector<std::string>& files;
 };
 
@@ -264,7 +264,7 @@ public:
     static const Scalar ObjectColor;
     static const Point Center;
 
-    WriteVideo_Invoker(const std::vector<VideoWriter*>& _writers) :
+    WriteVideo_Invoker(const std::vector< cv::Ptr<VideoWriter> >& _writers) :
         ParallelLoopBody(), writers(&_writers)
     {
     }
@@ -304,7 +304,7 @@ protected:
     }
 
 private:
-    const std::vector<VideoWriter*>* writers;
+    const std::vector< cv::Ptr<VideoWriter> >* writers;
 };
 
 const Scalar WriteVideo_Invoker::ObjectColor(Scalar::all(0));
@@ -315,7 +315,7 @@ class CreateVideoCaptureInvoker :
     public ParallelLoopBody
 {
 public:
-    CreateVideoCaptureInvoker(std::vector<VideoCapture*>& _readers, const std::vector<std::string>& _files) :
+    CreateVideoCaptureInvoker(std::vector< cv::Ptr<VideoCapture> >& _readers, const std::vector<std::string>& _files) :
         ParallelLoopBody(), readers(&_readers), files(&_files)
     {
     }
@@ -324,12 +324,12 @@ public:
     {
         for (int i = range.start; i != range.end; ++i)
         {
-            readers->operator[](i) = new VideoCapture(files->operator[](i), CAP_FFMPEG);
+            readers->operator[](i) = makePtr<VideoCapture>(files->operator[](i), CAP_FFMPEG);
             CV_Assert(readers->operator[](i)->isOpened());
         }
     }
 private:
-    std::vector<VideoCapture*>* readers;
+    std::vector< cv::Ptr<VideoCapture> >* readers;
     const std::vector<std::string>* files;
 };
 
@@ -337,7 +337,7 @@ class ReadImageAndTest :
     public ParallelLoopBody
 {
 public:
-    ReadImageAndTest(const std::vector<VideoCapture*>& _readers, cvtest::TS* _ts) :
+    ReadImageAndTest(const std::vector< cv::Ptr<VideoCapture> >& _readers, cvtest::TS* _ts) :
         ParallelLoopBody(), readers(&_readers), ts(_ts)
     {
     }
@@ -346,7 +346,7 @@ public:
     {
         for (int j = range.start; j < range.end; ++j)
         {
-            VideoCapture* capture = readers->operator[](j);
+            VideoCapture* capture = readers->operator[](j).get();
             CV_Assert(capture != NULL);
             CV_Assert(capture->isOpened());
 
@@ -394,7 +394,7 @@ public:
     static bool next;
 
 private:
-    const std::vector<VideoCapture*>* readers;
+    const std::vector< cv::Ptr<VideoCapture> >* readers;
     cvtest::TS* ts;
 };
 
@@ -406,7 +406,7 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
     cvtest::TS* ts = cvtest::TS::ptr();
 
     // creating VideoWriters
-    std::vector<VideoWriter*> writers(threadsCount);
+    std::vector< cv::Ptr<VideoWriter> > writers(threadsCount);
     Range range(0, threadsCount);
     std::vector<std::string> files(threadsCount);
     CreateVideoWriterInvoker invoker1(writers, files);
@@ -416,11 +416,9 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
     parallel_for_(range, WriteVideo_Invoker(writers));
 
     // deleting the writers
-    for (std::vector<VideoWriter*>::iterator i = writers.begin(), end = writers.end(); i != end; ++i)
-        delete *i;
     writers.clear();
 
-    std::vector<VideoCapture*> readers(threadsCount);
+    std::vector<cv::Ptr<VideoCapture> > readers(threadsCount);
     CreateVideoCaptureInvoker invoker2(readers, files);
     parallel_for_(range, invoker2);
 
@@ -437,8 +435,7 @@ TEST(Videoio_Video_parallel_writers_and_readers, accuracy)
     }
 
     // delete the readers
-    for (std::vector<VideoCapture *>::iterator i = readers.begin(), end = readers.end(); i != end; ++i)
-        delete *i;
+    readers.clear();
 }
 
 #endif
