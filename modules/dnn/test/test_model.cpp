@@ -58,10 +58,9 @@ public:
         model.setInputSize(size).setInputMean(mean).setInputScale(scale)
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
-        std::vector<std::pair<int, float>> prediction = model.classify(frame);
-        ASSERT_TRUE(!prediction.empty());
-        EXPECT_EQ(prediction[0].first, ref.first);
-        ASSERT_NEAR(prediction[0].second, ref.second, norm);
+        std::pair<int, float> prediction = model.classify(frame);
+        EXPECT_EQ(prediction.first, ref.first);
+        ASSERT_NEAR(prediction.second, ref.second, norm);
     }
 };
 

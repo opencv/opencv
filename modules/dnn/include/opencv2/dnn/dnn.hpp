@@ -996,43 +996,171 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
+
+     /** @brief This class is presented high-level API for neural networks.
+      *
+      * Model allows to set params for preprocessing input image.
+      * Model creates net from file with trained weights and config,
+      * sets preprocessing input and runs forward pass.
+      */
      class CV_EXPORTS_W Model : public Net
      {
      public:
-         Model(const std::string& model, const std::string& config = "");
+         /**
+          * @brief Create model from deep learning network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+         Model(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
          Model(const Net& network);
 
+         /** @brief Set input size for frame.
+          *  @param[in] size New input size.
+          *  @note If shape of the new blob less than 0, then frame size not change.
+         */
          Model& setInputSize(const Size& size);
+
+         /** @brief Set input size for frame.
+         *  @param[in] width New input width.
+         *  @param[in] height New input height.
+         *  @note If shape of the new blob less than 0,
+         *  then frame size not change.
+         */
          Model& setInputSize(int width, int height);
+
+         /** @brief Set mean value for frame.
+          *  @param[in] mean Scalar with mean values which are subtracted from channels.
+         */
          Model& setInputMean(const Scalar& mean);
+
+         /** @brief Set scalefactor value for frame.
+          *  @param[in] scale Multiplier for frame values.
+         */
          Model& setInputScale(float scale);
+
+         /** @brief Set flag crop for frame.
+          *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
+         */
          Model& setInputCrop(bool crop);
+
+         /** @brief Set flag swapRB for frame.
+          *  @param[in] swapRB Flag which indicates that swap first and last channels.
+         */
          Model& setInputSwapRB(bool swapRB);
-         void predict(InputArray frame, OutputArrayOfArrays outs);
+
+         /** @brief Set preprocessing parameters for frame.
+         *  @param[in] width New input width.
+         *  @param[in] height New input height.
+         *  @param[in] mean Scalar with mean values which are subtracted from channels.
+         *  @param[in] scale Multiplier for frame values.
+         *  @param[in] swapRB Flag which indicates that swap first and last channels.
+         *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
+         */
+         CV_WRAP void setParams(int width = -1, int height = -1, Scalar mean = Scalar(),
+                               float scale = 1.0, bool swapRB = false, bool crop = false);
+
+         /** @brief Given the @p input frame, create input blob, run net and return the output @p blobs.
+          *  @param[in]  frame  The input image.
+          *  @param[out] outs Allocated output blobs, which will store results of the computation.
+          */
+         CV_WRAP void predict(InputArray frame, CV_OUT OutputArrayOfArrays outs);
+
+         /** @brief The static method creates model from config and weights.
+         * @param[in] model Binary file contains trained weights.
+         * @param[in] config Text file contains network configuration.
+        */
+         CV_WRAP static Ptr<Model> create(const String& model, const String& config = "");
 
      protected:
          struct Impl;
-         Ptr<Impl> impl_;
+         Ptr<Impl> impl;
      };
 
+     /** @brief This class is presented high-level API for classification models.
+      *
+      * ClassificationModel allows to set params for preprocessing input image.
+      * ClassificationModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return top-1 prediction.
+      */
      class CV_EXPORTS_W ClassificationModel : public Model
      {
      public:
-         ClassificationModel(const std::string& model, const std::string& config = "");
+         /**
+          * @brief Create classification model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+         ClassificationModel(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
          ClassificationModel(const Net& network);
 
-         std::vector<std::pair<int, float>> classify(InputArray frame);
+         /** @brief Given the @p input frame, create input blob, run net and return top-1 prediction.
+          *  @param[in]  frame  The input image.
+          */
+         std::pair<int, float> classify(InputArray frame);
+
+         /** @overload */
+         CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
+
+         /** @brief The static method creates classification model from config and weights.
+         * @param[in] model Binary file contains trained weights.
+         * @param[in] config Text file contains network configuration.
+        */
+         CV_WRAP static Ptr<ClassificationModel> create(const String& model, const String& config = "");
      };
 
+     /** @brief This class is presented high-level API for detection models.
+      *
+      * DetectionModel allows to set params for preprocessing input image.
+      * DetectionModel creates net from file with trained weights and config,
+      * sets preprocessing input, runs forward pass and return result detections.
+      */
      class CV_EXPORTS_W DetectionModel : public Model
      {
      public:
-         DetectionModel(const std::string& model, const std::string& config = "");
+         /**
+          * @brief Create detection model from network represented in one of the supported formats.
+          * An order of @p model and @p config arguments does not matter.
+          * @param[in] model Binary file contains trained weights.
+          * @param[in] config Text file contains network configuration.
+          */
+         DetectionModel(const String& model, const String& config = "");
+
+         /**
+          * @brief Create model from deep learning network.
+          * @param[in] network Net object.
+          */
          DetectionModel(const Net& network);
 
-         void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
+         /** @brief Given the @p input frame, create input blob, run net and return result detections.
+          *  @param[in]  frame  The input image.
+          *  @param[out] classIds Class indexes in result detection.
+          *  @param[out] confidences A set of corresponding confidences.
+          *  @param[out] boxes A set of bounding boxes.
+          *  @param[in] confThreshold A threshold used to filter boxes by confidences.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression.
+          *  @param[in] absoluteCoords Flag which indicates return absolute pixel coordinates or relative.
+          */
+         CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                      CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
                      float confThreshold = 0.5, float nmsThreshold = 0.4, bool absoluteCoords = true);
+
+         /** @brief The static method creates detection model from config and weights.
+         * @param[in] model Binary file contains trained weights.
+         * @param[in] config Text file contains network configuration.
+        */
+         CV_WRAP static Ptr<DetectionModel> create(const String& model, const String& config = "");
      };
 
 //! @}
