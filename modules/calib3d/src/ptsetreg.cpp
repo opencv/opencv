@@ -141,10 +141,10 @@ public:
 
                 idx[i] = idx_i;
 
-                for( int k = 0; k < esz1; k++ )
+                for( int k = 0; k < esz1; ++k )
                     ms1ptr[i*esz1 + k] = m1ptr[idx_i*esz1 + k];
 
-                for( int k = 0; k < esz2; k++ )
+                for( int k = 0; k < esz2; ++k )
                     ms2ptr[i*esz2 + k] = m2ptr[idx_i*esz2 + k];
             }
 
