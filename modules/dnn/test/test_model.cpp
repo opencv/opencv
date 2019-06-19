@@ -24,8 +24,7 @@ public:
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                         float scale = 1.0, bool swapRB = false, bool crop = false,
-                         bool absoluteCoords = true)
+                         float scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
@@ -37,12 +36,16 @@ public:
 
         std::vector<int> classIds;
         std::vector<float> confidences;
-        std::vector<Rect2d> boxes;
+        std::vector<Rect> boxes;
 
-        model.detect(frame, classIds, confidences, boxes, confThreshold,
-                     nmsThreshold, absoluteCoords);
+        model.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
+
+        std::vector<Rect2d> boxesDouble(boxes.size());
+        for (int i = 0; i < boxes.size(); i++) {
+            boxesDouble[i] = boxes[i];
+        }
         normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
-                         confidences, boxes, "",
+                         confidences, boxesDouble, "",
                          confThreshold, scoreDiff, iouDiff);
     }
 
@@ -78,13 +81,14 @@ TEST_P(Test_Model, Classify)
     testClassifyModel(weights_file, config_file, img_path, ref, norm, size);
 }
 
+
 TEST_P(Test_Model, DetectRegion)
 {
     std::vector<int> refClassIds = {6, 1, 11};
     std::vector<float> refConfidences = {0.750469f, 0.780879f, 0.901615f};
-    std::vector<Rect2d> refBoxes = {Rect2d(0.577374f, 0.127391f, 0.325575f, 0.173418f),
-                                    Rect2d(0.270762f, 0.264102f, 0.461713f, 0.48131f),
-                                    Rect2d(0.1386f, 0.338509f, 0.282737f, 0.60028f)};
+    std::vector<Rect2d> refBoxes = {Rect2d(240.032, 52.994, 135.408, 72.134),
+                                    Rect2d(112.320, 109.865, 192.067, 200.220),
+                                    Rect2d(57.658, 140.608, 117.603, 249.683)};
 
     std::string img_path = _tf("dog416.png");
     std::string weights_file = _tf("yolo-voc.weights");
@@ -92,18 +96,16 @@ TEST_P(Test_Model, DetectRegion)
 
     float scale = 1.0 / 255.0;
     Size size{416, 416};
-    bool crop = false;
     bool swapRB = true;
-    bool absoluteCoords = false;
 
     double confThreshold = 0.24;
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
+    double iouDiff = 1;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
                     refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
-                    Scalar(), scale, swapRB, crop, absoluteCoords);
+                    Scalar(), scale, swapRB);
 }
 
 TEST_P(Test_Model, DetectionOutput)
@@ -122,7 +124,7 @@ TEST_P(Test_Model, DetectionOutput)
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
                         4e-3 : default_l1;
-    double iouDiff = 0.011;
+    double iouDiff = 1;
     float confThreshold = 0.8;
     float nmsThreshold = 0;
 
@@ -130,6 +132,31 @@ TEST_P(Test_Model, DetectionOutput)
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
 }
 
+
+TEST_P(Test_Model, DetectionMobilenetSSD)
+{
+    std::vector<int> refClassIds = {7, 15};
+    std::vector<float> refConfidences = {0.99983513f, 0.87925464f};
+    std::vector<Rect2d> refBoxes = {Rect2d(329.351, 238.952, 85.334, 102.106),
+                                    Rect2d(101.638, 189.152, 34.217, 138.234)};
+
+    std::string img_path = _tf("street.png");
+    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
+    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+
+    Scalar mean = Scalar(127.5, 127.5, 127.5);
+    float scale = 1.0f / 127.5;
+    Size size{300, 300};
+
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
+    double iouDiff = 1;
+
+    float confThreshold = FLT_MIN;
+    float nmsThreshold = 0;
+
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
+                    scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());
 

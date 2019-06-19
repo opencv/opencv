@@ -23,8 +23,7 @@ struct Model::Impl {
     std::vector<String> outNames;
 
     void predict(Net& net, const Mat& frame, std::vector<Mat>& outs) {
-        if (size.width <= 0) size.width = frame.cols;
-        if (size.height <= 0) size.height = frame.rows;
+        CV_Assert(!size.empty());
 
         blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
         net.setInput(blob, "", scale, mean);
@@ -81,10 +80,9 @@ Model& Model::setInputSwapRB(bool swapRB) {
     return *this;
 }
 
-void Model::setParams(int width, int height, Scalar mean,
-                      float scale, bool swapRB, bool crop) {
-    impl->size.width = width;
-    impl->size.height = height;
+void Model::setInputParams(const Size& size, const Scalar& mean,
+                           float scale, bool swapRB, bool crop) {
+    impl->size = size;
     impl->mean = mean;
     impl->scale = scale;
     impl->crop = crop;
@@ -131,8 +129,8 @@ Ptr<DetectionModel> DetectionModel::create(const String& model, const String& co
 }
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
-                   CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
-                   float confThreshold, float nmsThreshold, bool absoluteCoords)
+                   CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
+                   float confThreshold, float nmsThreshold)
 {
     std::vector<Mat> detections;
     impl->predict(*this, frame.getMat(), detections);
@@ -143,14 +141,14 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
+
     std::vector<String> layerNames = getLayerNames();
     int lastLayerId = getLayerId(layerNames.back());
     Ptr<Layer> lastLayer = getLayer(lastLayerId);
 
     std::vector<int> predClassIds;
-    std::vector<Rect2d> predBoxes;
+    std::vector<Rect> predBoxes;
     std::vector<float> predConf;
-
     if (lastLayer->type == "DetectionOutput") {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
@@ -168,14 +166,14 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 float top    = data[j + 4];
                 float right  = data[j + 5];
                 float bottom = data[j + 6];
-                float width  = right  - left + 1;
-                float height = bottom - top  + 1;
+                float width  = right  - left;
+                float height = bottom - top ;
 
-                if (absoluteCoords && width * height <= 1)
+                if (width * height <= 1)
                     boxes.emplace_back(left * frameWidth, top * frameHeight,
-                                       width * frameWidth, height * frameHeight);
+                                       width * frameWidth + 1, height * frameHeight + 1);
                 else
-                    boxes.emplace_back(left, top, width, height);
+                    boxes.emplace_back(left, top, width + 1, height + 1);
 
                 classIds.push_back(static_cast<int>(data[j + 1]));
                 confidences.push_back(conf);
@@ -197,21 +195,16 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 if (conf < confThreshold)
                     continue;
 
-                float centerX = data[0];
-                float centerY = data[1];
-                float width   = data[2];
-                float height  = data[3];
-                float left    = centerX - width  / 2;
-                float top     = centerY - height / 2;
+                int centerX = data[0] * frameWidth;
+                int centerY = data[1] * frameHeight;
+                int width   = data[2] * frameWidth;
+                int height  = data[3] * frameHeight;
+                int left    = centerX - width  / 2;
+                int top     = centerY - height / 2;
 
                 predClassIds.push_back(classIdPoint.x);
-                predConf.push_back(conf);
-
-                if (absoluteCoords)
-                    predBoxes.emplace_back(left * frameWidth, top * frameHeight,
-                                           width * frameWidth, height * frameHeight);
-                else
-                    predBoxes.emplace_back(left, top, width, height);
+                predConf.push_back(static_cast<float>(conf));
+                predBoxes.emplace_back(left, top, width, height);
             }
         }
     } else {

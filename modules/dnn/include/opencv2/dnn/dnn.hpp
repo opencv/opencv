@@ -1055,14 +1055,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          Model& setInputSwapRB(bool swapRB);
 
          /** @brief Set preprocessing parameters for frame.
-         *  @param[in] width New input width.
-         *  @param[in] height New input height.
+         *  @param[in] size New input size.
          *  @param[in] mean Scalar with mean values which are subtracted from channels.
          *  @param[in] scale Multiplier for frame values.
          *  @param[in] swapRB Flag which indicates that swap first and last channels.
          *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
          */
-         CV_WRAP void setParams(int width = -1, int height = -1, Scalar mean = Scalar(),
+         CV_WRAP void setInputParams(const Size& size = Size(), const Scalar& mean = Scalar(),
                                float scale = 1.0, bool swapRB = false, bool crop = false);
 
          /** @brief Given the @p input frame, create input blob, run net and return the output @p blobs.
@@ -1150,11 +1149,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
           *  @param[out] boxes A set of bounding boxes.
           *  @param[in] confThreshold A threshold used to filter boxes by confidences.
           *  @param[in] nmsThreshold A threshold used in non maximum suppression.
-          *  @param[in] absoluteCoords Flag which indicates return absolute pixel coordinates or relative.
           */
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
-                     CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect2d>& boxes,
-                     float confThreshold = 0.5, float nmsThreshold = 0.4, bool absoluteCoords = true);
+                     CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
+                     float confThreshold = 0.5, float nmsThreshold = 0.4);
 
          /** @brief The static method creates detection model from config and weights.
          * @param[in] model Binary file contains trained weights.

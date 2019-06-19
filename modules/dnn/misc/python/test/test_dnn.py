@@ -21,66 +21,45 @@ def box2str(box):
     width, height = box[2] - left, box[3] - top
     return '[%f x %f from (%f, %f)]' % (width, height, left, top)
 
+def assertDetect(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
+                 confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
+    matchedRefBoxes = [False] * len(refBoxes)
+    errMsg = ''
+    for i in range(len(testBoxes)):
+        try:
+            testScore = testScores[i]
+        except IndexError as e:
+            errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
+        if testScore < confThreshold:
+            continue
+
+        testClassId, testBox = testClassIds[i], testBoxes[i]
+        matched = False
+        for j in range(len(refBoxes)):
+            if (not matchedRefBoxes[j]) and testClassId == refClassIds[j] and \
+               abs(testScore - refScores[j]) < scores_diff:
+                interArea = inter_area(testBox, refBoxes[j])
+                iou = interArea / (area(testBox) + area(refBoxes[j]) - interArea)
+                if abs(iou - 1.0) < boxes_iou_diff:
+                    matched = True
+                    matchedRefBoxes[j] = True
+        if not matched:
+            errMsg += '\nUnmatched prediction: class %d score %f box %s' % (testClassId, testScore, box2str(testBox))
+
+    for i in range(len(refBoxes)):
+        if (not matchedRefBoxes[i]) and refScores[i] > confThreshold:
+            errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
+    if errMsg:
+        test.fail(errMsg)
+
 def normAssertDetections(test, ref, out, confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
     ref = np.array(ref, np.float32)
     refClassIds, testClassIds = ref[:, 1], out[:, 1]
     refScores, testScores = ref[:, 2], out[:, 2]
     refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
 
-    matchedRefBoxes = [False] * len(refBoxes)
-    errMsg = ''
-    for i in range(len(refBoxes)):
-        testScore = testScores[i]
-        if testScore < confThreshold:
-            continue
-
-        testClassId, testBox = testClassIds[i], testBoxes[i]
-        matched = False
-        for j in range(len(refBoxes)):
-            if (not matchedRefBoxes[j]) and testClassId == refClassIds[j] and \
-               abs(testScore - refScores[j]) < scores_diff:
-                interArea = inter_area(testBox, refBoxes[j])
-                iou = interArea / (area(testBox) + area(refBoxes[j]) - interArea)
-                if abs(iou - 1.0) < boxes_iou_diff:
-                    matched = True
-                    matchedRefBoxes[j] = True
-        if not matched:
-            errMsg += '\nUnmatched prediction: class %d score %f box %s' % (testClassId, testScore, box2str(testBox))
-
-    for i in range(len(refBoxes)):
-        if (not matchedRefBoxes[i]) and refScores[i] > confThreshold:
-            errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
-    if errMsg:
-        test.fail(errMsg)
-
-def normAssertDetections(test, refClassIds, refScores, refBoxes,
-                         testClassIds, testScores, testBoxes,
-                         confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
-    matchedRefBoxes = [False] * len(refBoxes)
-    errMsg = ''
-    for i in range(len(testBoxes)):
-        testScore = testScores[i]
-        if testScore < confThreshold:
-            continue
-
-        testClassId, testBox = testClassIds[i], testBoxes[i]
-        matched = False
-        for j in range(len(refBoxes)):
-            if (not matchedRefBoxes[j]) and testClassId == refClassIds[j] and \
-               abs(testScore - refScores[j]) < scores_diff:
-                interArea = inter_area(testBox, refBoxes[j])
-                iou = interArea / (area(testBox) + area(refBoxes[j]) - interArea)
-                if abs(iou - 1.0) < boxes_iou_diff:
-                    matched = True
-                    matchedRefBoxes[j] = True
-        if not matched:
-            errMsg += '\nUnmatched prediction: class %d score %f box %s' % (testClassId, testScore, box2str(testBox))
-
-    for i in range(len(refBoxes)):
-        if (not matchedRefBoxes[i]) and refScores[i] > confThreshold:
-            errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
-    if errMsg:
-        test.fail(errMsg)
+    assertDetect(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
+                 confThreshold, scores_diff, boxes_iou_diff)
 
 def printParams(backend, target):
     backendNames = {
@@ -165,50 +144,39 @@ class dnn_test(NewOpenCVTests):
         normAssert(self, blob, target)
 
     def test_model(self):
-        img_path = self.find_dnn_file("dnn/dog416.png")
-        weights = self.find_dnn_file("dnn/resnet50_rfcn_final.caffemodel")
-        config = self.find_dnn_file("dnn/rfcn_pascal_voc_resnet50.prototxt")
+        img_path = self.find_dnn_file("dnn/street.png")
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel")
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt")
         frame = cv.imread(img_path)
         model = cv.dnn.DetectionModel_create(weights, config)
-        size = (800, 600)
-        mean = (102.9801, 115.9465, 122.7717)
-        model.setParams(width=size[0], height=size[1], mean=mean)
+        size = (300, 300)
+        mean = (127.5, 127.5, 127.5)
+        scale = 1.0 / 127.5
+        model.setInputParams(size=size, mean=mean, scale=scale)
 
-        iouDiff = 0.011
-        confThreshold = 0.8
+        iouDiff = 1
+        confThreshold = 0.000001
         nmsThreshold = 0
-        scoreDiff = 4e-3
+        scoreDiff = 1e-5
 
         classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
 
-        refClassIds = (7, 12)
-        refConfidences = (0.991359, 0.94786)
-        refBoxes = ((491.822, 81.1668, 211.751, 98.0672),
-                    (132.093, 223.903, 206.984, 343.257))
+        refClassIds = (7, 15)
+        refConfidences = (0.99983513, 0.87925464)
+        refBoxes = ((329.351, 238.952, 85.334, 102.106),
+                    (101.638, 189.152, 34.217, 138.234))
 
-        normAssertDetections(self, refClassIds, refConfidences, refBoxes,
+        assertDetect(self, refClassIds, refConfidences, refBoxes,
                              classIds, confidences, boxes,
                              confThreshold, scoreDiff, iouDiff)
 
-        frame = cv.resize(frame, size)
         for box, conf, classId in zip(boxes, confidences, classIds):
             left, top, width, height = box
-            left = int(left)
             assert(left > 0)
-            top = int(top)
             assert(top > 0)
-            width = int(width)
-            height = int(height)
             assert(left + width < frame.shape[1])
             assert(top + height < frame.shape[0])
             cv.rectangle(frame, (left, top), (left + width, top + height), (0, 255, 0))
-
-            label = '%s: %.2f' % (classId, conf)
-
-            labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            top = max(top, labelSize[1])
-            cv.rectangle(frame, (left, top - labelSize[1]), (left + labelSize[0], top + baseLine), (255, 255, 255), cv.FILLED)
-            cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
 
     def test_face_detection(self):
