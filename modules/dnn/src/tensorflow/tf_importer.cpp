@@ -804,6 +804,7 @@ void TFImporter::populateNet(Net dstNet)
                 if (next_layers.empty())
                     next_layers = getNextLayers(net, name, "DepthwiseConv2dNative");
             }
+
             if (type == "SpaceToBatchND")
             {
                 // op: "SpaceToBatchND"
@@ -991,6 +992,35 @@ void TFImporter::populateNet(Net dstNet)
 
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_UNKNOWN)
                 data_layouts[name] = DATA_LAYOUT_NHWC;
+        }
+        else if (type == "MirrorPad")
+        {
+            layerParams.set("type", "reflect");
+
+            Mat paddings = getTensorContent(getConstBlob(layer, value_id, 1));
+            CV_Assert(paddings.type() == CV_32SC1);
+            if (paddings.total() == 8)
+            {
+                // Perhabs, we have NHWC padding dimensions order.
+                //  N    H    W    C
+                // 0 1  2 3  4 5  6 7
+                std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
+                std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
+                //  N    C    W    H
+                // 0 1  2 3  4 5  6 7
+                std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
+                std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
+                //  N    C    H    W
+                // 0 1  2 3  4 5  6 7
+            }
+
+            // Just a single padding layer.
+            layerParams.set("paddings", DictValue::arrayInt<int*>((int*)paddings.data, paddings.total()));
+
+            int id = dstNet.addLayer(name, "Padding", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
         else if (type == "BiasAdd" || type == "Add" || type == "Sub" || type=="AddN")
         {
