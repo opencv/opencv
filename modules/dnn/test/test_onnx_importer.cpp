@@ -146,6 +146,11 @@ TEST_P(Test_ONNX_layers, Concatenation)
     testONNXModels("concatenation");
 }
 
+TEST_P(Test_ONNX_layers, Eltwise3d)
+{
+    testONNXModels("eltwise3d");
+}
+
 TEST_P(Test_ONNX_layers, AveragePooling)
 {
     testONNXModels("average_pooling");
