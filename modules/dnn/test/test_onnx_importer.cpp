@@ -146,7 +146,7 @@ TEST_P(Test_ONNX_layers, Concatenation)
     testONNXModels("concatenation");
 }
 
-TEST_P(Test_ONNX_layers, Eltwise3d)
+TEST_P(Test_ONNX_layers, Eltwise3D)
 {
     testONNXModels("eltwise3d");
 }

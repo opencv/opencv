@@ -158,13 +158,7 @@ public:
             p.nstripes = nstripes;
             p.channels = (dst.dims >= 4 ? dst.size[1] : 1);
 
-            switch (dst.dims) {
-                case 3:  p.planeSize = dst.size[1] * dst.size[2];               break;
-                case 4:  p.planeSize = dst.size[2] * dst.size[3];               break;
-                case 5:  p.planeSize = dst.size[2] * dst.size[3] * dst.size[4]; break;
-                default: p.planeSize = dst.size[dst.dims - 1];
-            }
-
+            p.planeSize = dst.total(dst.dims >= 4 ? 2 : 1);
             CV_Assert(dst.total() == dst.size[0] * p.channels * p.planeSize);
 
             bool simpleCoeffs = true;
