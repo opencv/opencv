@@ -53,13 +53,13 @@ using namespace cv;
 using namespace cv::dnn;
 
 template<typename TStr>
-static std::string _tf(TStr filename, bool inTorchDir = true)
+static std::string _tf(TStr filename, bool inTorchDir = true, bool required = true)
 {
     String path = "dnn/";
     if (inTorchDir)
         path += "torch/";
     path += filename;
-    return findDataFile(path, false);
+    return findDataFile(path, required);
 }
 
 TEST(Torch_Importer, simple_read)
@@ -274,7 +274,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat sample = imread(findDataFile("cv/shared/lena.png", false));
+    Mat sample = imread(findDataFile("cv/shared/lena.png"));
     Mat sampleF32(sample.size(), CV_32FC3);
     sample.convertTo(sampleF32, sampleF32.type());
     sampleF32 /= 255;
@@ -415,7 +415,7 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
 
-        Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
+        Mat img = imread(findDataFile("dnn/googlenet_1.png"));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
         net.setInput(inputBlob);

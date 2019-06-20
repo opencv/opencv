@@ -58,7 +58,7 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
     const int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("This test does not support FP16");
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
+    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
                                findDataFile("dnn/bvlc_googlenet.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -89,7 +89,7 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
     const int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("This test does not support FP16");
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
+    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
                                findDataFile("dnn/bvlc_googlenet.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -120,7 +120,7 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
     const int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("This test does not support FP16");
-    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt", false),
+    Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
                                findDataFile("dnn/bvlc_googlenet.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);

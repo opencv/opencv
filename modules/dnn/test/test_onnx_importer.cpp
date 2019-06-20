@@ -12,15 +12,18 @@
 namespace opencv_test { namespace {
 
 template<typename TString>
-static std::string _tf(TString filename)
+static std::string _tf(TString filename, bool required = true)
 {
-    String rootFolder = "dnn/onnx/";
-    return findDataFile(rootFolder + filename, false);
+    return findDataFile(std::string("dnn/onnx/") + filename, required);
 }
 
 class Test_ONNX_layers : public DNNTestLayer
 {
 public:
+    bool required;
+
+    Test_ONNX_layers() : required(true) { }
+
     enum Extension
     {
         npy,
@@ -31,7 +34,7 @@ public:
                         const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true)
     {
-        String onnxmodel = _tf("models/" + basename + ".onnx");
+        String onnxmodel = _tf("models/" + basename + ".onnx", required);
         Mat inp, ref;
         if (ext == npy) {
             inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
@@ -275,11 +278,16 @@ TEST_P(Test_ONNX_layers, Softmax)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
-class Test_ONNX_nets : public Test_ONNX_layers {};
+class Test_ONNX_nets : public Test_ONNX_layers
+{
+public:
+    Test_ONNX_nets() { required = false; }
+};
+
 TEST_P(Test_ONNX_nets, Alexnet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    const String model =  _tf("models/alexnet.onnx");
+    const String model =  _tf("models/alexnet.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -309,7 +317,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         throw SkipTestException("");
 
-    const String model = _tf("models/googlenet.onnx");
+    const String model = _tf("models/googlenet.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -527,7 +535,7 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
 
-    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
     Mat image0 = imread(findDataFile("dnn/dog416.png"));
     Mat image1 = imread(findDataFile("dnn/street.png"));
 
