@@ -100,7 +100,7 @@ TEST_P(Test_Model, DetectRegion)
 
     double confThreshold = 0.24;
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = 1;
+    double iouDiff = 0.014;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
@@ -124,7 +124,7 @@ TEST_P(Test_Model, DetectionOutput)
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
                         4e-3 : default_l1;
-    double iouDiff = 1;
+    double iouDiff = 0.016;
     float confThreshold = 0.8;
     float nmsThreshold = 0;
 
@@ -149,7 +149,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    double iouDiff = 1;
+    double iouDiff = 0.05;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;

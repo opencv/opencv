@@ -13,7 +13,8 @@
 namespace cv {
 namespace dnn {
 
-struct Model::Impl {
+struct Model::Impl
+{
     Size   size;
     Scalar mean;
     float  scale = 1.0;
@@ -23,7 +24,8 @@ struct Model::Impl {
     std::vector<String> outNames;
 
     void predict(Net& net, const Mat& frame, std::vector<Mat>& outs) {
-        CV_Assert(!size.empty());
+        if (size.empty())
+            CV_Error(Error::StsBadSize, "Input size not specified");
 
         blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
         net.setInput(blob, "", scale, mean);
@@ -38,50 +40,55 @@ struct Model::Impl {
 };
 
 Model::Model(const String& model, const String& config)
-    : Net(readNet(model, config)), impl(new Impl) {
-        impl->outNames = getUnconnectedOutLayersNames();
-    };
-
-Model::Model(const Net& network) : Net(network), impl(new Impl) {
+    : Net(readNet(model, config)), impl(new Impl)
+{
     impl->outNames = getUnconnectedOutLayersNames();
 };
 
-Ptr<Model> Model::create(const String& model, const String& config) {
-    return makePtr<Model>(model, config);
-}
+Model::Model(const Net& network) : Net(network), impl(new Impl)
+{
+    impl->outNames = getUnconnectedOutLayersNames();
+};
 
-Model& Model::setInputSize(const Size& size) {
+Model& Model::setInputSize(const Size& size)
+{
     impl->size = size;
     return *this;
 }
 
-Model& Model::setInputSize(int width, int height) {
+Model& Model::setInputSize(int width, int height)
+{
     impl->size = Size(width, height);
     return *this;
 }
 
-Model& Model::setInputMean(const Scalar& mean) {
+Model& Model::setInputMean(const Scalar& mean)
+{
     impl->mean = mean;
     return *this;
 }
 
-Model& Model::setInputScale(float scale) {
+Model& Model::setInputScale(float scale)
+{
     impl->scale = scale;
     return *this;
 }
 
-Model& Model::setInputCrop(bool crop) {
+Model& Model::setInputCrop(bool crop)
+{
     impl->crop = crop;
     return *this;
 }
 
-Model& Model::setInputSwapRB(bool swapRB) {
+Model& Model::setInputSwapRB(bool swapRB)
+{
     impl->swapRB = swapRB;
     return *this;
 }
 
-void Model::setInputParams(const Size& size, const Scalar& mean,
-                           float scale, bool swapRB, bool crop) {
+void Model::setInputParams(float scale, const Size& size, const Scalar& mean,
+                           bool swapRB, bool crop)
+{
     impl->size = size;
     impl->mean = mean;
     impl->scale = scale;
@@ -89,7 +96,8 @@ void Model::setInputParams(const Size& size, const Scalar& mean,
     impl->swapRB = swapRB;
 }
 
-void Model::predict(InputArray frame, OutputArrayOfArrays outs) {
+void Model::predict(InputArray frame, OutputArrayOfArrays outs)
+{
     std::vector<Mat> outputs;
     outs.getMatVector(outputs);
     impl->predict(*this, frame.getMat(), outputs);
@@ -100,22 +108,20 @@ ClassificationModel::ClassificationModel(const String& model, const String& conf
 
 ClassificationModel::ClassificationModel(const Net& network) : Model(network) {};
 
-Ptr<ClassificationModel> ClassificationModel::create(const String& model, const String& config) {
-    return makePtr<ClassificationModel>(model, config);
-}
-
-std::pair<int, float> ClassificationModel::classify(InputArray frame) {
+std::pair<int, float> ClassificationModel::classify(InputArray frame)
+{
     std::vector<Mat> outs;
     impl->predict(*this, frame.getMat(), outs);
     CV_Assert(outs.size() == 1);
 
     double conf;
     cv::Point maxLoc;
-    minMaxLoc(outs[0], nullptr, &conf, nullptr, &maxLoc);
+    minMaxLoc(outs[0].reshape(1, 1), nullptr, &conf, nullptr, &maxLoc);
     return {maxLoc.x, static_cast<float>(conf)};
 }
 
-void ClassificationModel::classify(InputArray frame, int& classId, float& conf) {
+void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
+{
     std::tie(classId, conf) = classify(frame);
 }
 
@@ -123,10 +129,6 @@ DetectionModel::DetectionModel(const String& model, const String& config)
     : Model(model, config) {};
 
 DetectionModel::DetectionModel(const Net& network) : Model(network) {};
-
-Ptr<DetectionModel> DetectionModel::create(const String& model, const String& config) {
-    return makePtr<DetectionModel>(model, config);
-}
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                    CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
@@ -141,6 +143,10 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
+    if (getLayer(0)->outputNameToIndex("im_info") != -1) {
+        frameWidth = impl->size.width;
+        frameHeight = impl->size.height;
+    }
 
     std::vector<String> layerNames = getLayerNames();
     int lastLayerId = getLayerId(layerNames.back());
@@ -149,7 +155,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     std::vector<int> predClassIds;
     std::vector<Rect> predBoxes;
     std::vector<float> predConf;
-    if (lastLayer->type == "DetectionOutput") {
+    if (lastLayer->type == "DetectionOutput")
+    {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
         // [batchId, classId, confidence, left, top, right, bottom]
@@ -162,30 +169,44 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 if (conf < confThreshold)
                     continue;
 
-                float left   = data[j + 3];
-                float top    = data[j + 4];
-                float right  = data[j + 5];
-                float bottom = data[j + 6];
-                float width  = right  - left;
-                float height = bottom - top ;
+                int left   = data[j + 3];
+                int top    = data[j + 4];
+                int right  = data[j + 5];
+                int bottom = data[j + 6];
+                int width  = right  - left + 1;
+                int height = bottom - top + 1;
 
                 if (width * height <= 1)
-                    boxes.emplace_back(left * frameWidth, top * frameHeight,
-                                       width * frameWidth + 1, height * frameHeight + 1);
-                else
-                    boxes.emplace_back(left, top, width + 1, height + 1);
+                {
+                    left   = data[j + 3] * frameWidth;
+                    top    = data[j + 4] * frameHeight;
+                    right  = data[j + 5] * frameWidth;
+                    bottom = data[j + 6] * frameHeight;
+                    width  = right  - left + 1;
+                    height = bottom - top + 1;
+                }
+
+                left   = std::max(0, std::min(left, frameWidth - 1));
+                top    = std::max(0, std::min(top, frameHeight - 1));
+                width  = std::max(0, std::min(width, frameWidth - 1 - left));
+                height = std::max(0, std::min(height, frameHeight - 1 - top));
+                boxes.emplace_back(left, top, width, height);
 
                 classIds.push_back(static_cast<int>(data[j + 1]));
                 confidences.push_back(conf);
             }
         }
-    } else if (lastLayer->type == "Region") {
-        for (int i = 0; i < detections.size(); ++i) {
+    }
+    else if (lastLayer->type == "Region")
+    {
+        for (int i = 0; i < detections.size(); ++i)
+        {
             // Network produces output blob with a shape NxC where N is a number of
             // detected objects and C is a number of classes + 4 where the first 4
             // numbers are [center_x, center_y, width, height]
             float* data = (float*)detections[i].data;
-            for (int j = 0; j < detections[i].rows; ++j, data += detections[i].cols) {
+            for (int j = 0; j < detections[i].rows; ++j, data += detections[i].cols)
+            {
 
                 Mat scores = detections[i].row(j).colRange(5, detections[i].cols);
                 Point classIdPoint;
@@ -195,20 +216,25 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 if (conf < confThreshold)
                     continue;
 
-                int centerX = data[0] * frameWidth;
-                int centerY = data[1] * frameHeight;
+                int centerX = std::max(0, std::min(static_cast<int>(data[0] * frameWidth), frameWidth - 1));
+                int centerY = std::max(0, std::min(static_cast<int>(data[1] * frameHeight), frameWidth - 1));
                 int width   = data[2] * frameWidth;
                 int height  = data[3] * frameHeight;
-                int left    = centerX - width  / 2;
-                int top     = centerY - height / 2;
+
+                int left = std::max(0, std::min(centerX - width / 2, frameWidth - 1));
+                int top  = std::max(0, std::min(centerY - height / 2, frameHeight - 1));
+                width    = std::max(0, std::min(width, frameWidth - 1 - left));
+                height   = std::max(0, std::min(height, frameHeight - 1 - top));
 
                 predClassIds.push_back(classIdPoint.x);
                 predConf.push_back(static_cast<float>(conf));
                 predBoxes.emplace_back(left, top, width, height);
             }
         }
-    } else {
-        CV_Error(Error::StsError, "Unknown output layer type: \"" + lastLayer->type + "\"");
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
     }
 
     std::vector<int> indices;

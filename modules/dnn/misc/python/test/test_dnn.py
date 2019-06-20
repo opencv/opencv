@@ -21,15 +21,12 @@ def box2str(box):
     width, height = box[2] - left, box[3] - top
     return '[%f x %f from (%f, %f)]' % (width, height, left, top)
 
-def assertDetect(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
+def normAssertDetections(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
                  confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
     matchedRefBoxes = [False] * len(refBoxes)
     errMsg = ''
     for i in range(len(testBoxes)):
-        try:
-            testScore = testScores[i]
-        except IndexError as e:
-            errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
+        testScore = testScores[i]
         if testScore < confThreshold:
             continue
 
@@ -51,15 +48,6 @@ def assertDetect(test, refClassIds, refScores, refBoxes, testClassIds, testScore
             errMsg += '\nUnmatched reference: class %d score %f box %s' % (refClassIds[i], refScores[i], box2str(refBoxes[i]))
     if errMsg:
         test.fail(errMsg)
-
-def normAssertDetections(test, ref, out, confThreshold=0.0, scores_diff=1e-5, boxes_iou_diff=1e-4):
-    ref = np.array(ref, np.float32)
-    refClassIds, testClassIds = ref[:, 1], out[:, 1]
-    refScores, testScores = ref[:, 2], out[:, 2]
-    refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
-
-    assertDetect(test, refClassIds, refScores, refBoxes, testClassIds, testScores, testBoxes,
-                 confThreshold, scores_diff, boxes_iou_diff)
 
 def printParams(backend, target):
     backendNames = {
@@ -143,18 +131,19 @@ class dnn_test(NewOpenCVTests):
         target = target.transpose(2, 0, 1).reshape(1, 3, height, width)  # to NCHW
         normAssert(self, blob, target)
 
+
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
         weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel")
         config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt")
         frame = cv.imread(img_path)
-        model = cv.dnn.DetectionModel_create(weights, config)
+        model = cv.dnn_DetectionModel(weights, config)
         size = (300, 300)
         mean = (127.5, 127.5, 127.5)
         scale = 1.0 / 127.5
         model.setInputParams(size=size, mean=mean, scale=scale)
 
-        iouDiff = 1
+        iouDiff = 0.05
         confThreshold = 0.000001
         nmsThreshold = 0
         scoreDiff = 1e-5
@@ -166,16 +155,11 @@ class dnn_test(NewOpenCVTests):
         refBoxes = ((329.351, 238.952, 85.334, 102.106),
                     (101.638, 189.152, 34.217, 138.234))
 
-        assertDetect(self, refClassIds, refConfidences, refBoxes,
-                             classIds, confidences, boxes,
-                             confThreshold, scoreDiff, iouDiff)
+        normAssertDetections(self, refClassIds, refConfidences, refBoxes,
+                             classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
 
         for box, conf, classId in zip(boxes, confidences, classIds):
             left, top, width, height = box
-            assert(left > 0)
-            assert(top > 0)
-            assert(left + width < frame.shape[1])
-            assert(top + height < frame.shape[0])
             cv.rectangle(frame, (left, top), (left + width, top + height), (0, 255, 0))
 
 
@@ -209,7 +193,13 @@ class dnn_test(NewOpenCVTests):
             scoresDiff = 4e-3 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-5
             iouDiff = 2e-2 if target in [cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD] else 1e-4
 
-            normAssertDetections(self, ref, out, 0.5, scoresDiff, iouDiff)
+            ref = np.array(ref, np.float32)
+            refClassIds, testClassIds = ref[:, 1], out[:, 1]
+            refScores, testScores = ref[:, 2], out[:, 2]
+            refBoxes, testBoxes = ref[:, 3:], out[:, 3:]
+
+            normAssertDetections(self, refClassIds, refScores, refBoxes, testClassIds,
+                                 testScores, testBoxes, 0.5, scoresDiff, iouDiff)
 
     def test_async(self):
         timeout = 500*10**6  # in nanoseconds (500ms)
