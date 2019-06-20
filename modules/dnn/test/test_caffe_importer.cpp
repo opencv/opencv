@@ -48,7 +48,7 @@ namespace opencv_test { namespace {
 template<typename TString>
 static std::string _tf(TString filename)
 {
-    return (getOpenCVExtraDir() + "/dnn/") + filename;
+    return findDataFile(std::string("dnn/") + filename);
 }
 
 class Test_Caffe_nets : public DNNTestLayer
@@ -58,11 +58,11 @@ public:
                     double scoreDiff = 0.0, double iouDiff = 0.0)
     {
         checkBackend();
-        Net net = readNetFromCaffe(findDataFile("dnn/" + proto, false),
+        Net net = readNetFromCaffe(findDataFile("dnn/" + proto),
                                    findDataFile("dnn/" + model, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        Mat img = imread(findDataFile("dnn/dog416.png"));
         resize(img, img, Size(800, 600));
         Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
         Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
@@ -80,11 +80,12 @@ public:
 
 TEST(Test_Caffe, memory_read)
 {
-    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt");
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
     std::vector<char> dataProto;
     readFileContent(proto, dataProto);
+
     std::vector<char> dataModel;
     readFileContent(model, dataModel);
 
@@ -163,7 +164,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     bool readFromMemory = get<0>(GetParam());
     Net net;
     {
-        const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+        const string proto = findDataFile("dnn/bvlc_alexnet.prototxt");
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
         if (readFromMemory)
         {
@@ -204,8 +205,8 @@ TEST(Reproducibility_FCN, Accuracy)
 
     Net net;
     {
-        const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
-        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel", false);
+        const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt");
+        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel");
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
@@ -233,7 +234,7 @@ TEST(Reproducibility_SSD, Accuracy)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
     Net net;
     {
-        const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
+        const string proto = findDataFile("dnn/ssd_vgg16.prototxt");
         const string model = findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false);
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
@@ -331,7 +332,7 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     if (!ocl::useOpenCL() && targetId != DNN_TARGET_CPU)
         throw SkipTestException("OpenCL is disabled");
 
-    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
+    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt"),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -369,7 +370,7 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
         throw SkipTestException("This test does not support FP16");
-    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -400,18 +401,18 @@ TEST(Reproducibility_AlexNet_fp16, Accuracy)
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
-    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt");
     const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
 
     shrinkCaffeModel(model, "bvlc_alexnet.caffemodel_fp16");
     Net net = readNetFromCaffe(proto, "bvlc_alexnet.caffemodel_fp16");
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
-    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png", false));
+    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png"));
 
-    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false));
+    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar()));
     Mat out = net.forward();
-    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy", false));
+    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy"));
     normAssert(ref, out, "", l1, lInf);
 }
 
@@ -420,7 +421,7 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
-    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt");
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
     shrinkCaffeModel(model, "bvlc_googlenet.caffemodel_fp16");
@@ -506,7 +507,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
 
 TEST(Test_Caffe, multiple_inputs)
 {
-    const string proto = findDataFile("dnn/layers/net_input.prototxt", false);
+    const string proto = findDataFile("dnn/layers/net_input.prototxt");
     Net net = readNetFromCaffe(proto);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
@@ -534,8 +535,8 @@ TEST(Test_Caffe, multiple_inputs)
 
 TEST(Test_Caffe, shared_weights)
 {
-  const string proto = findDataFile("dnn/layers/shared_weights.prototxt", false);
-  const string model = findDataFile("dnn/layers/shared_weights.caffemodel", false);
+  const string proto = findDataFile("dnn/layers/shared_weights.prototxt");
+  const string model = findDataFile("dnn/layers/shared_weights.caffemodel");
 
   Net net = readNetFromCaffe(proto, model);
 
@@ -563,7 +564,7 @@ TEST_P(opencv_face_detector, Accuracy)
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
     Net net = readNetFromCaffe(proto, model);
-    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
