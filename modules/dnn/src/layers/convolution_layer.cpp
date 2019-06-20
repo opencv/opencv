@@ -47,6 +47,7 @@
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
+#include <numeric>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
