@@ -2107,5 +2107,5 @@ void writeTextGraph(const String& _model, const String& output)
     ofs.close();
 }
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
