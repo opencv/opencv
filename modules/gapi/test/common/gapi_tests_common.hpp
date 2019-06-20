@@ -99,11 +99,19 @@ public:
     }
 
     void initRand(int type, cv::Size sz_in, int dtype, bool createOutputMatrices,
-        int distributionType = cv::RNG::UNIFORM)
+        int distributionType = cv::RNG::UNIFORM, bool initOneMatrix = false)
     {
         switch( distributionType )
         {
-            case cv::RNG::UNIFORM: return initMatsRandU(type, sz_in, dtype, createOutputMatrices);
+            // FIXME: implement a better way of deciding which init function to call - e.g.
+            //        user-provided callback
+            case cv::RNG::UNIFORM: {
+                if (initOneMatrix) {
+                    return initMatrixRandU(type, sz_in, dtype, createOutputMatrices);
+                } else {
+                    return initMatsRandU(type, sz_in, dtype, createOutputMatrices);
+                }
+            }
             case cv::RNG::NORMAL: return initMatsRandN(type, sz_in, dtype, createOutputMatrices);
             default: GAPI_Assert(false);
         }
@@ -248,7 +256,7 @@ class TestWithParamBase : public TestFunctional,
             instance->dtype = instance->type;
         }
         initRand(instance->type, instance->sz, instance->dtype, instance->createOutputMatrices,
-            instance->distribution);
+            instance->distribution, instance->initOneMatrix);
     }
 public:
     using common_params_t = typename Params<SpecificParams...>::common_params_t;
@@ -260,9 +268,11 @@ public:
     bool createOutputMatrices = false;
     cv::GCompileArgs compile_args = {};
     int distribution = -1;
+    bool initOneMatrix = false;
 
-    TestWithParamBase(int _distributionType = cv::RNG::NORMAL) :
-        distribution(_distributionType)
+    TestWithParamBase(int _distributionType = cv::RNG::NORMAL, bool _initOneMatrix = false) :
+        distribution(_distributionType),
+        initOneMatrix(_initOneMatrix)
     {
         init(this);
     }
@@ -273,8 +283,8 @@ public:
     }
 };
 
-#define USE_UNIFORM_INIT(class_name) \
-    class_name() : TestWithParamBase(cv::RNG::UNIFORM) {}
+#define USE_UNIFORM_INIT(class_name, init_one_matrix) \
+    class_name() : TestWithParamBase(cv::RNG::UNIFORM, init_one_matrix) {}
 
 #define USE_NORMAL_INIT(class_name) \
     class_name() : TestWithParamBase(cv::RNG::NORMAL) {}
