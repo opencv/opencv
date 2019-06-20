@@ -492,10 +492,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS CropLayer : public Layer
     {
     public:
-        int startAxis;
-        std::vector<int> offset;
-
-        static Ptr<CropLayer> create(const LayerParams &params);
+        static Ptr<Layer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS EltwiseLayer : public Layer
@@ -608,7 +605,7 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     /**
-     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public
+     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
      * It differs from @ref ResizeLayer in output shape and resize scales computations.
      */

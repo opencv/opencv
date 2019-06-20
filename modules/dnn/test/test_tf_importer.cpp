@@ -96,17 +96,17 @@ public:
         if (memoryLoad)
         {
             // Load files into a memory buffers
-            string dataModel;
-            ASSERT_TRUE(readFileInMemory(netPath, dataModel));
+            std::vector<char> dataModel;
+            readFileContent(netPath, dataModel);
 
-            string dataConfig;
+            std::vector<char> dataConfig;
             if (hasText)
             {
-                ASSERT_TRUE(readFileInMemory(netConfig, dataConfig));
+                readFileContent(netConfig, dataConfig);
             }
 
-            net = readNetFromTensorflow(dataModel.c_str(), dataModel.size(),
-                                        dataConfig.c_str(), dataConfig.size());
+            net = readNetFromTensorflow(dataModel.data(), dataModel.size(),
+                                        dataConfig.data(), dataConfig.size());
         }
         else
             net = readNetFromTensorflow(netPath, netConfig);
@@ -133,6 +133,9 @@ TEST_P(Test_TensorFlow_layers, conv)
 
 TEST_P(Test_TensorFlow_layers, Convolution3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
             throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("conv3d");
@@ -186,6 +189,8 @@ TEST_P(Test_TensorFlow_layers, batch_norm)
     runTensorFlowNet("unfused_batch_norm_no_gamma");
     runTensorFlowNet("mvn_batch_norm");
     runTensorFlowNet("mvn_batch_norm_1x1");
+    runTensorFlowNet("switch_identity");
+    runTensorFlowNet("keras_batch_norm_training");
 }
 
 TEST_P(Test_TensorFlow_layers, batch_norm3D)
@@ -228,6 +233,9 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
 
 TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("max_pool3d");
@@ -235,6 +243,9 @@ TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 
 TEST_P(Test_TensorFlow_layers, AvePooling3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
     if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     runTensorFlowNet("ave_pool3d");
@@ -249,6 +260,7 @@ TEST_P(Test_TensorFlow_layers, deconvolution)
     runTensorFlowNet("deconvolution_adj_pad_same");
     runTensorFlowNet("keras_deconv_valid");
     runTensorFlowNet("keras_deconv_same");
+    runTensorFlowNet("keras_deconv_same_v2");
 }
 
 TEST_P(Test_TensorFlow_layers, matmul)
@@ -336,10 +348,15 @@ class Test_TensorFlow_nets : public DNNTestLayer {};
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 {
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
-        throw SkipTestException("Test is disabled for MyriadX");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+    {
+#if INF_ENGINE_VER_MAJOR_GE(2019010000)
+        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            throw SkipTestException("Test is disabled for MyriadX");
+#else
+            throw SkipTestException("Test is disabled for Myriad");
+#endif
+    }
 #endif
 
     checkBackend();
@@ -363,7 +380,9 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0043 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.037 : default_lInf;
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2019010000
     expectNoFallbacksFromIE(net);
+#endif
 }
 
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
@@ -437,7 +456,12 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
 
 TEST_P(Test_TensorFlow_nets, Faster_RCNN)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));  // FIXIT split test
+    // FIXIT split test
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     static std::string names[] = {"faster_rcnn_inception_v2_coco_2018_01_28",
                                   "faster_rcnn_resnet50_coco_2018_01_28"};
 
@@ -535,7 +559,10 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 // np.save('east_text_detection.geometry.npy', geometry)
 TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+        CV_TEST_TAG_DEBUG_LONG
+    );
 
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
@@ -765,7 +792,7 @@ TEST(Test_TensorFlow, two_inputs)
 
 TEST(Test_TensorFlow, Mask_RCNN)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_VERYLONG);
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 

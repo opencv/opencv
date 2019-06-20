@@ -9,12 +9,12 @@
 
 #include <iomanip>   // hex, dec (debug)
 
-#include "opencv2/gapi/own/convert.hpp"
-#include "opencv2/gapi/own/types.hpp"
+#include <opencv2/gapi/own/convert.hpp>
+#include <opencv2/gapi/own/types.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 #include "backends/fluid/gfluidbuffer_priv.hpp"
-#include "opencv2/gapi/opencv_includes.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
 
 #include "backends/fluid/gfluidutils.hpp" // saturate
 

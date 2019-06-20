@@ -22,8 +22,8 @@
 // This part of the system is API-unaware by its design.
 //
 
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gislandmodel.hpp"

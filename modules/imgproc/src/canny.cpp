@@ -318,8 +318,7 @@ public:
         low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient)
     {
 #if CV_SIMD128
-        haveSIMD = hasSIMD128();
-        if(haveSIMD)
+        if (true)
             _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
         else
 #endif
@@ -338,8 +337,7 @@ public:
         low(_low), high(_high), aperture_size(0), L2gradient(_L2gradient)
     {
 #if CV_SIMD128
-        haveSIMD = hasSIMD128();
-        if(haveSIMD)
+        if (true)
             _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
         else
 #endif
@@ -440,7 +438,6 @@ public:
                 {
                     int j = 0, width = src.cols * cn;
 #if CV_SIMD128
-                    if (haveSIMD)
                     {
                        for ( ; j <= width - 8; j += 8)
                         {
@@ -464,7 +461,6 @@ public:
                 {
                     int j = 0, width = src.cols * cn;
 #if CV_SIMD128
-                    if (haveSIMD)
                     {
                         for(; j <= width - 8; j += 8)
                         {
@@ -525,7 +521,7 @@ public:
             // From here actual src row is (i - 1)
             // Set left and right border to 1
 #if CV_SIMD128
-            if(haveSIMD)
+            if (true)
                 _pmap = map.ptr<uchar>(i) + CV_MALLOC_SIMD128;
             else
 #endif
@@ -547,7 +543,6 @@ public:
             const int TG22 = 13573;
             int j = 0;
 #if CV_SIMD128
-            if (haveSIMD)
             {
                 const v_int32x4 v_low = v_setall_s32(low);
                 const v_int8x16 v_one = v_setall_s8(1);
@@ -806,9 +801,6 @@ private:
     bool L2gradient, needGradient;
     ptrdiff_t mapstep;
     int cn;
-#if CV_SIMD128
-    bool haveSIMD;
-#endif
     mutable Mutex mutex;
 };
 
@@ -820,9 +812,6 @@ public:
         map(_map), dst(_dst)
     {
         dst = _dst;
-#if CV_SIMD128
-        haveSIMD = hasSIMD128();
-#endif
     }
 
     ~finalPass() {}
@@ -836,13 +825,13 @@ public:
             uchar *pdst = dst.ptr<uchar>(i);
             const uchar *pmap = map.ptr<uchar>(i + 1);
 #if CV_SIMD128
-            if(haveSIMD)
+            if (true)
                 pmap += CV_MALLOC_SIMD128;
             else
 #endif
                 pmap += 1;
 #if CV_SIMD128
-            if(haveSIMD) {
+            {
                 const v_uint8x16 v_zero = v_setzero_u8();
                 const v_uint8x16 v_ff = ~v_zero;
                 const v_uint8x16 v_two(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2);
@@ -873,9 +862,6 @@ public:
 private:
     const Mat &map;
     Mat &dst;
-#if CV_SIMD128
-    bool haveSIMD;
-#endif
 
     finalPass(const finalPass&); // = delete
     finalPass& operator=(const finalPass&); // = delete

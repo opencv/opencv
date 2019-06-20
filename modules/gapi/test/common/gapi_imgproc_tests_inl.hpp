@@ -8,11 +8,50 @@
 #ifndef OPENCV_GAPI_IMGPROC_TESTS_INL_HPP
 #define OPENCV_GAPI_IMGPROC_TESTS_INL_HPP
 
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/imgproc.hpp>
 #include "gapi_imgproc_tests.hpp"
 
 namespace opencv_test
 {
+
+// FIXME avoid this code duplicate in perf tests
+namespace
+{
+    void rgb2yuyv(const uchar* rgb_line, uchar* yuv422_line, int width)
+    {
+        CV_Assert(width % 2 == 0);
+
+        for (int i = 0; i < width; i += 2)
+        {
+            uchar r = rgb_line[i * 3    ];
+            uchar g = rgb_line[i * 3 + 1];
+            uchar b = rgb_line[i * 3 + 2];
+
+            yuv422_line[i * 2    ] = cv::saturate_cast<uchar>(-0.14713 * r - 0.28886 * g + 0.436   * b + 128.f);  // U0
+            yuv422_line[i * 2 + 1] = cv::saturate_cast<uchar>( 0.299   * r + 0.587   * g + 0.114   * b        );  // Y0
+            yuv422_line[i * 2 + 2] = cv::saturate_cast<uchar>( 0.615   * r - 0.51499 * g - 0.10001 * b + 128.f);  // V0
+
+            r = rgb_line[i * 3 + 3];
+            g = rgb_line[i * 3 + 4];
+            b = rgb_line[i * 3 + 5];
+
+            yuv422_line[i * 2 + 3] = cv::saturate_cast<uchar>(0.299 * r + 0.587 * g + 0.114 * b);   // Y1
+        }
+    }
+
+    void convertRGB2YUV422Ref(const cv::Mat& in, cv::Mat &out)
+    {
+        out.create(in.size(), CV_8UC2);
+
+        for (int i = 0; i < in.rows; ++i)
+        {
+            const uchar* in_line_p  = in.ptr<uchar>(i);
+            uchar* out_line_p = out.ptr<uchar>(i);
+            rgb2yuyv(in_line_p, out_line_p, in.cols);
+        }
+    }
+}
+
 TEST_P(Filter2DTest, AccuracyTest)
 {
     compare_f cmpF;
@@ -722,6 +761,78 @@ TEST_P(YUV2BGRTest, AccuracyTest)
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2BGR);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
+    }
+}
+
+TEST_P(RGB2HSVTest, AccuracyTest)
+{
+    auto param = GetParam();
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::RGB2HSV(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_RGB2HSV);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
+    }
+}
+
+TEST_P(BayerGR2RGBTest, AccuracyTest)
+{
+    auto param = GetParam();
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC1, std::get<1>(param), CV_8UC3, std::get<2>(param));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::BayerGR2RGB(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BayerGR2RGB);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), std::get<1>(param));
+    }
+}
+
+TEST_P(RGB2YUV422Test, AccuracyTest)
+{
+    auto param = GetParam();
+    auto compile_args = std::get<3>(param);
+    compare_f cmpF = std::get<0>(param);
+    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC2, std::get<2>(param));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::RGB2YUV422(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        convertRGB2YUV422Ref(in_mat1, out_mat_ocv);
     }
     // Comparison //////////////////////////////////////////////////////////////
     {

@@ -12,8 +12,8 @@
 
 #include "gfluidutils.hpp"
 
-#include "opencv2/core/cvdef.h"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/core/cvdef.h>
+#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -43,7 +43,35 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
 
 //--------------------------------------
 //
-// Fluid kernels: RGB-to-YUV, YUV-to-RGB
+// Fluid kernels: RGB-to-HSV
+//
+//--------------------------------------
+
+void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
+                      const int hdiv_table[], int width)
+{
+    CV_CPU_DISPATCH(run_rgb2hsv_impl, (out, in, sdiv_table, hdiv_table, width), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-BayerGR
+//
+//--------------------------------------
+
+void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
+{
+    CV_CPU_DISPATCH(run_bayergr2rgb_bg_impl, (out, in, width), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
+{
+    CV_CPU_DISPATCH(run_bayergr2rgb_gr_impl, (out, in, width), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-YUV, RGB-to-YUV422, YUV-to-RGB
 //
 //--------------------------------------
 
@@ -55,6 +83,11 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
 void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4])
 {
     CV_CPU_DISPATCH(run_yuv2rgb_impl, (out, in, width, coef), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
+{
+    CV_CPU_DISPATCH(run_rgb2yuv422_impl, (out, in, width), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 //-------------------------

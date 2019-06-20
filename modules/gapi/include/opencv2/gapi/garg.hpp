@@ -12,17 +12,17 @@
 #include <type_traits>
 
 #include <opencv2/gapi/opencv_includes.hpp>
-#include "opencv2/gapi/own/mat.hpp"
+#include <opencv2/gapi/own/mat.hpp>
 
-#include "opencv2/gapi/util/any.hpp"
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/util/variant.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/garray.hpp"
-#include "opencv2/gapi/gtype_traits.hpp"
-#include "opencv2/gapi/gmetaarg.hpp"
-#include "opencv2/gapi/own/scalar.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gtype_traits.hpp>
+#include <opencv2/gapi/gmetaarg.hpp>
+#include <opencv2/gapi/own/scalar.hpp>
 
 namespace cv {
 

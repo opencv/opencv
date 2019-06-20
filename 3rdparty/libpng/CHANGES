@@ -6066,31 +6066,44 @@ Version 1.6.35 [July 15, 2018]
 Version 1.6.36 [December 1, 2018]
   Optimized png_do_expand_palette for ARM processors.
   Improved performance by around 10-22% on a recent ARM Chromebook.
-  (Contributed by Richard Townsend, ARM Holdings)
+    (Contributed by Richard Townsend, ARM Holdings)
   Fixed manipulation of machine-specific optimization options.
-  (Contributed by Vicki Pfau)
+    (Contributed by Vicki Pfau)
   Used memcpy instead of manual pointer arithmetic on Intel SSE2.
-  (Contributed by Samuel Williams)
+    (Contributed by Samuel Williams)
   Fixed build errors with MSVC on ARM64.
-  (Contributed by Zhijie Liang)
+    (Contributed by Zhijie Liang)
   Fixed detection of libm in CMakeLists.
-  (Contributed by Cameron Cawley)
+    (Contributed by Cameron Cawley)
   Fixed incorrect creation of pkg-config file in CMakeLists.
-  (Contributed by Kyle Bentley)
+    (Contributed by Kyle Bentley)
   Fixed the CMake build on Windows MSYS by avoiding symlinks.
   Fixed a build warning on OpenBSD.
-  (Contributed by Theo Buehler)
+    (Contributed by Theo Buehler)
   Fixed various typos in comments.
-  (Contributed by "luz.paz")
+    (Contributed by "luz.paz")
   Raised the minimum required CMake version from 3.0.2 to 3.1.
   Removed yet more of the vestigial support for pre-ANSI C compilers.
   Removed ancient makefiles for ancient systems that have been broken
-  across all previous libpng-1.6.x versions.
+    across all previous libpng-1.6.x versions.
   Removed the Y2K compliance statement and the export control
-  information.
+    information.
   Applied various code style and documentation fixes.
 
-Send comments/corrections/commendations to png-mng-implement at lists.sf.net
-(subscription required; visit
+Version 1.6.37 [April 14, 2019]
+  Fixed a use-after-free vulnerability (CVE-2019-7317) in png_image_free.
+  Fixed a memory leak in the ARM NEON implementation of png_do_expand_palette.
+  Fixed a memory leak in pngtest.c.
+  Fixed two vulnerabilities (CVE-2018-14048, CVE-2018-14550) in
+    contrib/pngminus; refactor.
+  Changed the license of contrib/pngminus to MIT; refresh makefile and docs.
+    (Contributed by Willem van Schaik)
+  Fixed a typo in the libpng license v2.
+    (Contributed by Miguel Ojeda)
+  Added makefiles for AddressSanitizer-enabled builds.
+  Cleaned up various makefiles.
+
+Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
+Subscription is required; visit
 https://lists.sourceforge.net/lists/listinfo/png-mng-implement
-to subscribe).
+to subscribe.

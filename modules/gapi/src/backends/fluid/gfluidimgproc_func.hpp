@@ -8,7 +8,7 @@
 
 #if !defined(GAPI_STANDALONE)
 
-#include "opencv2/core.hpp"
+#include <opencv2/core.hpp>
 
 namespace cv {
 namespace gapi {
@@ -25,13 +25,34 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
 
 //--------------------------------------
 //
-// Fluid kernels: RGB-to-YUV, YUV-to-RGB
+// Fluid kernels: RGB-to-HSV
+//
+//--------------------------------------
+
+void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
+        const int hdiv_table[], int width);
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-BayerGR
+//
+//--------------------------------------
+
+void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width);
+
+void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width);
+
+//--------------------------------------
+//
+// Fluid kernels: RGB-to-YUV,RGB-to-YUV422, YUV-to-RGB
 //
 //--------------------------------------
 
 void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef[5]);
 
 void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef[4]);
+
+void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width);
 
 //-------------------------
 //

@@ -1083,7 +1083,7 @@ OPENCV_HAL_IMPL_AVX_REDUCE_8(v_int32x8,  int,      max, _mm_max_epi32)
         __m128 v1 = _v256_extract_high(a.val);                        \
         v0 = intrin(v0, v1);                                          \
         v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 3, 2))); \
-        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 0, 3))); \
+        v0 = intrin(v0, _mm_permute_ps(v0, _MM_SHUFFLE(0, 0, 0, 1))); \
         return _mm_cvtss_f32(v0);                                     \
     }
 
@@ -1227,18 +1227,14 @@ inline int v_signmask(const v_uint8x32& a)
 { return v_signmask(v_reinterpret_as_s8(a)); }
 
 inline int v_signmask(const v_int16x16& a)
-{
-    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a.val, a.val));
-    return v_signmask(v) & 255;
-}
+{ return v_signmask(v_pack(a, a)) & 0xFFFF; }
 inline int v_signmask(const v_uint16x16& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
 
 inline int v_signmask(const v_int32x8& a)
 {
-    __m256i a16 = _mm256_packs_epi32(a.val, a.val);
-    v_int8x32 v = v_int8x32(_mm256_packs_epi16(a16, a16));
-    return v_signmask(v) & 15;
+    v_int16x16 a16 = v_pack(a, a);
+    return v_signmask(v_pack(a16, a16)) & 0xFF;
 }
 inline int v_signmask(const v_uint32x8& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
@@ -2777,15 +2773,6 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
 }
 
 inline void v256_cleanup() { _mm256_zeroall(); }
-
-//! @name Check SIMD256 support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD256()
-{
-    return (CV_CPU_HAS_SUPPORT_AVX2) ? true : false;
-}
-//! @}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

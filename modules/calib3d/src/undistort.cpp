@@ -482,6 +482,12 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                     break;
                 double r2 = x*x + y*y;
                 double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
+                if (icdist < 0)  // test: undistortPoints.regression_14583
+                {
+                    x = (u - cx)*ifx;
+                    y = (v - cy)*ify;
+                    break;
+                }
                 double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
                 double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
                 x = (x0 - deltaX)*icdist;
@@ -565,10 +571,16 @@ void undistortPoints(InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), R = _Rmat.getMat(), P = _Pmat.getMat();
 
-    CV_Assert( src.isContinuous() && (src.depth() == CV_32F || src.depth() == CV_64F) &&
-              ((src.rows == 1 && src.channels() == 2) || src.cols*src.channels() == 2));
+    int npoints = src.checkVector(2), depth = src.depth();
+    if (npoints < 0)
+        src = src.t();
+    npoints = src.checkVector(2);
+    CV_Assert(npoints >= 0 && src.isContinuous() && (depth == CV_32F || depth == CV_64F));
 
-    _dst.create(src.size(), src.type(), -1, true);
+    if (src.cols == 2)
+        src = src.reshape(2);
+
+    _dst.create(npoints, 1, CV_MAKETYPE(depth, 2), -1, true);
     Mat dst = _dst.getMat();
 
     CvMat _csrc = cvMat(src), _cdst = cvMat(dst), _ccameraMatrix = cvMat(cameraMatrix);

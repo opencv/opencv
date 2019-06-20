@@ -145,7 +145,7 @@ struct ConcatVertTest    : public TestWithParam<std::tuple<int, cv::Size, cv::GC
 struct ConcatVertVecTest : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
 struct ConcatHorVecTest  : public TestWithParam<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
 struct LUTTest           : public TestParams<std::tuple<int, int, cv::Size,bool, cv::GCompileArgs>> {};
-struct ConvertToTest     : public TestParams<std::tuple<int, int, cv::Size, cv::GCompileArgs>> {};
+struct ConvertToTest     : public TestParams<std::tuple<int, int, cv::Size, double, double, compare_f, cv::GCompileArgs>> {};
 struct PhaseTest         : public TestParams<std::tuple<int, cv::Size, bool, cv::GCompileArgs>> {};
 struct SqrtTest          : public TestParams<std::tuple<int, cv::Size, cv::GCompileArgs>> {};
 struct NormalizeTest : public TestParams<std::tuple<compare_f,MatType,cv::Size,double,double,int,MatType,bool,cv::GCompileArgs>> {};

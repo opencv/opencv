@@ -226,3 +226,20 @@
    fun:_ZN20CvVideoWriter_FFMPEG10writeFrameEPKhiiiii
    fun:cvWriteFrame_FFMPEG
 }
+
+{
+   OpenCV-OpenEXR-ThreadPool
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN16IlmThread_opencv10ThreadPoolC1Ej
+   fun:_ZN16IlmThread_opencv10ThreadPool16globalThreadPoolEv
+}
+
+{
+   OpenCV-test-gapi-thread-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+}

@@ -320,10 +320,9 @@ public:
             return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         if (type == MAX || type == AVE)
         {
             InferenceEngine::Builder::PoolingLayer ieLayer(name);
@@ -366,69 +365,8 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
         return Ptr<BackendNode>();
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.precision = InferenceEngine::Precision::FP32;
-
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer;
-        if (type == MAX || type == AVE)
-        {
-            lp.type = "Pooling";
-            InferenceEngine::PoolingLayer* poolLayer = new InferenceEngine::PoolingLayer(lp);
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
-            poolLayer->_kernel.insert(InferenceEngine::X_AXIS, kernel.width);
-            poolLayer->_kernel.insert(InferenceEngine::Y_AXIS, kernel.height);
-            poolLayer->_stride.insert(InferenceEngine::X_AXIS, stride.width);
-            poolLayer->_stride.insert(InferenceEngine::Y_AXIS, stride.height);
-            poolLayer->_padding.insert(InferenceEngine::X_AXIS, pad_l);
-            poolLayer->_padding.insert(InferenceEngine::Y_AXIS, pad_t);
-            poolLayer->_pads_end.insert(InferenceEngine::X_AXIS, pad_r);
-            poolLayer->_pads_end.insert(InferenceEngine::Y_AXIS, pad_b);
-            poolLayer->params["kernel"] = format("%d,%d", kernel.height, kernel.width);
-            poolLayer->params["pads_begin"] = format("%d,%d", pad_t, pad_l);
-            poolLayer->params["pads_end"] = format("%d,%d", pad_b, pad_r);
-            poolLayer->params["strides"] = format("%d,%d", stride.height, stride.width);
-#else
-            poolLayer->_kernel_x = kernel.width;
-            poolLayer->_kernel_y = kernel.height;
-            poolLayer->_stride_x = stride.width;
-            poolLayer->_stride_y = stride.height;
-            poolLayer->_padding_x = pad_l;
-            poolLayer->_padding_y = pad_t;
-            poolLayer->params["pad-r"] = format("%d", pad_r);
-            poolLayer->params["pad-b"] = format("%d", pad_b);
-#endif
-            poolLayer->_exclude_pad = type == AVE && padMode == "SAME";
-            poolLayer->params["rounding-type"] = ceilMode ? "ceil" : "floor";
-            poolLayer->_type = type == MAX ? InferenceEngine::PoolingLayer::PoolType::MAX :
-                                             InferenceEngine::PoolingLayer::PoolType::AVG;
-            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(poolLayer);
-        }
-        else if (type == ROI)
-        {
-            lp.type = "ROIPooling";
-            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
-            ieLayer->params["pooled_w"] = format("%d", pooledSize.width);
-            ieLayer->params["pooled_h"] = format("%d", pooledSize.height);
-            ieLayer->params["spatial_scale"] = format("%f", spatialScale);
-        }
-        else if (type == PSROI)
-        {
-            lp.type = "PSROIPooling";
-            ieLayer = std::shared_ptr<InferenceEngine::CNNLayer>(new InferenceEngine::CNNLayer(lp));
-            ieLayer->params["output_dim"] = format("%d", psRoiOutChannels);
-            ieLayer->params["group_size"] = format("%d", pooledSize.width);
-            ieLayer->params["spatial_scale"] = format("%f", spatialScale);
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
 
     class PoolingInvoker : public ParallelLoopBody

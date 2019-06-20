@@ -14,7 +14,7 @@
 #include <ade/util/zip_range.hpp>   // util::indexed
 #include <ade/util/checked_cast.hpp>
 
-#include "opencv2/gapi/gproto.hpp"
+#include <opencv2/gapi/gproto.hpp>
 #include "api/gnode_priv.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"

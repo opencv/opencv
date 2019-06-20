@@ -8,7 +8,7 @@
 #include "../test_precomp.hpp"
 
 #include "../common/gapi_imgproc_tests.hpp"
-#include "opencv2/gapi/cpu/imgproc.hpp"
+#include <opencv2/gapi/cpu/imgproc.hpp>
 
 #define IMGPROC_CPU cv::gapi::imgproc::cpu::kernels()
 
@@ -271,4 +271,24 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRTestCPU, YUV2BGRTest,
 /*init output matrices or not*/ testing::Bool(),
                                 Values(cv::compile_args(IMGPROC_CPU))));
 
+INSTANTIATE_TEST_CASE_P(RGB2HSVTestCPU, RGB2HSVTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(BayerGR2RGBTestCPU, BayerGR2RGBTest,
+                        Combine(Values(AbsExact().to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(RGB2YUV422TestCPU, RGB2YUV422Test,
+                        Combine(Values(AbsTolerance(1).to_compare_f()),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(cv::compile_args(IMGPROC_CPU))));
 } // opencv_test

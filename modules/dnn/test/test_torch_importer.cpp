@@ -136,10 +136,8 @@ TEST_P(Test_Torch_layers, run_reshape_change_batch_size)
 
 TEST_P(Test_Torch_layers, run_reshape)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
+        throw SkipTestException("Test is disabled for Myriad targets");
     runTorchNet("net_reshape_batch");
     runTorchNet("net_reshape_channels", "", false, true);
 }
@@ -172,10 +170,6 @@ TEST_P(Test_Torch_layers, run_depth_concat)
 
 TEST_P(Test_Torch_layers, run_deconv)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE >= 2018040000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for OpenVINO 2018R4");
-#endif
     runTorchNet("net_deconv");
 }
 
@@ -224,10 +218,6 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 
 TEST_P(Test_Torch_layers, net_inception_block)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_RELEASE == 2018030000
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("");
-#endif
     runTorchNet("net_inception_block", "", false, true);
 }
 
@@ -398,10 +388,10 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
 //   -model models/instance_norm/feathers.t7
 TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
+#if defined INF_ENGINE_RELEASE
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+        throw SkipTestException("Test is disabled for MyriadX target");
 #endif
 
     checkBackend();

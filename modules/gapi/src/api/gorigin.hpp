@@ -11,11 +11,11 @@
 #include <set>   // set
 #include <map>   // map
 
-#include "opencv2/gapi/util/variant.hpp"   // variant
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/opencv_includes.hpp"
-#include "compiler/gobjref.hpp"
+#include <opencv2/gapi/util/variant.hpp>   // variant
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/opencv_includes.hpp>
 
+#include "compiler/gobjref.hpp"
 #include "api/gnode.hpp"
 
 namespace cv

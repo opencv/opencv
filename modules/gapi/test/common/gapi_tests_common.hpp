@@ -7,8 +7,8 @@
 
 #include <iostream>
 
-#include "opencv2/ts.hpp"
-#include "opencv2/gapi.hpp"
+#include <opencv2/ts.hpp>
+#include <opencv2/gapi.hpp>
 
 namespace
 {
