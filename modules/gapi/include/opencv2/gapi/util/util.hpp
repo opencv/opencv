@@ -2,13 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_UTIL_HPP
 #define OPENCV_GAPI_UTIL_HPP
 
-#include <utility> // std::tuple
+#include <tuple>
 
 // \cond HIDDEN_SYMBOLS
 // This header file contains some generic utility functions which are
@@ -91,12 +91,31 @@ namespace detail
     template <typename T1, typename T2, typename... Ts>
     struct contains<T1, T2, Ts...> : std::integral_constant<bool, std::is_same<T1, T2>::value ||
                                                                   contains<T1, Ts...>::value> {};
+    template<typename T, typename... Types>
+    struct contains<T, std::tuple<Types...>> : std::integral_constant<bool, contains<T, Types...>::value> {};
+
     template <typename...>
     struct all_unique : std::true_type{};
 
     template <typename T1, typename... Ts>
     struct all_unique<T1, Ts...> : std::integral_constant<bool, !contains<T1, Ts...>::value &&
                                                                  all_unique<Ts...>::value> {};
+
+    template<typename>
+    struct tuple_wrap_helper;
+
+    template<typename T> struct tuple_wrap_helper
+    {
+        using type = std::tuple<T>;
+        static type get(T&& obj) { return std::make_tuple(std::move(obj)); }
+    };
+
+    template<typename... Objs>
+    struct tuple_wrap_helper<std::tuple<Objs...>>
+    {
+        using type = std::tuple<Objs...>;
+        static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
+    };
 } // namespace detail
 } // namespace cv
 

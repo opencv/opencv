@@ -54,12 +54,10 @@ endif()
 
 #==================================
 
-if(HAVE_FFMPEG)
-  set(defs "HAVE_FFMPEG")
-  if(HAVE_FFMPEG_WRAPPER)
-    list(APPEND defs "HAVE_FFMPEG_WRAPPER")
-  endif()
-  ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "${defs}")
+if(HAVE_FFMPEG_WRAPPER)
+  ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
+elseif(HAVE_FFMPEG)
+  ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
 endif()
 
 set(HAVE_FFMPEG ${HAVE_FFMPEG} PARENT_SCOPE)
