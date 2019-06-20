@@ -144,14 +144,14 @@ class dnn_test(NewOpenCVTests):
         model.setInputParams(size=size, mean=mean, scale=scale)
 
         iouDiff = 0.05
-        confThreshold = 0.000001
+        confThreshold = 0.0001
         nmsThreshold = 0
-        scoreDiff = 1e-5
+        scoreDiff = 1e-3
 
         classIds, confidences, boxes = model.detect(frame, confThreshold, nmsThreshold)
 
         refClassIds = (7, 15)
-        refConfidences = (0.99983513, 0.87925464)
+        refConfidences = (0.9998, 0.8793)
         refBoxes = ((329.351, 238.952, 85.334, 102.106),
                     (101.638, 189.152, 34.217, 138.234))
 

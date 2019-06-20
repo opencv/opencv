@@ -23,7 +23,8 @@ struct Model::Impl
     Mat    blob;
     std::vector<String> outNames;
 
-    void predict(Net& net, const Mat& frame, std::vector<Mat>& outs) {
+    void predict(Net& net, const Mat& frame, std::vector<Mat>& outs)
+    {
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
 
@@ -31,7 +32,8 @@ struct Model::Impl
         net.setInput(blob, "", scale, mean);
 
         // Faster-RCNN or R-FCN
-        if (net.getLayer(0)->outputNameToIndex("im_info") != -1) {
+        if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
+        {
             Mat imInfo = (Mat_<float>(1, 3) << size.height, size.width, 1.6f);
             net.setInput(imInfo, "im_info");
         }
@@ -143,7 +145,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
-    if (getLayer(0)->outputNameToIndex("im_info") != -1) {
+    if (getLayer(0)->outputNameToIndex("im_info") != -1)
+    {
         frameWidth = impl->size.width;
         frameHeight = impl->size.height;
     }
@@ -190,10 +193,10 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 top    = std::max(0, std::min(top, frameHeight - 1));
                 width  = std::max(0, std::min(width, frameWidth - 1 - left));
                 height = std::max(0, std::min(height, frameHeight - 1 - top));
-                boxes.emplace_back(left, top, width, height);
+                predBoxes.emplace_back(left, top, width, height);
 
-                classIds.push_back(static_cast<int>(data[j + 1]));
-                confidences.push_back(conf);
+                predClassIds.push_back(static_cast<int>(data[j + 1]));
+                predConf.push_back(conf);
             }
         }
     }
@@ -233,9 +236,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         }
     }
     else
-    {
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
-    }
 
     std::vector<int> indices;
     NMSBoxes(predBoxes, predConf, confThreshold, nmsThreshold, indices);
