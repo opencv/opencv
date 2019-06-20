@@ -91,6 +91,9 @@ namespace detail
     template <typename T1, typename T2, typename... Ts>
     struct contains<T1, T2, Ts...> : std::integral_constant<bool, std::is_same<T1, T2>::value ||
                                                                   contains<T1, Ts...>::value> {};
+    template<typename T, typename... Types>
+    struct contains<T, std::tuple<Types...>> : std::integral_constant<bool, contains<T, Types...>::value> {};
+
     template <typename...>
     struct all_unique : std::true_type{};
 
