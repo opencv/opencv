@@ -73,6 +73,12 @@ public:
     }
 };
 
+TEST_P(Test_ONNX_layers, InstanceNorm)
+{
+
+    testONNXModels("instancenorm", npy, 1, 1, false, false);
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
     testONNXModels("maxpooling");
