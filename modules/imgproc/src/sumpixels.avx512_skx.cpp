@@ -6,6 +6,9 @@
 #include "precomp.hpp"
 #include "sumpixels.hpp"
 
+#include "opencv2/core/hal/intrin.hpp"
+
+
 namespace cv {
 namespace { // Anonymous namespace to avoid exposing the implementation classes
 

@@ -162,6 +162,8 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
               std::vector<Mat>& outputs)
 {
     Ptr<Layer> layer = LayerFactory::createLayerInstance(params.type, params);
+    CV_Assert((bool)layer);
+
     std::vector<MatShape> inpShapes(inputs.size());
     int ddepth = CV_32F;
     for (size_t i = 0; i < inputs.size(); ++i)
