@@ -2515,9 +2515,19 @@ struct Net::Impl
                         layer->forwardCUDA(ld.inputBlobsWrappers, ld.outputBlobsWrappers, workspace);
 #endif
                     }
-                    catch (const cv::Exception&)
+                    catch (const cv::Exception& ex)
                     {
-                        CV_LOG_WARNING(NULL, "Layer does not support CUDA. Switching to CPU implementation. ");
+                        /* if the layer failed because of an error, rethrow */
+                        if (ex.code != Error::StsNotImplemented)
+                            throw;
+
+                        /* the layer does not have a CUDA implementation; use CPU for this layer */
+                        std::ostringstream os;
+                        os << ld.name << " >> " << ex.what();
+                        if (ex.code == Error::StsNotImplemented)
+                            os << "Switching to CPU for this layer.\n";
+                        CV_LOG_WARNING(NULL, os.str().c_str());
+
                         auto actual_target = preferableTarget;
                         preferableBackend = DNN_BACKEND_OPENCV;
                         preferableTarget = DNN_TARGET_CPU;
