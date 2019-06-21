@@ -138,6 +138,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 
     size_t srcTotal = total(srcShape);
     size_t dstTotal = total(dstShape);
+    CV_Assert(dstTotal != 0);
 
     if (inferDim != -1)
     {
