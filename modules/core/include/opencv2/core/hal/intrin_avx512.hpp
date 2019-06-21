@@ -5,6 +5,12 @@
 #ifndef OPENCV_HAL_INTRIN_AVX512_HPP
 #define OPENCV_HAL_INTRIN_AVX512_HPP
 
+#if defined(_MSC_VER) && (_MSC_VER < 1920/*MSVS2019*/)
+# pragma warning(disable:4146)  // unary minus operator applied to unsigned type, result still unsigned
+# pragma warning(disable:4309)  // 'argument': truncation of constant value
+# pragma warning(disable:4310)  // cast truncates constant value
+#endif
+
 #define CVT_ROUND_MODES_IMPLEMENTED 0
 
 #define CV_SIMD512 1
@@ -1599,13 +1605,13 @@ inline v_float64x8 v_lut(const double* tab, const v_int32x16& idxvec)
 inline void v_lut_deinterleave(const float* tab, const v_int32x16& idxvec, v_float32x16& x, v_float32x16& y)
 {
     x.val = _mm512_i32gather_ps(idxvec.val, tab, 4);
-    y.val = _mm512_i32gather_ps(idxvec.val, tab + 1, 4);
+    y.val = _mm512_i32gather_ps(idxvec.val, &tab[1], 4);
 }
 
 inline void v_lut_deinterleave(const double* tab, const v_int32x16& idxvec, v_float64x8& x, v_float64x8& y)
 {
     x.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab, 8);
-    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab + 1, 8);
+    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), &tab[1], 8);
 }
 
 inline v_int8x64 v_interleave_pairs(const v_int8x64& vec)
