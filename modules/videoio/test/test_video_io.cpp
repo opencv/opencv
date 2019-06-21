@@ -227,8 +227,8 @@ public:
 
 struct Ext_Fourcc_PSNR
 {
-    string ext;
-    string fourcc;
+    const char* ext;
+    const char* fourcc;
     float PSNR;
     VideoCaptureAPIs api;
 };
@@ -345,18 +345,6 @@ INSTANTIATE_TEST_CASE_P(videoio, videoio_bunny,
                               testing::ValuesIn(backend_params)));
 
 
-//==================================================================================================
-
-inline Ext_Fourcc_PSNR makeParam(const char * ext, const char * fourcc, float psnr, VideoCaptureAPIs apipref)
-{
-    Ext_Fourcc_PSNR res;
-    res.ext = ext;
-    res.fourcc = fourcc;
-    res.PSNR = psnr;
-    res.api = apipref;
-    return res;
-}
-
 inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR &p)
 {
     out << "FOURCC(" << p.fourcc << "), ." << p.ext << ", " << p.api << ", " << p.PSNR << "dB"; return out;
@@ -366,41 +354,41 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
 
 #ifdef HAVE_MSMF
 #if !defined(_M_ARM)
-    makeParam("wmv", "WMV1", 30.f, CAP_MSMF),
-    makeParam("wmv", "WMV2", 30.f, CAP_MSMF),
+    {"wmv", "WMV1", 30.f, CAP_MSMF},
+    {"wmv", "WMV2", 30.f, CAP_MSMF},
 #endif
-    makeParam("wmv", "WMV3", 30.f, CAP_MSMF),
-    makeParam("wmv", "WVC1", 30.f, CAP_MSMF),
-    makeParam("mov", "H264", 30.f, CAP_MSMF),
+    {"wmv", "WMV3", 30.f, CAP_MSMF},
+    {"wmv", "WVC1", 30.f, CAP_MSMF},
+    {"mov", "H264", 30.f, CAP_MSMF},
 #endif
 
 #ifdef HAVE_AVFOUNDATION
-   makeParam("mov", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("mov", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("mp4", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("mp4", "MJPG", 30.f, CAP_AVFOUNDATION),
-   makeParam("m4v", "H264", 30.f, CAP_AVFOUNDATION),
-   makeParam("m4v", "MJPG", 30.f, CAP_AVFOUNDATION),
+   {"mov", "H264", 30.f, CAP_AVFOUNDATION},
+   {"mov", "MJPG", 30.f, CAP_AVFOUNDATION},
+   {"mp4", "H264", 30.f, CAP_AVFOUNDATION},
+   {"mp4", "MJPG", 30.f, CAP_AVFOUNDATION},
+   {"m4v", "H264", 30.f, CAP_AVFOUNDATION},
+   {"m4v", "MJPG", 30.f, CAP_AVFOUNDATION},
 #endif
 
-    makeParam("avi", "XVID", 30.f, CAP_FFMPEG),
-    makeParam("avi", "MPEG", 30.f, CAP_FFMPEG),
-    makeParam("avi", "IYUV", 30.f, CAP_FFMPEG),
-    makeParam("avi", "MJPG", 30.f, CAP_FFMPEG),
+    {"avi", "XVID", 30.f, CAP_FFMPEG},
+    {"avi", "MPEG", 30.f, CAP_FFMPEG},
+    {"avi", "IYUV", 30.f, CAP_FFMPEG},
+    {"avi", "MJPG", 30.f, CAP_FFMPEG},
 
-    makeParam("mkv", "XVID", 30.f, CAP_FFMPEG),
-    makeParam("mkv", "MPEG", 30.f, CAP_FFMPEG),
-    makeParam("mkv", "MJPG", 30.f, CAP_FFMPEG),
+    {"mkv", "XVID", 30.f, CAP_FFMPEG},
+    {"mkv", "MPEG", 30.f, CAP_FFMPEG},
+    {"mkv", "MJPG", 30.f, CAP_FFMPEG},
 
-    makeParam("avi", "MPEG", 30.f, CAP_GSTREAMER),
-    makeParam("avi", "MJPG", 30.f, CAP_GSTREAMER),
-    makeParam("avi", "H264", 30.f, CAP_GSTREAMER),
+    {"avi", "MPEG", 30.f, CAP_GSTREAMER},
+    {"avi", "MJPG", 30.f, CAP_GSTREAMER},
+    {"avi", "H264", 30.f, CAP_GSTREAMER},
 
-    makeParam("mkv", "MPEG", 30.f, CAP_GSTREAMER),
-    makeParam("mkv", "MJPG", 30.f, CAP_GSTREAMER),
-    makeParam("mkv", "H264", 30.f, CAP_GSTREAMER),
+    {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
+    {"mkv", "MJPG", 30.f, CAP_GSTREAMER},
+    {"mkv", "H264", 30.f, CAP_GSTREAMER},
 
-    makeParam("avi", "MJPG", 30.f, CAP_OPENCV_MJPEG),
+    {"avi", "MJPG", 30.f, CAP_OPENCV_MJPEG},
 };
 
 
@@ -415,6 +403,89 @@ INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
                             testing::ValuesIn(synthetic_params)));
+
+struct Ext_Fourcc_API
+{
+    const char* ext;
+    const char* fourcc;
+    VideoCaptureAPIs api;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_API &p)
+{
+    out << "(FOURCC(" << p.fourcc << "), \"" << p.ext << "\", " << p.api << ")"; return out;
+}
+
+
+class Videoio_Writer : public Videoio_Test_Base, public testing::TestWithParam<Ext_Fourcc_API>
+{
+protected:
+    Size frame_size;
+    int fourcc;
+    double fps;
+public:
+    Videoio_Writer()
+    {
+        frame_size = Size(640, 480);
+        const Ext_Fourcc_API p = GetParam();
+        ext = p.ext;
+        fourcc = fourccFromString(p.fourcc);
+        if (ext.size() == 3)
+            video_file = cv::tempfile((fourccToString(fourcc) + "." + ext).c_str());
+        else
+            video_file = ext;
+        fps = 25.;
+        apiPref = p.api;
+    }
+    void SetUp()
+    {
+    }
+    void TearDown()
+    {
+        if (ext.size() == 3)
+            (void)remove(video_file.c_str());
+    }
+};
+
+TEST_P(Videoio_Writer, write_nothing)
+{
+    if (!cv::videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
+    ASSERT_TRUE(writer.isOpened());
+#if 0  // no frames
+    cv::Mat m(frame_size, CV_8UC3, Scalar::all(127));
+    writer << m;
+#endif
+    EXPECT_NO_THROW(writer.release());
+}
+
+static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API()
+{
+    const size_t N = sizeof(synthetic_params)/sizeof(synthetic_params[0]);
+    vector<Ext_Fourcc_API> result; result.reserve(N);
+    for (size_t i = 0; i < N; i++)
+    {
+        const Ext_Fourcc_PSNR& src = synthetic_params[i];
+        Ext_Fourcc_API e = { src.ext, src.fourcc, src.api };
+        result.push_back(e);
+    }
+
+    {
+        Ext_Fourcc_API e = { "appsrc ! videoconvert ! video/x-raw, format=(string)NV12 ! filesink location=test.nv12", "\0\0\0\0", CAP_GSTREAMER };
+        result.push_back(e);
+    }
+    {
+        Ext_Fourcc_API e = { "appsrc ! videoconvert ! video/x-raw, format=(string)I420 ! matroskamux ! filesink location=test.mkv", "\0\0\0\0", CAP_GSTREAMER };
+        result.push_back(e);
+    }
+    return result;
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()));
+
 
 TEST(Videoio, exceptions)
 {
