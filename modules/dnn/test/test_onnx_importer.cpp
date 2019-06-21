@@ -148,6 +148,11 @@ TEST_P(Test_ONNX_layers, Concatenation)
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU on DLIE backend is supported");
     testONNXModels("eltwise3d");
 }
 
