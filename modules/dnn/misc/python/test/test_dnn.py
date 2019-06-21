@@ -158,7 +158,7 @@ class dnn_test(NewOpenCVTests):
         normAssertDetections(self, refClassIds, refConfidences, refBoxes,
                              classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
 
-        for box, conf, classId in zip(boxes, confidences, classIds):
+        for box in boxes:
             left, top, width, height = box
             cv.rectangle(frame, (left, top), (left + width, top + height), (0, 255, 0))
 

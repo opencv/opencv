@@ -137,8 +137,8 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
 {
     std::vector<int> refClassIds = {7, 15};
     std::vector<float> refConfidences = {0.99983513f, 0.87925464f};
-    std::vector<Rect2d> refBoxes = {Rect2d(329.351, 238.952, 85.334, 102.106),
-                                    Rect2d(101.638, 189.152, 34.217, 138.234)};
+    std::vector<Rect2d> refBoxes = {Rect2d(329, 239, 85, 102),
+                                    Rect2d(101, 189, 34, 138)};
 
     std::string img_path = _tf("street.png");
     std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
@@ -149,7 +149,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    double iouDiff = 0.05;
+    double iouDiff = 0.0098;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;

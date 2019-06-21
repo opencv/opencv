@@ -29,7 +29,7 @@ struct Model::Impl
             CV_Error(Error::StsBadSize, "Input size not specified");
 
         blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
-        net.setInput(blob, "", scale, mean);
+        net.setInput(blob, "", static_cast<double>(scale), mean);
 
         // Faster-RCNN or R-FCN
         if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
@@ -219,15 +219,15 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 if (conf < confThreshold)
                     continue;
 
-                int centerX = std::max(0, std::min(static_cast<int>(data[0] * frameWidth), frameWidth - 1));
-                int centerY = std::max(0, std::min(static_cast<int>(data[1] * frameHeight), frameWidth - 1));
+                int centerX = data[0] * frameWidth;
+                int centerY = data[1] * frameHeight;
                 int width   = data[2] * frameWidth;
                 int height  = data[3] * frameHeight;
 
                 int left = std::max(0, std::min(centerX - width / 2, frameWidth - 1));
                 int top  = std::max(0, std::min(centerY - height / 2, frameHeight - 1));
-                width    = std::max(0, std::min(width, frameWidth - 1 - left));
-                height   = std::max(0, std::min(height, frameHeight - 1 - top));
+                width    = std::max(0, std::min(width, frameWidth - left));
+                height   = std::max(0, std::min(height, frameHeight - top));
 
                 predClassIds.push_back(classIdPoint.x);
                 predConf.push_back(static_cast<float>(conf));

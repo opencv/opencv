@@ -1081,8 +1081,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * ClassificationModel allows to set params for preprocessing input image.
       * ClassificationModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return top-1 prediction.
-      * For ClassificationModel AlexNet, SqueezeNet, VGG, Inception, ResNet
-      * classification networks are supported.
       */
      class CV_EXPORTS_W ClassificationModel : public Model
      {
@@ -1115,7 +1113,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       * DetectionModel allows to set params for preprocessing input image.
       * DetectionModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return result detections.
-      * For DetectionModel SSD, Faster R-CNN, YOLO object detection networks are supported.
+      * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
       */
      class CV_EXPORTS_W DetectionModel : public Model
      {
