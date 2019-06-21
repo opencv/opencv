@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "utils.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
 
@@ -61,6 +62,66 @@ void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
                                Size size, int _swap_rb )
 {
     int i;
+#if CV_SIMD128
+    int cWidth = size.width & -16;
+
+    short cRGB0 = cR;
+    short cRGB2 = cB;
+    if (_swap_rb) std::swap(cRGB0, cRGB2);
+
+    v_int16x8 v_RB(cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2);
+    const short cScale = (1 << (SCALE-1));
+    const v_int16x8 v_GS((short)cG, cScale, (short)cG, cScale, (short)cG, cScale, (short)cG, cScale);
+
+    const v_uint8x16 v_one = v_setall_u8(1);
+
+    for( ; size.height--; gray += gray_step )
+    {
+        for( i = 0; i < cWidth; i += 16, rgb += 3 * 16 )
+        {
+            v_uint8x16 v_r0, v_g0, v_b0, v_rgb0, v_rgb1, v_rgb2, v_rgb3;
+            v_load_deinterleave(rgb, v_r0, v_g0, v_b0);
+
+            v_zip(v_r0, v_b0, v_rgb0, v_rgb1);
+            v_zip(v_g0, v_one, v_rgb2, v_rgb3);
+
+            v_uint16x8 v_rgb0_16l, v_rgb0_16h, v_rgb1_16l, v_rgb1_16h, v_rgb2_16l, v_rgb2_16h, v_rgb3_16l, v_rgb3_16h;
+            v_expand(v_rgb0, v_rgb0_16l, v_rgb0_16h);
+            v_expand(v_rgb1, v_rgb1_16l, v_rgb1_16h);
+            v_expand(v_rgb2, v_rgb2_16l, v_rgb2_16h);
+            v_expand(v_rgb3, v_rgb3_16l, v_rgb3_16h);
+
+            v_int32x4 v_rgb0_32l, v_rgb0_32h, v_rgb1_32l, v_rgb1_32h, v_rgb2_32l, v_rgb2_32h, v_rgb3_32l, v_rgb3_32h;
+            v_rgb0_32l = v_dotprod(v_reinterpret_as_s16(v_rgb0_16l), v_RB);
+            v_rgb0_32h = v_dotprod(v_reinterpret_as_s16(v_rgb0_16h), v_RB);
+            v_rgb1_32l = v_dotprod(v_reinterpret_as_s16(v_rgb1_16l), v_RB);
+            v_rgb1_32h = v_dotprod(v_reinterpret_as_s16(v_rgb1_16h), v_RB);
+            v_rgb2_32l = v_dotprod(v_reinterpret_as_s16(v_rgb2_16l), v_GS);
+            v_rgb2_32h = v_dotprod(v_reinterpret_as_s16(v_rgb2_16h), v_GS);
+            v_rgb3_32l = v_dotprod(v_reinterpret_as_s16(v_rgb3_16l), v_GS);
+            v_rgb3_32h = v_dotprod(v_reinterpret_as_s16(v_rgb3_16h), v_GS);
+
+            v_rgb0_32l = (v_rgb0_32l + v_rgb2_32l) >> SCALE;
+            v_rgb0_32h = (v_rgb0_32h + v_rgb2_32h) >> SCALE;
+            v_rgb1_32l = (v_rgb1_32l + v_rgb3_32l) >> SCALE;
+            v_rgb1_32h = (v_rgb1_32h + v_rgb3_32h) >> SCALE;
+
+            v_rgb0_16l = v_pack(v_reinterpret_as_u32(v_rgb0_32l), v_reinterpret_as_u32(v_rgb0_32h));
+            v_rgb1_16l = v_pack(v_reinterpret_as_u32(v_rgb1_32l), v_reinterpret_as_u32(v_rgb1_32h));
+
+            v_rgb0 = v_pack(v_rgb0_16l, v_rgb1_16l);
+
+            v_store(gray + i, v_rgb0);
+        }
+        for( ; i < size.width; i++, rgb += 3 )
+        {
+            int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
+            gray[i] = (uchar)t;
+        }
+
+        rgb += rgb_step - size.width*3;
+    }
+#else
     for( ; size.height--; gray += gray_step )
     {
         short cRGB0 = cR;
@@ -74,6 +135,7 @@ void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
 
         rgb += rgb_step - size.width*3;
     }
+#endif
 }
 
 
@@ -82,18 +144,81 @@ void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
                                 Size size, int ncn, int _swap_rb )
 {
     int i;
-    for( ; size.height--; gray += gray_step )
+#if CV_SIMD128
+    if (ncn == 3)
     {
+        int cWidth = size.width & -16;
+
         short cRGB0 = cR;
         short cRGB2 = cB;
         if (_swap_rb) std::swap(cRGB0, cRGB2);
-        for( i = 0; i < size.width; i++, rgb += ncn )
-        {
-            int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
-            gray[i] = (ushort)t;
-        }
 
-        rgb += rgb_step - size.width*ncn;
+        v_int16x8 v_RB(cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2);
+        const short cScale = (1 << (SCALE-1));
+        const v_int16x8 v_GS((short)cG, cScale, (short)cG, cScale, (short)cG, cScale, (short)cG, cScale);
+
+        const v_uint16x8 v_one = v_setall_u16(1);
+
+        for( ; size.height--; gray += gray_step )
+        {
+            for( i = 0; i < cWidth; i += 16, rgb += 3 * 16 )
+            {
+                v_uint16x8 v_r0, v_g0, v_b0, v_r1, v_g1, v_b1;
+                v_uint16x8 v_rgb0, v_rgb1, v_rgb2, v_rgb3, v_rgb4, v_rgb5, v_rgb6, v_rgb7;
+                v_load_deinterleave(rgb + 0 * 8, v_r0, v_g0, v_b0);
+                v_load_deinterleave(rgb + 3 * 8, v_r1, v_g1, v_b1);
+
+                v_zip(v_r0, v_b0, v_rgb0, v_rgb1);
+                v_zip(v_g0, v_one, v_rgb2, v_rgb3);
+                v_zip(v_r1, v_b1, v_rgb4, v_rgb5);
+                v_zip(v_g1, v_one, v_rgb6, v_rgb7);
+
+                v_int32x4 v_rgb0_32, v_rgb1_32, v_rgb2_32, v_rgb3_32, v_rgb4_32, v_rgb5_32, v_rgb6_32, v_rgb7_32;
+                v_rgb0_32 = v_dotprod(v_reinterpret_as_s16(v_rgb0), v_RB);
+                v_rgb1_32 = v_dotprod(v_reinterpret_as_s16(v_rgb1), v_RB);
+                v_rgb2_32 = v_dotprod(v_reinterpret_as_s16(v_rgb2), v_GS);
+                v_rgb3_32 = v_dotprod(v_reinterpret_as_s16(v_rgb3), v_GS);
+                v_rgb4_32 = v_dotprod(v_reinterpret_as_s16(v_rgb4), v_RB);
+                v_rgb5_32 = v_dotprod(v_reinterpret_as_s16(v_rgb5), v_RB);
+                v_rgb6_32 = v_dotprod(v_reinterpret_as_s16(v_rgb6), v_GS);
+                v_rgb7_32 = v_dotprod(v_reinterpret_as_s16(v_rgb7), v_GS);
+
+                v_rgb0_32 = (v_rgb0_32 + v_rgb2_32) >> SCALE;
+                v_rgb1_32 = (v_rgb1_32 + v_rgb3_32) >> SCALE;
+                v_rgb4_32 = (v_rgb4_32 + v_rgb6_32) >> SCALE;
+                v_rgb5_32 = (v_rgb5_32 + v_rgb7_32) >> SCALE;
+
+                v_rgb0 = v_pack(v_reinterpret_as_u32(v_rgb0_32), v_reinterpret_as_u32(v_rgb1_32));
+                v_rgb1 = v_pack(v_reinterpret_as_u32(v_rgb4_32), v_reinterpret_as_u32(v_rgb5_32));
+
+                v_store(gray + i + 0 * 8, v_rgb0);
+                v_store(gray + i + 1 * 8, v_rgb1);
+            }
+            for( ; i < size.width; i++, rgb += 3 )
+            {
+                int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
+                gray[i] = (ushort)t;
+            }
+
+            rgb += rgb_step - size.width*3;
+        }
+    }
+    else
+#endif
+    {
+        for( ; size.height--; gray += gray_step )
+        {
+            short cRGB0 = cR;
+            short cRGB2 = cB;
+            if (_swap_rb) std::swap(cRGB0, cRGB2);
+            for( i = 0; i < size.width; i++, rgb += ncn )
+            {
+                int t = descale( rgb[0]*cRGB0 + rgb[1]*cG + rgb[2]*cRGB2, SCALE );
+                gray[i] = (ushort)t;
+            }
+
+            rgb += rgb_step - size.width*ncn;
+        }
     }
 }
 
@@ -103,6 +228,69 @@ void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
                                 Size size, int _swap_rb )
 {
     int i;
+#if CV_SIMD128
+    int cWidth = size.width & -16;
+
+    short cRGB0 = cR;
+    short cRGB2 = cB;
+    if (_swap_rb) std::swap(cRGB0, cRGB2);
+
+    v_int16x8 v_RB(cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2, cRGB0, cRGB2);
+    const v_int16x8 v_G0((short)cG, 0, (short)cG, 0, (short)cG, 0, (short)cG, 0);
+
+    const int cScale = (1 << (SCALE-1));
+    const v_int32x4 v_scale(cScale, 0, cScale, 0);
+
+    for( ; size.height--; gray += gray_step )
+    {
+        for( i = 0; i < cWidth; i += 16, rgba += 4 * 16 )
+        {
+            v_uint8x16 v_rgba0, v_rgba1;
+            v_load_deinterleave(rgba + 0 * 16, v_rgba0, v_rgba1);
+
+            v_uint16x8 v_rgba0_16l, v_rgba0_16h, v_rgba1_16l, v_rgba1_16h, v_rgba2_16l;
+            v_expand(v_rgba0, v_rgba0_16l, v_rgba0_16h);
+            v_expand(v_rgba1, v_rgba1_16l, v_rgba1_16h);
+
+            v_int32x4 v_rgba0_32l, v_rgba0_32h, v_rgba1_32l, v_rgba1_32h;
+            v_rgba0_32l = v_dotprod(v_reinterpret_as_s16(v_rgba0_16l), v_RB, v_scale);
+            v_rgba1_32l = v_dotprod(v_reinterpret_as_s16(v_rgba1_16l), v_G0);
+            v_rgba0_32h = v_dotprod(v_reinterpret_as_s16(v_rgba0_16h), v_RB, v_scale);
+            v_rgba1_32h = v_dotprod(v_reinterpret_as_s16(v_rgba1_16h), v_G0);
+
+            v_rgba0_32l = (v_rgba0_32l + v_rgba1_32l) >> SCALE;
+            v_rgba0_32h = (v_rgba0_32h + v_rgba1_32h) >> SCALE;
+
+            v_rgba0_16l = v_pack(v_reinterpret_as_u32(v_rgba0_32l), v_reinterpret_as_u32(v_rgba0_32h));
+
+            v_load_deinterleave(rgba + 2 * 16, v_rgba0, v_rgba1);
+
+            v_expand(v_rgba0, v_rgba2_16l, v_rgba0_16h);
+            v_expand(v_rgba1, v_rgba1_16l, v_rgba1_16h);
+
+            v_rgba0_32l = v_dotprod(v_reinterpret_as_s16(v_rgba2_16l), v_RB, v_scale);
+            v_rgba1_32l = v_dotprod(v_reinterpret_as_s16(v_rgba1_16l), v_G0);
+            v_rgba0_32h = v_dotprod(v_reinterpret_as_s16(v_rgba0_16h), v_RB, v_scale);
+            v_rgba1_32h = v_dotprod(v_reinterpret_as_s16(v_rgba1_16h), v_G0);
+
+            v_rgba0_32l = (v_rgba0_32l + v_rgba1_32l) >> SCALE;
+            v_rgba0_32h = (v_rgba0_32h + v_rgba1_32h) >> SCALE;
+
+            v_rgba1_16l = v_pack(v_reinterpret_as_u32(v_rgba0_32l), v_reinterpret_as_u32(v_rgba0_32h));
+
+            v_rgba0 = v_pack(v_rgba0_16l, v_rgba1_16l);
+
+            v_store(gray + i, v_rgba0);
+        }
+        for( ; i < size.width; i++, rgba += 4 )
+        {
+            int t = descale( rgba[0]*cRGB0 + rgba[1]*cG + rgba[2]*cRGB2, SCALE );
+            gray[i] = (uchar)t;
+        }
+
+        rgba += rgba_step - size.width*4;
+    }
+#else
     for( ; size.height--; gray += gray_step )
     {
         short cRGB0 = cR;
@@ -116,6 +304,7 @@ void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
 
         rgba += rgba_step - size.width*4;
     }
+#endif
 }
 
 
