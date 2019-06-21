@@ -33,6 +33,7 @@ public:
 
 
     BatchNormLayerImpl(const LayerParams& params)
+        : dims(-1)
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() >= 2);
