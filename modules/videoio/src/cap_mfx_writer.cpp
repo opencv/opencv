@@ -31,7 +31,7 @@ inline mfxU32 codecIdByFourCC(int fourcc)
 }
 
 VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, double fps, Size frameSize_, bool)
-    : session(0), plugin(0), deviceHandler(0), bs(0), encoder(0), pool(0), frameSize(frameSize_), good(false)
+    : session(0), plugin(0), deviceHandler(0), bs(0), encoder(0), pool(0), outSurface(NULL), frameSize(frameSize_), good(false)
 {
     mfxStatus res = MFX_ERR_NONE;
 
