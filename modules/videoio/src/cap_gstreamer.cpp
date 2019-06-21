@@ -1769,7 +1769,7 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
         cap = new GStreamerCapture();
         bool res;
         if (filename)
-            res = cap->open(string(filename));
+            res = cap->open(std::string(filename));
         else
             res = cap->open(camera_index);
         if (res)
