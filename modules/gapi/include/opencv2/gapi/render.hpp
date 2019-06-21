@@ -31,15 +31,14 @@ namespace draw
 struct Text
 {
     /*@{*/
-    std::string text;               /** < The text string to be drawn */
-    cv::Point   org;                /** < The bottom-left corner of the text string in the image */
-    int         ff;                 /** < The font type, see #HersheyFonts */
-    double      fs;                 /** < The font scale factor that is multiplied by the font-specific base size */
-    cv::Scalar  color;              /** < The text color */
-    int         thick;              /** < The thickness of the lines used to draw a text */
-    int         lt;                 /** < The line type. See #LineTypes */
-    bool        bottom_left_origin; /** < When true, the image data origin is at the bottom-left corner. Otherwise,
-                                          it is at the top-left corner. */
+    std::string text;               //!< The text string to be drawn
+    cv::Point   org;                //!< The bottom-left corner of the text string in the image
+    int         ff;                 //!< The font type, see #HersheyFonts
+    double      fs;                 //!< The font scale factor that is multiplied by the font-specific base size
+    cv::Scalar  color;              //!< The text color
+    int         thick;              //!< The thickness of the lines used to draw a text
+    int         lt;                 //!< The line type. See #LineTypes
+    bool        bottom_left_origin; //!< When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
     /*@{*/
 };
 
@@ -48,12 +47,11 @@ struct Text
  */
 struct Rect
 {
-    cv::Rect   rect;  /** Coordinates of the rectangle < */
-    cv::Scalar color; /** The rectangle color or brightness (grayscale image) < */
-    int        thick; /** The thickness of lines that make up the rectangle. Negative values, like #FILLED,
-                          mean that the function has to draw a filled rectangle < */
-    int        lt;    /** The type of the line. See #LineTypes< */
-    int        shift; /** The number of fractional bits in the point coordinates < */
+    cv::Rect   rect;  //!< Coordinates of the rectangle
+    cv::Scalar color; //!< The rectangle color or brightness (grayscale image)
+    int        thick; //!< The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
+    int        lt;    //!< The type of the line. See #LineTypes
+    int        shift; //!< The number of fractional bits in the point coordinates
 };
 
 /**
@@ -61,13 +59,12 @@ struct Rect
  */
 struct Circle
 {
-    cv::Point  center; /** The center of the circle  < */
-    int        radius; /** The radius of the circle  < */
-    cv::Scalar color;  /** The color of the  circle <  */
-    int        thick;  /** The thickness of the circle outline, if positive. Negative values, like #FILLED,
-                           mean that a filled circle is to be drawn */
-    int        lt;     /** The Type of the circle boundary. See #LineTypes< */
-    int        shift;  /** The Number of fractional bits in the coordinates of the center and in the radius value < */
+    cv::Point  center; //!< The center of the circle
+    int        radius; //!< The radius of the circle
+    cv::Scalar color;  //!< The color of the  circle
+    int        thick;  //!< The thickness of the circle outline, if positive. Negative values, like #FILLED, mean that a filled circle is to be drawn
+    int        lt;     //!< The Type of the circle boundary. See #LineTypes
+    int        shift;  //!< The Number of fractional bits in the coordinates of the center and in the radius value
 };
 
 /**
@@ -75,16 +72,22 @@ struct Circle
  */
 struct Line
 {
-    cv::Point  pt1;    /** The first point of the line segment  < */
-    cv::Point  pt2;    /** The second point of the line segment < */
-    cv::Scalar color;  /** The line color                       < */
-    int        thick;  /** The thickness of line                < */
-    int        lt;     /** The Type of the line. See #LineTypes < */
-    int        shift;  /** The number of fractional bits in the point coordinates */
+    cv::Point  pt1;    //!< The first point of the line segment
+    cv::Point  pt2;    //!< The second point of the line segment
+    cv::Scalar color;  //!< The line color
+    int        thick;  //!< The thickness of line
+    int        lt;     //!< The Type of the line. See #LineTypes
+    int        shift;  //!< The number of fractional bits in the point coordinates
 
 };
 
-using Prim  = util::variant<Text, Rect, Circle, Line>;
+using Prim  = util::variant
+    < Text
+    , Rect
+    , Circle
+    , Line
+    >;
+
 using Prims = std::vector<Prim>;
 
 /** @brief The function renders on the input image passed drawing primitivies
