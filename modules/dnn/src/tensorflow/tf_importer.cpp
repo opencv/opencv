@@ -24,7 +24,7 @@ Implementation of Tensorflow models parser
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #if HAVE_PROTOBUF
 
@@ -792,7 +792,7 @@ void TFImporter::populateNet(Net dstNet)
         int predictedLayout = predictOutputDataLayout(net, layer, data_layouts);
         data_layouts[name] = predictedLayout;
 
-        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "Conv3D")
+        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "MirrorPad" || type == "Conv3D")
         {
             // The first node of dilated convolution subgraph.
             // Extract input node, dilation rate and paddings.
@@ -831,7 +831,7 @@ void TFImporter::populateNet(Net dstNet)
                 name = layer.name();
                 type = layer.op();
             }
-            else if (type == "Pad")
+            else if (type == "Pad" || type == "MirrorPad")
             {
                 Mat paddings = getTensorContent(getConstBlob(layer, value_id, 1));
                 CV_Assert(paddings.type() == CV_32SC1);
@@ -849,12 +849,15 @@ void TFImporter::populateNet(Net dstNet)
                     //  N    C    H    W
                     // 0 1  2 3  4 5  6 7
                 }
+
                 if (next_layers.empty() || paddings.total() != 8 ||
                     paddings.at<int32_t>(4) != paddings.at<int32_t>(5) ||
-                    paddings.at<int32_t>(6) != paddings.at<int32_t>(7))
+                    paddings.at<int32_t>(6) != paddings.at<int32_t>(7) || type == "MirrorPad")
                 {
                     // Just a single padding layer.
                     layerParams.set("paddings", DictValue::arrayInt<int*>((int*)paddings.data, paddings.total()));
+                    if (type == "MirrorPad")
+                        layerParams.set("type", "reflect");
 
                     int id = dstNet.addLayer(name, "Padding", layerParams);
                     layer_id[name] = id;
@@ -992,35 +995,6 @@ void TFImporter::populateNet(Net dstNet)
 
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_UNKNOWN)
                 data_layouts[name] = DATA_LAYOUT_NHWC;
-        }
-        else if (type == "MirrorPad")
-        {
-            layerParams.set("type", "reflect");
-
-            Mat paddings = getTensorContent(getConstBlob(layer, value_id, 1));
-            CV_Assert(paddings.type() == CV_32SC1);
-            if (paddings.total() == 8)
-            {
-                // Perhabs, we have NHWC padding dimensions order.
-                //  N    H    W    C
-                // 0 1  2 3  4 5  6 7
-                std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));
-                std::swap(paddings.at<int32_t>(3), paddings.at<int32_t>(7));
-                //  N    C    W    H
-                // 0 1  2 3  4 5  6 7
-                std::swap(paddings.at<int32_t>(4), paddings.at<int32_t>(6));
-                std::swap(paddings.at<int32_t>(5), paddings.at<int32_t>(7));
-                //  N    C    H    W
-                // 0 1  2 3  4 5  6 7
-            }
-
-            // Just a single padding layer.
-            layerParams.set("paddings", DictValue::arrayInt<int*>((int*)paddings.data, paddings.total()));
-
-            int id = dstNet.addLayer(name, "Padding", layerParams);
-            layer_id[name] = id;
-
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
         else if (type == "BiasAdd" || type == "Add" || type == "Sub" || type=="AddN")
         {
@@ -2107,5 +2081,5 @@ void writeTextGraph(const String& _model, const String& output)
     ofs.close();
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
