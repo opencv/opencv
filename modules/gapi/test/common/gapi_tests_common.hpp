@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <tuple>
+#include <type_traits>
 
 #include <opencv2/ts.hpp>
 #include <opencv2/gapi.hpp>
@@ -98,25 +99,6 @@ public:
         }
     }
 
-    void initRand(int type, cv::Size sz_in, int dtype, bool createOutputMatrices,
-        int distributionType = cv::RNG::UNIFORM, bool initOneMatrix = false)
-    {
-        switch( distributionType )
-        {
-            // FIXME: implement a better way of deciding which init function to call - e.g.
-            //        user-provided callback
-            case cv::RNG::UNIFORM: {
-                if (initOneMatrix) {
-                    return initMatrixRandU(type, sz_in, dtype, createOutputMatrices);
-                } else {
-                    return initMatsRandU(type, sz_in, dtype, createOutputMatrices);
-                }
-            }
-            case cv::RNG::NORMAL: return initMatsRandN(type, sz_in, dtype, createOutputMatrices);
-            default: GAPI_Assert(false);
-        }
-    }
-
     static cv::Mat nonZeroPixels(const cv::Mat& mat)
     {
         int channels = mat.channels();
@@ -150,144 +132,84 @@ using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
 
-namespace detail
-{
-    // Recursive integer sequence type that starts from an arbitrary user-defined value. Derived
-    // from Seq<> to allow implicit conversion from Range<> to Seq<>
-    template<int First, int... I>
-    struct Range : cv::detail::Seq<I...> {
-        using next = Range<First, I..., sizeof...(I) + First>;
-    };
-    template<int First, int Sz>
-    struct MkRange { using type = typename MkRange<First, Sz-1>::type::next; };
-    template<int First>
-    struct MkRange<First, 0> { using type = Range<First>; };
-}  // namespace detail
-
-// TODO: delete bool (createOutputMatrices)
+// Universal parameter wrapper for common (pre-defined) and specific (user-defined) parameters
 template<typename ...SpecificParams>
-class Params
+struct Params
 {
-public:
+    // TODO: delete bool (createOutputMatrices) from common parameters
     using common_params_t = std::tuple<int, cv::Size, int, bool, cv::GCompileArgs>;
     using specific_params_t = std::tuple<SpecificParams...>;
     using params_t = std::tuple<int, cv::Size, int, bool, cv::GCompileArgs, SpecificParams...>;
-private:
-    common_params_t m_common;
-    specific_params_t m_specific;
+    static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
+    static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
 
-    template<typename TIn, typename TOut, int ...Indices>
-    static void copyValues(const TIn& in, TOut& out, cv::detail::Seq<Indices...>)
+    template<size_t I>
+    static const typename std::tuple_element<I, common_params_t>::type&
+    getCommon(const params_t& t)
     {
-        out = std::make_tuple(std::get<Indices>(in)...);
-    }
-
-    void init(const params_t& params)
-    {
-        constexpr int common_params_size = std::tuple_size<common_params_t>::value;
-        constexpr int specific_params_size = std::tuple_size<specific_params_t>::value;
-        copyValues(params, m_common,
-            typename detail::MkRange<0, common_params_size>::type());
-        copyValues(params, m_specific,
-            typename detail::MkRange<common_params_size, specific_params_size>::type());
-    }
-public:
-    Params() = default;
-    Params(const params_t& params)
-    {
-        init(params);
-    }
-    Params& operator=(const params_t& params)
-    {
-        init(params);
-        return *this;
+        static_assert(I < common_params_size, "Index out of range");
+        return std::get<I>(t);
     }
 
-    const common_params_t& commonParams() const
+    template<size_t I>
+    static const typename std::tuple_element<I, specific_params_t>::type&
+    getSpecific(const params_t& t)
     {
-        return m_common;
-    }
-
-    const specific_params_t& specificParams() const
-    {
-        return m_specific;
+        static_assert(specific_params_size > 0,
+            "Impossible to call this function: no specific parameters specified");
+        static_assert(I < specific_params_size, "Index out of range");
+        return std::get<common_params_size + I>(t);
     }
 };
 
-template<>
-class Params<>
-{
-public:
-    using common_params_t = std::tuple<int, cv::Size, int, bool, cv::GCompileArgs>;
-    using specific_params_t = std::tuple<>;
-    using params_t = common_params_t;
-private:
-    params_t m_all;
-public:
-    Params() = default;
-    Params(const params_t& params) : m_all(params) {}
-    Params& operator=(const params_t& params)
-    {
-        m_all = params;
-        return *this;
-    }
-
-    const common_params_t& commonParams() const
-    {
-        return m_all;
-    }
-};
-
+// Base class for test fixtures
 template<typename ...SpecificParams>
 class TestWithParamBase : public TestFunctional,
     public TestWithParam<typename Params<SpecificParams...>::params_t>
 {
-    Params<SpecificParams...> m_params;
-
-    void init(TestWithParamBase* instance)
-    {
-        using TestWithParamClass =
-            TestWithParam<typename Params<SpecificParams...>::params_t>;
-        instance->m_params = instance->TestWithParamClass::GetParam();
-        std::tie(instance->type, instance->sz, instance->dtype, instance->createOutputMatrices,
-            instance->compile_args) = instance->m_params.commonParams();
-        if (instance->dtype == SAME_TYPE)
-        {
-            instance->dtype = instance->type;
-        }
-        initRand(instance->type, instance->sz, instance->dtype, instance->createOutputMatrices,
-            instance->distribution, instance->initOneMatrix);
-    }
+    using AllParams = Params<SpecificParams...>;
 public:
-    using common_params_t = typename Params<SpecificParams...>::common_params_t;
-    using specific_params_t = typename Params<SpecificParams...>::specific_params_t;
+    using specific_params_t = typename AllParams::specific_params_t;
 
-    MatType type = -1;
-    cv::Size sz = {};
-    MatType dtype = -1;
-    bool createOutputMatrices = false;
-    cv::GCompileArgs compile_args = {};
-    int distribution = -1;
-    bool initOneMatrix = false;
+    MatType type = getCommonParam<0>();
+    cv::Size sz = getCommonParam<1>();
+    MatType dtype = getCommonParam<2>();
+    bool createOutputMatrices = getCommonParam<3>();
+    cv::GCompileArgs compile_args = getCommonParam<4>();
 
-    TestWithParamBase(int _distributionType = cv::RNG::NORMAL, bool _initOneMatrix = false) :
-        distribution(_distributionType),
-        initOneMatrix(_initOneMatrix)
+    TestWithParamBase()
     {
-        init(this);
+        if (this->dtype == SAME_TYPE)
+        {
+            this->dtype = this->type;
+        }
     }
 
-    const Params<SpecificParams...>& GetParam() const
+    // Get common (pre-defined) parameter value by index
+    template<size_t I>
+    inline auto getCommonParam() const
+        -> decltype(AllParams::template getCommon<I>(this->GetParam()))
     {
-        return m_params;
+        return AllParams::template getCommon<I>(this->GetParam());
+    }
+
+    // Get specific (user-defined) parameter value by index
+    template<size_t I>
+    inline auto getSpecificParam() const
+        -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
+    {
+        return AllParams::template getSpecific<I>(this->GetParam());
     }
 };
 
-#define USE_UNIFORM_INIT(class_name, init_one_matrix) \
-    class_name() : TestWithParamBase(cv::RNG::UNIFORM, init_one_matrix) {}
+#define USE_UNIFORM_INIT_ONE_MAT(class_name) \
+    class_name() { initMatrixRandU(type, sz, dtype, createOutputMatrices); }
+
+#define USE_UNIFORM_INIT(class_name) \
+    class_name() { initMatsRandU(type, sz, dtype, createOutputMatrices); }
 
 #define USE_NORMAL_INIT(class_name) \
-    class_name() : TestWithParamBase(cv::RNG::NORMAL) {}
+    class_name() { initMatsRandN(type, sz, dtype, createOutputMatrices); }
 
 template<typename T>
 struct Wrappable

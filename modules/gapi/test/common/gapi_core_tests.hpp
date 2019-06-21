@@ -46,19 +46,19 @@ struct PrintMathOpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        Params<mathOp,bool,double,bool> params = info.param;
-        const auto& common_params = params.commonParams();
-        const auto& specific_params = params.specificParams();
-        cv::Size sz = std::get<1>(common_params);  // size
-        ss<<MathOperations[std::get<0>(specific_params)]  // mathOp
-                    <<"_"<<std::get<1>(specific_params)  // testWithScalar
-                    <<"_"<<std::get<0>(common_params)  // type
-                    <<"_"<<(int)std::get<2>(specific_params)  // scale
+        // TODO: simplify this
+        using AllParams = Params<mathOp,bool,double,bool>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<MathOperations[AllParams::getSpecific<0>(params)]  // mathOp
+                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
+                    <<"_"<<(int)AllParams::getSpecific<2>(params)  // scale
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<(std::get<2>(common_params)+1)  // dtype
-                    <<"_"<<std::get<3>(common_params)  // createOutputMatrices
-                    <<"_"<<std::get<3>(specific_params);  // doReverseOp
+                    <<"_"<<(AllParams::getCommon<2>(params)+1)  // dtype
+                    <<"_"<<AllParams::getCommon<3>(params)  // createOutputMatrices
+                    <<"_"<<AllParams::getSpecific<3>(params);  // doReverseOp
         return ss.str();
    }
 };
@@ -69,16 +69,15 @@ struct PrintCmpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        Params<CmpTypes,bool> params = info.param;
-        const auto& common_params = params.commonParams();
-        const auto& specific_params = params.specificParams();
-        cv::Size sz = std::get<1>(common_params);  // size
-        ss<<CompareOperations[std::get<0>(specific_params)]  // CmpType
-                    <<"_"<<std::get<1>(specific_params)  // testWithScalar
-                    <<"_"<<std::get<0>(common_params)  // type
+        using AllParams = Params<CmpTypes,bool>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<CompareOperations[AllParams::getSpecific<0>(params)]  // CmpType
+                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<std::get<3>(common_params);  // createOutputMatrices
+                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -89,15 +88,14 @@ struct PrintBWCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        Params<bitwiseOp> params = info.param;
-        const auto& common_params = params.commonParams();
-        const auto& specific_params = params.specificParams();
-        cv::Size sz = std::get<1>(common_params);  // size
-        ss<<BitwiseOperations[std::get<0>(specific_params)]  // bitwiseOp
-                    <<"_"<<std::get<0>(common_params)  // type
+        using AllParams = Params<bitwiseOp>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<BitwiseOperations[AllParams::getSpecific<0>(params)]  // bitwiseOp
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<std::get<3>(common_params);  // createOutputMatrices
+                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -108,12 +106,11 @@ struct PrintNormCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        Params<compare_scalar_f,NormTypes> params = info.param;
-        const auto& common_params = params.commonParams();
-        const auto& specific_params = params.specificParams();
-        cv::Size sz = std::get<1>(common_params);  // size
-        ss<<NormOperations[std::get<1>(specific_params)]  // NormTypes
-                    <<"_"<<std::get<0>(common_params)  // type
+        using AllParams = Params<compare_scalar_f,NormTypes>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height;
         return ss.str();
@@ -123,99 +120,99 @@ struct PrintNormCoreParams
 struct MathOpTest        : public TestWithParamBase<mathOp,bool,double,bool>
 {
     DEFINE_SPECIFIC_PARAMS_4(opType, testWithScalar, scale, doReverseOp);
-    USE_UNIFORM_INIT(MathOpTest, false);
+    USE_UNIFORM_INIT(MathOpTest);
 };
-struct MulDoubleTest     : public TestWithParamBase<> { USE_UNIFORM_INIT(MulDoubleTest, true); };
-struct DivTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(DivTest, true); };
-struct DivCTest          : public TestWithParamBase<> { USE_UNIFORM_INIT(DivCTest, true); };
-struct MeanTest          : public TestWithParamBase<> { USE_UNIFORM_INIT(MeanTest, true); };
-struct MaskTest          : public TestWithParamBase<> { USE_UNIFORM_INIT(MaskTest, true); };
-struct Polar2CartTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(Polar2CartTest, false); };
-struct Cart2PolarTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(Cart2PolarTest, false); };
+struct MulDoubleTest     : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(MulDoubleTest); };
+struct DivTest           : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(DivTest); };
+struct DivCTest          : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(DivCTest); };
+struct MeanTest          : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(MeanTest); };
+struct MaskTest          : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(MaskTest); };
+struct Polar2CartTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(Polar2CartTest); };
+struct Cart2PolarTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(Cart2PolarTest); };
 struct CmpTest           : public TestWithParamBase<CmpTypes,bool>
 {
     DEFINE_SPECIFIC_PARAMS_2(opType, testWithScalar);
-    USE_UNIFORM_INIT(CmpTest, false);
+    USE_UNIFORM_INIT(CmpTest);
 };
 struct BitwiseTest       : public TestWithParamBase<bitwiseOp>
 {
     DEFINE_SPECIFIC_PARAMS_1(opType);
-    USE_UNIFORM_INIT(BitwiseTest, false);
+    USE_UNIFORM_INIT(BitwiseTest);
 };
-struct NotTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(NotTest, true); };
-struct SelectTest        : public TestWithParamBase<> { USE_UNIFORM_INIT(SelectTest, false); };
-struct MinTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(MinTest, false); };
-struct MaxTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(MaxTest, false); };
-struct AbsDiffTest       : public TestWithParamBase<> { USE_UNIFORM_INIT(AbsDiffTest, false); };
-struct AbsDiffCTest      : public TestWithParamBase<> { USE_UNIFORM_INIT(AbsDiffCTest, false); };
+struct NotTest           : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(NotTest); };
+struct SelectTest        : public TestWithParamBase<> { USE_UNIFORM_INIT(SelectTest); };
+struct MinTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(MinTest); };
+struct MaxTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(MaxTest); };
+struct AbsDiffTest       : public TestWithParamBase<> { USE_UNIFORM_INIT(AbsDiffTest); };
+struct AbsDiffCTest      : public TestWithParamBase<> { USE_UNIFORM_INIT(AbsDiffCTest); };
 struct SumTest           : public TestWithParamBase<compare_scalar_f>
 {
     DEFINE_SPECIFIC_PARAMS_1(cmpF);
-    USE_UNIFORM_INIT(SumTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(SumTest);
 };
 struct AddWeightedTest   : public TestWithParamBase<compare_f>
 {
     DEFINE_SPECIFIC_PARAMS_1(cmpF);
-    USE_UNIFORM_INIT(AddWeightedTest, false);
+    USE_UNIFORM_INIT(AddWeightedTest);
 };
 struct NormTest          : public TestWithParamBase<compare_scalar_f,NormTypes>
 {
     DEFINE_SPECIFIC_PARAMS_2(cmpF, opType);
-    USE_UNIFORM_INIT(NormTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(NormTest);
 };
-struct IntegralTest      : public TestWithParamBase<> { USE_UNIFORM_INIT(IntegralTest, false); };
+struct IntegralTest      : public TestWithParamBase<> { USE_UNIFORM_INIT(IntegralTest); };
 struct ThresholdTest     : public TestWithParamBase<int>
 {
     DEFINE_SPECIFIC_PARAMS_1(tt);
-    USE_UNIFORM_INIT(ThresholdTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(ThresholdTest);
 };
 struct ThresholdOTTest   : public TestWithParamBase<int>
 {
     DEFINE_SPECIFIC_PARAMS_1(tt);
-    USE_UNIFORM_INIT(ThresholdOTTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(ThresholdOTTest);
 };
-struct InRangeTest       : public TestWithParamBase<> { USE_UNIFORM_INIT(InRangeTest, true); };
-struct Split3Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Split3Test, true); };
-struct Split4Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Split4Test, true); };
+struct InRangeTest       : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(InRangeTest); };
+struct Split3Test        : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(Split3Test); };
+struct Split4Test        : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(Split4Test); };
 struct ResizeTest        : public TestWithParamBase<compare_f,int,cv::Size>
 {
     DEFINE_SPECIFIC_PARAMS_3(cmpF, interp, sz_out);
-    USE_UNIFORM_INIT(ResizeTest, false);
+    USE_UNIFORM_INIT(ResizeTest);
 };
 struct ResizeTestFxFy    : public TestWithParamBase<compare_f,int,double,double>
 {
     DEFINE_SPECIFIC_PARAMS_4(cmpF, interp, fx, fy);
-    USE_UNIFORM_INIT(ResizeTestFxFy, false);
+    USE_UNIFORM_INIT(ResizeTestFxFy);
 };
-struct Merge3Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Merge3Test, false); };
-struct Merge4Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Merge4Test, false); };
-struct RemapTest         : public TestWithParamBase<> { USE_UNIFORM_INIT(RemapTest, true); };
+struct Merge3Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Merge3Test); };
+struct Merge4Test        : public TestWithParamBase<> { USE_UNIFORM_INIT(Merge4Test); };
+struct RemapTest         : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(RemapTest); };
 struct FlipTest          : public TestWithParamBase<int>
 {
     DEFINE_SPECIFIC_PARAMS_1(flipCode);
-    USE_UNIFORM_INIT(FlipTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(FlipTest);
 };
 struct CropTest          : public TestWithParamBase<cv::Rect>
 {
     DEFINE_SPECIFIC_PARAMS_1(rect_to);
-    USE_UNIFORM_INIT(CropTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(CropTest);
 };
-struct ConcatHorTest     : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatHorTest, false); };
-struct ConcatVertTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatVertTest, false); };
-struct ConcatVertVecTest : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatVertVecTest, false); };
-struct ConcatHorVecTest  : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatHorVecTest, false); };
-struct LUTTest           : public TestWithParamBase<> { USE_UNIFORM_INIT(LUTTest, true); };
+struct ConcatHorTest     : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatHorTest); };
+struct ConcatVertTest    : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatVertTest); };
+struct ConcatVertVecTest : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatVertVecTest); };
+struct ConcatHorVecTest  : public TestWithParamBase<> { USE_UNIFORM_INIT(ConcatHorVecTest); };
+struct LUTTest           : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(LUTTest); };
 struct ConvertToTest     : public TestWithParamBase<compare_f, double, double>
 {
     DEFINE_SPECIFIC_PARAMS_3(cmpF, alpha, beta);
-    USE_UNIFORM_INIT(ConvertToTest, true);
+    USE_UNIFORM_INIT_ONE_MAT(ConvertToTest);
 };
 struct PhaseTest         : public TestWithParamBase<bool>
 {
     DEFINE_SPECIFIC_PARAMS_1(angle_in_degrees);
-    USE_UNIFORM_INIT(PhaseTest, false);
+    USE_UNIFORM_INIT(PhaseTest);
 };
-struct SqrtTest          : public TestWithParamBase<> { USE_UNIFORM_INIT(SqrtTest, true); };
+struct SqrtTest          : public TestWithParamBase<> { USE_UNIFORM_INIT_ONE_MAT(SqrtTest); };
 struct NormalizeTest : public TestWithParamBase<compare_f,double,double,int,MatType>
 {
     DEFINE_SPECIFIC_PARAMS_5(cmpF, a, b, norm_type, ddepth);
