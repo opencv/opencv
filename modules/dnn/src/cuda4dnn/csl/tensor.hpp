@@ -47,12 +47,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      * "TensorType", frequently used as a template parameter, can refer to Tensor, TensorSpan or TensorView.
      */
 
-    template <class T, std::size_t rank>
-    class TensorSpan;
-
-    template <class T, std::size_t rank>
-    class TensorView;
-
     /** @brief multi-dimensional contiguous GPU tensor containing elements of a single type
      *
      * \tparam  T       type of data stored by the tensor
@@ -270,9 +264,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             reshape(std::begin(new_sizes), std::end(new_sizes));
         }
 
-        operator TensorSpan<T, rank_>() noexcept; /* defined later */
-        operator TensorView<T, rank_>() const noexcept; /* defined later */
-
         friend void swap(Tensor& lhs, Tensor& rhs) noexcept {
             using std::swap;
             swap(lhs.data, rhs.data);
@@ -488,8 +479,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return subspan(offset, std::begin(new_sizes), std::end(new_sizes));
         }
 
-        operator TensorView<T, rank_>() const noexcept; /* defined later */
-
         friend void swap(TensorSpan& lhs, TensorSpan& rhs) noexcept {
             using std::swap;
             swap(lhs.ptr, rhs.ptr);
@@ -500,11 +489,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         size_type sizes[rank];
         pointer ptr;
     };
-
-    template <class T, std::size_t rank_>
-    Tensor<T, rank_>::operator TensorSpan<T, rank_>() noexcept {
-        return TensorSpan<T, rank_>(*this);
-    }
 
     /** @brief view of a tensor
      *
@@ -730,17 +714,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         const_pointer ptr;
     };
 
-    template <class T, std::size_t rank_>
-    Tensor<T, rank_>::operator TensorView<T, rank_>() const noexcept {
-        return TensorView<T, rank_>(*this);
-    }
-
-    template <class T, std::size_t rank_>
-    TensorSpan<T, rank_>::operator TensorView<T, rank_>() const noexcept {
-        return TensorView<T, rank_>(*this);
-    }
-
-    /** returns true if the two Tensor/TensorSpan/TensorView objects have the same shape */
+    /** returns true if the two TensorType objects have the same shape */
     template <class TensorType1, class TensorType2> inline
     bool is_same_shape(const TensorType1& x, const TensorType2& y) noexcept {
         constexpr auto rank1 = TensorType1::rank;
@@ -751,6 +725,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         for (int i = 0; i < rank1; i++)
             if (x.get_axis_size(i) != y.get_axis_size(i))
+                return false;
+        return true;
+    }
+
+    /** returns true if the two TensorType objects are compatible */
+    template <class TensorType1, class TensorType2> inline
+    bool is_shape_compatible(const TensorType1& x, const TensorType2& y) noexcept {
+        constexpr auto rank1 = TensorType1::rank;
+        constexpr auto rank2 = TensorType2::rank;
+
+        if (rank1 != rank2)
+            return false;
+
+        for (int i = 0; i < rank1; i++)
+            if (x.get_axis_size(i) != y.get_axis_size(i) &&
+                x.get_axis_size(i) != 1 && y.get_axis_size(i) != 1)
                 return false;
         return true;
     }
@@ -776,6 +766,91 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         return shape;
     }
 
+    namespace tensor_ops {
+
+        /** @brief performs generalized matrix-multiplication
+         *
+         * Pre-conditions:
+         * - \p A and \p B must meet the mathematical requirements for matrix multiplication
+         * - \p result must be large enough to hold the result
+         *
+         * Exception Gaurantee: Basic
+         */
+        template <class T> inline
+        void gemm(const cublas::Handle& handle, T beta, TensorSpan<T> result, T alpha, bool transa, TensorView<T> A, bool transb, TensorView<T> B) {
+            /* matrix operations can be performed only on rank two or less tensors */
+            CV_Assert(get_effective_rank(A) <= 2 &&
+                get_effective_rank(B) <= 2 &&
+                get_effective_rank(result) <= 2);
+
+            /* check dimension requirements for matrix multiplication */
+            if (!transa && !transb) {
+                CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
+                CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-2));
+                CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
+            } else if (!transa && transb) {
+                CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
+                CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-1));
+                CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
+            } else if (transa && !transb) {
+                CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
+                CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-2));
+                CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
+            } else {
+                CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
+                CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-1));
+                CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
+            }
+
+            const auto result_nr = result.get_axis_size(-2);
+            const auto result_nc = result.get_axis_size(-1);
+            const auto common_dim = A.get_axis_size(transa ? -2 : -1);
+            const auto A_nc = A.get_axis_size(-1);
+            const auto B_nc = B.get_axis_size(-1);
+
+            cublas::gemm<T>(handle,
+                transb, transa,
+                result_nc, result_nr, common_dim,
+                alpha, B.get(), B_nc,
+                A.get(), A_nc,
+                beta, result.get(), result_nc);
+        }
+
+        /** @brief performs element-wise addition with broadcasting
+        *
+        * Pre-conditions:
+        * - \p A and \p result must be compatible tensors
+        *
+        * Exception Gaurantee: Basic
+        */
+        template <class T> inline
+        void add(const cudnn::Handle& handle, T beta, TensorSpan<T> result, T alpha, TensorView<T> A) {
+            /* mathematical requirements */
+            CV_Assert(is_shape_compatible(result, A));
+
+            /* technical requirements */
+            CV_Assert(get_effective_rank(result) <= 4);
+            CV_Assert(get_effective_rank(A) <= 4);
+
+            using cudnn::TensorDescriptor;
+            auto aDesc = TensorDescriptor<T>(
+                A.get_axis_size(-4),
+                A.get_axis_size(-3),
+                A.get_axis_size(-2),
+                A.get_axis_size(-1)
+            );
+
+            auto cDesc = TensorDescriptor<T>(
+                result.get_axis_size(-4),
+                result.get_axis_size(-3),
+                result.get_axis_size(-2),
+                result.get_axis_size(-1)
+            );
+
+            cudnn::add(handle, alpha, aDesc, A.get(), beta, cDesc, result.get());
+        }
+    }
+
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
 
-#endif /* OPENCV_DNN_CUDA4DNN_CSL_TENSOR_HPP*/
+#endif /* OPENCV_DNN_CUDA4DNN_CSL_TENSOR_HPP */

@@ -6,6 +6,7 @@
 
 #include "cudnn.hpp"
 #include "stream.hpp"
+#include "pointer.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -65,15 +66,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnHandle_t handle;
     };
 
-    /** used to access the raw cuDNN handle held by Handle */
-    class HandleAccessor {
-    public:
-        static cudnnHandle_t get(const Handle& handle) {
-            CV_Assert(handle);
-            return handle.handle->get();
-        }
-    };
-
     Handle::Handle() : handle(std::make_shared<Handle::UniqueHandle>()) { }
     Handle::Handle(const Handle&) noexcept = default;
     Handle::Handle(Handle&&) noexcept = default;
@@ -83,5 +75,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     Handle& Handle::operator=(Handle&&) noexcept = default;
 
     Handle::operator bool() const noexcept { return static_cast<bool>(handle); }
+
+    cudnnHandle_t HandleAccessor::get(const Handle& handle) {
+        CV_Assert(handle);
+        return handle.handle->get();
+    }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */

@@ -6,6 +6,7 @@
 
 #include "cublas.hpp"
 #include "stream.hpp"
+#include "pointer.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -93,7 +94,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     /* used to access the raw cuBLAS handle held by Handle */
     class HandleAccessor {
     public:
-        static cublasHandle_t get(Handle& handle) {
+        static cublasHandle_t get(const Handle& handle) {
             CV_Assert(handle);
             return handle.handle->get();
         }
@@ -108,5 +109,67 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     Handle& Handle::operator=(Handle&&) noexcept = default;
 
     Handle::operator bool() const noexcept { return static_cast<bool>(handle); }
+
+    template <>
+    void gemm<float>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        float alpha, const DevicePtr<const float> A, std::size_t lda,
+        const DevicePtr<const float> B, std::size_t ldb,
+        float beta, const DevicePtr<float> C, std::size_t ldc)
+    {
+        CV_Assert(handle);
+
+        auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+            opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        int irows_c = static_cast<int>(rows_c),
+            icols_c = static_cast<int>(cols_c),
+            icommon_dim = static_cast<int>(common_dim),
+            ilda = static_cast<int>(lda),
+            ildb = static_cast<int>(ldb),
+            ildc = static_cast<int>(ldc);
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasSgemm(
+                HandleAccessor::get(handle),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda,
+                B.get(), ildb,
+                &beta, C.get(), ildc
+            )
+        );
+    }
+
+    template <>
+    void gemm<double>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        double alpha, const DevicePtr<const double> A, std::size_t lda,
+        const DevicePtr<const double> B, std::size_t ldb,
+        double beta, const DevicePtr<double> C, std::size_t ldc)
+    {
+        CV_Assert(handle);
+
+        auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+            opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        int irows_c = static_cast<int>(rows_c),
+            icols_c = static_cast<int>(cols_c),
+            icommon_dim = static_cast<int>(common_dim),
+            ilda = static_cast<int>(lda),
+            ildb = static_cast<int>(ldb),
+            ildc = static_cast<int>(ldc);
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasDgemm(
+                HandleAccessor::get(handle),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda,
+                B.get(), ildb,
+                &beta, C.get(), ildc
+            )
+        );
+    }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */

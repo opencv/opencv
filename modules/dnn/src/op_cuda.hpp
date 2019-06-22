@@ -29,7 +29,7 @@ namespace cv {
 #ifdef HAVE_CUDA
         /** @brief creates csl::Tensor object from cv::Mat */
         template <class TensorT = cuda4dnn::csl::Tensor<float>> inline
-            TensorT createTensorHeaderFromMat(const cv::Mat& mat) {
+        TensorT createTensorHeaderFromMat(const cv::Mat& mat) {
             auto is_matrix_type_same_as_tensor_type = [&mat]() {
                 switch (mat.type()) {
                 case CV_32F: return std::is_same<TensorT::value_type, float>::value;
@@ -49,14 +49,13 @@ namespace cv {
          *
          * @note performance is best for continuous and page-locked cv::Mat
          */
-        template <class TensorSpanT> inline
-        void copyMatToTensor(const TensorSpanT& tensor, const cv::Mat& mat, const cuda4dnn::csl::Stream& stream) {
+        template <class T> inline
+        void copyMatToTensor(const cuda4dnn::csl::TensorSpan<T> tensor, const cv::Mat& mat, const cuda4dnn::csl::Stream& stream) {
             CV_Assert(mat.total() >= tensor.size());
 
             cv::Mat source = mat.isContinuous() ? mat : mat.clone();
             CV_Assert(source.isContinuous());
 
-            using T = typename TensorSpanT::value_type;
             cuda4dnn::csl::memcpy<T>(tensor.get(), reinterpret_cast<T*>(source.data), tensor.size(), stream);
         }
 
@@ -67,14 +66,13 @@ namespace cv {
          *
          * @note performance is best for continuous and page-locked cv::Mat
          */
-        template <class TensorType = cuda4dnn::csl::TensorView<float>> inline
-        void copyTensorToMat(cv::Mat& mat, TensorType& tensor, const cuda4dnn::csl::Stream& stream) {
+        template <class T> inline
+        void copyTensorToMat(cv::Mat& mat, cuda4dnn::csl::TensorView<T> tensor, const cuda4dnn::csl::Stream& stream) {
             CV_Assert(mat.total() >= tensor.size());
 
             cv::Mat source = mat.isContinuous() ? mat : mat.clone();
             CV_Assert(source.isContinuous());
 
-            using T = typename TensorType::value_type;
             cuda4dnn::csl::memcpy<T>(reinterpret_cast<T*>(source.data), tensor.get(), tensor.size(), stream);
 
             if(source.data != mat.data)
