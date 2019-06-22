@@ -40,34 +40,42 @@ set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\bin\"
 
 :: Detect compiler
 cl /? >NUL 2>NUL <NUL
+if %ERRORLEVEL% == 0 (
+  goto detect_cmake
+)
+PUSHD %CD%
+
+CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvars64.bat"
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+)
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+)
+
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat"
+)
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+)
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+)
+
+IF ERRORLEVEL 1 (
+  CALL :try_call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+)
+
+POPD
+cl /? >NUL 2>NUL <NUL
 if %ERRORLEVEL% NEQ 0 (
-  PUSHD %CD%
-  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat" (
-    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat"
-    goto check_msvc
-  )
-  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
-    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-    goto check_msvc
-  )
-  if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
-    CALL "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-    goto check_msvc
-  )
-  if exist "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" (
-    CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
-    goto check_msvc
-  )
-:check_msvc
-  POPD
-  cl /? >NUL 2>NUL <NUL
-  if %ERRORLEVEL% NEQ 0 (
-    set "MSG=Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017 are supported only from standard locations"
-    goto die
-  )
+  set "MSG=Can't detect Microsoft Visial Studio C++ compiler (cl.exe). MSVS 2015/2017/2019 are supported only from standard locations"
+  goto die
 )
 
 :: Detect CMake
+:detect_cmake
 cmake --version >NUL 2>NUL
 if %ERRORLEVEL% EQU 0 GOTO :CMAKE_FOUND
 
@@ -84,6 +92,7 @@ goto die
 set CMAKE_FOUND=1
 call :execute cmake --version
 echo CMake is detected
+where cmake
 
 :: Detect available MSVS version
 if NOT DEFINED VisualStudioVersion (
@@ -91,19 +100,30 @@ if NOT DEFINED VisualStudioVersion (
   goto die
 )
 if "%VisualStudioVersion%" == "14.0" (
-  set CMAKE_GENERATOR="Visual Studio 14 Win64"
+  set "CMAKE_GENERATOR=-G^"Visual Studio 14 Win64^""
+  set "BUILD_DIR_SUFFIX=.vc14"
   set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc14\bin\"
 ) else (
   if "%VisualStudioVersion%" == "15.0" (
-    set CMAKE_GENERATOR="Visual Studio 15 Win64"
+    set "CMAKE_GENERATOR=-G^"Visual Studio 15 Win64^""
+    set "BUILD_DIR_SUFFIX=.vc15"
     set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc15\bin\"
   ) else (
-    set "MSG=Unsupported MSVS version. VisualStudioVersion=%VisualStudioVersion%"
-    goto die
+    if "%VisualStudioVersion%" == "16.0" (
+      echo.==========================================
+      echo.*  Note: MSVS 2019 requires CMake 3.14+  *
+      echo.==========================================
+      set "CMAKE_GENERATOR=-G^"Visual Studio 16 2019^" -A x64"
+      set "BUILD_DIR_SUFFIX=.vc16"
+      set "PATH=%PATH%;%SCRIPTDIR%\..\..\build\x64\vc15\bin\"
+    ) else (
+      set "MSG=Unsupported MSVS version. VisualStudioVersion=%VisualStudioVersion%"
+      goto die
+    )
   )
 )
 
-set "BUILD_DIR=%SRC_DIR%\build_%SRC_NAME%"
+set "BUILD_DIR=%SRC_DIR%\build_%SRC_NAME%%BUILD_DIR_SUFFIX%"
 call :set_title Create build directory
 if NOT exist "%BUILD_DIR%" ( call :execute md "%BUILD_DIR%" )
 PUSHD "%BUILD_DIR%"
@@ -111,7 +131,7 @@ if NOT exist "%BUILD_DIR%/sample" ( call :execute md "%BUILD_DIR%/sample" )
 call :execute copy /Y "%SCRIPTDIR%/CMakeLists.example.in" "%BUILD_DIR%/sample/CMakeLists.txt"
 
 call :set_title Configuring via CMake
-call :execute cmake -G%CMAKE_GENERATOR% "%BUILD_DIR%\sample" -DEXAMPLE_NAME=%SRC_NAME% "-DEXAMPLE_FILE=%SRC_FILENAME%" "-DOpenCV_DIR=%SCRIPTDIR%\..\..\build"
+call :execute cmake %CMAKE_GENERATOR% "%BUILD_DIR%\sample" -DEXAMPLE_NAME=%SRC_NAME% "-DEXAMPLE_FILE=%SRC_FILENAME%" "-DOpenCV_DIR=%SCRIPTDIR%\..\..\build"
 if %ERRORLEVEL% NEQ 0 (
   set "MSG=CMake configuration step failed: %BUILD_DIR%"
   goto die
@@ -175,6 +195,14 @@ exit /B 0
   set _dir=%_dir:~0,-1%
   endlocal & set %2=%_dir%
   EXIT /B 0
+
+:try_call
+IF EXIST %1 (
+  CALL %*
+  EXIT /B
+) ELSE (
+  EXIT /B 1
+)
 
 :: 'goto die' instead of 'call'
 :die
