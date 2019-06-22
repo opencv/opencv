@@ -716,7 +716,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** returns true if the two TensorType objects have the same shape */
     template <class TensorType1, class TensorType2> inline
-    bool is_same_shape(const TensorType1& x, const TensorType2& y) noexcept {
+    bool is_shape_same(const TensorType1& x, const TensorType2& y) noexcept {
         constexpr auto rank1 = TensorType1::rank;
         constexpr auto rank2 = TensorType2::rank;
 
@@ -848,6 +848,40 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             );
 
             cudnn::add(handle, alpha, aDesc, A.get(), beta, cDesc, result.get());
+        }
+
+        /** @brief performs element-wise addition with broadcasting
+        *
+        * Pre-conditions:
+        * - \p A and \p result must be compatible tensors
+        *
+        * Exception Gaurantee: Basic
+        */
+        template <class T> inline
+        void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, bool log) {
+            /* mathematical requirements */
+            CV_Assert(is_shape_same(output, input));
+
+            /* technical requirements */
+            CV_Assert(get_effective_rank(output) <= 4);
+            CV_Assert(get_effective_rank(input) <= 4);
+
+            using cudnn::TensorDescriptor;
+            auto inputDesc = TensorDescriptor<T>(
+                input.get_axis_size(-4),
+                input.get_axis_size(-3),
+                input.get_axis_size(-2),
+                input.get_axis_size(-1)
+            );
+
+            auto outputDesc = TensorDescriptor<T>(
+                output.get_axis_size(-4),
+                output.get_axis_size(-3),
+                output.get_axis_size(-2),
+                output.get_axis_size(-1)
+            );
+
+            cudnn::softmax(handle, outputDesc, output.get(), inputDesc, input.get(), log);
         }
     }
 

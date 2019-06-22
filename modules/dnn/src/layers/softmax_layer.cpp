@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -52,6 +53,11 @@ using std::max;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -90,6 +96,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
@@ -285,6 +292,54 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    )
+    {
+        CV_UNUSED(workspace);
+
+        for (std::size_t i = 0; i < inputs.size(); i++)
+        {
+            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto input = input_wrapper->getView();
+
+            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto output = output_wrapper->getSpan();
+
+            auto actual_dims = input_wrapper->getShape().size();
+            CV_Assert(get_effective_rank(input) <= actual_dims);
+
+            auto extra_dims = input.rank - actual_dims;
+            auto channel_axis = clamp(axisRaw, actual_dims) + extra_dims;
+
+            std::size_t batch_size = 1;
+            for (int j = 0; j < channel_axis; j++)
+                batch_size *= input.get_axis_size(j);
+
+            auto channel_size = input.get_axis_size(channel_axis);
+            input.reshape(batch_size, channel_size, 1, -1);
+            output.reshape(batch_size, channel_size, 1, -1);
+
+            csl::tensor_ops::softmax(cudnnHandle, output, input, logSoftMax);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes
+    )
+    {
+        cudnnHandle = std::move(cudnn_handle);
+    }
+
+    csl::cudnn::Handle cudnnHandle;
+#endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
