@@ -326,3 +326,15 @@ class Slice(nn.Module):
 input = Variable(torch.randn(1, 2, 4, 4))
 model = Slice()
 save_data_and_model("slice", input, model)
+
+class Eltwise(nn.Module):
+
+    def __init__(self):
+        super(Eltwise, self).__init__()
+
+    def forward(self, x):
+        return x + 2.7 * x
+
+input = Variable(torch.randn(1, 1, 2, 3, 4))
+model = Eltwise()
+save_data_and_model("eltwise3d", input, model)
