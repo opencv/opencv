@@ -10,6 +10,7 @@
 #include "cublas.hpp"
 #include "cudnn.hpp"
 #include "span.hpp"
+#include "kernels.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -264,6 +265,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             reshape(std::begin(new_sizes), std::end(new_sizes));
         }
 
+        operator span<T>() noexcept { return span<T>(data.get(), size()); }
+        operator view<T>() const noexcept { return view<T>(data.get(), size()); }
+
         friend void swap(Tensor& lhs, Tensor& rhs) noexcept {
             using std::swap;
             swap(lhs.data, rhs.data);
@@ -478,6 +482,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             std::array<std::int64_t, sizeof...(Sizes)> new_sizes = { static_cast<std::int64_t>(new_sizes_)... };
             return subspan(offset, std::begin(new_sizes), std::end(new_sizes));
         }
+
+        operator span<T>() noexcept { return span<T>(ptr, size()); }
+        operator view<T>() const noexcept { return view<T>(ptr, size()); }
 
         friend void swap(TensorSpan& lhs, TensorSpan& rhs) noexcept {
             using std::swap;
@@ -703,6 +710,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return subview(offset, std::begin(new_sizes), std::end(new_sizes));
         }
 
+        operator view<T>() const noexcept { return view<T>(ptr, size()); }
+
         friend void swap(TensorView& lhs, TensorView& rhs) noexcept {
             using std::swap;
             swap(lhs.ptr, rhs.ptr);
@@ -808,6 +817,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             const auto A_nc = A.get_axis_size(-1);
             const auto B_nc = B.get_axis_size(-1);
 
+            /* tensors are stored in row-major but cublas::gemm operates on column-major matrices
+             * a row-major matrix when read as column-major matrix gives the transpose of the intended matrix
+             *
+             * Required: C = AB
+             * what cuBLAS sees: C^T = A^TB^T = (BA)^T
+             *
+             * By reversing operands, we effectively perform:
+             * C^T = B^TA^T = (AB)^T
+             *
+             * which gives C = AB
+             */
             cublas::gemm<T>(handle,
                 transb, transa,
                 result_nc, result_nr, common_dim,
@@ -882,6 +902,63 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             );
 
             cudnn::softmax(handle, outputDesc, output.get(), inputDesc, input.get(), log);
+        }
+
+        template <class T> inline
+        void abs(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::abs<T>(stream, dest, src);
+        }
+
+        template <class T> inline
+        void bnll(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::bnll<T>(stream, dest, src);
+        }
+
+        template <class T> inline
+        void relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T slope = 0) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::relu<T>(stream, dest, src, slope);
+        }
+
+        template <class T> inline
+        void clipped_relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T min, T max) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::clipped_relu<T>(stream, dest, src, min, max);
+        }
+
+        template <class T> inline
+        void channelwise_relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, TensorView<T> slope) {
+            CV_Assert(is_shape_same(dest, src));
+            CV_Assert(src.get_axis_size(1) == slope.size());
+            std::size_t inner_size = src.size() / src.get_axis_size(0);
+            std::size_t channel_size = inner_size / src.get_axis_size(1);
+            kernels::axiswise_relu<T>(stream, dest, src, slope, inner_size, channel_size);
+        }
+
+        template <class T> inline
+        void elu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::elu<T>(stream, dest, src);
+        }
+
+        template <class T> inline
+        void power(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T exp = 1, T scale = 1, T shift = 0) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::power<T>(stream, dest, src, exp, scale, shift);
+        }
+
+        template <class T> inline
+        void sigmoid(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::sigmoid<T>(stream, dest, src);
+        }
+
+        template <class T> inline
+        void tanh(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+            CV_Assert(is_shape_same(dest, src));
+            kernels::tanh<T>(stream, dest, src);
         }
     }
 
