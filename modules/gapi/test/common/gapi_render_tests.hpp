@@ -16,7 +16,7 @@ namespace opencv_test
 using Points = std::vector<cv::Point>;
 using Rects  = std::vector<cv::Rect>;
 
-struct RenderTextTest : public TestParams <std::tuple<std::string,Points,int,double,cv::Scalar,int,int,bool>> {};
+struct RenderTextTest : public TestParams <std::tuple<cv::Size,std::string,Points,int,double,cv::Scalar,int,int,bool>> {};
 
 } // opencv_test
 

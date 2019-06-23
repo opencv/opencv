@@ -8,9 +8,9 @@
 #ifndef OPENCV_GAPI_RENDER_TESTS_INL_HPP
 #define OPENCV_GAPI_RENDER_TESTS_INL_HPP
 
-// FIXME
-#include <iostream>
 #include "gapi_render_tests.hpp"
+#include "api/render_priv.hpp"
+
 #include <opencv2/gapi/render.hpp>
 
 namespace opencv_test
@@ -18,8 +18,11 @@ namespace opencv_test
 
 TEST_P(RenderTextTest, AccuracyTest)
 {
-    std::vector<cv::Point> points;
+    MatType type = CV_8UC3;
+    cv::Size sz;
+    bool initOut = true;
     std::string text;
+    std::vector<cv::Point> points;
     int         ff;
     double      fs;
     cv::Scalar  color;
@@ -27,25 +30,32 @@ TEST_P(RenderTextTest, AccuracyTest)
     int         lt;
     bool        blo;
 
-    std::tie(text, points, ff, fs, color, thick, lt, blo) = GetParam();
+    std::tie(sz, text, points, ff, fs, color, thick, lt, blo) = GetParam();
+    initMatsRandU(type, sz, type, initOut);
 
-    cv::Mat ref_mat(300, 300, CV_8UC3);
-    cv::Mat out_mat(300, 300, CV_8UC3);
     std::vector<cv::gapi::wip::draw::Prim> prims;
 
     for (const auto& p : points) {
-        cv::putText(ref_mat, text, p, ff, fs, color, thick);
+        cv::putText(out_mat_ocv, text, p, ff, fs, color, thick);
         prims.emplace_back(cv::gapi::wip::draw::Text{text, p, ff, fs, color, thick, lt, false});
     }
-    cv::imshow("ref_mat", ref_mat);
-    cv::waitKey(0);
 
-    cv::gapi::wip::draw::render(out_mat, prims);
+    if (true) {
+        cv::Mat y, uv;
+        cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
 
-    // EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+        cv::gapi::wip::draw::render(y, uv, prims);
+        cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
+
+        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
+        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
+    } else {
+        cv::gapi::wip::draw::render(out_mat_gapi, prims);
+    }
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 } // opencv_test
 
 #endif //OPENCV_GAPI_RENDER_TESTS_INL_HPP
-

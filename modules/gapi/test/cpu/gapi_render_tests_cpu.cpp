@@ -12,12 +12,15 @@ namespace opencv_test
 {
 
 INSTANTIATE_TEST_CASE_P(RenderTextTestCPU, RenderTextTest,
-                        Combine(Values("text"),
+                        Combine(Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values("text"),
                                 Values(Points{Point(30,150)}),
                                 Values(5),
                                 Values(5.5),
                                 Values(cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)),
                                 Values(5),
                                 Values(5),
-                                Values(false)));
+                                testing::Bool()));
 }
