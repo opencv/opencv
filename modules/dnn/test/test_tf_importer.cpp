@@ -74,7 +74,7 @@ TEST(Test_TensorFlow, inception_accuracy)
 
 static std::string path(const std::string& file)
 {
-    return findDataFile("dnn/tensorflow/" + file, false);
+    return findDataFile("dnn/tensorflow/" + file);
 }
 
 class Test_TensorFlow_layers : public DNNTestLayer
@@ -360,15 +360,15 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 #endif
 
     checkBackend();
+    std::string imgPath = findDataFile("dnn/street.png");
+    std::string netConfig = findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt");
     std::string netPath = findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false);
-    std::string netConfig = findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false);
-    std::string imgPath = findDataFile("dnn/street.png", false);
 
     Mat inp;
     resize(imread(imgPath), inp, Size(300, 300));
     inp = blobFromImage(inp, 1.0f / 127.5, Size(), Scalar(127.5, 127.5, 127.5), true);
 
-    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco.detection_out.npy", false));
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco.detection_out.npy"));
 
     Net net = readNetFromTensorflow(netPath, netConfig);
     net.setPreferableBackend(backend);
@@ -397,11 +397,11 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 #endif
 
     checkBackend();
-    std::string proto = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pbtxt", false);
+    Mat img = imread(findDataFile("dnn/street.png"));
+    std::string proto = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pbtxt");
     std::string model = findDataFile("dnn/ssd_inception_v2_coco_2017_11_17.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
-    Mat img = imread(findDataFile("dnn/street.png", false));
     Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
@@ -434,11 +434,11 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
         throw SkipTestException("Test is disabled for MyriadX");
 #endif
 
+    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt");
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", false);
-    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt", false);
 
     Net net = readNetFromTensorflow(model, proto);
-    Mat img = imread(findDataFile("dnn/dog416.png", false));
+    Mat img = imread(findDataFile("dnn/dog416.png"));
     Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
@@ -473,13 +473,13 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
     double scoresDiff = backend == DNN_BACKEND_INFERENCE_ENGINE ? 2.9e-5 : 1e-5;
     for (int i = 0; i < 2; ++i)
     {
-        std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt", false);
+        std::string proto = findDataFile("dnn/" + names[i] + ".pbtxt");
         std::string model = findDataFile("dnn/" + names[i] + ".pb", false);
 
         Net net = readNetFromTensorflow(model, proto);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        Mat img = imread(findDataFile("dnn/dog416.png", false));
+        Mat img = imread(findDataFile("dnn/dog416.png"));
         Mat blob = blobFromImage(img, 1.0f, Size(800, 600), Scalar(), true, false);
 
         net.setInput(blob);
@@ -498,12 +498,12 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 #endif
 
     checkBackend();
-    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt", false);
+    std::string proto = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pbtxt");
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_ppn_coco.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
-    Mat img = imread(findDataFile("dnn/dog416.png", false));
-    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy", false));
+    Mat img = imread(findDataFile("dnn/dog416.png"));
+    Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy"));
     Mat blob = blobFromImage(img, 1.0f, Size(300, 300), Scalar(), true, false);
 
     net.setPreferableBackend(backend);
@@ -521,11 +521,11 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
 TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
 {
     checkBackend();
-    std::string proto = findDataFile("dnn/opencv_face_detector.pbtxt", false);
+    std::string proto = findDataFile("dnn/opencv_face_detector.pbtxt");
     std::string model = findDataFile("dnn/opencv_face_detector_uint8.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
-    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
 
     net.setPreferableBackend(backend);
@@ -572,11 +572,11 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     checkBackend();
 
     std::string netPath = findDataFile("dnn/frozen_east_text_detection.pb", false);
-    std::string imgPath = findDataFile("cv/ximgproc/sources/08.png", false);
-    std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy", false);
-    std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy", false);
+    std::string imgPath = findDataFile("cv/ximgproc/sources/08.png");
+    std::string refScoresPath = findDataFile("dnn/east_text_detection.scores.npy");
+    std::string refGeometryPath = findDataFile("dnn/east_text_detection.geometry.npy");
 
-    Net net = readNet(findDataFile("dnn/frozen_east_text_detection.pb", false));
+    Net net = readNet(netPath);
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -793,11 +793,11 @@ TEST(Test_TensorFlow, two_inputs)
 TEST(Test_TensorFlow, Mask_RCNN)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_VERYLONG);
-    std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt", false);
+    Mat img = imread(findDataFile("dnn/street.png"));
+    std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
     Net net = readNetFromTensorflow(model, proto);
-    Mat img = imread(findDataFile("dnn/street.png", false));
     Mat refDetections = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
     Mat refMasks = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy"));
     Mat blob = blobFromImage(img, 1.0f, Size(800, 800), Scalar(), true, false);

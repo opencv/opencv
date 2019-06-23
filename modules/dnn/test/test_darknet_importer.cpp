@@ -82,7 +82,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
     Mat ref;
     Mat sample = imread(_tf("dog416.png"));
     Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
-    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg", false);
+    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg");
     const std::string weightsFile = findDataFile("dnn/yolo-voc.weights", false);
     // Import by paths.
     {
@@ -110,12 +110,13 @@ class Test_Darknet_layers : public DNNTestLayer
 public:
     void testDarknetLayer(const std::string& name, bool hasWeights = false)
     {
-        std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg", false);
+        Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy"));
+        Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy"));
+
+        std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg");
         std::string model = "";
         if (hasWeights)
             model = findDataFile("dnn/darknet/" + name + ".weights", false);
-        Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy", false));
-        Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy", false));
 
         checkBackend(&inp, &ref);
 
@@ -152,7 +153,7 @@ public:
 
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
-        Net net = readNet(findDataFile("dnn/" + cfg, false),
+        Net net = readNet(findDataFile("dnn/" + cfg),
                           findDataFile("dnn/" + weights, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
