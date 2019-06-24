@@ -118,14 +118,14 @@ class GdalDecoder CV_FINAL : public BaseImageDecoder{
         ~GdalDecoder() CV_OVERRIDE;
 
         /**
-         * Read image data
-        */
-        bool readData( Mat& img ) CV_OVERRIDE;
-
-        /**
          * Read the image header
         */
-        bool readHeader() CV_OVERRIDE;
+        bool readHeader(std::map<String, String> *properties) CV_OVERRIDE;
+
+        /**
+         * Read image data
+        */
+        bool readData( Mat& img, std::map<String, String> *properties ) CV_OVERRIDE;
 
         /**
          * Close the module
