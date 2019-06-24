@@ -3,12 +3,12 @@
 <html>
 
 <head>
-  <script async src="../../opencv.js" type="text/javascript"></script>
   <script src="../../utils.js" type="text/javascript"></script>
 
 <script type='text/javascript'>
 var netDet = undefined, netRecogn = undefined;
 var persons = {};
+var utils = new Utils('');
 
 //! [Run face detection model]
 function detectFaces(img) {
@@ -68,7 +68,6 @@ function recognize(face) {
 //! [Recognize]
 
 function loadModels(callback) {
-  var utils = new Utils('');
   var proto = 'https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt';
   var weights = 'https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel';
   var recognModel = 'https://raw.githubusercontent.com/pyannote/pyannote-data/master/openface.nn4.small2.v1.t7';
@@ -186,11 +185,16 @@ function main() {
 
   document.getElementById('startStopButton').disabled = false;
 };
+
+// Load opencv.js
+utils.loadOpenCv(() => {
+  main();
+});
 </script>
 
 </head>
 
-<body onload="main()">
+<body>
   <button id="startStopButton" type="button" disabled="true">Start</button>
   <div id="status"></div>
   <canvas id="output" width=640 height=480 style="max-width: 100%"></canvas>
