@@ -146,6 +146,7 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("padding_valid");
     runTensorFlowNet("spatial_padding");
     runTensorFlowNet("keras_pad_concat");
+    runTensorFlowNet("mirror_pad");
 }
 
 TEST_P(Test_TensorFlow_layers, padding_same)
