@@ -11,6 +11,7 @@
 #include "cudnn.hpp"
 #include "span.hpp"
 #include "kernels.hpp"
+#include "workspace.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -954,6 +955,70 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             kernels::tanh<T>(stream, dest, src);
         }
     }
+
+    template <class T>
+    class Convolution {
+    public:
+        struct params_type {
+            std::vector<std::size_t> input_shape;
+            std::vector<std::size_t> filter_shape;
+
+            std::vector<std::size_t> padding;
+            std::vector<std::size_t> stride;
+            std::vector<std::size_t> dialation;
+
+            std::size_t groups;
+        };
+
+        Convolution() = default;
+        Convolution(const Convolution&) = delete;
+        Convolution(Convolution&&) = default;
+        Convolution(cudnn::Handle handle, const params_type& params) {
+            cudnnHandle = std::move(handle);
+
+            inputTensorDesc = TensorDescriptor(params.input_shape);
+            filterDesc = FilterDescriptor(params.filter_shape);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dialation, params.groups);
+
+            std::vector<int> output_dims;
+            getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
+
+            outputTensorDesc = TensorDescriptor(output_dims);
+
+            algo = ConvolutionAlgorithm(cudnnHandle, convDesc, filterDesc, inputTensorDesc, outputTensorDesc);
+        }
+
+        Convolution& operator=(const Convolution&) = delete;
+        Convolution& operator=(Convolution&&) = default;
+
+        std::size_t get_workspace_size() const noexcept {
+            return algo.get_workspace_size();
+        }
+
+        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, Workspace& scratchpad) {
+            cudnn::convolve<T>(cudnnHandle,
+                filterDesc, filters.get(),
+                convDesc, algo, WorkspaceAccessor::get(scratchpad),
+                inputTensorDesc, input.get(), 1.0,
+                0.0, outputTensorDesc, output.get()
+            );
+        }
+
+    private:
+        cudnn::Handle cudnnHandle;
+
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        TensorDescriptor inputTensorDesc, outputTensorDesc;
+
+        using FilterDescriptor = cudnn::FilterDescriptor<T>;
+        FilterDescriptor filterDesc;
+
+        using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
+        ConvolutionDescriptor convDesc;
+
+        using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
+        ConvolutionAlgorithm algo;
+    };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
 

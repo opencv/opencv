@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -53,6 +54,11 @@
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -253,6 +259,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+            return true;
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
@@ -490,8 +499,6 @@ public:
 #endif  // HAVE_VULKAN
         return Ptr<BackendNode>();
     }
-
-
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
@@ -1280,6 +1287,99 @@ public:
         ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                           kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    )
+    {
+        CV_Assert(!activ);
+
+        for (std::size_t i = 0; i < inputs.size(); i++)
+        {
+            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto input = input_wrapper->getView();
+
+            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto output = output_wrapper->getSpan();
+
+            auto start = std::chrono::steady_clock::now();
+
+            convoluter.convolve(output, input, filtersTensor, workspace);
+            if (hasBias() || fusedBias)
+                csl::tensor_ops::add<float>(cudnnHandle, 1.0, output, 1.0, biasTensor);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    )
+    {
+        cudnnHandle = std::move(cudnn_handle);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input_shape = input_wrapper->getShape();
+
+        /* we support 1-6d convolution */
+        CV_Assert(input_shape.size() >= 3 || input_shape.size() <= 8);
+
+        CV_Assert(blobs.size() >= 1);
+        const auto& filtersMat = blobs[0];
+
+        const auto output_feature_maps = filtersMat.size[0];
+        const auto input_feature_maps = input_shape[1];
+        const auto input_feature_maps_per_group = filtersMat.size[1];
+        const auto groups = input_feature_maps / input_feature_maps_per_group;
+        CV_Assert(input_feature_maps % input_feature_maps_per_group == 0);
+
+        const Mat& filterWeightsSource = newWeightAndBias ? weightsMat : filtersMat;
+        filtersTensor = createTensorHeaderFromMat(filterWeightsSource);
+        copyMatToTensor<float>(filtersTensor, filterWeightsSource, stream);
+
+        if (hasBias() || fusedBias)
+        {
+            std::vector<int> biasShape(input_shape.size(), 1);
+            biasShape[1] = output_feature_maps;
+            Mat biasMat(input_shape.size(), biasShape.data(), CV_32F, &biasvec[0]);
+            biasTensor = createTensorHeaderFromMat(biasMat);
+            copyMatToTensor<float>(biasTensor, biasMat, stream);
+        }
+
+        if(pads_begin != pads_end)
+            CV_Error(Error::StsNotImplemented, "Asymmetric padding for convolution layer is not supported by CUDA backend");
+
+        csl::Convolution<float>::params_type params;
+        params.padding = pads_begin;
+        params.stride = strides;
+        params.dialation = dilations;
+        params.groups = groups;
+
+        auto& ishape = params.input_shape;
+        ishape.resize(input_shape.size());
+        std::copy(std::begin(input_shape), std::end(input_shape), std::begin(ishape));
+
+        auto& fshape = params.filter_shape;
+        fshape.resize(ishape.size());
+        fshape[0] = output_feature_maps;
+        fshape[1] = input_feature_maps_per_group;
+
+        std::copy_backward(std::begin(kernel_size), std::end(kernel_size), std::end(fshape));
+        CV_Assert(fshape.size() == kernel_size.size() + 2);
+
+        convoluter = csl::Convolution<float>(cudnnHandle, params);
+        scratch_mem_in_bytes = convoluter.get_workspace_size();
+    }
+
+    csl::cudnn::Handle cudnnHandle;
+    csl::Tensor<float> filtersTensor, biasTensor;
+    csl::Convolution<float> convoluter;
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
