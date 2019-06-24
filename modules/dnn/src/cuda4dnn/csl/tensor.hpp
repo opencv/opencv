@@ -94,6 +94,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return std::accumulate(std::begin(sizes), std::end(sizes), 1, std::multiplies<size_type>());
         }
 
+        /** returns a shape array consisting of axis lengths in order starting from zero */
+        std::array<size_type, rank> shape() const noexcept { return sizes; }
+
         /** returns true if the tensor is empty */
         bool empty() const noexcept { return !size(); }
 
@@ -111,7 +114,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - the axis must be in the range [-rank, rank)
          */
         size_type get_axis_size(int axis) const noexcept {
-            axis = axis < 0 ? rank + axis : axis;
+            axis = clamp_axis(axis, rank);
             CV_Assert(axis >= 0 && axis < rank);
             return sizes[axis];
         }
@@ -144,9 +147,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             data.reset(total);
 
             /* length of the unspecified axes are assumed to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(sizes) + fill_sizes);
+            std::fill(std::begin(sizes), std::end(sizes), 1);
+            std::copy_backward(start, end, std::end(sizes));
         }
 
         /** @brief resizes the tensor
@@ -230,9 +232,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             }
 
             /* we assume the size of the unspecified axes to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(sizes) + fill_sizes);
+            std::fill(std::begin(sizes), std::end(sizes), 1);
+            std::copy_backward(start, end, std::end(sizes));
 
             /* replace the unknown axis with the correct value */
             std::replace(std::begin(sizes), std::end(sizes), size_type(-1), unknown_size);
@@ -314,6 +315,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return std::accumulate(std::begin(sizes), std::end(sizes), 1, std::multiplies<size_type>());
         }
 
+        /** returns a shape array consisting of axis lengths in order starting from zero */
+        CUDA4DNN_HOST std::array<size_type, rank> shape() const noexcept {
+            std::array<size_type, rank> temp;
+            std::copy(std::begin(sizes), std::end(sizes), std::begin(temp));
+            return temp;
+        }
+
         /** returns true if the tensor is empty */
         CUDA4DNN_HOST/*_DEVICE*/ bool empty() const noexcept { return !size(); }
 
@@ -329,7 +337,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - the axis must be in the range [-rank, rank)
          */
         CUDA4DNN_HOST_DEVICE size_type get_axis_size(int axis) const noexcept {
-            axis = axis < 0 ? rank + axis : axis;
+            axis = clamp_axis(axis, rank);
             CV_Assert(axis >= 0 && axis < rank);
             return sizes[axis];
         }
@@ -391,9 +399,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             }
 
             /* we assume the size of the unspecified axes to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(sizes) + fill_sizes);
+            std::fill(std::begin(sizes), std::end(sizes), 1);
+            std::copy_backward(start, end, std::end(sizes));
 
             /* replace the unknown axis with the correct value */
             std::replace(std::begin(sizes), std::end(sizes), size_type(-1), unknown_size);
@@ -465,9 +472,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             TensorSpan temp;
 
             /* we assume the size of the unspecified axes to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(temp.sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(temp.sizes) + fill_sizes);
+            std::fill(std::begin(temp.sizes), std::end(temp.sizes), 1);
+            std::copy_backward(start, end, std::end(temp.sizes));
 
             temp.ptr = ptr + offset;
             return temp;
@@ -541,6 +547,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return std::accumulate(std::begin(sizes), std::end(sizes), 1, std::multiplies<size_type>());
         }
 
+        /** returns a shape array consisting of axis lengths in order starting from zero */
+        CUDA4DNN_HOST std::array<size_type, rank> shape() const noexcept {
+            std::array<size_type, rank> temp;
+            std::copy(std::begin(sizes), std::end(sizes), std::begin(temp));
+            return temp;
+        }
+
         /** returns true if the tensor is empty */
         CUDA4DNN_HOST/*_DEVICE*/ bool empty() const noexcept { return !size(); }
 
@@ -556,7 +569,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - the axis must be in the range [-rank, rank)
          */
         CUDA4DNN_HOST_DEVICE size_type get_axis_size(int axis) const noexcept {
-            axis = axis < 0 ? rank + axis : axis;
+            axis = clamp_axis(axis, rank);
             CV_Assert(axis >= 0 && axis < rank);
             return sizes[axis];
         }
@@ -618,9 +631,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             }
 
             /* we assume the size of the unspecified axes to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(sizes) + fill_sizes);
+            std::fill(std::begin(sizes), std::end(sizes), 1);
+            std::copy_backward(start, end, std::end(sizes));
 
             /* replace the unknown axis with the correct value */
             std::replace(std::begin(sizes), std::end(sizes), size_type(-1), unknown_size);
@@ -692,9 +704,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             TensorView temp;
 
             /* we assume the size of the unspecified axes to be one */
-            auto fill_sizes = rank - std::distance(start, end);
-            std::fill_n(std::begin(temp.sizes), fill_sizes, 1);
-            std::copy(start, end, std::begin(temp.sizes) + fill_sizes);
+            std::fill(std::begin(temp.sizes), std::end(temp.sizes), 1);
+            std::copy_backward(start, end, std::end(temp.sizes));
 
             temp.ptr = ptr + offset;
             return temp;
@@ -722,6 +733,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         size_type sizes[rank];
         const_pointer ptr;
     };
+
+    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
+    template <class T>
+    CUDA4DNN_HOST_DEVICE constexpr T clamp_axis(T axis, std::size_t rank) {
+        return axis < 0 ? axis + rank : axis;
+    }
 
     /** returns true if the two TensorType objects have the same shape */
     template <class TensorType1, class TensorType2> inline
@@ -765,14 +782,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         return effective_rank;
     }
 
-    /** returns the length of the axes of a TensorType object in a std::vector */
-    template <class TensorType> inline
-    std::vector<typename TensorType::size_type> get_shape_vector(const TensorType& x)  {
-        constexpr auto rank = TensorType::rank;
-        std::vector<typename TensorType::size_type> shape(rank);
-        for (int i = 0; i < rank; i++)
-            shape[i] = x.get_axis_size(i);
-        return shape;
+    template <class Container, class T = int> inline
+    std::vector<T> squeeze_shape(const Container& shape, std::size_t upto_rank = 1) {
+        auto start = std::find_if(std::begin(shape), std::end(shape) - upto_rank + 1, [] (T x) { return x != 1; });
+        return { start, std::end(shape) };
     }
 
     namespace tensor_ops {
@@ -839,35 +852,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         /** @brief performs element-wise addition with broadcasting
         *
         * Pre-conditions:
-        * - \p A and \p result must be compatible tensors
+        * - \p A and \p C must be compatible tensors
         *
         * Exception Gaurantee: Basic
         */
         template <class T> inline
-        void add(const cudnn::Handle& handle, T beta, TensorSpan<T> result, T alpha, TensorView<T> A) {
-            /* mathematical requirements */
-            CV_Assert(is_shape_compatible(result, A));
-
-            /* technical requirements */
-            CV_Assert(get_effective_rank(result) <= 4);
-            CV_Assert(get_effective_rank(A) <= 4);
+        void add(const cudnn::Handle& handle, T beta, TensorSpan<T> C, T alpha, TensorView<T> A) {
+            CV_Assert(is_shape_compatible(A, C));
 
             using cudnn::TensorDescriptor;
-            auto aDesc = TensorDescriptor<T>(
-                A.get_axis_size(-4),
-                A.get_axis_size(-3),
-                A.get_axis_size(-2),
-                A.get_axis_size(-1)
-            );
-
-            auto cDesc = TensorDescriptor<T>(
-                result.get_axis_size(-4),
-                result.get_axis_size(-3),
-                result.get_axis_size(-2),
-                result.get_axis_size(-1)
-            );
-
-            cudnn::add(handle, alpha, aDesc, A.get(), beta, cDesc, result.get());
+            auto aDesc = TensorDescriptor<T>(A.shape());
+            auto cDesc = TensorDescriptor<T>(C.shape());
+            cudnn::add(handle, alpha, aDesc, A.get(), beta, cDesc, C.get());
         }
 
         /** @brief performs element-wise addition with broadcasting
@@ -878,29 +874,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         * Exception Gaurantee: Basic
         */
         template <class T> inline
-        void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, bool log) {
-            /* mathematical requirements */
+        void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, int channel_axis, bool log) {
             CV_Assert(is_shape_same(output, input));
 
-            /* technical requirements */
-            CV_Assert(get_effective_rank(output) <= 4);
-            CV_Assert(get_effective_rank(input) <= 4);
+            channel_axis = clamp_axis(channel_axis, input.rank);
+
+            std::size_t outer_size = 1;
+            for (int j = 0; j < channel_axis; j++)
+                outer_size *= input.get_axis_size(j);
+
+            auto channel_size = input.get_axis_size(channel_axis);
+
+            std::size_t inner_size = 1;
+            for (int j = channel_axis + 1; j < input.rank; j++)
+                inner_size *= input.get_axis_size(j);
+
+            std::array<std::size_t, 4> shape = { outer_size, channel_size, 1 , inner_size };
 
             using cudnn::TensorDescriptor;
-            auto inputDesc = TensorDescriptor<T>(
-                input.get_axis_size(-4),
-                input.get_axis_size(-3),
-                input.get_axis_size(-2),
-                input.get_axis_size(-1)
-            );
-
-            auto outputDesc = TensorDescriptor<T>(
-                output.get_axis_size(-4),
-                output.get_axis_size(-3),
-                output.get_axis_size(-2),
-                output.get_axis_size(-1)
-            );
-
+            auto inputDesc = TensorDescriptor<T>(shape);
+            auto outputDesc = TensorDescriptor<T>(shape);
             cudnn::softmax(handle, outputDesc, output.get(), inputDesc, input.get(), log);
         }
 

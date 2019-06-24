@@ -11,6 +11,13 @@
 
 #include <cudnn.h>
 
+#include <array>
+#include <algorithm>
+#include <numeric>
+#include <functional>
+#include <vector>
+#include <iterator>
+
 #define CUDA4DNN_CHECK_CUDNN(call) \
     ::cv::dnn::cuda4dnn::csl::cudnn::detail::check((call), CV_Func, __FILE__, __LINE__)
 
@@ -28,13 +35,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         template <> inline auto get_data_type<double>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_DOUBLE; }
     }
 
-
     /** used to access the raw cuDNN handle held by Handle */
     class HandleAccessor {
     public:
         static cudnnHandle_t get(const Handle& handle);
     };
 
+    /** creates a cuDNN tensor descriptor for a given shape */
     template <class T>
     class TensorDescriptor {
     public:
@@ -45,19 +52,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             other.descriptor = nullptr;
         }
 
-        TensorDescriptor(std::size_t N, std::size_t chans, std::size_t height, std::size_t width) {
-            CUDA4DNN_CHECK_CUDNN(cudnnCreateTensorDescriptor(&descriptor));
-            try {
-                CUDA4DNN_CHECK_CUDNN(cudnnSetTensor4dDescriptor(descriptor,
-                    CUDNN_TENSOR_NCHW, detail::get_data_type<T>(),
-                    static_cast<int>(N), static_cast<int>(chans),
-                    static_cast<int>(height), static_cast<int>(width)));
-            }
-            catch (...) {
-                /* cudnnDestroyTensorDescriptor will not fail */
-                CUDA4DNN_CHECK_CUDNN(cudnnDestroyTensorDescriptor(descriptor));
-                throw;
-            }
+        /** constructs a tensor descriptor from the axis lengths provided in \p shape */
+        template <class SequenceContainer, typename = decltype(std::begin(std::declval<SequenceContainer>()))>
+        TensorDescriptor(const SequenceContainer& shape) {
+            constructor(shape.begin(), shape.end());
+        }
+
+        /** constructs a tensor descriptor from the axis lengths provided in [begin, end) */
+        template <class ForwardItr, typename = typename std::enable_if<!std::is_integral<ForwardItr>::value, void>::type> // TODO is_iterator
+        TensorDescriptor(ForwardItr begin, ForwardItr end) {
+            constructor(begin, end);
+        }
+
+        /** constructs a tensor descriptor from the axis lengths provided as arguments */
+        template <class ...Sizes>
+        TensorDescriptor(Sizes ...sizes) {
+            static_assert(sizeof...(Sizes) <= CUDNN_DIM_MAX, "required rank exceeds maximum supported rank");
+            std::array<int, sizeof...(Sizes)> dims = { static_cast<int>(sizes)... };
+            constructor(std::begin(dims), std::end(dims));
         }
 
         ~TensorDescriptor() noexcept {
@@ -77,6 +89,77 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnTensorDescriptor_t get() const noexcept { return descriptor; }
 
     private:
+        template <class ForwardItr>
+        void constructor(ForwardItr start, ForwardItr end) {
+            CV_Assert(start != end);
+            CV_Assert(std::distance(start, end) <= CUDNN_DIM_MAX);
+
+            CUDA4DNN_CHECK_CUDNN(cudnnCreateTensorDescriptor(&descriptor));
+            try {
+                const auto rank = std::distance(start, end);
+                if (rank <= 4) {
+                    std::array<int, 4> dims;
+                    std::fill(std::begin(dims), std::end(dims), 1);
+
+                    /* suppose we have a 3d tensor, the first axis is the batch axis and
+                     * the second axis is the channel axis (generally)
+                     *
+                     * cuDNN frequently assumes that the first axis is the batch axis and the
+                     * second axis is the channel axis; hence, we copy the shape of a lower rank
+                     * tensor to the begining of `dims`
+                     */
+                    std::copy(start, end, std::begin(dims));
+
+                    CUDA4DNN_CHECK_CUDNN(
+                        cudnnSetTensor4dDescriptor(descriptor,
+                            CUDNN_TENSOR_NCHW, detail::get_data_type<T>(),
+                            dims[0], dims[1], dims[2], dims[3]
+                        )
+                    );
+                } else {
+                    std::vector<int> stride(rank);
+                    stride.back() = 1;
+                    /* WHAT WE HAVE NOW:
+                     * stride[-1] = 1
+                     * stride[-2] = garbage
+                     * stride[-3] = garbage
+                     * stride[-4] = garbage
+                     * ...
+                     */
+
+                    std::copy(start + 1, end, stride.begin());
+                    /* WHAT WE HAVE NOW:
+                     * stride[-1] = 1
+                     * stride[-2] = dim[-1]
+                     * stride[-3] = dim[-2]
+                     * stride[-4] = dim[-3]
+                     * ...
+                     */
+
+                    std::partial_sum(std::rbegin(stride), std::rend(stride), std::rbegin(stride), std::multiplies<int>());
+                    /* WHAT WE HAVE NOW:
+                     * stride[-1] = 1
+                     * stride[-2] = stride[-1] * dim[-1]
+                     * stride[-3] = stride[-2] * dim[-2]
+                     * stride[-4] = stride[-3] * dim[-3]
+                     * ...
+                     */
+
+                    std::vector<int> dims(start, end);
+                    CUDA4DNN_CHECK_CUDNN(
+                        cudnnSetTensorNdDescriptor(descriptor,
+                            detail::get_data_type<T>(), rank,
+                            dims.data(), stride.data()
+                        )
+                    );
+                }
+            } catch (...) {
+                /* cudnnDestroyTensorDescriptor will not fail */
+                CUDA4DNN_CHECK_CUDNN(cudnnDestroyTensorDescriptor(descriptor));
+                throw;
+            }
+        }
+
         cudnnTensorDescriptor_t descriptor;
     };
 

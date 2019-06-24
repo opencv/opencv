@@ -315,16 +315,7 @@ public:
 
             auto extra_dims = input.rank - actual_dims;
             auto channel_axis = clamp(axisRaw, actual_dims) + extra_dims;
-
-            std::size_t batch_size = 1;
-            for (int j = 0; j < channel_axis; j++)
-                batch_size *= input.get_axis_size(j);
-
-            auto channel_size = input.get_axis_size(channel_axis);
-            input.reshape(batch_size, channel_size, 1, -1);
-            output.reshape(batch_size, channel_size, 1, -1);
-
-            csl::tensor_ops::softmax(cudnnHandle, output, input, logSoftMax);
+            csl::tensor_ops::softmax(cudnnHandle, output, input, channel_axis, logSoftMax);
         }
     }
 
