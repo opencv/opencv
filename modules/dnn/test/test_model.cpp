@@ -66,6 +66,23 @@ public:
         EXPECT_EQ(prediction.first, ref.first);
         ASSERT_NEAR(prediction.second, ref.second, norm);
     }
+
+    void extractBoxes(const Mat& ref, int frameWidth, int frameHeight, std::vector<int>& refClassIds,
+                      std::vector<float>& refConfidences, std::vector<Rect2d>& refBoxes)
+    {
+        for (int i = 0; i < ref.rows; i++)
+        {
+            refClassIds.emplace_back(ref.at<float>(i, 1));
+            refConfidences.emplace_back(ref.at<float>(i, 2));
+            int left   = ref.at<float>(i, 3) * (frameWidth - 1);
+            int top    = ref.at<float>(i, 4) * (frameHeight - 1);
+            int right  = ref.at<float>(i, 5) * (frameWidth - 1);
+            int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
+            int width  = right  - left + 1;
+            int height = bottom - top + 1;
+            refBoxes.emplace_back(left, top, width, height);
+        }
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -87,9 +104,9 @@ TEST_P(Test_Model, DetectRegion)
 {
     std::vector<int> refClassIds = {6, 1, 11};
     std::vector<float> refConfidences = {0.750469f, 0.780879f, 0.901615f};
-    std::vector<Rect2d> refBoxes = {Rect2d(240.032, 52.994, 135.408, 72.134),
-                                    Rect2d(112.320, 109.865, 192.067, 200.220),
-                                    Rect2d(57.658, 140.608, 117.603, 249.683)};
+    std::vector<Rect2d> refBoxes = {Rect2d(240, 53, 135, 72),
+                                    Rect2d(112, 109, 192, 200),
+                                    Rect2d(58, 141, 117, 249)};
 
     std::string img_path = _tf("dog416.png");
     std::string weights_file = _tf("yolo-voc.weights");
@@ -101,7 +118,7 @@ TEST_P(Test_Model, DetectRegion)
 
     double confThreshold = 0.24;
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = 0.014;
+    double iouDiff = 1e-5;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
@@ -113,8 +130,8 @@ TEST_P(Test_Model, DetectionOutput)
 {
     std::vector<int> refClassIds = {7, 12};
     std::vector<float> refConfidences = {0.991359f, 0.94786f};
-    std::vector<Rect2d> refBoxes = {Rect2d(491.822, 81.1668, 211.751, 98.0672),
-                                    Rect2d(132.093, 223.903, 206.984, 343.257)};
+    std::vector<Rect2d> refBoxes = {Rect2d(491, 81, 212, 98),
+                                    Rect2d(132, 223, 207, 344)};
 
     std::string img_path = _tf("dog416.png");
     std::string weights_file = _tf("resnet50_rfcn_final.caffemodel");
@@ -125,7 +142,7 @@ TEST_P(Test_Model, DetectionOutput)
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
                         4e-3 : default_l1;
-    double iouDiff = 0.016;
+    double iouDiff = 1e-5;
     float confThreshold = 0.8;
     float nmsThreshold = 0;
 
@@ -147,18 +164,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     std::vector<int> refClassIds;
     std::vector<float> refConfidences;
     std::vector<Rect2d> refBoxes;
-    for (int i = 0; i < ref.rows; i++)
-    {
-        refClassIds.emplace_back(ref.at<float>(i, 1));
-        refConfidences.emplace_back(ref.at<float>(i, 2));
-        int left   = ref.at<float>(i, 3) * (frameWidth - 1);
-        int top    = ref.at<float>(i, 4) * (frameHeight - 1);
-        int right  = ref.at<float>(i, 5) * (frameWidth - 1);
-        int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
-        int width  = right  - left + 1;
-        int height = bottom - top + 1;
-        refBoxes.emplace_back(left, top, width, height);
-    }
+    extractBoxes(ref, frameWidth, frameHeight, refClassIds, refConfidences, refBoxes);
 
     std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
     std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
