@@ -66,23 +66,6 @@ public:
         EXPECT_EQ(prediction.first, ref.first);
         ASSERT_NEAR(prediction.second, ref.second, norm);
     }
-
-    void extractBoxes(const Mat& ref, int frameWidth, int frameHeight, std::vector<int>& refClassIds,
-                      std::vector<float>& refConfidences, std::vector<Rect2d>& refBoxes)
-    {
-        for (int i = 0; i < ref.rows; i++)
-        {
-            refClassIds.emplace_back(ref.at<float>(i, 1));
-            refConfidences.emplace_back(ref.at<float>(i, 2));
-            int left   = ref.at<float>(i, 3) * (frameWidth - 1);
-            int top    = ref.at<float>(i, 4) * (frameHeight - 1);
-            int right  = ref.at<float>(i, 5) * (frameWidth - 1);
-            int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
-            int width  = right  - left + 1;
-            int height = bottom - top + 1;
-            refBoxes.emplace_back(left, top, width, height);
-        }
-    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -164,7 +147,18 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     std::vector<int> refClassIds;
     std::vector<float> refConfidences;
     std::vector<Rect2d> refBoxes;
-    extractBoxes(ref, frameWidth, frameHeight, refClassIds, refConfidences, refBoxes);
+    for (int i = 0; i < ref.rows; i++)
+    {
+        refClassIds.emplace_back(ref.at<float>(i, 1));
+        refConfidences.emplace_back(ref.at<float>(i, 2));
+        int left   = ref.at<float>(i, 3) * (frameWidth - 1);
+        int top    = ref.at<float>(i, 4) * (frameHeight - 1);
+        int right  = ref.at<float>(i, 5) * (frameWidth - 1);
+        int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
+        int width  = right  - left + 1;
+        int height = bottom - top + 1;
+        refBoxes.emplace_back(left, top, width, height);
+    }
 
     std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
     std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
