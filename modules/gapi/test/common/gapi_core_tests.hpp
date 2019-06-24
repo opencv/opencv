@@ -46,18 +46,18 @@ struct PrintMathOpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        using Params = Params<mathOp,bool,double,bool>;
-        const Params::params_t& params = info.param;
-        cv::Size sz = Params::getCommon<1>(params);  // size
-        ss<<MathOperations[Params::getSpecific<0>(params)]  // mathOp
-                    <<"_"<<Params::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<Params::getCommon<0>(params)  // type
-                    <<"_"<<(int)Params::getSpecific<2>(params)  // scale
+        using AllParams = Params<mathOp,bool,double,bool>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<MathOperations[AllParams::getSpecific<0>(params)]  // mathOp
+                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
+                    <<"_"<<(int)AllParams::getSpecific<2>(params)  // scale
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<(Params::getCommon<2>(params)+1)  // dtype
-                    <<"_"<<Params::getCommon<3>(params)  // createOutputMatrices
-                    <<"_"<<Params::getSpecific<3>(params);  // doReverseOp
+                    <<"_"<<(AllParams::getCommon<2>(params)+1)  // dtype
+                    <<"_"<<AllParams::getCommon<3>(params)  // createOutputMatrices
+                    <<"_"<<AllParams::getSpecific<3>(params);  // doReverseOp
         return ss.str();
    }
 };
@@ -68,15 +68,15 @@ struct PrintCmpCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        using Params = Params<CmpTypes,bool>;
-        const Params::params_t& params = info.param;
-        cv::Size sz = Params::getCommon<1>(params);  // size
-        ss<<CompareOperations[Params::getSpecific<0>(params)]  // CmpType
-                    <<"_"<<Params::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<Params::getCommon<0>(params)  // type
+        using AllParams = Params<CmpTypes,bool>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<CompareOperations[AllParams::getSpecific<0>(params)]  // CmpType
+                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<Params::getCommon<3>(params);  // createOutputMatrices
+                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -87,14 +87,14 @@ struct PrintBWCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        using Params = Params<bitwiseOp>;
-        const Params::params_t& params = info.param;
-        cv::Size sz = Params::getCommon<1>(params);  // size
-        ss<<BitwiseOperations[Params::getSpecific<0>(params)]  // bitwiseOp
-                    <<"_"<<Params::getCommon<0>(params)  // type
+        using AllParams = Params<bitwiseOp>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<BitwiseOperations[AllParams::getSpecific<0>(params)]  // bitwiseOp
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<Params::getCommon<3>(params);  // createOutputMatrices
+                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
         return ss.str();
    }
 };
@@ -105,11 +105,11 @@ struct PrintNormCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        using Params = Params<compare_scalar_f,NormTypes>;
-        const Params::params_t& params = info.param;
-        cv::Size sz = Params::getCommon<1>(params);  // size
-        ss<<NormOperations[Params::getSpecific<1>(params)]  // NormTypes
-                    <<"_"<<Params::getCommon<0>(params)  // type
+        using AllParams = Params<compare_scalar_f,NormTypes>;
+        const AllParams::params_t& params = info.param;
+        cv::Size sz = AllParams::getCommon<1>(params);  // size
+        ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
+                    <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height;
         return ss.str();

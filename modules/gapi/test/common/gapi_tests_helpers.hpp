@@ -22,7 +22,7 @@ enum {
 // Ensure correct __VA_ARGS__ expansion on Windows
 #define __WRAP_VAARGS(x) x
 
-#define __TUPLE_PARAM_TYPE(i) std::tuple_element<i, Params::specific_params_t>::type
+#define __TUPLE_PARAM_TYPE(i) std::tuple_element<i, AllParams::specific_params_t>::type
 
 // implementation of recursive in-class declaration and initialization of member variables
 #define __DEFINE_PARAMS_IMPL1(index, param_name) \

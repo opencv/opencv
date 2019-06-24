@@ -171,7 +171,7 @@ template<typename ...SpecificParams>
 struct TestWithParamBase : TestFunctional,
     TestWithParam<typename Params<SpecificParams...>::params_t>
 {
-    using Params = Params<SpecificParams...>;
+    using AllParams = Params<SpecificParams...>;
 
     MatType type = getCommonParam<0>();
     cv::Size sz = getCommonParam<1>();
@@ -187,17 +187,17 @@ struct TestWithParamBase : TestFunctional,
     // Get common (pre-defined) parameter value by index
     template<size_t I>
     inline auto getCommonParam() const
-        -> decltype(Params::template getCommon<I>(this->GetParam()))
+        -> decltype(AllParams::template getCommon<I>(this->GetParam()))
     {
-        return Params::template getCommon<I>(this->GetParam());
+        return AllParams::template getCommon<I>(this->GetParam());
     }
 
     // Get specific (user-defined) parameter value by index
     template<size_t I>
     inline auto getSpecificParam() const
-        -> decltype(Params::template getSpecific<I>(this->GetParam()))
+        -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
     {
-        return Params::template getSpecific<I>(this->GetParam());
+        return AllParams::template getSpecific<I>(this->GetParam());
     }
 };
 
