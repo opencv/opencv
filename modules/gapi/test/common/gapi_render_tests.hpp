@@ -17,6 +17,7 @@ using Points = std::vector<cv::Point>;
 using Rects  = std::vector<cv::Rect>;
 
 struct RenderTextTest : public TestParams <std::tuple<cv::Size,std::string,Points,int,double,cv::Scalar,int,int,bool,bool>> {};
+struct RenderRectTest : public TestParams <std::tuple<cv::Size,Rects,cv::Scalar,int,int,int,bool>> {};
 
 } // opencv_test
 
