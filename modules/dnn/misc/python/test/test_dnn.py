@@ -159,7 +159,8 @@ class dnn_test(NewOpenCVTests):
                              classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
 
         for box in boxes:
-            cv.rectangle(frame, box, (0, 255, 0))
+            left, top, width, height = box
+            cv.rectangle(frame, (left, top), (left + width, top + height), (0, 255, 0))
 
 
     def test_face_detection(self):

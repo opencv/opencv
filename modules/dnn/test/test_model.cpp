@@ -137,8 +137,7 @@ TEST_P(Test_Model, DetectionOutput)
 TEST_P(Test_Model, DetectionMobilenetSSD)
 {
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    int dims[] = {ref.size[2], ref.size[3]};
-    ref = ref.reshape(0, 2, dims);
+    ref = ref.reshape(1, ref.size[2]);
 
     std::string img_path = _tf("street.png");
     Mat frame = imread(img_path);
@@ -152,12 +151,12 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     {
         refClassIds.emplace_back(ref.at<float>(i, 1));
         refConfidences.emplace_back(ref.at<float>(i, 2));
-        double left   = ref.at<float>(i, 3) * (frameWidth - 1);
-        double top    = ref.at<float>(i, 4) * (frameHeight - 1);
-        double right  = ref.at<float>(i, 5) * (frameWidth - 1);
-        double bottom = ref.at<float>(i, 6) * (frameHeight - 1);
-        double width  = right  - left + 1;
-        double height = bottom - top + 1;
+        int left   = ref.at<float>(i, 3) * (frameWidth - 1);
+        int top    = ref.at<float>(i, 4) * (frameHeight - 1);
+        int right  = ref.at<float>(i, 5) * (frameWidth - 1);
+        int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
+        int width  = right  - left + 1;
+        int height = bottom - top + 1;
         refBoxes.emplace_back(left, top, width, height);
     }
 
@@ -169,7 +168,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    double iouDiff = 0.041;
+    double iouDiff = 1e-5;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;
