@@ -1841,7 +1841,7 @@ struct Net::Impl
         {
             auto& ld = layer.second;
             std::size_t workspace_size_required = 0;
-            ld.layerInstance->initCUDA(stream, cublasHandle, cudnnHandle, workspace_size_required);
+            ld.layerInstance->initCUDA(stream, cublasHandle, cudnnHandle, workspace_size_required, ld.inputBlobsWrappers);
             workspace.require(workspace_size_required);
         }
 #endif
@@ -3769,7 +3769,8 @@ void Layer::initCUDA(
     cuda4dnn::csl::Stream stream,
     cuda4dnn::csl::cublas::Handle cublas_handle,
     cuda4dnn::csl::cudnn::Handle cudnn_handle,
-    std::size_t& scratch_mem_in_bytes)
+    std::size_t& scratch_mem_in_bytes,
+    const std::vector<Ptr<BackendWrapper>>& inputs)
 {
     /*
     ** Implementing initCUDA is required iff the layer supports forward pass on CUDA devices.

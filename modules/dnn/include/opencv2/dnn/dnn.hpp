@@ -305,6 +305,7 @@ CV__DNN_INLINE_NS_BEGIN
          * @param[in]  cublas_handle           cuBLAS handle to use for cuBLAS operations
          * @param[in]  cudnn_handle            cuDNN handle to use for cuDNN operations
          * @param[out] scratch_mem_in_bytes    request extra device memory in bytes for internals; defaults to zero
+         * @param      inputs                  layer inputs
          *
          * This method needs to be implemented iff the layer supports forward pass compuatation on CUDA devices.
          */
@@ -312,7 +313,8 @@ CV__DNN_INLINE_NS_BEGIN
             cuda4dnn::csl::Stream stream,
             cuda4dnn::csl::cublas::Handle cublas_handle,
             cuda4dnn::csl::cudnn::Handle cudnn_handle,
-            std::size_t& scratch_mem_in_bytes
+            std::size_t& scratch_mem_in_bytes,
+            const std::vector<Ptr<BackendWrapper>>& inputs
         );
 
        /**
