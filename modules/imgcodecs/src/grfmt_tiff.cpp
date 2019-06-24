@@ -155,81 +155,82 @@ ImageDecoder TiffDecoder::newDecoder() const
     return makePtr<TiffDecoder>();
 }
 
-class TiffDecoderBufHelper
+namespace
 {
-    Mat& m_buf;
-    size_t& m_buf_pos;
-public:
-    TiffDecoderBufHelper(Mat& buf, size_t& buf_pos) :
-        m_buf(buf), m_buf_pos(buf_pos)
-    {}
-    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
+    class TiffDecoderBufHelper
     {
-        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
-        const Mat& buf = helper->m_buf;
-        const tmsize_t size = buf.cols*buf.rows*buf.elemSize();
-        tmsize_t pos = helper->m_buf_pos;
-        if ( n > (size - pos) )
+        Mat &m_buf;
+        size_t &m_buf_pos;
+    public:
+        TiffDecoderBufHelper(Mat &buf, size_t &buf_pos) :
+                m_buf(buf), m_buf_pos(buf_pos) {}
+
+        static tmsize_t read(thandle_t handle, void *buffer, tmsize_t n)
         {
-            n = size - pos;
+            TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper *>(handle);
+            const Mat &buf = helper->m_buf;
+            const tmsize_t size = buf.cols * buf.rows * buf.elemSize();
+            tmsize_t pos = helper->m_buf_pos;
+            if (n > (size - pos)) {
+                n = size - pos;
+            }
+            memcpy(buffer, buf.ptr() + pos, n);
+            helper->m_buf_pos += n;
+            return n;
         }
-        memcpy(buffer, buf.ptr() + pos, n);
-        helper->m_buf_pos += n;
-        return n;
-    }
 
-    static tmsize_t write( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
-    {
-        // Not used for decoding.
-        return 0;
-    }
-
-    static toff_t seek( thandle_t handle, toff_t offset, int whence )
-    {
-        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
-        const Mat& buf = helper->m_buf;
-        const toff_t size = buf.cols*buf.rows*buf.elemSize();
-        toff_t new_pos = helper->m_buf_pos;
-        switch (whence)
+        static tmsize_t write(thandle_t /*handle*/, void * /*buffer*/, tmsize_t /*n*/)
         {
-            case SEEK_SET:
-                new_pos = offset;
-                break;
-            case SEEK_CUR:
-                new_pos += offset;
-                break;
-            case SEEK_END:
-                new_pos = size + offset;
-                break;
+            // Not used for decoding.
+            return 0;
         }
-        new_pos = std::min(new_pos, size);
-        helper->m_buf_pos = (size_t)new_pos;
-        return new_pos;
-    }
 
-    static int map( thandle_t handle, void** base, toff_t* size )
-    {
-        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
-        Mat& buf = helper->m_buf;
-        *base = buf.ptr();
-        *size = buf.cols*buf.rows*buf.elemSize();
-        return 0;
-    }
+        static toff_t seek(thandle_t handle, toff_t offset, int whence)
+        {
+            TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper *>(handle);
+            const Mat &buf = helper->m_buf;
+            const toff_t size = buf.cols * buf.rows * buf.elemSize();
+            toff_t new_pos = helper->m_buf_pos;
+            switch (whence) {
+                case SEEK_SET:
+                    new_pos = offset;
+                    break;
+                case SEEK_CUR:
+                    new_pos += offset;
+                    break;
+                case SEEK_END:
+                    new_pos = size + offset;
+                    break;
+            }
+            new_pos = std::min(new_pos, size);
+            helper->m_buf_pos = (size_t) new_pos;
+            return new_pos;
+        }
 
-    static toff_t size( thandle_t handle )
-    {
-        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
-        const Mat& buf = helper->m_buf;
-        return buf.cols*buf.rows*buf.elemSize();
-    }
+        static int map(thandle_t handle, void **base, toff_t *size)
+        {
+            TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper *>(handle);
+            Mat &buf = helper->m_buf;
+            *base = buf.ptr();
+            *size = buf.cols * buf.rows * buf.elemSize();
+            return 0;
+        }
 
-    static int close( thandle_t handle )
-    {
-        TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper*>(handle);
-        delete helper;
-        return 0;
-    }
-};
+        static toff_t size(thandle_t handle)
+        {
+            TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper *>(handle);
+            const Mat &buf = helper->m_buf;
+            return buf.cols * buf.rows * buf.elemSize();
+        }
+
+        static int close(thandle_t handle)
+        {
+            TiffDecoderBufHelper *helper = reinterpret_cast<TiffDecoderBufHelper *>(handle);
+            delete helper;
+            return 0;
+        }
+    };
+}
 
 bool TiffDecoder::setSource( const String& filename ) {
    return open(BaseImageDecoder::setSource(filename));
@@ -267,7 +268,140 @@ bool TiffDecoder::open(bool source_set) {
     return !m_tif.empty();
 }
 
-bool TiffDecoder::readHeader()
+namespace {
+    template<class T>
+    static void
+    getField(TIFF *tif, int tag, const String &tag_str, const String &name, int num, std::map<String, String> &p)
+    {
+        T buf1;
+        T buf2;
+        if (TIFFGetField(tif, tag, &buf1, &buf2)) {
+            switch (num) {
+                case 1:
+                    p[tag_str] = p[name] = BaseImageDecoder::toString(buf1);
+                    break;
+
+                case 2:
+                    p[tag_str] = p[name] = BaseImageDecoder::toString(buf1) + "-" + BaseImageDecoder::toString(buf2);
+                    break;
+
+                default:
+                    CV_Error(Error::StsBadArg, "bad number of fields");
+                    break;
+            }
+        }
+    }
+
+    struct TiffTagTrait
+    {
+        int m_tag;
+        String m_tag_str;
+        String m_name;
+        int m_num;
+
+        void
+        (*m_get)(TIFF *tif, int tag, const String &tag_str, const String &name, int num, std::map<String, String> &p);
+
+        TiffTagTrait(int tag, const String &name, int num,
+                     void (*getter)(TIFF *tif, int tag, const String &tag_str, const String &name, int num,
+                                    std::map<String, String> &p))
+                : m_tag(tag), m_tag_str(BaseImageDecoder::toString(m_tag)), m_name(name), m_num(num), m_get(getter)
+        {
+            CV_Assert(num >= 1 && num <= 2);
+        }
+
+        void get(TIFF *tif, std::map<String, String> &p) const
+        {
+            m_get(tif, m_tag, m_tag_str, m_name, m_num, p);
+        }
+    };
+}
+
+static const std::vector<TiffTagTrait>& getTTT()
+{
+    static std::vector<TiffTagTrait> tag_traits;
+#define  TTT(tag, num, type) tag_traits.push_back(TiffTagTrait(tag, #tag, num, &getField<type>))
+    TTT(TIFFTAG_XPOSITION, 1, float);
+    TTT(TIFFTAG_YPOSITION, 1, float);
+    TTT(TIFFTAG_XRESOLUTION, 1, float);
+    TTT(TIFFTAG_YRESOLUTION, 1, float);
+    TTT(TIFFTAG_RESOLUTIONUNIT, 1, uint16);
+    TTT(TIFFTAG_ORIENTATION, 1, uint16);
+    TTT(TIFFTAG_PAGENUMBER, 2, uint16);
+    TTT(TIFFTAG_ARTIST, 1, char*);
+    TTT(TIFFTAG_COPYRIGHT, 1, char*);
+    TTT(TIFFTAG_DATETIME, 1, char*);
+    TTT(TIFFTAG_DOCUMENTNAME, 1, char*);
+    TTT(TIFFTAG_IMAGEDESCRIPTION, 1, char*);
+    TTT(TIFFTAG_INKNAMES, 1, char*);
+    TTT(TIFFTAG_MAKE, 1, char*);
+    TTT(TIFFTAG_MODEL, 1, char*);
+    TTT(TIFFTAG_PAGENAME, 1, char*);
+    TTT(TIFFTAG_SOFTWARE, 1, char*);
+    TTT(TIFFTAG_TARGETPRINTER, 1, char*);
+#undef TTT
+    return tag_traits;
+}
+
+template<class K, class V> bool contains(const std::map<K, V> &m, const K &k) {
+    return m.find(k) != m.end();
+}
+
+static void setRes(const String &name, const String &res, const String &unit, std::map<String, String> &p){
+    if(contains(p, res) && contains(p, unit)) {
+        const String &r_str = p[res];
+        const String &u_str = p[unit];
+        double r = atof(r_str.c_str());
+        int u = atoi(u_str.c_str());
+        switch(u) {
+            case RESUNIT_NONE:
+                p[name] = BaseImageDecoder::toString(-r);
+                break;
+
+            case RESUNIT_INCH:
+                p[name] = BaseImageDecoder::toString(r);
+                break;
+
+            case RESUNIT_CENTIMETER:
+                p[name] = BaseImageDecoder::toString(r * 2.54);
+                break;
+        }
+    }
+}
+
+static void setRes(const String &name, int tag, std::map<String, String> &p){
+    setRes(name, BaseImageDecoder::toString(tag), BaseImageDecoder::toString(TIFFTAG_RESOLUTIONUNIT), p);
+}
+
+static void setIf(const String &name, const String &tag, std::map<String, String> &p){
+    if(contains(p, tag)) {
+        p[name] = p[tag];
+    }
+}
+
+static void setIf(const String &name, int tag, std::map<String, String> &p){
+    setIf(name, BaseImageDecoder::toString(tag), p);
+}
+
+static void readTiffTags(TIFF *tif, std::map<String, String> *properties) {
+    if (!properties) return;
+    std::map<String, String> &p = *properties;
+    p.clear();
+    if (!tif) return;
+
+    static const std::vector<TiffTagTrait> &ttt = getTTT();
+    for(std::vector<TiffTagTrait>::const_iterator it = ttt.begin(); it != ttt.end(); ++it) {
+        it->get(tif, p);
+    }
+
+    setRes(BaseImageDecoder::dpi_x, TIFFTAG_XRESOLUTION, p);
+    setRes(BaseImageDecoder::dpi_y, TIFFTAG_XRESOLUTION, p);
+    setIf(BaseImageDecoder::document_name, TIFFTAG_DOCUMENTNAME, p);
+    setIf(BaseImageDecoder::page_name, TIFFTAG_PAGENAME, p);
+    setIf(BaseImageDecoder::page_number, TIFFTAG_PAGENUMBER, p);
+}
+
+bool TiffDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     bool result = false;
 
@@ -427,13 +561,15 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
     }
 }
 
-bool  TiffDecoder::readData( Mat& img )
+bool  TiffDecoder::readData( Mat& img, std::map<String, String> *properties )
 {
     int type = img.type();
     int depth = CV_MAT_DEPTH(type);
 
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
+
+    readTiffTags(tif, properties);
 
     uint16 photometric = (uint16)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));

@@ -76,7 +76,7 @@ ImageDecoder BmpDecoder::newDecoder() const
     return makePtr<BmpDecoder>();
 }
 
-bool  BmpDecoder::readHeader()
+bool  BmpDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     bool result = false;
     bool iscolor = false;
@@ -192,7 +192,7 @@ bool  BmpDecoder::readHeader()
 }
 
 
-bool  BmpDecoder::readData( Mat& img )
+bool  BmpDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 {
     uchar* data = img.ptr();
     int step = validateToInt(img.step);

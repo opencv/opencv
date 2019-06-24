@@ -100,7 +100,7 @@ ImageDecoder WebPDecoder::newDecoder() const
     return makePtr<WebPDecoder>();
 }
 
-bool WebPDecoder::readHeader()
+bool WebPDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     uint8_t header[WEBP_HEADER_SIZE] = { 0 };
     if (m_buf.empty())
@@ -146,7 +146,7 @@ bool WebPDecoder::readHeader()
     return false;
 }
 
-bool WebPDecoder::readData(Mat &img)
+bool WebPDecoder::readData(Mat &img, std::map<String, String> */*properties*/)
 {
     CV_CheckGE(m_width, 0, ""); CV_CheckGE(m_height, 0, "");
 

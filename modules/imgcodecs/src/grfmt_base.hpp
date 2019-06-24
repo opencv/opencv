@@ -45,6 +45,8 @@
 
 #include "utils.hpp"
 #include "bitstrm.hpp"
+#include <map>
+#include <sstream>
 
 namespace cv
 {
@@ -58,6 +60,21 @@ typedef Ptr<BaseImageDecoder> ImageDecoder;
 class BaseImageDecoder
 {
 public:
+    /// standardized property key
+    static const String dpi_x;
+
+    /// standardized property key
+    static const String dpi_y;
+
+    /// standardized property key
+    static const String document_name;
+
+    /// standardized property key
+    static const String page_name;
+
+    /// standardized property key
+    static const String page_number;
+
     BaseImageDecoder();
     virtual ~BaseImageDecoder() {}
 
@@ -68,8 +85,8 @@ public:
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
     virtual int setScale( const int& scale_denom );
-    virtual bool readHeader() = 0;
-    virtual bool readData( Mat& img ) = 0;
+    virtual bool readHeader(std::map<String, String> *properties) = 0;
+    virtual bool readData(Mat& img, std::map<String, String> *properties) = 0;
 
     /// Inquire multipage ability.
     virtual bool supportMultiPage() const { return false; }
@@ -86,6 +103,23 @@ public:
     virtual size_t signatureLength() const;
     virtual bool checkSignature( const String& signature ) const;
     virtual ImageDecoder newDecoder() const;
+
+    /// utility for decoders
+    template <class T> static String toString(const T &var) {
+        std::ostringstream oss;
+        oss << var;
+        return oss.str();
+    }
+
+    /// utility for decoders
+    static const String& toString(const String &var) {
+        return var;
+    }
+
+    /// utility for decoders
+    static const String toString(const char *var) {
+        return var ? var : "";
+    }
 
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )

@@ -117,7 +117,7 @@ int  ExrDecoder::type() const
 }
 
 
-bool  ExrDecoder::readHeader()
+bool  ExrDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     bool result = false;
 
@@ -175,7 +175,7 @@ bool  ExrDecoder::readHeader()
 }
 
 
-bool  ExrDecoder::readData( Mat& img )
+bool  ExrDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 {
     m_native_depth = CV_MAT_DEPTH(type()) == img.depth();
     bool color = img.channels() > 1;

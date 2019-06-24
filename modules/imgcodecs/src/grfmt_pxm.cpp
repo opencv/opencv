@@ -138,7 +138,7 @@ void PxMDecoder::close()
 }
 
 
-bool PxMDecoder::readHeader()
+bool PxMDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     bool result = false;
 
@@ -205,7 +205,7 @@ bool PxMDecoder::readHeader()
 }
 
 
-bool PxMDecoder::readData( Mat& img )
+bool PxMDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 {
     bool color = img.channels() > 1;
     uchar* data = img.ptr();

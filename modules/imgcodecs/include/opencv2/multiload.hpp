@@ -8,6 +8,7 @@
 #define OPENCV_IMGCODECS_MULTILOAD_HPP
 
 #include "opencv2/imgcodecs.hpp"
+#include <map>
 
 namespace cv
 {
@@ -116,22 +117,24 @@ namespace cv
          *
          * @param idx index of page to load (0 ... size() - 1)
          * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
+         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the requested page of a multi-image or an empty matrix
          * @sa imread()
          */
-        Mat at(int idx, int flags, Mat *dst = 0) const;
+        Mat at(int idx, int flags, std::map<String, String> *properties = 0, Mat *dst = 0) const;
 
         /** @brief Return an arbitrary page.
          *
          * Returns a selected page of a multi-image using the default-flags.
          *
          * @param idx index of page to load (0 ... size() - 1)
+         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the requested page of a multi-image or an empty matrix
          * @sa at(int,int,Mat*) const
          */
-        Mat at(int idx, Mat *dst = 0) const { return at(idx, m_default_flags, dst); }
+        Mat at(int idx, std::map<String, String> *properties = 0, Mat *dst = 0) const { return at(idx, m_default_flags, properties, dst); }
 
         /** @brief Return an arbitrary page.
          *
@@ -148,21 +151,23 @@ namespace cv
          * Return the page set by advance() or next().
          *
          * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
+         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the current page of a multi-image or an empty matrix
          * @sa imread()
          */
-        Mat current(int flags, Mat *dst = 0) const;
+        Mat current(int flags, std::map<String, String> *properties = 0, Mat *dst = 0) const;
 
         /** @brief Return the current page.
          *
          * Return the page set by advance() or next() using default-flags.
          *
+         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the current page of a multi-image or an empty matrix
          * @sa current(int,Mat*) const
          */
-        Mat current(Mat *dst = 0) const { return current(m_default_flags, dst); }
+        Mat current(std::map<String, String> *properties = 0, Mat *dst = 0) const { return current(m_default_flags, properties, dst); }
 
         /** @brief Return the current page.
          *

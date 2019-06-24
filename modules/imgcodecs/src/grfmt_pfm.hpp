@@ -18,8 +18,8 @@ public:
     PFMDecoder();
     virtual ~PFMDecoder() CV_OVERRIDE;
 
-    bool  readData( Mat& img ) CV_OVERRIDE;
-    bool  readHeader() CV_OVERRIDE;
+    bool  readHeader(std::map<String, String> *properties) CV_OVERRIDE;
+    bool  readData( Mat& img, std::map<String, String> *properties ) CV_OVERRIDE;
     void  close();
 
     size_t signatureLength() const CV_OVERRIDE;

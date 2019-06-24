@@ -481,8 +481,8 @@ Mat imdecode( InputArray _buf, int flags )
 Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
     CV_TRACE_FUNCTION();
-    MultiLoad load(flags);
-    return load.decode(_buf) ? load.current(dst) : Mat();
+    MultiLoad load;
+    return load.decode(_buf, flags) ? load.current(flags, 0, dst) : Mat();
 }
 
 bool imencode( const String& ext, InputArray _image,
@@ -663,13 +663,13 @@ static Mat released(Mat *mat) {
     return mat ? released(*mat) : Mat();
 }
 
-Mat MultiLoad::at(int idx, int flags, Mat *dst) const {
+Mat MultiLoad::at(int idx, int flags, std::map<String, String> *properties, Mat *dst) const {
     CV_TRACE_FUNCTION();
     if (!m_decoder || !m_decoder->gotoPage(idx)) return released(dst);
-    return current(flags, dst);
+    return current(flags, properties, dst);
 }
 
-Mat MultiLoad::current(int flags, Mat *dst) const {
+Mat MultiLoad::current(int flags, std::map<String, String> *properties, Mat *dst) const {
     CV_TRACE_FUNCTION();
     if (!m_decoder || !m_has_current) return released(dst);
 
@@ -691,7 +691,7 @@ Mat MultiLoad::current(int flags, Mat *dst) const {
 
     try {
         // read the header to make sure it succeeds
-        if (!m_decoder->readHeader()) return released(mat);
+        if (!m_decoder->readHeader(properties)) return released(mat);
     } catch (const cv::Exception &e) {
         std::cerr << m_file << ": can't read header: " << e.what() << std::endl << std::flush;
         return released(mat);
@@ -721,7 +721,7 @@ Mat MultiLoad::current(int flags, Mat *dst) const {
     // read the image data
     bool success = false;
     try {
-        if (m_decoder->readData(mat)) success = true;
+        if (m_decoder->readData(mat, properties)) success = true;
     } catch (const cv::Exception &e) {
         std::cerr << m_file << ": can't read data: " << e.what() << std::endl << std::flush;
     } catch (...) {

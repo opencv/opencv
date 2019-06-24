@@ -139,7 +139,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
     decoder->m_buf_pos += size;
 }
 
-bool  PngDecoder::readHeader()
+bool  PngDecoder::readHeader(std::map<String, String> */*properties*/)
 {
     volatile bool result = false;
     close();
@@ -221,7 +221,7 @@ bool  PngDecoder::readHeader()
 }
 
 
-bool  PngDecoder::readData( Mat& img )
+bool  PngDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 {
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);

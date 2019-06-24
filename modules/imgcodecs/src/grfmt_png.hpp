@@ -58,8 +58,8 @@ public:
     PngDecoder();
     virtual ~PngDecoder();
 
-    bool  readData( Mat& img ) CV_OVERRIDE;
-    bool  readHeader() CV_OVERRIDE;
+    bool  readHeader(std::map<String, String> *properties) CV_OVERRIDE;
+    bool  readData( Mat& img, std::map<String, String> *properties ) CV_OVERRIDE;
     void  close();
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
