@@ -20,50 +20,54 @@ enum {
 };
 
 // Ensure correct __VA_ARGS__ expansion on Windows
-#define WRAP_VAARGS(x) x
+#define __WRAP_VAARGS(x) x
+
+#define __TUPLE_PARAM_TYPE(i) std::tuple_element<i, Params::specific_params_t>::type
 
 // implementation of recursive in-class declaration and initialization of member variables
-#define __DEFINE_PARAMS_IMPL1(params_type, index, param_name) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>();
+#define __DEFINE_PARAMS_IMPL1(index, param_name) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>();
 
-#define __DEFINE_PARAMS_IMPL2(params_type, index, param_name, ...) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>(); \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL1(params_type, index+1, __VA_ARGS__))
+#define __DEFINE_PARAMS_IMPL2(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL1(index+1, __VA_ARGS__))
 
-#define __DEFINE_PARAMS_IMPL3(params_type, index, param_name, ...) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>(); \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL2(params_type, index+1, __VA_ARGS__))
+#define __DEFINE_PARAMS_IMPL3(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL2(index+1, __VA_ARGS__))
 
-#define __DEFINE_PARAMS_IMPL4(params_type, index, param_name, ...) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>(); \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL3(params_type, index+1, __VA_ARGS__))
+#define __DEFINE_PARAMS_IMPL4(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL3(index+1, __VA_ARGS__))
 
-#define __DEFINE_PARAMS_IMPL5(params_type, index, param_name, ...) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>(); \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL4(params_type, index+1, __VA_ARGS__))
+#define __DEFINE_PARAMS_IMPL5(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL4(index+1, __VA_ARGS__))
 
-#define __DEFINE_PARAMS_IMPL6(params_type, index, param_name, ...) \
-    std::tuple_element<index, params_type>::type param_name = getSpecificParam<index>(); \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL5(params_type, index+1, __VA_ARGS__))
+#define __DEFINE_PARAMS_IMPL6(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL5(index+1, __VA_ARGS__))
 
 // user interface to define member variables of specified names
+#define DEFINE_SPECIFIC_PARAMS_0()
+
 #define DEFINE_SPECIFIC_PARAMS_1(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL1(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL1(0, __VA_ARGS__))
 
 #define DEFINE_SPECIFIC_PARAMS_2(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL2(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL2(0, __VA_ARGS__))
 
 #define DEFINE_SPECIFIC_PARAMS_3(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL3(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL3(0, __VA_ARGS__))
 
 #define DEFINE_SPECIFIC_PARAMS_4(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL4(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL4(0, __VA_ARGS__))
 
 #define DEFINE_SPECIFIC_PARAMS_5(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL5(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL5(0, __VA_ARGS__))
 
 #define DEFINE_SPECIFIC_PARAMS_6(...) \
-    WRAP_VAARGS(__DEFINE_PARAMS_IMPL6(specific_params_t, 0, __VA_ARGS__))
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL6(0, __VA_ARGS__))
 } // namespace opencv_test
 
 #endif //OPENCV_GAPI_TESTS_HELPERS_HPP

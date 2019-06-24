@@ -99,6 +99,10 @@ public:
         }
     }
 
+    // empty function to with intent to show that nothing is to be initialized via TestFunctional
+    // helpers
+    void initNothing(int, cv::Size, int, bool = true) {}
+
     static cv::Mat nonZeroPixels(const cv::Mat& mat)
     {
         int channels = mat.channels();
@@ -164,12 +168,10 @@ struct Params
 
 // Base class for test fixtures
 template<typename ...SpecificParams>
-class TestWithParamBase : public TestFunctional,
-    public TestWithParam<typename Params<SpecificParams...>::params_t>
+struct TestWithParamBase : TestFunctional,
+    TestWithParam<typename Params<SpecificParams...>::params_t>
 {
-    using AllParams = Params<SpecificParams...>;
-public:
-    using specific_params_t = typename AllParams::specific_params_t;
+    using Params = Params<SpecificParams...>;
 
     MatType type = getCommonParam<0>();
     cv::Size sz = getCommonParam<1>();
@@ -179,37 +181,45 @@ public:
 
     TestWithParamBase()
     {
-        if (this->dtype == SAME_TYPE)
-        {
-            this->dtype = this->type;
-        }
+        if (dtype == SAME_TYPE) { dtype = type; }
     }
 
     // Get common (pre-defined) parameter value by index
     template<size_t I>
     inline auto getCommonParam() const
-        -> decltype(AllParams::template getCommon<I>(this->GetParam()))
+        -> decltype(Params::template getCommon<I>(this->GetParam()))
     {
-        return AllParams::template getCommon<I>(this->GetParam());
+        return Params::template getCommon<I>(this->GetParam());
     }
 
     // Get specific (user-defined) parameter value by index
     template<size_t I>
     inline auto getSpecificParam() const
-        -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
+        -> decltype(Params::template getSpecific<I>(this->GetParam()))
     {
-        return AllParams::template getSpecific<I>(this->GetParam());
+        return Params::template getSpecific<I>(this->GetParam());
     }
 };
 
-#define USE_UNIFORM_INIT_ONE_MAT(class_name) \
-    class_name() { initMatrixRandU(type, sz, dtype, createOutputMatrices); }
+#define FIXTURE_API(...) <__VA_ARGS__>
 
-#define USE_UNIFORM_INIT(class_name) \
-    class_name() { initMatsRandU(type, sz, dtype, createOutputMatrices); }
-
-#define USE_NORMAL_INIT(class_name) \
-    class_name() { initMatsRandN(type, sz, dtype, createOutputMatrices); }
+/**
+ * @private
+ * @brief Create G-API test fixture with TestWithParamBase base class
+ * @param Fixture   test fixture name
+ * @param InitF     callable that will initialize default available members (from TestFunctional)
+ * @param API       base class API. Specifies types of user-defined parameters. If there are no such
+ *                  parameters, empty angle brackets ("<>") must be specified.
+ * @param Number    number of user-defined parameters (corresponds to the number of types in API).
+ *                  if there are no such parameters, 0 must be specified.
+ * @param ...       list of names of user-defined parameters. if there are no parameters, the list
+ *                  must be empty.
+ */
+#define GAPI_TEST_FIXTURE(Fixture, InitF, API, Number, ...) \
+    struct Fixture : public TestWithParamBase API { \
+        __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
+        Fixture() { InitF(type, sz, dtype, createOutputMatrices); } \
+    };
 
 template<typename T>
 struct Wrappable
