@@ -351,7 +351,7 @@ bool TiffDecoder::nextPage()
 
 bool TiffDecoder::gotoPage(int page)
 {
-    // Prepare the page, if any.
+    // Prepare the page, if possible.
     return !m_tif.empty() &&
            TIFFSetDirectory(static_cast<TIFF*>(m_tif.get()), (uint16)page);
 }

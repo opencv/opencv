@@ -378,8 +378,8 @@ static void ApplyExifOrientation(const Mat& buf, Mat& img)
 Mat imread( const String& filename, int flags )
 {
     CV_TRACE_FUNCTION();
-    MultiLoad load;
-    return load.read(filename, flags) ? load.next(flags) : Mat();
+    MultiLoad load(flags);
+    return load.read(filename) ? *load : Mat();
 }
 
 /**
@@ -395,10 +395,10 @@ Mat imread( const String& filename, int flags )
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
-    MultiLoad load;
-    if(!load.read(filename, flags)) return false;
-    while(load.hasNext()) {
-        mats.push_back(load.next(flags));
+    MultiLoad load(flags);
+    if(!load.read(filename)) return false;
+    for(cv::Mat mat: load) {
+        mats.push_back(mat);
     }
     return !mats.empty();
 }
@@ -481,8 +481,8 @@ Mat imdecode( InputArray _buf, int flags )
 Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
     CV_TRACE_FUNCTION();
-    MultiLoad load;
-    return load.decode(_buf, flags) ? load.next(flags, dst) : Mat();
+    MultiLoad load(flags);
+    return load.decode(_buf) ? load.current(dst) : Mat();
 }
 
 bool imencode( const String& ext, InputArray _image,
@@ -549,7 +549,12 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
-MultiLoad::MultiLoad() : m_has_next(false)
+const MultiLoad::iterator& MultiLoad::end() const {
+    static const iterator s_end(0);
+    return s_end;
+}
+
+MultiLoad::MultiLoad(int default_flags) : m_default_flags(default_flags), m_has_current(false)
 {
     CV_TRACE_FUNCTION();
 }
@@ -572,16 +577,10 @@ bool MultiLoad::decode(InputArray buf, int flags)
     return load(0, &buf, flags);
 }
 
-bool MultiLoad::empty() const
+bool MultiLoad::valid() const
 {
     CV_TRACE_FUNCTION();
-    return size() == 0;
-}
-
-bool MultiLoad::hasNext() const
-{
-    CV_TRACE_FUNCTION();
-    return m_has_next;
+    return m_has_current;
 }
 
 void MultiLoad::clear()
@@ -600,10 +599,11 @@ void MultiLoad::clear()
 
     m_file.clear();
     m_buf.release();
-    m_has_next = false;
+    m_has_current = false;
 }
 
 bool MultiLoad::load(const String *filename, const _InputArray *buf, int flags) {
+    CV_TRACE_FUNCTION();
     clear();
 
     if (buf) {
@@ -645,7 +645,7 @@ bool MultiLoad::load(const String *filename, const _InputArray *buf, int flags) 
         m_decoder->setSource(m_file);
     }
 
-    m_has_next = true;
+    m_has_current = true;
     return true;
 }
 
@@ -663,18 +663,15 @@ static Mat released(Mat *mat) {
     return mat ? released(*mat) : Mat();
 }
 
-Mat MultiLoad::at(int idx, int flags, Mat *dst) {
+Mat MultiLoad::at(int idx, int flags, Mat *dst) const {
     CV_TRACE_FUNCTION();
     if (!m_decoder || !m_decoder->gotoPage(idx)) return released(dst);
-    m_has_next = true;
-    return next(flags, dst);
+    return current(flags, dst);
 }
 
-Mat MultiLoad::next(int flags, Mat *dst) {
+Mat MultiLoad::current(int flags, Mat *dst) const {
     CV_TRACE_FUNCTION();
-
-    if (!m_decoder || !m_has_next) return released(dst);
-    m_has_next = false;
+    if (!m_decoder || !m_has_current) return released(dst);
 
     Mat dft;
     Mat &mat = dst ? *dst : dft;
@@ -744,10 +741,21 @@ Mat MultiLoad::next(int flags, Mat *dst) {
         else ApplyExifOrientation(m_buf, mat);
     }
 
-    m_has_next = m_decoder->nextPage();
     return mat;
 }
 
+bool MultiLoad::next() {
+    return m_has_current = m_decoder && m_decoder->nextPage();
+}
+
+bool MultiLoad::iterator::operator==(const cv::MultiLoad::iterator &other) const {
+    MultiLoad const *const a = m_parent;
+    MultiLoad const *const b = other.m_parent;
+    if (a == b) return true;
+    if (!a) return !b->valid();
+    if (!b) return !a->valid();
+    return false;
+}
 }
 
 /* End of file. */
