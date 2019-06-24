@@ -151,12 +151,6 @@ TEST_P(Test_TensorFlow_layers, padding)
 
 TEST_P(Test_TensorFlow_layers, padding_same)
 {
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
     // Reference output values are in range [0.0006, 2.798]
     runTensorFlowNet("padding_same");
 }
@@ -432,14 +426,6 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
 {
     checkBackend();
-
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-
     std::string proto = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt");
     std::string model = findDataFile("dnn/ssd_mobilenet_v1_coco_2017_11_17.pb", false);
 
@@ -456,7 +442,17 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
     float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7e-3 : 1.5e-5;
     float iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 1e-3;
-    normAssertDetections(ref, out, "", 0.3, scoreDiff, iouDiff);
+    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.35 : 0.3;
+
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        scoreDiff = 0.061;
+        iouDiff = 0.12;
+        detectionConfThresh = 0.36;
+#endif
+    normAssertDetections(ref, out, "", detectionConfThresh, scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
 
@@ -648,15 +644,8 @@ TEST_P(Test_TensorFlow_layers, fp16_weights)
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#endif
-
     // Reference output values are in range [-3.504, -0.002]
-    runTensorFlowNet("fp16_padding_same", false, 6e-4, 4e-3);
+    runTensorFlowNet("fp16_padding_same", false, 7e-4, 4e-3);
 }
 
 TEST_P(Test_TensorFlow_layers, defun)
