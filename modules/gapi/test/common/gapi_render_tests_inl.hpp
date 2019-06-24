@@ -18,9 +18,12 @@ namespace opencv_test
 
 TEST_P(RenderTextTest, AccuracyTest)
 {
+    cv::Mat y, uv;
+
     MatType type = CV_8UC3;
-    cv::Size sz;
     bool initOut = true;
+
+    cv::Size sz;
     std::string text;
     std::vector<cv::Point> points;
     int         ff;
@@ -29,26 +32,31 @@ TEST_P(RenderTextTest, AccuracyTest)
     int         thick;
     int         lt;
     bool        blo;
+    bool        isNV12Format;
 
-    std::tie(sz, text, points, ff, fs, color, thick, lt, blo) = GetParam();
+    std::tie(sz, text, points, ff, fs, color, thick, lt, blo, isNV12Format) = GetParam();
     initMatsRandU(type, sz, type, initOut);
 
     std::vector<cv::gapi::wip::draw::Prim> prims;
 
-    for (const auto& p : points) {
-        cv::putText(out_mat_ocv, text, p, ff, fs, color, thick);
-        prims.emplace_back(cv::gapi::wip::draw::Text{text, p, ff, fs, color, thick, lt, false});
+    if (isNV12Format) {
+        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
+        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
     }
 
-    if (true) {
-        cv::Mat y, uv;
-        cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
+    for (const auto& p : points) {
+        cv::putText(out_mat_ocv, text, p, ff, fs, color, thick, lt, blo);
+        prims.emplace_back(cv::gapi::wip::draw::Text{text, p, ff, fs, color, thick, lt, blo});
+    }
 
+    if (isNV12Format) {
+        cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
         cv::gapi::wip::draw::render(y, uv, prims);
         cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
 
         cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
         cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
+
     } else {
         cv::gapi::wip::draw::render(out_mat_gapi, prims);
     }
