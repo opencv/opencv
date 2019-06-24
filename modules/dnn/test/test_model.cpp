@@ -4,6 +4,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "npy_blob.hpp"
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -135,12 +136,31 @@ TEST_P(Test_Model, DetectionOutput)
 
 TEST_P(Test_Model, DetectionMobilenetSSD)
 {
-    std::vector<int> refClassIds = {7, 15};
-    std::vector<float> refConfidences = {0.99983513f, 0.87925464f};
-    std::vector<Rect2d> refBoxes = {Rect2d(329, 239, 85, 102),
-                                    Rect2d(101, 189, 34, 138)};
+    Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
+    int dims[] = {ref.size[2], ref.size[3]};
+    ref = ref.reshape(0, 2, dims);
 
     std::string img_path = _tf("street.png");
+    Mat frame = imread(img_path);
+    int frameWidth  = frame.cols;
+    int frameHeight = frame.rows;
+
+    std::vector<int> refClassIds;
+    std::vector<float> refConfidences;
+    std::vector<Rect2d> refBoxes;
+    for (int i = 0; i < ref.rows; i++)
+    {
+        refClassIds.emplace_back(ref.at<float>(i, 1));
+        refConfidences.emplace_back(ref.at<float>(i, 2));
+        double left   = ref.at<float>(i, 3) * (frameWidth - 1);
+        double top    = ref.at<float>(i, 4) * (frameHeight - 1);
+        double right  = ref.at<float>(i, 5) * (frameWidth - 1);
+        double bottom = ref.at<float>(i, 6) * (frameHeight - 1);
+        double width  = right  - left + 1;
+        double height = bottom - top + 1;
+        refBoxes.emplace_back(left, top, width, height);
+    }
+
     std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel");
     std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
 
@@ -149,7 +169,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    double iouDiff = 0.0098;
+    double iouDiff = 0.041;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;

@@ -17,7 +17,7 @@ struct Model::Impl
 {
     Size   size;
     Scalar mean;
-    float  scale = 1.0;
+    double  scale = 1.0;
     bool   swapRB = false;
     bool   crop = false;
     Mat    blob;
@@ -29,7 +29,7 @@ struct Model::Impl
             CV_Error(Error::StsBadSize, "Input size not specified");
 
         blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
-        net.setInput(blob, "", static_cast<double>(scale), mean);
+        net.setInput(blob, "", scale, mean);
 
         // Faster-RCNN or R-FCN
         if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
@@ -70,7 +70,7 @@ Model& Model::setInputMean(const Scalar& mean)
     return *this;
 }
 
-Model& Model::setInputScale(float scale)
+Model& Model::setInputScale(double scale)
 {
     impl->scale = scale;
     return *this;
@@ -88,7 +88,7 @@ Model& Model::setInputSwapRB(bool swapRB)
     return *this;
 }
 
-void Model::setInputParams(float scale, const Size& size, const Scalar& mean,
+void Model::setInputParams(double scale, const Size& size, const Scalar& mean,
                            bool swapRB, bool crop)
 {
     impl->size = size;
@@ -181,18 +181,18 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
                 if (width * height <= 1)
                 {
-                    left   = data[j + 3] * frameWidth;
-                    top    = data[j + 4] * frameHeight;
-                    right  = data[j + 5] * frameWidth;
-                    bottom = data[j + 6] * frameHeight;
+                    left   = data[j + 3] * (frameWidth - 1);
+                    top    = data[j + 4] * (frameHeight - 1);
+                    right  = data[j + 5] * (frameWidth - 1);
+                    bottom = data[j + 6] * (frameHeight - 1);
                     width  = right  - left + 1;
                     height = bottom - top + 1;
                 }
 
                 left   = std::max(0, std::min(left, frameWidth - 1));
                 top    = std::max(0, std::min(top, frameHeight - 1));
-                width  = std::max(0, std::min(width, frameWidth - 1 - left));
-                height = std::max(0, std::min(height, frameHeight - 1 - top));
+                width  = std::max(0, std::min(width, frameWidth - left));
+                height = std::max(0, std::min(height, frameHeight - top));
                 predBoxes.emplace_back(left, top, width, height);
 
                 predClassIds.push_back(static_cast<int>(data[j + 1]));

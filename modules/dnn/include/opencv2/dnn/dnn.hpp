@@ -1042,7 +1042,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         Model& setInputScale(float scale);
+         Model& setInputScale(double scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
@@ -1062,7 +1062,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
          *  blob(n, c, y, x) = scale * resize( frame(y, x, c) ) - mean(c) )
          */
-         CV_WRAP void setInputParams(float scale = 1.0, const Size& size = Size(),
+         CV_WRAP void setInputParams(double scale = 1.0, const Size& size = Size(),
                                      const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false);
 
          /** @brief Given the @p input frame, create input blob, run net and return the output @p blobs.
