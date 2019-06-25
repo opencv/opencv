@@ -158,7 +158,7 @@ TEST_P(setInput, normalization)
     const bool kSwapRB = true;
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);

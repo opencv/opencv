@@ -273,12 +273,12 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("Test is disabled");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 #endif
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX (need to update check function)");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
 
     // batchId, classId, confidence, left, top, right, bottom
@@ -314,7 +314,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX (need to update check function)");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(4, 7) << 0, 6,  0.761967f, 0.579042f, 0.159161f, 0.894482f, 0.31994f,   // a car
@@ -346,7 +346,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
     // batchId, classId, confidence, left, top, right, bottom
@@ -373,7 +373,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("Test with 'batch size 2' is disabled for DLIE/OpenCL target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL)  // Test with 'batch size 2' is disabled for DLIE/OpenCL target
 #endif
 
     {

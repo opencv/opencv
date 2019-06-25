@@ -113,7 +113,7 @@ TEST(Test_Caffe, read_googlenet)
 TEST_P(Test_Caffe_nets, Axpy)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 
     String proto = _tf("axpy.prototxt");
     Net net = readNetFromCaffe(proto);
@@ -158,8 +158,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
 {
     Target targetId = get<1>(GetParam());
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    if (!ocl::useOpenCL() && targetId != DNN_TARGET_CPU)
-        throw SkipTestException("OpenCL is disabled");
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
 
     bool readFromMemory = get<0>(GetParam());
     Net net;
@@ -197,7 +196,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
-                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16)));
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))));
 
 TEST(Reproducibility_FCN, Accuracy)
 {
@@ -329,8 +328,7 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
 {
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    if (!ocl::useOpenCL() && targetId != DNN_TARGET_CPU)
-        throw SkipTestException("OpenCL is disabled");
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
 
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt"),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
@@ -362,14 +360,14 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
-                        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16));
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 typedef testing::TestWithParam<Target> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
     int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("This test does not support FP16");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -600,10 +598,10 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("Test is disabled for DLIE OpenCL targets");  // very slow
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for Myriad targets");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
 
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
@@ -618,9 +616,10 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
         CV_TEST_TAG_DEBUG_LONG
     );
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
                                            0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
                                            0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
@@ -634,9 +633,10 @@ TEST_P(Test_Caffe_nets, RFCN)
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
     );
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16) ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 4e-3 : default_l1;
     double iouDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 8e-2 : default_lInf;
     static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
