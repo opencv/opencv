@@ -40,7 +40,13 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -57,6 +63,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
     }
 
@@ -106,6 +113,42 @@ public:
             if (outputs[i].data != inputs[i].data)
                 inputs[i].copyTo(outputs[i]);
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_UNUSED(workspace);
+
+        for (std::size_t i = 0; i < inputs.size(); i++)
+        {
+            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto input = input_wrapper->getView();
+
+            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto output = output_wrapper->getSpan();
+
+            if (input.get() != output.get())
+                csl::tensor_ops::copy(stream, output, input);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+    }
+
+    csl::Stream stream;
+#endif
 
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE

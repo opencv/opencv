@@ -552,7 +552,6 @@ struct DataLayer : public Layer
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA   ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && inputsData.size() == 1);
     }
 
@@ -2538,7 +2537,7 @@ struct Net::Impl
 
                         /* the layer does not have a CUDA implementation; use CPU for this layer */
                         std::ostringstream os;
-                        os << ld.name << " >> " << ex.what();
+                        os << ld.name << " [" << ld.type << "]" << " >> " << ex.what();
                         if (ex.code == Error::StsNotImplemented)
                             os << "Switching to CPU for this layer.\n";
                         CV_LOG_WARNING(NULL, os.str().c_str());
