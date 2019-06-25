@@ -9,6 +9,7 @@
 
 #include "cudnn/cudnn.hpp"
 #include "cudnn/convolution.hpp"
+#include "cudnn/lrn.hpp"
 #include "cudnn/pooling.hpp"
 #include "cudnn/softmax.hpp"
 

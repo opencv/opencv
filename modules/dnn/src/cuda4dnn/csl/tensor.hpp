@@ -1013,7 +1013,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return algo.get_workspace_size();
         }
 
-        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, Workspace& scratchpad) {
+        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, const Workspace& scratchpad) {
             cudnn::convolve<T>(
                 cudnnHandle,
                 convDesc, algo, scratchpad,
@@ -1066,7 +1066,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         Pooling& operator=(const Pooling&) = delete;
         Pooling& operator=(Pooling&&) = default;
 
-        void pool(TensorView<T> input, TensorSpan<T>& output) {
+        void pool(TensorView<T> input, TensorSpan<T> output) {
             cudnn::pool<T>(
                 cudnnHandle,
                 poolingDesc,
@@ -1079,6 +1079,39 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         cudnn::Handle cudnnHandle;
         TensorDescriptor inputTensorDesc, outputTensorDesc;
         PoolingDescriptor poolingDesc;
+    };
+
+    template <class T>
+    class LRN {
+        using LRNDescriptor = cudnn::LRNDescriptor;
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+
+    public:
+        using lrn_type = LRNDescriptor::lrn_type;
+
+        LRN() = default;
+        LRN(const LRN&) = delete;
+        LRN(LRN&&) = default;
+        LRN(csl::cudnn::Handle handle, std::size_t local_size, double alpha, double beta, double k, lrn_type type) {
+            cudnnHandle = std::move(handle);
+            lrnDesc = LRNDescriptor(local_size, alpha, beta, k, type);
+        }
+
+        LRN& operator=(const LRN&) = delete;
+        LRN& operator=(LRN&&) = default;
+
+        void normalize(TensorView<T> input, TensorSpan<T> output) {
+            cudnn::LRNForward<T>(
+                cudnnHandle,
+                lrnDesc,
+                TensorDescriptor(input.shape()), input.get(),
+                1.0, 0.0, TensorDescriptor(output.shape()), output.get()
+            );
+        }
+
+    private:
+        cudnn::Handle cudnnHandle;
+        LRNDescriptor lrnDesc;
     };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
