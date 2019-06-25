@@ -338,14 +338,14 @@ public:
 
         if (type == MAX)
         {
-            params.type = csl::Pooling<float>::pooling_type::max;
+            params.type = csl::Pooling<float>::pooling_type::MAX;
         }
         else if (type == AVE)
         {
             if(padMode == "SAME")
-                params.type = csl::Pooling<float>::pooling_type::average_exclude_padding;
+                params.type = csl::Pooling<float>::pooling_type::AVERAGE_EXCLUDE_PADDING;
             else
-                params.type = csl::Pooling<float>::pooling_type::average_include_padding;
+                params.type = csl::Pooling<float>::pooling_type::AVERAGE_INCLUDE_PADDING;
         }
         else
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");

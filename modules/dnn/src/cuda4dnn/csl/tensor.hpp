@@ -958,6 +958,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     template <class T>
     class Convolution {
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        using FilterDescriptor = cudnn::FilterDescriptor<T>;
+        using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
+        using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
+
     public:
         struct params_type {
             std::vector<std::size_t> input_shape;
@@ -982,7 +987,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             std::vector<int> output_dims;
             getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
-
             outputTensorDesc = TensorDescriptor(output_dims);
 
             algo = ConvolutionAlgorithm(cudnnHandle, convDesc, filterDesc, inputTensorDesc, outputTensorDesc);
@@ -995,29 +999,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return algo.get_workspace_size();
         }
 
-        /* plain convolution */
         void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, Workspace& scratchpad) {
-            cudnn::convolve<T>(cudnnHandle,
+            cudnn::convolve<T>(
+                cudnnHandle,
+                convDesc, algo, scratchpad,
                 filterDesc, filters.get(),
-                convDesc, algo, WorkspaceAccessor::get(scratchpad),
-                inputTensorDesc, input.get(), 1.0,
-                0.0, outputTensorDesc, output.get()
+                inputTensorDesc, input.get(),
+                1.0, 0.0, outputTensorDesc, output.get()
             );
         }
 
     private:
         cudnn::Handle cudnnHandle;
-
-        using TensorDescriptor = cudnn::TensorDescriptor<T>;
         TensorDescriptor inputTensorDesc, outputTensorDesc;
-
-        using FilterDescriptor = cudnn::FilterDescriptor<T>;
         FilterDescriptor filterDesc;
-
-        using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
         ConvolutionDescriptor convDesc;
-
-        using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
         ConvolutionAlgorithm algo;
     };
 
@@ -1043,16 +1039,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         Pooling(const Pooling&) = delete;
         Pooling(Pooling&&) = default;
         Pooling(cudnn::Handle handle, const params_type& params) {
-
             cudnnHandle = std::move(handle);
 
             inputTensorDesc = TensorDescriptor(params.input_shape);
-
             poolingDesc = PoolingDescriptor(params.window_size, params.padding, params.stride, params.type);
 
             std::vector<int> output_dim;
             getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
-
             outputTensorDesc = TensorDescriptor(output_dim);
         }
 
@@ -1060,14 +1053,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         Pooling& operator=(Pooling&&) = default;
 
         void pool(TensorView<T> input, TensorSpan<T>& output) {
-            cudnn::pool<T>(cudnnHandle, poolingDesc, inputTensorDesc, input.get(), 1.0, 0.0, outputTensorDesc, output.get());
+            cudnn::pool<T>(
+                cudnnHandle,
+                poolingDesc,
+                inputTensorDesc, input.get(),
+                1.0, 0.0, outputTensorDesc, output.get()
+            );
         }
 
     private:
         cudnn::Handle cudnnHandle;
-
         TensorDescriptor inputTensorDesc, outputTensorDesc;
-
         PoolingDescriptor poolingDesc;
     };
 
