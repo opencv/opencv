@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -55,6 +56,11 @@ using std::min;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -184,6 +190,9 @@ public:
         }
         else
         {
+            if (backendId == DNN_BACKEND_CUDA)
+                return (type == MAX || type == AVE);
+
             if (kernel_size.size() == 3)
                 return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
             if (kernel_size.empty() || kernel_size.size() == 2)
@@ -282,6 +291,73 @@ public:
                 break;
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    )
+    {
+        CV_UNUSED(workspace);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        pooler.pool(input, output);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    )
+    {
+        cudnnHandle = std::move(cudnn_handle);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input_shape = input_wrapper->getShape();
+
+        if (pads_begin != pads_end)
+            CV_Error(Error::StsNotImplemented, "Asymmetric padding for pooling layer is not supported by CUDA backend");
+
+        csl::Pooling<float>::params_type params;
+
+        auto& ishape = params.input_shape;
+        ishape.resize(input_shape.size());
+        std::copy(std::begin(input_shape), std::end(input_shape), std::begin(ishape));
+
+        params.window_size = kernel_size;
+        params.padding = pads_begin;
+        params.stride = strides;
+
+        if (type == MAX)
+        {
+            params.type = csl::Pooling<float>::pooling_type::max;
+        }
+        else if (type == AVE)
+        {
+            if(padMode == "SAME")
+                params.type = csl::Pooling<float>::pooling_type::average_exclude_padding;
+            else
+                params.type = csl::Pooling<float>::pooling_type::average_include_padding;
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+
+      /* TODO ceilMode */
+
+        pooler = csl::Pooling<float>(cudnnHandle, params);
+    }
+
+    csl::cudnn::Handle cudnnHandle;
+    csl::Pooling<float> pooler;
+#endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

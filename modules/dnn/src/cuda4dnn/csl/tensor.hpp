@@ -995,6 +995,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return algo.get_workspace_size();
         }
 
+        /* plain convolution */
         void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, Workspace& scratchpad) {
             cudnn::convolve<T>(cudnnHandle,
                 filterDesc, filters.get(),
@@ -1018,6 +1019,56 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         using ConvolutionAlgorithm = cudnn::ConvolutionAlgorithm<T>;
         ConvolutionAlgorithm algo;
+    };
+
+    template <class T>
+    class Pooling {
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        using PoolingDescriptor = cudnn::PoolingDescriptor;
+
+    public:
+        using pooling_type = PoolingDescriptor::pooling_type;
+
+        struct params_type {
+            std::vector<std::size_t> input_shape;
+
+            std::vector<std::size_t> window_size;
+            std::vector<std::size_t> padding;
+            std::vector<std::size_t> stride;
+
+            pooling_type type;
+        };
+
+        Pooling() = default;
+        Pooling(const Pooling&) = delete;
+        Pooling(Pooling&&) = default;
+        Pooling(cudnn::Handle handle, const params_type& params) {
+
+            cudnnHandle = std::move(handle);
+
+            inputTensorDesc = TensorDescriptor(params.input_shape);
+
+            poolingDesc = PoolingDescriptor(params.window_size, params.padding, params.stride, params.type);
+
+            std::vector<int> output_dim;
+            getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
+
+            outputTensorDesc = TensorDescriptor(output_dim);
+        }
+
+        Pooling& operator=(const Pooling&) = delete;
+        Pooling& operator=(Pooling&&) = default;
+
+        void pool(TensorView<T> input, TensorSpan<T>& output) {
+            cudnn::pool<T>(cudnnHandle, poolingDesc, inputTensorDesc, input.get(), 1.0, 0.0, outputTensorDesc, output.get());
+        }
+
+    private:
+        cudnn::Handle cudnnHandle;
+
+        TensorDescriptor inputTensorDesc, outputTensorDesc;
+
+        PoolingDescriptor poolingDesc;
     };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */

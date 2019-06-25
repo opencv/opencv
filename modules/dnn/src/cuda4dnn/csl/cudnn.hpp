@@ -385,9 +385,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
     template <class T> inline
     void getConvolutionForwardOutputDim(
-        ConvolutionDescriptor<T>& conv,
-        FilterDescriptor<T>& filter,
-        TensorDescriptor<T>& input,
+        const ConvolutionDescriptor<T>& conv,
+        const FilterDescriptor<T>& filter,
+        const TensorDescriptor<T>& input,
         std::vector<int>& output)
     {
         output.clear();
@@ -436,6 +436,152 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &alpha, input_desc.get(), input_data.get(),
                 filter_desc.get(), filter_data.get(), conv_desc.get(), algo.get(), workspace.get(),
                 algo.get_workspace_size(), &beta, output_desc.get(), output_data.get()
+            )
+        );
+    }
+
+    class PoolingDescriptor {
+    public:
+        enum class pooling_type {
+            max,
+            average_exclude_padding,
+            average_include_padding
+        };
+
+        PoolingDescriptor() noexcept : descriptor{ nullptr } { }
+        PoolingDescriptor(const PoolingDescriptor&) = delete;
+        PoolingDescriptor(PoolingDescriptor&& other) noexcept
+            : descriptor{ other.descriptor } {
+            other.descriptor = nullptr;
+        }
+
+        template <class SequenceContainer, typename = decltype(std::begin(std::declval<SequenceContainer>()))>
+        PoolingDescriptor(
+            const SequenceContainer& window_size,
+            const SequenceContainer& padding,
+            const SequenceContainer& stride,
+            pooling_type type)
+        {
+            constructor(window_size, padding, stride, type);
+        }
+
+        ~PoolingDescriptor() noexcept {
+            if (descriptor != nullptr) {
+                /* cudnnDestroyPoolingDescriptor will not fail */
+                CUDA4DNN_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(descriptor));
+            }
+        }
+
+        PoolingDescriptor& operator=(const PoolingDescriptor&) = delete;
+        PoolingDescriptor& operator=(PoolingDescriptor&& other) noexcept {
+            descriptor = other.descriptor;
+            other.descriptor = nullptr;
+            return *this;
+        };
+
+        cudnnPoolingDescriptor_t get() const noexcept { return descriptor; }
+
+    private:
+        template <class SequenceContainer>
+        void constructor(
+            const SequenceContainer& window_size,
+            const SequenceContainer& padding,
+            const SequenceContainer& stride,
+            pooling_type type)
+        {
+            CV_Assert(std::size(window_size) == std::size(padding));
+            CV_Assert(std::size(window_size) == std::size(stride));
+
+            auto get_pooling_type = [] (pooling_type type) {
+                switch (type) {
+                case pooling_type::max:
+                    return CUDNN_POOLING_MAX;
+                case pooling_type::average_exclude_padding:
+                    return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+                case pooling_type::average_include_padding:
+                    return CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+                }
+                return CUDNN_POOLING_MAX;
+            };
+
+            CUDA4DNN_CHECK_CUDNN(cudnnCreatePoolingDescriptor(&descriptor));
+            try {
+                const auto rank = std::size(window_size);
+                if (rank == 2) {
+                    CUDA4DNN_CHECK_CUDNN(
+                        cudnnSetPooling2dDescriptor(descriptor,
+                            get_pooling_type(type), CUDNN_PROPAGATE_NAN,
+                            window_size[0], window_size[1],
+                            padding[0], padding[1],
+                            stride[0], stride[1]
+                        )
+                    );
+                }
+                else {
+                    std::vector<int> iwindow_size(std::begin(window_size), std::end(window_size));
+                    std::vector<int> ipadding(std::begin(padding), std::end(padding));
+                    std::vector<int> istride(std::begin(stride), std::end(stride));
+                    CUDA4DNN_CHECK_CUDNN(
+                        cudnnSetPoolingNdDescriptor(descriptor,
+                            get_pooling_type(type), CUDNN_PROPAGATE_NAN,
+                            rank,
+                            iwindow_size.data(),
+                            ipadding.data(),
+                            istride.data()
+                        )
+                    );
+                }
+            } catch (...) {
+                /* cudnnDestroyPoolingDescriptor will not fail */
+                CUDA4DNN_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(descriptor));
+                throw;
+            }
+        }
+
+        cudnnPoolingDescriptor_t descriptor;
+    };
+
+    template <class T> inline
+    void getPoolingForwardOutputDim(const PoolingDescriptor& pooling_desc,
+            const TensorDescriptor<T>& input,
+            std::vector<int>& output) {
+        output.clear();
+        output.resize(CUDNN_DIM_MAX); /* we use `output` to hold temporaries */
+
+        std::vector<int> temp(CUDNN_DIM_MAX);
+        cudnnDataType_t tempDataType;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnGetTensorNdDescriptor(
+                input.get(),
+                CUDNN_DIM_MAX + 1, /* according to docs, this is what we do to get the rank */
+                &tempDataType,
+                output.data(),
+                temp.data(),
+                temp.data()
+            )
+        );
+        const auto rank = output[0];
+        output.resize(rank);
+
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnGetPoolingNdForwardOutputDim(pooling_desc.get(), input.get(), rank, output.data())
+        );
+    }
+
+    template <class T> inline
+    void pool(Handle& handle,
+            PoolingDescriptor& pooling_desc,
+            TensorDescriptor<T>& input_desc,
+            DevicePtr<const T> input_data,
+            T alpha, T beta,
+            TensorDescriptor<T>& output_desc,
+            DevicePtr<T> output_data)
+    {
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnPoolingForward(HandleAccessor::get(handle),
+                pooling_desc.get(),
+                &alpha, input_desc.get(), input_data.get(),
+                &beta, output_desc.get(), output_data.get()
             )
         );
     }
