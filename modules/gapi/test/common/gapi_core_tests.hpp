@@ -156,12 +156,12 @@ GAPI_TEST_FIXTURE(ConcatHorTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertVecTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatHorVecTest, initNothing, <>, 0)
-GAPI_TEST_FIXTURE(LUTTest, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(ConvertToTest, initMatrixRandU, FIXTURE_API(compare_f, double, double), 3,
+GAPI_TEST_FIXTURE(LUTTest, initNothing, <>, 0)
+GAPI_TEST_FIXTURE(ConvertToTest, initNothing, FIXTURE_API(compare_f, double, double), 3,
     cmpF, alpha, beta)
 GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degrees)
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(NormalizeTest, initMatsRandN, FIXTURE_API(compare_f,double,double,int,MatType), 5,
+GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
     cmpF, a, b, norm_type, ddepth)
 } // opencv_test
 
