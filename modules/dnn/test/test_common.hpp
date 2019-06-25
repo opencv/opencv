@@ -11,6 +11,20 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
+#define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
+#define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
+#define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
+#define CV_TEST_TAG_DNN_SKIP_IE                  "dnn_skip_ie"
+#define CV_TEST_TAG_DNN_SKIP_IE_2018R5           "dnn_skip_ie_2018r5"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R1           "dnn_skip_ie_2019r1"
+#define CV_TEST_TAG_DNN_SKIP_IE_2019R1_1         "dnn_skip_ie_2019r1_1"
+#define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
+#define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
+#define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+
+
 
 namespace cv { namespace dnn {
 CV__DNN_EXPERIMENTAL_NS_BEGIN
@@ -27,6 +41,8 @@ CV__DNN_EXPERIMENTAL_NS_END
 
 
 namespace opencv_test {
+
+void initDNNTests();
 
 using namespace cv::dnn;
 
@@ -106,7 +122,10 @@ public:
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
                 throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
+            }
         }
     }
 
