@@ -152,14 +152,16 @@ class dnn_test(NewOpenCVTests):
 
         refClassIds = (7, 15)
         refConfidences = (0.9998, 0.8793)
-        refBoxes = ((329.351, 238.952, 85.334, 102.106),
-                    (101.638, 189.152, 34.217, 138.234))
+        refBoxes = ((328, 238, 85, 102), (101, 188, 34, 138))
 
         normAssertDetections(self, refClassIds, refConfidences, refBoxes,
                              classIds, confidences, boxes,confThreshold, scoreDiff, iouDiff)
 
         for box in boxes:
+            cv.rectangle(frame, box, (0, 255, 0))
+            cv.rectangle(frame, np.array(box), (0, 255, 0))
             cv.rectangle(frame, tuple(box), (0, 255, 0))
+            cv.rectangle(frame, list(box), (0, 255, 0))
 
 
     def test_face_detection(self):
