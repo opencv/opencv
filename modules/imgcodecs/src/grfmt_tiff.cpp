@@ -688,6 +688,12 @@ bool TiffEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F;
 }
 
+bool TiffEncoder::setDestination( std::vector<uchar>& buf ) {
+    m_buf = &buf;
+    m_filename = String();
+    return true;
+}
+
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
                              TiffFieldType fieldType,
                              int count, int value )
@@ -706,20 +712,33 @@ public:
             : m_buf(buf), m_buf_pos(0)
     {}
 
-    TIFF* open ()
+    TIFF* open (bool append)
     {
+        if(!append) m_buf->clear();
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
         // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-        return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
+        return TIFFClientOpen( "", append ? "am" : "wm", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
                                /*map=*/0, /*unmap=*/0 );
     }
 
-    static tmsize_t read( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    /// used for appending
+    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
     {
-        // Not used for encoding.
-        return 0;
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper *>(handle);
+        size_t begin = (size_t) helper->m_buf_pos;
+        if (helper->m_buf->size() < begin) return 0;
+
+        size_t end = begin + n;
+        if (helper->m_buf->size() < end)
+        {
+            n = helper->m_buf->size() - begin;
+            end = begin + n;
+        }
+        memcpy(buffer, &(*helper->m_buf)[begin], n);
+        helper->m_buf_pos = end;
+        return n;
     }
 
     static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
@@ -793,15 +812,17 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
     TIFF* tif = NULL;
-
     TiffEncoderBufHelper buf_helper(m_buf);
+    int append = 0;
+
+    readParam(params, IMWRITE_TIFF_APPEND, append);
     if ( m_buf )
     {
-        tif = buf_helper.open();
+        tif = buf_helper.open(append);
     }
     else
     {
-        tif = TIFFOpen(m_filename.c_str(), "w");
+        tif = TIFFOpen(m_filename.c_str(), append ? "a" : "w");
     }
     if (!tif)
     {
@@ -815,7 +836,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
     readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
-    readParam(params, TIFFTAG_PREDICTOR, predictor);
+    readParam(params, IMWRITE_TIFF_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
     readParam(params, IMWRITE_TIFF_YDPI, dpiY);

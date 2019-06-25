@@ -96,6 +96,8 @@ enum ImwriteFlags {
        IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI = 258, //!< For TIFF, use to specify the Y direction DPI
        IMWRITE_TIFF_COMPRESSION = 259, //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_PREDICTOR = 317, //!< For TIFF, LZW-predictor, default is PREDICTOR_HORIZONTAL. Deviant numeric value (TIFFTAG_PREDICTOR) for backward-compatibility.
+       IMWRITE_TIFF_APPEND = 260, //!< For TIFF, append to existing data.
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272 //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
      };
 
