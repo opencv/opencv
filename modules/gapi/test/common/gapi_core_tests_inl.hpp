@@ -73,7 +73,7 @@ TEST_P(MathOpTest, MatricesAccuracyTest )
         }
         }
         cv::GComputation c(GIn(in1, sc1), GOut(out));
-        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
+        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
     }
     else
     {
@@ -109,7 +109,7 @@ TEST_P(MathOpTest, MatricesAccuracyTest )
             FAIL() << "no such math operation type for matrix and matrix!";
         }}
         cv::GComputation c(GIn(in1, in2), GOut(out));
-        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -146,7 +146,7 @@ TEST_P(MulDoubleTest, AccuracyTest)
     cv::GMat in1, out;
     out = cv::gapi::mulC(in1, d, dtype);
     cv::GComputation c(in1, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::multiply(in_mat1, d, out_mat_ocv, 1, dtype);
@@ -182,7 +182,7 @@ TEST_P(DivTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pul
     cv::GMat in1, in2;
     auto out = cv::gapi::div(in1, in2, 1.0, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -206,7 +206,7 @@ TEST_P(DivCTest, DISABLED_DivByZeroTest)  // https://github.com/opencv/opencv/pu
     auto out = cv::gapi::divC(in1, sc1, dtype);
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
-    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -231,7 +231,7 @@ TEST_P(MeanTest, AccuracyTest)
     auto out = cv::gapi::mean(in);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_norm), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_norm), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         out_norm_ocv = cv::mean(in_mat1);
@@ -253,7 +253,7 @@ TEST_P(MaskTest, AccuracyTest)
     auto out = cv::gapi::mask(in, m);
 
     cv::GComputation c(cv::GIn(in, m), cv::GOut(out));
-    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), std::move(compile_args));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         out_mat_ocv = cv::Mat::zeros(in_mat1.size(), in_mat1.type());
@@ -280,7 +280,7 @@ TEST_P(Polar2CartTest, AccuracyTest)
     std::tie(out1, out2) = cv::gapi::polarToCart(in1, in2);
 
     cv::GComputation c(GIn(in1, in2), GOut(out1, out2));
-    c.apply(gin(in_mat1,in_mat2), gout(out_mat_gapi, out_mat2), std::move(compile_args));
+    c.apply(gin(in_mat1,in_mat2), gout(out_mat_gapi, out_mat2), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::polarToCart(in_mat1, in_mat2, out_mat_ocv, out_mat_ocv2);
@@ -385,7 +385,7 @@ TEST_P(CmpTest, AccuracyTest)
         cv::compare(in_mat1, sc, out_mat_ocv, opType);
 
         cv::GComputation c(GIn(in1, in2), GOut(out));
-        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
+        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
     }
     else
     {
@@ -404,7 +404,7 @@ TEST_P(CmpTest, AccuracyTest)
         cv::compare(in_mat1, in_mat2, out_mat_ocv, opType);
 
         cv::GComputation c(GIn(in1, in2), GOut(out));
-        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
     }
 
     // Comparison //////////////////////////////////////////////////////////////
@@ -444,7 +444,7 @@ TEST_P(BitwiseTest, AccuracyTest)
         }
     }
     cv::GComputation c(GIn(in1, in2), GOut(out));
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     {
@@ -460,7 +460,7 @@ TEST_P(NotTest, AccuracyTest)
     auto out = cv::gapi::bitwise_not(in);
     cv::GComputation c(in, out);
 
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -483,7 +483,7 @@ TEST_P(SelectTest, AccuracyTest)
     auto out = cv::gapi::select(in1, in2, in3);
     cv::GComputation c(GIn(in1, in2, in3), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2, in_mask), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2, in_mask), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -504,7 +504,7 @@ TEST_P(MinTest, AccuracyTest)
     auto out = cv::gapi::min(in1, in2);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -524,7 +524,7 @@ TEST_P(MaxTest, AccuracyTest)
     auto out = cv::gapi::max(in1, in2);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -544,7 +544,7 @@ TEST_P(AbsDiffTest, AccuracyTest)
     auto out = cv::gapi::absDiff(in1, in2);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -565,7 +565,7 @@ TEST_P(AbsDiffCTest, AccuracyTest)
     auto out = cv::gapi::absDiffC(in1, sc1);
     cv::GComputation c(cv::GIn(in1, sc1), cv::GOut(out));
 
-    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -588,7 +588,7 @@ TEST_P(SumTest, AccuracyTest)
     auto out = cv::gapi::sum(in);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_sum), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_sum), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         out_sum_ocv = cv::sum(in_mat1);
@@ -611,7 +611,7 @@ TEST_P(AddWeightedTest, AccuracyTest)
     auto out = cv::gapi::addWeighted(in1, alpha, in2, beta, gamma, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -639,7 +639,7 @@ TEST_P(NormTest, AccuracyTest)
     }
     out_norm_ocv = cv::norm(in_mat1, opType);
     cv::GComputation c(GIn(in1), GOut(out));
-    c.apply(gin(in_mat1), gout(out_norm), std::move(compile_args));
+    c.apply(gin(in_mat1), gout(out_norm), getCompileArgs());
 
     // Comparison //////////////////////////////////////////////////////////////
     {
@@ -666,7 +666,7 @@ TEST_P(IntegralTest, AccuracyTest)
     std::tie(out1, out2)  = cv::gapi::integral(in1, type_out, CV_64FC1);
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2));
 
-    c.apply(cv::gin(in_mat1), cv::gout(out_mat1, out_mat2), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat1, out_mat2), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -691,7 +691,7 @@ TEST_P(ThresholdTest, AccuracyTestBinary)
     out = cv::gapi::threshold(in1, th1, mv1, tt);
     cv::GComputation c(GIn(in1, th1, mv1), GOut(out));
 
-    c.apply(gin(in_mat1, thr, maxval), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, thr, maxval), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -716,7 +716,7 @@ TEST_P(ThresholdOTTest, AccuracyTestOtsu)
     std::tie<cv::GMat, cv::GScalar>(out, scout) = cv::gapi::threshold(in1, mv1, tt);
     cv::GComputation c(cv::GIn(in1, mv1), cv::GOut(out, scout));
 
-    c.apply(gin(in_mat1, maxval), gout(out_mat_gapi, out_gapi_scalar), std::move(compile_args));
+    c.apply(gin(in_mat1, maxval), gout(out_mat_gapi, out_gapi_scalar), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -741,7 +741,7 @@ TEST_P(InRangeTest, AccuracyTest)
     auto out = cv::gapi::inRange(in1, th1, mv1);
     cv::GComputation c(GIn(in1, th1, mv1), GOut(out));
 
-    c.apply(gin(in_mat1, thrLow, thrUp), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, thrLow, thrUp), gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -765,7 +765,7 @@ TEST_P(Split3Test, AccuracyTest)
     std::tie(out1, out2, out3)  = cv::gapi::split3(in1);
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2, out3));
 
-    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         std::vector<cv::Mat> out_mats_ocv = {out_mat_ocv, out_mat_ocv2, out_mat_ocv3};
@@ -793,7 +793,7 @@ TEST_P(Split4Test, AccuracyTest)
     std::tie(out1, out2, out3, out4)  = cv::gapi::split4(in1);
     cv::GComputation c(cv::GIn(in1), cv::GOut(out1, out2, out3, out4));
 
-    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3, out_mat4), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi, out_mat2, out_mat3, out_mat4), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         std::vector<cv::Mat> out_mats_ocv = {out_mat_ocv, out_mat_ocv2, out_mat_ocv3, out_mat_ocv4};
@@ -840,12 +840,12 @@ static void ResizeAccuracyTest(compare_f cmpF, int type, int interp, cv::Size sz
 
 TEST_P(ResizeTest, AccuracyTest)
 {
-    ResizeAccuracyTest(cmpF, type, interp, sz, sz_out, 0.0, 0.0, std::move(compile_args));
+    ResizeAccuracyTest(cmpF, type, interp, sz, sz_out, 0.0, 0.0, getCompileArgs());
 }
 
 TEST_P(ResizeTestFxFy, AccuracyTest)
 {
-    ResizeAccuracyTest(cmpF, type, interp, sz, cv::Size{0, 0}, fx, fy, std::move(compile_args));
+    ResizeAccuracyTest(cmpF, type, interp, sz, cv::Size{0, 0}, fx, fy, getCompileArgs());
 }
 
 TEST_P(Merge3Test, AccuracyTest)
@@ -861,7 +861,7 @@ TEST_P(Merge3Test, AccuracyTest)
     auto out = cv::gapi::merge3(in1, in2, in3);
 
     cv::GComputation c(cv::GIn(in1, in2, in3), cv::GOut(out));
-    c.apply(cv::gin(in_mat1, in_mat2, in_mat3), cv::gout(out_mat_gapi), std::move(compile_args));
+    c.apply(cv::gin(in_mat1, in_mat2, in_mat3), cv::gout(out_mat_gapi), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         std::vector<cv::Mat> in_mats_ocv = {in_mat1, in_mat2, in_mat3};
@@ -888,7 +888,7 @@ TEST_P(Merge4Test, AccuracyTest)
     auto out = cv::gapi::merge4(in1, in2, in3, in4);
 
     cv::GComputation c(cv::GIn(in1, in2, in3, in4), cv::GOut(out));
-    c.apply(cv::gin(in_mat1, in_mat2, in_mat3, in_mat4), cv::gout(out_mat_gapi), std::move(compile_args));
+    c.apply(cv::gin(in_mat1, in_mat2, in_mat3, in_mat4), cv::gout(out_mat_gapi), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         std::vector<cv::Mat> in_mats_ocv = {in_mat1, in_mat2, in_mat3, in_mat4};
@@ -912,7 +912,7 @@ TEST_P(RemapTest, AccuracyTest)
     auto out = cv::gapi::remap(in1, in_map1, in_map2, cv::INTER_NEAREST,  cv::BORDER_REPLICATE, bv);
     cv::GComputation c(in1, out);
 
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -932,7 +932,7 @@ TEST_P(FlipTest, AccuracyTest)
     auto out = cv::gapi::flip(in, flipCode);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::flip(in_mat1, out_mat_ocv, flipCode);
@@ -958,7 +958,7 @@ TEST_P(CropTest, AccuracyTest)
     auto out = cv::gapi::crop(in, rect_to);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::Mat(in_mat1, rect_to).copyTo(out_mat_ocv);
@@ -994,7 +994,7 @@ TEST_P(ConcatHorTest, AccuracyTest)
     auto out = cv::gapi::concatHor(in1, in2);
 
     cv::GComputation c(GIn(in1, in2), GOut(out));
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::hconcat(in_mat1, in_mat2, out_mat_ocv);
@@ -1029,7 +1029,7 @@ TEST_P(ConcatVertTest, AccuracyTest)
     auto out = cv::gapi::concatVert(in1, in2);
 
     cv::GComputation c(GIn(in1, in2), GOut(out));
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat), getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::vconcat(in_mat1, in_mat2, out_mat_ocv );
@@ -1070,7 +1070,7 @@ TEST_P(ConcatVertVecTest, AccuracyTest)
     std::vector <cv::Mat> cvmats = {in_mat1, in_mat2, in_mat3};
 
     cv::GComputation c({mats[0], mats[1], mats[2]}, {out});
-    c.apply(gin(in_mat1, in_mat2, in_mat3), gout(out_mat), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2, in_mat3), gout(out_mat), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -1112,7 +1112,7 @@ TEST_P(ConcatHorVecTest, AccuracyTest)
     std::vector <cv::Mat> cvmats = {in_mat1, in_mat2, in_mat3};
 
     cv::GComputation c({mats[0], mats[1], mats[2]}, {out});
-    c.apply(gin(in_mat1, in_mat2, in_mat3), gout(out_mat), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2, in_mat3), gout(out_mat), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -1140,7 +1140,7 @@ TEST_P(LUTTest, AccuracyTest)
     auto out = cv::gapi::LUT(in, in_lut);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         cv::LUT(in_mat1, in_lut, out_mat_ocv);
@@ -1164,7 +1164,7 @@ TEST_P(ConvertToTest, AccuracyTest)
     auto out = cv::gapi::convertTo(in, depth_to, alpha, beta);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
     // OpenCV code /////////////////////////////////////////////////////////////
     {
         in_mat1.convertTo(out_mat_ocv, depth_to, alpha, beta);
@@ -1183,7 +1183,7 @@ TEST_P(PhaseTest, AccuracyTest)
     auto out = cv::gapi::phase(in_x, in_y, angle_in_degrees);
 
     cv::GComputation c(in_x, in_y, out);
-    c.apply(in_mat1, in_mat2, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, in_mat2, out_mat_gapi, getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     cv::phase(in_mat1, in_mat2, out_mat_ocv, angle_in_degrees);
@@ -1202,7 +1202,7 @@ TEST_P(SqrtTest, AccuracyTest)
     auto out = cv::gapi::sqrt(in);
 
     cv::GComputation c(in, out);
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     cv::sqrt(in_mat1, out_mat_ocv);
@@ -1223,7 +1223,7 @@ TEST_P(NormalizeTest, Test)
     auto out = cv::gapi::normalize(in, a, b, norm_type, ddepth);
 
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
-    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi), getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {

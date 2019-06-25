@@ -140,10 +140,11 @@ using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scala
 template<typename ...SpecificParams>
 struct Params
 {
+    using gcomp_args_function_t = cv::GCompileArgs(*)();
     // TODO: delete bool (createOutputMatrices) from common parameters
-    using common_params_t = std::tuple<int, cv::Size, int, bool, cv::GCompileArgs>;
+    using common_params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t>;
     using specific_params_t = std::tuple<SpecificParams...>;
-    using params_t = std::tuple<int, cv::Size, int, bool, cv::GCompileArgs, SpecificParams...>;
+    using params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t, SpecificParams...>;
     static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
     static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
 
@@ -177,7 +178,6 @@ struct TestWithParamBase : TestFunctional,
     cv::Size sz = getCommonParam<1>();
     MatType dtype = getCommonParam<2>();
     bool createOutputMatrices = getCommonParam<3>();
-    cv::GCompileArgs compile_args = getCommonParam<4>();
 
     TestWithParamBase()
     {
@@ -198,6 +198,12 @@ struct TestWithParamBase : TestFunctional,
         -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
     {
         return AllParams::template getSpecific<I>(this->GetParam());
+    }
+
+    // Return G-API compile arguments specified for test fixture
+    inline cv::GCompileArgs getCompileArgs() const
+    {
+        return getCommonParam<4>()();
     }
 };
 
