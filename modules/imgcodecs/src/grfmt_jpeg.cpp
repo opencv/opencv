@@ -221,16 +221,15 @@ static void setRes(const String &name, UINT16 res, UINT8 unit, std::map<String, 
 }
 
 static void setRes(jpeg_decompress_struct *cinfo, std::map<String, String> *properties) {
-    if(!properties) return;
+    if(!cinfo || !properties) return;
     std::map<String, String> &p = *properties;
-    p.clear();
-    if(!cinfo) return;
     setRes(BaseImageDecoder::dpi_x, cinfo->X_density, cinfo->density_unit, p);
     setRes(BaseImageDecoder::dpi_y, cinfo->Y_density, cinfo->density_unit, p);
 }
 
-bool  JpegDecoder::readHeader(std::map<String, String> */*properties*/)
+bool  JpegDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     volatile bool result = false;
     close();
 

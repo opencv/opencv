@@ -384,25 +384,24 @@ static void setIf(const String &name, int tag, std::map<String, String> &p){
 }
 
 static void readTiffTags(TIFF *tif, std::map<String, String> *properties) {
-    if (!properties) return;
-    std::map<String, String> &p = *properties;
-    p.clear();
-    if (!tif) return;
+    if (!tif || !properties) return;
 
+    std::map<String, String> &p = *properties;
     static const std::vector<TiffTagTrait> &ttt = getTTT();
     for(std::vector<TiffTagTrait>::const_iterator it = ttt.begin(); it != ttt.end(); ++it) {
         it->get(tif, p);
     }
 
     setRes(BaseImageDecoder::dpi_x, TIFFTAG_XRESOLUTION, p);
-    setRes(BaseImageDecoder::dpi_y, TIFFTAG_XRESOLUTION, p);
+    setRes(BaseImageDecoder::dpi_y, TIFFTAG_YRESOLUTION, p);
     setIf(BaseImageDecoder::document_name, TIFFTAG_DOCUMENTNAME, p);
     setIf(BaseImageDecoder::page_name, TIFFTAG_PAGENAME, p);
     setIf(BaseImageDecoder::page_number, TIFFTAG_PAGENUMBER, p);
 }
 
-bool TiffDecoder::readHeader(std::map<String, String> */*properties*/)
+bool TiffDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     bool result = false;
 
     TIFF* tif = static_cast<TIFF*>(m_tif.get());

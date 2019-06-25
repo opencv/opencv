@@ -139,7 +139,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
     decoder->m_buf_pos += size;
 }
 
-bool  PngDecoder::readHeader(std::map<String, String> */*properties*/)
+bool  PngDecoder::readHeader(std::map<String, String>* /*properties*/)
 {
     volatile bool result = false;
     close();
@@ -221,7 +221,31 @@ bool  PngDecoder::readHeader(std::map<String, String> */*properties*/)
 }
 
 
-bool  PngDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
+static void setRes(png_structp png_ptr, png_infop info_ptr, std::map<String, String> *properties)
+{
+    if (!properties) return;
+    std::map<String, String> &p = *properties;
+    p.clear();
+    if (!png_ptr || !info_ptr) return;
+
+    png_uint_32 resx, resy;
+    int unit;
+    if (!png_get_pHYs(png_ptr, info_ptr, &resx, &resy, &unit)) return;
+
+    switch (unit) {
+        case PNG_RESOLUTION_UNKNOWN:
+            p[BaseImageDecoder::dpi_x] = BaseImageDecoder::toString(-resx);
+            p[BaseImageDecoder::dpi_y] = BaseImageDecoder::toString(-resy);
+            break;
+
+        case PNG_RESOLUTION_METER:
+            p[BaseImageDecoder::dpi_x] = BaseImageDecoder::toString(resx * 2.54 / 100);
+            p[BaseImageDecoder::dpi_y] = BaseImageDecoder::toString(resy * 2.54 / 100);
+            break;
+    }
+}
+
+bool  PngDecoder::readData( Mat& img, std::map<String, String> *properties )
 {
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
@@ -234,6 +258,7 @@ bool  PngDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
+        setRes(png_ptr, info_ptr, properties);
         if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
         {
             int y;

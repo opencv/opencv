@@ -67,8 +67,9 @@ size_t HdrDecoder::signatureLength() const
            m_signature.size() : m_signature_alt.size();
 }
 
-bool  HdrDecoder::readHeader(std::map<String, String> */*properties*/)
+bool  HdrDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     file = fopen(m_filename.c_str(), "rb");
     if(!file) {
         return false;

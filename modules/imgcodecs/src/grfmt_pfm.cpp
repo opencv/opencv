@@ -84,8 +84,9 @@ PFMDecoder::PFMDecoder() : m_scale_factor(0), m_swap_byte_order(false)
   m_strm.close();
 }
 
-bool PFMDecoder::readHeader(std::map<String, String> */*properties*/)
+bool PFMDecoder::readHeader(std::map<String, String> *properties)
 {
+  if(properties) properties->clear();
   if (m_buf.empty()) {
     if (!m_strm.open(m_filename)) {
       return false;
@@ -124,7 +125,7 @@ bool PFMDecoder::readHeader(std::map<String, String> */*properties*/)
   return true;
 }
 
-bool PFMDecoder::readData(Mat& mat, std::map<String, String> */*properties*/)
+bool PFMDecoder::readData(Mat& mat, std::map<String, String>* /*properties*/)
 {
   if (!m_strm.isOpened()) {
     CV_Error(Error::StsError, "Unexpected status in data stream");

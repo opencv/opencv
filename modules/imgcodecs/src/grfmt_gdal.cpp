@@ -351,7 +351,7 @@ void write_ctable_pixel( const double& pixelValue,
 /**
  * read data
 */
-bool GdalDecoder::readData( Mat& img, std::map<String, String> */*properties*/ ){
+bool GdalDecoder::readData( Mat& img, std::map<String, String>* /*properties*/ ){
 
 
     // make sure the image is the proper size
@@ -454,7 +454,7 @@ bool GdalDecoder::readData( Mat& img, std::map<String, String> */*properties*/ )
 /**
  * Read image header
 */
-bool GdalDecoder::readHeader(std::map<String, String> */*properties*/){
+bool GdalDecoder::readHeader(std::map<String, String>* /*properties*/){
 
     // load the dataset
     m_dataset = (GDALDataset*) GDALOpen( m_filename.c_str(), GA_ReadOnly);
