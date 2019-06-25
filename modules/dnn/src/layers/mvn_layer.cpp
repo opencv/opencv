@@ -147,6 +147,7 @@ public:
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
             int newRows = total(shape(inpMat), 0, splitDim);
+            CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
             UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16S : CV_32F);
@@ -221,6 +222,7 @@ public:
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
             int newRows = total(shape(inpMat), 0, splitDim);
+            CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
             UMat oneMat = UMat::ones(s[1], 1, CV_32F);
