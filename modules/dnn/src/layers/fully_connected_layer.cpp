@@ -427,7 +427,7 @@ public:
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
         csl::Workspace& workspace
-    )
+    ) override
     {
         CV_UNUSED(workspace);
 
@@ -481,7 +481,7 @@ public:
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
-    )
+    ) override
     {
         cublasHandle = std::move(cublas_handle);
         cudnnHandle = std::move(cudnn_handle);

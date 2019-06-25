@@ -230,7 +230,7 @@ CV__DNN_INLINE_NS_BEGIN
          */
         void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
-        /** @brief forward the @p inputs through the layer
+        /** @brief Forward the @p inputs through the layer.
          *
          *  @param[in]  inputs  input tensors
          *  @param[out] outputs output tensors

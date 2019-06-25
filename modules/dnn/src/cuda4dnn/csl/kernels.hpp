@@ -5,9 +5,9 @@
 #ifndef OPENCV_DNN_CUDA4DNN_KERNELS_HPP
 #define OPENCV_DNN_CUDA4DNN_KERNELS_HPP
 
-#include "cuda4dnn/csl/stream.hpp"
-#include "cuda4dnn/csl/memory.hpp"
-#include "cuda4dnn/csl/span.hpp"
+#include "stream.hpp"
+#include "memory.hpp"
+#include "span.hpp"
 
 #include <cstddef>
 

@@ -83,7 +83,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             return *this;
         }
 
-        //!< returns the raw cuBLAS handle
+        /** @brief returns the raw cuBLAS handle */
         cublasHandle_t get() const noexcept { return handle; }
 
     private:

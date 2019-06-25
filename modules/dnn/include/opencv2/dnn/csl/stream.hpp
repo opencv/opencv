@@ -25,23 +25,25 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         Stream(const Stream&) noexcept;
         Stream(Stream&&) noexcept;
 
-        //!< if \p create is `true`, a new stream will be created instead of the otherwise default stream
+        /** if \p create is `true`, a new stream will be created instead of the otherwise default stream */
         Stream(bool create);
 
         Stream& operator=(const Stream&) noexcept;
         Stream& operator=(Stream&&) noexcept;
 
-        //!< blocks the caller thread until all operations in the stream complete
+        /** blocks the caller thread until all operations in the stream are complete */
         void synchronize() const;
 
-        //!< returns true if there are operations pending in the stream
+        /** returns true if there are operations pending in the stream */
         bool busy() const;
 
-        //!< returns true if the stream is valid
+        /** returns true if the stream is valid */
         explicit operator bool() const noexcept;
 
     private:
+        /*! \cond PRIVATE */
         friend class StreamAccessor;
+        /*! \endcond */
 
         class UniqueStream;
         std::shared_ptr<UniqueStream> stream;

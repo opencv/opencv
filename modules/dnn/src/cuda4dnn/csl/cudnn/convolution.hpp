@@ -159,12 +159,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& dialation,
             std::size_t group_count)
         {
-            CV_Assert(std::size(zero_padding) == std::size(stride));
-            CV_Assert(std::size(zero_padding) == std::size(dialation));
+            CV_Assert(zero_padding.size() == stride.size());
+            CV_Assert(zero_padding.size() == dialation.size());
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreateConvolutionDescriptor(&descriptor));
             try {
-                const auto rank = std::size(zero_padding);
+                const auto rank = zero_padding.size();
                 if (rank == 2) {
                     CUDA4DNN_CHECK_CUDNN(
                         cudnnSetConvolution2dDescriptor(
@@ -236,8 +236,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         ConvolutionAlgorithm& operator=(const ConvolutionAlgorithm&) = default;
         ConvolutionAlgorithm& operator=(ConvolutionAlgorithm&& other) = default;
 
-        auto get() const noexcept { return algo; }
-        auto get_workspace_size() const noexcept { return workspace_size; }
+        cudnnConvolutionFwdAlgo_t get() const noexcept { return algo; }
+        std::size_t get_workspace_size() const noexcept { return workspace_size; }
 
     private:
         cudnnConvolutionFwdAlgo_t algo;

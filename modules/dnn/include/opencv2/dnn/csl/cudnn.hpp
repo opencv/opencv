@@ -12,7 +12,7 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cudnn {
 
-    //! exception class for errors thrown by the cuDNN API
+    /** @brief exception class for errors thrown by the cuDNN API */
     class cuDNNException : public CUDAException {
     public:
         using CUDAException::CUDAException;
@@ -37,11 +37,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         Handle& operator=(const Handle&) noexcept;
         Handle& operator=(Handle&&) noexcept;
 
-        //!< returns true if the handle is valid
+        /** returns true if the handle is valid */
         explicit operator bool() const noexcept;
 
     private:
+        /*! \cond PRIVATE */
         friend class HandleAccessor;
+        /*! \endcond */
 
         class UniqueHandle;
         std::shared_ptr<UniqueHandle> handle;

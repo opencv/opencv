@@ -32,6 +32,12 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
+    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
+    template <class T>
+    CUDA4DNN_HOST_DEVICE constexpr T clamp_axis(T axis, std::size_t rank) {
+        return axis < 0 ? axis + rank : axis;
+    }
+
     /** \file tensor.hpp
      *
      * The tensor library contains three kinds of tensor objects which are summarized
@@ -734,12 +740,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         size_type sizes[rank];
         const_pointer ptr;
     };
-
-    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
-    template <class T>
-    CUDA4DNN_HOST_DEVICE constexpr T clamp_axis(T axis, std::size_t rank) {
-        return axis < 0 ? axis + rank : axis;
-    }
 
     /** returns true if the two TensorType objects have the same shape */
     template <class TensorType1, class TensorType2> inline

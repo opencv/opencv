@@ -234,7 +234,7 @@ public:
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
         csl::Workspace& workspace
-    )
+    ) override
     {
         func.applyCUDA(inputs, outputs, workspace, stream);
     }
@@ -245,7 +245,7 @@ public:
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
-    )
+    ) override
     {
         stream = std::move(stream_);
     }

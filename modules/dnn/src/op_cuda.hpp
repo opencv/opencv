@@ -32,7 +32,7 @@ namespace cv {
         TensorT createTensorHeaderFromMat(const cv::Mat& mat) {
             auto is_matrix_type_same_as_tensor_type = [&mat]() {
                 switch (mat.type()) {
-                case CV_32F: return std::is_same<TensorT::value_type, float>::value;
+                case CV_32F: return std::is_same<typename TensorT::value_type, float>::value;
                 default: return false;
                 }
             };

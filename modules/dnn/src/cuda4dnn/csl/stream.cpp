@@ -57,7 +57,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return *this;
         }
 
-        //!< returns the raw CUDA stream handle
+        /** returns the raw CUDA stream handle */
         cudaStream_t get() const noexcept { return stream; }
 
         void synchronize() const { CUDA4DNN_CHECK_CUDA(cudaStreamSynchronize(stream)); }

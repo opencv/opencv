@@ -1293,7 +1293,7 @@ public:
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
         csl::Workspace& workspace
-    )
+    ) override
     {
         CV_Assert(!activ);
 
@@ -1304,8 +1304,6 @@ public:
 
             auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
             auto output = output_wrapper->getSpan();
-
-            auto start = std::chrono::steady_clock::now();
 
             convoluter.convolve(output, input, filtersTensor, workspace);
             if (hasBias() || fusedBias)
@@ -1319,7 +1317,7 @@ public:
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
-    )
+    ) override
     {
         cudnnHandle = std::move(cudnn_handle);
 

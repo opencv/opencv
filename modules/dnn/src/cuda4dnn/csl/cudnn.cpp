@@ -58,7 +58,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             return *this;
         }
 
-        //!< returns the raw cuDNN handle
+        /** returns the raw cuDNN handle */
         cudnnHandle_t get() const noexcept { return handle; }
 
     private:

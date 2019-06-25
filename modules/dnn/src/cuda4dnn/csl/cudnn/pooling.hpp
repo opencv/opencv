@@ -71,8 +71,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             const SequenceContainer& stride,
             pooling_type type)
         {
-            CV_Assert(std::size(window_size) == std::size(padding));
-            CV_Assert(std::size(window_size) == std::size(stride));
+            CV_Assert(window_size.size() == padding.size());
+            CV_Assert(window_size.size() == stride.size());
 
             auto get_pooling_type = [] (pooling_type type) {
                 switch (type) {
@@ -90,7 +90,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreatePoolingDescriptor(&descriptor));
             try {
-                const auto rank = std::size(window_size);
+                const auto rank = window_size.size();
                 if (rank == 2) {
                     CUDA4DNN_CHECK_CUDNN(
                         cudnnSetPooling2dDescriptor(

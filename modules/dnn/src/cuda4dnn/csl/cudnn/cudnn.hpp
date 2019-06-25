@@ -14,6 +14,8 @@
 #include <cstddef>
 #include <array>
 #include <algorithm>
+#include <functional>
+#include <numeric>
 #include <vector>
 #include <type_traits>
 #include <iterator>
@@ -136,7 +138,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                      * ...
                      */
 
-                    std::partial_sum(std::rbegin(stride), std::rend(stride), std::rbegin(stride), std::multiplies<int>());
+                    std::partial_sum(stride.rbegin(), stride.rend(), stride.rbegin(), std::multiplies<int>());
                     /* WHAT WE HAVE NOW:
                      * stride[-1] = 1
                      * stride[-2] = stride[-1] * dim[-1]

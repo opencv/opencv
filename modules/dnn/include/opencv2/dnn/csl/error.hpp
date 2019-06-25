@@ -9,7 +9,7 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
-    //! exception class for errors thrown by the CUDA APIs
+    /** @brief exception class for errors thrown by the CUDA APIs */
     class CUDAException : public cv::Exception {
     public:
         using cv::Exception::Exception;
