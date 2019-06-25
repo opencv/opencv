@@ -117,7 +117,7 @@ namespace cv
          *
          * @param idx index of page to load (0 ... size() - 1)
          * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
-         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the requested page of a multi-image or an empty matrix
          * @sa imread()
@@ -129,7 +129,7 @@ namespace cv
          * Returns a selected page of a multi-image using the default-flags.
          *
          * @param idx index of page to load (0 ... size() - 1)
-         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the requested page of a multi-image or an empty matrix
          * @sa at(int,int,Mat*) const
@@ -151,7 +151,7 @@ namespace cv
          * Return the page set by advance() or next().
          *
          * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
-         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the current page of a multi-image or an empty matrix
          * @sa imread()
@@ -162,7 +162,7 @@ namespace cv
          *
          * Return the page set by advance() or next() using default-flags.
          *
-         * @param properties additional properties like "dpi_x", "dpi_y" or TIFF-tags in string-form.
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
          * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
          * @return the current page of a multi-image or an empty matrix
          * @sa current(int,Mat*) const
