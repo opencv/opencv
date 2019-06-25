@@ -9,7 +9,6 @@
 #define OPENCV_GAPI_RENDER_TESTS_INL_HPP
 
 #include "gapi_render_tests.hpp"
-#include "api/render_priv.hpp"
 
 #include <opencv2/gapi/render.hpp>
 
@@ -18,93 +17,76 @@ namespace opencv_test
 
 TEST_P(RenderTextTest, AccuracyTest)
 {
-    cv::Mat y, uv;
-
-    MatType type = CV_8UC3;
-    bool initOut = true;
-
-    cv::Size sz;
-    std::string text;
     std::vector<cv::Point> points;
+    std::string text;
     int         ff;
     double      fs;
-    cv::Scalar  color;
-    int         thick;
-    int         lt;
     bool        blo;
-    bool        isNV12Format;
 
     std::tie(sz, text, points, ff, fs, color, thick, lt, blo, isNV12Format) = GetParam();
-    initMatsRandU(type, sz, type, initOut);
-
-    std::vector<cv::gapi::wip::draw::Prim> prims;
-
-    if (isNV12Format) {
-        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
-        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
-    }
+    Init(sz, isNV12Format);
 
     for (const auto& p : points) {
         cv::putText(out_mat_ocv, text, p, ff, fs, color, thick, lt, blo);
         prims.emplace_back(cv::gapi::wip::draw::Text{text, p, ff, fs, color, thick, lt, blo});
     }
 
-    if (isNV12Format) {
-        cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
-        cv::gapi::wip::draw::render(y, uv, prims);
-        cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
-
-        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
-        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
-
-    } else {
-        cv::gapi::wip::draw::render(out_mat_gapi, prims);
-    }
+    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
 
 TEST_P(RenderRectTest, AccuracyTest)
 {
-    cv::Mat y, uv;
-
-    MatType type = CV_8UC3;
-    bool initOut = true;
-
-    cv::Size sz;
     std::vector<cv::Rect> rects;
-    cv::Scalar  color;
-    int         thick;
-    int         lt;
-    int         shift;
-    bool        isNV12Format;
+    int shift;
 
     std::tie(sz, rects, color, thick, lt, shift, isNV12Format) = GetParam();
-    initMatsRandU(type, sz, type, initOut);
-
-    std::vector<cv::gapi::wip::draw::Prim> prims;
-
-    if (isNV12Format) {
-        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
-        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
-    }
+    Init(sz, isNV12Format);
 
     for (const auto& r : rects) {
         cv::rectangle(out_mat_ocv, r, color, thick, lt, shift);
         prims.emplace_back(cv::gapi::wip::draw::Rect{r, color, thick, lt, shift});
     }
 
-    if (isNV12Format) {
-        cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
-        cv::gapi::wip::draw::render(y, uv, prims);
-        cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
+    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
 
-        cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
-        cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+}
 
-    } else {
-        cv::gapi::wip::draw::render(out_mat_gapi, prims);
+TEST_P(RenderCircleTest, AccuracyTest)
+{
+    std::vector<cv::Point> points;
+    int radius;
+    int shift;
+
+    std::tie(sz, points, radius, color, thick, lt, shift, isNV12Format) = GetParam();
+    Init(sz, isNV12Format);
+
+    for (const auto& p : points) {
+        cv::circle(out_mat_ocv, p, radius, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Circle{p, radius, color, thick, lt, shift});
     }
+
+    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
+
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+}
+
+TEST_P(RenderLineTest, AccuracyTest)
+{
+    std::vector<std::pair<cv::Point, cv::Point>> points;
+    int shift;
+
+    std::tie(sz, points, color, thick, lt, shift, isNV12Format) = GetParam();
+    Init(sz, isNV12Format);
+
+    for (const auto& p : points) {
+        cv::line(out_mat_ocv, p.first, p.second, color, thick, lt, shift);
+        prims.emplace_back(cv::gapi::wip::draw::Line{p.first, p.second, color, thick, lt, shift});
+    }
+
+    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
