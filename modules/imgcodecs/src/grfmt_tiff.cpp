@@ -320,25 +320,25 @@ namespace {
 static const std::vector<TiffTagTrait>& getTTT()
 {
     static std::vector<TiffTagTrait> tag_traits;
-#define  TTT(tag, num, type) tag_traits.push_back(TiffTagTrait(tag, #tag, num, &getField<type>))
-    TTT(TIFFTAG_XPOSITION, 1, float);
-    TTT(TIFFTAG_YPOSITION, 1, float);
-    TTT(TIFFTAG_XRESOLUTION, 1, float);
-    TTT(TIFFTAG_YRESOLUTION, 1, float);
-    TTT(TIFFTAG_RESOLUTIONUNIT, 1, uint16);
-    TTT(TIFFTAG_ORIENTATION, 1, uint16);
-    TTT(TIFFTAG_PAGENUMBER, 2, uint16);
-    TTT(TIFFTAG_ARTIST, 1, char*);
-    TTT(TIFFTAG_COPYRIGHT, 1, char*);
-    TTT(TIFFTAG_DATETIME, 1, char*);
-    TTT(TIFFTAG_DOCUMENTNAME, 1, char*);
-    TTT(TIFFTAG_IMAGEDESCRIPTION, 1, char*);
-    TTT(TIFFTAG_INKNAMES, 1, char*);
-    TTT(TIFFTAG_MAKE, 1, char*);
-    TTT(TIFFTAG_MODEL, 1, char*);
-    TTT(TIFFTAG_PAGENAME, 1, char*);
-    TTT(TIFFTAG_SOFTWARE, 1, char*);
-    TTT(TIFFTAG_TARGETPRINTER, 1, char*);
+#define  TTT(tag, num, type) tag_traits.push_back(TiffTagTrait(TIFFTAG_##tag, #tag, num, &getField<type>))
+    TTT(XPOSITION, 1, float);
+    TTT(YPOSITION, 1, float);
+    TTT(XRESOLUTION, 1, float);
+    TTT(YRESOLUTION, 1, float);
+    TTT(RESOLUTIONUNIT, 1, uint16);
+    TTT(ORIENTATION, 1, uint16);
+    TTT(PAGENUMBER, 2, uint16);
+    TTT(ARTIST, 1, char*);
+    TTT(COPYRIGHT, 1, char*);
+    TTT(DATETIME, 1, char*);
+    TTT(DOCUMENTNAME, 1, char*);
+    TTT(IMAGEDESCRIPTION, 1, char*);
+    TTT(INKNAMES, 1, char*);
+    TTT(MAKE, 1, char*);
+    TTT(MODEL, 1, char*);
+    TTT(PAGENAME, 1, char*);
+    TTT(SOFTWARE, 1, char*);
+    TTT(TARGETPRINTER, 1, char*);
 #undef TTT
     return tag_traits;
 }
