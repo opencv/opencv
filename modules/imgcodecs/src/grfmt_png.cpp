@@ -234,8 +234,8 @@ static void setRes(png_structp png_ptr, png_infop info_ptr, std::map<String, Str
 
     switch (unit) {
         case PNG_RESOLUTION_UNKNOWN:
-            p[BaseImageDecoder::dpi_x] = BaseImageDecoder::toString(-resx);
-            p[BaseImageDecoder::dpi_y] = BaseImageDecoder::toString(-resy);
+            p[BaseImageDecoder::dpi_x] = BaseImageDecoder::toString(-(int)resx);
+            p[BaseImageDecoder::dpi_y] = BaseImageDecoder::toString(-(int)resy);
             break;
 
         case PNG_RESOLUTION_METER:
