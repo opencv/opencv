@@ -55,7 +55,7 @@
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../cuda4dnn/csl/tensor_ops.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
