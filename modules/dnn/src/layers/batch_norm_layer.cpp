@@ -11,12 +11,19 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -155,6 +162,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return (backendId == DNN_BACKEND_OPENCV) ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
@@ -305,6 +313,48 @@ public:
                 dstptr[i] = w * srcptr[i] + b;
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        auto input_shape = input_wrapper->getShape();
+        std::size_t inner_size = total(input_shape, 2, -1);
+
+        csl::kernels::scale_with_bias<float>(stream, output, input, inner_size, weightsTensor, biasTensor);
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+
+        weightsTensor = createTensorHeaderFromMat(weights_);
+        copyMatToTensor<float>(weightsTensor, weights_, stream);
+
+        biasTensor = createTensorHeaderFromMat(bias_);
+        copyMatToTensor<float>(biasTensor, bias_, stream);
+    }
+
+    csl::Tensor<float> weightsTensor, biasTensor;
+    csl::Stream stream;
+#endif
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
