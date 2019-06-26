@@ -96,8 +96,7 @@ public:
         }
     }
 
-    // empty function to with intent to show that nothing is to be initialized via TestFunctional
-    // helpers
+    // empty function intended to show that nothing is to be initialized via TestFunctional methods
     void initNothing(int, cv::Size, int, bool = true) {}
 
     static cv::Mat nonZeroPixels(const cv::Mat& mat)
