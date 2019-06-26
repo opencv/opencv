@@ -228,6 +228,10 @@ conv = tf.layers.conv2d(inp, filters=4, kernel_size=[5, 5], strides=(2, 2),
                         bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'spatial_padding')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 10, 10, 3], 'input')
+pad = tf.pad(inp, [[0, 0], [3, 3], [3, 3], [0, 0]], mode='REFLECT')
+save(inp, pad, 'mirror_pad')
+################################################################################
 inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
 bn = tf.add(inp, tf.Variable(tf.random_normal(inp.shape)))
 reshape = tf.reshape(bn, [-1, 3])
