@@ -35,6 +35,9 @@ public:
         model.setInputSize(size).setInputMean(mean).setInputScale(scale)
              .setInputSwapRB(swapRB).setInputCrop(crop);
 
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<Rect> boxes;
