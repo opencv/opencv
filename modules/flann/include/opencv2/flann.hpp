@@ -289,7 +289,7 @@ public:
 
         int veclen() const { return nnIndex->veclen(); }
 
-        int size() const { return nnIndex->size(); }
+        int size() const { return (int)nnIndex->size(); }
 
         ::cvflann::IndexParams getParameters() { return nnIndex->getParameters(); }
 
