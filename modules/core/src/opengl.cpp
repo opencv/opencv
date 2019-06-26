@@ -1726,7 +1726,7 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
@@ -1786,7 +1786,7 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
-    size_t region[3] = {u.cols, u.rows, 1};
+    size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");

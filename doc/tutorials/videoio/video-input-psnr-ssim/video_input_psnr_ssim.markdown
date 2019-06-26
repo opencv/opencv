@@ -77,7 +77,7 @@ by the @ref cv::VideoCapture::read or the overloaded \>\> operator:
 @code{.cpp}
 Mat frameReference, frameUnderTest;
 captRefrnc >> frameReference;
-captUndTst.open(frameUnderTest);
+captUndTst.read(frameUnderTest);
 @endcode
 The upper read operations will leave empty the *Mat* objects if no frame could be acquired (either
 cause the video stream was closed or you got to the end of the video file). We can check this with a

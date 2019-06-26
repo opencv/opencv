@@ -186,11 +186,16 @@ function main() {
 
   document.getElementById('startStopButton').disabled = false;
 };
+
+// Load opencv.js
+cv['onRuntimeInitialized']=()=>{
+  main();
+};
 </script>
 
 </head>
 
-<body onload="main()">
+<body>
   <button id="startStopButton" type="button" disabled="true">Start</button>
   <div id="status"></div>
   <canvas id="output" width=640 height=480 style="max-width: 100%"></canvas>

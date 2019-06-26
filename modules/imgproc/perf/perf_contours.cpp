@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
 
-namespace opencv_test {
+namespace opencv_test { namespace {
 
 CV_ENUM(RetrMode, RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE)
 CV_ENUM(ApproxMode, CHAIN_APPROX_NONE, CHAIN_APPROX_SIMPLE, CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS)
@@ -84,4 +84,26 @@ PERF_TEST_P(TestFindContoursFF, findContours,
     SANITY_CHECK_NOTHING();
 }
 
-} // namespace
+typedef TestBaseWithParam< tuple<MatDepth, int> > TestBoundingRect;
+
+PERF_TEST_P(TestBoundingRect, BoundingRect,
+    Combine(
+        testing::Values(CV_32S, CV_32F), // points type
+        Values(400, 511, 1000, 10000, 100000) // points count
+    )
+)
+
+{
+    int ptType = get<0>(GetParam());
+    int n = get<1>(GetParam());
+
+    Mat pts(n, 2, ptType);
+    declare.in(pts, WARMUP_RNG);
+
+    cv::Rect rect;
+    TEST_CYCLE() rect = boundingRect(pts);
+
+    SANITY_CHECK_NOTHING();
+}
+
+} } // namespace

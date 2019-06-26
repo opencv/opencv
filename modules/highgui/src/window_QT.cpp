@@ -103,7 +103,7 @@ CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int w
     float       dx;//spacing letter in Qt (0 default) in pixel
     int         line_type;//<- pointSize in Qt
     */
-    CvFont f = {nameFont,color,style,NULL,NULL,NULL,0,0,0,weight,spacing,pointSize};
+    CvFont f = {nameFont,color,style,NULL,NULL,NULL,0,0,0,weight, (float)spacing, pointSize};
     return f;
 }
 

@@ -39,7 +39,7 @@ def bootstrap():
     l_vars = locals()
 
     if sys.version_info[:2] < (3, 0):
-        from cv2.load_config_py2 import exec_file_wrapper
+        from . load_config_py2 import exec_file_wrapper
     else:
         from . load_config_py3 import exec_file_wrapper
 
@@ -65,7 +65,7 @@ def bootstrap():
     if DEBUG: print('OpenCV loader: BINARIES_PATHS={}'.format(str(l_vars['BINARIES_PATHS'])))
 
     for p in reversed(l_vars['PYTHON_EXTENSIONS_PATHS']):
-        sys.path.insert(0, p)
+        sys.path.insert(1, p)
 
     if os.name == 'nt':
         os.environ['PATH'] = ';'.join(l_vars['BINARIES_PATHS']) + ';' + os.environ.get('PATH', '')

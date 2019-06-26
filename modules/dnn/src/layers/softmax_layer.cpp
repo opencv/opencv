@@ -309,21 +309,16 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "SoftMax";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::SoftMaxLayer> ieLayer(new InferenceEngine::SoftMaxLayer(lp));
-        ieLayer->axis = clamp(axisRaw, input->dims.size());
+        InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
+        ieLayer.setAxis(clamp(axisRaw, input->dims.size()));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE

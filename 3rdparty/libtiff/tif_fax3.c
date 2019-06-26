@@ -1,5 +1,3 @@
-/* $Id: tif_fax3.c,v 1.81 2017-06-18 10:31:50 erouault Exp $ */
-
 /*
  * Copyright (c) 1990-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

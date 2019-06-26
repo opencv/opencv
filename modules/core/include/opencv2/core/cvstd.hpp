@@ -103,7 +103,7 @@ double memory deallocation.
 CV_EXPORTS void fastFree(void* ptr);
 
 /*!
-  The STL-compilant memory Allocator based on cv::fastMalloc() and cv::fastFree()
+  The STL-compliant memory Allocator based on cv::fastMalloc() and cv::fastFree()
 */
 template<typename _Tp> class Allocator
 {
@@ -1025,6 +1025,40 @@ static inline bool operator>  (const String& lhs, const char*   rhs) { return lh
 static inline bool operator>= (const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
 static inline bool operator>= (const char*   lhs, const String& rhs) { return rhs.compare(lhs) <= 0; }
 static inline bool operator>= (const String& lhs, const char*   rhs) { return lhs.compare(rhs) >= 0; }
+
+
+#ifndef OPENCV_DISABLE_STRING_LOWER_UPPER_CONVERSIONS
+
+//! @cond IGNORED
+namespace details {
+// std::tolower is int->int
+static inline char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
+// std::toupper is int->int
+static inline char char_toupper(char ch)
+{
+    return (char)std::toupper((int)ch);
+}
+} // namespace details
+//! @endcond
+
+static inline std::string toLowerCase(const std::string& str)
+{
+    std::string result(str);
+    std::transform(result.begin(), result.end(), result.begin(), details::char_tolower);
+    return result;
+}
+
+static inline std::string toUpperCase(const std::string& str)
+{
+    std::string result(str);
+    std::transform(result.begin(), result.end(), result.begin(), details::char_toupper);
+    return result;
+}
+
+#endif // OPENCV_DISABLE_STRING_LOWER_UPPER_CONVERSIONS
 
 //! @} relates cv::String
 

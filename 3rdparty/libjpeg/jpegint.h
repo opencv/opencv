@@ -2,7 +2,7 @@
  * jpegint.h
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 1997-2013 by Guido Vollbeding.
+ * Modified 1997-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -258,6 +258,19 @@ struct jpeg_color_quantizer {
   JMETHOD(void, finish_pass, (j_decompress_ptr cinfo));
   JMETHOD(void, new_color_map, (j_decompress_ptr cinfo));
 };
+
+
+/* Definition of range extension bits for decompression processes.
+ * See the comments with prepare_range_limit_table (in jdmaster.c)
+ * for more info.
+ * The recommended default value for normal applications is 2.
+ * Applications with special requirements may use a different value.
+ * For example, Ghostscript wants to use 3 for proper handling of
+ * wacky images with oversize coefficient values.
+ */
+
+#define RANGE_BITS	2
+#define RANGE_CENTER	(CENTERJSAMPLE << RANGE_BITS)
 
 
 /* Miscellaneous useful macros */

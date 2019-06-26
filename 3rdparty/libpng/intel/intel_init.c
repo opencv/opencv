@@ -1,11 +1,10 @@
 
 /* intel_init.c - SSE2 optimized filter functions
  *
+ * Copyright (c) 2018 Cosmin Truta
  * Copyright (c) 2016-2017 Glenn Randers-Pehrson
  * Written by Mike Klein and Matt Sarett, Google, Inc.
  * Derived from arm/arm_init.c
- *
- * Last changed in libpng 1.6.29 [March 16, 2017]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer

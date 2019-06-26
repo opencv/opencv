@@ -2,7 +2,7 @@
  * jdcolor.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2011-2015 by Guido Vollbeding.
+ * Modified 2011-2017 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -12,6 +12,12 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+
+
+#if RANGE_BITS < 2
+  /* Deliberate syntax err */
+  Sorry, this code requires 2 or more range extension bits.
+#endif
 
 
 /* Private subobject */

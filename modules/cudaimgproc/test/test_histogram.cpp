@@ -236,17 +236,19 @@ namespace
     IMPLEMENT_PARAM_CLASS(ClipLimit, double)
 }
 
-PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
+PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit, MatType)
 {
     cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     double clipLimit;
+    int type;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
         clipLimit = GET_PARAM(2);
+        type = GET_PARAM(3);
 
         cv::cuda::setDevice(devInfo.deviceID());
     }
@@ -254,7 +256,11 @@ PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
 
 CUDA_TEST_P(CLAHE, Accuracy)
 {
-    cv::Mat src = randomMat(size, CV_8UC1);
+    cv::Mat src;
+    if (type == CV_8UC1)
+        src = randomMat(size, type);
+    else if (type == CV_16UC1)
+        src = randomMat(size, type, 0, 65535);
 
     cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(clipLimit);
     cv::cuda::GpuMat dst;
@@ -270,7 +276,8 @@ CUDA_TEST_P(CLAHE, Accuracy)
 INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(0.0, 40.0)));
+    testing::Values(0.0, 5.0, 10.0, 20.0, 40.0),
+    testing::Values(MatType(CV_8UC1), MatType(CV_16UC1))));
 
 
 }} // namespace

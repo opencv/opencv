@@ -130,8 +130,10 @@ CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
 CvCapture* cvCreateCameraCapture_Aravis( int index );
 
+namespace cv {
 CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
+}
 
 
 #define CV_CAP_GSTREAMER_1394		0
@@ -152,8 +154,11 @@ CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourc
 
 CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
 CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
+
+namespace cv {
 CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
                                             double fps, CvSize frameSize, int is_color );
+}
 
 
 namespace cv

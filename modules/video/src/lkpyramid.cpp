@@ -71,7 +71,6 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
 
 #if CV_SIMD128
     v_int16x8 c3 = v_setall_s16(3), c10 = v_setall_s16(10);
-    bool haveSIMD = checkHardwareSupport(CV_CPU_SSE2) || checkHardwareSupport(CV_CPU_NEON);
 #endif
 
     for( y = 0; y < rows; y++ )
@@ -84,7 +83,6 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
         // do vertical convolution
         x = 0;
 #if CV_SIMD128
-        if(haveSIMD)
         {
             for( ; x <= colsn - 8; x += 8 )
             {
@@ -120,7 +118,6 @@ static void calcSharrDeriv(const cv::Mat& src, cv::Mat& dst)
         // do horizontal convolution, interleave the results and store them to dst
         x = 0;
 #if CV_SIMD128
-        if(haveSIMD)
         {
             for( ; x <= colsn - 8; x += 8 )
             {
@@ -1283,7 +1280,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
             levels1 /= 2;
         }
 
-        // ensure that pyramid has reqired padding
+        // ensure that pyramid has required padding
         if(levels1 > 0)
         {
             Size fullSize;
@@ -1311,7 +1308,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
             levels2 /= 2;
         }
 
-        // ensure that pyramid has reqired padding
+        // ensure that pyramid has required padding
         if(levels2 > 0)
         {
             Size fullSize;

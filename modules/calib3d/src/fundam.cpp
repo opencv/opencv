@@ -72,7 +72,7 @@ public:
         // are geometrically consistent. We check if every 3 correspondences sets
         // fulfills the constraint.
         //
-        // The usefullness of this constraint is explained in the paper:
+        // The usefulness of this constraint is explained in the paper:
         //
         // "Speeding-up homography estimation in mobile devices"
         // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
@@ -909,6 +909,14 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     }
 }
 
+static inline double scaleFor(double x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
+}
+static inline float scaleFor(float x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
+}
+
+
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
@@ -967,7 +975,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i].z != 0.f ? 1.f/sptr[i].z : 1.f;
+                float scale = scaleFor(sptr[i].z);
                 dptr[i] = Point2f(sptr[i].x*scale, sptr[i].y*scale);
             }
         }
@@ -977,7 +985,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i][3] != 0.f ? 1.f/sptr[i][3] : 1.f;
+                float scale = scaleFor(sptr[i][3]);
                 dptr[i] = Point3f(sptr[i][0]*scale, sptr[i][1]*scale, sptr[i][2]*scale);
             }
         }
@@ -990,7 +998,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point2d* dptr = dst.ptr<Point2d>();
             for( i = 0; i < npoints; i++ )
             {
-                double scale = sptr[i].z != 0. ? 1./sptr[i].z : 1.;
+                double scale = scaleFor(sptr[i].z);
                 dptr[i] = Point2d(sptr[i].x*scale, sptr[i].y*scale);
             }
         }
@@ -1000,7 +1008,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
             {
-                double scale = sptr[i][3] != 0.f ? 1./sptr[i][3] : 1.;
+                double scale = scaleFor(sptr[i][3]);
                 dptr[i] = Point3d(sptr[i][0]*scale, sptr[i][1]*scale, sptr[i][2]*scale);
             }
         }

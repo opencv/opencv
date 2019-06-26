@@ -3,6 +3,14 @@ Camera calibration and 3D reconstruction (calib3d module) {#tutorial_table_of_co
 
 Although we get most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out 3D world information from 2D images.
 
+-   @subpage tutorial_camera_calibration_pattern
+
+    *Compatibility:* \> OpenCV 2.0
+
+    *Author:* Laurent Berger
+
+    You will learn how to create some calibration pattern.
+
 -   @subpage tutorial_camera_calibration_square_chess
 
     *Compatibility:* \> OpenCV 2.0

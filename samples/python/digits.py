@@ -27,12 +27,12 @@ Usage:
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import numpy as np
+import cv2 as cv
+
 # built-in modules
 from multiprocessing.pool import ThreadPool
 
-import cv2 as cv
-
-import numpy as np
 from numpy.linalg import norm
 
 # local modules

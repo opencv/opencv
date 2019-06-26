@@ -563,6 +563,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 cv::String canonical(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 bool exists(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 void remove_all(const cv::String& /*path*/) { NOT_IMPLEMENTED }
+cv::String getcwd() { NOT_IMPLEMENTED }
 bool createDirectory(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 bool createDirectories(const cv::String& /*path*/) { NOT_IMPLEMENTED }
 cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*configuration_name = NULL*/) { NOT_IMPLEMENTED }

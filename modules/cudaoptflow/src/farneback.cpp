@@ -165,10 +165,29 @@ namespace
     {
         const GpuMat frame0 = _frame0.getGpuMat();
         const GpuMat frame1 = _frame1.getGpuMat();
+        GpuMat flow = _flow.getGpuMat();
 
-        BufferPool pool(stream);
-        GpuMat flowx = pool.getBuffer(frame0.size(), CV_32FC1);
-        GpuMat flowy = pool.getBuffer(frame0.size(), CV_32FC1);
+        CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
+        CV_Assert(frame0.size() == frame1.size());
+
+        GpuMat flowx, flowy;
+
+        // If flag is set, check for integrity; if not set, allocate memory space
+        if (flags_ & OPTFLOW_USE_INITIAL_FLOW)
+        {
+            CV_Assert(flow.size() == frame0.size() && flow.channels() == 2 &&
+                      flow.depth() == CV_32F);
+
+            std::vector<cuda::GpuMat> _flows(2);
+            cuda::split(flow, _flows, stream);
+            flowx = _flows[0];
+            flowy = _flows[1];
+        }
+        else
+        {
+            flowx.create(frame0.size(), CV_32FC1);
+            flowy.create(frame0.size(), CV_32FC1);
+        }
 
         calcImpl(frame0, frame1, flowx, flowy, stream);
 
@@ -291,8 +310,6 @@ namespace
 
     void FarnebackOpticalFlowImpl::calcImpl(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &stream)
     {
-        CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
-        CV_Assert(frame0.size() == frame1.size());
         CV_Assert(polyN_ == 5 || polyN_ == 7);
         CV_Assert(!fastPyramids_ || std::abs(pyrScale_ - 0.5) < 1e-6);
 
@@ -303,8 +320,6 @@ namespace
         Size size = frame0.size();
         GpuMat prevFlowX, prevFlowY, curFlowX, curFlowY;
 
-        flowx.create(size, CV_32F);
-        flowy.create(size, CV_32F);
         GpuMat flowx0 = flowx;
         GpuMat flowy0 = flowy;
 

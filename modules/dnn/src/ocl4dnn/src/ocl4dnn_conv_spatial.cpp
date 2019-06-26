@@ -1826,7 +1826,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                 }
                 else
                 {
-                    CV_LOG_VERBOSE(NULL, "Kernel " << config->kernelName << " pass verification");
+                    CV_LOG_VERBOSE(NULL, 0, "Kernel " << config->kernelName << " pass verification");
                 }
             }
             catch (...)

@@ -48,6 +48,8 @@
 
 #include "../common.hpp"
 #include "../util/vec_traits.hpp"
+#include "../block/block.hpp"
+#include "warp.hpp"
 
 namespace cv { namespace cudev {
 
@@ -59,7 +61,7 @@ namespace cv { namespace cudev {
 #if __CUDACC_VER_MAJOR__ >= 9
 #  define __shfl(x, y, z) __shfl_sync(0xFFFFFFFFU, x, y, z)
 #  define __shfl_xor(x, y, z) __shfl_xor_sync(0xFFFFFFFFU, x, y, z)
-#  define __shfl_up(x, y, z) __shfl_up_sync(0xFFFFFFFFU, x, y, z)
+//#  define __shfl_up(x, y, z) __shfl_up_sync(0xFFFFFFFFU, x, y, z)
 #  define __shfl_down(x, y, z) __shfl_down_sync(0xFFFFFFFFU, x, y, z)
 #endif
 
@@ -155,6 +157,16 @@ CV_CUDEV_SHFL_VEC_INST(double)
 
 // shfl_up
 
+#if __CUDACC_VER_MAJOR__ >= 9
+
+template <typename T>
+__device__ __forceinline__ T shfl_up_sync(uint mask, T val, uint delta, int width = warpSize)
+{
+    return (T) __shfl_up_sync(mask, val, delta, width);
+}
+
+#else
+
 __device__ __forceinline__ uchar shfl_up(uchar val, uint delta, int width = warpSize)
 {
     return (uchar) __shfl_up((int) val, delta, width);
@@ -201,6 +213,11 @@ __device__ double shfl_up(double val, uint delta, int width = warpSize)
     return __hiloint2double(hi, lo);
 }
 
+__device__ __forceinline__ unsigned long long shfl_up(unsigned long long val, uint delta, int width = warpSize)
+{
+    return __shfl_up(val, delta, width);
+}
+
 #define CV_CUDEV_SHFL_UP_VEC_INST(input_type) \
     __device__ __forceinline__ input_type ## 1 shfl_up(const input_type ## 1 & val, uint delta, int width = warpSize) \
     { \
@@ -243,6 +260,45 @@ CV_CUDEV_SHFL_UP_VEC_INST(float)
 CV_CUDEV_SHFL_UP_VEC_INST(double)
 
 #undef CV_CUDEV_SHFL_UP_VEC_INST
+
+#endif
+
+template <typename T>
+__device__ __forceinline__ T compatible_shfl_up(T val, uint delta, int width = warpSize)
+{
+#if __CUDACC_VER_MAJOR__ < 9
+
+    return shfl_up(val, delta, width);
+
+#else // __CUDACC_VER_MAJOR__ < 9
+
+#if CV_CUDEV_ARCH >= 700
+    return shfl_up_sync(0xFFFFFFFFU, val, delta, width);
+#else
+    const int block_size = Block::blockSize();
+    const int residual = block_size & (warpSize - 1);
+
+    if (0 == residual)
+        return shfl_up_sync(0xFFFFFFFFU, val, delta, width);
+    else
+    {
+        const int n_warps = divUp(block_size, warpSize);
+        const int warp_id = Warp::warpId();
+
+        if (warp_id < n_warps - 1)
+            return shfl_up_sync(0xFFFFFFFFU, val, delta, width);
+        else
+        {
+            // We are at the last threads of a block whose number of threads
+            // is not a multiple of the warp size
+            uint mask = (1LU << residual) - 1;
+            return shfl_up_sync(mask, val, delta, width);
+        }
+    }
+#endif
+
+#endif // __CUDACC_VER_MAJOR__ < 9
+}
 
 // shfl_down
 

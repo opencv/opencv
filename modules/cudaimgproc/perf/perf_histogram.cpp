@@ -183,16 +183,18 @@ PERF_TEST_P(Sz, EqualizeHist,
 //////////////////////////////////////////////////////////////////////
 // CLAHE
 
-DEF_PARAM_TEST(Sz_ClipLimit, cv::Size, double);
+DEF_PARAM_TEST(Sz_ClipLimit, cv::Size, double, MatType);
 
 PERF_TEST_P(Sz_ClipLimit, CLAHE,
             Combine(CUDA_TYPICAL_MAT_SIZES,
-                    Values(0.0, 40.0)))
+                    Values(0.0, 40.0),
+                    Values(MatType(CV_8UC1), MatType(CV_16UC1))))
 {
     const cv::Size size = GET_PARAM(0);
     const double clipLimit = GET_PARAM(1);
+    const int type = GET_PARAM(2);
 
-    cv::Mat src(size, CV_8UC1);
+    cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
     if (PERF_RUN_CUDA())

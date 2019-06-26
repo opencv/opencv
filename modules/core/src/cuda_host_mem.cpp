@@ -206,7 +206,7 @@ void cv::cuda::HostMem::create(int rows_, int cols_, int type_)
         cols = cols_;
         step = elemSize() * cols;
         int sz[] = { rows, cols };
-        size_t steps[] = { step, CV_ELEM_SIZE(type_) };
+        size_t steps[] = { step, (size_t)CV_ELEM_SIZE(type_) };
         flags = updateContinuityFlag(flags, 2, sz, steps);
 
         if (alloc_type == SHARED)

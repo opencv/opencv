@@ -138,6 +138,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 
     size_t srcTotal = total(srcShape);
     size_t dstTotal = total(dstShape);
+    CV_Assert(dstTotal != 0);
 
     if (inferDim != -1)
     {
@@ -203,6 +204,17 @@ public:
         return true;
     }
 
+    void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
+        CV_Assert(!outputs.empty());
+        outShapes.resize(outputs.size());
+        for (int i = 0; i < outputs.size(); ++i)
+            outShapes[i] = shape(outputs[i]);
+    }
+
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
         std::vector<UMat> inputs;
@@ -218,8 +230,7 @@ public:
             void *dst_handle = outputs[i].handle(ACCESS_WRITE);
             if (src_handle != dst_handle)
             {
-                MatShape outShape = shape(outputs[i]);
-                UMat umat = srcBlob.reshape(1, (int)outShape.size(), &outShape[0]);
+                UMat umat = srcBlob.reshape(1, (int)outShapes[i].size(), &outShapes[i][0]);
                 umat.copyTo(outputs[i]);
             }
         }
@@ -247,27 +258,18 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Reshape";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ReshapeLayer> ieLayer(new InferenceEngine::ReshapeLayer(lp));
-        if (!newShapeDesc.empty())
-            ieLayer->shape = newShapeDesc;
-        else
-        {
-            CV_Assert(inputs.size() == 2);
-            InferenceEngine::DataPtr shapeSrc = infEngineDataNode(inputs[1]);
-            // NOTE: shapeSrc->dims are reversed
-            ieLayer->shape = std::vector<int>(shapeSrc->dims.rbegin(), shapeSrc->dims.rend());
-        }
+        InferenceEngine::Builder::ReshapeLayer ieLayer(name);
+        CV_Assert(outShapes.size() == 1);
+        ieLayer.setDims(outShapes[0]);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
+
+private:
+    std::vector<MatShape> outShapes;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

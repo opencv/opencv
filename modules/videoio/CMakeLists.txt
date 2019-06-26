@@ -85,11 +85,11 @@ if (WIN32 AND HAVE_DSHOW)
   endif()
 endif()
 
-if (WIN32 AND HAVE_MSMF)
+if(WIN32 AND HAVE_MSMF)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.hpp)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_msmf.cpp)
-  if (HAVE_DXVA)
-    add_definitions(-DHAVE_DXVA)
+  if(HAVE_MSMF_DXVA)
+    add_definitions(-DHAVE_MSMF_DXVA)
   endif()
 endif()
 
@@ -233,8 +233,8 @@ if(IOS)
   list(APPEND VIDEOIO_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework UIKit")
 endif()
 
-if(UNIX)
-  #these variables are set by CHECK_MODULE macro
+if(TRUE)
+  # these variables are set by 'ocv_append_build_options(VIDEOIO ...)'
   foreach(P ${VIDEOIO_INCLUDE_DIRS})
     ocv_include_directories(${P})
   endforeach()

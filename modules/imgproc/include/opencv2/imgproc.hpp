@@ -799,108 +799,108 @@ enum RectanglesIntersectTypes {
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
 */
-class CV_EXPORTS GeneralizedHough : public Algorithm
+class CV_EXPORTS_W GeneralizedHough : public Algorithm
 {
 public:
     //! set template to search
-    virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
-    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
+    CV_WRAP virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
-    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
+    CV_WRAP virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
 
     //! Canny low threshold.
-    virtual void setCannyLowThresh(int cannyLowThresh) = 0;
-    virtual int getCannyLowThresh() const = 0;
+    CV_WRAP virtual void setCannyLowThresh(int cannyLowThresh) = 0;
+    CV_WRAP virtual int getCannyLowThresh() const = 0;
 
     //! Canny high threshold.
-    virtual void setCannyHighThresh(int cannyHighThresh) = 0;
-    virtual int getCannyHighThresh() const = 0;
+    CV_WRAP virtual void setCannyHighThresh(int cannyHighThresh) = 0;
+    CV_WRAP virtual int getCannyHighThresh() const = 0;
 
     //! Minimum distance between the centers of the detected objects.
-    virtual void setMinDist(double minDist) = 0;
-    virtual double getMinDist() const = 0;
+    CV_WRAP virtual void setMinDist(double minDist) = 0;
+    CV_WRAP virtual double getMinDist() const = 0;
 
     //! Inverse ratio of the accumulator resolution to the image resolution.
-    virtual void setDp(double dp) = 0;
-    virtual double getDp() const = 0;
+    CV_WRAP virtual void setDp(double dp) = 0;
+    CV_WRAP virtual double getDp() const = 0;
 
     //! Maximal size of inner buffers.
-    virtual void setMaxBufferSize(int maxBufferSize) = 0;
-    virtual int getMaxBufferSize() const = 0;
+    CV_WRAP virtual void setMaxBufferSize(int maxBufferSize) = 0;
+    CV_WRAP virtual int getMaxBufferSize() const = 0;
 };
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
 
 Detects position only without translation and rotation @cite Ballard1981 .
 */
-class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughBallard : public GeneralizedHough
 {
 public:
     //! R-Table levels.
-    virtual void setLevels(int levels) = 0;
-    virtual int getLevels() const = 0;
+    CV_WRAP virtual void setLevels(int levels) = 0;
+    CV_WRAP virtual int getLevels() const = 0;
 
     //! The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.
-    virtual void setVotesThreshold(int votesThreshold) = 0;
-    virtual int getVotesThreshold() const = 0;
+    CV_WRAP virtual void setVotesThreshold(int votesThreshold) = 0;
+    CV_WRAP virtual int getVotesThreshold() const = 0;
 };
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
 
 Detects position, translation and rotation @cite Guil1999 .
 */
-class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
+class CV_EXPORTS_W GeneralizedHoughGuil : public GeneralizedHough
 {
 public:
     //! Angle difference in degrees between two points in feature.
-    virtual void setXi(double xi) = 0;
-    virtual double getXi() const = 0;
+    CV_WRAP virtual void setXi(double xi) = 0;
+    CV_WRAP virtual double getXi() const = 0;
 
     //! Feature table levels.
-    virtual void setLevels(int levels) = 0;
-    virtual int getLevels() const = 0;
+    CV_WRAP virtual void setLevels(int levels) = 0;
+    CV_WRAP virtual int getLevels() const = 0;
 
     //! Maximal difference between angles that treated as equal.
-    virtual void setAngleEpsilon(double angleEpsilon) = 0;
-    virtual double getAngleEpsilon() const = 0;
+    CV_WRAP virtual void setAngleEpsilon(double angleEpsilon) = 0;
+    CV_WRAP virtual double getAngleEpsilon() const = 0;
 
     //! Minimal rotation angle to detect in degrees.
-    virtual void setMinAngle(double minAngle) = 0;
-    virtual double getMinAngle() const = 0;
+    CV_WRAP virtual void setMinAngle(double minAngle) = 0;
+    CV_WRAP virtual double getMinAngle() const = 0;
 
     //! Maximal rotation angle to detect in degrees.
-    virtual void setMaxAngle(double maxAngle) = 0;
-    virtual double getMaxAngle() const = 0;
+    CV_WRAP virtual void setMaxAngle(double maxAngle) = 0;
+    CV_WRAP virtual double getMaxAngle() const = 0;
 
     //! Angle step in degrees.
-    virtual void setAngleStep(double angleStep) = 0;
-    virtual double getAngleStep() const = 0;
+    CV_WRAP virtual void setAngleStep(double angleStep) = 0;
+    CV_WRAP virtual double getAngleStep() const = 0;
 
     //! Angle votes threshold.
-    virtual void setAngleThresh(int angleThresh) = 0;
-    virtual int getAngleThresh() const = 0;
+    CV_WRAP virtual void setAngleThresh(int angleThresh) = 0;
+    CV_WRAP virtual int getAngleThresh() const = 0;
 
     //! Minimal scale to detect.
-    virtual void setMinScale(double minScale) = 0;
-    virtual double getMinScale() const = 0;
+    CV_WRAP virtual void setMinScale(double minScale) = 0;
+    CV_WRAP virtual double getMinScale() const = 0;
 
     //! Maximal scale to detect.
-    virtual void setMaxScale(double maxScale) = 0;
-    virtual double getMaxScale() const = 0;
+    CV_WRAP virtual void setMaxScale(double maxScale) = 0;
+    CV_WRAP virtual double getMaxScale() const = 0;
 
     //! Scale step.
-    virtual void setScaleStep(double scaleStep) = 0;
-    virtual double getScaleStep() const = 0;
+    CV_WRAP virtual void setScaleStep(double scaleStep) = 0;
+    CV_WRAP virtual double getScaleStep() const = 0;
 
     //! Scale votes threshold.
-    virtual void setScaleThresh(int scaleThresh) = 0;
-    virtual int getScaleThresh() const = 0;
+    CV_WRAP virtual void setScaleThresh(int scaleThresh) = 0;
+    CV_WRAP virtual int getScaleThresh() const = 0;
 
     //! Position votes threshold.
-    virtual void setPosThresh(int posThresh) = 0;
-    virtual int getPosThresh() const = 0;
+    CV_WRAP virtual void setPosThresh(int posThresh) = 0;
+    CV_WRAP virtual int getPosThresh() const = 0;
 };
 
 //! @} imgproc_shape
@@ -1211,14 +1211,12 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/lsd_lines.cpp
-An example using the LineSegmentDetector
-\image html building_lsd.png "Sample output image" width=434 height=300
-*/
-
 /** @brief Line segment detector class
 
 following the algorithm described at @cite Rafael12 .
+
+@note Implementation has been removed due original code license conflict
+
 */
 class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
@@ -1282,6 +1280,8 @@ to edit those, as to tailor it for their own application.
 is chosen.
 @param _density_th Minimal density of aligned region points in the enclosing rectangle.
 @param _n_bins Number of bins in pseudo-ordering of gradient modulus.
+
+@note Implementation has been removed due original code license conflict
  */
 CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     int _refine = LSD_REFINE_STD, double _scale = 0.8,
@@ -3116,9 +3116,9 @@ point coordinates out of the normalized distorted point coordinates ("normalized
 coordinates do not depend on the camera matrix).
 
 The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-
-@param src Observed point coordinates, 1xN or Nx1 2-channel (CV_32FC2 or CV_64FC2).
-@param dst Output ideal point coordinates after undistortion and reverse perspective
+@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
+vector\<Point2f\> ).
+@param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
 transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
 @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
 @param distCoeffs Input vector of distortion coefficients
@@ -3131,14 +3131,14 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
  */
 CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
                                    InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray());
+                                   InputArray R = noArray(), InputArray P = noArray() );
 /** @overload
     @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
 
  */
 CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R, InputArray P, TermCriteria criteria);
+                                                         InputArray cameraMatrix, InputArray distCoeffs,
+                                                         InputArray R, InputArray P, TermCriteria criteria );
 
 //! @} imgproc_transform
 
@@ -4323,11 +4323,11 @@ CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const R
 
 /** @brief Creates a smart pointer to a cv::GeneralizedHoughBallard class and initializes it.
 */
-CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
+CV_EXPORTS_W Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
 
 /** @brief Creates a smart pointer to a cv::GeneralizedHoughGuil class and initializes it.
 */
-CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
+CV_EXPORTS_W Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 //! @} imgproc_shape
 
@@ -4349,7 +4349,14 @@ enum ColormapTypes
     COLORMAP_HSV = 9, //!< ![HSV](pics/colormaps/colorscale_hsv.jpg)
     COLORMAP_PINK = 10, //!< ![pink](pics/colormaps/colorscale_pink.jpg)
     COLORMAP_HOT = 11, //!< ![hot](pics/colormaps/colorscale_hot.jpg)
-    COLORMAP_PARULA = 12 //!< ![parula](pics/colormaps/colorscale_parula.jpg)
+    COLORMAP_PARULA = 12, //!< ![parula](pics/colormaps/colorscale_parula.jpg)
+    COLORMAP_MAGMA = 13, //!< ![magma](pics/colormaps/colorscale_magma.jpg)
+    COLORMAP_INFERNO = 14, //!< ![inferno](pics/colormaps/colorscale_inferno.jpg)
+    COLORMAP_PLASMA = 15, //!< ![plasma](pics/colormaps/colorscale_plasma.jpg)
+    COLORMAP_VIRIDIS = 16, //!< ![viridis](pics/colormaps/colorscale_viridis.jpg)
+    COLORMAP_CIVIDIS = 17, //!< ![cividis](pics/colormaps/colorscale_cividis.jpg)
+    COLORMAP_TWILIGHT = 18, //!< ![twilight](pics/colormaps/colorscale_twilight.jpg)
+    COLORMAP_TWILIGHT_SHIFTED = 19 //!< ![twilight shifted](pics/colormaps/colorscale_twilight_shifted.jpg)
 };
 
 /** @example samples/cpp/falsecolor.cpp
@@ -4819,7 +4826,7 @@ LineIterator it2 = it;
 vector<Vec3b> buf(it.count);
 
 for(int i = 0; i < it.count; i++, ++it)
-    buf[i] = *(const Vec3b)*it;
+    buf[i] = *(const Vec3b*)*it;
 
 // alternative way of iterating through the line
 for(int i = 0; i < it2.count; i++, ++it2)

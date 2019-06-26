@@ -45,8 +45,7 @@
 #include <vector>
 #include <cuda_runtime.h>
 
-#include "opencv2/core/cuda/warp.hpp"
-#include "opencv2/core/cuda/warp_shuffle.hpp"
+#include "opencv2/cudev.hpp"
 
 #include "opencv2/cudalegacy/NPP_staging.hpp"
 
@@ -78,111 +77,6 @@ cudaStream_t nppStSetActiveCUDAstream(cudaStream_t cudaStream)
     cudaStream_t tmp = nppStream;
     nppStream = cudaStream;
     return tmp;
-}
-
-
-//==============================================================================
-//
-// BlockScan.cuh
-//
-//==============================================================================
-
-
-NCV_CT_ASSERT(K_WARP_SIZE == 32); //this is required for the manual unroll of the loop in warpScanInclusive
-
-
-//Almost the same as naive scan1Inclusive, but doesn't need __syncthreads()
-//assuming size <= WARP_SIZE and size is power of 2
-template <class T>
-inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
-{
-#if __CUDA_ARCH__ >= 300
-    const unsigned int laneId = cv::cuda::device::Warp::laneId();
-
-    // scan on shuffl functions
-    #pragma unroll
-    for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
-    {
-        const T n = cv::cuda::device::shfl_up(idata, i);
-        if (laneId >= i)
-              idata += n;
-    }
-
-    return idata;
-#else
-    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
-    s_Data[pos] = 0;
-    pos += K_WARP_SIZE;
-    s_Data[pos] = idata;
-
-    s_Data[pos] += s_Data[pos - 1];
-    s_Data[pos] += s_Data[pos - 2];
-    s_Data[pos] += s_Data[pos - 4];
-    s_Data[pos] += s_Data[pos - 8];
-    s_Data[pos] += s_Data[pos - 16];
-
-    return s_Data[pos];
-#endif
-}
-inline __device__ Ncv64u warpScanInclusive(Ncv64u idata, volatile Ncv64u *s_Data)
-{
-    Ncv32u pos = 2 * threadIdx.x - (threadIdx.x & (K_WARP_SIZE - 1));
-    s_Data[pos] = 0;
-    pos += K_WARP_SIZE;
-    s_Data[pos] = idata;
-
-    s_Data[pos] += s_Data[pos - 1];
-    s_Data[pos] += s_Data[pos - 2];
-    s_Data[pos] += s_Data[pos - 4];
-    s_Data[pos] += s_Data[pos - 8];
-    s_Data[pos] += s_Data[pos - 16];
-
-    return s_Data[pos];
-}
-
-
-template <class T>
-inline __device__ T warpScanExclusive(T idata, volatile T *s_Data)
-{
-    return warpScanInclusive(idata, s_Data) - idata;
-}
-
-
-template <class T, Ncv32u tiNumScanThreads>
-inline __device__ T blockScanInclusive(T idata, volatile T *s_Data)
-{
-    if (tiNumScanThreads > K_WARP_SIZE)
-    {
-        //Bottom-level inclusive warp scan
-        T warpResult = warpScanInclusive(idata, s_Data);
-
-        //Save top elements of each warp for exclusive warp scan
-        //sync to wait for warp scans to complete (because s_Data is being overwritten)
-        __syncthreads();
-        if( (threadIdx.x & (K_WARP_SIZE - 1)) == (K_WARP_SIZE - 1) )
-        {
-            s_Data[threadIdx.x >> K_LOG2_WARP_SIZE] = warpResult;
-        }
-
-        //wait for warp scans to complete
-        __syncthreads();
-
-        if( threadIdx.x < (tiNumScanThreads / K_WARP_SIZE) )
-        {
-            //grab top warp elements
-            T val = s_Data[threadIdx.x];
-            //calculate exclusive scan and write back to shared memory
-            s_Data[threadIdx.x] = warpScanExclusive(val, s_Data);
-        }
-
-        //return updated warp scans with exclusive scan results
-        __syncthreads();
-        return warpResult + s_Data[threadIdx.x >> K_LOG2_WARP_SIZE];
-    }
-    else
-    {
-        return warpScanInclusive(idata, s_Data);
-    }
 }
 
 
@@ -280,7 +174,7 @@ __global__ void scanRows(T_in *d_src, Ncv32u texOffs, Ncv32u srcWidth, Ncv32u sr
     Ncv32u numBuckets = (srcWidth + NUM_SCAN_THREADS - 1) >> LOG2_NUM_SCAN_THREADS;
     Ncv32u offsetX = 0;
 
-    __shared__ T_out shmem[NUM_SCAN_THREADS * 2];
+    __shared__ T_out shmem[NUM_SCAN_THREADS];
     __shared__ T_out carryElem;
     carryElem = 0;
     __syncthreads();
@@ -301,7 +195,7 @@ __global__ void scanRows(T_in *d_src, Ncv32u texOffs, Ncv32u srcWidth, Ncv32u sr
         curElemMod = _scanElemOp<T_in, T_out>::scanElemOp<tbDoSqr>(curElem);
 
         //inclusive scan
-        curScanElem = blockScanInclusive<T_out, NUM_SCAN_THREADS>(curElemMod, shmem);
+        curScanElem = cv::cudev::blockScanInclusive<NUM_SCAN_THREADS>(curElemMod, shmem, threadIdx.x);
 
         if (curElemOffs <= srcWidth)
         {
@@ -1290,7 +1184,7 @@ __global__ void removePass1Scan(Ncv32u *d_src, Ncv32u srcLen,
         return;
     }
 
-    __shared__ Ncv32u shmem[NUM_REMOVE_THREADS * 2];
+    __shared__ Ncv32u shmem[NUM_REMOVE_THREADS];
 
     Ncv32u scanElem = 0;
     if (elemAddrIn < srcLen)
@@ -1305,7 +1199,7 @@ __global__ void removePass1Scan(Ncv32u *d_src, Ncv32u srcLen,
         }
     }
 
-    Ncv32u localScanInc = blockScanInclusive<Ncv32u, NUM_REMOVE_THREADS>(scanElem, shmem);
+    Ncv32u localScanInc = cv::cudev::blockScanInclusive<NUM_REMOVE_THREADS>(scanElem, shmem, threadIdx.x);
     __syncthreads();
 
     if (elemAddrIn < srcLen)

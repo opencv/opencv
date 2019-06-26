@@ -141,12 +141,19 @@ namespace cv
 {
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 
-//! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call.
 CV_EXPORTS void* allocSingletonBuffer(size_t size);
 
-//! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call
 template <typename T> static inline
 T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffer(sizeof(T) * count)); }
+
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses generic malloc() call.
+CV_EXPORTS void* allocSingletonNewBuffer(size_t size);
+
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues.  Uses generic malloc() call.
+template <typename T> static inline
+T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 } // namespace
 
@@ -796,9 +803,9 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #endif
 
 #ifdef __CV_AVX_GUARD
-#define CV_INSTRUMENT_REGION(); __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
 #else
-#define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_();
 #endif
 
 namespace cv {

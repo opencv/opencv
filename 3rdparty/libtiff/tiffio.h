@@ -1,5 +1,3 @@
-/* $Id: tiffio.h,v 1.94 2017-01-11 19:02:49 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -52,7 +50,7 @@ typedef struct tiff TIFF;
  *     promoted type (i.e. one of int, unsigned int, pointer,
  *     or double) and because we defined pseudo-tags that are
  *     outside the range of legal Aldus-assigned tags.
- * NB: tsize_t is int32 and not uint32 because some functions
+ * NB: tsize_t is signed and not unsigned because some functions
  *     return -1.
  * NB: toff_t is not off_t for many reasons; TIFFs max out at
  *     32-bit file offsets, and BigTIFF maxes out at 64-bit

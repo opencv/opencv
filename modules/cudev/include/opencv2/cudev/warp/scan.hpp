@@ -55,6 +55,36 @@ namespace cv { namespace cudev {
 //! @addtogroup cudev
 //! @{
 
+#if __CUDACC_VER_MAJOR__ >= 9
+
+// Starting from CUDA 9.0, support for Fermi is dropped.
+// So CV_CUDEV_ARCH >= 300 is implied.
+
+template <typename T>
+__device__ T warpScanInclusive(uint mask, T data)
+{
+    const uint laneId = Warp::laneId();
+
+    // scan on shufl functions
+    #pragma unroll
+    for (int i = 1; i <= (WARP_SIZE / 2); i *= 2)
+    {
+        const T val = shfl_up_sync(mask, data, i);
+        if (laneId >= i)
+              data += val;
+    }
+
+    return data;
+}
+
+template <typename T>
+__device__ __forceinline__ T warpScanExclusive(uint mask, T data)
+{
+    return warpScanInclusive(mask, data) - data;
+}
+
+#else // __CUDACC_VER_MAJOR__ >= 9
+
 template <typename T>
 __device__ T warpScanInclusive(T data, volatile T* smem, uint tid)
 {
@@ -75,19 +105,16 @@ __device__ T warpScanInclusive(T data, volatile T* smem, uint tid)
 
     return data;
 #else
-    uint pos = 2 * tid - (tid & (WARP_SIZE - 1));
-    smem[pos] = 0;
+    const uint laneId = Warp::laneId();
 
-    pos += WARP_SIZE;
-    smem[pos] = data;
+    smem[tid] = data;
 
-    smem[pos] += smem[pos - 1];
-    smem[pos] += smem[pos - 2];
-    smem[pos] += smem[pos - 4];
-    smem[pos] += smem[pos - 8];
-    smem[pos] += smem[pos - 16];
+    #pragma unroll
+    for (int i = 1; i <= (WARP_SIZE / 2); i *= 2)
+        if (laneId >= i)
+            smem[tid] += smem[tid - i];
 
-    return smem[pos];
+    return smem[tid];
 #endif
 }
 
@@ -96,6 +123,8 @@ __device__ __forceinline__ T warpScanExclusive(T data, volatile T* smem, uint ti
 {
     return warpScanInclusive(data, smem, tid) - data;
 }
+
+#endif // __CUDACC_VER_MAJOR__ >= 9
 
 //! @}
 

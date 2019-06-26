@@ -194,20 +194,16 @@ public:
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+        InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ScaleShiftLayer(name);
 
         CV_Assert(!blobs.empty());
         const size_t numChannels = blobs[0].total();
         if (hasWeights)
         {
-            ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
+            addConstantData("weights", wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C), l);
         }
         else
         {
@@ -217,15 +213,13 @@ public:
 
             std::vector<float> ones(numChannels, 1);
             weights->set(ones);
-            ieLayer->_weights = weights;
+            addConstantData("weights", weights, l);
         }
         if (hasBias)
-            ieLayer->_biases = wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
+            addConstantData("biases", wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C), l);
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
+#endif  // HAVE_INF_ENGINE
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {

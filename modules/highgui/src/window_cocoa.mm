@@ -266,7 +266,7 @@ CV_IMPL void cvResizeWindow( const char* name, int width, int height)
     CVWindow *window = cvGetWindow(name);
     if(window && ![window autosize]) {
         height += [window contentView].sliderHeight;
-        NSSize size = { width, height };
+        NSSize size = { (CGFloat)width, (CGFloat)height };
         [window setContentSize:size];
     }
     [localpool drain];

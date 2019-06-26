@@ -90,7 +90,7 @@ bool  SunRasterDecoder::readHeader()
         m_width  = m_strm.getDWord();
         m_height = m_strm.getDWord();
         m_bpp    = m_strm.getDWord();
-        int palSize = 3*(1 << m_bpp);
+        int palSize = (m_bpp > 0 && m_bpp <= 8) ? (3*(1 << m_bpp)) : 0;
 
         m_strm.skip( 4 );
         m_encoding = (SunRasType)m_strm.getDWord();

@@ -25,7 +25,7 @@ from common import splitfn
 # built-in modules
 import os
 
-if __name__ == '__main__':
+def main():
     import sys
     import getopt
     from glob import glob
@@ -126,4 +126,10 @@ if __name__ == '__main__':
         print('Undistorted image written to: %s' % outfile)
         cv.imwrite(outfile, dst)
 
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

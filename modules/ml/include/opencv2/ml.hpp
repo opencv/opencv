@@ -120,7 +120,7 @@ public:
     \f[(minVal, minVal*step, minVal*{step}^2, \dots,  minVal*{logStep}^n),\f]
     where \f$n\f$ is the maximal index satisfying
     \f[\texttt{minVal} * \texttt{logStep} ^n <  \texttt{maxVal}\f]
-    The grid is logarithmic, so logStep must always be greater then 1. Default value is 1.
+    The grid is logarithmic, so logStep must always be greater than 1. Default value is 1.
     */
     CV_PROP_RW double logStep;
 
@@ -505,6 +505,14 @@ public:
     The static method creates empty %KNearest classifier. It should be then trained using StatModel::train method.
      */
     CV_WRAP static Ptr<KNearest> create();
+    /** @brief Loads and creates a serialized knearest from a file
+     *
+     * Use KNearest::save to serialize and store an KNearest to disk.
+     * Load the KNearest from this file again, by calling this function with the path to the file.
+     *
+     * @param filepath path to serialized KNearest
+     */
+    CV_WRAP static Ptr<KNearest> load(const String& filepath);
 };
 
 /****************************************************************************************\
@@ -996,7 +1004,7 @@ public:
     @param samples Samples from which the Gaussian mixture model will be estimated. It should be a
         one-channel matrix, each row of which is a sample. If the matrix does not have CV_64F type
         it will be converted to the inner matrix of such type for the further computing.
-    @param probs0
+    @param probs0 the probabilities
     @param logLikelihoods The optional output matrix that contains a likelihood logarithm value for
         each sample. It has \f$nsamples \times 1\f$ size and CV_64FC1 type.
     @param labels The optional output "class label" for each sample:

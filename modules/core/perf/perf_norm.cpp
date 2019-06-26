@@ -253,4 +253,53 @@ PERF_TEST_P( Size_MatType, normalize_minmax, TYPICAL_MATS )
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
 
+typedef TestBaseWithParam< int > test_len;
+PERF_TEST_P(test_len, hal_normL1_u8,
+            testing::Values(300000, 2000000)
+           )
+{
+    int len = GetParam();
+
+    Mat src1(1, len, CV_8UC1);
+    Mat src2(1, len, CV_8UC1);
+
+    declare.in(src1, src2, WARMUP_RNG);
+    double n;
+    TEST_CYCLE() n = hal::normL1_(src1.ptr<uchar>(0), src2.ptr<uchar>(0), len);
+    CV_UNUSED(n);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(test_len, hal_normL1_f32,
+            testing::Values(300000, 2000000)
+           )
+{
+    int len = GetParam();
+
+    Mat src1(1, len, CV_32FC1);
+    Mat src2(1, len, CV_32FC1);
+
+    declare.in(src1, src2, WARMUP_RNG);
+    double n;
+    TEST_CYCLE() n = hal::normL1_(src1.ptr<float>(0), src2.ptr<float>(0), len);
+    CV_UNUSED(n);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(test_len, hal_normL2Sqr,
+            testing::Values(300000, 2000000)
+           )
+{
+    int len = GetParam();
+
+    Mat src1(1, len, CV_32FC1);
+    Mat src2(1, len, CV_32FC1);
+
+    declare.in(src1, src2, WARMUP_RNG);
+    double n;
+    TEST_CYCLE() n = hal::normL2Sqr_(src1.ptr<float>(0), src2.ptr<float>(0), len);
+    CV_UNUSED(n);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

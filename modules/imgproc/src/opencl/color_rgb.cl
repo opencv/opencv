@@ -439,9 +439,10 @@ __kernel void mRGBA2RGBA(__global const uchar* src, int src_step, int src_offset
                     *(__global uchar4 *)(dst + dst_index) = (uchar4)(0, 0, 0, 0);
                 else
                     *(__global uchar4 *)(dst + dst_index) =
-                        (uchar4)(mad24(src_pix.x, MAX_NUM, v3_half) / v3,
-                                 mad24(src_pix.y, MAX_NUM, v3_half) / v3,
-                                 mad24(src_pix.z, MAX_NUM, v3_half) / v3, v3);
+                        (uchar4)(SAT_CAST(mad24(src_pix.x, MAX_NUM, v3_half) / v3),
+                                 SAT_CAST(mad24(src_pix.y, MAX_NUM, v3_half) / v3),
+                                 SAT_CAST(mad24(src_pix.z, MAX_NUM, v3_half) / v3),
+                                 SAT_CAST(v3));
 
                 ++y;
                 dst_index += dst_step;

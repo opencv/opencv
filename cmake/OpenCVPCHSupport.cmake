@@ -43,18 +43,9 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
-        GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
-        if(_definitions)
-          foreach(_def ${_definitions})
-            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
-          endforeach()
-        endif()
-        GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
-        if(_target_definitions)
-          foreach(_def ${_target_definitions})
-            LIST(APPEND ${_out_compile_flags} "\"-D${_def}\"")
-          endforeach()
-        endif()
+        # Processed via $<TARGET_PROPERTY:target,COMPILE_DEFINITIONS>
+        #GET_PROPERTY(_definitions DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+        #GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
 
         GET_TARGET_PROPERTY(_cxx_standard ${_PCH_current_target} CXX_STANDARD)
         if (_cxx_standard)
@@ -261,6 +252,7 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
       )
 
     _PCH_GET_COMPILE_FLAGS(_compile_FLAGS)
+    list(APPEND _compile_FLAGS "${_PCH_include_prefix}\"${_path}\"")
 
     get_target_property(type ${_targetName} TYPE)
     if(type STREQUAL "SHARED_LIBRARY")
@@ -303,12 +295,22 @@ MACRO(ADD_PRECOMPILED_HEADER _targetName _input)
     #message("_command  ${_input} ${_output}")
     _PCH_GET_COMPILE_COMMAND(_command  ${CMAKE_CURRENT_BINARY_DIR}/${_name} ${_output} )
 
+    set(_pch_generate_file_cmd "${CMAKE_CURRENT_BINARY_DIR}/${_name}.command.sh")
+    string(REPLACE " " "\\ " _command "${_command}")
+    string(REPLACE ";" " " _command "${_command}")
+    file(GENERATE OUTPUT "${_pch_generate_file_cmd}" CONTENT "#!/bin/sh
+if [ -n \"$VERBOSE\" ]; then
+  tail -n1 \$0
+fi
+${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
+")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
     ADD_CUSTOM_COMMAND(
       OUTPUT "${_output}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
-      COMMAND ${_command}
-      DEPENDS "${_input}"
+      COMMAND chmod +x "${_pch_generate_file_cmd}"
+      COMMAND "${_pch_generate_file_cmd}"
+      DEPENDS "${_input}" "${_pch_generate_file_cmd}"
       DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"
       DEPENDS ${_targetName}_pch_dephelp
       )

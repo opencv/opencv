@@ -40,7 +40,7 @@ hdr = merge_debevec.process(images, times, response)
 ## [Make HDR image]
 
 ## [Tonemap HDR image]
-tonemap = cv.createTonemapDurand(2.2)
+tonemap = cv.createTonemap(2.2)
 ldr = tonemap.process(hdr)
 ## [Tonemap HDR image]
 

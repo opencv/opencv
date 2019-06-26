@@ -527,7 +527,15 @@ void PrintTo(const Size& sz, ::std::ostream* os);
     { \
        CV__TEST_NAMESPACE_CHECK \
        CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
+       try { \
+       ::cvtest::testSetUp(); \
        RunPerfTestBody(); \
+       } \
+       catch (cvtest::SkipTestException& e) \
+       { \
+          printf("[     SKIP ] %s\n", e.what()); \
+       } \
+       ::cvtest::testTearDown(); \
     }
 
 #define PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name) \
