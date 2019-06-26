@@ -34,6 +34,11 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
 
     double l1, lInf;
     DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+#if 0
+    std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
+    std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
+    std::cout << outputHalide.reshape(1, outputDefault.total()).t() << std::endl;
+#endif
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
