@@ -133,7 +133,7 @@ CvCapture* cvCreateCameraCapture_Aravis( int index );
 CvCapture* cvCreateFileCapture_Images(const char* filename);
 CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
 
-#ifdef HAVE_RTX64_GIGE
+#ifdef UNDER_RTSS
 CvCapture* cvCreateCameraCapture_Rtx64GigE(int index);
 #endif
 
