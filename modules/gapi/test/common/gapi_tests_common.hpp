@@ -223,8 +223,8 @@ struct TestWithParamBase : TestFunctional,
         Fixture() { InitF(type, sz, dtype, createOutputMatrices); } \
     };
 
-// Wrapper for test fixture API. Use to specify multiple types. Example: FIXTURE_API(int, bool)
-//                                                                       expands to <int, bool>
+// Wrapper for test fixture API. Use to specify multiple types.
+// Example: FIXTURE_API(int, bool) expands to <int, bool>
 #define FIXTURE_API(...) <__VA_ARGS__>
 
 template<typename T>
