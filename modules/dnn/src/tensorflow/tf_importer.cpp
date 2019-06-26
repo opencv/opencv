@@ -792,7 +792,7 @@ void TFImporter::populateNet(Net dstNet)
         int predictedLayout = predictOutputDataLayout(net, layer, data_layouts);
         data_layouts[name] = predictedLayout;
 
-        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "Conv3D")
+        if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "MirrorPad" || type == "Conv3D")
         {
             // The first node of dilated convolution subgraph.
             // Extract input node, dilation rate and paddings.
@@ -804,6 +804,7 @@ void TFImporter::populateNet(Net dstNet)
                 if (next_layers.empty())
                     next_layers = getNextLayers(net, name, "DepthwiseConv2dNative");
             }
+
             if (type == "SpaceToBatchND")
             {
                 // op: "SpaceToBatchND"
@@ -830,7 +831,7 @@ void TFImporter::populateNet(Net dstNet)
                 name = layer.name();
                 type = layer.op();
             }
-            else if (type == "Pad")
+            else if (type == "Pad" || type == "MirrorPad")
             {
                 Mat paddings = getTensorContent(getConstBlob(layer, value_id, 1));
                 CV_Assert(paddings.type() == CV_32SC1);
@@ -848,12 +849,15 @@ void TFImporter::populateNet(Net dstNet)
                     //  N    C    H    W
                     // 0 1  2 3  4 5  6 7
                 }
+
                 if (next_layers.empty() || paddings.total() != 8 ||
                     paddings.at<int32_t>(4) != paddings.at<int32_t>(5) ||
-                    paddings.at<int32_t>(6) != paddings.at<int32_t>(7))
+                    paddings.at<int32_t>(6) != paddings.at<int32_t>(7) || type == "MirrorPad")
                 {
                     // Just a single padding layer.
                     layerParams.set("paddings", DictValue::arrayInt<int*>((int*)paddings.data, paddings.total()));
+                    if (type == "MirrorPad")
+                        layerParams.set("type", "reflect");
 
                     int id = dstNet.addLayer(name, "Padding", layerParams);
                     layer_id[name] = id;

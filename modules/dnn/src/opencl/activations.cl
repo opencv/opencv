@@ -98,7 +98,8 @@ __kernel void SigmoidForward(const int count, __global const T* in, __global T* 
 __kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
   int index = get_global_id(0);
   if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
+    T x = in[index];
+    out[index] = x > 0 ? x + log(1.0f + exp(-x)) : log(1.0f + exp(x));
   }
 }
 

@@ -114,7 +114,7 @@ struct L2_Simple
         ResultType result = ResultType();
         ResultType diff;
         for(size_t i = 0; i < size; ++i ) {
-            diff = *a++ - *b++;
+            diff = (ResultType)(*a++ - *b++);
             result += diff*diff;
         }
         return result;

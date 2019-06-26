@@ -82,7 +82,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
     Mat ref;
     Mat sample = imread(_tf("dog416.png"));
     Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
-    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg", false);
+    const std::string cfgFile = findDataFile("dnn/yolo-voc.cfg");
     const std::string weightsFile = findDataFile("dnn/yolo-voc.weights", false);
     // Import by paths.
     {
@@ -110,12 +110,13 @@ class Test_Darknet_layers : public DNNTestLayer
 public:
     void testDarknetLayer(const std::string& name, bool hasWeights = false)
     {
-        std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg", false);
+        Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy"));
+        Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy"));
+
+        std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg");
         std::string model = "";
         if (hasWeights)
             model = findDataFile("dnn/darknet/" + name + ".weights", false);
-        Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy", false));
-        Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy", false));
 
         checkBackend(&inp, &ref);
 
@@ -152,7 +153,7 @@ public:
 
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
-        Net net = readNet(findDataFile("dnn/" + cfg, false),
+        Net net = readNet(findDataFile("dnn/" + cfg),
                           findDataFile("dnn/" + weights, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -272,12 +273,12 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
-        throw SkipTestException("Test is disabled");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 #endif
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX (need to update check function)");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
 
     // batchId, classId, confidence, left, top, right, bottom
@@ -313,7 +314,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX (need to update check function)");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
 #endif
     // batchId, classId, confidence, left, top, right, bottom
     Mat ref = (Mat_<float>(4, 7) << 0, 6,  0.761967f, 0.579042f, 0.159161f, 0.894482f, 0.31994f,   // a car
@@ -345,7 +346,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
     // batchId, classId, confidence, left, top, right, bottom
@@ -372,7 +373,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("Test with 'batch size 2' is disabled for DLIE/OpenCL target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL)  // Test with 'batch size 2' is disabled for DLIE/OpenCL target
 #endif
 
     {
