@@ -127,9 +127,17 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
+bool BaseImageEncoder::write( const Mat& img, const std::vector<int>& iparams, const std::map<int, String> & /*sparams*/ ) {
+    return write(img, iparams);
+}
+
 bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
 {
     return false;
+}
+
+bool BaseImageEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& iparams, const std::map<int, String>& /*sparams*/) {
+    return writemulti(img_vec, iparams);
 }
 
 ImageEncoder BaseImageEncoder::newEncoder() const
@@ -146,6 +154,33 @@ void BaseImageEncoder::throwOnEror() const
     }
 }
 
+bool BaseImageEncoder::readParam(const std::vector<int>& params, int key, int& value)
+{
+    for (size_t i = 0; i + 1 < params.size(); i += 2) {
+        if (params[i] == key) {
+            value = params[i + 1];
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BaseImageEncoder::readParam(const std::vector<int>& params, int key, int& value, int min, int max)
+{
+    if (readParam(params, key, value)) {
+        if (value < min) value = min;
+        if (value > max) value = max;
+        return true;
+    }
+    return false;
+}
+
+bool BaseImageEncoder::readParam(const std::map<int, String>& params, int key, String &value) {
+    std::map<int, String>::const_iterator find = params.find(key);
+    if(find == params.end()) return false;
+    value = find->second;
+    return true;
+}
 }
 
 /* End of file. */

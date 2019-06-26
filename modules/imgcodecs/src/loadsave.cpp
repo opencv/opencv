@@ -53,7 +53,6 @@
 #include <fstream>
 #include <opencv2/core/utils/configuration.private.hpp>
 
-
 /****************************************************************************************\
 *                                      Image Codecs                                      *
 \****************************************************************************************/
@@ -652,7 +651,8 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 }
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
-                      const std::vector<int>& params, bool flipv )
+                      const std::vector<int>& iparams, const std::map<int, String>& sparams,
+                      bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
     std::vector<Mat> write_vec;
@@ -684,14 +684,14 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
-    CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
+    CV_Assert(iparams.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
     bool code = false;
     try
     {
         if (!isMultiImg)
-            code = encoder->write( write_vec[0], params );
+            code = encoder->write( write_vec[0], iparams, sparams );
         else
-            code = encoder->writemulti( write_vec, params ); //to be implemented
+            code = encoder->writemulti( write_vec, iparams, sparams ); //to be implemented
     }
     catch (const cv::Exception& e)
     {
@@ -706,8 +706,33 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     return code;
 }
 
+template<class T> static std::vector<T> &map2vec(std::vector<T> &dst, const std::map<T, T> &src)
+{
+    dst.clear();
+    dst.reserve(src.size() * 2);
+    for(typename std::map<T, T>::const_iterator it = src.begin(); it != src.end(); ++it) {
+        dst.push_back(it->first);
+        dst.push_back(it->second);
+    }
+    return dst;
+}
+
+static const std::map<int, String> empty_int_String_map;
+
+bool imwrite( const String& filename, InputArray _img, const std::vector<int>& params )
+{
+    return imwrite(filename, _img, params, empty_int_String_map);
+}
+
 bool imwrite( const String& filename, InputArray _img,
-              const std::vector<int>& params )
+                           const std::map<int, int>& iparams, const std::map<int, String> &sparams)
+{
+    std::vector<int> tmp;
+    return imwrite(filename, _img, map2vec(tmp, iparams), sparams);
+}
+
+bool imwrite( const String& filename, InputArray _img,
+              const std::vector<int>& iparams, const std::map<int, String>& sparams)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> img_vec;
@@ -717,7 +742,7 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, params, false);
+    return imwrite_(filename, img_vec, iparams, sparams, false);
 }
 
 static bool
@@ -863,6 +888,21 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {
+    return imencode(ext, _image, buf, params, empty_int_String_map);
+}
+
+bool imencode( const String& ext, InputArray _image,
+               CV_OUT std::vector<uchar>& buf,
+               const std::map<int, int>& iparams, const std::map<int, String> &sparams)
+{
+    std::vector<int> tmp;
+    return imencode(ext, _image, buf, map2vec(tmp, iparams), sparams);
+}
+
+bool imencode( const String& ext, InputArray _image,
+               CV_OUT std::vector<uchar>& buf,
+               const std::vector<int>& iparams, const std::map<int, String>& sparams)
+{
     CV_TRACE_FUNCTION();
 
     Mat image = _image.getMat();
@@ -885,7 +925,7 @@ bool imencode( const String& ext, InputArray _image,
     bool code;
     if( encoder->setDestination(buf) )
     {
-        code = encoder->write(image, params);
+        code = encoder->write(image, iparams, sparams);
         encoder->throwOnEror();
         CV_Assert( code );
     }
@@ -895,7 +935,7 @@ bool imencode( const String& ext, InputArray _image,
         code = encoder->setDestination(filename);
         CV_Assert( code );
 
-        code = encoder->write(image, params);
+        code = encoder->write(image, iparams, sparams);
         encoder->throwOnEror();
         CV_Assert( code );
 

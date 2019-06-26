@@ -127,9 +127,11 @@ public:
 
     bool setDestination( std::vector<uchar>& buf ) CV_OVERRIDE;
 
-    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    bool write( const Mat& img, const std::vector<int>& iparams, const std::map<int, String> &sparams ) CV_OVERRIDE;
 
     bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params) CV_OVERRIDE;
+    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& iparams, const std::map<int, String> &sparams) CV_OVERRIDE;
 
     ImageEncoder newEncoder() const CV_OVERRIDE;
 
@@ -139,6 +141,7 @@ protected:
                     int count, int value );
 
     bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params );
+    bool writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& iparams, const std::map<int, String> &sparams );
     bool write_32FC3_SGILOG(const Mat& img, void* tif);
 
 private:
