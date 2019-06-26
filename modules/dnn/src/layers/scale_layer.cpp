@@ -11,9 +11,17 @@ Implementation of Scale layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -50,7 +58,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
     }
 
@@ -137,6 +147,99 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_UNUSED(workspace);
+        CV_Assert(outputs.size() == 1);
+        CV_Assert(!blobs.empty() || inputs.size() == 2);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        csl::TensorView<float> weights;
+        if (blobs.empty())
+        {
+            auto wrapper = inputs[1].dynamicCast<CUDABackendWrapperFP32>();
+            weights = wrapper->getView();
+        }
+        else if (hasWeights)
+        {
+            weights = csl::TensorSpan<float>(weightsTensor);
+        }
+
+        csl::TensorView<float> bias;
+        if (hasBias)
+            bias = csl::TensorSpan<float>(biasTensor);
+
+        const auto numParams = !weights.empty() ? weights.size() : bias.size();
+        CV_Assert(numParams != 0);
+        if (hasWeights && hasBias)
+        {
+            CV_CheckEQ(weights.size(), bias.size(), "Incompatible weights/bias blobs");
+        }
+
+        auto input_shape = input_wrapper->getShape();
+
+        /* the weights might require broadcasting to scale */
+        int end_axis = [&] {
+            for (int endAxis = axis + 1; endAxis <= input_shape.size(); ++endAxis)
+                if (total(input_shape, axis, endAxis) == numParams)
+                    return endAxis;
+            CV_Assert(0 /* invalid weights matrix */);
+        }();
+
+        std::size_t inner_size = total(input_shape, end_axis, -1);
+
+        CV_Assert(hasWeights || hasBias);
+        if (hasWeights && hasBias)
+            csl::kernels::scale_with_bias<float>(stream, output, input, inner_size, weights, bias);
+        else if (hasWeights)
+            csl::kernels::scale<float>(stream, output, input, inner_size, weights);
+        else
+        {
+            /* rarely used codepath; hence, not optimized TODO */
+            csl::tensor_ops::copy(stream, output, input);
+            csl::tensor_ops::add<float>(stream, 1.0, output, 1.0, bias);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+        if (hasWeights)
+        {
+            weightsTensor = createTensorHeaderFromMat(blobs[0]);
+            copyMatToTensor<float>(weightsTensor, blobs[0], stream);
+        }
+
+        if (hasBias)
+        {
+            /* if the weights are provided, bias will be in blobs[1]; otherwise, it will be in blobs[0]
+             * in either case, it is at the end of the blobs vector => bias = blobs.back()
+             */
+            biasTensor = createTensorHeaderFromMat(blobs[1]);
+            copyMatToTensor<float>(biasTensor, blobs.back(), stream);
+        }
+    }
+
+    csl::Tensor<float> weightsTensor, biasTensor;
+    csl::Stream stream;
+#endif
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {

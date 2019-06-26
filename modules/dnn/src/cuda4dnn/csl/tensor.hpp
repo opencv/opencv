@@ -344,7 +344,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          */
         CUDA4DNN_HOST_DEVICE size_type get_axis_size(int axis) const noexcept {
             axis = clamp_axis(axis, rank);
-            CV_Assert(axis >= 0 && axis < rank);
+            assert(axis >= 0 && axis < rank);
             return sizes[axis];
         }
 
@@ -576,7 +576,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          */
         CUDA4DNN_HOST_DEVICE size_type get_axis_size(int axis) const noexcept {
             axis = clamp_axis(axis, rank);
-            CV_Assert(axis >= 0 && axis < rank);
+            assert(axis >= 0 && axis < rank); /* CV_Assert isn't allowed in device code */
             return sizes[axis];
         }
 
