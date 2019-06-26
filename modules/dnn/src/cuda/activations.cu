@@ -4,6 +4,8 @@
 
 #include <cuda_runtime.h>
 
+#include "math.hpp"
+
 #include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/kernel_utils.hpp"
 #include "../cuda4dnn/csl/span.hpp"
@@ -11,58 +13,12 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
-    namespace detail {
-        template <class T> __device__ T abs(T val);
-        template <> __device__ float abs(float val) { return fabsf(val); }
-        template <> __device__ double abs(double val) { return fabs(val); }
-
-        template <class T> __device__ T exp(T val);
-        template <> __device__ float exp(float val) { return expf(val); }
-        template <> __device__ double exp(double val) { return ::exp(val); }
-
-        template <class T> __device__ T max(T x, T y);
-        template <> __device__ float max(float x, float y) { return fmaxf(x, y); }
-        template <> __device__ double max(double x, double y) { return fmax(x, y); }
-
-        template <class T> __device__ T min(T x, T y);
-        template <> __device__ float min(float x, float y) { return fminf(x, y); }
-        template <> __device__ double min(double x, double y) { return fmin(x, y); }
-
-        template <class T> __device__ T log1p(T val);
-        template <> __device__ float log1p(float val) { return log1pf(val); }
-        template <> __device__ double log1p(double val) { return ::log1p(val); }
-
-        template <class T> __device__ T log1pexp(T val);
-        template <> __device__ double log1pexp(double val) {
-            if (val <= -37)
-                return exp(val);
-            else if (-37 < val && val <= 18)
-                return log1p(exp(val));
-            else if (18 < val && val <= 33.3)
-                return val + exp(-val);
-            else
-                return val;
-        }
-        template <> __device__ float log1pexp(float val) { return log1pexp<double>(val); }
-
-        template <class T> __device__ T tanh(T val);
-        template <> __device__ float tanh(float val) { return tanhf(val); }
-        template <> __device__ double tanh(double val) { return ::tanh(val); }
-
-        template <class T> __device__ T pow(T val, T exp);
-        template <> __device__ float pow(float val, float exp) { return powf(val, exp); }
-        template <> __device__ double pow(double val, double exp) { return ::pow(val, exp); }
-
-        template <class T>
-        __device__ T sigmoid(T val) { return T(1) / (1 + exp(-val)); }
-    }
-
     namespace raw {
         template <class T>
         __global__ void abs(span<T> dest, view<T> src) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::abs;
+                using utils::abs;
                 dest[i] = abs(src[i]);
             }
         }
@@ -71,7 +27,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void tanh(span<T> dest, view<T> src) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::tanh;
+                using utils::tanh;
                 dest[i] = tanh(src[i]);
             }
         }
@@ -80,7 +36,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void sigmoid(span<T> dest, view<T> src) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::sigmoid;
+                using utils::sigmoid;
                 dest[i] = sigmoid(src[i]);
             }
         }
@@ -89,7 +45,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void bnll(span<T> dest, view<T> src) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::log1pexp;
+                using utils::log1pexp;
                 dest[i] = src[i] > 0 ? src[i] + log1pexp(-src[i]) : log1pexp(src[i]);
             }
         }
@@ -98,7 +54,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void elu(span<T> dest, view<T> src) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::exp;
+                using utils::exp;
                 dest[i] = src[i] >= 0 ? src[i] : (exp(src[i]) - 1);
             }
         }
@@ -115,8 +71,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             assert(src.size() >= dest.size());
             assert(floor <= ceiling);
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::max;
-                using detail::min;
+                using utils::max;
+                using utils::min;
                 dest[i] = min(max(src[i], floor), ceiling);
             }
         }
@@ -134,7 +90,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void power(span<T> dest, view<T> src, T exp, T scale, T shift) {
             assert(src.size() >= dest.size());
             for (auto i : grid_stride_range(dest.size())) {
-                using detail::pow;
+                using utils::pow;
                 dest[i] = pow(shift + scale * src[i], exp);
             }
         }
