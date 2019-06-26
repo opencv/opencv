@@ -64,6 +64,9 @@
 /* IEEE1394 capturing support - libdc1394 v2.x */
 #cmakedefine HAVE_DC1394_2
 
+/* RTX64 capturing support */
+#cmakedefine HAVE_RTX64_GIGE
+
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
 #cmakedefine HAVE_DIRECTX_NV12

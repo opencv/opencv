@@ -128,6 +128,10 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_BACKEND(CAP_UNICAP, "UNICAP", MODE_CAPTURE_BY_INDEX),
 #endif
 
+#ifdef HAVE_RTX64_GIGE
+	DECLARE_BACKEND(CAP_RTX64_GIGE, "RTX64_GIGE", MODE_CAPTURE_BY_INDEX),
+#endif
+
 #ifdef HAVE_GPHOTO2
     DECLARE_BACKEND(CAP_GPHOTO2, "GPHOTO2", MODE_CAPTURE_ALL),
 #endif
@@ -436,6 +440,11 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         TRY_OPEN(createGPhoto2Capture(index));
         break;
 #endif
+#ifdef HAVE_RTX64_GIGE
+    case CAP_RTX64_GIGE:
+	    TRY_OPEN(createCameraCapture_Rtx64GigE(index));
+		break;
+#endif
     case CAP_VFW: // or CAP_V4L or CAP_V4L2
 #ifdef HAVE_VFW
         TRY_OPEN_LEGACY(cvCreateCameraCapture_VFW(index))
@@ -511,6 +520,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
     } // switch (api)
 }
 
+#ifndef UNDER_RTSS
 void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCaptureAPIs api, const cv::String& filename)
 {
     switch (api)
@@ -596,7 +606,7 @@ void VideoCapture_create(CvCapture*& capture, Ptr<IVideoCapture>& icap, VideoCap
         break;
     } // switch
 }
-
+#endif
 
 void VideoWriter_create(CvVideoWriter*& writer, Ptr<IVideoWriter>& iwriter, VideoCaptureAPIs api,
         const String& filename, int fourcc, double fps, const Size& frameSize, bool isColor)

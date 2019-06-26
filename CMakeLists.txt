@@ -136,6 +136,11 @@ enable_testing()
 
 project(OpenCV CXX C)
 
+if(RTX64)
+	SET(CMAKE_CXX_STANDARD_LIBRARIES "" CACHE STRING "Force an empty linker for RTX" FORCE)
+	SET(CMAKE_C_STANDARD_LIBRARIES "" CACHE STRING "Force an empty linker for RTX" FORCE)
+ENDIF(RTX64)
+
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
@@ -143,6 +148,55 @@ endif()
 ocv_cmake_eval(DEBUG_PRE ONCE)
 
 ocv_clear_vars(OpenCVModules_TARGETS)
+
+if(MSVC)
+  set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
+  set( RTX64 0 CACHE STRING "If true builds the solution and project for RTX64" )  
+  # Threading part of the suffix
+  # if( RTX64 )
+	# set(COMPILER_THREADING_SUFFIX _MT) 
+  # endif( RTX64 )
+  
+endif()
+
+if( WITH_RTX64_GIGE )
+	LINK_DIRECTORIES( $ENV{RTX64SDKDIR3}/lib/amd64 )
+	INCLUDE_DIRECTORIES( $ENV{RTX64SDKDIR3}/include )
+endif( WITH_RTX64_GIGE )
+
+if ( WITH_RTX64_GIGE )
+	set(HAVE_RTX64_GIGE TRUE)
+endif ( WITH_RTX64_GIGE )
+
+if( RTX64 )
+	LINK_DIRECTORIES( $ENV{RTX64SDKDIR3}/lib/amd64 )
+	INCLUDE_DIRECTORIES( $ENV{RTX64SDKDIR3}/include )
+
+	SET(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /NODEFAULTLIB /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /STACK:10000,10000")
+	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /Fixed:NO /STACK:100000,100000")
+	SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiDllEntryCRT /Fixed:NO /STACK:100000,100000")
+	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB /MANIFESTUAC:NO /MANIFEST:NO /SUBSYSTEM:NATIVE /ENTRY:_RtapiProcessEntryCRT /STACK:100000,100000")
+endif( RTX64 )
+
+IF( RTX64 )
+	message (STATUS "This is a Win64 RTX build")
+	add_definitions(-DUNDER_RTSS)
+	# FOREACH(flag_var
+		# CMAKE_CXX_FLAGS 
+		# CMAKE_CXX_FLAGS_DEBUG 
+		# CMAKE_CXX_FLAGS_RELEASE
+		# CMAKE_CXX_FLAGS_MINSIZEREL 
+		# CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        # CMAKE_C_FLAGS_RTSSDEBUG
+		# CMAKE_CXX_FLAGS_RTSSDEBUG)
+		# IF( ${flag_var} MATCHES "/MD" )
+			# string( REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}" )
+		# ENDIF()
+
+		# STRING (REGEX REPLACE "/RTC(su|[1su])" "" ${flag_var} "${${flag_var}}")
+
+	# ENDFOREACH()
+ENDIF(RTX64 )
 
 include(cmake/OpenCVDownload.cmake)
 
@@ -223,6 +277,7 @@ OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN3
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
 OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"        (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT AND NOT APPLE_FRAMEWORK )
+OCV_OPTION(WITH_RTX64_GIGE          "Include RTX64 support for GigE camers"           OFF  )
 
 # Optional 3rd party components
 # ===================================================
@@ -1412,6 +1467,10 @@ endif()
 # ========================== VIDEO IO ==========================
 status("")
 status("  Video I/O:")
+
+if (DEFINED WITH_RTX64_GIGE)
+  status("    Video for RTX64:" HAVE_RTX64_GIGE         THEN YES                                        ELSE NO)
+endif(DEFINED WITH_RTX64_GIGE)
 
 if(WITH_VFW OR HAVE_VFW)
   status("    Video for Windows:" HAVE_VFW         THEN YES                                        ELSE NO)

@@ -41,6 +41,7 @@ CV_IMPL CvCapture* cvCreateCameraCapture(int index)
     return NULL;
 }
 
+#ifndef UNDER_RTSS
 CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char* filename, int apiPreference)
 {
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
@@ -69,6 +70,7 @@ CV_IMPL CvCapture* cvCreateFileCapture(const char * filename)
 {
     return cvCreateFileCaptureWithPreference(filename, CAP_ANY);
 }
+#endif
 
 CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc,
                                            double fps, CvSize frameSize, int is_color)

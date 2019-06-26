@@ -277,7 +277,7 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
     }
 }
 
-
+#ifndef UNDER_RTSS
 bool CvCapture_Images::open(const char * _filename)
 {
     unsigned offset = 0;
@@ -345,6 +345,7 @@ CvCapture* cvCreateFileCapture_Images(const char * filename)
 
     return NULL;
 }
+#endif
 
 //
 //

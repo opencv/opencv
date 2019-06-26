@@ -97,6 +97,12 @@ if (WIN32 AND HAVE_VFW)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_vfw.cpp)
 endif()
 
+if(HAVE_RTX64_GIGE)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_rtx64gige.cpp)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_rtx64gige.h)
+  include_directories(AFTER SYSTEM $ENV{RTX64_RTVISION}/include )
+endif(HAVE_RTX64_GIGE)
+
 if(HAVE_XINE)
   list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_xine.cpp)
 endif(HAVE_XINE)

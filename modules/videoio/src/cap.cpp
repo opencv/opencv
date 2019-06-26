@@ -57,6 +57,7 @@ template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) c
 VideoCapture::VideoCapture()
 {}
 
+#ifndef UNDER_RTSS
 VideoCapture::VideoCapture(const String& filename, int apiPreference)
 {
     CV_TRACE_FUNCTION();
@@ -68,6 +69,7 @@ VideoCapture::VideoCapture(const String& filename)
     CV_TRACE_FUNCTION();
     open(filename, CAP_ANY);
 }
+#endif
 
 VideoCapture::VideoCapture(int index)
 {
@@ -89,6 +91,7 @@ VideoCapture::~VideoCapture()
     cap.release();
 }
 
+#ifndef UNDER_RTSS
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
     CV_TRACE_FUNCTION();
@@ -126,6 +129,7 @@ bool VideoCapture::open(const String& filename)
 
     return open(filename, CAP_ANY);
 }
+#endif
 
 bool  VideoCapture::open(int cameraNum, int apiPreference)
 {

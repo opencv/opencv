@@ -206,6 +206,8 @@ namespace cv
     Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
     Ptr<IVideoCapture> cvCreateCapture_MSMF(const String& filename);
     Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const String& filename, int fourcc, double fps, Size frameSize, int is_color);
+    
+	Ptr<IVideoCapture> createCameraCapture_Rtx64GigE(int index);
 }
 
 #endif /* __VIDEOIO_H_ */
