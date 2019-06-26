@@ -62,6 +62,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
         TensorView<T> input, std::size_t inner_size,
         TensorView<T> weights, TensorView<T> bias);
 
+    template <class T>
+    void eltwise_max_2(const Stream& stream, span<T> output, view<T> x, view<T> y);
+
+    template <class T>
+    void eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y);
+
+    template <class T>
+    void eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y);
+
+    template <class T>
+    void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

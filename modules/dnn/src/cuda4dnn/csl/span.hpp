@@ -45,6 +45,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         CUDA4DNN_DEVICE reference operator[](difference_type index) const { return ptr[index]; }
         CUDA4DNN_HOST_DEVICE pointer data() const noexcept { return ptr; }
 
+        template<class U = T, class V = typename std::add_const<U>::type,
+            typename std::enable_if<!std::is_const<U>::value, bool>::type = true>
+            CUDA4DNN_HOST_DEVICE operator span<V>() const noexcept { return span<V>{ptr, sz}; }
+
     private:
         pointer ptr;
         size_type sz;
