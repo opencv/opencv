@@ -771,7 +771,8 @@ struct BNLLFunctor
             for( int i = 0; i < len; i++ )
             {
                 float x = srcptr[i];
-                dstptr[i] = log(1.f + exp(-abs(x)));
+                // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
+                dstptr[i] = x > 0 ? x + log(1. + exp(-x)) : log(1. + exp(x));
             }
         }
     }
@@ -788,7 +789,8 @@ struct BNLLFunctor
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
         Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = log(1.0f + exp(-abs(input)));
+        // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
+        top(x, y, c, n) = max(input, 0) + log(1.0f + exp(-abs(input)));
     }
 #endif  // HAVE_HALIDE
 
