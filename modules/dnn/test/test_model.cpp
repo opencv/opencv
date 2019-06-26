@@ -25,7 +25,7 @@ public:
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                         float scale = 1.0, bool swapRB = false, bool crop = false)
+                         double scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
@@ -53,7 +53,7 @@ public:
     void testClassifyModel(const std::string& weights, const std::string& cfg,
                     const std::string& imgPath, std::pair<int, float> ref, float norm,
                     const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                    float scale = 1.0, bool swapRB = false, bool crop = false)
+                    double scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
@@ -95,7 +95,7 @@ TEST_P(Test_Model, DetectRegion)
     std::string weights_file = _tf("yolo-voc.weights");
     std::string config_file = _tf("yolo-voc.cfg");
 
-    float scale = 1.0 / 255.0;
+    double scale = 1.0 / 255.0;
     Size size{416, 416};
     bool swapRB = true;
 
@@ -164,7 +164,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
-    float scale = 1.0f / 127.5;
+    double scale = 1.0 / 127.5;
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;

@@ -133,8 +133,8 @@ DetectionModel::DetectionModel(const String& model, const String& config)
 DetectionModel::DetectionModel(const Net& network) : Model(network) {};
 
 void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
-                   CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
-                   float confThreshold, float nmsThreshold)
+                            CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
+                            float confThreshold, float nmsThreshold)
 {
     std::vector<Mat> detections;
     impl->predict(*this, frame.getMat(), detections);
@@ -216,7 +216,7 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                 double conf;
                 minMaxLoc(scores, nullptr, &conf, nullptr, &classIdPoint);
 
-                if (conf < confThreshold)
+                if (static_cast<float>(conf) < confThreshold)
                     continue;
 
                 int centerX = data[0] * frameWidth;
