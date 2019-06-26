@@ -85,13 +85,10 @@ public:
         }
     }
 
-    void initMatsRandN(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
+    void initMatrixRandN(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
     {
         in_mat1 = cv::Mat(sz_in, type);
-        in_mat2 = cv::Mat(sz_in, type);
-
         cv::randn(in_mat1, cv::Scalar::all(127), cv::Scalar::all(40.f));
-        cv::randn(in_mat2, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
         if (createOutputMatrices)
         {

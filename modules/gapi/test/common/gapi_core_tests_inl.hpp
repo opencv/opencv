@@ -1216,7 +1216,7 @@ TEST_P(SqrtTest, AccuracyTest)
 
 TEST_P(NormalizeTest, Test)
 {
-    initMatsRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)), createOutputMatrices);
+    initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)), createOutputMatrices);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;

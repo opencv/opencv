@@ -61,7 +61,7 @@ TEST_P(Filter2DTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, borderType, dtype, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, dtype, initOut);
+    initMatrixRandN(type, sz, dtype, initOut);
 
     cv::Point anchor = {-1, -1};
     double delta = 0;
@@ -97,7 +97,7 @@ TEST_P(BoxFilterTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, filterSize, sz, borderType, dtype, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, dtype, initOut);
+    initMatrixRandN(type, sz, dtype, initOut);
 
     cv::Point anchor = {-1, -1};
     bool normalize = true;
@@ -133,7 +133,7 @@ TEST_P(SepFilterTest, AccuracyTest)
     cv::Mat kernelY(kernSize, 1, CV_32F);
     randu(kernelX, -1, 1);
     randu(kernelY, -1, 1);
-    initMatsRandN(type, sz, dtype, initOut);
+    initMatrixRandN(type, sz, dtype, initOut);
 
     cv::Point anchor = cv::Point(-1, -1);
 
@@ -163,7 +163,7 @@ TEST_P(BlurTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, filterSize, sz, borderType, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Point anchor = {-1, -1};
 
@@ -193,7 +193,7 @@ TEST_P(GaussianBlurTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF,type, kernSize, sz, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Size kSize = cv::Size(kernSize, kernSize);
     double sigmaX = rand();
@@ -224,7 +224,7 @@ TEST_P(MedianBlurTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -252,7 +252,7 @@ TEST_P(ErodeTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
 
@@ -282,7 +282,7 @@ TEST_P(Erode3x3Test, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, initOut, numIters, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3,3));
 
@@ -312,7 +312,7 @@ TEST_P(DilateTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, kernType, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
 
@@ -342,7 +342,7 @@ TEST_P(Dilate3x3Test, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, initOut, numIters, compile_args) = GetParam();
-    initMatsRandN(type, sz, type, initOut);
+    initMatrixRandN(type, sz, type, initOut);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3,3));
 
@@ -373,7 +373,7 @@ TEST_P(SobelTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, dtype, dx, dy, initOut, compile_args) = GetParam();
-    initMatsRandN(type, sz, dtype, initOut);
+    initMatrixRandN(type, sz, dtype, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -404,7 +404,7 @@ TEST_P(SobelXYTest, AccuracyTest)
     cv::Mat out_mat_ocv2;
     cv::Mat out_mat_gapi2;
 
-    initMatsRandN(type, sz, dtype);
+    initMatrixRandN(type, sz, dtype);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -441,7 +441,7 @@ TEST_P(EqHistTest, AccuracyTest)
     bool initOut = false;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, initOut, compile_args) = GetParam();
-    initMatsRandN(CV_8UC1, sz, CV_8UC1, initOut);
+    initMatrixRandN(CV_8UC1, sz, CV_8UC1, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -471,7 +471,7 @@ TEST_P(CannyTest, AccuracyTest)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, thrLow, thrUp, apSize, l2gr, initOut, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, CV_8UC1, initOut);
+    initMatrixRandN(type, sz, CV_8UC1, initOut);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -495,7 +495,7 @@ TEST_P(RGB2GrayTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -519,7 +519,7 @@ TEST_P(BGR2GrayTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC1, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -543,7 +543,7 @@ TEST_P(RGB2YUVTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -567,7 +567,7 @@ TEST_P(YUV2RGBTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
 
     // G-API code //////////////////////////////////////////////////////////////
@@ -594,7 +594,7 @@ TEST_P(NV12toRGBTest, AccuracyTest)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
 
-    initMatsRandN(CV_8UC1, sz, CV_8UC3);
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in_y;
@@ -625,7 +625,7 @@ TEST_P(NV12toBGRTest, AccuracyTest)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, sz, compile_args) = GetParam();
 
-    initMatsRandN(CV_8UC1, sz, CV_8UC3);
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in_y;
@@ -654,7 +654,7 @@ TEST_P(RGB2LabTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -678,7 +678,7 @@ TEST_P(BGR2LUVTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -702,7 +702,7 @@ TEST_P(LUV2BGRTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -726,7 +726,7 @@ TEST_P(BGR2YUVTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -750,7 +750,7 @@ TEST_P(YUV2BGRTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -774,7 +774,7 @@ TEST_P(RGB2HSVTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -798,7 +798,7 @@ TEST_P(BayerGR2RGBTest, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC1, std::get<1>(param), CV_8UC3, std::get<2>(param));
+    initMatrixRandN(CV_8UC1, std::get<1>(param), CV_8UC3, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -822,7 +822,7 @@ TEST_P(RGB2YUV422Test, AccuracyTest)
     auto param = GetParam();
     auto compile_args = std::get<3>(param);
     compare_f cmpF = std::get<0>(param);
-    initMatsRandN(CV_8UC3, std::get<1>(param), CV_8UC2, std::get<2>(param));
+    initMatrixRandN(CV_8UC3, std::get<1>(param), CV_8UC2, std::get<2>(param));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
