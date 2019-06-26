@@ -203,8 +203,6 @@ struct TestWithParamBase : TestFunctional,
     }
 };
 
-#define FIXTURE_API(...) <__VA_ARGS__>
-
 /**
  * @private
  * @brief Create G-API test fixture with TestWithParamBase base class
@@ -219,9 +217,15 @@ struct TestWithParamBase : TestFunctional,
  */
 #define GAPI_TEST_FIXTURE(Fixture, InitF, API, Number, ...) \
     struct Fixture : public TestWithParamBase API { \
+        static_assert(Number == AllParams::specific_params_size, \
+            "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
         __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
         Fixture() { InitF(type, sz, dtype, createOutputMatrices); } \
     };
+
+// Wrapper for test fixture API. Use to specify multiple types. Example: FIXTURE_API(int, bool)
+//                                                                       expands to <int, bool>
+#define FIXTURE_API(...) <__VA_ARGS__>
 
 template<typename T>
 struct Wrappable
