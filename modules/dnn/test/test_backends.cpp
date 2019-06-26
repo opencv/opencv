@@ -37,7 +37,7 @@ public:
 
         weights = findDataFile(weights, false);
         if (!proto.empty())
-            proto = findDataFile(proto, false);
+            proto = findDataFile(proto);
 
         // Create two networks - with default backend and target and a tested one.
         Net netDefault = readNet(weights, proto);
@@ -51,7 +51,7 @@ public:
         net.setPreferableTarget(target);
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
-            halideScheduler = findDataFile(halideScheduler, false);
+            halideScheduler = findDataFile(halideScheduler);
             net.setHalideScheduler(halideScheduler);
         }
         Mat out = net.forward(outputLayer).clone();
@@ -157,9 +157,10 @@ TEST_P(DNNTestNetwork, Inception_5h)
 TEST_P(DNNTestNetwork, ENet)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
                                              "dnn/halide_scheduler_enet.yml",
@@ -170,8 +171,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     float diffScores = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 0.0;
     float diffSquares = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
@@ -184,13 +185,13 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
 {
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
     float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.029 : 0.0;
     float diffSquares = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09  : 0.0;
@@ -203,8 +204,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
     applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.095 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.09 : 0.0;
@@ -217,13 +218,13 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
 {
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.06 : 0.0;
@@ -236,8 +237,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.013 : 2e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.062 : 0.0;
@@ -251,10 +252,10 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
                  CV_TEST_TAG_DEBUG_VERYLONG);
     if (backend == DNN_BACKEND_HALIDE && target == DNN_TARGET_CPU)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);  // TODO HALIDE_CPU
     double scoreThreshold = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0325 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.032 : 0.0;
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
                "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreThreshold, lInf);
@@ -264,13 +265,13 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
 TEST_P(DNNTestNetwork, OpenPose_pose_coco)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
-                 CV_TEST_TAG_DEBUG_VERYLONG);
+                 CV_TEST_TAG_DEBUG_LONG);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0056 : 0.0;
@@ -285,11 +286,11 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
                  CV_TEST_TAG_DEBUG_VERYLONG);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
     // output range: [-0.001, 0.97]
@@ -304,11 +305,11 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for OpenVINO <= 2018R5 + MyriadX target");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 
     // The same .caffemodel but modified .prototxt
@@ -323,11 +324,11 @@ TEST_P(DNNTestNetwork, OpenFace)
 #if defined(INF_ENGINE_RELEASE)
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-        throw SkipTestException("Test is disabled for Myriad targets");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 #endif
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0024 : 0.0;
     const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.0071 : 0.0;
     processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", "", l1, lInf);
@@ -336,8 +337,8 @@ TEST_P(DNNTestNetwork, OpenFace)
 TEST_P(DNNTestNetwork, opencv_face_detector)
 {
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
     processNet("dnn/opencv_face_detector.caffemodel", "dnn/opencv_face_detector.prototxt",
                inp, "detection_out");
@@ -353,11 +354,11 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        throw SkipTestException("Test is disabled for MyriadX");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/street.png", false));
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.015 : 0.0;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0731 : 0.0;
@@ -370,7 +371,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     // Reference output values are in range [-3.807, 4.605]
     float l1 = 0.0, lInf = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
@@ -389,24 +390,25 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_VERYLONG);
 
-    if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD))
-        throw SkipTestException("");
+    if (backend == DNN_BACKEND_HALIDE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 
 #if defined(INF_ENGINE_RELEASE)
-#if INF_ENGINE_RELEASE <= 2018050000
+#if INF_ENGINE_VER_MAJOR_LE(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2018R5);
 #endif
 #endif
 
-    Mat img = imread(findDataFile("dnn/googlenet_1.png", false));
+    Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
     // Output image has values in range [-143.526, 148.539].
     float l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.4 : 4e-5;
     float lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 7.45 : 2e-3;
     processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", "", l1, lInf);
-#if defined(HAVE_INF_ENGINE) && INF_ENGINE_RELEASE >= 2019010000
+#if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
 #endif
 }
