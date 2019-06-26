@@ -1037,6 +1037,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         using PoolingDescriptor = cudnn::PoolingDescriptor;
 
     public:
+        enum class rounding_type {
+            FLOOR,
+            CEILING
+        };
+
         using pooling_type = PoolingDescriptor::pooling_type;
 
         struct params_type {
@@ -1046,6 +1051,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             std::vector<std::size_t> padding;
             std::vector<std::size_t> stride;
 
+            rounding_type rounding_mode;
             pooling_type type;
         };
 
@@ -1058,9 +1064,36 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             inputTensorDesc = TensorDescriptor(params.input_shape);
             poolingDesc = PoolingDescriptor(params.window_size, params.padding, params.stride, params.type);
 
-            std::vector<int> output_dim;
-            getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
-            outputTensorDesc = TensorDescriptor(output_dim);
+            const auto& input_shape = params.input_shape;
+            std::vector<std::size_t> output_shape;
+            output_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+            const auto& window_size = params.window_size;
+            const auto& padding = params.padding;
+            const auto& stride = params.stride;
+
+            bool ceil = params.rounding_mode == rounding_type::CEILING;
+            for (int i = 0; i < window_size.size(); i++) {
+                double axis_sz = (input_shape[i + 2] + 2 * padding[i] - window_size[i]) / double(stride[i]) + 1;
+                output_shape[i + 2] = ceil ? std::ceil(axis_sz) : std::floor(axis_sz);
+
+                /* check if the last pooling window starts in the valid region */
+                if (padding[i]) {
+                    if ((output_shape[i + 2] - 1) * stride[i] >= input_shape[i + 2] + padding[i])
+                        output_shape[i + 2]--;
+                }
+            }
+
+            if (!ceil)
+            {
+                /* we must agree with cuDNN if we used floor */
+                std::vector<int> output_dim;
+                getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
+                CV_Assert(std::equal(std::begin(output_dim), std::end(output_dim), std::begin(output_shape)));
+                CV_UNUSED(output_dim);
+            }
+
+            outputTensorDesc = TensorDescriptor(output_shape);
         }
 
         Pooling& operator=(const Pooling&) = delete;

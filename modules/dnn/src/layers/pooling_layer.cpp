@@ -301,6 +301,9 @@ public:
     {
         CV_UNUSED(workspace);
 
+        if (computeMaxIdx)
+            CV_Error(Error::StsNotImplemented, "Pooling layer does not support caching max indicies");
+
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto input = input_wrapper->getView();
 
@@ -327,11 +330,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Asymmetric padding for pooling layer is not supported by CUDA backend");
 
         csl::Pooling<float>::params_type params;
-
-        auto& ishape = params.input_shape;
-        ishape.resize(input_shape.size());
-        std::copy(std::begin(input_shape), std::end(input_shape), std::begin(ishape));
-
+        params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
         params.window_size = kernel_size;
         params.padding = pads_begin;
         params.stride = strides;
@@ -342,15 +341,18 @@ public:
         }
         else if (type == AVE)
         {
-            if(padMode == "SAME")
-                params.type = csl::Pooling<float>::pooling_type::AVERAGE_EXCLUDE_PADDING;
-            else
+            if(avePoolPaddedArea)
                 params.type = csl::Pooling<float>::pooling_type::AVERAGE_INCLUDE_PADDING;
+            else
+                params.type = csl::Pooling<float>::pooling_type::AVERAGE_EXCLUDE_PADDING;
         }
         else
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
 
-      /* TODO ceilMode */
+        if(ceilMode)
+            params.rounding_mode = csl::Pooling<float>::rounding_type::CEILING;
+        else
+            params.rounding_mode = csl::Pooling<float>::rounding_type::FLOOR;
 
         pooler = csl::Pooling<float>(cudnnHandle, params);
     }

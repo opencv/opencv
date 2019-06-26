@@ -101,8 +101,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                             stride[0], stride[1]
                         )
                     );
-                }
-                else {
+                } else {
                     std::vector<int> iwindow_size(std::begin(window_size), std::end(window_size));
                     std::vector<int> ipadding(std::begin(padding), std::end(padding));
                     std::vector<int> istride(std::begin(stride), std::end(stride));
