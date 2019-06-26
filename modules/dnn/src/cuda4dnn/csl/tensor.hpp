@@ -10,7 +10,6 @@
 #include "cublas.hpp"
 #include "cudnn.hpp"
 #include "span.hpp"
-#include "kernels.hpp"
 #include "workspace.hpp"
 
 #include <opencv2/core.hpp>

@@ -8,6 +8,7 @@
 #include "stream.hpp"
 #include "memory.hpp"
 #include "span.hpp"
+#include "tensor.hpp"
 
 #include <cstddef>
 
@@ -39,6 +40,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
 
     template <class T>
     void power(const Stream& stream, span<T> dest, view<T> src, T exp, T scale, T shift);
+
+    template <class T>
+    void concat(
+        const Stream& stream,
+        TensorSpan<T> output, TensorView<T> input,
+        std::size_t concat_size, std::size_t input_concat_axis_size,
+        std::size_t output_concat_axis_size, std::size_t output_offset_concat_axis);
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 

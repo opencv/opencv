@@ -42,12 +42,19 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -105,6 +112,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA() && !padding) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
@@ -232,6 +240,62 @@ public:
 
         return true;
     }
+#endif
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_UNUSED(workspace);
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        auto output_concat_axis = [&] {
+            auto actual_dims = output_wrapper->getShape().size();
+            auto extra_dims = output.rank - actual_dims;
+            return clamp(axis, actual_dims) + extra_dims;
+        }();
+
+        std::size_t concat_size = 1;
+        for (auto i = output_concat_axis + 1; i < output.rank; i++)
+            concat_size *= output.get_axis_size(i);
+
+        std::size_t output_concat_axis_offset = 0;
+        for (std::size_t i = 0; i < inputs.size(); i++)
+        {
+            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto input = input_wrapper->getView();
+
+            auto input_concat_axis = [&] {
+                auto actual_dims = input_wrapper->getShape().size();
+                auto extra_dims = input.rank - actual_dims;
+                return clamp(axis, actual_dims) + extra_dims;
+            }();
+
+            csl::kernels::concat<float>(stream, output, input,
+                concat_size, input.get_axis_size(input_concat_axis),
+                output.get_axis_size(output_concat_axis), output_concat_axis_offset);
+
+            output_concat_axis_offset += input.get_axis_size(input_concat_axis);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+    }
+
+    csl::Stream stream;
 #endif
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
