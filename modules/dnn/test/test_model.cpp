@@ -11,7 +11,7 @@ template<typename TString>
 static std::string _tf(TString filename)
 {
     String rootFolder = "dnn/";
-    return findDataFile(rootFolder + filename, false);
+    return findDataFile(rootFolder + filename);
 }
 
 
@@ -88,6 +88,15 @@ TEST_P(Test_Model, Classify)
 
 TEST_P(Test_Model, DetectRegion)
 {
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_OPENCL_FP16 )
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    if (target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+#endif
+
     std::vector<int> refClassIds = {6, 1, 11};
     std::vector<float> refConfidences = {0.750469f, 0.780879f, 0.901615f};
     std::vector<Rect2d> refBoxes = {Rect2d(240, 53, 135, 72),
@@ -104,7 +113,7 @@ TEST_P(Test_Model, DetectRegion)
 
     double confThreshold = 0.24;
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = 1e-5;
+    double iouDiff = (target == DNN_TARGET_MYRIAD) ? 6e-3 : 1e-5;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
@@ -114,6 +123,14 @@ TEST_P(Test_Model, DetectRegion)
 
 TEST_P(Test_Model, DetectionOutput)
 {
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
+
     std::vector<int> refClassIds = {7, 12};
     std::vector<float> refConfidences = {0.991359f, 0.94786f};
     std::vector<Rect2d> refBoxes = {Rect2d(491, 81, 212, 98),
@@ -128,7 +145,7 @@ TEST_P(Test_Model, DetectionOutput)
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
                         4e-3 : default_l1;
-    double iouDiff = 1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16) ? 1.8e-1 : 1e-5;
     float confThreshold = 0.8;
     float nmsThreshold = 0;
 
@@ -139,6 +156,11 @@ TEST_P(Test_Model, DetectionOutput)
 
 TEST_P(Test_Model, DetectionMobilenetSSD)
 {
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#endif
+
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
     ref = ref.reshape(1, ref.size[2]);
 
@@ -170,8 +192,9 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     double scale = 1.0 / 127.5;
     Size size{300, 300};
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
-    double iouDiff = 1e-5;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.7e-2 : 1e-5;
+    double iouDiff = (target == DNN_TARGET_MYRIAD &&
+                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 5.5e-2 : 1e-5;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;
