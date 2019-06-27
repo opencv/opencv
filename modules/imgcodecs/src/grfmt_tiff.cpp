@@ -272,9 +272,10 @@ bool TiffDecoder::readHeader()
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3, sf = SAMPLEFORMAT_UINT;
             CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
+            CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sf));
 
             m_width = wdth;
             m_height = hght;
@@ -295,27 +296,47 @@ bool TiffDecoder::readHeader()
             switch(bpp)
             {
                 case 1:
-                    m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
-                    result = true;
+                    if(sf == SAMPLEFORMAT_UINT) {
+                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
+                        result = true;
+                    } else {
+                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 1 bit! Must be UINT.");
+                    }
                     break;
                 case 8:
-                    m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
-                    result = true;
+                    if(sf == SAMPLEFORMAT_UINT) {
+                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
+                        result = true;
+                    } else {
+                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 8 bit! Must be UINT.");
+                    }
                     break;
                 case 16:
-                    m_type = CV_MAKETYPE(CV_16U, !isGrayScale ? wanted_channels : 1);
-                    result = true;
+                    if(sf == SAMPLEFORMAT_UINT) {
+                        m_type = CV_MAKETYPE(CV_16U, !isGrayScale ? wanted_channels : 1);
+                        result = true;
+                    } else {
+                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 16 bit! Must be UINT.");
+                    }
                     break;
                 case 32:
-                    m_type = CV_MAKETYPE(CV_32F, wanted_channels);
-                    result = true;
+                    if(sf == SAMPLEFORMAT_IEEEFP) {
+                        m_type = CV_MAKETYPE(CV_32F, wanted_channels);
+                        result = true;
+                    } else {
+                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 32 bit! Must be IEEEFP.");
+                    }
                     break;
                 case 64:
-                    m_type = CV_MAKETYPE(CV_64F, wanted_channels);
-                    result = true;
+                    if(sf == SAMPLEFORMAT_IEEEFP) {
+                        m_type = CV_MAKETYPE(CV_64F, wanted_channels);
+                        result = true;
+                    } else {
+                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 64 bit! Must be IEEEFP.");
+                    }
                     break;
-            default:
-                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
+                default:
+                    CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
             }
         }
     }
@@ -491,7 +512,6 @@ bool  TiffDecoder::readData( Mat& img )
             else if (dst_bpp == 32 || dst_bpp == 64)
             {
                 CV_Assert(ncn == img.channels());
-                CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
             const size_t buffer_size = (bpp / bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer(buffer_size);
