@@ -135,6 +135,7 @@ struct Split3Test        : public TestParams<std::tuple<cv::Size, cv::GCompileAr
 struct Split4Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
 struct ResizeTest        : public TestWithParam<std::tuple<compare_f, int, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
 struct ResizeTestFxFy    : public TestWithParam<std::tuple<compare_f, int, int, cv::Size, double, double, cv::GCompileArgs>> {};
+struct ResizePTest       : public TestWithParam<std::tuple<compare_f, int, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
 struct Merge3Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
 struct Merge4Test        : public TestParams<std::tuple<cv::Size, cv::GCompileArgs>> {};
 struct RemapTest         : public TestParams<std::tuple<int,cv::Size,bool, cv::GCompileArgs>> {};
