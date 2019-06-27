@@ -28,8 +28,8 @@ struct Model::Impl
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
 
-        blobFromImage(frame, blob, 1.0, size, Scalar(), swapRB, crop, CV_8U);
-        net.setInput(blob, "", scale, mean);
+        blob = blobFromImage(frame, scale, size, mean, swapRB, crop);
+        net.setInput(blob);
 
         // Faster-RCNN or R-FCN
         if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
