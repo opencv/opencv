@@ -49,14 +49,14 @@ public:
             boxesDouble[i] = boxes[i];
         }
         normAssertDetections(refClassIds, refConfidences, refBoxes, classIds,
-                         confidences, boxesDouble, "",
-                         confThreshold, scoreDiff, iouDiff);
+                             confidences, boxesDouble, "",
+                             confThreshold, scoreDiff, iouDiff);
     }
 
     void testClassifyModel(const std::string& weights, const std::string& cfg,
-                    const std::string& imgPath, std::pair<int, float> ref, float norm,
-                    const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                    double scale = 1.0, bool swapRB = false, bool crop = false)
+                           const std::string& imgPath, std::pair<int, float> ref, float norm,
+                           const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                           double scale = 1.0, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 

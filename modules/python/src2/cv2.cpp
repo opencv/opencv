@@ -1102,17 +1102,17 @@ template<typename _Tp> struct pyopencvVecConverter
                     return false;
                 data[j] = saturate_cast<_Cp>(v);
             }
+            else if( PyLong_Check(item_ij))
+            {
+                int v = (int)PyLong_AsLong(item_ij);
+                if( v == -1 && PyErr_Occurred() )
+                    return false;
+                data[j] = saturate_cast<_Cp>(v);
+            }
             else if( PyFloat_Check(item_ij))
             {
                 double v = PyFloat_AsDouble(item_ij);
                 if( PyErr_Occurred() )
-                    return false;
-                data[j] = saturate_cast<_Cp>(v);
-            }
-            else if( PyLong_Check(item_ij) || PyNumber_Check(item_ij))
-            {
-                int v = (int)PyLong_AsLong(item_ij);
-                if( v == -1 && PyErr_Occurred() )
                     return false;
                 data[j] = saturate_cast<_Cp>(v);
             }
@@ -1364,10 +1364,16 @@ bool pyopencv_to(PyObject* obj, Rect& r, const char* name)
     if(!obj || obj == Py_None)
         return true;
 
-    std::vector<int> value(4);
-    pyopencvVecConverter<int>::to(obj, value, ArgInfo(name, 0));
-    r = Rect(value[0], value[1], value[2], value[3]);
-    return true;
+    if (PyTuple_Check(obj))
+        return PyArg_ParseTuple(obj, "iiii", &r.x, &r.y, &r.width, &r.height) > 0;
+    else
+    {
+        std::vector<int> value(4);
+        pyopencvVecConverter<int>::to(obj, value, ArgInfo(name, 0));
+        r = Rect(value[0], value[1], value[2], value[3]);
+        return true;
+    }
+
 }
 
 template<>
