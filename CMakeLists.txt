@@ -156,7 +156,6 @@ if(MSVC)
   # if( RTX64 )
 	# set(COMPILER_THREADING_SUFFIX _MT)
   # endif( RTX64 )
-  
 endif()
 
 if( WITH_RTX64_GIGE )
