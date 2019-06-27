@@ -26,11 +26,13 @@ protected:
     void Init()
     {
         MatType type = CV_8UC3;
-
         out_mat_ocv  = cv::Mat(sz, type, cv::Scalar(0));
         out_mat_gapi = cv::Mat(sz, type, cv::Scalar(0));
 
         if (isNV12Format) {
+            /* NB: When converting data from BGR to NV12, data loss occurs,
+             * so the reference data is subjected to the same transformation
+             * for correct comparison of the test results */
             cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
             cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
         }
@@ -43,6 +45,7 @@ protected:
             cv::gapi::wip::draw::render(y, uv, prims);
             cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
 
+            // NB: Also due to data loss
             cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
             cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
         } else {
