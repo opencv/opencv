@@ -627,64 +627,55 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         int rst_interval = 0;
         int luma_quality = -1;
         int chroma_quality = -1;
+        int dpix = -1;
+        int dpiy = -1;
 
-        for( size_t i = 0; i < params.size(); i += 2 )
-        {
-            if( params[i] == CV_IMWRITE_JPEG_QUALITY )
-            {
-                quality = params[i+1];
-                quality = MIN(MAX(quality, 0), 100);
-            }
+        readParam(params, IMWRITE_JPEG_PROGRESSIVE, progressive);
+        readParam(params, IMWRITE_JPEG_OPTIMIZE, optimize);
+        readParam(params, IMWRITE_JPEG_RST_INTERVAL, rst_interval, 0, 65535);
+        readParam(params, IMWRITE_DPIX, dpix);
+        readParam(params, IMWRITE_DPIY, dpiy);
 
-            if( params[i] == CV_IMWRITE_JPEG_PROGRESSIVE )
-            {
-                progressive = params[i+1];
-            }
+        // order of parameters matters, so evaluate in loop
+        for( size_t i = 0; i < params.size(); i += 2 ) {
+            switch(params[i]) {
+                case IMWRITE_JPEG_QUALITY:
+                    quality = limitParam(params[i + 1], 0, 100);
+                    break;
 
-            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
-            {
-                optimize = params[i+1];
-            }
-
-            if( params[i] == CV_IMWRITE_JPEG_LUMA_QUALITY )
-            {
-                if (params[i+1] >= 0)
-                {
-                    luma_quality = MIN(MAX(params[i+1], 0), 100);
-
-                    quality = luma_quality;
-
-                    if (chroma_quality < 0)
-                    {
-                        chroma_quality = luma_quality;
+                case IMWRITE_JPEG_LUMA_QUALITY:
+                    if (params[i + 1] >= 0) {
+                        quality = luma_quality = limitParam(params[i + 1], 0, 100);
+                        if (chroma_quality < 0) {
+                            chroma_quality = luma_quality;
+                        }
                     }
-                }
-            }
+                    break;
 
-            if( params[i] == CV_IMWRITE_JPEG_CHROMA_QUALITY )
-            {
-                if (params[i+1] >= 0)
-                {
-                    chroma_quality = MIN(MAX(params[i+1], 0), 100);
-                }
-            }
-
-            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
-            {
-                rst_interval = params[i+1];
-                rst_interval = MIN(MAX(rst_interval, 0), 65535L);
+                case IMWRITE_JPEG_CHROMA_QUALITY:
+                    if (params[i + 1] >= 0) {
+                        chroma_quality = limitParam(params[i + 1], 0, 100);
+                    }
+                    break;
             }
         }
 
         jpeg_set_defaults( &cinfo );
         cinfo.restart_interval = rst_interval;
 
-        jpeg_set_quality( &cinfo, quality,
-                          TRUE /* limit to baseline-JPEG values */ );
+        jpeg_set_quality( &cinfo, quality, TRUE /* limit to baseline-JPEG values */ );
         if( progressive )
             jpeg_simple_progression( &cinfo );
         if( optimize )
             cinfo.optimize_coding = TRUE;
+        if(dpix >= 0) {
+            cinfo.X_density = dpix;
+            cinfo.density_unit = 1; // dpi
+        }
+        if(dpiy >= 0) {
+            cinfo.Y_density = dpiy;
+            cinfo.density_unit = 1; // dpi
+        }
 
 #if JPEG_LIB_VERSION >= 70
         if (luma_quality >= 0 && chroma_quality >= 0)

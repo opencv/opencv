@@ -44,6 +44,7 @@
 #define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
+#include <map>
 
 /**
   @defgroup imgcodecs Image file reading and writing
@@ -93,10 +94,25 @@ enum ImwriteFlags {
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
        IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
-       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI
-       IMWRITE_TIFF_YDPI = 258, //!< For TIFF, use to specify the Y direction DPI
+       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction resolution as defined by IMWRITE_TIFF_RESUNIT
+       IMWRITE_TIFF_YDPI = 258, //!< For TIFF, use to specify the Y direction resolution as defined by IMWRITE_TIFF_RESUNIT
        IMWRITE_TIFF_COMPRESSION = 259, //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
-       IMWRITE_JPEG2000_COMPRESSION_X1000 = 272 //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
+       IMWRITE_TIFF_PREDICTOR = 317, //!< For TIFF, LZW-predictor, default is PREDICTOR_HORIZONTAL. Deviant numeric value (TIFFTAG_PREDICTOR) for backward-compatibility.
+       IMWRITE_TIFF_PAGENUMBER1 = 260, //! For TIFF: first page number (current)
+       IMWRITE_TIFF_PAGENUMBER2 = 261, //! For TIFF: second page number (total)
+       IMWRITE_TIFF_APPEND = 262, //!< For TIFF, append to existing data.
+       IMWRITE_JPEG2000_COMPRESSION_X1000 = 272, //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
+       // be careful about 317 for IMWRITE_TIFF_PREDICTOR
+       IMWRITE_TIFF_STR_IMAGEDESCRIPTION = 400, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_DOCUMENTNAME = 401, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_PAGENAME = 402, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_MAKE = 405, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_MODEL = 406, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_SOFTWARE = 407, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_DATETIME = 408, //! For TIFF: string-parameter
+       IMWRITE_TIFF_STR_COPYRIGHT = 409, //! For TIFF: string-parameter
+       IMWRITE_DPIX = 512, //!< for all formats supporting it
+       IMWRITE_DPIY = 513, //!< for all formats supporting it
      };
 
 enum ImwriteEXRTypeFlags {
@@ -222,6 +238,26 @@ compression parameters:
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
+/** @brief Saves an image to a specified file.
+@sa imwrite(const String&,InputArray,const std::vector<int>&)
+@param filename Name of the file.
+@param img Image to be saved.
+@param iparams Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+@param sparams string-parameters, see cv::ImwriteFlags
+*/
+CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
+              const std::vector<int>& iparams, const std::map<int, String> &sparams);
+
+/** @brief Saves an image to a specified file.
+@sa imwrite(const String&,InputArray,const std::vector<int>&)
+@param filename Name of the file.
+@param img Image to be saved.
+@param iparams int-parameters as map, not vector, see cv::ImwriteFlags
+@param sparams string-parameters, see cv::ImwriteFlags
+*/
+CV_EXPORTS_W bool imwrite( const String& filename, InputArray _img,
+              const std::map<int, int>& iparams, const std::map<int, String> &sparams = std::map<int, String>());
+
 /** @brief Reads an image from a buffer in memory.
 
 The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
@@ -256,6 +292,30 @@ result. See cv::imwrite for the list of supported formats and flags description.
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
+
+/** @brief Encodes an image into a memory buffer.
+@sa imencode(const String&,InputArray img,std::vector<uchar>&,const std::vector<int>&)
+@param ext File extension that defines the output format.
+@param img Image to be written.
+@param buf Output buffer resized to fit the compressed image.
+@param iparams int-parameters as map, not vector, see cv::ImwriteFlags
+@param sparams string-parameters, see cv::ImwriteFlags
+*/
+CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
+                            CV_OUT std::vector<uchar>& buf,
+                            const std::vector<int>& iparams, const std::map<int, String> &sparams);
+
+/** @brief Encodes an image into a memory buffer.
+@sa imencode(const String&,InputArray img,std::vector<uchar>&,const std::vector<int>&)
+@param ext File extension that defines the output format.
+@param img Image to be written.
+@param buf Output buffer resized to fit the compressed image.
+@param iparams int-parameters as map, not vector, see cv::ImwriteFlags
+@param sparams string-parameters, see cv::ImwriteFlags
+*/
+CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
+                            CV_OUT std::vector<uchar>& buf,
+                            const std::map<int, int>& iparams, const std::map<int, String> &sparams = std::map<int, String>());
 
 /** @brief Returns true if the specified image can be decoded by OpenCV
 

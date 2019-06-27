@@ -144,7 +144,9 @@ public:
     virtual bool setDestination( const String& filename );
     virtual bool setDestination( std::vector<uchar>& buf );
     virtual bool write( const Mat& img, const std::vector<int>& params ) = 0;
+    virtual bool write( const Mat& img, const std::vector<int>& iparams, const std::map<int, String> &sparams );
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+    virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& iparams, const std::map<int, String> &sparams);
 
     virtual String getDescription() const;
     virtual ImageEncoder newEncoder() const;
@@ -159,6 +161,11 @@ protected:
     bool m_buf_supported;
 
     String m_last_error;
+
+    inline int limitParam(int val, int min, int max) { return val >= min ? val <= max ? val : max : min; }
+    static bool readParam(const std::vector<int> &params, int key, int &value);
+    static bool readParam(const std::vector<int> &params, int key, int &value, int min, int max);
+    static bool readParam(const std::map<int, String> &params, int key, String &value);
 };
 
 }

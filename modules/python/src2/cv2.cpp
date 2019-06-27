@@ -44,6 +44,28 @@ struct PyOpenCV_Converter
     //static inline PyObject* from(const T& src);
 };
 
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by new versions of imwrite() and imencode()
+template<> struct PyOpenCV_Converter<std::map<int, int> > {
+    static bool to(PyObject*, std::map<int, int>&, const char*) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<int, int>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+};
+
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by new versions of imwrite() and imencode()
+template<> struct PyOpenCV_Converter<std::map<int, cv::String> > {
+    static bool to(PyObject*, std::map<int, std::string>&, const char*) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<int, cv::String>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+};
+
 template<typename T> static
 bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>") { return PyOpenCV_Converter<T>::to(obj, p, name); }
 
@@ -155,6 +177,9 @@ typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
+
+typedef std::map<int, int> map_int_and_int;
+typedef std::map<int, String> map_int_and_String;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {

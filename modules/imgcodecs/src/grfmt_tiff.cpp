@@ -865,6 +865,12 @@ bool TiffEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F;
 }
 
+bool TiffEncoder::setDestination( std::vector<uchar>& buf ) {
+    m_buf = &buf;
+    m_filename = String();
+    return true;
+}
+
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
                              TiffFieldType fieldType,
                              int count, int value )
@@ -883,20 +889,33 @@ public:
             : m_buf(buf), m_buf_pos(0)
     {}
 
-    TIFF* open ()
+    TIFF* open (bool append)
     {
+        if(!append) m_buf->clear();
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
         // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
-        return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
+        return TIFFClientOpen( "", append ? "am" : "wm", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
                                /*map=*/0, /*unmap=*/0 );
     }
 
-    static tmsize_t read( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    /// used for appending
+    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
     {
-        // Not used for encoding.
-        return 0;
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper *>(handle);
+        size_t begin = (size_t) helper->m_buf_pos;
+        if (helper->m_buf->size() < begin) return 0;
+
+        size_t end = begin + n;
+        if (helper->m_buf->size() < end)
+        {
+            n = helper->m_buf->size() - begin;
+            end = begin + n;
+        }
+        memcpy(buffer, &(*helper->m_buf)[begin], n);
+        helper->m_buf_pos = end;
+        return n;
     }
 
     static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
@@ -952,33 +971,36 @@ private:
     toff_t m_buf_pos;
 };
 
-static bool readParam(const std::vector<int>& params, int key, int& value)
-{
-    for (size_t i = 0; i + 1 < params.size(); i += 2)
-    {
-        if (params[i] == key)
-        {
-            value = params[i + 1];
-            return true;
-        }
-    }
-    return false;
-}
+#define PARAM2TAG(a) {IMWRITE_TIFF_STR_##a,  TIFFTAG_##a}
+typedef std::map<ImwriteFlags, int> StringParamTagMap;
+static StringParamTagMap stringParamTagMap {
+        PARAM2TAG(IMAGEDESCRIPTION),
+        PARAM2TAG(DOCUMENTNAME),
+        PARAM2TAG(PAGENAME),
+        PARAM2TAG(MAKE),
+        PARAM2TAG(MODEL),
+        PARAM2TAG(SOFTWARE),
+        PARAM2TAG(DATETIME),
+        PARAM2TAG(COPYRIGHT)
+};
+#undef PARAM2TAG
 
-bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
+bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params, const std::map<int, String>& sparams)
 {
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
     TIFF* tif = NULL;
-
     TiffEncoderBufHelper buf_helper(m_buf);
+    int append = 0;
+
+    readParam(params, IMWRITE_TIFF_APPEND, append);
     if ( m_buf )
     {
-        tif = buf_helper.open();
+        tif = buf_helper.open(append);
     }
     else
     {
-        tif = TIFFOpen(m_filename.c_str(), "w");
+        tif = TIFFOpen(m_filename.c_str(), append ? "a" : "w");
     }
     if (!tif)
     {
@@ -990,12 +1012,23 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     int compression = COMPRESSION_LZW;
     int predictor = PREDICTOR_HORIZONTAL;
     int resUnit = -1, dpiX = -1, dpiY = -1;
+    int page1 = -1, page2 = 0;
+
+    if(readParam(params, IMWRITE_DPIX, dpiX)) {
+        resUnit = RESUNIT_INCH;
+    }
+
+    if(readParam(params, IMWRITE_DPIY, dpiY)) {
+        resUnit = RESUNIT_INCH;
+    }
 
     readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
-    readParam(params, TIFFTAG_PREDICTOR, predictor);
+    readParam(params, IMWRITE_TIFF_PREDICTOR, predictor);
     readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
     readParam(params, IMWRITE_TIFF_XDPI, dpiX);
     readParam(params, IMWRITE_TIFF_YDPI, dpiY);
+    readParam(params, IMWRITE_TIFF_PAGENUMBER1, page1);
+    readParam(params, IMWRITE_TIFF_PAGENUMBER2, page2);
 
     //Iterate through each image in the vector and write them out as Tiff directories
     for (size_t page = 0; page < img_vec.size(); page++)
@@ -1093,6 +1126,16 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         {
             CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_YRESOLUTION, (float)dpiY));
         }
+        if(page1 >= 0 && page2 >= 0) {
+            CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PAGENUMBER, page1, page2));
+        }
+        for(StringParamTagMap::const_iterator itr = stringParamTagMap.begin(); itr != stringParamTagMap.end(); ++itr) {
+            CV_Assert(itr->second);
+            String str;
+            if(readParam(sparams, itr->first, str)) {
+                CV_TIFF_CHECK_CALL(TIFFSetField(tif, itr->second, str.c_str()));
+            }
+        }
 
         // row buffer, because TIFFWriteScanline modifies the original data!
         size_t scanlineSize = TIFFScanlineSize(tif);
@@ -1137,6 +1180,11 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     return true;
 }
 
+static const std::map<int, String> empty_int_String_map;
+bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params ) {
+    return writeLibTiff(img_vec, params, empty_int_String_map);
+}
+
 bool TiffEncoder::write_32FC3_SGILOG(const Mat& _img, void* tif_)
 {
     TIFF* tif = (TIFF*)tif_;
@@ -1163,21 +1211,26 @@ bool TiffEncoder::write_32FC3_SGILOG(const Mat& _img, void* tif_)
     return true;
 }
 
-bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
-{
-    return writeLibTiff(img_vec, params);
-}
-
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 {
-    int type = img.type();
-    int depth = CV_MAT_DEPTH(type);
+    return write(img, params, empty_int_String_map);
+}
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
-
+bool TiffEncoder::write( const Mat& img, const std::vector<int>& iparams, const std::map<int, String> &sparams )
+{
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
-    return writeLibTiff(img_vec, params);
+    return writemulti(img_vec, iparams, sparams);
+}
+
+bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
+{
+    return writemulti(img_vec, params, empty_int_String_map);
+}
+
+bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& iparams, const std::map<int, String> &sparams)
+{
+    return writeLibTiff(img_vec, iparams, sparams);
 }
 
 } // namespace

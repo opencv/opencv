@@ -361,6 +361,11 @@ void PngEncoder::flushBuf(void*)
 {
 }
 
+static png_uint_32 dpi2m(int dpi)
+{
+    return (png_uint_32)floor(MAX(0, dpi) *  100. / 2.54 + .5);
+}
+
 bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
@@ -396,24 +401,24 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                 int compression_level = -1; // Invalid value to allow setting 0-9 as valid
                 int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-                bool isBilevel = false;
+                int isBilevel = false;
+                int dpix = -1; int dpiy = -1;
 
-                for( size_t i = 0; i < params.size(); i += 2 )
-                {
-                    if( params[i] == IMWRITE_PNG_COMPRESSION )
-                    {
-                        compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                        compression_level = params[i+1];
-                        compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
-                    }
-                    if( params[i] == IMWRITE_PNG_STRATEGY )
-                    {
-                        compression_strategy = params[i+1];
-                        compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
-                    }
-                    if( params[i] == IMWRITE_PNG_BILEVEL )
-                    {
-                        isBilevel = params[i+1] != 0;
+                readParam(params, IMWRITE_PNG_BILEVEL, isBilevel);
+                readParam(params, IMWRITE_DPIX, dpix);
+                readParam(params, IMWRITE_DPIY, dpiy);
+
+                // order of parameters matters, so evaluate in loop
+                for( size_t i = 0; i < params.size(); i += 2 ) {
+                    switch (params[i]) {
+                        case IMWRITE_PNG_COMPRESSION:
+                            compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+                            compression_level = limitParam(params[i + 1], 0, Z_BEST_COMPRESSION);
+                            break;
+
+                        case IMWRITE_PNG_STRATEGY:
+                            compression_strategy = limitParam(params[i + 1], 0, Z_FIXED);
+                            break;
                     }
                 }
 
@@ -437,6 +442,10 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
+
+                    if(dpix >= 0 || dpiy >= 0) {
+                        png_set_pHYs(png_ptr, info_ptr, dpi2m(dpix), dpi2m(dpiy), PNG_RESOLUTION_METER);
+                    }
 
                     png_write_info( png_ptr, info_ptr );
 

@@ -532,7 +532,12 @@ ImageEncoder BmpEncoder::newEncoder() const
     return makePtr<BmpEncoder>();
 }
 
-bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
+static int dpi2m(int dpi)
+{
+    return (int)floor(MAX(0, dpi) *  100. / 2.54 + .5);
+}
+
+bool  BmpEncoder::write( const Mat& img, const std::vector<int> &params)
 {
     int width = img.cols, height = img.rows, channels = img.channels();
     int fileStep = (width*channels + 3) & -4;
@@ -546,6 +551,10 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     }
     else if( !strm.open( m_filename ))
         return false;
+
+    int dpix = 0, dpiy = 0;
+    readParam(params, IMWRITE_DPIX, dpix);
+    readParam(params, IMWRITE_DPIY, dpiy);
 
     int  bitmapHeaderSize = 40;
     int  paletteSize = channels > 1 ? 0 : 1024;
@@ -572,8 +581,8 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     strm.putWord( channels << 3 );
     strm.putDWord( BMP_RGB );
     strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
+    strm.putDWord( dpi2m(dpix) );
+    strm.putDWord( dpi2m(dpiy) );
     strm.putDWord( 0 );
     strm.putDWord( 0 );
 
