@@ -88,7 +88,7 @@ ImageDecoder DICOMDecoder::newDecoder() const
     return makePtr<DICOMDecoder>();
 }
 
-bool  DICOMDecoder::readHeader()
+bool  DICOMDecoder::readHeader(std::map<String, String>* /*properties*/)
 {
     gdcm::ImageReader csImageReader;
     csImageReader.SetFileName(m_filename.c_str());
@@ -162,7 +162,7 @@ bool  DICOMDecoder::readHeader()
 }
 
 
-bool  DICOMDecoder::readData( Mat& csImage )
+bool  DICOMDecoder::readData( Mat& csImage, std::map<String, String>* /*properties*/ )
 {
     csImage.create(m_width,m_height,m_type);
 

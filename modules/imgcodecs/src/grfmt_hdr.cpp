@@ -67,8 +67,9 @@ size_t HdrDecoder::signatureLength() const
            m_signature.size() : m_signature_alt.size();
 }
 
-bool  HdrDecoder::readHeader()
+bool  HdrDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     file = fopen(m_filename.c_str(), "rb");
     if(!file) {
         return false;
@@ -82,11 +83,11 @@ bool  HdrDecoder::readHeader()
     return true;
 }
 
-bool HdrDecoder::readData(Mat& _img)
+bool HdrDecoder::readData(Mat& _img, std::map<String, String> *properties)
 {
     Mat img(m_height, m_width, CV_32FC3);
     if(!file) {
-        if(!readHeader()) {
+        if(!readHeader(properties)) {
             return false;
         }
     }

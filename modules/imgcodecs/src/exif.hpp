@@ -78,6 +78,7 @@ enum AppMarkerTypes
  */
 enum ExifTagName
 {
+    DOCUMENT_NAME           = 0x010D,   ///< Document Name: ASCII-string
     IMAGE_DESCRIPTION       = 0x010E,   ///< Image Description: ASCII string
     MAKE                    = 0x010F,   ///< Description of manufacturer: ASCII string
     MODEL                   = 0x0110,   ///< Description of camera model: ASCII string

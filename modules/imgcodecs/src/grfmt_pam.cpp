@@ -370,8 +370,9 @@ ImageDecoder PAMDecoder::newDecoder() const
     return makePtr<PAMDecoder>();
 }
 
-bool PAMDecoder::readHeader()
+bool PAMDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     PamHeaderFieldType fieldtype = PAM_HEADER_NONE;
     char value[MAX_PAM_HEADER_VALUE_LENGTH+1];
     int byte;
@@ -493,7 +494,7 @@ bool PAMDecoder::readHeader()
 }
 
 
-bool PAMDecoder::readData(Mat& img)
+bool PAMDecoder::readData(Mat& img, std::map<String, String>* /*properties*/)
 {
     uchar* data = img.ptr();
     const int target_channels = img.channels();

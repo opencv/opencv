@@ -78,8 +78,9 @@ void  SunRasterDecoder::close()
 }
 
 
-bool  SunRasterDecoder::readHeader()
+bool  SunRasterDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     bool result = false;
 
     if( !m_strm.open( m_filename )) return false;
@@ -158,7 +159,7 @@ bool  SunRasterDecoder::readHeader()
 }
 
 
-bool  SunRasterDecoder::readData( Mat& img )
+bool  SunRasterDecoder::readData( Mat& img, std::map<String, String>* /*properties*/ )
 {
     bool color = img.channels() > 1;
     uchar* data = img.ptr();

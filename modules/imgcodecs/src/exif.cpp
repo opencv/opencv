@@ -335,6 +335,9 @@ ExifEntry_t ExifReader::parseExifEntry(const size_t offset)
 
     switch( tagNum )
     {
+        case DOCUMENT_NAME:
+            entry.field_str = getString( offset );
+            break;
         case IMAGE_DESCRIPTION:
             entry.field_str = getString( offset );
             break;

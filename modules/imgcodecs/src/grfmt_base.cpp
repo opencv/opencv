@@ -47,6 +47,12 @@
 namespace cv
 {
 
+const String BaseImageDecoder::dpi_x = "dpi-x";
+const String BaseImageDecoder::dpi_y = "dpi-y";
+const String BaseImageDecoder::document_name = "document-name";
+const String BaseImageDecoder::page_name = "page-name";
+const String BaseImageDecoder::page_number = "page-number";
+
 BaseImageDecoder::BaseImageDecoder()
 {
     m_width = m_height = 0;

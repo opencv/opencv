@@ -76,8 +76,17 @@ ImageDecoder BmpDecoder::newDecoder() const
     return makePtr<BmpDecoder>();
 }
 
-bool  BmpDecoder::readHeader()
+static void setRes(int resx, int resy, std::map<String, String> *properties) {
+    if(!properties) return;
+    std::map<String, String> &p = *properties;
+    p[BaseImageDecoder::dpi_x] = BaseImageDecoder::toString(resx * 2.54 / 100);
+    p[BaseImageDecoder::dpi_y] = BaseImageDecoder::toString(resy * 2.54 / 100);
+}
+
+bool  BmpDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
+
     bool result = false;
     bool iscolor = false;
 
@@ -103,10 +112,13 @@ bool  BmpDecoder::readHeader()
             m_height = m_strm.getDWord();
             m_bpp    = m_strm.getDWord() >> 16;
             m_rle_code = (BmpCompression)m_strm.getDWord();
-            m_strm.skip(12);
+            m_strm.skip(4); // image size
+            int resx = m_strm.getDWord();
+            int resy = m_strm.getDWord();
             int clrused = m_strm.getDWord();
             m_strm.skip( size - 36 );
 
+            setRes(resx, resy, properties);
             if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
                 m_bpp == 24 || m_bpp == 32 ) && m_rle_code == BMP_RGB) ||
@@ -192,7 +204,7 @@ bool  BmpDecoder::readHeader()
 }
 
 
-bool  BmpDecoder::readData( Mat& img )
+bool  BmpDecoder::readData( Mat& img, std::map<String, String>* /*properties*/ )
 {
     uchar* data = img.ptr();
     int step = validateToInt(img.step);

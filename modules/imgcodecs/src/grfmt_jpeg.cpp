@@ -204,8 +204,32 @@ ImageDecoder JpegDecoder::newDecoder() const
     return makePtr<JpegDecoder>();
 }
 
-bool  JpegDecoder::readHeader()
+static void setRes(const String &name, UINT16 res, UINT8 unit, std::map<String, String> &p) {
+    switch (unit) {
+        case 0: // none
+            p[name] = BaseImageDecoder::toString(-res);
+            break;
+
+        case 1: // inch
+            p[name] = BaseImageDecoder::toString(res);
+            break;
+
+        case 2: // cm
+            p[name] = BaseImageDecoder::toString(res * 2.54);
+            break;
+    }
+}
+
+static void setRes(jpeg_decompress_struct *cinfo, std::map<String, String> *properties) {
+    if(!cinfo || !properties) return;
+    std::map<String, String> &p = *properties;
+    setRes(BaseImageDecoder::dpi_x, cinfo->X_density, cinfo->density_unit, p);
+    setRes(BaseImageDecoder::dpi_y, cinfo->Y_density, cinfo->density_unit, p);
+}
+
+bool  JpegDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     volatile bool result = false;
     close();
 
@@ -386,7 +410,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
  * based on a message of Laurent Pinchart on the video4linux mailing list
  ***************************************************************************/
 
-bool  JpegDecoder::readData( Mat& img )
+bool  JpegDecoder::readData( Mat& img, std::map<String, String> *properties )
 {
     volatile bool result = false;
     size_t step = img.step;
@@ -397,6 +421,8 @@ bool  JpegDecoder::readData( Mat& img )
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
         JSAMPARRAY buffer = 0;
+
+        setRes(cinfo, properties);
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {

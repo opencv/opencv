@@ -96,10 +96,15 @@ public:
     TiffDecoder();
     virtual ~TiffDecoder() CV_OVERRIDE;
 
-    bool  readHeader() CV_OVERRIDE;
-    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool setSource( const String& filename ) CV_OVERRIDE;
+    bool setSource( const Mat& buf ) CV_OVERRIDE;
+    bool  readHeader(std::map<String, String> *properties) CV_OVERRIDE;
+    bool  readData( Mat& img, std::map<String, String> *properties ) CV_OVERRIDE;
     void  close();
+    bool  supportMultiPage() const CV_OVERRIDE { return true; }
+    int   pageNum() const CV_OVERRIDE;
     bool  nextPage() CV_OVERRIDE;
+    bool  gotoPage(int page) CV_OVERRIDE;
 
     size_t signatureLength() const CV_OVERRIDE;
     bool checkSignature( const String& signature ) const CV_OVERRIDE;
@@ -114,6 +119,7 @@ protected:
 private:
     TiffDecoder(const TiffDecoder &); // copy disabled
     TiffDecoder& operator=(const TiffDecoder &); // assign disabled
+    bool open(bool source_set);
 };
 
 // ... and writer

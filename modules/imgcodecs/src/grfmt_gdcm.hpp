@@ -57,8 +57,8 @@ class DICOMDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
     DICOMDecoder();
-    bool  readData( Mat& img ) CV_OVERRIDE;
-    bool  readHeader() CV_OVERRIDE;
+    bool  readHeader(std::map<String, String> *properties) CV_OVERRIDE;
+    bool  readData( Mat& img, std::map<String, String> *properties ) CV_OVERRIDE;
     ImageDecoder newDecoder() const CV_OVERRIDE;
     virtual bool checkSignature( const String& signature ) const CV_OVERRIDE;
 };

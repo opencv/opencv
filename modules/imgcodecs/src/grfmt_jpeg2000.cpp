@@ -145,8 +145,9 @@ void  Jpeg2KDecoder::close()
 }
 
 
-bool  Jpeg2KDecoder::readHeader()
+bool  Jpeg2KDecoder::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     CV_Assert(isJasperEnabled());
     bool result = false;
 
@@ -212,7 +213,7 @@ static void Jpeg2KDecoder_close(Jpeg2KDecoder* ptr)
     ptr->close();
 }
 
-bool  Jpeg2KDecoder::readData( Mat& img )
+bool  Jpeg2KDecoder::readData( Mat& img, std::map<String, String>* /*properties*/ )
 {
     CV_Assert(isJasperEnabled());
 
