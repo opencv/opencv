@@ -643,11 +643,11 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         if( optimize )
             cinfo.optimize_coding = TRUE;
         if(dpix >= 0) {
-            cinfo.X_density = dpix;
+            cinfo.X_density = (UINT16)dpix;
             cinfo.density_unit = 1; // dpi
         }
         if(dpiy >= 0) {
-            cinfo.Y_density = dpiy;
+            cinfo.Y_density = (UINT16)dpiy;
             cinfo.density_unit = 1; // dpi
         }
 
