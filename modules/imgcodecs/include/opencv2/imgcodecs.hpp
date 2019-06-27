@@ -255,7 +255,7 @@ CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
 @param iparams int-parameters as map, not vector, see cv::ImwriteFlags
 @param sparams string-parameters, see cv::ImwriteFlags
 */
-CV_EXPORTS_W bool imwrite( const String& filename, InputArray _img,
+CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::map<int, int>& iparams, const std::map<int, String> &sparams = std::map<int, String>());
 
 /** @brief Reads an image from a buffer in memory.
