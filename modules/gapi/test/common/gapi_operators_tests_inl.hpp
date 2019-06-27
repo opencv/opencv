@@ -14,15 +14,6 @@ namespace opencv_test
 {
 TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 {
-    compare_f cmpF;
-    g_api_ocv_pair_mat_scalar op;
-    int type = 0, dtype = 0;
-    cv::Size sz;
-    bool initOutMatr = false;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
-    initMatsRandU(type, sz, dtype, initOutMatr);
-
     auto fun_gapi = op.g_api_function;
     auto fun_ocv = op.ocv_function ;
 
@@ -33,7 +24,7 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
     auto out = fun_gapi(in1, in2);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
 
     fun_ocv(in_mat1, sc, out_mat_ocv);
 
@@ -46,15 +37,6 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 
 TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 {
-    compare_f cmpF;
-    g_api_ocv_pair_mat_mat op;
-    int type = 0, dtype = 0;
-    cv::Size sz;
-    bool initOutMatr = false;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, op, type, sz, dtype, initOutMatr, compile_args) = GetParam();
-    initMatsRandU(type, sz, dtype, initOutMatr);
-
     auto fun_gapi = op.g_api_function;
     auto fun_ocv = op.ocv_function ;
 
@@ -65,7 +47,7 @@ TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
     auto out = fun_gapi(in1, in2);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), std::move(compile_args));
+    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
 
     fun_ocv(in_mat1, in_mat2, out_mat_ocv);
 
@@ -78,16 +60,12 @@ TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 
 TEST_P(NotOperatorTest, OperatorAccuracyTest)
 {
-    cv::Size sz_in = std::get<1>(GetParam());
-    initMatrixRandU(std::get<0>(GetParam()), sz_in, std::get<0>(GetParam()), std::get<2>(GetParam()));
-    cv::GCompileArgs compile_args;
-
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
     auto out = ~in;
     cv::GComputation c(in, out);
 
-    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -96,7 +74,7 @@ TEST_P(NotOperatorTest, OperatorAccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
-        EXPECT_EQ(out_mat_gapi.size(), sz_in);
+        EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
 } // opencv_test
