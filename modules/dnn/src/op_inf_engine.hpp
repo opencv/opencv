@@ -84,7 +84,7 @@ public:
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 
-    void addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs);
+    void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
 private:
     InferenceEngine::Builder::Network netBuilder;
