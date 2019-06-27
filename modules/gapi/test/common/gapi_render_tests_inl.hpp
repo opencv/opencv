@@ -24,14 +24,14 @@ TEST_P(RenderTextTest, AccuracyTest)
     bool        blo;
 
     std::tie(sz, text, points, ff, fs, color, thick, lt, blo, isNV12Format) = GetParam();
-    Init(sz, isNV12Format);
+    Init();
 
     for (const auto& p : points) {
         cv::putText(out_mat_ocv, text, p, ff, fs, color, thick, lt, blo);
         prims.emplace_back(cv::gapi::wip::draw::Text{text, p, ff, fs, color, thick, lt, blo});
     }
 
-    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
+    Run();
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
@@ -42,14 +42,14 @@ TEST_P(RenderRectTest, AccuracyTest)
     int shift;
 
     std::tie(sz, rects, color, thick, lt, shift, isNV12Format) = GetParam();
-    Init(sz, isNV12Format);
+    Init();
 
     for (const auto& r : rects) {
         cv::rectangle(out_mat_ocv, r, color, thick, lt, shift);
         prims.emplace_back(cv::gapi::wip::draw::Rect{r, color, thick, lt, shift});
     }
 
-    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
+    Run();
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
@@ -61,14 +61,14 @@ TEST_P(RenderCircleTest, AccuracyTest)
     int shift;
 
     std::tie(sz, points, radius, color, thick, lt, shift, isNV12Format) = GetParam();
-    Init(sz, isNV12Format);
+    Init();
 
     for (const auto& p : points) {
         cv::circle(out_mat_ocv, p, radius, color, thick, lt, shift);
         prims.emplace_back(cv::gapi::wip::draw::Circle{p, radius, color, thick, lt, shift});
     }
 
-    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
+    Run();
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }
@@ -79,14 +79,14 @@ TEST_P(RenderLineTest, AccuracyTest)
     int shift;
 
     std::tie(sz, points, color, thick, lt, shift, isNV12Format) = GetParam();
-    Init(sz, isNV12Format);
+    Init();
 
     for (const auto& p : points) {
         cv::line(out_mat_ocv, p.first, p.second, color, thick, lt, shift);
         prims.emplace_back(cv::gapi::wip::draw::Line{p.first, p.second, color, thick, lt, shift});
     }
 
-    Run(out_mat_gapi, out_mat_ocv, isNV12Format);
+    Run();
 
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
 }

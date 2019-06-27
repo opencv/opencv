@@ -23,30 +23,30 @@ template<class T>
 class RenderWithParam : public TestWithParam<T>
 {
 protected:
-    void Init(const cv::Size& size, bool isNV12)
+    void Init()
     {
         MatType type = CV_8UC3;
 
-        out_mat_ocv  = cv::Mat(size, type, cv::Scalar(0));
-        out_mat_gapi = cv::Mat(size, type, cv::Scalar(0));
+        out_mat_ocv  = cv::Mat(sz, type, cv::Scalar(0));
+        out_mat_gapi = cv::Mat(sz, type, cv::Scalar(0));
 
-        if (isNV12) {
+        if (isNV12Format) {
             cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
             cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
         }
     }
 
-    void Run(cv::Mat& out_mat, cv::Mat& ref_mat, bool isNV12)
+    void Run()
     {
-        if (isNV12) {
-            cv::gapi::wip::draw::BGR2NV12(out_mat, y, uv);
+        if (isNV12Format) {
+            cv::gapi::wip::draw::BGR2NV12(out_mat_gapi, y, uv);
             cv::gapi::wip::draw::render(y, uv, prims);
-            cv::cvtColorTwoPlane(y, uv, out_mat, cv::COLOR_YUV2BGR_NV12);
+            cv::cvtColorTwoPlane(y, uv, out_mat_gapi, cv::COLOR_YUV2BGR_NV12);
 
-            cv::gapi::wip::draw::BGR2NV12(ref_mat, y, uv);
-            cv::cvtColorTwoPlane(y, uv, ref_mat, cv::COLOR_YUV2BGR_NV12);
+            cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
+            cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
         } else {
-            cv::gapi::wip::draw::render(out_mat, prims);
+            cv::gapi::wip::draw::render(out_mat_gapi, prims);
         }
     }
 
@@ -68,4 +68,3 @@ struct RenderLineTest   : public RenderWithParam <std::tuple<cv::Size,VecOfPairO
 } // opencv_test
 
 #endif //OPENCV_GAPI_RENDER_TESTS_HPP
-
