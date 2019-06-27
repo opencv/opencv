@@ -20,19 +20,19 @@ using PairOfPoints      = std::pair<cv::Point, cv::Point>;
 using VecOfPairOfPoints = std::vector<PairOfPoints>;
 
 template<class T>
-class RenderTestParams : public TestParams<T>
+class RenderWithParam : public TestWithParam<T>
 {
 protected:
     void Init(const cv::Size& size, bool isNV12)
     {
         MatType type = CV_8UC3;
-        bool initOut = true;
 
-        TestFunctional::initMatsRandU(type, size, type, initOut);
+        out_mat_ocv  = cv::Mat(size, type, cv::Scalar(0));
+        out_mat_gapi = cv::Mat(size, type, cv::Scalar(0));
 
         if (isNV12) {
-            cv::gapi::wip::draw::BGR2NV12(TestFunctional::out_mat_ocv, y, uv);
-            cv::cvtColorTwoPlane(y, uv, TestFunctional::out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
+            cv::gapi::wip::draw::BGR2NV12(out_mat_ocv, y, uv);
+            cv::cvtColorTwoPlane(y, uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
         }
     }
 
@@ -57,12 +57,13 @@ protected:
     bool isNV12Format;
     std::vector<cv::gapi::wip::draw::Prim> prims;
     cv::Mat y, uv;
+    cv::Mat out_mat_ocv, out_mat_gapi;
 };
 
-struct RenderTextTest   : public RenderTestParams <std::tuple<cv::Size,std::string,Points,int,double,cv::Scalar,int,int,bool,bool>> {};
-struct RenderRectTest   : public RenderTestParams <std::tuple<cv::Size,Rects,cv::Scalar,int,int,int,bool>>                          {};
-struct RenderCircleTest : public RenderTestParams <std::tuple<cv::Size,Points,int,cv::Scalar,int,int,int,bool>>                     {};
-struct RenderLineTest   : public RenderTestParams <std::tuple<cv::Size,VecOfPairOfPoints,cv::Scalar,int,int,int,bool>>              {};
+struct RenderTextTest   : public RenderWithParam <std::tuple<cv::Size,std::string,Points,int,double,cv::Scalar,int,int,bool,bool>> {};
+struct RenderRectTest   : public RenderWithParam <std::tuple<cv::Size,Rects,cv::Scalar,int,int,int,bool>>                          {};
+struct RenderCircleTest : public RenderWithParam <std::tuple<cv::Size,Points,int,cv::Scalar,int,int,int,bool>>                     {};
+struct RenderLineTest   : public RenderWithParam <std::tuple<cv::Size,VecOfPairOfPoints,cv::Scalar,int,int,int,bool>>              {};
 
 } // opencv_test
 
