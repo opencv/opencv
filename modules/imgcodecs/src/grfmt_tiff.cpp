@@ -889,7 +889,7 @@ public:
             : m_buf(buf), m_buf_pos(0)
     {}
 
-    TIFF* open (bool append)
+    TIFF* open (int append)
     {
         if(!append) m_buf->clear();
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
