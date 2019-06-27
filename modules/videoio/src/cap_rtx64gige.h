@@ -50,7 +50,7 @@ public:
     // Rtx64 GigE Capture Class constructor calls open with given index
     //
     Rtx64GigECapture(int index);
-    
+
     //
     // Rtx64GigE Capture Class Destructor
     //
@@ -79,7 +79,7 @@ public:
     //
     // Retrieves a frame which was grabbed through grabFrame().
     //
-    //  int flag                        - 
+    //  int flag                        - Currently performs no function
     //  OutputArray image               - The buffer given by the customer which will receive the image
     //
     virtual bool retrieveFrame(int flag, OutputArray image);
@@ -122,7 +122,7 @@ public:
     {
         close();
     }
-    
+
     //
     //  Opens the connection with the camera.  This is called by cvCreateCameraCapture_Rtx64GigE.
     //
@@ -154,15 +154,9 @@ public:
     //  Releases the resources held by the RTX64 GigE Capture class.
     //
     void release(void);
-        
-#ifdef NOT_READY_YET
-        bool CvCaptureCAM_Rtx64GigE::retrieveFrameEx(int index, RtGVImage ** pImageObj);
 
-        void ReturnCameraList(void);
-#endif // NOT_READY_YET
-        
     uint32_t                interfaceIPAddress = 0;             //  The IP Address of the RTX64 NIC
-    
+
 protected:
     //  Image Bits per pixel
     const uint32_t IMAGE_BITS_PER_PIXEL = 16;
@@ -185,7 +179,5 @@ protected:
 };
 }
 
-#endif  // HAVE_RTX64_GIGE 
+#endif  // HAVE_RTX64_GIGE
 #endif // CAP_RTX64GIGE
-
-

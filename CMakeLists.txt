@@ -151,10 +151,10 @@ ocv_clear_vars(OpenCVModules_TARGETS)
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
-  set( RTX64 0 CACHE STRING "If true builds the solution and project for RTX64" )  
+  set( RTX64 0 CACHE STRING "If true builds the solution and project for RTX64" )
   # Threading part of the suffix
   # if( RTX64 )
-	# set(COMPILER_THREADING_SUFFIX _MT) 
+	# set(COMPILER_THREADING_SUFFIX _MT)
   # endif( RTX64 )
   
 endif()
@@ -182,10 +182,10 @@ IF( RTX64 )
 	message (STATUS "This is a Win64 RTX build")
 	add_definitions(-DUNDER_RTSS)
 	# FOREACH(flag_var
-		# CMAKE_CXX_FLAGS 
-		# CMAKE_CXX_FLAGS_DEBUG 
+		# CMAKE_CXX_FLAGS
+		# CMAKE_CXX_FLAGS_DEBUG
 		# CMAKE_CXX_FLAGS_RELEASE
-		# CMAKE_CXX_FLAGS_MINSIZEREL 
+		# CMAKE_CXX_FLAGS_MINSIZEREL
 		# CMAKE_CXX_FLAGS_RELWITHDEBINFO
         # CMAKE_C_FLAGS_RTSSDEBUG
 		# CMAKE_CXX_FLAGS_RTSSDEBUG)

@@ -170,7 +170,7 @@ bool Rtx64GigECapture::open(int index)
         RtPrintf("RtGVGetCameraPayloadSize failed on camera %d. Error: %d\n", index, GetLastError());
         return false;
     }
-    
+
     // Allocate/Initialize RTGV_FRAME buffer using the camera settings
     pActiveFrame = (PRTGV_FRAME)malloc(sizeof(RTGV_FRAME) + payloadSize);
     pActiveFrame->size = sizeof(RTGV_FRAME);
