@@ -482,7 +482,7 @@ bool InfEngineBackendNet::isInitialized()
     return (bool)enginePtr;
 }
 
-void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs)
+void InfEngineBackendNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
 {
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
