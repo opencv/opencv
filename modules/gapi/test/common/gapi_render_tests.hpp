@@ -26,8 +26,8 @@ protected:
     void Init()
     {
         MatType type = CV_8UC3;
-        out_mat_ocv  = cv::Mat(sz, type, cv::Scalar(0));
-        out_mat_gapi = cv::Mat(sz, type, cv::Scalar(0));
+        out_mat_ocv  = cv::Mat(sz, type, cv::Scalar(255));
+        out_mat_gapi = cv::Mat(sz, type, cv::Scalar(255));
 
         if (isNV12Format) {
             /* NB: When converting data from BGR to NV12, data loss occurs,
