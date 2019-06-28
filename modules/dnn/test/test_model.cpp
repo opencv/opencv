@@ -128,6 +128,9 @@ TEST_P(Test_Model, DetectRegion)
 TEST_P(Test_Model, DetectionOutput)
 {
 #if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
@@ -145,10 +148,10 @@ TEST_P(Test_Model, DetectionOutput)
     Size size{800, 600};
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
-                        4.1e-2 : default_l1;
+                        4e-3 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16) ? 1.8e-1 : 1e-5;
     float confThreshold = 0.8;
-    float nmsThreshold = 0;
+    double nmsThreshold = 0.0;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
@@ -193,7 +196,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
                       getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 6.6e-2 : 1e-5;
 
     float confThreshold = FLT_MIN;
-    float nmsThreshold = 0;
+    double nmsThreshold = 0.0;
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
