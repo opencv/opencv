@@ -174,8 +174,7 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    )
+        csl::Workspace& workspace) override
     {
         CV_UNUSED(workspace);
         CV_Assert(outputs.size() == 1);
@@ -200,8 +199,8 @@ public:
         csl::Stream stream_,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes
-    )
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs) override
     {
         stream = std::move(stream_);
     }
