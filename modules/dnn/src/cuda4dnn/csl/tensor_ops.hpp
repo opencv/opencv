@@ -357,7 +357,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         LRN() = default;
         LRN(const LRN&) = delete;
         LRN(LRN&&) = default;
-        LRN(csl::cudnn::Handle handle, std::size_t local_size, double alpha, double beta, double k, lrn_type type) {
+        LRN(cudnn::Handle handle, std::size_t local_size, double alpha, double beta, double k, lrn_type type) {
             cudnnHandle = std::move(handle);
             lrnDesc = LRNDescriptor(local_size, alpha, beta, k, type);
         }
@@ -377,6 +377,39 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     private:
         cudnn::Handle cudnnHandle;
         LRNDescriptor lrnDesc;
+    };
+
+    template <class T>
+    class TensorTransform {
+        using TensorTransformDescriptor = cudnn::TensorTransformDescriptor;
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+
+    public:
+        TensorTransform() = default;
+        TensorTransform(const TensorTransform&) = delete;
+        TensorTransform(TensorTransform&&) = default;
+
+        template <class SequenceContainer>
+        TensorTransform(cudnn::Handle handle, const SequenceContainer& paddingLeft, const SequenceContainer& paddingRight) {
+            cudnnHandle = std::move(handle);
+            transDesc = TensorTransformDescriptor(paddingLeft, paddingRight);
+        }
+
+        TensorTransform& operator=(const TensorTransform&) = delete;
+        TensorTransform& operator=(TensorTransform&&) = default;
+
+        void transform(TensorView<T> input, TensorSpan<T> output) {
+            cudnn::transform<T>(
+                cudnnHandle,
+                transDesc,
+                TensorDescriptor(input.shape()), input.get(),
+                TensorDescriptor(output.shape()), output.get()
+            );
+        }
+
+    private:
+        cudnn::Handle cudnnHandle;
+        TensorTransformDescriptor transDesc;
     };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */

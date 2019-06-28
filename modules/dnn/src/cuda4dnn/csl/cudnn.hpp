@@ -12,5 +12,6 @@
 #include "cudnn/lrn.hpp"
 #include "cudnn/pooling.hpp"
 #include "cudnn/softmax.hpp"
+#include "cudnn/transform.hpp"
 
 #endif /* OPENCV_DNN_CUDA4DNN_CSL_CUDNN_HPP */
