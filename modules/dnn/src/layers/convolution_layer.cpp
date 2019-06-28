@@ -1342,7 +1342,7 @@ public:
         const auto groups = input_feature_maps / input_feature_maps_per_group;
         CV_Assert(input_feature_maps % input_feature_maps_per_group == 0);
 
-        const Mat& filterWeightsSource = newWeightAndBias ? weightsMat : filtersMat;
+        const Mat& filterWeightsSource = fusedWeights ? weightsMat : filtersMat;
         filtersTensor = createTensorHeaderFromMat(filterWeightsSource);
         copyMatToTensor<float>(filtersTensor, filterWeightsSource, stream);
 

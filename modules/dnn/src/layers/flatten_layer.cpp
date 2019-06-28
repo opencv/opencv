@@ -42,7 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "op_cuda.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include <float.h>
 #include <algorithm>
