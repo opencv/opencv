@@ -145,7 +145,7 @@ TEST_P(Test_Model, DetectionOutput)
     Size size{800, 600};
 
     double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ?
-                        4e-3 : default_l1;
+                        4.1e-2 : default_l1;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16) ? 1.8e-1 : 1e-5;
     float confThreshold = 0.8;
     float nmsThreshold = 0;
@@ -190,7 +190,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.7e-2 : 1e-5;
     double iouDiff = (target == DNN_TARGET_MYRIAD &&
-                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 5.5e-2 : 1e-5;
+                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 6.6e-2 : 1e-5;
 
     float confThreshold = FLT_MIN;
     float nmsThreshold = 0;
