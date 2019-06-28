@@ -238,19 +238,31 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: \"" + lastLayer->type + "\"");
 
-    std::vector<int> indices;
-    NMSBoxes(predBoxes, predConf, confThreshold, nmsThreshold, indices);
-
-    boxes.reserve(indices.size());
-    confidences.reserve(indices.size());
-    classIds.reserve(indices.size());
-
-    for (int idx : indices)
+    if (nmsThreshold)
     {
-        boxes.push_back(predBoxes[idx]);
-        confidences.push_back(predConf[idx]);
-        classIds.push_back(predClassIds[idx]);
+        std::vector<int> indices;
+        NMSBoxes(predBoxes, predConf, confThreshold, nmsThreshold, indices);
+
+        boxes.reserve(indices.size());
+        confidences.reserve(indices.size());
+        classIds.reserve(indices.size());
+
+        for (int idx : indices)
+        {
+            boxes.push_back(predBoxes[idx]);
+            confidences.push_back(predConf[idx]);
+            classIds.push_back(predClassIds[idx]);
+        }
     }
+    else
+    {
+        boxes       = std::move(predBoxes);
+        classIds    = std::move(predClassIds);
+        confidences = std::move(predConf);
+    }
+
+
+
 }
 
 }} // namespace
