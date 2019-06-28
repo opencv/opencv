@@ -249,6 +249,8 @@ class ClassInfo(GeneralInfo):
         if ctype in type_dict:
             if "j_import" in type_dict[ctype]:
                 self.imports.add(type_dict[ctype]["j_import"])
+            if "m_type" in type_dict[ctype]:
+                self.imports.add("java.util.Map")
             if "v_type" in type_dict[ctype]:
                 self.imports.add("java.util.List")
                 self.imports.add("java.util.ArrayList")
@@ -662,7 +664,15 @@ class JavaWrapperGenerator(object):
                 if not a.ctype: # hidden
                     continue
                 ci.addImports(a.ctype)
-                if "v_type" in type_dict[a.ctype]: # pass as vector
+                if  "m_type" in type_dict[a.ctype]: # pass as map
+                    jn_args.append  ( ArgInfo([ a.ctype, a.name, "", [], "" ]) )
+                    jni_args.append ( ArgInfo([ a.ctype, "%s_map" % a.name , "", [], "" ]) )
+                    c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
+                    if "I" in a.out or not a.out:
+                        c_prologue.append("%(n)s = Map_to_%(t)s(env, %(n)s_map);" % {"n" : a.name, "t" : a.ctype})
+                    if "O" in a.out:
+                        c_epilogue.append("Copy_%s_to_Map(env,%s,%s_map);" % (a.ctype, a.name, a.name))
+                elif "v_type" in type_dict[a.ctype]: # pass as vector
                     if type_dict[a.ctype]["v_type"] in ("Mat", "vector_Mat"): #pass as Mat or vector_Mat
                         jn_args.append  ( ArgInfo([ "__int64", "%s_mat.nativeObj" % a.name, "", [], "" ]) )
                         jni_args.append ( ArgInfo([ "__int64", "%s_mat_nativeObj" % a.name, "", [], "" ]) )
@@ -951,7 +961,7 @@ class JavaWrapperGenerator(object):
                 if not a.ctype: # hidden
                     jni_name = a.defval
                 cvargs.append( type_dict[a.ctype].get("jni_name", jni_name) % {"n" : a.name})
-                if "v_type" not in type_dict[a.ctype]:
+                if "v_type" not in type_dict[a.ctype] and "m_type" not in type_dict[a.ctype]:
                     if ("I" in a.out or not a.out or self.isWrapped(a.ctype)) and "jni_var" in type_dict[a.ctype]: # complex type
                         c_prologue.append(type_dict[a.ctype]["jni_var"] % {"n" : a.name} + ";")
                     if a.out and "I" not in a.out and not self.isWrapped(a.ctype) and a.ctype:
