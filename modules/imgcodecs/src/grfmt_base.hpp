@@ -150,6 +150,7 @@ public:
 
     virtual String getDescription() const;
     virtual ImageEncoder newEncoder() const;
+    virtual bool supportAppend() const { return false; }
 
     virtual void throwOnEror() const;
 

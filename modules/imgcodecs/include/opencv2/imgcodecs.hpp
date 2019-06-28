@@ -290,7 +290,7 @@ result. See cv::imwrite for the list of supported formats and flags description.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
+                            CV_IN_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
 /** @brief Encodes an image into a memory buffer.
@@ -302,7 +302,7 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 @param sparams string-parameters, see cv::ImwriteFlags
 */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
+                            CV_IN_OUT std::vector<uchar>& buf,
                             const std::vector<int>& iparams, const std::map<int, String> &sparams);
 
 /** @brief Encodes an image into a memory buffer.
@@ -314,7 +314,7 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 @param sparams string-parameters, see cv::ImwriteFlags
 */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
-                            CV_OUT std::vector<uchar>& buf,
+                            CV_IN_OUT std::vector<uchar>& buf,
                             const std::map<int, int>& iparams, const std::map<int, String> &sparams = std::map<int, String>());
 
 /** @brief Returns true if the specified image can be decoded by OpenCV

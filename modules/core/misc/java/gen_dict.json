@@ -902,6 +902,22 @@
             "jni_var": "std::vector< std::vector<char> > %(n)s",
             "v_type": "vector_Mat",
             "j_import": "org.opencv.core.MatOfByte"
+        },
+        "map_int_and_int": {
+            "j_type": "Map<Integer,Integer>",
+            "jn_type": "Map<Integer,Integer>",
+            "jni_type": "jobject",
+            "jni_var": "std::map< int, int > %(n)s",
+            "m_type": "map_int_int",
+            "j_import": "java.util.Map"
+        },
+        "map_int_and_String": {
+            "j_type": "Map<Integer,String>",
+            "jn_type": "Map<Integer,String>",
+            "jni_type": "jobject",
+            "jni_var": "std::map< int, std::string > %(n)s",
+            "m_type": "map_int_int",
+            "j_import": "java.util.Map"
         }
     }
 }

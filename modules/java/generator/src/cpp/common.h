@@ -34,6 +34,7 @@ extern "C" {
 
 #include "converters.h"
 #include "listconverters.hpp"
+#include "mapconverters.hpp"
 
 #ifdef _MSC_VER
 #  pragma warning(disable:4800 4244)

@@ -548,7 +548,7 @@ bool imencode( const String& ext, InputArray _image,
 }
 
 bool imencode( const String& ext, InputArray _image,
-               CV_OUT std::vector<uchar>& buf,
+               std::vector<uchar>& buf,
                const std::map<int, int>& iparams, const std::map<int, String> &sparams)
 {
     std::vector<int> tmp;
@@ -556,7 +556,7 @@ bool imencode( const String& ext, InputArray _image,
 }
 
 bool imencode( const String& ext, InputArray _image,
-               CV_OUT std::vector<uchar>& buf,
+               std::vector<uchar>& buf,
                const std::vector<int>& iparams, const std::map<int, String>& sparams)
 {
     CV_TRACE_FUNCTION();
@@ -569,6 +569,9 @@ bool imencode( const String& ext, InputArray _image,
     ImageEncoder encoder = findEncoder( ext );
     if( !encoder )
         CV_Error( Error::StsError, "could not find encoder for the specified extension" );
+
+    if(!encoder->supportAppend())
+        buf.clear();
 
     if( !encoder->isFormatSupported(image.depth()) )
     {
@@ -588,6 +591,14 @@ bool imencode( const String& ext, InputArray _image,
     else
     {
         String filename = tempfile();
+
+        if(!buf.empty()) {
+            FILE *f = fopen(filename.c_str(), "wb");
+            CV_Assert(f != 0);
+            fwrite(buf.data(), 1, buf.size(), f);
+            fclose(f);
+        }
+
         code = encoder->setDestination(filename);
         CV_Assert( code );
 
