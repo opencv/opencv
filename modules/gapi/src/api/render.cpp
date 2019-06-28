@@ -24,7 +24,7 @@ void cv::gapi::wip::draw::render(cv::Mat& bgr, const Prims& prims)
             {
                 const auto& t_p = cv::util::get<Text>(p);
                 cv::putText(bgr, t_p.text, t_p.org, t_p.ff, t_p.fs,
-                            t_p.color, t_p.thick, t_p.bottom_left_origin);
+                            t_p.color, t_p.thick, t_p.lt, t_p.bottom_left_origin);
                 break;
             }
 
