@@ -135,6 +135,8 @@ public:
 
     ImageEncoder newEncoder() const CV_OVERRIDE;
 
+    bool supportAppend() const CV_OVERRIDE { return true; }
+
 protected:
     void  writeTag( WLByteStream& strm, TiffTag tag,
                     TiffFieldType fieldType,
