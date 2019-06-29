@@ -709,10 +709,10 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #endif
 
 // Instrument region
-#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion  CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
 #define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
-    void *__curr_address__ = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
-    ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, __curr_address__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
+    void *CVAUX_CONCAT(__curr_address__, __LINE__) = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
+    ::cv::instr::IntrumentationRegion CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CVAUX_CONCAT(__curr_address__, __LINE__), false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 // Instrument functions with non-void return type
 #define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
 {\

@@ -461,6 +461,12 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
                 CV_LOG_WARNING(NULL, "DNN-IE: Can't load extension plugin (extra layers for some networks). Specify path via OPENCV_DNN_IE_EXTRA_PLUGIN_PATH parameter");
             }
             // Some of networks can work without a library of extra layers.
+#ifndef _WIN32
+            // Limit the number of CPU threads.
+            enginePtr->SetConfig({{
+                InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
+            }}, 0);
+#endif
         }
         plugin = InferenceEngine::InferencePlugin(enginePtr);
 
@@ -477,7 +483,7 @@ bool InfEngineBackendNet::isInitialized()
     return (bool)enginePtr;
 }
 
-void InfEngineBackendNet::addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs)
+void InfEngineBackendNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
 {
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
