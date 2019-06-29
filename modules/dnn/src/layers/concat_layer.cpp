@@ -112,7 +112,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA() && !padding) ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !padding) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
@@ -246,41 +246,57 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
+        csl::Workspace& workspace) override
     {
-        CV_UNUSED(workspace);
-
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto output = output_wrapper->getSpan();
+        auto outShape = output_wrapper->getShape();
 
-        auto output_concat_axis = [&] {
-            auto actual_dims = output_wrapper->getShape().size();
+        auto concat_axis = [&] {
+            auto actual_dims = outShape.size();
             auto extra_dims = output.rank - actual_dims;
             return clamp(axis, actual_dims) + extra_dims;
         }();
 
-        std::size_t concat_size = 1;
-        for (auto i = output_concat_axis + 1; i < output.rank; i++)
-            concat_size *= output.get_axis_size(i);
-
-        std::size_t output_concat_axis_offset = 0;
-        for (std::size_t i = 0; i < inputs.size(); i++)
+        if (!padding)
         {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
+            std::size_t concat_size = 1;
+            for (auto i = concat_axis + 1; i < output.rank; i++)
+                concat_size *= output.get_axis_size(i);
 
-            auto input_concat_axis = [&] {
-                auto actual_dims = input_wrapper->getShape().size();
-                auto extra_dims = input.rank - actual_dims;
-                return clamp(axis, actual_dims) + extra_dims;
-            }();
+            std::size_t output_concat_axis_offset = 0;
+            for (std::size_t i = 0; i < inputs.size(); i++)
+            {
+                auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+                auto input = input_wrapper->getView();
 
-            csl::kernels::concat<float>(stream, output, input,
-                concat_size, input.get_axis_size(input_concat_axis),
-                output.get_axis_size(output_concat_axis), output_concat_axis_offset);
+                csl::kernels::concat<float>(stream, output, input,
+                    concat_size, input.get_axis_size(concat_axis),
+                    output.get_axis_size(concat_axis), output_concat_axis_offset);
 
-            output_concat_axis_offset += input.get_axis_size(input_concat_axis);
+                output_concat_axis_offset += input.get_axis_size(concat_axis);
+            }
+        }
+        else  /* if(padding) */
+        {
+            csl::memset(output.get(), 0, output.size(), stream);
+
+            std::size_t output_concat_axis_offset = 0;
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+                auto input = input_wrapper->getView();
+                auto inShape = input_wrapper->getShape();
+
+                std::vector<std::size_t> offsets(inShape.size());
+                for (int j = 0; j < offsets.size(); j++)
+                    offsets[j] = (outShape[j] - inShape[j]) / 2;
+                offsets[concat_axis] = output_concat_axis_offset;
+
+                csl::kernels::concat_with_axis_offset(stream, output, input, offsets);
+
+                output_concat_axis_offset += input.get_axis_size(concat_axis);
+            }
         }
     }
 
@@ -289,8 +305,7 @@ public:
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<Ptr<BackendWrapper>>& inputs
-    ) override
+        const std::vector<Ptr<BackendWrapper>>& inputs) override
     {
         stream = std::move(stream_);
     }

@@ -77,6 +77,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     template <class T>
     void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& order);
 
+    template <class T>
+    void concat_with_axis_offset(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& axis_offset);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */
