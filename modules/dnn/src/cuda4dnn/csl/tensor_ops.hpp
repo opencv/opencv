@@ -37,6 +37,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 memcpy(dest.get(), src.get(), dest.size());
         }
 
+        /** @brief permutes the dimensions of a tensor
+         *
+         * Pre-conditions:
+         * - \p dest and \p src must have the same number of elements
+         *
+         * Exception Gaurantee: Basic
+         */
+        template <class T> inline
+        void permute(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, const std::vector<int>& order_) {
+            std::vector<std::size_t> order;
+            for (const auto& sz : order_)
+                order.push_back(clamp_axis(sz, src.rank));
+            csl::kernels::permute(stream, dest, src, order);
+        }
+
         /** @brief performs generalized matrix-multiplication
          *
          * Pre-conditions:

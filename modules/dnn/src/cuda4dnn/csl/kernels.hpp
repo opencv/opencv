@@ -74,6 +74,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     template <class T>
     void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y);
 
+    template <class T>
+    void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& order);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
 #include <float.h>
@@ -49,6 +50,12 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/tensor_ops.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -106,6 +113,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine()) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
@@ -372,6 +380,49 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace) override
+    {
+        CV_UNUSED(workspace);
+        CV_Assert(outputs.size() == 1);
+
+        for (std::size_t i = 0; i < inputs.size(); i++)
+        {
+            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto input = input_wrapper->getView();
+
+            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto output = output_wrapper->getSpan();
+
+            if (!_needsPermute)
+            {
+                if (input.get() != output.get())
+                    csl::tensor_ops::copy(stream, output, input);
+            }
+            else
+            {
+                std::vector<int> order(std::begin(_order), std::end(_order));
+                csl::tensor_ops::permute<float>(stream, output, input, order);
+            }
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs) override
+    {
+        stream = std::move(stream_);
+    }
+
+    csl::Stream stream;
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
@@ -382,14 +433,30 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::PermuteLayer ieLayer(name);
         ieLayer.setOrder(_order);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
+#else
+        InferenceEngine::LayerParams lp;
+        lp.name = name;
+        lp.type = "Permute";
+        lp.precision = InferenceEngine::Precision::FP32;
+        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
+
+        CV_Assert(!_order.empty());
+        ieLayer->params["order"] = format("%zu", _order[0]);
+        for (int i = 1; i < _order.size(); ++i)
+            ieLayer->params["order"] += format(",%zu", _order[i]);
+
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#endif
 #endif  // HAVE_INF_ENGINE
+        return Ptr<BackendNode>();
+    }
 
     size_t _count;
     std::vector<size_t> _order;
