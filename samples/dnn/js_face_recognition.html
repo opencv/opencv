@@ -12,7 +12,7 @@ var persons = {};
 
 //! [Run face detection model]
 function detectFaces(img) {
-  var blob = cv.blobFromImage(img, 1, {width: 128, height: 96}, [104, 177, 123, 0], false, false);
+  var blob = cv.blobFromImage(img, 1, {width: 192, height: 144}, [104, 117, 123, 0], false, false);
   netDet.setInput(blob);
   var out = netDet.forward();
 
@@ -186,16 +186,11 @@ function main() {
 
   document.getElementById('startStopButton').disabled = false;
 };
-
-// Load opencv.js
-cv['onRuntimeInitialized']=()=>{
-  main();
-};
 </script>
 
 </head>
 
-<body>
+<body onload="cv['onRuntimeInitialized']=()=>{ main() }">
   <button id="startStopButton" type="button" disabled="true">Start</button>
   <div id="status"></div>
   <canvas id="output" width=640 height=480 style="max-width: 100%"></canvas>
