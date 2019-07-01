@@ -889,7 +889,7 @@ Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC3.
 
 @sa YUV2RGB, NV12toBGRp, NV12toRGB
 */
-GAPI_EXPORTS GMatP NV12toRGBp(const GMat &y, const GMat &uv);
+GAPI_EXPORTS GMatP NV12toRGBp(const GMat &src_y, const GMat &src_uv);
 
 /** @brief Converts an image from NV12 (YUV420p) color space to BGR.
 The function converts an input image from NV12 color space to RGB.
@@ -904,7 +904,7 @@ Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC3.
 
 @sa YUV2RGB, NV12toBGRp, NV12toBGR
 */
-GAPI_EXPORTS GMatP NV12toBGRp(const GMat &y, const GMat &uv);
+GAPI_EXPORTS GMatP NV12toBGRp(const GMat &src_y, const GMat &src_uv);
 
 //! @} gapi_colorconvert
 } //namespace gapi
