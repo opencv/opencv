@@ -45,6 +45,7 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/render.cpp
+    src/api/ginfer.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
@@ -82,6 +83,10 @@ set(gapi_srcs
     src/backends/ocl/goclimgproc.cpp
     src/backends/ocl/goclcore.cpp
 
+    # IE Backend. FIXME: should be included by CMake
+    # if and only if IE support is enabled
+    src/backends/ie/giebackend.cpp
+
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
@@ -100,7 +105,7 @@ ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 
 # Note `ade` is not a module name but link dependency for ${the_module}
 # (which is opencv_gapi)
-ocv_create_module(ade)
+ocv_create_module(ade ${INF_ENGINE_TARGET})
 
 ocv_add_accuracy_tests()
 # FIXME: test binary is linked with ADE directly since ADE symbols

@@ -7,9 +7,6 @@
 
 #include "precomp.hpp"
 
-#include <functional>
-#include <unordered_set>
-
 #include <ade/util/algorithm.hpp>
 
 #include <ade/util/range.hpp>
@@ -26,8 +23,6 @@
 #include "compiler/gmodel.hpp"
 
 #include "backends/ocl/goclbackend.hpp"
-#include "backends/ocl/goclimgproc.hpp"
-#include "backends/ocl/goclcore.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 

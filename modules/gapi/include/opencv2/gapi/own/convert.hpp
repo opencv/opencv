@@ -32,7 +32,11 @@ namespace gapi
 {
 namespace own
 {
-    inline cv::Mat to_ocv(Mat const& m) { return {m.rows, m.cols, m.type(), m.data, m.step};};
+    inline cv::Mat to_ocv(Mat const& m) {
+        return m.dims.empty()
+            ? cv::Mat{m.rows, m.cols, m.type(), m.data, m.step}
+            : cv::Mat{m.dims, m.type(), m.data};
+    }
            cv::Mat to_ocv(Mat&&)    = delete;
 
     inline cv::Scalar to_ocv(const Scalar& s) { return {s[0], s[1], s[2], s[3]}; };

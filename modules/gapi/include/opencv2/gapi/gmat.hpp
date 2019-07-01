@@ -69,6 +69,7 @@ struct GAPI_EXPORTS GMatDesc
     int chan;
     cv::gapi::own::Size size; // NB.: no multi-dimensional cases covered yet
     bool planar;
+    std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
 
     GMatDesc(int d, int c, cv::gapi::own::Size s, bool p = false)
         : depth(d), chan(c), size(s), planar(p) {}

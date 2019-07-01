@@ -16,6 +16,7 @@
 
 #include <memory>                   //std::shared_ptr
 #include <cstring>                  //std::memcpy
+#include <numeric>                  //std::accumulate
 #include <opencv2/gapi/util/throw.hpp>
 
 namespace cv { namespace gapi { namespace own {
@@ -49,6 +50,10 @@ namespace cv { namespace gapi { namespace own {
             : flags((type & TYPE_MASK)), rows(_rows), cols(_cols), data((uchar*)_data), step(_step == AUTO_STEP ? detail::default_step(type, _cols) : _step)
             {}
 
+            MatHeader(const std::vector<int> &_dims, int type, void* _data)
+            : flags((type & TYPE_MASK)), data((uchar*)_data), step(0), dims(_dims)
+            {}
+
             MatHeader(const MatHeader& ) = default;
             MatHeader(MatHeader&& src) : MatHeader(src) // reuse copy constructor here
             {
@@ -74,6 +79,8 @@ namespace cv { namespace gapi { namespace own {
             //! pointer to the data
             uchar* data = nullptr;
             size_t step = 0;
+            //! dimensions (ND-case)
+            std::vector<int> dims;
         };
     }
     //concise version of cv::Mat suitable for GAPI needs (used when no dependence on OpenCV is required)
@@ -99,6 +106,11 @@ namespace cv { namespace gapi { namespace own {
         Mat(int _rows, int _cols, int _type, void* _data, size_t _step = AUTO_STEP)
         : MatHeader (_rows, _cols, _type, _data, _step)
         {}
+
+        Mat(const std::vector<int> &_dims, int _type, void* _data)
+        : MatHeader (_dims, _type, _data)
+        {}
+
 
         Mat(Mat const& src, const Rect& roi )
         : Mat(src)
@@ -197,7 +209,7 @@ namespace cv { namespace gapi { namespace own {
          */
         void create(int _rows, int _cols, int _type)
         {
-            create({_cols, _rows}, _type);
+            create(Size{_cols, _rows}, _type);
         }
         /** @overload
         @param _size Alternative new matrix size specification: Size(cols, rows)
@@ -213,6 +225,16 @@ namespace cv { namespace gapi { namespace own {
 
                 *this = std::move(tmp);
             }
+        }
+        void create(const std::vector<int> &_dims, int _type) {
+            // FIXME: make a proper reallocation-on-demands
+            // WARNING: no tensor views, so no strides
+            Mat tmp{_dims, _type, nullptr};
+            // FIXME: this accumulate duplicates a lot
+            const auto sz = std::accumulate(_dims.begin(), _dims.end(), 1, std::multiplies<int>());
+            tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
+            tmp.data = tmp.memory.get();
+            *this = std::move(tmp);
         }
 
         /** @brief Copies the matrix to another one.
@@ -248,9 +270,11 @@ namespace cv { namespace gapi { namespace own {
          */
         size_t total() const
         {
+            if (!dims.empty())
+                return std::accumulate(dims.begin(), dims.end(), 1u, std::multiplies<std::size_t>());
+
             return static_cast<size_t>(rows * cols);
         }
-
 
         /** @overload
         @param roi Extracted submatrix specified as a rectangle.

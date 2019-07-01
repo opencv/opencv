@@ -20,6 +20,9 @@
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
+#include <opencv2/gapi/gmat.hpp>    // flatten_g only!
+#include <opencv2/gapi/gscalar.hpp> // flatten_g only!
+
 namespace cv
 {
 // Forward declaration; GNode and GOrigin are an internal
@@ -247,6 +250,18 @@ namespace detail
             return m_ref->m_desc;
         }
     };
+
+    // Helper (FIXME: work-around?)
+    // stripping G types to their host types
+    // like cv::GArray<GMat> would still map to std::vector<cv::Mat>
+    // but not to std::vector<cv::GMat>
+    template<class T> struct flatten_g;
+    template<> struct flatten_g<cv::GMat>    { using type = cv::Mat; };
+    template<> struct flatten_g<cv::GScalar> { using type = cv::Scalar; };
+    template<class T> struct flatten_g       { using type = T; };
+    // FIXME: the above mainly duplicates "ProtoToParam" thing from gtyped.hpp
+    // but I decided not to include gtyped here - probably worth moving that stuff
+    // to some common place? (DM)
 } // namespace detail
 
 /** \addtogroup gapi_data_objects
@@ -263,10 +278,16 @@ public:
     detail::GArrayU strip() const { return m_ref; }
 
 private:
-    static void VCTor(detail::VectorRef& vref) { vref.reset<T>(); }
+    // Host type (or Flat type) - the type this GArray is actually
+    // specified to.
+    using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
+
+    static void VCTor(detail::VectorRef& vref) {
+        vref.reset<HT>();
+    }
     void putDetails() {
         m_ref.setConstructFcn(&VCTor);
-        m_ref.specifyType<T>();
+        m_ref.specifyType<HT>();
     }
 
     detail::GArrayU m_ref;
