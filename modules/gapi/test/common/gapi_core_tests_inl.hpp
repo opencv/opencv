@@ -851,7 +851,7 @@ TEST_P(ResizeTestFxFy, AccuracyTest)
 TEST_P(ResizePTest, AccuracyTest)
 {
     constexpr int planeNum = 3;
-    cv::Size sz_in_p {sz_in.width,  sz_in.height*planeNum};
+    cv::Size sz_in_p {sz.width,  sz.height*planeNum};
     cv::Size sz_out_p{sz_out.width, sz_out.height*planeNum};
 
     cv::Mat in_mat(sz_in_p, CV_8UC1);
@@ -868,7 +868,7 @@ TEST_P(ResizePTest, AccuracyTest)
              (cv::gin(in_mat), cv::gout(out_mat));
 
     for (int i = 0; i < planeNum; i++) {
-        const cv::Mat in_mat_roi = in_mat(cv::Rect(0, i*sz_in.height,  sz_in.width,  sz_in.height));
+        const cv::Mat in_mat_roi = in_mat(cv::Rect(0, i*sz.height,  sz.width,  sz.height));
         cv::Mat out_mat_roi = out_mat_ocv_p(cv::Rect(0, i*sz_out.height, sz_out.width, sz_out.height));
         cv::resize(in_mat_roi, out_mat_roi, sz_out, 0, 0, interp);
     }
