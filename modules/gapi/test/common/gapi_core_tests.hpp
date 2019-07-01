@@ -46,13 +46,13 @@ struct PrintMathOpCoreParams
 {
     // NB: _all_ test parameters (that _vary_) must be a part of the std::string returned.
     //     otherwise, 2 test instantiations that differ _only_ in 1 parameter, that is not appended
-    //     to the printed string, are going to have _the same_ instantioation suffixes which is not
+    //     to the printed string, are going to have _the same_ instantiation suffixes which is not
     //     allowed by GTest.
     //
-    // Example: (in_type is not part of the string) ADD_640x480 with in_type CV_8U vs ADD_640x480
+    // Example: [ in_type is not part of the string ] ADD_640x480 with in_type CV_8U vs ADD_640x480
     //          with in_type CV_16U. We have 2 instantiation suffixes that are the same: ADD_640x480
     //          (for CV_8U) && ADD_640x480 (for CV_16U) => there's no difference between the two
-    //          because the names are identical.
+    //          because the names are identical when in_type is not taken into account.
     template <class TestParams>
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
