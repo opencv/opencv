@@ -1067,7 +1067,7 @@ cvFindNextContour( CvContourScanner scanner )
                         v_uint8 vmask = (vx_load((uchar*)(img + x)) != v_prev);
                         if (v_check_any(vmask))
                         {
-                            p = img[(x += v_find_negative(vmask))];
+                            p = img[(x += v_scan_forward(vmask))];
                             goto _next_contour;
                         }
                     }
@@ -1334,7 +1334,7 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j)
         v_uint8 vmask = (vx_load((uchar*)(src_data + j)) != v_zero);
         if (v_check_any(vmask))
         {
-            j += v_find_negative(vmask);
+            j += v_scan_forward(vmask);
             return j;
         }
     }
@@ -1359,7 +1359,7 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j)
             v_uint8 vmask = (vx_load((uchar*)(src_data + j)) == v_zero);
             if (v_check_any(vmask))
             {
-                j += v_find_negative(vmask);
+                j += v_scan_forward(vmask);
                 return j;
             }
         }

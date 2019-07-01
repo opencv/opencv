@@ -1098,7 +1098,7 @@ v_int32x4 r; // set to {0, 0, -1, -1}
 int idx = v_heading_zeros(r); // idx = 2
 @endcode
 */
-template <typename _Tp, int n> inline int v_find_negative(const v_reg<_Tp, n>& a)
+template <typename _Tp, int n> inline int v_scan_forward(const v_reg<_Tp, n>& a)
 {
     for (int i = 0; i < n; i++)
         if(V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) < 0)

@@ -551,7 +551,7 @@ public:
                                                  vx_load_aligned((const int*)(_mag_a + j + 3*v_int32::nlanes)) > v_low));
                     while (v_check_any(v_cmp))
                     {
-                        int l = v_find_negative(v_cmp);
+                        int l = v_scan_forward(v_cmp);
                         v_cmp &= vx_load(smask + v_int8::nlanes - 1 - l);
                         int k = j + l;
 

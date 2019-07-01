@@ -2754,21 +2754,21 @@ inline bool v_check_any(const v_uint16x32& a) { return v_check_any(v_reinterpret
 inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_uint64x8& a) { return v_check_any(v_reinterpret_as_s64(a)); }
 
-inline int v_find_negative(const v_int8x64& a)
+inline int v_scan_forward(const v_int8x64& a)
 {
     int64 mask = _mm512_movepi8_mask(a.val);
     int mask32 = (int)mask;
     return mask != 0 ? mask32 != 0 ? trailingZeros32(mask32) : 32 + trailingZeros32((int)(mask >> 32)) : 0;
 }
-inline int v_find_negative(const v_uint8x64& a) { return v_find_negative(v_reinterpret_as_s8(a)); }
-inline int v_find_negative(const v_int16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
-inline int v_find_negative(const v_uint16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
-inline int v_find_negative(const v_int32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
-inline int v_find_negative(const v_uint32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
-inline int v_find_negative(const v_float32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
-inline int v_find_negative(const v_int64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
-inline int v_find_negative(const v_uint64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
-inline int v_find_negative(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_uint8x64& a) { return v_scan_forward(v_reinterpret_as_s8(a)); }
+inline int v_scan_forward(const v_int16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_uint16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_int32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_uint32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_float32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_int64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 

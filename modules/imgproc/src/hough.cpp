@@ -1149,13 +1149,13 @@ public:
 
                         if(v_check_any(v_edge1))
                         {
-                            x += v_find_negative(v_edge1);
+                            x += v_scan_forward(v_edge1);
                             goto _next_step;
                         }
 
                         if(v_check_any(v_edge2))
                         {
-                            x += v_uint8::nlanes + v_find_negative(v_edge2);
+                            x += v_uint8::nlanes + v_scan_forward(v_edge2);
                             goto _next_step;
                         }
                     }
