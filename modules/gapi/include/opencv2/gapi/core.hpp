@@ -12,9 +12,9 @@
 
 #include <opencv2/imgproc.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 /** \defgroup gapi_core G-API core (basic) functionality
 @{
@@ -1563,25 +1563,6 @@ either have a single channel (in this case the same table is used for all channe
 number of channels as in the input matrix.
 */
 GAPI_EXPORTS GMat LUT(const GMat& src, const Mat& lut);
-
-/** @brief Performs a 3D look-up table transform of a multi-channel matrix.
-
-The function LUT3D fills the output matrix with values from the look-up table. Indices of the entries
-are taken from the input matrix. Interpolation is applied for mapping 0-255 range values to 0-16 range of 3DLUT table.
-The function processes each element of src as follows:
-@code{.cpp}
-    dst[i][j][k] = lut3D[~src_r][~src_g][~src_b];
-@endcode
-where ~ means approximation.
-Output is a matrix of of @ref CV_8UC3.
-
-@note Function textual ID is "org.opencv.core.transform.LUT3D"
-
-@param src input matrix of @ref CV_8UC3.
-@param lut3D look-up table 17x17x17 3-channel elements.
-@param interpolation The depth of interpoolation to be used.
-*/
-GAPI_EXPORTS GMat LUT3D(const GMat& src, const GMat& lut3D, int interpolation = INTER_NEAREST);
 
 /** @brief Converts a matrix to another data depth with optional scaling.
 

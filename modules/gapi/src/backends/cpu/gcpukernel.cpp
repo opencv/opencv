@@ -9,7 +9,7 @@
 
 #include <cassert>
 
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 const cv::gapi::own::Mat& cv::GCPUContext::inMat(int input)
 {

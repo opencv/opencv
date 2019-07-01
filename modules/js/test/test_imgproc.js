@@ -201,6 +201,89 @@ QUnit.test('test_imgProc', function(assert) {
         expected_img.delete();
         compare_result.delete();
     }
+
+    // fillPoly
+    {
+        let img_width = 6;
+        let img_height = 6;
+
+        let img = new cv.Mat.zeros(img_height, img_width, cv.CV_8UC1);
+
+        let npts = 4;
+        let square_point_data = new Uint8Array([
+            1, 1,
+            4, 1,
+            4, 4,
+            1, 4]);
+        let square_points = cv.matFromArray(npts, 1, cv.CV_32SC2, square_point_data);
+        let pts = new cv.MatVector();
+        pts.push_back (square_points);
+        let color = new cv.Scalar (255);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0,   0,   0,   0,   0,   0]);
+        let expected_img = cv.matFromArray(img_height, img_width, cv.CV_8UC1, expected_img_data);
+
+        cv.fillPoly(img, pts, color);
+
+        let compare_result = new cv.Mat(img_height, img_width, cv.CV_8UC1);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+
+        img.delete();
+        square_points.delete();
+        pts.delete();
+        expected_img.delete();
+        compare_result.delete();
+    }
+
+    // fillConvexPoly
+    {
+        let img_width = 6;
+        let img_height = 6;
+
+        let img = new cv.Mat.zeros(img_height, img_width, cv.CV_8UC1);
+
+        let npts = 4;
+        let square_point_data = new Uint8Array([
+            1, 1,
+            4, 1,
+            4, 4,
+            1, 4]);
+        let square_points = cv.matFromArray(npts, 1, cv.CV_32SC2, square_point_data);
+        let color = new cv.Scalar (255);
+
+        let expected_img_data = new Uint8Array([
+            0,   0,   0,   0,   0,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0, 255, 255, 255, 255,   0,
+            0,   0,   0,   0,   0,   0]);
+        let expected_img = cv.matFromArray(img_height, img_width, cv.CV_8UC1, expected_img_data);
+
+        cv.fillConvexPoly(img, square_points, color);
+
+        let compare_result = new cv.Mat(img_height, img_width, cv.CV_8UC1);
+
+        cv.compare (img, expected_img, compare_result, cv.CMP_EQ);
+
+        // expect every pixels are the same.
+        assert.equal (cv.countNonZero(compare_result), img.total());
+
+        img.delete();
+        square_points.delete();
+        expected_img.delete();
+        compare_result.delete();
+    }
 });
 
 QUnit.test('test_segmentation', function(assert) {

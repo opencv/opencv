@@ -9,13 +9,13 @@ namespace cv {
 namespace utils {
 namespace logging {
 
-LogTagConfigParser::LogTagConfigParser()
+LogTagConfigParser::LogTagConfigParser(LogLevel defaultUnconfiguredGlobalLevel)
 {
     m_parsedGlobal.namePart = "global";
     m_parsedGlobal.isGlobal = true;
     m_parsedGlobal.hasPrefixWildcard = false;
     m_parsedGlobal.hasSuffixWildcard = false;
-    m_parsedGlobal.level = LOG_LEVEL_VERBOSE;
+    m_parsedGlobal.level = defaultUnconfiguredGlobalLevel;
 }
 
 LogTagConfigParser::LogTagConfigParser(const std::string& input)

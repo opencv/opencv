@@ -212,6 +212,36 @@ static inline void applyTestTag(const std::string& tag1, const std::string& tag2
 { applyTestTag_(tag1); applyTestTag_(tag2); applyTestTag_(tag3); applyTestTag_(tag4); checkTestTags(); }
 
 
+/** Append global skip test tags
+*/
+void registerGlobalSkipTag(const std::string& skipTag);
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2)
+{ registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); }
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3)
+{ registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); }
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4)
+{ registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4); }
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+    const std::string& tag5)
+{
+    registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);
+    registerGlobalSkipTag(tag5);
+}
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+    const std::string& tag5, const std::string& tag6)
+{
+    registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);
+    registerGlobalSkipTag(tag5); registerGlobalSkipTag(tag6);
+}
+static inline void registerGlobalSkipTag(const std::string& tag1, const std::string& tag2, const std::string& tag3, const std::string& tag4,
+    const std::string& tag5, const std::string& tag6, const std::string& tag7)
+{
+    registerGlobalSkipTag(tag1); registerGlobalSkipTag(tag2); registerGlobalSkipTag(tag3); registerGlobalSkipTag(tag4);
+    registerGlobalSkipTag(tag5); registerGlobalSkipTag(tag6); registerGlobalSkipTag(tag7);
+}
+
+
+
 class TS;
 
 int64 readSeed(const char* str);
@@ -758,7 +788,7 @@ int main(int argc, char **argv) \
 { \
     CV_TRACE_FUNCTION(); \
     { CV_TRACE_REGION("INIT"); \
-    using namespace cvtest; \
+    using namespace cvtest; using namespace opencv_test; \
     TS* ts = TS::ptr(); \
     ts->init(resourcesubdir); \
     __CV_TEST_EXEC_ARGS(CV_TEST_INIT0_ ## INIT0) \

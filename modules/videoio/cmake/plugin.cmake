@@ -21,15 +21,33 @@ function(ocv_create_builtin_videoio_plugin name target)
   target_link_libraries(${name} PRIVATE ${target})
 
   foreach(mod opencv_videoio opencv_core opencv_imgproc opencv_imgcodecs)
-    target_link_libraries(${name} PRIVATE ${mod})
-    target_include_directories(${name} PRIVATE "${OPENCV_MODULE_${mod}_LOCATION}/include")
+    ocv_target_link_libraries(${name} LINK_PRIVATE ${mod})
+    ocv_target_include_directories(${name} PRIVATE "${OPENCV_MODULE_${mod}_LOCATION}/include")
   endforeach()
+
+  if(WIN32)
+    set(OPENCV_PLUGIN_VERSION "${OPENCV_DLLVERSION}" CACHE STRING "")
+    if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
+      set(OPENCV_PLUGIN_ARCH "_64" CACHE STRING "")
+    else()
+      set(OPENCV_PLUGIN_ARCH "" CACHE STRING "")
+    endif()
+  else()
+    set(OPENCV_PLUGIN_VERSION "" CACHE STRING "")
+    set(OPENCV_PLUGIN_ARCH "" CACHE STRING "")
+  endif()
 
   set_target_properties(${name} PROPERTIES
     CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
+    OUTPUT_NAME "${name}${OPENCV_PLUGIN_VERSION}${OPENCV_PLUGIN_ARCH}"
   )
-  install(TARGETS ${name} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins OPTIONAL)
+
+  if(WIN32)
+    install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT plugins)
+  else()
+    install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins)
+  endif()
 
   add_dependencies(opencv_videoio_plugins ${name})
 

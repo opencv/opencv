@@ -8,18 +8,18 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/core/traits.hpp"
-#include "opencv2/imgproc/types_c.h"
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/core/traits.hpp>
+#include <opencv2/imgproc/types_c.h>
 
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
-#include "opencv2/gapi/own/types.hpp"
+#include <opencv2/gapi/own/types.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/imgproc.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/imgproc.hpp>
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"
@@ -27,8 +27,8 @@
 
 #include "gfluidimgproc_func.hpp"
 
-#include "opencv2/imgproc/hal/hal.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/imgproc/hal/hal.hpp>
+#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -1683,6 +1683,121 @@ GAPI_FLUID_KERNEL(GFluidMedianBlur, cv::gapi::imgproc::GMedianBlur, false)
     }
 };
 
+GAPI_FLUID_KERNEL(GFluidRGB2YUV422, cv::gapi::imgproc::GRGB2YUV422, false)
+{
+    static const int Window = 1;
+    static const auto Kind = cv::GFluidKernel::Kind::Filter;
+
+    static void run(const cv::gapi::fluid::View&   in,
+            cv::gapi::fluid::Buffer& out)
+    {
+        const auto *src = in.InLine<uchar>(0);
+        auto *dst = out.OutLine<uchar>();
+
+        run_rgb2yuv422_impl(dst, src, in.length());
+    }
+};
+
+GAPI_FLUID_KERNEL(GFluidRGB2HSV, cv::gapi::imgproc::GRGB2HSV, true)
+{
+    static const int Window = 1;
+    static const auto Kind = cv::GFluidKernel::Kind::Filter;
+
+    static void run(const cv::gapi::fluid::View&   in,
+                    cv::gapi::fluid::Buffer& out,
+                    cv::gapi::fluid::Buffer& scratch)
+    {
+        const auto *src = in.InLine<uchar>(0);
+        auto *dst = out.OutLine<uchar>();
+
+        auto* sdiv_table = scratch.OutLine<int>(0);
+        auto* hdiv_table = sdiv_table + 256;
+
+        run_rgb2hsv_impl(dst, src, sdiv_table, hdiv_table, in.length());
+    }
+
+    static void initScratch(const cv::GMatDesc& /* in */,
+                            cv::gapi::fluid::Buffer& scratch)
+    {
+        const int hsv_shift = 12;
+
+        cv::GMatDesc desc;
+        desc.chan  = 1;
+        desc.depth = CV_32S;
+        desc.size  = cv::gapi::own::Size(512, 1);
+
+        cv::gapi::fluid::Buffer buffer(desc);
+        scratch = std::move(buffer);
+
+        auto* sdiv_table = scratch.OutLine<int>(0);
+        auto* hdiv_table = sdiv_table + 256;
+
+        sdiv_table[0] = hdiv_table[0] = 0;
+        for(int i = 1; i < 256; i++ )
+        {
+            sdiv_table[i] = cv::saturate_cast<int>((255 << hsv_shift)/(1.*i));
+            hdiv_table[i] = cv::saturate_cast<int>((180 << hsv_shift)/(6.*i));
+        }
+
+    }
+
+    static void resetScratch(cv::gapi::fluid::Buffer& /* scratch */)
+    {
+    }
+};
+
+GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
+{
+    static const int Window = 3;
+    static const int LPI    = 2;
+
+    static void run(const cv::gapi::fluid::View& in,
+                    cv::gapi::fluid::Buffer& out)
+    {
+        const int height = in.meta().size.height;
+        const int border_size = 1;
+        const int width = in.length();
+
+        constexpr int num_lines = LPI + 2 * border_size;
+        const uchar* src[num_lines];
+        uchar* dst[LPI];
+
+        for (int i = 0; i < LPI; ++i)
+        {
+            dst[i] = out.OutLine<uchar>(i);
+        }
+
+        for (int i = 0; i < num_lines; ++i)
+        {
+            src[i] = in.InLine<uchar>(i - 1);
+        }
+
+        if (in.y() == -1)
+        {
+            run_bayergr2rgb_bg_impl(dst[1], src + border_size, width);
+            std::memcpy(dst[0], dst[1], width * 3);
+        }
+        else if (in.y() == height - LPI - 2 * border_size + 1)
+        {
+            run_bayergr2rgb_gr_impl(dst[0], src, width);
+            std::memcpy(dst[1], dst[0], width * 3);
+        }
+        else
+        {
+            run_bayergr2rgb_gr_impl(dst[0], src, width);
+            run_bayergr2rgb_bg_impl(dst[1], src + border_size, width);
+        }
+    }
+
+    static cv::gapi::fluid::Border getBorder(const cv::GMatDesc&)
+    {
+        int  borderType  = cv::BORDER_CONSTANT;
+        auto borderValue = cv::Scalar();
+
+        return { borderType, borderValue };
+    }
+};
+
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
@@ -1709,6 +1824,9 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::fluid::kernels()
       , GFluidGaussBlur
       , GFluidSobel
       , GFluidSobelXY
+      , GFluidRGB2YUV422
+      , GFluidRGB2HSV
+      , GFluidBayerGR2RGB
     #if 0
       , GFluidCanny        -- not fluid (?)
       , GFluidEqualizeHist -- not fluid

@@ -11,8 +11,8 @@
 #include <map>
 #include <unordered_map>
 
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/gcall.hpp"
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/gcall.hpp>
 
 #include "api/gorigin.hpp"
 #include "api/gnode.hpp"

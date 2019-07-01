@@ -11,7 +11,7 @@
 
 #include <ade/util/zip_range.hpp>
 
-#include "opencv2/gapi/opencv_includes.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
 #include "executor/gexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 

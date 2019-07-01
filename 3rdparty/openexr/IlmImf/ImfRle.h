@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,83 +32,32 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
+#ifndef INCLUDED_IMF_RLE_H_
+#define INCLUDED_IMF_RLE_H_
 
+#include "ImfNamespace.h"
+#include "ImfExport.h"
 
-#include <iostream>
-#include <iomanip>
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-using namespace std;
-
-//-----------------------------------------------------
-// Compute a lookup table for float-to-half conversion.
 //
-// When indexed with the combined sign and exponent of
-// a float, the table either returns the combined sign
-// and exponent of the corresponding half, or zero if
-// the corresponding half may not be normalized (zero,
-// denormalized, overflow).
-//-----------------------------------------------------
+// Compress an array of bytes, using run-length encoding,
+// and return the length of the compressed data.
+//
 
-void
-initELut (unsigned short eLut[])
-{
-    for (int i = 0; i < 0x100; i++)
-    {
-    int e = (i & 0x0ff) - (127 - 15);
+IMF_EXPORT
+int rleCompress (int inLength, const char in[], signed char out[]);
 
-    if (e <= 0 || e >= 30)
-    {
-        //
-        // Special case
-        //
+//
+// Uncompress an array of bytes compressed with rleCompress().
+// Returns the length of the uncompressed data, or 0 if the
+// length of the uncompressed data would be more than maxLength.
+//
 
-        eLut[i]         = 0;
-        eLut[i | 0x100] = 0;
-    }
-    else
-    {
-        //
-        // Common case - normalized half, no exponent overflow possible
-        //
+IMF_EXPORT
+int rleUncompress (int inLength, int maxLength,
+                                 const signed char in[], char out[]);
 
-        eLut[i]         =  (e << 10);
-        eLut[i | 0x100] = ((e << 10) | 0x8000);
-    }
-    }
-}
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
-
-//------------------------------------------------------------
-// Main - prints the sign-and-exponent conversion lookup table
-//------------------------------------------------------------
-
-int
-main ()
-{
-    const int tableSize = 1 << 9;
-    unsigned short eLut[tableSize];
-    initELut (eLut);
-
-    cout << "//\n"
-        "// This is an automatically generated file.\n"
-        "// Do not edit.\n"
-        "//\n\n";
-
-    cout << "{\n    ";
-
-    for (int i = 0; i < tableSize; i++)
-    {
-    cout << setw (5) << eLut[i] << ", ";
-
-    if (i % 8 == 7)
-    {
-        cout << "\n";
-
-        if (i < tableSize - 1)
-        cout << "    ";
-    }
-    }
-
-    cout << "};\n";
-    return 0;
-}
+#endif

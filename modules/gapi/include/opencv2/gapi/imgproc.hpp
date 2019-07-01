@@ -8,13 +8,13 @@
 #ifndef OPENCV_GAPI_IMGPROC_HPP
 #define OPENCV_GAPI_IMGPROC_HPP
 
-#include "opencv2/imgproc.hpp"
+#include <opencv2/imgproc.hpp>
 
 #include <utility> // std::tuple
 
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
 
 
 /** \defgroup gapi_imgproc G-API image processing functionality
@@ -185,6 +185,26 @@ namespace imgproc {
     G_TYPED_KERNEL(GBGR2Gray, <GMat(GMat)>, "org.opencv.imgproc.colorconvert.bgr2gray") {
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
+        }
+    };
+
+    G_TYPED_KERNEL(GBayerGR2RGB, <cv::GMat(cv::GMat)>, "org.opencv.imgproc.colorconvert.bayergr2rgb") {
+        static cv::GMatDesc outMeta(cv::GMatDesc in) {
+            return in.withType(CV_8U, 3);
+        }
+    };
+
+    G_TYPED_KERNEL(GRGB2HSV, <cv::GMat(cv::GMat)>, "org.opencv.imgproc.colorconvert.rgb2hsv") {
+        static cv::GMatDesc outMeta(cv::GMatDesc in) {
+            return in;
+        }
+    };
+
+    G_TYPED_KERNEL(GRGB2YUV422, <cv::GMat(cv::GMat)>, "org.opencv.imgproc.colorconvert.rgb2yuv422") {
+        static cv::GMatDesc outMeta(cv::GMatDesc in) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            return in.withType(in.depth, 2);
         }
     };
 }
@@ -784,6 +804,49 @@ Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa YUV2BGR, NV12toRGB
 */
 GAPI_EXPORTS GMat NV12toBGR(const GMat& src_y, const GMat& src_uv);
+
+/** @brief Converts an image from BayerGR color space to RGB.
+The function converts an input image from BayerGR color space to RGB.
+The conventional ranges for G, R, and B channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.bayergr2rgb"
+
+@param src_gr input image: 8-bit unsigned 1-channel image @ref CV_8UC1.
+
+@sa YUV2BGR, NV12toRGB
+*/
+GAPI_EXPORTS GMat BayerGR2RGB(const GMat& src_gr);
+
+/** @brief Converts an image from RGB color space to HSV.
+The function converts an input image from RGB color space to HSV.
+The conventional ranges for R, G, and B channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.rgb2hsv"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@sa YUV2BGR, NV12toRGB
+*/
+GAPI_EXPORTS GMat RGB2HSV(const GMat& src);
+
+/** @brief Converts an image from RGB color space to YUV422.
+The function converts an input image from RGB color space to YUV422.
+The conventional ranges for R, G, and B channel values are 0 to 255.
+
+Output image must be 8-bit unsigned 2-channel image @ref CV_8UC2.
+
+@note Function textual ID is "org.opencv.imgproc.colorconvert.rgb2yuv422"
+
+@param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
+
+@sa YUV2BGR, NV12toRGB
+*/
+GAPI_EXPORTS GMat RGB2YUV422(const GMat& src);
+
 //! @} gapi_colorconvert
 } //namespace gapi
 } //namespace cv

@@ -446,8 +446,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !hasSIMD128() ||
-            sstep > 0x8000 )
+        if( (cn != 1 && cn != 3 && cn != 4) || sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
@@ -1098,9 +1097,6 @@ public:
         int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
         int bcols0 = std::min(buf_size/brows0, dst->cols);
         brows0 = std::min(buf_size/bcols0, dst->rows);
-#if CV_SIMD128
-        bool useSIMD = hasSIMD128();
-#endif
 
         Mat _bufxy(brows0, bcols0, CV_16SC2), _bufa;
         if( !nnfunc )
@@ -1147,7 +1143,6 @@ public:
                             x1 = 0;
 
                             #if CV_SIMD128
-                            if( useSIMD )
                             {
                                 int span = v_float32x4::nlanes;
                                 for( ; x1 <= bcols - span * 2; x1 += span * 2 )
@@ -1189,7 +1184,6 @@ public:
                         x1 = 0;
 
                         #if CV_SIMD128
-                        if (useSIMD)
                         {
                             v_uint16x8 v_scale = v_setall_u16(INTER_TAB_SIZE2 - 1);
                             int span = v_uint16x8::nlanes;
@@ -1207,7 +1201,6 @@ public:
 
                         x1 = 0;
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -1245,7 +1238,6 @@ public:
                         x1 = 0;
 
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1), v_scale3 = v_setall_s32(INTER_TAB_SIZE);
@@ -1898,9 +1890,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         size.height = 1;
     }
 
-#if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-#endif
 #if CV_TRY_SSE4_1
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
 #endif
@@ -1931,7 +1920,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         int span = v_int16x8::nlanes;
                         for( ; x <= size.width - span; x += span )
@@ -1961,7 +1949,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -2002,10 +1989,11 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             {
                 #if CV_SIMD128
                 int span = v_float32x4::nlanes;
-                if( useSIMD )
+                {
                     for( ; x <= (size.width << 1) - span * 2; x += span * 2 )
                         v_store(dst1 + x, v_pack(v_round(v_load(src1f + x)),
                                                  v_round(v_load(src1f + x + span))));
+                }
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -2022,7 +2010,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -2063,7 +2050,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
             #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint16x8 v_mask2 =  v_setall_u16(INTER_TAB_SIZE2-1);
                 v_uint32x4 v_zero =   v_setzero_u32(), v_mask = v_setall_u32(INTER_TAB_SIZE-1);
@@ -2113,7 +2099,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
         {
             #if CV_SIMD128
-            if( useSIMD )
             {
                 v_int16x8 v_mask2 = v_setall_s16(INTER_TAB_SIZE2-1);
                 v_int32x4 v_zero = v_setzero_s32(), v_mask = v_setall_s32(INTER_TAB_SIZE-1);
@@ -2189,9 +2174,6 @@ public:
     #if CV_TRY_AVX2
         bool useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
     #endif
-    #if CV_SIMD128
-        bool useSIMD = hasSIMD128();
-    #endif
     #if CV_TRY_SSE4_1
         bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
     #endif
@@ -2226,7 +2208,6 @@ public:
                         #endif
                         {
                             #if CV_SIMD128
-                            if( useSIMD )
                             {
                                 v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
                                 int span = v_uint16x8::nlanes;
@@ -2260,7 +2241,6 @@ public:
                             x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
                         #endif
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
                             v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);

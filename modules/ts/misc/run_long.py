@@ -43,7 +43,8 @@ LONG_TESTS_DEBUG_VALGRIND = [
     ('tracking', 'UKF.br_mean_squared_error', 5228.27),
     ('tracking', '*DistanceAndOverlap*/1', 1000.0), # dudek
     ('tracking', '*DistanceAndOverlap*/2', 1000.0), # faceocc2
-    ('videoio', 'Videoio_Video.ffmpeg_writebig', 1000),
+    ('videoio', 'videoio/videoio_ffmpeg.write_big*', 1000),
+    ('videoio', 'videoio_ffmpeg.parallel', 1000),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_BoostDesc_LBGM.regression', 1124.51),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG120.regression', 2198.1),
     ('xfeatures2d', 'Features2d_RotationInvariance_Descriptor_VGG48.regression', 1958.52),

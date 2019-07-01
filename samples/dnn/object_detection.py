@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import time
 from threading import Thread
-if sys.version_info[0] == '2':
+if sys.version_info[0] == 2:
     import Queue as queue
 else:
     import queue
@@ -262,7 +262,7 @@ def processingThreadBody():
                 outs = net.forward(outNames)
                 predictionsQueue.put(np.copy(outs))
 
-        while futureOutputs and futureOutputs[0].wait_for(0) == 0:
+        while futureOutputs and futureOutputs[0].wait_for(0):
             out = futureOutputs[0].get()
             predictionsQueue.put(np.copy([out]))
 

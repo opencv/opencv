@@ -8,16 +8,16 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/own/assert.hpp"
-#include "opencv2/core/traits.hpp"
-#include "opencv2/core/hal/hal.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+#include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/core/traits.hpp>
+#include <opencv2/core/hal/hal.hpp>
+#include <opencv2/core/hal/intrin.hpp>
 
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/core.hpp>
 
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/core.hpp"
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/core.hpp>
 
 #include "gfluidbuffer_priv.hpp"
 #include "gfluidbackend.hpp"

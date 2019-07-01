@@ -14,9 +14,9 @@
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
-#include "opencv2/gapi/util/any.hpp"
-#include "opencv2/gapi/own/exports.hpp"
-#include "opencv2/gapi/own/assert.hpp"
+#include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/own/exports.hpp>
+#include <opencv2/gapi/own/assert.hpp>
 
 namespace cv {
 
@@ -29,6 +29,12 @@ namespace detail
     {
         static const char* tag() { return ""; };
     };
+
+    // These structures are tags which separate kernels and transformations
+    struct KernelTag
+    {};
+    struct TransformTag
+    {};
 }
 
 // This definition is here because it is reused by both public(?) and internal

@@ -25,6 +25,8 @@ if(OPENCV_JAVA_TARGET_VERSION)
   set(OPENCV_ANT_JAVAC_EXTRA_ATTRS "${OPENCV_ANT_JAVAC_EXTRA_ATTRS} target=\"${OPENCV_JAVA_TARGET_VERSION}\"")
 endif()
 
+set(OPENCV_JAVADOC_DESTINATION "${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc" CACHE STRING "")
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
 list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 

@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2005-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -51,7 +51,7 @@
 //	share a Lock object among multiple threads.
 //
 //	Typical usage:
-//
+//    
 //	    Mutex mtx;	// Create a Mutex object that is visible
 //	    		//to multiple threads
 //
@@ -66,24 +66,45 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "IlmThreadExport.h"
 #include "IlmBaseConfig.h"
+#include "IlmThreadNamespace.h"
 
-#if defined _WIN32 || defined _WIN64
-    #ifdef NOMINMAX
-        #undef NOMINMAX
-    #endif
-    #define NOMINMAX
-    #include <windows.h>
-#elif HAVE_PTHREAD
-    #include <pthread.h>
+#ifdef ILMBASE_FORCE_CXX03
+#   if defined _WIN32 || defined _WIN64
+#      ifdef NOMINMAX
+#         undef NOMINMAX
+#      endif
+#      define NOMINMAX
+#      include <windows.h>
+#   elif HAVE_PTHREAD
+#      include <pthread.h>
+#   endif
+#else
+#   include <mutex>
 #endif
 
-namespace IlmThread {
+ILMTHREAD_INTERNAL_NAMESPACE_HEADER_ENTER
+
+
+// in c++11, this can just be
+//
+// using Mutex = std::mutex;
+// unfortunately we can't use std::unique_lock as a replacement for Lock since
+// they have different API.
+//
+// if we decide to break the API, we can just
+//
+// using Lock = std::lock_guard<std::mutex>;
+// or
+// using Lock = std::unique_lock<std::mutex>;
+//
+// (or eliminate the type completely and have people use the std library) 
+#ifdef ILMBASE_FORCE_CXX03
 
 class Lock;
 
-
-class Mutex
+class ILMTHREAD_EXPORT Mutex
 {
   public:
 
@@ -96,25 +117,26 @@ class Mutex
     void	unlock () const;
 
     #if defined _WIN32 || defined _WIN64
-    mutable CRITICAL_SECTION _mutex;
+	mutable CRITICAL_SECTION _mutex;
     #elif HAVE_PTHREAD
-    mutable pthread_mutex_t _mutex;
+	mutable pthread_mutex_t _mutex;
     #endif
 
     void operator = (const Mutex& M);	// not implemented
     Mutex (const Mutex& M);		// not implemented
-
+    
     friend class Lock;
 };
+#else
+using Mutex = std::mutex;
+#endif
 
-
-class Lock
+class ILMTHREAD_EXPORT Lock
 {
   public:
 
     Lock (const Mutex& m, bool autoLock = true):
-    _mutex (m),
-    _locked (false)
+        _mutex (const_cast<Mutex &>(m)), _locked (false)
     {
         if (autoLock)
         {
@@ -122,25 +144,25 @@ class Lock
             _locked = true;
         }
     }
-
+    
     ~Lock ()
     {
         if (_locked)
             _mutex.unlock();
     }
-
+    
     void acquire ()
     {
         _mutex.lock();
         _locked = true;
     }
-
+    
     void release ()
     {
         _mutex.unlock();
         _locked = false;
     }
-
+    
     bool locked ()
     {
         return _locked;
@@ -148,11 +170,11 @@ class Lock
 
   private:
 
-    const Mutex &	_mutex;
-    bool		_locked;
+    Mutex & _mutex;
+    bool    _locked;
 };
 
 
-} // namespace IlmThread
+ILMTHREAD_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_ILM_THREAD_MUTEX_H

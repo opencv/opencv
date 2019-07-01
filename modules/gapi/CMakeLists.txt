@@ -44,6 +44,7 @@ set(gapi_srcs
     src/api/operators.cpp
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
+    src/api/render.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp

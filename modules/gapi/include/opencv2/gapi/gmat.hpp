@@ -14,9 +14,9 @@
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/gcommon.hpp> // GShape
 
-#include "opencv2/gapi/own/types.hpp" // cv::gapi::own::Size
-#include "opencv2/gapi/own/convert.hpp" // to_own
-#include "opencv2/gapi/own/assert.hpp"
+#include <opencv2/gapi/own/types.hpp> // cv::gapi::own::Size
+#include <opencv2/gapi/own/convert.hpp> // to_own
+#include <opencv2/gapi/own/assert.hpp>
 
 // TODO GAPI_EXPORTS or so
 namespace cv
