@@ -875,13 +875,27 @@ OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_int64x2, s64)
 OPENCV_HAL_IMPL_NEON_ROTATE_OP(v_float64x2, f64)
 #endif
 
+#if defined(__clang__) && defined(__aarch64__)
+// avoid LD2 instruction. details: https://github.com/opencv/opencv/issues/14863
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ \
+typedef uint64 CV_DECL_ALIGNED(1) unaligned_uint64; \
+uint64 v = *(unaligned_uint64*)ptr; \
+return _Tpvec(v_reinterpret_as_##suffix(v_uint64x2(v, (uint64)123456))); \
+}
+#else
+#define OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); }
+#endif
+
 #define OPENCV_HAL_IMPL_NEON_LOADSTORE_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { return _Tpvec(vld1q_##suffix(ptr)); } \
-inline _Tpvec v_load_low(const _Tp* ptr) \
-{ return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr), vdup_n_##suffix((_Tp)0))); } \
+OPENCV_HAL_IMPL_NEON_LOAD_LOW_OP(_Tpvec, _Tp, suffix) \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
 { return _Tpvec(vcombine_##suffix(vld1_##suffix(ptr0), vld1_##suffix(ptr1))); } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \

@@ -2,13 +2,20 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
+#ifndef OPENCV_GAPI_TESTS_COMMON_HPP
+#define OPENCV_GAPI_TESTS_COMMON_HPP
 
 #include <iostream>
+#include <tuple>
+#include <type_traits>
 
 #include <opencv2/ts.hpp>
 #include <opencv2/gapi.hpp>
+#include <opencv2/gapi/util/util.hpp>
+
+#include "gapi_tests_helpers.hpp"
 
 namespace
 {
@@ -41,6 +48,15 @@ public:
         return cv::Scalar(s1, s2, s3, s4);
     }
 
+    void initOutMats(cv::Size sz_in, int dtype)
+    {
+        if (dtype != -1)
+        {
+            out_mat_gapi = cv::Mat(sz_in, dtype);
+            out_mat_ocv = cv::Mat(sz_in, dtype);
+        }
+    }
+
     void initMatsRandU(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
     {
         in_mat1 = cv::Mat(sz_in, type);
@@ -50,10 +66,9 @@ public:
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
         cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
 
-        if (createOutputMatrices && dtype != -1)
+        if (createOutputMatrices)
         {
-            out_mat_gapi = cv::Mat (sz_in, dtype);
-            out_mat_ocv = cv::Mat (sz_in, dtype);
+            initOutMats(sz_in, dtype);
         }
     }
 
@@ -62,27 +77,27 @@ public:
         in_mat1 = cv::Mat(sz_in, type);
 
         sc = initScalarRandU(100);
-
         cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
 
-        if (createOutputMatrices && dtype != -1)
+        if (createOutputMatrices)
         {
-            out_mat_gapi = cv::Mat (sz_in, dtype);
-            out_mat_ocv = cv::Mat (sz_in, dtype);
+            initOutMats(sz_in, dtype);
         }
     }
 
-    void initMatsRandN(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
+    void initMatrixRandN(int type, cv::Size sz_in, int dtype, bool createOutputMatrices = true)
     {
-        in_mat1  = cv::Mat(sz_in, type);
+        in_mat1 = cv::Mat(sz_in, type);
         cv::randn(in_mat1, cv::Scalar::all(127), cv::Scalar::all(40.f));
 
-        if (createOutputMatrices  && dtype != -1)
+        if (createOutputMatrices)
         {
-            out_mat_gapi = cv::Mat(sz_in, dtype);
-            out_mat_ocv = cv::Mat(sz_in, dtype);
+            initOutMats(sz_in, dtype);
         }
     }
+
+    // empty function intended to show that nothing is to be initialized via TestFunctional methods
+    void initNothing(int, cv::Size, int, bool = true) {}
 
     static cv::Mat nonZeroPixels(const cv::Mat& mat)
     {
@@ -117,6 +132,100 @@ using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
 
+// Universal parameter wrapper for common (pre-defined) and specific (user-defined) parameters
+template<typename ...SpecificParams>
+struct Params
+{
+    using gcomp_args_function_t = cv::GCompileArgs(*)();
+    // TODO: delete bool (createOutputMatrices) from common parameters
+    using common_params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t>;
+    using specific_params_t = std::tuple<SpecificParams...>;
+    using params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t, SpecificParams...>;
+    static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
+    static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
+
+    template<size_t I>
+    static const typename std::tuple_element<I, common_params_t>::type&
+    getCommon(const params_t& t)
+    {
+        static_assert(I < common_params_size, "Index out of range");
+        return std::get<I>(t);
+    }
+
+    template<size_t I>
+    static const typename std::tuple_element<I, specific_params_t>::type&
+    getSpecific(const params_t& t)
+    {
+        static_assert(specific_params_size > 0,
+            "Impossible to call this function: no specific parameters specified");
+        static_assert(I < specific_params_size, "Index out of range");
+        return std::get<common_params_size + I>(t);
+    }
+};
+
+// Base class for test fixtures
+template<typename ...SpecificParams>
+struct TestWithParamBase : TestFunctional,
+    TestWithParam<typename Params<SpecificParams...>::params_t>
+{
+    using AllParams = Params<SpecificParams...>;
+
+    MatType type = getCommonParam<0>();
+    cv::Size sz = getCommonParam<1>();
+    MatType dtype = getCommonParam<2>();
+    bool createOutputMatrices = getCommonParam<3>();
+
+    TestWithParamBase()
+    {
+        if (dtype == SAME_TYPE) { dtype = type; }
+    }
+
+    // Get common (pre-defined) parameter value by index
+    template<size_t I>
+    inline auto getCommonParam() const
+        -> decltype(AllParams::template getCommon<I>(this->GetParam()))
+    {
+        return AllParams::template getCommon<I>(this->GetParam());
+    }
+
+    // Get specific (user-defined) parameter value by index
+    template<size_t I>
+    inline auto getSpecificParam() const
+        -> decltype(AllParams::template getSpecific<I>(this->GetParam()))
+    {
+        return AllParams::template getSpecific<I>(this->GetParam());
+    }
+
+    // Return G-API compile arguments specified for test fixture
+    inline cv::GCompileArgs getCompileArgs() const
+    {
+        return getCommonParam<4>()();
+    }
+};
+
+/**
+ * @private
+ * @brief Create G-API test fixture with TestWithParamBase base class
+ * @param Fixture   test fixture name
+ * @param InitF     callable that will initialize default available members (from TestFunctional)
+ * @param API       base class API. Specifies types of user-defined parameters. If there are no such
+ *                  parameters, empty angle brackets ("<>") must be specified.
+ * @param Number    number of user-defined parameters (corresponds to the number of types in API).
+ *                  if there are no such parameters, 0 must be specified.
+ * @param ...       list of names of user-defined parameters. if there are no parameters, the list
+ *                  must be empty.
+ */
+#define GAPI_TEST_FIXTURE(Fixture, InitF, API, Number, ...) \
+    struct Fixture : public TestWithParamBase API { \
+        static_assert(Number == AllParams::specific_params_size, \
+            "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
+        __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
+        Fixture() { InitF(type, sz, dtype, createOutputMatrices); } \
+    };
+
+// Wrapper for test fixture API. Use to specify multiple types.
+// Example: FIXTURE_API(int, bool) expands to <int, bool>
+#define FIXTURE_API(...) <__VA_ARGS__>
 
 template<typename T>
 struct Wrappable
@@ -341,3 +450,5 @@ namespace
         return os << "compare_scalar_f";
     }
 }
+
+#endif //OPENCV_GAPI_TESTS_COMMON_HPP

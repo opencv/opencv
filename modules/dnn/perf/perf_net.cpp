@@ -35,7 +35,7 @@ public:
 
         weights = findDataFile(weights, false);
         if (!proto.empty())
-            proto = findDataFile(proto, false);
+            proto = findDataFile(proto);
         if (backend == DNN_BACKEND_HALIDE)
         {
             if (halide_scheduler == "disabled")
@@ -198,10 +198,10 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    Mat sample = imread(findDataFile("dnn/dog416.png", false));
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp;
     sample.convertTo(inp, CV_32FC3);
-    processNet("dnn/yolov3.cfg", "dnn/yolov3.weights", "", inp / 255);
+    processNet("dnn/yolov3.weights", "dnn/yolov3.cfg", "", inp / 255);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)

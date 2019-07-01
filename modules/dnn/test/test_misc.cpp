@@ -62,18 +62,18 @@ TEST(imagesFromBlob, Regression)
 
 TEST(readNet, Regression)
 {
-    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                       findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/opencv_face_detector.caffemodel", false),
-                  findDataFile("dnn/opencv_face_detector.prototxt", false));
+                  findDataFile("dnn/opencv_face_detector.prototxt"));
     EXPECT_FALSE(net.empty());
     net = readNet(findDataFile("dnn/openface_nn4.small2.v1.t7", false));
     EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg", false),
+    net = readNet(findDataFile("dnn/tiny-yolo-voc.cfg"),
                   findDataFile("dnn/tiny-yolo-voc.weights", false));
     EXPECT_FALSE(net.empty());
-    net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt", false),
+    net = readNet(findDataFile("dnn/ssd_mobilenet_v1_coco.pbtxt"),
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
     EXPECT_FALSE(net.empty());
 }
@@ -158,9 +158,9 @@ TEST_P(setInput, normalization)
     const bool kSwapRB = true;
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
-        throw SkipTestException("");
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
-        throw SkipTestException("");
+        throw SkipTestException(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);
