@@ -460,11 +460,11 @@ public:
 
         std::vector<Ptr<BackendWrapper> > blobsWrapper;
 
-        if (newWeightAndBias)
+        if (fusedWeights)
         {
             Mat wm;
             weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
-            wm.reshape(1, blobs[0].dims, blobs[0].size);
+            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
             blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(wm)));
         }
         else
