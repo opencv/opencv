@@ -1244,6 +1244,17 @@ inline int v_signmask(const v_float32x8& a)
 inline int v_signmask(const v_float64x4& a)
 { return _mm256_movemask_pd(a.val); }
 
+inline int v_scan_forward(const v_int8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
+inline int v_scan_forward(const v_uint8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
+inline int v_scan_forward(const v_int16x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 2; }
+inline int v_scan_forward(const v_uint16x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 2; }
+inline int v_scan_forward(const v_int32x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_uint32x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_float32x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_int64x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+inline int v_scan_forward(const v_uint64x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+inline int v_scan_forward(const v_float64x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+
 /** Checks **/
 #define OPENCV_HAL_IMPL_AVX_CHECK(_Tpvec, and_op, allmask)  \
     inline bool v_check_all(const _Tpvec& a)                \
