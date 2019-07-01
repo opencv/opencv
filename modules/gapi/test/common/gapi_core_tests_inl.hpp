@@ -269,7 +269,7 @@ TEST_P(Polar2CartTest, AccuracyTest)
 {
     cv::Mat out_mat2;
     cv::Mat out_mat_ocv2;
-    if(createOutputMatrices)
+    if (dtype != -1)
     {
         out_mat2 = cv::Mat(sz, dtype);
         out_mat_ocv2 = cv::Mat(sz, dtype);
@@ -947,7 +947,7 @@ TEST_P(FlipTest, AccuracyTest)
 TEST_P(CropTest, AccuracyTest)
 {
     cv::Size sz_out = cv::Size(rect_to.width, rect_to.height);
-    if(createOutputMatrices)
+    if (dtype != -1)
     {
         out_mat_gapi = cv::Mat(sz_out, dtype);
         out_mat_ocv = cv::Mat(sz_out, dtype);
@@ -1216,7 +1216,7 @@ TEST_P(SqrtTest, AccuracyTest)
 
 TEST_P(NormalizeTest, Test)
 {
-    initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)), createOutputMatrices);
+    initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;

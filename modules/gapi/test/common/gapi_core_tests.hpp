@@ -37,11 +37,22 @@ const char *BitwiseOperations[] = {"And", "Or", "Xor"};
 const char *CompareOperations[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
 //corresponds to OpenCV
 const char *NormOperations[] = {"", "NORM_INF", "NORM_L1", "","NORM_L2"};
+// helper function that returns correct string representation for dtype
+const auto dtypeToStr = [] (int v) { return (v == -1) ? std::string("neg1") : std::to_string(v); };
 }
 
 
 struct PrintMathOpCoreParams
 {
+    // NB: _all_ test parameters (that _vary_) must be a part of the std::string returned.
+    //     otherwise, 2 test instantiations that differ _only_ in 1 parameter, that is not appended
+    //     to the printed string, are going to have _the same_ instantioation suffixes which is not
+    //     allowed by GTest.
+    //
+    // Example: (in_type is not part of the string) ADD_640x480 with in_type CV_8U vs ADD_640x480
+    //          with in_type CV_16U. We have 2 instantiation suffixes that are the same: ADD_640x480
+    //          (for CV_8U) && ADD_640x480 (for CV_16U) => there's no difference between the two
+    //          because the names are identical.
     template <class TestParams>
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
@@ -55,8 +66,7 @@ struct PrintMathOpCoreParams
                     <<"_"<<(int)AllParams::getSpecific<2>(params)  // scale
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<(AllParams::getCommon<2>(params)+1)  // dtype
-                    <<"_"<<AllParams::getCommon<3>(params)  // createOutputMatrices
+                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params))  // dtype
                     <<"_"<<AllParams::getSpecific<3>(params);  // doReverseOp
         return ss.str();
    }
@@ -76,7 +86,7 @@ struct PrintCmpCoreParams
                     <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
+                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
         return ss.str();
    }
 };
@@ -94,7 +104,7 @@ struct PrintBWCoreParams
                     <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
                     <<"x"<<sz.height
-                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
+                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
         return ss.str();
    }
 };
@@ -111,7 +121,8 @@ struct PrintNormCoreParams
         ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
                     <<"_"<<AllParams::getCommon<0>(params)  // type
                     <<"_"<<sz.width
-                    <<"x"<<sz.height;
+                    <<"x"<<sz.height
+                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
         return ss.str();
    }
 };

@@ -137,10 +137,9 @@ template<typename ...SpecificParams>
 struct Params
 {
     using gcomp_args_function_t = cv::GCompileArgs(*)();
-    // TODO: delete bool (createOutputMatrices) from common parameters
-    using common_params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t>;
+    using common_params_t = std::tuple<int, cv::Size, int, gcomp_args_function_t>;
     using specific_params_t = std::tuple<SpecificParams...>;
-    using params_t = std::tuple<int, cv::Size, int, bool, gcomp_args_function_t, SpecificParams...>;
+    using params_t = std::tuple<int, cv::Size, int, gcomp_args_function_t, SpecificParams...>;
     static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
     static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
 
@@ -173,7 +172,6 @@ struct TestWithParamBase : TestFunctional,
     MatType type = getCommonParam<0>();
     cv::Size sz = getCommonParam<1>();
     MatType dtype = getCommonParam<2>();
-    bool createOutputMatrices = getCommonParam<3>();
 
     TestWithParamBase()
     {
@@ -199,7 +197,7 @@ struct TestWithParamBase : TestFunctional,
     // Return G-API compile arguments specified for test fixture
     inline cv::GCompileArgs getCompileArgs() const
     {
-        return getCommonParam<4>()();
+        return getCommonParam<3>()();
     }
 };
 
@@ -220,7 +218,7 @@ struct TestWithParamBase : TestFunctional,
         static_assert(Number == AllParams::specific_params_size, \
             "Number of user-defined parameters doesn't match size of __VA_ARGS__"); \
         __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__)) \
-        Fixture() { InitF(type, sz, dtype, createOutputMatrices); } \
+        Fixture() { InitF(type, sz, dtype); } \
     };
 
 // Wrapper for test fixture API. Use to specify multiple types.
