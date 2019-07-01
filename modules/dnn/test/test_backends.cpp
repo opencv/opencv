@@ -383,7 +383,8 @@ TEST_P(DNNTestNetwork, DenseNet_121)
         l1 = 0.1; lInf = 0.6;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
-    expectNoFallbacksFromIE(net);
+    if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        expectNoFallbacksFromIE(net);
 }
 
 TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
