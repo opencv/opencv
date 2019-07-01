@@ -2013,14 +2013,14 @@ void SGBM3WayMainLoop::operator () (const Range& range) const
 
                         mask = cost1 < thresh_reg;
                         mask = mask & ( (cur_d<d1) | (cur_d>d2) );
-                        if( v_signmask(mask) )
+                        if( v_check_any(mask) )
                             break;
 
                         cur_d = cur_d+eight_reg;
 
                         mask = cost2 < thresh_reg;
                         mask = mask & ( (cur_d<d1) | (cur_d>d2) );
-                        if( v_signmask(mask) )
+                        if( v_check_any(mask) )
                             break;
 
                         cur_d = cur_d+eight_reg;

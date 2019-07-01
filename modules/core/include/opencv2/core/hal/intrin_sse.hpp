@@ -1617,6 +1617,17 @@ OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_int32x4, epi8, v_packq_epi32, OPENCV_HAL_AND, 
 OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float32x4, ps, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 15, 15)
 OPENCV_HAL_IMPL_SSE_CHECK_SIGNS(v_float64x2, pd, OPENCV_HAL_NOP, OPENCV_HAL_1ST, 3, 3)
 
+inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
+inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
+inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 2; }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 2; }
+inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 4; }
+inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))) / 8; }
+
 #if CV_SSE4_1
 #define OPENCV_HAL_IMPL_SSE_SELECT(_Tpvec, cast_ret, cast, suffix) \
 inline _Tpvec v_select(const _Tpvec& mask, const _Tpvec& a, const _Tpvec& b) \
