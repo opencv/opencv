@@ -478,9 +478,9 @@ TEST_P(NV12toBGRTest, AccuracyTest)
 
     cv::GComputation c(cv::GIn(in_y, in_uv), cv::GOut(out));
     c.apply(cv::gin(in_mat1, in_mat_uv), cv::gout(out_mat_gapi), getCompileArgs());
-    // OpenCV code ///////////////////////////////////////////////////////////// 
+    // OpenCV code /////////////////////////////////////////////////////////////
     {
-        cv::cvtColorTwoPlane(in_mat1, in_mat_uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);      
+        cv::cvtColorTwoPlane(in_mat1, in_mat_uv, out_mat_ocv, cv::COLOR_YUV2BGR_NV12);
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
