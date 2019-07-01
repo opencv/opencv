@@ -36,7 +36,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     void clipped_relu(const Stream& stream, span<T> dest, view<T> src, T floor, T ceiling);
 
     template <class T>
-    void axiswise_relu(const Stream& stream, span<T> dest, view<T> src, view<T> slope, std::size_t inner_size, std::size_t channel_size);
+    void axiswise_relu(const Stream& stream, span<T> dest, view<T> src, view<T> slope, std::size_t inner_size);
 
     template <class T>
     void power(const Stream& stream, span<T> dest, view<T> src, T exp, T scale, T shift);
@@ -44,19 +44,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     template <class T>
     void concat(
         const Stream& stream,
-        TensorSpan<T> output, TensorView<T> input,
-        std::size_t concat_size, std::size_t input_concat_axis_size,
-        std::size_t output_concat_axis_size, std::size_t output_offset_concat_axis);
+        TensorSpan<T> output, std::size_t output_axis_offset,
+        TensorView<T> input, std::size_t axis);
 
     template <class T>
-    void scale(
-        const Stream& stream,
+    void concat_with_offsets(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& axis_offsets);
+
+    template <class T>
+    void scale1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha);
+
+    template <class T>
+    void scaleN(const Stream& stream,
         TensorSpan<T> output,
         TensorView<T> input, std::size_t inner_size,
         TensorView<T> weights);
 
     template <class T>
-    void scale_with_bias(
+    void scale1_with_bias1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha, T beta);
+
+    template <class T>
+    void scaleN_with_biasN(
         const Stream& stream,
         TensorSpan<T> output,
         TensorView<T> input, std::size_t inner_size,
@@ -76,9 +83,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
 
     template <class T>
     void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& order);
-
-    template <class T>
-    void concat_with_axis_offset(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& axis_offset);
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 

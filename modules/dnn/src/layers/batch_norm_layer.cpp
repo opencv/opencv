@@ -332,7 +332,7 @@ public:
         auto input_shape = input_wrapper->getShape();
         std::size_t inner_size = total(input_shape, 2, -1);
 
-        csl::kernels::scale_with_bias<float>(stream, output, input, inner_size, weightsTensor, biasTensor);
+        csl::kernels::scaleN_with_biasN<float>(stream, output, input, inner_size, weightsTensor, biasTensor);
     }
 
     void initCUDA(

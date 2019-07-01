@@ -250,34 +250,28 @@ public:
     {
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto output = output_wrapper->getSpan();
-        auto outShape = output_wrapper->getShape();
+        auto output_shape = output_wrapper->getShape();
 
         auto concat_axis = [&] {
-            auto actual_dims = outShape.size();
+            auto actual_dims = output_shape.size();
             auto extra_dims = output.rank - actual_dims;
             return clamp(axis, actual_dims) + extra_dims;
         }();
 
         if (!padding)
         {
-            std::size_t concat_size = 1;
-            for (auto i = concat_axis + 1; i < output.rank; i++)
-                concat_size *= output.get_axis_size(i);
-
-            std::size_t output_concat_axis_offset = 0;
+            std::size_t output_axis_offset = 0;
             for (std::size_t i = 0; i < inputs.size(); i++)
             {
                 auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
                 auto input = input_wrapper->getView();
 
-                csl::kernels::concat<float>(stream, output, input,
-                    concat_size, input.get_axis_size(concat_axis),
-                    output.get_axis_size(concat_axis), output_concat_axis_offset);
+                csl::kernels::concat<float>(stream, output, output_axis_offset, input, concat_axis);
 
-                output_concat_axis_offset += input.get_axis_size(concat_axis);
+                output_axis_offset += input.get_axis_size(concat_axis);
             }
         }
-        else  /* if(padding) */
+        else /* if(padding) */
         {
             csl::memset(output.get(), 0, output.size(), stream);
 
@@ -286,14 +280,14 @@ public:
             {
                 auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
                 auto input = input_wrapper->getView();
-                auto inShape = input_wrapper->getShape();
+                auto input_shape = input_wrapper->getShape();
 
-                std::vector<std::size_t> offsets(inShape.size());
+                std::vector<std::size_t> offsets(input_shape.size());
                 for (int j = 0; j < offsets.size(); j++)
-                    offsets[j] = (outShape[j] - inShape[j]) / 2;
+                    offsets[j] = (output_shape[j] - input_shape[j]) / 2;
                 offsets[concat_axis] = output_concat_axis_offset;
 
-                csl::kernels::concat_with_axis_offset(stream, output, input, offsets);
+                csl::kernels::concat_with_offsets(stream, output, input, offsets);
 
                 output_concat_axis_offset += input.get_axis_size(concat_axis);
             }

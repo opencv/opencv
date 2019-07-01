@@ -8,40 +8,61 @@
 #include "../cuda4dnn/csl/pointer.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
 
+#include <opencv2/core.hpp>
+
+#include <cstddef>
 #include <cuda_runtime.h>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
         template <class T>
-        __global__ void scale(
-            std::size_t n,
-            DevicePtr<T> output,
-            DevicePtr<const T> input, std::size_t inner_size,
-            DevicePtr<const T> weights, std::size_t scale_size)
+        __global__ void scale1(span<T> output, view<T> input, T alpha)
         {
-            for (auto i : grid_stride_range(n)) {
-                const auto scale_idx = (i / inner_size) % scale_size;
+            for (auto i : grid_stride_range(output.size()))
+                output[i] = alpha * input[i];
+        }
+
+        template <class T>
+        __global__ void scaleN(span<T> output, view<T> input, std::size_t inner_size, view<T> weights)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                const auto scale_idx = (i / inner_size) % weights.size();
                 output[i] = input[i] * weights[scale_idx];
             }
         }
 
         template <class T>
-        __global__ void scale_with_bias(
-            std::size_t n,
-            DevicePtr<T> output,
-            DevicePtr<const T> input, std::size_t inner_size,
-            DevicePtr<const T> weights, DevicePtr<const T> bias, std::size_t scale_bias_size)
+        __global__ void scale1_with_bias1(span<T> output, view<T> input, T alpha, T beta)
         {
-            for (auto i : grid_stride_range(n)) {
-                const auto scale_idx = (i / inner_size) % scale_bias_size;
+            for (auto i : grid_stride_range(output.size()))
+                output[i] = alpha * input[i] + beta;
+        }
+
+        template <class T>
+        __global__ void scaleN_with_biasN(span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                const auto scale_idx = (i / inner_size) % weights.size();
                 output[i] = input[i] * weights[scale_idx] + bias[scale_idx];
             }
         }
     }
 
     template <class T>
-    void scale(
+    void scale1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha) {
+        CV_Assert(is_shape_same(input, output));
+
+        auto kernel = raw::scale1<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, alpha);
+    }
+
+    template void scale1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
+    template void scale1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
+
+    template <class T>
+    void scaleN(
         const Stream& stream,
         TensorSpan<T> output,
         TensorView<T> input, std::size_t inner_size,
@@ -49,28 +70,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     {
         CV_Assert(is_shape_same(input, output));
 
-        auto policy = make_policy(raw::scale<T>, 0, stream);
-        launch_kernel(raw::scale<T>, policy,
-            output.size(),
-            output.get(),
-            input.get(), inner_size,
-            weights.get(), weights.size());
+        auto kernel = raw::scaleN<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size, weights);
     }
 
-    template void scale<float>(
-        const Stream& stream,
-        TensorSpan<float> output,
-        TensorView<float> input, std::size_t inner_size,
-        TensorView<float> weights);
-
-    template void scale<double>(
-        const Stream& stream,
-        TensorSpan<double> output,
-        TensorView<double> input, std::size_t inner_size,
-        TensorView<double> weights);
+    template void scaleN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
+    template void scaleN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>);
 
     template <class T>
-    void scale_with_bias(
+    void scale1_with_bias1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha, T beta) {
+        CV_Assert(is_shape_same(input, output));
+
+        auto kernel = raw::scale1_with_bias1<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, alpha, beta);
+    }
+
+    template void scale1_with_bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
+    template void scale1_with_bias1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double, double);
+
+    template <class T>
+    void scaleN_with_biasN(
         const Stream& stream,
         TensorSpan<T> output,
         TensorView<T> input, std::size_t inner_size,
@@ -79,24 +100,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
         CV_Assert(weights.size() == bias.size());
 
-        auto policy = make_policy(raw::scale_with_bias<T>, 0, stream);
-        launch_kernel(raw::scale_with_bias<T>, policy,
-            output.size(),
-            output.get(),
-            input.get(), inner_size,
-            weights.get(), bias.get(), weights.size());
+        auto kernel = raw::scaleN_with_biasN<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size, weights, bias);
     }
 
-    template void scale_with_bias<float>(
-        const Stream& stream,
-        TensorSpan<float> output,
-        TensorView<float> input, std::size_t inner_size,
-        TensorView<float> weights, TensorView<float> bias);
-
-    template void scale_with_bias<double>(
-        const Stream& stream,
-        TensorSpan<double> output,
-        TensorView<double> input, std::size_t inner_size,
-        TensorView<double> weights, TensorView<double> bias);
+    template void scaleN_with_biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>, TensorView<float>);
+    template void scaleN_with_biasN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>, TensorView<double>);
 
 }}}}} /* cv::dnn::cuda4dnn::csl::kernels */

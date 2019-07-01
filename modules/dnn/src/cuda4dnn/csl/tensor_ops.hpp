@@ -31,10 +31,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Gaurantee: Basic
          */
         template <class T> inline
-            void copy(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
+        void copy(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
             CV_Assert(is_shape_same(dest, src));
             if (dest.get() != src.get())
-                memcpy(dest.get(), src.get(), dest.size());
+                memcpy(dest.get(), src.get(), dest.size(), stream);
         }
 
         /** @brief permutes the dimensions of a tensor
@@ -112,12 +112,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         }
 
         /** @brief performs element-wise addition with broadcasting
-        *
-        * Pre-conditions:
-        * - \p A and \p C must be compatible tensors
-        *
-        * Exception Gaurantee: Basic
-        */
+         *
+         * Pre-conditions:
+         * - \p A and \p C must be compatible tensors
+         *
+         * Exception Gaurantee: Basic
+         */
         template <class T> inline
         void add(const cudnn::Handle& handle, T beta, TensorSpan<T> C, T alpha, TensorView<T> A) {
             CV_Assert(is_shape_compatible(A, C));
@@ -129,12 +129,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         }
 
         /** @brief performs element-wise addition with broadcasting
-        *
-        * Pre-conditions:
-        * - \p A and \p result must be compatible tensors
-        *
-        * Exception Gaurantee: Basic
-        */
+         *
+         * Pre-conditions:
+         * - \p A and \p result must be compatible tensors
+         *
+         * Exception Gaurantee: Basic
+         */
         template <class T> inline
         void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, int channel_axis, bool log) {
             CV_Assert(is_shape_same(output, input));
@@ -188,8 +188,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Assert(is_shape_same(dest, src));
             CV_Assert(src.get_axis_size(1) == slope.size());
             std::size_t inner_size = src.size() / src.get_axis_size(0);
-            std::size_t channel_size = inner_size / src.get_axis_size(1);
-            kernels::axiswise_relu<T>(stream, dest, src, slope, inner_size, channel_size);
+            kernels::axiswise_relu<T>(stream, dest, src, slope, inner_size);
         }
 
         template <class T> inline

@@ -2,26 +2,31 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <cuda_runtime.h>
-
 #include "array.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/kernel_utils.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/pointer.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+
+#include <opencv2/core.hpp>
+
+#include <cstddef>
+#include <cuda_runtime.h>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
         template <class T, std::size_t N>
+        using array = utils::array<T, N>;
+
+        template <class T, std::size_t N>
         __global__ void permute(
-            std::size_t n, utils::array<int, N> axis_order,
-            DevicePtr<T> output, utils::array<int, N> outStrides,
-            DevicePtr<const T> input, utils::array<int, N> inStrides)
+            array<int, N> axis_order,
+            span<T> output, array<int, N> outStrides,
+            view<T> input, array<int, N> inStrides)
         {
-            for (auto i : grid_stride_range(n)) {
+            for (auto i : grid_stride_range(input.size())) {
                 int oldPosition = 0;
                 int newPosition = i;
 
@@ -40,9 +45,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T, std::size_t N> static
     void launch_permute_kernel(
         const Stream& stream,
-        std::size_t n, const std::vector<std::size_t>& order,
-        DevicePtr<T> output, const std::vector<std::size_t>& outStride,
-        DevicePtr<const T> input, const std::vector<std::size_t>& inStride)
+        const std::vector<std::size_t>& order,
+        span<T> output, const std::vector<std::size_t>& outStride,
+        view<T> input, const std::vector<std::size_t>& inStride)
     {
         CV_Assert(order.size() == N);
         CV_Assert(outStride.size() == N);
@@ -55,7 +60,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         auto kernel = raw::permute<T, N>;
         auto policy = make_policy(kernel, 0, stream);
-        launch_kernel(kernel, policy, n, order_k, output, outStride_k, input, inStride_k);
+        launch_kernel(kernel, policy, order_k, output, outStride_k, input, inStride_k);
     }
 
     template <class T>
@@ -96,11 +101,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         if (rank == 5) {
-            launch_permute_kernel<T, 5>(stream, input.size(), order, output.get(), outStride, input.get(), inStride);
+            launch_permute_kernel<T, 5>(stream, order, output, outStride, input, inStride);
         } else if (rank == 4) {
-            launch_permute_kernel<T, 4>(stream, input.size(), order, output.get(), outStride, input.get(), inStride);
+            launch_permute_kernel<T, 4>(stream, order, output, outStride, input, inStride);
         } else if (rank == 3) {
-            launch_permute_kernel<T, 3>(stream, input.size(), order, output.get(), outStride, input.get(), inStride);
+            launch_permute_kernel<T, 3>(stream, order, output, outStride, input, inStride);
         }
     }
 

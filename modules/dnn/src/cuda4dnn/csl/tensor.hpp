@@ -31,12 +31,6 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
-    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
-    template <class T>
-    CUDA4DNN_HOST_DEVICE constexpr T clamp_axis(T axis, std::size_t rank) {
-        return axis < 0 ? axis + rank : axis;
-    }
-
     /** \file tensor.hpp
      *
      * The tensor library contains three kinds of tensor objects which are summarized
@@ -53,6 +47,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      *
      * "TensorType", frequently used as a template parameter, can refer to Tensor, TensorSpan or TensorView.
      */
+
+    /** if the \p axis is a negative index, the equivalent postive index is returned; otherwise, returns \p axis */
+    template <class T>
+    CUDA4DNN_HOST_DEVICE constexpr T clamp_axis(T axis, std::size_t rank) {
+        return axis < 0 ? axis + rank : axis;
+    }
 
     /** @brief multi-dimensional contiguous GPU tensor containing elements of a single type
      *

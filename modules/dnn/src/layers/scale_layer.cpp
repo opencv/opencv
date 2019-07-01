@@ -201,9 +201,9 @@ public:
 
         CV_Assert(hasWeights || hasBias);
         if (hasWeights && hasBias)
-            csl::kernels::scale_with_bias<float>(stream, output, input, inner_size, weights, bias);
+            csl::kernels::scaleN_with_biasN<float>(stream, output, input, inner_size, weights, bias);
         else if (hasWeights)
-            csl::kernels::scale<float>(stream, output, input, inner_size, weights);
+            csl::kernels::scaleN<float>(stream, output, input, inner_size, weights);
         else
         {
             /* rarely used codepath; hence, not optimized TODO */
