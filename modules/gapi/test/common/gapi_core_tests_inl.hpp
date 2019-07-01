@@ -875,7 +875,7 @@ TEST_P(ResizePTest, AccuracyTest)
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat, out_mat_ocv));
+        EXPECT_TRUE(cmpF(out_mat, out_mat_ocv_p));
     }
 }
 
