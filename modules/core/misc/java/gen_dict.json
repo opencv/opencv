@@ -918,6 +918,14 @@
             "jni_var": "std::map< int, std::string > %(n)s",
             "m_type": "map_int_int",
             "j_import": "java.util.Map"
+        },
+        "map_String_and_String": {
+            "j_type": "Map<String,String>",
+            "jn_type": "Map<String,String>",
+            "jni_type": "jobject",
+            "jni_var": "std::map< std::string, std::string > %(n)s",
+            "m_type": "map_string_string",
+            "j_import": "java.util.Map"
         }
     }
 }

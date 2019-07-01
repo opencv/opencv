@@ -66,6 +66,17 @@ template<> struct PyOpenCV_Converter<std::map<int, cv::String> > {
     }
 };
 
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by new versions of imwrite() and imencode()
+template<> struct PyOpenCV_Converter<std::map<cv::String, cv::String> > {
+    static bool to(PyObject*, std::map<cv::String, std::string>&, const char*) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<cv::String, cv::String>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+};
+
 template<typename T> static
 bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>") { return PyOpenCV_Converter<T>::to(obj, p, name); }
 
@@ -180,6 +191,7 @@ typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
 
 typedef std::map<int, int> map_int_and_int;
 typedef std::map<int, String> map_int_and_String;
+typedef std::map<String, String> map_String_and_String;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {

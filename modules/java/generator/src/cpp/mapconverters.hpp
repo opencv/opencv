@@ -15,4 +15,6 @@
 std::map<int, int> Map_to_map_int_and_int(JNIEnv* env, jobject map);
 std::map<int, cv::String> Map_to_map_int_and_String(JNIEnv* env, jobject map);
 
+void Copy_map_String_and_String_to_Map(JNIEnv *env, const std::map<std::string, std::string> &src, jobject dst);
+
 #endif //OPENCV_MAPCONVERTER_HPP
