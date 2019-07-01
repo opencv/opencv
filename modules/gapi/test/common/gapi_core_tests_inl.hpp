@@ -850,13 +850,6 @@ TEST_P(ResizeTestFxFy, AccuracyTest)
 
 TEST_P(ResizePTest, AccuracyTest)
 {
-    compare_f cmpF;
-    int type = 0, interp = 0;
-    cv::Size sz_in, sz_out;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, interp, sz_in, sz_out, compile_args) = GetParam();
-    GAPI_Assert(type == CV_8UC3);
-
     constexpr int planeNum = 3;
     cv::Size sz_in_p {sz_in.width,  sz_in.height*planeNum};
     cv::Size sz_out_p{sz_out.width, sz_out.height*planeNum};
@@ -871,7 +864,7 @@ TEST_P(ResizePTest, AccuracyTest)
     auto out = cv::gapi::resizeP(in, sz_out, interp);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
-    c.compile(cv::descr_of(in_mat).asPlanar(planeNum), std::move(compile_args))
+    c.compile(cv::descr_of(in_mat).asPlanar(planeNum), getCompileArgs())
              (cv::gin(in_mat), cv::gout(out_mat));
 
     for (int i = 0; i < planeNum; i++) {
