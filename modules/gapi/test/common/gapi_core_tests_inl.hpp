@@ -858,7 +858,7 @@ TEST_P(ResizePTest, AccuracyTest)
     cv::randn(in_mat, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
 
     cv::Mat out_mat    (sz_out_p, CV_8UC1);
-    cv::Mat out_mat_ocv(sz_out_p, CV_8UC1);
+    cv::Mat out_mat_ocv_p(sz_out_p, CV_8UC1);
 
     cv::GMatP in;
     auto out = cv::gapi::resizeP(in, sz_out, interp);
@@ -869,7 +869,7 @@ TEST_P(ResizePTest, AccuracyTest)
 
     for (int i = 0; i < planeNum; i++) {
         const cv::Mat in_mat_roi = in_mat(cv::Rect(0, i*sz_in.height,  sz_in.width,  sz_in.height));
-        cv::Mat out_mat_roi = out_mat_ocv(cv::Rect(0, i*sz_out.height, sz_out.width, sz_out.height));
+        cv::Mat out_mat_roi = out_mat_ocv_p(cv::Rect(0, i*sz_out.height, sz_out.width, sz_out.height));
         cv::resize(in_mat_roi, out_mat_roi, sz_out, 0, 0, interp);
     }
 
