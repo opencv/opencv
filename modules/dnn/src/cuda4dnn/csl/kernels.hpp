@@ -100,6 +100,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
         std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm, T epsilon,
         span<T> workspace);
 
+    template <class T>
+    void generate_prior_boxes(
+        const Stream& stream,
+        span<T> output,
+        view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY,
+        std::vector<T> variance,
+        std::size_t numPriors,
+        std::size_t layerWidth, std::size_t layerHeight,
+        std::size_t imageWidth, std::size_t imageHeight,
+        T stepX, T stepY,
+        bool normalize, bool clip);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

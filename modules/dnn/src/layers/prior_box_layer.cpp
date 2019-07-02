@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
 #include <float.h>
@@ -50,6 +51,12 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/tensor_ops.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -274,6 +281,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
                    ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)))
                || (backendId == DNN_BACKEND_VKCOM && haveVulkan());
@@ -484,6 +492,67 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace) override
+    {
+        CV_Assert(inputs.size() == 2 && outputs.size() == 1);
+
+        auto layer_input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto layer_input = layer_input_wrapper->getView(); /* useless synchronization */
+
+        auto data_input_wrapper = inputs[1].dynamicCast<CUDABackendWrapperFP32>();
+        auto data_input = data_input_wrapper->getView(); /* useless synchronization */
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        auto layerWidth = layer_input.get_axis_size(-1);
+        auto layerHeight = layer_input.get_axis_size(-2);
+
+        auto imageWidth = data_input.get_axis_size(-1);
+        auto imageHeight = data_input.get_axis_size(-2);
+
+        auto boxSize = _boxWidths.size(), offsetSize = _offsetsX.size();
+        auto boxWidth = csl::view<float>(paramsTensor.get(), boxSize);
+        auto boxHeight = csl::view<float>(paramsTensor.get() + boxSize, boxSize);
+        auto offsetX = csl::view<float>(paramsTensor.get() + 2 * boxSize, offsetSize);
+        auto offsetY = csl::view<float>(paramsTensor.get() + 2 * boxSize + offsetSize, offsetSize);
+
+        csl::kernels::generate_prior_boxes<float>(stream, output,
+            boxWidth, boxHeight, offsetX, offsetY,
+            _variance, _numPriors, layerWidth, layerHeight, imageWidth, imageHeight, _stepX, _stepY, _bboxesNormalized, _clip);
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs) override
+    {
+        stream = std::move(stream_);
+
+        CV_Assert(_boxWidths.size() == _boxHeights.size());
+        CV_Assert(_offsetsX.size() == _offsetsY.size());
+
+        auto total = _boxWidths.size() * 2 + _offsetsX.size() * 2;
+        std::vector<float> paramsVec;
+        paramsVec.insert(std::end(paramsVec), std::begin(_boxWidths), std::end(_boxWidths));
+        paramsVec.insert(std::end(paramsVec), std::begin(_boxHeights), std::end(_boxHeights));
+        paramsVec.insert(std::end(paramsVec), std::begin(_offsetsX), std::end(_offsetsX));
+        paramsVec.insert(std::end(paramsVec), std::begin(_offsetsY), std::end(_offsetsY));
+
+        paramsTensor.resize(total);
+        csl::memcpy(paramsTensor.get(), paramsVec.data(), total, stream); /* synchronous copy */
+    }
+
+    csl::Tensor<float> paramsTensor; /* widths, heights, offsetsX, offsetsY */
+    csl::Stream stream;
+#endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {

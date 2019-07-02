@@ -28,8 +28,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             using reverse_iterator  = std::reverse_iterator<iterator>;
             using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-            bool empty() const noexcept { return N == 0; }
-            size_type size() const noexcept { return N; }
+            __host__ __device__ bool empty() const noexcept { return N == 0; }
+            __host__ __device__ size_type size() const noexcept { return N; }
 
             __host__ __device__ iterator begin() noexcept { return ptr; }
             __host__ __device__ iterator end() noexcept { return ptr + N; }
