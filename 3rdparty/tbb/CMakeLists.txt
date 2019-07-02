@@ -5,19 +5,14 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-set(tbb_filename "2018_U1.tar.gz")
-set(tbb_subdir "tbb-2018_U1")
-set(tbb_md5 "b2f2fa09adf44a22f4024049907f774b")
-
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702
-    -Wshadow
-    -Wunused-parameter
-    -Wmissing-prototypes  # MacOSX
-)
+ocv_update(OPENCV_TBB_RELEASE "2019_U8")
+ocv_update(OPENCV_TBB_RELEASE_MD5 "7c371d0f62726154d2c568a85697a0ad")
+ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
+ocv_update(OPENCV_TBB_SUBDIR "tbb-${OPENCV_TBB_RELEASE}")
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
-ocv_download(FILENAME ${tbb_filename}
-             HASH ${tbb_md5}
+ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
+             HASH ${OPENCV_TBB_RELEASE_MD5}
              URL
                "${OPENCV_TBB_URL}"
                "$ENV{OPENCV_TBB_URL}"
@@ -29,7 +24,7 @@ ocv_download(FILENAME ${tbb_filename}
 if(NOT res)
   return()
 endif()
-set(tbb_src_dir "${tbb_src_dir}/${tbb_subdir}")
+set(tbb_src_dir "${tbb_src_dir}/${OPENCV_TBB_SUBDIR}")
 
 ocv_include_directories("${tbb_src_dir}/include"
                         "${tbb_src_dir}/src/"
@@ -82,18 +77,19 @@ endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
 endif()
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS
+    /wd4702
+    -Wshadow
+    -Wunused-parameter
+    -Wclass-memaccess                  # TBB 2018 under GCC 8+
+    -Wimplicit-fallthrough             # TBB 2018 under GCC 7+
+    -Wmissing-prototypes               # MacOSX, Android/Clang
+    -Wundef -Wmissing-declarations     # TBB 2019
+)
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
-
-if (ARM AND NOT WIN32)
-  if (NOT ANDROID)
-    set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/arm_linux_stub.cpp")
-  endif()
-  set(TBB_SOURCE_FILES ${TBB_SOURCE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
-endif()
 
 set(tbb_version_file "version_string.ver")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
@@ -121,8 +117,6 @@ if (WIN32)
 else()
   target_link_libraries(tbb c m dl)
 endif()
-
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 
 # filter out flags that are not handled well by the TBB code
 foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
