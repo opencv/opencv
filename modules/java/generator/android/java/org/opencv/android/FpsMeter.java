@@ -14,7 +14,7 @@ public class FpsMeter {
     private static final int    STEP              = 20;
     private static final DecimalFormat FPS_FORMAT = new DecimalFormat("0.00");
 
-    private int                 mFramesCouner;
+    private int                 mFramesCounter;
     private double              mFrequency;
     private long                mprevFrameTime;
     private String              mStrfps;
@@ -24,7 +24,7 @@ public class FpsMeter {
     int                         mHeight = 0;
 
     public void init() {
-        mFramesCouner = 0;
+        mFramesCounter = 0;
         mFrequency = Core.getTickFrequency();
         mprevFrameTime = Core.getTickCount();
         mStrfps = "";
@@ -39,8 +39,8 @@ public class FpsMeter {
             init();
             mIsInitialized = true;
         } else {
-            mFramesCouner++;
-            if (mFramesCouner % STEP == 0) {
+            mFramesCounter++;
+            if (mFramesCounter % STEP == 0) {
                 long time = Core.getTickCount();
                 double fps = STEP * mFrequency / (time - mprevFrameTime);
                 mprevFrameTime = time;

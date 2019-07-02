@@ -82,9 +82,14 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
         {
             if (matched)
             {
-                if (i == 0 || total(srcShape, i, srcRange.end) != maskTotal)
+                if (total(srcShape, i, srcRange.end) != maskTotal)
                 {
                     srcRange.start = i + 1;
+                    break;
+                }
+                else if (i == 0)
+                {
+                    srcRange.start = 0;
                     break;
                 }
             }
@@ -92,6 +97,10 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
             {
                 matched = total(srcShape, i, srcRange.end) == maskTotal;
             }
+        }
+        while (total(srcShape, srcRange.start, srcRange.end) != maskTotal && srcRange.start > 0)
+        {
+            srcRange.start -= 1;
         }
         CV_Assert(total(srcShape, srcRange.start, srcRange.end) == maskTotal);
     }
@@ -129,6 +138,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
 
     size_t srcTotal = total(srcShape);
     size_t dstTotal = total(dstShape);
+    CV_Assert(dstTotal != 0);
 
     if (inferDim != -1)
     {
@@ -168,8 +178,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -177,16 +187,32 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        outputs.clear();
-
-        for (size_t i = 0; i < inputs.size(); i++)
+        if (inputs.size() == 1 || inputs.size() == requiredOutputs)
         {
-            outputs.push_back(MatShape());
-            computeShapeByReshapeMask(inputs[i], newShapeDesc, newShapeRange, outputs.back());
+            outputs.clear();
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                outputs.push_back(MatShape());
+                computeShapeByReshapeMask(inputs[i], newShapeDesc, newShapeRange, outputs.back());
+            }
         }
-        internals = outputs;
-
+        else
+        {
+            CV_Assert_N(inputs.size() == 2, total(inputs[0]) == total(inputs[1]));
+            outputs.assign(1, inputs[1]);
+        }
         return true;
+    }
+
+    void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        std::vector<Mat> outputs;
+        outputs_arr.getMatVector(outputs);
+
+        CV_Assert(!outputs.empty());
+        outShapes.resize(outputs.size());
+        for (int i = 0; i < outputs.size(); ++i)
+            outShapes[i] = shape(outputs[i]);
     }
 
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
@@ -197,15 +223,14 @@ public:
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
-        for (size_t i = 0; i < inputs.size(); i++)
+        for (size_t i = 0; i < outputs.size(); i++)
         {
             UMat srcBlob = inputs[i];
             void *src_handle = inputs[i].handle(ACCESS_READ);
             void *dst_handle = outputs[i].handle(ACCESS_WRITE);
             if (src_handle != dst_handle)
             {
-                MatShape outShape = shape(outputs[i]);
-                UMat umat = srcBlob.reshape(1, (int)outShape.size(), &outShape[0]);
+                UMat umat = srcBlob.reshape(1, (int)outShapes[i].size(), &outShapes[i][0]);
                 umat.copyTo(outputs[i]);
             }
         }
@@ -219,39 +244,32 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        for (size_t i = 0; i < inputs.size(); i++)
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        for (size_t i = 0; i < outputs.size(); i++)
         {
-            Mat srcBlob = *inputs[i];
+            Mat srcBlob = inputs[i];
             if (outputs[i].data != srcBlob.data)
                 srcBlob.reshape(1, shape(outputs[i])).copyTo(outputs[i]);
         }
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
 #ifdef HAVE_INF_ENGINE
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Reshape";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ReshapeLayer> ieLayer(new InferenceEngine::ReshapeLayer(lp));
-        ieLayer->shape = newShapeDesc;
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+        InferenceEngine::Builder::ReshapeLayer ieLayer(name);
+        CV_Assert(outShapes.size() == 1);
+        ieLayer.setDims(outShapes[0]);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
+
+private:
+    std::vector<MatShape> outShapes;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

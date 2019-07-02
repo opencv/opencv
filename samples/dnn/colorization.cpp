@@ -64,9 +64,9 @@ int main(int argc, char **argv)
         parser.printMessage();
         return 0;
     }
-    string modelTxt = parser.get<string>("proto");
-    string modelBin = parser.get<string>("model");
-    string imageFile = parser.get<string>("image");
+    string modelTxt = samples::findFile(parser.get<string>("proto"));
+    string modelBin = samples::findFile(parser.get<string>("model"));
+    string imageFile = samples::findFile(parser.get<string>("image"));
     bool useOpenCL = parser.has("opencl");
     if (!parser.check())
     {
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     // run the L channel through the network
     Mat inputBlob = blobFromImage(input);
     net.setInput(inputBlob);
-    Mat result = net.forward("class8_ab");
+    Mat result = net.forward();
 
     // retrieve the calculated a,b channels from the network output
     Size siz(result.size[2], result.size[3]);

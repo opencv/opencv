@@ -65,8 +65,8 @@ int main(int argc, char** argv)
         print_help();
         return 0;
     }
-    img1_filename = parser.get<std::string>(0);
-    img2_filename = parser.get<std::string>(1);
+    img1_filename = samples::findFile(parser.get<std::string>(0));
+    img2_filename = samples::findFile(parser.get<std::string>(1));
     if (parser.has("algorithm"))
     {
         std::string _alg = parser.get<std::string>("algorithm");

@@ -13,7 +13,7 @@ The data preparation pipeline can be represented as:
 a) Find some datasets with face bounding boxes annotation. For some reasons I can't provide links here, but you easily find them on your own. Also study the data. It may contain small or low quality faces which can spoil training process. Often there are special flags about object quality in annotation. Remove such faces from annotation (smaller when 16 along at least one side, or blurred, of highly-occluded, or something else).
 
 b) The downloaded dataset will have some format of annotation. It may be one single file for all images, or separate file for each image or something else. But to train SSD in Caffe you need to convert annotation to PASCAL VOC format.
-PASCAL VOC annoitation consist of .xml file for each image. In this xml file all face bounding boxes should be listed as:
+PASCAL VOC annotation consist of .xml file for each image. In this xml file all face bounding boxes should be listed as:
 
 <annotation>
   <size>
@@ -42,7 +42,7 @@ PASCAL VOC annoitation consist of .xml file for each image. In this xml file all
   </object>
 </annotation>
 
-So, convert your dataset's annotation to the fourmat above.
+So, convert your dataset's annotation to the format above.
 Also, you should create labelmap.prototxt file with the following content:
 item {
   name: "none_of_the_above"

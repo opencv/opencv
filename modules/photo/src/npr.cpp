@@ -51,7 +51,7 @@ using namespace cv;
 
 void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
 
@@ -68,7 +68,7 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
 
 void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
 
@@ -104,7 +104,7 @@ void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float si
 
 void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, float sigma_s, float sigma_r, float shade_factor)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
     _dst1.create(I.size(), CV_8UC1);
@@ -130,7 +130,7 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
 
 void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sigma_r)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC3);

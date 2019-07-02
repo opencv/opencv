@@ -22,12 +22,12 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 
     public void testCascadeClassifier() {
         cc = new CascadeClassifier();
-        assertTrue(null != cc);
+        assertNotNull(cc);
     }
 
     public void testCascadeClassifierString() {
         cc = new CascadeClassifier(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
-        assertTrue(null != cc);
+        assertNotNull(cc);
     }
 
     public void testDetectMultiScaleMatListOfRect() {
@@ -36,9 +36,9 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 
         Mat greyLena = new Mat();
         Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);
+        Imgproc.equalizeHist(greyLena, greyLena);
 
-        // TODO: doesn't detect with 1.1 scale
-        cc.detectMultiScale(greyLena, faces, 1.09, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30), new Size());
+        cc.detectMultiScale(greyLena, faces, 1.1, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30), new Size());
         assertEquals(1, faces.total());
     }
 
@@ -98,7 +98,7 @@ public class CascadeClassifierTest extends OpenCVTestCase {
     public void testLoad() {
         cc = new CascadeClassifier();
         cc.load(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH);
-        assertTrue(!cc.empty());
+        assertFalse(cc.empty());
     }
 
 }

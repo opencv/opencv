@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008,2019 Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
@@ -43,6 +43,8 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+#include "sumpixels.hpp"
 
 namespace cv
 {
@@ -60,15 +62,43 @@ struct Integral_SIMD
     }
 };
 
-#if CV_SSE2
+
+template <>
+struct Integral_SIMD<uchar, double, double> {
+    Integral_SIMD() {};
+
+
+    bool operator()(const uchar *src, size_t _srcstep,
+                    double *sum,      size_t _sumstep,
+                    double *sqsum,    size_t _sqsumstep,
+                    double *tilted,   size_t _tiltedstep,
+                    int width, int height, int cn) const
+    {
+#if CV_TRY_AVX512_SKX
+        CV_UNUSED(_tiltedstep);
+        // TODO:  Add support for 1 channel input (WIP)
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && (cn <= 4)){
+            opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
+                                                      sqsum, _sqsumstep, width, height, cn);
+            return true;
+        }
+#else
+        // Avoid warnings in some builds
+        CV_UNUSED(src); CV_UNUSED(_srcstep); CV_UNUSED(sum); CV_UNUSED(_sumstep);
+        CV_UNUSED(sqsum); CV_UNUSED(_sqsumstep); CV_UNUSED(tilted); CV_UNUSED(_tiltedstep);
+        CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(cn);
+#endif
+        return false;
+    }
+
+};
+
+#if CV_SIMD && CV_SIMD_WIDTH <= 64
 
 template <>
 struct Integral_SIMD<uchar, int, double>
 {
-    Integral_SIMD()
-    {
-        haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
-    }
+    Integral_SIMD() {}
 
     bool operator()(const uchar * src, size_t _srcstep,
                     int * sum, size_t _sumstep,
@@ -76,14 +106,11 @@ struct Integral_SIMD<uchar, int, double>
                     int * tilted, size_t,
                     int width, int height, int cn) const
     {
-        if (sqsum || tilted || cn != 1 || !haveSSE2)
+        if (sqsum || tilted || cn != 1)
             return false;
 
         // the first iteration
         memset(sum, 0, (width + 1) * sizeof(int));
-
-        __m128i v_zero = _mm_setzero_si128(), prev = v_zero;
-        int j = 0;
 
         // the others
         for (int i = 0; i < height; ++i)
@@ -94,48 +121,113 @@ struct Integral_SIMD<uchar, int, double>
 
             sum_row[-1] = 0;
 
-            prev = v_zero;
-            j = 0;
-
-            for ( ; j + 7 < width; j += 8)
+            v_int32 prev = vx_setzero_s32();
+            int j = 0;
+            for ( ; j + v_uint16::nlanes <= width; j += v_uint16::nlanes)
             {
-                __m128i vsuml = _mm_loadu_si128((const __m128i *)(prev_sum_row + j));
-                __m128i vsumh = _mm_loadu_si128((const __m128i *)(prev_sum_row + j + 4));
-
-                __m128i el8shr0 = _mm_loadl_epi64((const __m128i *)(src_row + j));
-                __m128i el8shr1 = _mm_slli_si128(el8shr0, 1);
-                __m128i el8shr2 = _mm_slli_si128(el8shr0, 2);
-                __m128i el8shr3 = _mm_slli_si128(el8shr0, 3);
-
-                vsuml = _mm_add_epi32(vsuml, prev);
-                vsumh = _mm_add_epi32(vsumh, prev);
-
-                __m128i el8shr12 = _mm_add_epi16(_mm_unpacklo_epi8(el8shr1, v_zero),
-                                                 _mm_unpacklo_epi8(el8shr2, v_zero));
-                __m128i el8shr03 = _mm_add_epi16(_mm_unpacklo_epi8(el8shr0, v_zero),
-                                                 _mm_unpacklo_epi8(el8shr3, v_zero));
-                __m128i el8 = _mm_add_epi16(el8shr12, el8shr03);
-
-                __m128i el4h = _mm_add_epi16(_mm_unpackhi_epi16(el8, v_zero),
-                                             _mm_unpacklo_epi16(el8, v_zero));
-
-                vsuml = _mm_add_epi32(vsuml, _mm_unpacklo_epi16(el8, v_zero));
-                vsumh = _mm_add_epi32(vsumh, el4h);
-
-                _mm_storeu_si128((__m128i *)(sum_row + j), vsuml);
-                _mm_storeu_si128((__m128i *)(sum_row + j + 4), vsumh);
-
-                prev = _mm_add_epi32(prev, _mm_shuffle_epi32(el4h, _MM_SHUFFLE(3, 3, 3, 3)));
+                v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                v_int32 el4l, el4h;
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
+                __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
+                vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
+                vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
+                __m256i shmask = _mm256_set1_epi32(7);
+                el4l.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_low(vsum)), prev.val);
+                el4h.val = _mm256_add_epi32(_mm256_cvtepi16_epi32(_v256_extract_high(vsum)), _mm256_permutevar8x32_epi32(el4l.val, shmask));
+                prev.val = _mm256_permutevar8x32_epi32(el4h.val, shmask);
+#else
+                el8 += v_rotate_left<1>(el8);
+                el8 += v_rotate_left<2>(el8);
+#if CV_SIMD_WIDTH >= 32
+                el8 += v_rotate_left<4>(el8);
+#if CV_SIMD_WIDTH == 64
+                el8 += v_rotate_left<8>(el8);
+#endif
+#endif
+                v_expand(el8, el4l, el4h);
+                el4l += prev;
+                el4h += el4l;
+                prev = vx_setall_s32(v_rotate_right<v_int32::nlanes - 1>(el4h).get0());
+#endif
+                v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
+                v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));
             }
 
             for (int v = sum_row[j - 1] - prev_sum_row[j - 1]; j < width; ++j)
                 sum_row[j] = (v += src_row[j]) + prev_sum_row[j];
         }
+        vx_cleanup();
 
         return true;
     }
+};
 
-    bool haveSSE2;
+template <>
+struct Integral_SIMD<uchar, float, double>
+{
+    Integral_SIMD() {}
+
+    bool operator()(const uchar * src, size_t _srcstep,
+        float * sum, size_t _sumstep,
+        double * sqsum, size_t,
+        float * tilted, size_t,
+        int width, int height, int cn) const
+    {
+        if (sqsum || tilted || cn != 1)
+            return false;
+
+        // the first iteration
+        memset(sum, 0, (width + 1) * sizeof(int));
+
+        // the others
+        for (int i = 0; i < height; ++i)
+        {
+            const uchar * src_row = src + _srcstep * i;
+            float * prev_sum_row = (float *)((uchar *)sum + _sumstep * i) + 1;
+            float * sum_row = (float *)((uchar *)sum + _sumstep * (i + 1)) + 1;
+
+            sum_row[-1] = 0;
+
+            v_float32 prev = vx_setzero_f32();
+            int j = 0;
+            for (; j + v_uint16::nlanes <= width; j += v_uint16::nlanes)
+            {
+                v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
+                v_float32 el4l, el4h;
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
+                __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
+                vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
+                vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
+                __m256i shmask = _mm256_set1_epi32(7);
+                el4l.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_low(vsum))), prev.val);
+                el4h.val = _mm256_add_ps(_mm256_cvtepi32_ps(_mm256_cvtepi16_epi32(_v256_extract_high(vsum))), _mm256_permutevar8x32_ps(el4l.val, shmask));
+                prev.val = _mm256_permutevar8x32_ps(el4h.val, shmask);
+#else
+                el8 += v_rotate_left<1>(el8);
+                el8 += v_rotate_left<2>(el8);
+#if CV_SIMD_WIDTH >= 32
+                el8 += v_rotate_left<4>(el8);
+#if CV_SIMD_WIDTH == 64
+                el8 += v_rotate_left<8>(el8);
+#endif
+#endif
+                v_int32 el4li, el4hi;
+                v_expand(el8, el4li, el4hi);
+                el4l = v_cvt_f32(el4li) + prev;
+                el4h = v_cvt_f32(el4hi) + el4l;
+                prev = vx_setall_f32(v_rotate_right<v_float32::nlanes - 1>(el4h).get0());
+#endif
+                v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
+                v_store(sum_row + j + v_float32::nlanes, el4h + vx_load(prev_sum_row + j + v_float32::nlanes));
+            }
+
+            for (float v = sum_row[j - 1] - prev_sum_row[j - 1]; j < width; ++j)
+                sum_row[j] = (v += src_row[j]) + prev_sum_row[j];
+        }
+        vx_cleanup();
+
+        return true;
+    }
 };
 
 #endif
@@ -216,7 +308,7 @@ void integral_( const T* src, size_t _srcstep, ST* sum, size_t _sumstep,
     else
     {
         AutoBuffer<ST> _buf(width+cn);
-        ST* buf = _buf;
+        ST* buf = _buf.data();
         ST s;
         QT sq;
         for( k = 0; k < cn; k++, src++, sum++, tilted++, buf++ )
@@ -408,7 +500,7 @@ static bool ipp_integral(
     uchar* tilted, size_t tstep,
     int width, int height, int cn)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     IppiSize size = {width, height};
 
@@ -494,7 +586,7 @@ void integral(int depth, int sdepth, int sqdepth,
 
 void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( sdepth <= 0 )
@@ -532,14 +624,14 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
 
 void cv::integral( InputArray src, OutputArray sum, int sdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     integral( src, sum, noArray(), noArray(), sdepth );
 }
 
 void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, int sqdepth )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     integral( src, sum, sqsum, noArray(), sdepth, sqdepth );
 }

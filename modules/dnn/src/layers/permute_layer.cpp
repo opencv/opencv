@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include <float.h>
 #include <algorithm>
 
@@ -57,23 +58,6 @@ namespace dnn
 class PermuteLayerImpl CV_FINAL : public PermuteLayer
 {
 public:
-    void checkCurrentOrder(int currentOrder)
-    {
-        if(currentOrder < 0 || currentOrder > 3)
-        {
-            CV_Error(
-                     Error::StsBadArg,
-                     "Orders of dimensions in Permute layer parameter"
-                     "must be in [0...3] interval");
-        }
-
-        if(std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
-        {
-            CV_Error(Error::StsBadArg,
-                     "Permute layer parameter contains duplicated orders.");
-        }
-    }
-
     void checkNeedForPermutation()
     {
         _needsPermute = false;
@@ -96,19 +80,22 @@ public:
         }
 
         DictValue paramOrder = params.get("order");
-        if(paramOrder.size() > 4)
-        {
-            CV_Error(
-                     Error::StsBadArg,
-                     "Too many (> 4) orders of dimensions in Permute layer");
-        }
-
         _numAxes = paramOrder.size();
 
         for (size_t i = 0; i < _numAxes; i++)
         {
             int currentOrder = paramOrder.get<int>(i);
-            checkCurrentOrder(currentOrder);
+            if (currentOrder < 0 || currentOrder > _numAxes)
+            {
+                CV_Error(Error::StsBadArg,
+                         format("Orders of dimensions in Permute layer parameter"
+                                "must be in [0...%zu]", _numAxes - 1));
+            }
+            if (std::find(_order.begin(), _order.end(), currentOrder) != _order.end())
+            {
+                CV_Error(Error::StsBadArg,
+                         "Permute layer parameter contains duplicated orders.");
+            }
             _order.push_back(currentOrder);
         }
 
@@ -118,8 +105,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine()) ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -146,8 +134,6 @@ public:
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            CV_Assert(inputs[i].size() == 4);
-            CV_Assert(inputs[i][2] == shapeBefore[2] && inputs[i][3] == shapeBefore[3]);
             CV_Assert(total(inputs[i]) == total(shapeAfter));
             outputs.push_back(shapeAfter);
         }
@@ -172,18 +158,21 @@ public:
         _count = _oldStride[0] * shapeBefore[0];
     }
 
-    void finalize(const std::vector<Mat*> &inputs, std::vector<Mat> &outputs) CV_OVERRIDE
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         if(!_needsPermute)
         {
             return;
         }
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         CV_Assert(inputs.size() > 0);
-        const Mat& inp0 = *inputs[0];
+        const Mat& inp0 = inputs[0];
         CV_Assert((int)_numAxes == inp0.dims);
 
-        computeStrides(shape(*inputs[0]), shape(outputs[0]));
+        computeStrides(shape(inputs[0]), shape(outputs[0]));
 
 #ifdef HAVE_OPENCL
         if (uorder.empty())
@@ -288,9 +277,11 @@ public:
         if (!_needsPermute)
             return false;
 
+        bool use_half = (inps.depth() == CV_16S);
+        String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc);
+            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc, opts);
 
             kernel.set(0, (int)_count);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
@@ -313,26 +304,27 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
 
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         size_t k, ninputs = inputs.size();
         if(!_needsPermute)
         {
             for (k = 0; k < ninputs; k++)
             {
-                CV_Assert(outputs[k].total() == inputs[k]->total());
-                if (outputs[k].data != inputs[k]->data)
-                    inputs[k]->copyTo(outputs[k]);
+                CV_Assert(outputs[k].total() == inputs[k].total());
+                if (outputs[k].data != inputs[k].data)
+                    inputs[k].copyTo(outputs[k]);
             }
         }
         else
@@ -344,10 +336,10 @@ public:
 
             for (k = 0; k < ninputs; k++)
             {
-                const Mat& inp = *inputs[k];
+                const Mat& inp = inputs[k];
                 Mat& out = outputs[k];
 
-                CV_Assert(inp.dims == numAxes && inp.size == inputs[0]->size);
+                CV_Assert(inp.dims == numAxes && inp.size == inputs[0].size);
                 CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
 
                 CV_Assert(inp.isContinuous() && out.isContinuous());
@@ -380,24 +372,24 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Permute";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
+#ifdef HAVE_VULKAN
         CV_Assert(!_order.empty());
-        ieLayer->params["order"] = format("%d", _order[0]);
-        for (int i = 1; i < _order.size(); ++i)
-            ieLayer->params["order"] += format(",%d", _order[i]);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+#endif // HAVE_VULKAN
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_INF_ENGINE
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
+    {
+        InferenceEngine::Builder::PermuteLayer ieLayer(name);
+        ieLayer.setOrder(_order);
+        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+    }
+#endif  // HAVE_INF_ENGINE
 
     size_t _count;
     std::vector<size_t> _order;

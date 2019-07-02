@@ -55,10 +55,18 @@ you can get a better result.
 
 ![image](images/disparity_map.jpg)
 
-@note More details to be added
+There are some parameters when you get familiar with StereoBM, and you may need to fine tune the parameters to get better and smooth results. Parameters:
+- texture_threshold: filters out areas that don't have enough texture for reliable matching
+- Speckle range and size: Block-based matchers often produce "speckles" near the boundaries of objects, where the matching window catches the foreground on one side and the background on the other. In this scene it appears that the matcher is also finding small spurious matches in the projected texture on the table. To get rid of these artifacts we post-process the disparity image with a speckle filter controlled by the speckle_size and speckle_range parameters. speckle_size is the number of pixels below which a disparity blob is dismissed as "speckle." speckle_range controls how close in value disparities must be to be considered part of the same blob.
+- Number of disparities: How many pixels to slide the window over. The larger it is, the larger the range of visible depths, but more computation is required.
+- min_disparity: the offset from the x-position of the left pixel at which to begin searching.
+- uniqueness_ratio: Another post-filtering step. If the best matching disparity is not sufficiently better than every other disparity in the search range, the pixel is filtered out. You can try tweaking this if texture_threshold and the speckle filtering are still letting through spurious matches.
+- prefilter_size and prefilter_cap: The pre-filtering phase, which normalizes image brightness and enhances texture in preparation for block matching. Normally you should not need to adjust these.
+
 
 Additional Resources
 --------------------
+- [Ros stereo img processing wiki page](http://wiki.ros.org/stereo_image_proc/Tutorials/ChoosingGoodStereoParameters)
 
 Exercises
 ---------

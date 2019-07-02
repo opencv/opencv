@@ -49,6 +49,8 @@ namespace opencv_test { namespace {
 #define DEBUG_IMAGES 0
 #endif
 
+//#define GENERATE_DATA // generate data in debug mode via CPU code path (without IPP / OpenCL and other accelerators)
+
 using namespace cv;
 using namespace std;
 
@@ -109,7 +111,8 @@ public:
     {
     }
 
-    void run_test()
+    template <typename CircleType>
+    void run_test(const char* xml_name)
     {
         string test_case_name = getTestCaseName(picture_name, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
         string filename = cvtest::TS::ptr()->get_data_path() + picture_name;
@@ -118,7 +121,7 @@ public:
 
         GaussianBlur(src, src, Size(9, 9), 2, 2);
 
-        vector<Vec3f> circles;
+        vector<CircleType> circles;
         const double dp = 1.0;
         HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
@@ -127,31 +130,37 @@ public:
         highlightCircles(filename, circles, imgProc + test_case_name + ".png");
 #endif
 
-        string xml = imgProc + "HoughCircles.xml";
-        FileStorage fs(xml, FileStorage::READ);
-        FileNode node = fs[test_case_name];
-        if (node.empty())
+        string xml = imgProc + xml_name;
+#ifdef GENERATE_DATA
         {
-            fs.release();
-            fs.open(xml, FileStorage::APPEND);
+            FileStorage fs(xml, FileStorage::READ);
+            ASSERT_TRUE(!fs.isOpened() || fs[test_case_name].empty());
+        }
+        {
+            FileStorage fs(xml, FileStorage::APPEND);
             EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
             fs << test_case_name << circles;
-            fs.release();
-            fs.open(xml, FileStorage::READ);
-            EXPECT_TRUE(fs.isOpened()) << "Cannot open sanity data file: " << xml;
         }
-
-        vector<Vec3f> exp_circles;
-        read(fs[test_case_name], exp_circles, vector<Vec3f>());
+#else
+        FileStorage fs(xml, FileStorage::READ);
+        FileNode node = fs[test_case_name];
+        ASSERT_FALSE(node.empty()) << "Missing test data: " << test_case_name << std::endl << "XML: " << xml;
+        vector<CircleType> exp_circles;
+        read(fs[test_case_name], exp_circles, vector<CircleType>());
         fs.release();
-
         EXPECT_EQ(exp_circles.size(), circles.size());
+#endif
     }
 };
 
 TEST_P(HoughCirclesTestFixture, regression)
 {
-    run_test();
+    run_test<Vec3f>("HoughCircles.xml");
+}
+
+TEST_P(HoughCirclesTestFixture, regression4f)
+{
+    run_test<Vec4f>("HoughCircles4f.xml");
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, HoughCirclesTestFixture, testing::Combine(
@@ -186,7 +195,9 @@ TEST(HoughCirclesTest, DefaultMaxRadius)
     GaussianBlur(src, src, Size(9, 9), 2, 2);
 
     vector<Vec3f> circles;
+    vector<Vec4f> circles4f;
     HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
 #if DEBUG_IMAGES
     string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
@@ -220,7 +231,9 @@ TEST(HoughCirclesTest, CentersOnly)
     GaussianBlur(src, src, Size(9, 9), 2, 2);
 
     vector<Vec3f> circles;
+    vector<Vec4f> circles4f;
     HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
 #if DEBUG_IMAGES
     string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
@@ -231,6 +244,9 @@ TEST(HoughCirclesTest, CentersOnly)
     for (size_t i = 0; i < circles.size(); ++i)
     {
         EXPECT_EQ(circles[i][2], 0.0f) << "Did not ask for radius";
+        EXPECT_EQ(circles[i][0], circles4f[i][0]);
+        EXPECT_EQ(circles[i][1], circles4f[i][1]);
+        EXPECT_EQ(circles[i][2], circles4f[i][2]);
     }
 }
 
@@ -249,7 +265,9 @@ TEST(HoughCirclesTest, ManySmallCircles)
     EXPECT_FALSE(src.empty()) << "Invalid test image: " << filename;
 
     vector<Vec3f> circles;
+    vector<Vec4f> circles4f;
     HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+    HoughCircles(src, circles4f, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
 #if DEBUG_IMAGES
     string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
@@ -258,6 +276,7 @@ TEST(HoughCirclesTest, ManySmallCircles)
 #endif
 
     EXPECT_GT(circles.size(), size_t(3000)) << "Should find a lot of circles";
+    EXPECT_EQ(circles.size(), circles4f.size());
 }
 
 }} // namespace

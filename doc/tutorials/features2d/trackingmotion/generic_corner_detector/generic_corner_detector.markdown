@@ -1,5 +1,5 @@
-Creating yor own corner detector {#tutorial_generic_corner_detector}
-================================
+Creating your own corner detector {#tutorial_generic_corner_detector}
+=================================
 
 Goal
 ----
@@ -10,7 +10,7 @@ In this tutorial you will learn how to:
     to determine if a pixel is a corner.
 -   Use the OpenCV function @ref cv::cornerMinEigenVal to find the minimum eigenvalues for corner
     detection.
--   To implement our own version of the Harris detector as well as the Shi-Tomasi detector, by using
+-   Implement our own version of the Harris detector as well as the Shi-Tomasi detector, by using
     the two functions above.
 
 Theory
@@ -19,10 +19,26 @@ Theory
 Code
 ----
 
+@add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp)
 
-@include cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp
+@include samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/TrackingMotion/generic_corner_detector/CornerDetectorDemo.java)
+
+@include samples/java/tutorial_code/TrackingMotion/generic_corner_detector/CornerDetectorDemo.java
+@end_toggle
+
+@add_toggle_python
+This tutorial code's is shown lines below. You can also download it from
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/TrackingMotion/generic_corner_detector/cornerDetector_Demo.py)
+
+@include samples/python/tutorial_code/TrackingMotion/generic_corner_detector/cornerDetector_Demo.py
+@end_toggle
 
 Explanation
 -----------

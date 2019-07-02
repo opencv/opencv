@@ -30,14 +30,12 @@
 * Result: The cloned image will be displayed.
 */
 
-#include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
 #include <iostream>
-#include <stdlib.h>
 
 // we're NOT "using namespace std;" here, to avoid collisions between the beta variable and std::beta in c++17
 using std::cin;
@@ -320,9 +318,9 @@ int main()
         cout << "Enter Destination Image: ";
         cin >> dest;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
-        img2 = imread(dest);
+        img2 = imread(samples::findFile(dest));
 
         if(img0.empty())
         {
@@ -370,7 +368,7 @@ int main()
         cout << "Blue: ";
         cin >> blue;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {
@@ -400,7 +398,7 @@ int main()
         cout << "beta: ";
         cin >> beta;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {
@@ -433,7 +431,7 @@ int main()
         cout << "kernel_size: ";
         cin >> kernel_size;
 
-        img0 = imread(src);
+        img0 = imread(samples::findFile(src));
 
         if(img0.empty())
         {

@@ -1,6 +1,9 @@
 Histogram Calculation {#tutorial_histogram_calculation}
 =====================
 
+@prev_tutorial{tutorial_histogram_equalization}
+@next_tutorial{tutorial_histogram_comparison}
+
 Goal
 ----
 
@@ -17,7 +20,8 @@ histogram called *Image histogram*. Now we will considerate it in its more gener
 
 -   Histograms are collected *counts* of data organized into a set of predefined *bins*
 -   When we say *data* we are not restricting it to be intensity values (as we saw in the previous
-    Tutorial). The data collected can be whatever feature you find useful to describe your image.
+    Tutorial @ref tutorial_histogram_equalization). The data collected can be whatever feature you find
+    useful to describe your image.
 -   Let's see an example. Imagine that a Matrix contains information of an image (i.e. intensity in
     the range \f$0-255\f$):
 
@@ -65,122 +69,193 @@ Code
     -   Splits the image into its R, G and B planes using the function @ref cv::split
     -   Calculate the Histogram of each 1-channel plane by calling the function @ref cv::calcHist
     -   Plot the three histograms in a window
+
+@add_toggle_cpp
 -   **Downloadable code**: Click
     [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp)
+
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java)
+
+-   **Code at glance:**
+    @include samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py)
+
+-   **Code at glance:**
+    @include samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Create the necessary matrices:
-    @code{.cpp}
-    Mat src, dst;
-    @endcode
--#  Load the source image
-    @code{.cpp}
-    src = imread( argv[1], 1 );
+-   Load the source image
 
-    if( !src.data )
-      { return -1; }
-    @endcode
--#  Separate the source image in its three R,G and B planes. For this we use the OpenCV function
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Load image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Load image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Load image
+    @end_toggle
+
+-   Separate the source image in its three R,G and B planes. For this we use the OpenCV function
     @ref cv::split :
-    @code{.cpp}
-    vector<Mat> bgr_planes;
-    split( src, bgr_planes );
-    @endcode
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Separate the image in 3 places ( B, G and R )
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Separate the image in 3 places ( B, G and R )
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Separate the image in 3 places ( B, G and R )
+    @end_toggle
     our input is the image to be divided (this case with three channels) and the output is a vector
     of Mat )
 
--#  Now we are ready to start configuring the **histograms** for each plane. Since we are working
+-   Now we are ready to start configuring the **histograms** for each plane. Since we are working
     with the B, G and R planes, we know that our values will range in the interval \f$[0,255]\f$
-    -#  Establish number of bins (5, 10...):
-        @code{.cpp}
-        int histSize = 256; //from 0 to 255
-        @endcode
-    -#  Set the range of values (as we said, between 0 and 255 )
-        @code{.cpp}
-        /// Set the ranges ( for B,G,R) )
-        float range[] = { 0, 256 } ; //the upper boundary is exclusive
-        const float* histRange = { range };
-        @endcode
-    -#  We want our bins to have the same size (uniform) and to clear the histograms in the
-        beginning, so:
-        @code{.cpp}
-        bool uniform = true; bool accumulate = false;
-        @endcode
-    -#  Finally, we create the Mat objects to save our histograms. Creating 3 (one for each plane):
-        @code{.cpp}
-        Mat b_hist, g_hist, r_hist;
-        @endcode
-    -#  We proceed to calculate the histograms by using the OpenCV function @ref cv::calcHist :
-        @code{.cpp}
-        /// Compute the histograms:
-        calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate );
-        calcHist( &bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate );
-        calcHist( &bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate );
-        @endcode
-        where the arguments are:
 
-        -   **&bgr_planes[0]:** The source array(s)
-        -   **1**: The number of source arrays (in this case we are using 1. We can enter here also
-            a list of arrays )
-        -   **0**: The channel (*dim*) to be measured. In this case it is just the intensity (each
-            array is single-channel) so we just write 0.
-        -   **Mat()**: A mask to be used on the source array ( zeros indicating pixels to be ignored
-            ). If not defined it is not used
-        -   **b_hist**: The Mat object where the histogram will be stored
-        -   **1**: The histogram dimensionality.
-        -   **histSize:** The number of bins per each used dimension
-        -   **histRange:** The range of values to be measured per each dimension
-        -   **uniform** and **accumulate**: The bin sizes are the same and the histogram is cleared
-            at the beginning.
+-   Establish the number of bins (5, 10...):
 
--#  Create an image to display the histograms:
-    @code{.cpp}
-    // Draw the histograms for R, G and B
-    int hist_w = 512; int hist_h = 400;
-    int bin_w = cvRound( (double) hist_w/histSize );
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Establish the number of bins
+    @end_toggle
 
-    Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
-    @endcode
--#  Notice that before drawing, we first @ref cv::normalize the histogram so its values fall in the
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Establish the number of bins
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Establish the number of bins
+    @end_toggle
+
+-   Set the range of values (as we said, between 0 and 255 )
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Set the ranges ( for B,G,R) )
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Set the ranges ( for B,G,R) )
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Set the ranges ( for B,G,R) )
+    @end_toggle
+
+-   We want our bins to have the same size (uniform) and to clear the histograms in the
+    beginning, so:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Set histogram param
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Set histogram param
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Set histogram param
+    @end_toggle
+
+-   We proceed to calculate the histograms by using the OpenCV function @ref cv::calcHist :
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Compute the histograms
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Compute the histograms
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Compute the histograms
+    @end_toggle
+
+-   where the arguments are (**C++ code**):
+    -   **&bgr_planes[0]:** The source array(s)
+    -   **1**: The number of source arrays (in this case we are using 1. We can enter here also
+        a list of arrays )
+    -   **0**: The channel (*dim*) to be measured. In this case it is just the intensity (each
+        array is single-channel) so we just write 0.
+    -   **Mat()**: A mask to be used on the source array ( zeros indicating pixels to be ignored
+        ). If not defined it is not used
+    -   **b_hist**: The Mat object where the histogram will be stored
+    -   **1**: The histogram dimensionality.
+    -   **histSize:** The number of bins per each used dimension
+    -   **histRange:** The range of values to be measured per each dimension
+    -   **uniform** and **accumulate**: The bin sizes are the same and the histogram is cleared
+        at the beginning.
+
+-   Create an image to display the histograms:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Draw the histograms for B, G and R
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Draw the histograms for B, G and R
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Draw the histograms for B, G and R
+    @end_toggle
+
+-   Notice that before drawing, we first @ref cv::normalize the histogram so its values fall in the
     range indicated by the parameters entered:
-    @code{.cpp}
-    /// Normalize the result to [ 0, histImage.rows ]
-    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-    normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-    normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
-    @endcode
-    this function receives these arguments:
 
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Normalize the result to ( 0, histImage.rows )
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Normalize the result to ( 0, histImage.rows )
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Normalize the result to ( 0, histImage.rows )
+    @end_toggle
+
+-   this function receives these arguments (**C++ code**):
     -   **b_hist:** Input array
     -   **b_hist:** Output normalized array (can be the same)
-    -   **0** and\**histImage.rows: For this example, they are the lower and upper limits to
-        normalize the values ofr_hist*\*
+    -   **0** and **histImage.rows**: For this example, they are the lower and upper limits to
+        normalize the values of **r_hist**
     -   **NORM_MINMAX:** Argument that indicates the type of normalization (as described above, it
         adjusts the values between the two limits set before)
     -   **-1:** Implies that the output normalized array will be the same type as the input
     -   **Mat():** Optional mask
 
--#  Finally, observe that to access the bin (in this case in this 1D-Histogram):
-    @code{.cpp}
-    /// Draw for each channel
-    for( int i = 1; i < histSize; i++ )
-    {
-        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(b_hist.at<float>(i-1)) ) ,
-                         Point( bin_w*(i), hist_h - cvRound(b_hist.at<float>(i)) ),
-                         Scalar( 255, 0, 0), 2, 8, 0  );
-        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(g_hist.at<float>(i-1)) ) ,
-                         Point( bin_w*(i), hist_h - cvRound(g_hist.at<float>(i)) ),
-                         Scalar( 0, 255, 0), 2, 8, 0  );
-        line( histImage, Point( bin_w*(i-1), hist_h - cvRound(r_hist.at<float>(i-1)) ) ,
-                         Point( bin_w*(i), hist_h - cvRound(r_hist.at<float>(i)) ),
-                         Scalar( 0, 0, 255), 2, 8, 0  );
-    }
-    @endcode
-    we use the expression:
+-   Observe that to access the bin (in this case in this 1D-Histogram):
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Draw for each channel
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Draw for each channel
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Draw for each channel
+    @end_toggle
+    we use the expression (**C++ code**):
     @code{.cpp}
     b_hist.at<float>(i)
     @endcode
@@ -189,20 +264,24 @@ Explanation
     b_hist.at<float>( i, j )
     @endcode
 
--#  Finally we display our histograms and wait for the user to exit:
-    @code{.cpp}
-    namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
-    imshow("calcHist Demo", histImage );
+-   Finally we display our histograms and wait for the user to exit:
 
-    waitKey(0);
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcHist_Demo.cpp Display
+    @end_toggle
 
-    return 0;
-    @endcode
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/histogram_calculation/CalcHistDemo.java Display
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/histogram_calculation/calcHist_Demo.py Display
+    @end_toggle
 
 Result
 ------
 
--#  Using as input argument an image like the shown below:
+-#  Using as input argument an image like the one shown below:
 
     ![](images/Histogram_Calculation_Original_Image.jpg)
 

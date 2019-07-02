@@ -97,7 +97,7 @@ OCL_TEST_P(PyrDown, Mat)
         Size src_roiSize = randomSize(1, MAX_VALUE);
         Size dst_roiSize = Size(randomInt((src_roiSize.width - 1) / 2, (src_roiSize.width + 3) / 2),
                                 randomInt((src_roiSize.height - 1) / 2, (src_roiSize.height + 3) / 2));
-        dst_roiSize = dst_roiSize.area() == 0 ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
+        dst_roiSize = dst_roiSize.empty() ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
         generateTestData(src_roiSize, dst_roiSize);
 
         OCL_OFF(pyrDown(src_roi, dst_roi, dst_roiSize, borderType));

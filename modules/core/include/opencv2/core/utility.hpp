@@ -58,7 +58,9 @@
 
 #include <functional>
 
+#if !defined(_M_CEE)
 #include <mutex>  // std::mutex, std::lock_guard
+#endif
 
 namespace cv
 {
@@ -116,7 +118,11 @@ CV_EXPORTS void setUseCollection(bool flag); // set implementation collection st
  }
  \endcode
 */
+#ifdef OPENCV_ENABLE_MEMORY_SANITIZER
+template<typename _Tp, size_t fixed_size = 0> class AutoBuffer
+#else
 template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
+#endif
 {
 public:
     typedef _Tp value_type;
@@ -143,9 +149,21 @@ public:
     //! returns the current buffer size
     size_t size() const;
     //! returns pointer to the real buffer, stack-allocated or heap-allocated
-    operator _Tp* ();
+    inline _Tp* data() { return ptr; }
     //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
-    operator const _Tp* () const;
+    inline const _Tp* data() const { return ptr; }
+
+#if !defined(OPENCV_DISABLE_DEPRECATED_COMPATIBILITY) // use to .data() calls instead
+    //! returns pointer to the real buffer, stack-allocated or heap-allocated
+    operator _Tp* () { return ptr; }
+    //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
+    operator const _Tp* () const { return ptr; }
+#else
+    //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
+    inline _Tp& operator[] (size_t i) { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
+    //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
+    inline const _Tp& operator[] (size_t i) const { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
+#endif
 
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
@@ -445,6 +463,18 @@ Returns empty string if feature is not defined
 */
 CV_EXPORTS_W String getHardwareFeatureName(int feature);
 
+/** @brief Returns list of CPU features enabled during compilation.
+
+Returned value is a string containing space separated list of CPU features with following markers:
+
+- no markers - baseline features
+- prefix `*` - features enabled in dispatcher
+- suffix `?` - features enabled but not available in HW
+
+Example: `SSE SSE2 SSE3 *SSE4.1 *SSE4.2 *FP16 *AVX *AVX2 *AVX512-SKX?`
+*/
+CV_EXPORTS std::string getCPUFeaturesLine();
+
 /** @brief Returns the number of logical CPUs available for the process.
  */
 CV_EXPORTS_W int getNumberOfCPUs();
@@ -493,9 +523,26 @@ static inline size_t divUp(size_t a, unsigned int b)
     return (a + b - 1) / b;
 }
 
+/** @brief Round first value up to the nearest multiple of second value.
+
+Use this function instead of `ceil((float)a / b) * b` expressions.
+
+@sa divUp
+*/
+static inline int roundUp(int a, unsigned int b)
+{
+    CV_DbgAssert(a >= 0);
+    return a + b - 1 - (a + b -1) % b;
+}
+/** @overload */
+static inline size_t roundUp(size_t a, unsigned int b)
+{
+    return a + b - 1 - (a + b - 1) % b;
+}
+
 /** @brief Enables or disables the optimized code.
 
-The function can be used to dynamically turn on and off optimized code (code that uses SSE2, AVX,
+The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,
 and other instructions on the platforms that support it). It sets a global flag that is further
 checked by OpenCV functions. Since the flag is not checked in the inner OpenCV loops, it is only
 safe to call the function on the very top level in your application where you can be sure that no
@@ -650,8 +697,10 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
+#if !defined(_M_CEE)
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
+#endif
 
 // TLS interface
 class CV_EXPORTS TLSDataContainer
@@ -919,8 +968,8 @@ public:
     void printErrors() const;
 
 protected:
-    void getByName(const String& name, bool space_delete, int type, void* dst) const;
-    void getByIndex(int index, bool space_delete, int type, void* dst) const;
+    void getByName(const String& name, bool space_delete, Param type, void* dst) const;
+    void getByIndex(int index, bool space_delete, Param type, void* dst) const;
 
     struct Impl;
     Impl* impl;
@@ -1028,23 +1077,6 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
 template<typename _Tp, size_t fixed_size> inline size_t
 AutoBuffer<_Tp, fixed_size>::size() const
 { return sz; }
-
-template<typename _Tp, size_t fixed_size> inline
-AutoBuffer<_Tp, fixed_size>::operator _Tp* ()
-{ return ptr; }
-
-template<typename _Tp, size_t fixed_size> inline
-AutoBuffer<_Tp, fixed_size>::operator const _Tp* () const
-{ return ptr; }
-
-template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
-{
-    return get<String>(index, space_delete);
-}
-template<> inline std::string CommandLineParser::get<std::string>(const String& name, bool space_delete) const
-{
-    return get<String>(name, space_delete);
-}
 
 //! @endcond
 
@@ -1206,7 +1238,74 @@ enum FLAGS
 CV_EXPORTS void       setFlags(FLAGS modeFlags);
 static inline void    setFlags(int modeFlags) { setFlags((FLAGS)modeFlags); }
 CV_EXPORTS FLAGS      getFlags();
+
+} // namespace instr
+
+
+namespace samples {
+
+//! @addtogroup core_utils_samples
+// This section describes utility functions for OpenCV samples.
+//
+// @note Implementation of these utilities is not thread-safe.
+//
+//! @{
+
+/** @brief Try to find requested data file
+
+Search directories:
+
+1. Directories passed via `addSamplesDataSearchPath()`
+2. OPENCV_SAMPLES_DATA_PATH_HINT environment variable
+3. OPENCV_SAMPLES_DATA_PATH environment variable
+   If parameter value is not empty and nothing is found then stop searching.
+4. Detects build/install path based on:
+   a. current working directory (CWD)
+   b. and/or binary module location (opencv_core/opencv_world, doesn't work with static linkage)
+5. Scan `<source>/{,data,samples/data}` directories if build directory is detected or the current directory is in source tree.
+6. Scan `<install>/share/OpenCV` directory if install directory is detected.
+
+@see cv::utils::findDataFile
+
+@param relative_path Relative path to data file
+@param required Specify "file not found" handling.
+       If true, function prints information message and raises cv::Exception.
+       If false, function returns empty result
+@param silentMode Disables messages
+@return Returns path (absolute or relative to the current directory) or empty string if file is not found
+*/
+CV_EXPORTS_W cv::String findFile(const cv::String& relative_path, bool required = true, bool silentMode = false);
+
+CV_EXPORTS_W cv::String findFileOrKeep(const cv::String& relative_path, bool silentMode = false);
+
+inline cv::String findFileOrKeep(const cv::String& relative_path, bool silentMode)
+{
+    cv::String res = findFile(relative_path, false, silentMode);
+    if (res.empty())
+        return relative_path;
+    return res;
 }
+
+/** @brief Override search data path by adding new search location
+
+Use this only to override default behavior
+Passed paths are used in LIFO order.
+
+@param path Path to used samples data
+*/
+CV_EXPORTS_W void addSamplesDataSearchPath(const cv::String& path);
+
+/** @brief Append samples search data sub directory
+
+General usage is to add OpenCV modules name (`<opencv_contrib>/modules/<name>/samples/data` -> `<name>/samples/data` + `modules/<name>/samples/data`).
+Passed subdirectories are used in LIFO order.
+
+@param subdir samples data sub directory
+*/
+CV_EXPORTS_W void addSamplesDataSearchSubDirectory(const cv::String& subdir);
+
+//! @}
+} // namespace samples
 
 namespace utils {
 

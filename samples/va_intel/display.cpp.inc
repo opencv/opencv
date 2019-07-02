@@ -7,8 +7,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "cvconfig.h"
-
 #include <va/va.h>
 # include <va/va_drm.h>
 

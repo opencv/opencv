@@ -276,7 +276,7 @@ static void on_mouse( int event, int x, int y, int flags, void* param )
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{@input| ../data/messi5.jpg |}");
+    cv::CommandLineParser parser(argc, argv, "{@input| messi5.jpg |}");
     help();
 
     string filename = parser.get<string>("@input");
@@ -285,7 +285,7 @@ int main( int argc, char** argv )
         cout << "\nDurn, empty filename" << endl;
         return 1;
     }
-    Mat image = imread( filename, 1 );
+    Mat image = imread(samples::findFile(filename), IMREAD_COLOR);
     if( image.empty() )
     {
         cout << "\n Durn, couldn't read image filename " << filename << endl;

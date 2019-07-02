@@ -45,7 +45,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -58,7 +58,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
   You can use both API, but factory API is less convenient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
 
   Built-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
-  In partuclar, the following layers and Caffe importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
+  In particular, the following layers and Caffe importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
   - Convolution
   - Deconvolution
   - Pooling
@@ -72,6 +72,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 */
 
     class CV_EXPORTS BlankLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams &params);
+    };
+
+    /**
+     * Constant layer produces the same data blob at an every forward pass.
+     */
+    class CV_EXPORTS ConstLayer : public Layer
     {
     public:
         static Ptr<Layer> create(const LayerParams &params);
@@ -108,13 +117,13 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         @f$W_{x?} \in R^{N_h \times N_x}@f$, @f$W_{h?} \in R^{N_h \times N_h}@f$, @f$b_? \in R^{N_h}@f$.
 
         For simplicity and performance purposes we use @f$ W_x = [W_{xi}; W_{xf}; W_{xo}, W_{xg}] @f$
-        (i.e. @f$W_x@f$ is vertical contacentaion of @f$ W_{x?} @f$), @f$ W_x \in R^{4N_h \times N_x} @f$.
+        (i.e. @f$W_x@f$ is vertical concatenation of @f$ W_{x?} @f$), @f$ W_x \in R^{4N_h \times N_x} @f$.
         The same for @f$ W_h = [W_{hi}; W_{hf}; W_{ho}, W_{hg}], W_h \in R^{4N_h \times N_h} @f$
         and for @f$ b = [b_i; b_f, b_o, b_g]@f$, @f$b \in R^{4N_h} @f$.
 
-        @param Wh is matrix defining how previous output is transformed to internal gates (i.e. according to abovemtioned notation is @f$ W_h @f$)
-        @param Wx is matrix defining how current input is transformed to internal gates (i.e. according to abovemtioned notation is @f$ W_x @f$)
-        @param b  is bias vector (i.e. according to abovemtioned notation is @f$ b @f$)
+        @param Wh is matrix defining how previous output is transformed to internal gates (i.e. according to above mentioned notation is @f$ W_h @f$)
+        @param Wx is matrix defining how current input is transformed to internal gates (i.e. according to above mentioned notation is @f$ W_x @f$)
+        @param b  is bias vector (i.e. according to above mentioned notation is @f$ b @f$)
         */
         CV_DEPRECATED virtual void setWeights(const Mat &Wh, const Mat &Wx, const Mat &b) = 0;
 
@@ -148,7 +157,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * If setUseTimstampsDim() is set to true then @p input[0] should has at least two dimensions with the following shape: [`T`, `N`, `[data dims]`],
          * where `T` specifies number of timestamps, `N` is number of independent streams (i.e. @f$ x_{t_0 + t}^{stream} @f$ is stored inside @p input[0][t, stream, ...]).
          *
-         * If setUseTimstampsDim() is set to fase then @p input[0] should contain single timestamp, its shape should has form [`N`, `[data dims]`] with at least one dimension.
+         * If setUseTimstampsDim() is set to false then @p input[0] should contain single timestamp, its shape should has form [`N`, `[data dims]`] with at least one dimension.
          * (i.e. @f$ x_{t}^{stream} @f$ is stored inside @p input[0][stream, ...]).
         */
 
@@ -201,7 +210,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
-        Size kernel, stride, pad, dilation, adjustPad;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad, dilation, adjustPad;
+        std::vector<size_t> adjust_pads;
+        std::vector<size_t> kernel_size, strides, dilations;
+        std::vector<size_t> pads_begin, pads_end;
         String padMode;
         int numOutput;
     };
@@ -234,7 +246,10 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         int type;
-        Size kernel, stride, pad;
+        std::vector<size_t> kernel_size, strides;
+        std::vector<size_t> pads_begin, pads_end;
+        CV_DEPRECATED_EXTERNAL Size kernel, stride, pad;
+        CV_DEPRECATED_EXTERNAL int pad_l, pad_t, pad_r, pad_b;
         bool globalPooling;
         bool computeMaxIdx;
         String padMode;
@@ -362,6 +377,23 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     };
 
     /**
+     * Permute channels of 4-dimensional input blob.
+     * @param group Number of groups to split input channels and pick in turns
+     *              into output blob.
+     *
+     * \f[ groupSize = \frac{number\ of\ channels}{group} \f]
+     * \f[ output(n, c, h, w) = input(n, groupSize \times (c \% group) + \lfloor \frac{c}{group} \rfloor, h, w) \f]
+     * Read more at https://arxiv.org/pdf/1707.01083.pdf
+     */
+    class CV_EXPORTS ShuffleChannelLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+
+        int group;
+    };
+
+    /**
      * @brief Adds extra values for specific axes.
      * @param paddings Vector of paddings in format
      *                 @code
@@ -460,10 +492,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS CropLayer : public Layer
     {
     public:
-        int startAxis;
-        std::vector<int> offset;
-
-        static Ptr<CropLayer> create(const LayerParams &params);
+        static Ptr<Layer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS EltwiseLayer : public Layer
@@ -472,7 +501,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<EltwiseLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS BatchNormLayer : public Layer
+    class CV_EXPORTS BatchNormLayer : public ActivationLayer
     {
     public:
         bool hasWeights, hasBias;
@@ -503,7 +532,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ShiftLayer : public Layer
     {
     public:
-        static Ptr<ShiftLayer> create(const LayerParams& params);
+        static Ptr<Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS PriorBoxLayer : public Layer
@@ -550,7 +579,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
      * dst(x, y, c) = \frac{ src(x, y, c) }{norm(c)}
      * @f]
      *
-     * Where `x, y` - spatial cooridnates, `c` - channel.
+     * Where `x, y` - spatial coordinates, `c` - channel.
      *
      * An every sample in the batch is normalized separately. Optionally,
      * output is scaled by the trained parameters.
@@ -559,20 +588,31 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     {
     public:
         float pnorm, epsilon;
-        CV_DEPRECATED bool acrossSpatial;
+        CV_DEPRECATED_EXTERNAL bool acrossSpatial;
 
         static Ptr<NormalizeBBoxLayer> create(const LayerParams& params);
     };
 
     /**
-     * @brief Resize input 4-dimensional blob by nearest neghbor strategy.
+     * @brief Resize input 4-dimensional blob by nearest neighbor or bilinear strategy.
      *
-     * Layer is used to support TensorFlow's resize_nearest_neighbor op.
+     * Layer is used to support TensorFlow's resize_nearest_neighbor and resize_bilinear ops.
      */
-    class CV_EXPORTS ResizeNearestNeighborLayer : public Layer
+    class CV_EXPORTS ResizeLayer : public Layer
     {
     public:
-        static Ptr<ResizeNearestNeighborLayer> create(const LayerParams& params);
+        static Ptr<ResizeLayer> create(const LayerParams& params);
+    };
+
+    /**
+     * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
+     *
+     * It differs from @ref ResizeLayer in output shape and resize scales computations.
+     */
+    class CV_EXPORTS InterpLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ProposalLayer : public Layer
@@ -581,9 +621,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<ProposalLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CropAndResizeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 #endif

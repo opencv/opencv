@@ -158,8 +158,9 @@ public:
         data.resize(size);
     }
 
-    void put(unsigned bits, int len)
+    inline void put_bits(unsigned bits, int len)
     {
+        CV_Assert(len >=0 && len < 32);
         if((m_pos == (data.size() - 1) && len > bits_free) || m_pos == data.size())
         {
             resize(int(2*data.size()));
@@ -180,6 +181,12 @@ public:
         {
             data[m_pos] |= (bits_free == 32) ? tempval : (tempval << bits_free);
         }
+    }
+
+    inline void put_val(int val, const unsigned * table)
+    {
+        unsigned code = table[(val) + 2];
+        put_bits(code >> 8, (int)(code & 255));
     }
 
     void finish()
@@ -395,6 +402,8 @@ public:
         nstripes = -1;
     }
     ~MotionJpegWriter() { close(); }
+
+    virtual int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_OPENCV_MJPEG; }
 
     void close()
     {
@@ -1188,13 +1197,6 @@ public:
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
         const int CAT_TAB_SIZE = 4096;
-        unsigned code = 0;
-
-#define JPUT_BITS(val, bits) output_buffer.put(val, bits)
-
-#define JPUT_HUFF(val, table) \
-    code = table[(val) + 2]; \
-    JPUT_BITS(code >> 8, (int)(code & 255))
 
         int x, y;
         int i, j;
@@ -1300,8 +1302,8 @@ public:
                             int cat = cat_table[val + CAT_TAB_SIZE];
 
                             //CV_Assert( cat <= 11 );
-                            JPUT_HUFF( cat, huff_dc_tab[is_chroma] );
-                            JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
+                            output_buffer.put_val(cat, huff_dc_tab[is_chroma] );
+                            output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
                         }
 
                         for( j = 1; j < 64; j++ )
@@ -1316,15 +1318,15 @@ public:
                             {
                                 while( run >= 16 )
                                 {
-                                    JPUT_HUFF( 0xF0, htable ); // encode 16 zeros
+                                    output_buffer.put_val( 0xF0, htable ); // encode 16 zeros
                                     run -= 16;
                                 }
 
                                 {
                                     int cat = cat_table[val + CAT_TAB_SIZE];
                                     //CV_Assert( cat <= 10 );
-                                    JPUT_HUFF( cat + run*16, htable );
-                                    JPUT_BITS( val - (val < 0 ? 1 : 0), cat );
+                                    output_buffer.put_val( cat + run*16, htable );
+                                    output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
                                 }
 
                                 run = 0;
@@ -1333,7 +1335,7 @@ public:
 
                         if( run )
                         {
-                            JPUT_HUFF( 0x00, htable ); // encode EOB
+                            output_buffer.put_val( 0x00, htable ); // encode EOB
                         }
                     }
                 }
@@ -1530,8 +1532,11 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
 }
 
-Ptr<IVideoWriter> createMotionJpegWriter( const String& filename, double fps, Size frameSize, bool iscolor )
+Ptr<IVideoWriter> createMotionJpegWriter(const std::string &filename, int fourcc, double fps, const Size &frameSize, bool iscolor)
 {
+    if (fourcc != CV_FOURCC('M', 'J', 'P', 'G'))
+        return Ptr<IVideoWriter>();
+
     Ptr<IVideoWriter> iwriter = makePtr<mjpeg::MotionJpegWriter>(filename, fps, frameSize, iscolor);
     if( !iwriter->isOpened() )
         iwriter.release();

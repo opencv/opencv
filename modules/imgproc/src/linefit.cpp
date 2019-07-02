@@ -47,6 +47,7 @@ static const double eps = 1e-6;
 
 static void fitLine2D_wods( const Point2f* points, int count, float *weights, float *line )
 {
+    CV_Assert(count > 0);
     double x = 0, y = 0, x2 = 0, y2 = 0, xy = 0, w = 0;
     double dx2, dy2, dxy;
     int i;
@@ -98,6 +99,7 @@ static void fitLine2D_wods( const Point2f* points, int count, float *weights, fl
 
 static void fitLine3D_wods( const Point3f * points, int count, float *weights, float *line )
 {
+    CV_Assert(count > 0);
     int i;
     float w0 = 0;
     float x0 = 0, y0 = 0, z0 = 0;
@@ -319,7 +321,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
     void (*calc_weights) (float *, int, float *) = 0;
     void (*calc_weights_param) (float *, int, float *, float) = 0;
     int i, j, k;
-    float _line[6], _lineprev[6];
+    float _line[4], _lineprev[4];
     float rdelta = reps != 0 ? reps : 1.0f;
     float adelta = aeps != 0 ? aeps : 0.01f;
     double min_err = DBL_MAX, err = 0;
@@ -360,7 +362,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
     }
 
     AutoBuffer<float> wr(count*2);
-    float *w = wr, *r = w + count;
+    float *w = wr.data(), *r = w + count;
 
     for( k = 0; k < 20; k++ )
     {
@@ -495,7 +497,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
     }
 
     AutoBuffer<float> buf(count*2);
-    float *w = buf, *r = w + count;
+    float *w = buf.data(), *r = w + count;
 
     for( k = 0; k < 20; k++ )
     {
@@ -594,7 +596,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
 void cv::fitLine( InputArray _points, OutputArray _line, int distType,
                  double param, double reps, double aeps )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
 

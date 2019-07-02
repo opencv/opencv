@@ -79,11 +79,11 @@ using **np.ifft2()** function. The result, again, will be a complex number. You 
 absolute value.
 @code{.py}
 rows, cols = img.shape
-crow,ccol = rows/2 , cols/2
-fshift[crow-30:crow+30, ccol-30:ccol+30] = 0
+crow,ccol = rows//2 , cols//2
+fshift[crow-30:crow+31, ccol-30:ccol+31] = 0
 f_ishift = np.fft.ifftshift(fshift)
 img_back = np.fft.ifft2(f_ishift)
-img_back = np.abs(img_back)
+img_back = np.real(img_back)
 
 plt.subplot(131),plt.imshow(img, cmap = 'gray')
 plt.title('Input Image'), plt.xticks([]), plt.yticks([])

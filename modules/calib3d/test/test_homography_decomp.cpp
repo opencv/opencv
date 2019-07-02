@@ -134,4 +134,36 @@ private:
 
 TEST(Calib3d_DecomposeHomography, regression) { CV_HomographyDecompTest test; test.safe_run(); }
 
+
+TEST(Calib3d_DecomposeHomography, issue_4978)
+{
+    Matx33d K(
+        1.0,   0.0,    0.0,
+        0.0,   1.0,    0.0,
+        0.0,   0.0,    1.0
+    );
+
+    Matx33d H(
+        -0.102896, 0.270191,   -0.0031153,
+        0.0406387, 1.19569,    -0.0120456,
+        0.445351,  0.0410889,  1
+    );
+
+    vector<Mat> rotations;
+    vector<Mat> translations;
+    vector<Mat> normals;
+
+    decomposeHomographyMat(H, K, rotations, translations, normals);
+
+    ASSERT_GT(rotations.size(), (size_t)0u);
+    for (size_t i = 0; i < rotations.size(); i++)
+    {
+        // check: det(R) = 1
+        EXPECT_TRUE(std::fabs(cv::determinant(rotations[i]) - 1.0) < 0.01)
+            << "R: det=" << cv::determinant(rotations[0]) << std::endl << rotations[i] << std::endl
+            << "T:" << std::endl << translations[i] << std::endl;
+    }
+}
+
+
 }} // namespace

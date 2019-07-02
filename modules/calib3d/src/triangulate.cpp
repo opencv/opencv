@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/core/core_c.h"
 
 // cvCorrectMatches function is Copyright (C) 2009, Jostein Austvik Jacobsen.
 // cvTriangulatePoints function is derived from icvReconstructPointsFor3View, originally by Valery Mosyagin.
@@ -50,8 +50,8 @@
 
 
 // This method is the same as icvReconstructPointsFor3View, with only a few numbers adjusted for two-view geometry
-CV_IMPL void
-cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMat* projPoints2, CvMat* points4D)
+static void
+icvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMat* projPoints2, CvMat* points4D)
 {
     if( projMatr1 == 0 || projMatr2 == 0 ||
       projPoints1 == 0 || projPoints2 == 0 ||
@@ -131,8 +131,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
  *		new_points1	:	the optimized points1_. if this is NULL, the corrected points are placed back in points1_
  *		new_points2	:	the optimized points2_. if this is NULL, the corrected points are placed back in points2_
  */
-CV_IMPL void
-cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1, CvMat *new_points2)
+static void
+icvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1, CvMat *new_points2)
 {
     cv::Ptr<CvMat> tmp33;
     cv::Ptr<CvMat> tmp31, tmp31_2;
@@ -347,7 +347,7 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
                             InputArray _projPoints1, InputArray _projPoints2,
                             OutputArray _points4D )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
     Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
@@ -358,29 +358,31 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
     if((points2.rows == 1 || points2.cols == 1) && points2.channels() == 2)
         points2 = points2.reshape(1, static_cast<int>(points2.total())).t();
 
-    CvMat cvMatr1 = matr1, cvMatr2 = matr2;
-    CvMat cvPoints1 = points1, cvPoints2 = points2;
+    CvMat cvMatr1 = cvMat(matr1), cvMatr2 = cvMat(matr2);
+    CvMat cvPoints1 = cvMat(points1), cvPoints2 = cvMat(points2);
 
     _points4D.create(4, points1.cols, points1.type());
-    CvMat cvPoints4D = _points4D.getMat();
+    Mat cvPoints4D_ = _points4D.getMat();
+    CvMat cvPoints4D = cvMat(cvPoints4D_);
 
-    cvTriangulatePoints(&cvMatr1, &cvMatr2, &cvPoints1, &cvPoints2, &cvPoints4D);
+    icvTriangulatePoints(&cvMatr1, &cvMatr2, &cvPoints1, &cvPoints2, &cvPoints4D);
 }
 
 void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2,
                          OutputArray _newPoints1, OutputArray _newPoints2 )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
 
-    CvMat cvPoints1 = points1, cvPoints2 = points2;
-    CvMat cvF = F;
+    CvMat cvPoints1 = cvMat(points1), cvPoints2 = cvMat(points2);
+    CvMat cvF = cvMat(F);
 
     _newPoints1.create(points1.size(), points1.type());
     _newPoints2.create(points2.size(), points2.type());
-    CvMat cvNewPoints1 = _newPoints1.getMat(), cvNewPoints2 = _newPoints2.getMat();
+    Mat cvNewPoints1_ = _newPoints1.getMat(), cvNewPoints2_ = _newPoints2.getMat();
+    CvMat cvNewPoints1 = cvMat(cvNewPoints1_), cvNewPoints2 = cvMat(cvNewPoints2_);
 
-    cvCorrectMatches(&cvF, &cvPoints1, &cvPoints2, &cvNewPoints1, &cvNewPoints2);
+    icvCorrectMatches(&cvF, &cvPoints1, &cvPoints2, &cvNewPoints1, &cvNewPoints2);
 }

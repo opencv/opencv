@@ -94,7 +94,7 @@ else()
     set(MKL_ARCH_SUFFIX "c")
 endif()
 
-if(${MKL_VERSION_STR} VERSION_GREATER "11.3.0" OR ${MKL_VERSION_STR} VERSION_EQUAL "11.3.0")
+if(MKL_VERSION_STR VERSION_GREATER "11.3.0" OR MKL_VERSION_STR VERSION_EQUAL "11.3.0")
     set(mkl_lib_find_paths
         ${MKL_ROOT_DIR}/lib
         ${MKL_ROOT_DIR}/lib/${MKL_ARCH} ${MKL_ROOT_DIR}/../tbb/lib/${MKL_ARCH})

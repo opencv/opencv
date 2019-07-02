@@ -72,7 +72,7 @@ int main(int argc, char** argv)
         string image_file = args.get<string>("i");
         if (!image_file.empty())
         {
-            Mat image = imread(image_file);
+            Mat image = imread(samples::findFile(image_file));
             if (image.empty())
             {
                 cout << "error read image: " << image_file << endl;

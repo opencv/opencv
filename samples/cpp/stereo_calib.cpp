@@ -18,7 +18,6 @@
      Homepage:      http://opencv.org
      Online docs:   http://docs.opencv.org
      Q&A forum:     http://answers.opencv.org
-     Issue tracker: http://code.opencv.org
      GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
@@ -46,11 +45,11 @@ static int print_help()
             " on the chessboards, and a flag: useCalibrated for \n"
             "   calibrated (0) or\n"
             "   uncalibrated \n"
-            "     (1: use cvStereoCalibrate(), 2: compute fundamental\n"
+            "     (1: use stereoCalibrate(), 2: compute fundamental\n"
             "         matrix separately) stereo. \n"
             " Calibrate the cameras and display the\n"
             " rectified results along with the computed disparity images.   \n" << endl;
-    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=../data/stereo_calib.xml>\n" << endl;
+    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=stereo_calib.xml>\n" << endl;
     return 0;
 }
 
@@ -347,11 +346,11 @@ int main(int argc, char** argv)
     Size boardSize;
     string imagelistfn;
     bool showRectified;
-    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{s|1.0|}{nr||}{help||}{@input|../data/stereo_calib.xml|}");
+    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{s|1.0|}{nr||}{help||}{@input|stereo_calib.xml|}");
     if (parser.has("help"))
         return print_help();
     showRectified = !parser.has("nr");
-    imagelistfn = parser.get<string>("@input");
+    imagelistfn = samples::findFile(parser.get<string>("@input"));
     boardSize.width = parser.get<int>("w");
     boardSize.height = parser.get<int>("h");
     float squareSize = parser.get<float>("s");

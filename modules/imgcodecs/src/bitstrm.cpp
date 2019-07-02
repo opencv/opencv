@@ -99,7 +99,7 @@ void  RBaseStream::readBlock()
     {
         if( m_block_pos == 0 && m_current < m_end )
             return;
-        CV_THROW (RBS_THROW_EOS);
+        throw RBS_THROW_EOS;
     }
 
     fseek( m_file, m_block_pos, SEEK_SET );
@@ -107,7 +107,7 @@ void  RBaseStream::readBlock()
     m_end = m_start + readed;
 
     if( readed == 0 || m_current >= m_end )
-        CV_THROW (RBS_THROW_EOS);
+        throw RBS_THROW_EOS;
 }
 
 
@@ -175,8 +175,11 @@ void  RBaseStream::setPos( int pos )
     }
 
     int offset = pos % m_block_size;
+    int old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
+    if (old_block_pos != m_block_pos)
+        readBlock();
 }
 
 

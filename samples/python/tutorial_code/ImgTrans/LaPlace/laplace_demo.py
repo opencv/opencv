@@ -14,14 +14,14 @@ def main(argv):
     # [variables]
 
     # [load]
-    imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
+    imageName = argv[0] if len(argv) > 0 else 'lena.jpg'
 
-    src = cv.imread(imageName, cv.IMREAD_COLOR) # Load an image
+    src = cv.imread(cv.samples.findFile(imageName), cv.IMREAD_COLOR) # Load an image
 
     # Check if image is loaded fine
     if src is None:
         print ('Error opening image')
-        print ('Program Arguments: [image_name -- default ../data/lena.jpg]')
+        print ('Program Arguments: [image_name -- default lena.jpg]')
         return -1
     # [load]
 

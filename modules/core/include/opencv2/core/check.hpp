@@ -66,15 +66,19 @@ struct CheckContext {
             { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, message, p1_str, p2_str }
 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v1, const float v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v1, const double v2, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v1, const Size_<int> v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx);
 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckContext& ctx);
@@ -120,15 +124,35 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 
 #define CV_CheckChannelsEQ(c1, c2, msg)  CV__CHECK(_, EQ, MatChannels, c1, c2, #c1, #c2, msg)
 
-
 /// Example: type == CV_8UC1 || type == CV_8UC3
 #define CV_CheckType(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatType, t, (test_expr), #t, #test_expr, msg)
 
 /// Example: depth == CV_32F || depth == CV_64F
 #define CV_CheckDepth(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatDepth, t, (test_expr), #t, #test_expr, msg)
 
+/// Example: v == A || v == B
+#define CV_Check(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
+
 /// Some complex conditions: CV_Check(src2, src2.empty() || (src2.type() == src1.type() && src2.size() == src1.size()), "src2 should have same size/type as src1")
-// TODO define pretty-printers: #define CV_Check(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
+// TODO define pretty-printers
+
+#ifndef NDEBUG
+#define CV_DbgCheck(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
+#define CV_DbgCheckEQ(v1, v2, msg)  CV__CHECK(_, EQ, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckNE(v1, v2, msg)  CV__CHECK(_, NE, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckLE(v1, v2, msg)  CV__CHECK(_, LE, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckLT(v1, v2, msg)  CV__CHECK(_, LT, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckGE(v1, v2, msg)  CV__CHECK(_, GE, auto, v1, v2, #v1, #v2, msg)
+#define CV_DbgCheckGT(v1, v2, msg)  CV__CHECK(_, GT, auto, v1, v2, #v1, #v2, msg)
+#else
+#define CV_DbgCheck(v, test_expr, msg)  do { } while (0)
+#define CV_DbgCheckEQ(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckNE(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckLE(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckLT(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckGE(v1, v2, msg)  do { } while (0)
+#define CV_DbgCheckGT(v1, v2, msg)  do { } while (0)
+#endif
 
 } // namespace
 

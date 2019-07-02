@@ -141,7 +141,7 @@
 #   -- Same as CUDA_ADD_EXECUTABLE except that a library is created.
 #
 #   CUDA_BUILD_CLEAN_TARGET()
-#   -- Creates a convience target that deletes all the dependency files
+#   -- Creates a convenience target that deletes all the dependency files
 #      generated.  You should make clean after running this target to ensure the
 #      dependency files get regenerated.
 #
@@ -473,7 +473,7 @@ else()
 endif()
 
 # Propagate the host flags to the host compiler via -Xcompiler
-option(CUDA_PROPAGATE_HOST_FLAGS "Propage C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
+option(CUDA_PROPAGATE_HOST_FLAGS "Propagate C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
 
 # Enable CUDA_SEPARABLE_COMPILATION
 option(CUDA_SEPARABLE_COMPILATION "Compile CUDA objects with separable compilation enabled.  Requires CUDA 5.0+" OFF)
@@ -1042,7 +1042,7 @@ function(CUDA_COMPUTE_BUILD_PATH path build_path)
   # Only deal with CMake style paths from here on out
   file(TO_CMAKE_PATH "${path}" bpath)
   if (IS_ABSOLUTE "${bpath}")
-    # Absolute paths are generally unnessary, especially if something like
+    # Absolute paths are generally unnecessary, especially if something like
     # file(GLOB_RECURSE) is used to pick up the files.
 
     string(FIND "${bpath}" "${CMAKE_CURRENT_BINARY_DIR}" _binary_dir_pos)
@@ -1065,7 +1065,7 @@ function(CUDA_COMPUTE_BUILD_PATH path build_path)
   # Avoid spaces
   string(REPLACE " " "_" bpath "${bpath}")
 
-  # Strip off the filename.  I wait until here to do it, since removin the
+  # Strip off the filename.  I wait until here to do it, since removing the
   # basename can make a path that looked like path/../basename turn into
   # path/.. (notice the trailing slash).
   get_filename_component(bpath "${bpath}" PATH)
@@ -1362,7 +1362,7 @@ macro(CUDA_WRAP_SRCS cuda_target format generated_files)
       # Bring in the dependencies.  Creates a variable CUDA_NVCC_DEPEND #######
       cuda_include_nvcc_dependencies(${cmake_dependency_file})
 
-      # Convience string for output ###########################################
+      # Convenience string for output ###########################################
       if(CUDA_BUILD_EMULATION)
         set(cuda_build_type "Emulation")
       else()
@@ -1563,7 +1563,7 @@ macro(CUDA_ADD_LIBRARY cuda_target)
     ${_cmake_options} ${_cuda_shared_flag}
     OPTIONS ${_options} )
 
-  # Compute the file name of the intermedate link file used for separable
+  # Compute the file name of the intermediate link file used for separable
   # compilation.
   CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(link_file ${cuda_target} "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
@@ -1607,7 +1607,7 @@ macro(CUDA_ADD_EXECUTABLE cuda_target)
   # Create custom commands and targets for each file.
   CUDA_WRAP_SRCS( ${cuda_target} OBJ _generated_files ${_sources} OPTIONS ${_options} )
 
-  # Compute the file name of the intermedate link file used for separable
+  # Compute the file name of the intermediate link file used for separable
   # compilation.
   CUDA_COMPUTE_SEPARABLE_COMPILATION_OBJECT_FILE_NAME(link_file ${cuda_target} "${${cuda_target}_SEPARABLE_COMPILATION_OBJECTS}")
 
@@ -1723,7 +1723,7 @@ endmacro()
 ###############################################################################
 ###############################################################################
 macro(CUDA_BUILD_CLEAN_TARGET)
-  # Call this after you add all your CUDA targets, and you will get a convience
+  # Call this after you add all your CUDA targets, and you will get a convenience
   # target.  You should also make clean after running this target to get the
   # build system to generate all the code again.
 

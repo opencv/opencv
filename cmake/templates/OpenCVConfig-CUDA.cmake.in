@@ -6,6 +6,9 @@ set(OpenCV_USE_CUBLAS   "@HAVE_CUBLAS@")
 set(OpenCV_USE_CUFFT    "@HAVE_CUFFT@")
 set(OpenCV_USE_NVCUVID  "@HAVE_NVCUVID@")
 
+set(OpenCV_CUDNN_VERSION    "@CUDNN_VERSION@")
+set(OpenCV_USE_CUDNN        "@HAVE_CUDNN@")
+
 if(NOT CUDA_FOUND)
   find_host_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
 else()
@@ -16,7 +19,7 @@ endif()
 
 set(OpenCV_CUDA_LIBS_ABSPATH ${CUDA_LIBRARIES})
 
-if(${CUDA_VERSION} VERSION_LESS "5.5")
+if(CUDA_VERSION VERSION_LESS "5.5")
   list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_npp_LIBRARY})
 else()
   find_cuda_helper_libs(nppc)

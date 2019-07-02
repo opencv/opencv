@@ -5,6 +5,12 @@ else()
   ocv_update(OPENCV_JAVA_LIB_NAME_SUFFIX "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
 endif()
 
+if(MSVC)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+else()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-declarations)
+endif()
+
 # get list of modules to wrap
 # message(STATUS "Wrapped in java:")
 set(OPENCV_JAVA_MODULES)

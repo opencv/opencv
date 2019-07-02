@@ -159,12 +159,12 @@ void Decolor::gradvector(const Mat &img, vector <double> &grad) const
 
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[i*height + j] = d_trans.at<float>(i, j);
+            grad[i*width + j] = d_trans.at<float>(i, j);
 
     const int offset = width * height;
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[offset + i * height + j] = d1_trans.at<float>(i, j);
+            grad[offset + i * width + j] = d1_trans.at<float>(i, j);
 }
 
 void Decolor::colorGrad(const Mat &img, vector <double> &Cg) const
@@ -204,14 +204,19 @@ void Decolor::add_to_vector_poly(vector < vector <double> > &polyGrad, const vec
     idx1++;
 }
 
-void Decolor::weak_order(const Mat &img, vector <double> &alf) const
+void Decolor::weak_order(const Mat &im, vector <double> &alf) const
 {
-    const int h = img.size().height;
-    const int w = img.size().width;
+    Mat img;
+    const int h = im.size().height;
+    const int w = im.size().width;
     if((h + w) > 800)
     {
         const double sizefactor = double(800)/(h+w);
-        resize(img, img, Size(cvRound(h*sizefactor), cvRound(w*sizefactor)));
+        resize(im, img, Size(cvRound(w*sizefactor), cvRound(h*sizefactor)));
+    }
+    else
+    {
+        img = im;
     }
 
     Mat curIm = Mat(img.size(),CV_32FC1);
@@ -246,16 +251,20 @@ void Decolor::weak_order(const Mat &img, vector <double> &alf) const
         alf[i] -= tmp1[i] * tmp2[i] * tmp3[i];
 }
 
-void Decolor::grad_system(const Mat &img, vector < vector < double > > &polyGrad,
+void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
         vector < double > &Cg, vector <Vec3i>& comb) const
 {
-    int h = img.size().height;
-    int w = img.size().width;
-
+    Mat img;
+    int h = im.size().height;
+    int w = im.size().width;
     if((h + w) > 800)
     {
         const double sizefactor = double(800)/(h+w);
-        resize(img, img, Size(cvRound(h*sizefactor), cvRound(w*sizefactor)));
+        resize(im, img, Size(cvRound(w*sizefactor), cvRound(h*sizefactor)));
+    }
+    else
+    {
+        img = im;
     }
 
     h = img.size().height;

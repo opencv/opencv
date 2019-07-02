@@ -15,7 +15,7 @@ set(OPENCV_LIBVERSION "${OPENCV_VERSION_MAJOR}.${OPENCV_VERSION_MINOR}.${OPENCV_
 
 # create a dependency on the version file
 # we never use the output of the following command but cmake will rerun automatically if the version file changes
-configure_file("${OPENCV_VERSION_FILE}" "${CMAKE_BINARY_DIR}/junk/version.junk" COPYONLY)
+configure_file("${OPENCV_VERSION_FILE}" "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/opencv_junk/version.junk" COPYONLY)
 
 ocv_update(OPENCV_VS_VER_FILEVERSION_QUAD "${OPENCV_VERSION_MAJOR},${OPENCV_VERSION_MINOR},${OPENCV_VERSION_PATCH},0")
 ocv_update(OPENCV_VS_VER_PRODUCTVERSION_QUAD "${OPENCV_VERSION_MAJOR},${OPENCV_VERSION_MINOR},${OPENCV_VERSION_PATCH},0")

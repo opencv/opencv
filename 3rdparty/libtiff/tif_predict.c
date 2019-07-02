@@ -1,5 +1,3 @@
-/* $Id: tif_predict.c,v 1.44 2017-06-18 10:31:50 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

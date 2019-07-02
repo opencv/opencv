@@ -210,7 +210,7 @@ void calib::calibDataController::filterFrames()
                 worstElemIndex = i;
             }
         }
-        showOverlayMessage(cv::format("Frame %d is worst", worstElemIndex + 1));
+        showOverlayMessage(cv::format("Frame %zu is worst", worstElemIndex + 1));
 
         if(mCalibData->imagePoints.size()) {
             mCalibData->imagePoints.erase(mCalibData->imagePoints.begin() + worstElemIndex);
@@ -224,8 +224,10 @@ void calib::calibDataController::filterFrames()
         cv::Mat newErrorsVec = cv::Mat((int)numberOfFrames - 1, 1, CV_64F);
         std::copy(mCalibData->perViewErrors.ptr<double>(0),
                   mCalibData->perViewErrors.ptr<double>((int)worstElemIndex), newErrorsVec.ptr<double>(0));
-        std::copy(mCalibData->perViewErrors.ptr<double>((int)worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>((int)numberOfFrames),
+        if((int)worstElemIndex < (int)numberOfFrames-1) {
+            std::copy(mCalibData->perViewErrors.ptr<double>((int)worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>((int)numberOfFrames),
                     newErrorsVec.ptr<double>((int)worstElemIndex));
+        }
         mCalibData->perViewErrors = newErrorsVec;
     }
 }

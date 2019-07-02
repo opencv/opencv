@@ -109,10 +109,9 @@ namespace cv {
             };
         }
 
-        // Read parameters from a file into a NetParameter message.
-        void ReadNetParamsFromCfgFileOrDie(const char *cfgFile, darknet::NetParameter *net);
-        void ReadNetParamsFromBinaryFileOrDie(const char *darknetModel, darknet::NetParameter *net);
-
+        // Read parameters from a stream into a NetParameter message.
+        void ReadNetParamsFromCfgStreamOrDie(std::istream &ifile, darknet::NetParameter *net);
+        void ReadNetParamsFromBinaryStreamOrDie(std::istream &ifile, darknet::NetParameter *net);
     }
 }
 #endif

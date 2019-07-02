@@ -26,6 +26,7 @@ Declaration of various functions which are related to Tensorflow models reading.
 #pragma GCC diagnostic pop
 #endif
 
+namespace tensorflow { using namespace opencv_tensorflow; }
 
 namespace cv {
 namespace dnn {

@@ -556,7 +556,7 @@ int CV_StereoMatchingTest::processStereoMatchingResults( FileStorage& fs, int ca
     assert( fs.isOpened() );
     assert( trueLeftDisp.type() == CV_32FC1 );
     assert( trueRightDisp.empty() || trueRightDisp.type() == CV_32FC1 );
-    assert( leftDisp.type() == CV_32FC1 && rightDisp.type() == CV_32FC1 );
+    assert( leftDisp.type() == CV_32FC1 && (rightDisp.empty() || rightDisp.type() == CV_32FC1) );
 
     // get masks for unknown ground truth disparity values
     Mat leftUnknMask, rightUnknMask;
@@ -790,6 +790,12 @@ protected:
 
         bm->compute( leftImg, rightImg, tempDisp );
         tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+
+        //check for fixed-type disparity data type
+        Mat_<float> fixedFloatDisp;
+        bm->compute( leftImg, rightImg, fixedFloatDisp );
+        EXPECT_LT(cvtest::norm(fixedFloatDisp, leftDisp, cv::NORM_L2 | cv::NORM_RELATIVE),
+                  0.005 + DBL_EPSILON);
 
         if (params.mindisp != 0)
             for (int y = 0; y < leftDisp.rows; y++)

@@ -39,6 +39,8 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+
 namespace cv
 {
 
@@ -150,7 +152,7 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
 // see Welzl, Emo. Smallest enclosing disks (balls and ellipsoids). Springer Berlin Heidelberg, 1991.
 void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radius )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int count = points.checkVector(2);
@@ -229,7 +231,7 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
 // calculates length of a curve (e.g. contour perimeter)
 double cv::arcLength( InputArray _curve, bool is_closed )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat curve = _curve.getMat();
     int count = curve.checkVector(2);
@@ -264,7 +266,7 @@ double cv::arcLength( InputArray _curve, bool is_closed )
 // area of a whole sequence
 double cv::contourArea( InputArray _contour, bool oriented )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat contour = _contour.getMat();
     int npoints = contour.checkVector(2);
@@ -297,7 +299,7 @@ double cv::contourArea( InputArray _contour, bool oriented )
 
 cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
@@ -318,7 +320,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     const Point2f* ptsf = points.ptr<Point2f>();
 
     AutoBuffer<double> _Ad(n*5), _bd(n);
-    double *Ad = _Ad, *bd = _bd;
+    double *Ad = _Ad.data(), *bd = _bd.data();
 
     // first fit for parameters A - E
     Mat A( n, 5, CV_64F, Ad );
@@ -746,109 +748,161 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( npoints == 0 )
         return Rect();
 
+#if CV_SIMD
+    const int64_t* pts = points.ptr<int64_t>();
+
+    if( !is_float )
+    {
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_int32::nlanes/2; i+= v_int32::nlanes/2 )
+        {
+            v_int32 ptXY2 = v_reinterpret_as_s32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_int32::nlanes/4 )
+        {
+            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_int64::nlanes/2;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = minval.get0();
+        xmax = maxval.get0();
+        ymin = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))).get0();
+        ymax = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))).get0();
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_int32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, minval2.get0());
+            xmax = max(xmax, maxval2.get0());
+            ymin = min(ymin, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2))).get0());
+            ymax = max(ymax, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0());
+        }
+#endif
+    }
+    else
+    {
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_float32::nlanes/2; i+= v_float32::nlanes/2 )
+        {
+            v_float32 ptXY2 = v_reinterpret_as_f32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_float32::nlanes/4 )
+        {
+            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_float32::nlanes/4;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = cvFloor(minval.get0());
+        xmax = cvFloor(maxval.get0());
+        ymin = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))).get0());
+        ymax = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))).get0());
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_float32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, cvFloor(minval2.get0()));
+            xmax = max(xmax, cvFloor(maxval2.get0()));
+            ymin = min(ymin, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))).get0()));
+            ymax = max(ymax, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0()));
+        }
+#endif
+    }
+#else
     const Point* pts = points.ptr<Point>();
     Point pt = pts[0];
 
-#if CV_SSE4_2
-    if(cv::checkHardwareSupport(CV_CPU_SSE4_2))
+    if( !is_float )
     {
-        if( !is_float )
+        xmin = xmax = pt.x;
+        ymin = ymax = pt.y;
+
+        for( i = 1; i < npoints; i++ )
         {
-            __m128i minval, maxval;
-            minval = maxval = _mm_loadl_epi64((const __m128i*)(&pt)); //min[0]=pt.x, min[1]=pt.y
+            pt = pts[i];
 
-            for( i = 1; i < npoints; i++ )
-            {
-                __m128i ptXY = _mm_loadl_epi64((const __m128i*)&pts[i]);
-                minval = _mm_min_epi32(ptXY, minval);
-                maxval = _mm_max_epi32(ptXY, maxval);
-            }
-            xmin = _mm_cvtsi128_si32(minval);
-            ymin = _mm_cvtsi128_si32(_mm_srli_si128(minval, 4));
-            xmax = _mm_cvtsi128_si32(maxval);
-            ymax = _mm_cvtsi128_si32(_mm_srli_si128(maxval, 4));
-        }
-        else
-        {
-            __m128 minvalf, maxvalf, z = _mm_setzero_ps(), ptXY = _mm_setzero_ps();
-            minvalf = maxvalf = _mm_loadl_pi(z, (const __m64*)(&pt));
+            if( xmin > pt.x )
+                xmin = pt.x;
 
-            for( i = 1; i < npoints; i++ )
-            {
-                ptXY = _mm_loadl_pi(ptXY, (const __m64*)&pts[i]);
+            if( xmax < pt.x )
+                xmax = pt.x;
 
-                minvalf = _mm_min_ps(minvalf, ptXY);
-                maxvalf = _mm_max_ps(maxvalf, ptXY);
-            }
+            if( ymin > pt.y )
+                ymin = pt.y;
 
-            float xyminf[2], xymaxf[2];
-            _mm_storel_pi((__m64*)xyminf, minvalf);
-            _mm_storel_pi((__m64*)xymaxf, maxvalf);
-            xmin = cvFloor(xyminf[0]);
-            ymin = cvFloor(xyminf[1]);
-            xmax = cvFloor(xymaxf[0]);
-            ymax = cvFloor(xymaxf[1]);
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
     }
     else
-#endif
     {
-        if( !is_float )
+        Cv32suf v;
+        // init values
+        xmin = xmax = CV_TOGGLE_FLT(pt.x);
+        ymin = ymax = CV_TOGGLE_FLT(pt.y);
+
+        for( i = 1; i < npoints; i++ )
         {
-            xmin = xmax = pt.x;
-            ymin = ymax = pt.y;
+            pt = pts[i];
+            pt.x = CV_TOGGLE_FLT(pt.x);
+            pt.y = CV_TOGGLE_FLT(pt.y);
 
-            for( i = 1; i < npoints; i++ )
-            {
-                pt = pts[i];
+            if( xmin > pt.x )
+                xmin = pt.x;
 
-                if( xmin > pt.x )
-                    xmin = pt.x;
+            if( xmax < pt.x )
+                xmax = pt.x;
 
-                if( xmax < pt.x )
-                    xmax = pt.x;
+            if( ymin > pt.y )
+                ymin = pt.y;
 
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
-            }
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
-        else
-        {
-            Cv32suf v;
-            // init values
-            xmin = xmax = CV_TOGGLE_FLT(pt.x);
-            ymin = ymax = CV_TOGGLE_FLT(pt.y);
 
-            for( i = 1; i < npoints; i++ )
-            {
-                pt = pts[i];
-                pt.x = CV_TOGGLE_FLT(pt.x);
-                pt.y = CV_TOGGLE_FLT(pt.y);
-
-                if( xmin > pt.x )
-                    xmin = pt.x;
-
-                if( xmax < pt.x )
-                    xmax = pt.x;
-
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
-            }
-
-            v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-            // because right and bottom sides of the bounding rectangle are not inclusive
-            // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-            v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
-        }
+        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
     }
+#endif
 
     return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
@@ -951,7 +1005,7 @@ static Rect maskBoundingRect( const Mat& img )
 
 cv::Rect cv::boundingRect(InputArray array)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
     return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
@@ -969,7 +1023,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
 
     cv::minEnclosingCircle(points, center, radius);
     if(_center)
-        *_center = center;
+        *_center = cvPoint2D32f(center);
     if(_radius)
         *_radius = radius;
     return 1;
@@ -1009,8 +1063,8 @@ icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 /* area of a contour sector */
 static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 {
-    CvPoint pt;                 /*  pointer to points   */
-    CvPoint pt_s, pt_e;         /*  first and last points  */
+    cv::Point pt;                 /*  pointer to points   */
+    cv::Point pt_s, pt_e;         /*  first and last points  */
     CvSeqReader reader;         /*  points reader of contour   */
 
     int p_max = 2, p_ind;
@@ -1044,10 +1098,10 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     cvStartReadSeq( contour, &reader, 0 );
     cvSetSeqReaderPos( &reader, slice.start_index );
-    CV_READ_SEQ_ELEM( pt_s, reader );
+    { CvPoint pt_s_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_s_, reader); pt_s = pt_s_; }
     p_ind = 0;
     cvSetSeqReaderPos( &reader, slice.end_index );
-    CV_READ_SEQ_ELEM( pt_e, reader );
+    { CvPoint pt_e_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_e_, reader); pt_e = pt_e_; }
 
 /*    normal coefficients    */
     nx = pt_s.y - pt_e.y;
@@ -1056,7 +1110,7 @@ static double icvContourSecArea( CvSeq * contour, CvSlice slice )
 
     while( lpt-- > 0 )
     {
-        CV_READ_SEQ_ELEM( pt, reader );
+        { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt = pt_; }
 
         if( flag == 0 )
         {
@@ -1294,14 +1348,14 @@ cvFitEllipse2( const CvArr* array )
 {
     cv::AutoBuffer<double> abuf;
     cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-    return cv::fitEllipse(points);
+    return cvBox2D(cv::fitEllipse(points));
 }
 
 /* Calculates bounding rectagnle of a point set or retrieves already calculated */
 CV_IMPL  CvRect
 cvBoundingRect( CvArr* array, int update )
 {
-    CvRect  rect;
+    cv::Rect rect;
     CvContour contour_header;
     CvSeq* ptseq = 0;
     CvSeqBlock block;
@@ -1343,16 +1397,16 @@ cvBoundingRect( CvArr* array, int update )
 
     if( mat )
     {
-        rect = cv::maskBoundingRect(cv::cvarrToMat(mat));
+        rect = cvRect(cv::maskBoundingRect(cv::cvarrToMat(mat)));
     }
     else if( ptseq->total )
     {
         cv::AutoBuffer<double> abuf;
-        rect = cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf));
+        rect = cvRect(cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
     }
     if( update )
-        ((CvContour*)ptseq)->rect = rect;
-    return rect;
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
 }
 
 /* End of file. */

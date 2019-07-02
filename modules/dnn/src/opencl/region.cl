@@ -84,9 +84,9 @@ __kernel void softmax_activ(const int count,
             output[i] = e;
         }
 
-        int y = index / anchors / cols;
-        int x = index / anchors % cols;
-        int a = index - anchors * (x + y * cols);
+        int y = (index / (anchors * cols)) % rows;
+        int x = (index / anchors) % cols;
+        int a = index % anchors;
         float scale = dst[box_index + 4];
         if (classfix == -1 && scale < .5) scale = 0;
 

@@ -91,7 +91,7 @@ bool clipLine( Size img_size, Point& pt1, Point& pt2 )
 
 bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int c1, c2;
     int64 right = img_size.width-1, bottom = img_size.height-1;
@@ -146,7 +146,7 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
 
 bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Point tl = img_rect.tl();
     pt1 -= tl; pt2 -= tl;
@@ -338,7 +338,6 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
     if( ax > ay )
     {
-        dx = ax;
         dy = (dy ^ j) - j;
         pt1.x ^= pt2.x & j;
         pt2.x ^= pt1.x & j;
@@ -362,7 +361,6 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
     }
     else
     {
-        dy = ay;
         dx = (dx ^ i) - i;
         pt1.x ^= pt2.x & i;
         pt2.x ^= pt1.x & i;
@@ -677,7 +675,6 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
     if( ax > ay )
     {
-        dx = ax;
         dy = (dy ^ j) - j;
         pt1.x ^= pt2.x & j;
         pt2.x ^= pt1.x & j;
@@ -692,7 +689,6 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
     }
     else
     {
-        dy = ay;
         dx = (dx ^ i) - i;
         pt1.x ^= pt2.x & i;
         pt2.x ^= pt1.x & i;
@@ -963,7 +959,7 @@ void ellipse2Poly( Point2d center, Size2d axes, int angle,
                    int arc_start, int arc_end,
                    int delta, std::vector<Point2d>& pts )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     float alpha, beta;
     int i;
@@ -1805,7 +1801,7 @@ void drawMarker(InputOutputArray img, Point position, const Scalar& color, int m
 void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1823,7 +1819,7 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
 void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
            int thickness, int line_type, int shift, double tipLength)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     const double tipSize = norm(pt1-pt2)*tipLength; // Factor to normalize the size of the tip depending on the length of the arrow
 
@@ -1844,7 +1840,7 @@ void rectangle( InputOutputArray _img, Point pt1, Point pt2,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1877,9 +1873,9 @@ void rectangle( InputOutputArray img, Rect rec,
                 const Scalar& color, int thickness,
                 int lineType, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    if( rec.area() > 0 )
+    if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),
                    color, thickness, lineType, shift );
 }
@@ -1888,7 +1884,7 @@ void rectangle( InputOutputArray img, Rect rec,
 void circle( InputOutputArray _img, Point center, int radius,
              const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1920,7 +1916,7 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
               double angle, double start_angle, double end_angle,
               const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1950,7 +1946,7 @@ void ellipse( InputOutputArray _img, Point center, Size axes,
 void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
              int thickness, int lineType)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat img = _img.getMat();
 
@@ -1975,10 +1971,12 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
     EllipseEx( img, center, axes, _angle, 0, 360, buf, thickness, lineType );
 }
 
-void fillConvexPoly( Mat& img, const Point* pts, int npts,
+void fillConvexPoly( InputOutputArray _img, const Point* pts, int npts,
                      const Scalar& color, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( !pts || npts <= 0 )
         return;
@@ -1993,12 +1991,13 @@ void fillConvexPoly( Mat& img, const Point* pts, int npts,
     FillConvexPoly( img, _pts.data(), npts, buf, line_type, shift );
 }
 
-
-void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
+void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int ncontours,
                const Scalar& color, int line_type,
                int shift, Point offset )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2024,11 +2023,12 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
     FillEdgeCollection(img, edges, buf);
 }
 
-
-void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
+void polylines( InputOutputArray _img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
+
+    Mat img = _img.getMat();
 
     if( line_type == CV_AA && img.depth() != CV_8U )
         line_type = 8;
@@ -2268,7 +2268,7 @@ void putText( InputOutputArray _img, const String& text, Point org,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if ( text.empty() )
     {
@@ -2374,31 +2374,28 @@ double getFontScaleFromHeight(const int fontFace, const int pixelHeight, const i
 
 }
 
-
-void cv::fillConvexPoly(InputOutputArray _img, InputArray _points,
+void cv::fillConvexPoly(InputOutputArray img, InputArray _points,
                         const Scalar& color, int lineType, int shift)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat(), points = _points.getMat();
+    Mat points = _points.getMat();
     CV_Assert(points.checkVector(2, CV_32S) >= 0);
     fillConvexPoly(img, points.ptr<Point>(), points.rows*points.cols*points.channels()/2, color, lineType, shift);
 }
 
-
-void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
+void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                   const Scalar& color, int lineType, int shift, Point offset)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat();
     int i, ncontours = (int)pts.total();
     if( ncontours == 0 )
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
     AutoBuffer<int> _npts(ncontours);
-    Point** ptsptr = _ptsptr;
-    int* npts = _npts;
+    Point** ptsptr = _ptsptr.data();
+    int* npts = _npts.data();
 
     for( i = 0; i < ncontours; i++ )
     {
@@ -2410,14 +2407,12 @@ void cv::fillPoly(InputOutputArray _img, InputArrayOfArrays pts,
     fillPoly(img, (const Point**)ptsptr, npts, (int)ncontours, color, lineType, shift, offset);
 }
 
-
-void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
+void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
                    bool isClosed, const Scalar& color,
-                   int thickness, int lineType, int shift )
+                   int thickness, int lineType, int shift)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
-    Mat img = _img.getMat();
     bool manyContours = pts.kind() == _InputArray::STD_VECTOR_VECTOR ||
                         pts.kind() == _InputArray::STD_VECTOR_MAT;
     int i, ncontours = manyContours ? (int)pts.total() : 1;
@@ -2425,8 +2420,8 @@ void cv::polylines(InputOutputArray _img, InputArrayOfArrays pts,
         return;
     AutoBuffer<Point*> _ptsptr(ncontours);
     AutoBuffer<int> _npts(ncontours);
-    Point** ptsptr = _ptsptr;
-    int* npts = _npts;
+    Point** ptsptr = _ptsptr.data();
+    int* npts = _npts.data();
 
     for( i = 0; i < ncontours; i++ )
     {
@@ -2479,10 +2474,10 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int lineType, InputArray _hierarchy,
                    int maxLevel, Point offset )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
-    CvMat _cimage = image;
+    CvMat _cimage = cvMat(image);
 
     size_t ncontours = _contours.total();
     size_t i = 0, first = 0, last = ncontours;
@@ -2551,8 +2546,8 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
         }
     }
 
-    cvDrawContours( &_cimage, &seq[first], color, color, contourIdx >= 0 ?
-                   -maxLevel : maxLevel, thickness, lineType, offset );
+    cvDrawContours( &_cimage, &seq[first], cvScalar(color), cvScalar(color), contourIdx >= 0 ?
+                   -maxLevel : maxLevel, thickness, lineType, cvPoint(offset) );
 }
 
 
@@ -2656,14 +2651,14 @@ cvDrawContours( void* _img, CvSeq* contour,
             int shift = 0;
 
             count -= !CV_IS_SEQ_CLOSED(contour);
-            CV_READ_SEQ_ELEM( pt1, reader );
+            { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt1 = pt_; }
             pt1 += offset;
             if( thickness < 0 )
                 pts.push_back(pt1);
 
             for( i = 0; i < count; i++ )
             {
-                CV_READ_SEQ_ELEM( pt2, reader );
+                { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt2 = pt_; }
                 pt2 += offset;
                 if( thickness >= 0 )
                     cv::ThickLine( img, pt1, pt2, clr, thickness, line_type, 2, shift );
@@ -2705,7 +2700,7 @@ cvEllipse2Poly( CvPoint center, CvSize axes, int angle,
 CV_IMPL CvScalar
 cvColorToScalar( double packed_color, int type )
 {
-    CvScalar scalar;
+    cv::Scalar scalar;
 
     if( CV_MAT_DEPTH( type ) == CV_8U )
     {
@@ -2763,7 +2758,7 @@ cvColorToScalar( double packed_color, int type )
         }
     }
 
-    return scalar;
+    return cvScalar(scalar);
 }
 
 CV_IMPL int
@@ -2891,7 +2886,7 @@ cvGetTextSize( const char *text, const CvFont *_font, CvSize *_size, int *_base_
     cv::Size size = cv::getTextSize( text, _font->font_face, (_font->hscale + _font->vscale)*0.5,
                                      _font->thickness, _base_line );
     if( _size )
-        *_size = size;
+        *_size = cvSize(size);
 }
 
 /* End of file. */

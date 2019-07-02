@@ -50,6 +50,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
+#include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "opencv2/core/softfloat.hpp"
@@ -66,7 +67,7 @@ typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
 template <int channels, typename Type>
 bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     Type values[channels];
     for( int i = 0; i < channels; i++ )
@@ -76,7 +77,7 @@ bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size,
 
 static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
 {
-    CV_INSTRUMENT_REGION_IPP()
+    CV_INSTRUMENT_REGION_IPP();
 
     if( channels == 1 )
     {
@@ -228,7 +229,7 @@ static const void* initInterTab2D( int method, bool fixpt )
     {
         AutoBuffer<float> _tab(8*INTER_TAB_SIZE);
         int i, j, k1, k2;
-        initInterTab1D(method, _tab, INTER_TAB_SIZE);
+        initInterTab1D(method, _tab.data(), INTER_TAB_SIZE);
         for( i = 0; i < INTER_TAB_SIZE; i++ )
             for( j = 0; j < INTER_TAB_SIZE; j++, tab += ksize*ksize, itab += ksize*ksize )
             {
@@ -435,6 +436,9 @@ struct RemapNoVec
 
 #if CV_SIMD128
 
+typedef unsigned short CV_DECL_ALIGNED(1) unaligned_ushort;
+typedef int CV_DECL_ALIGNED(1) unaligned_int;
+
 struct RemapVec_8u
 {
     int operator()( const Mat& _src, void* _dst, const short* XY,
@@ -442,8 +446,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !hasSIMD128() ||
-            sstep > 0x8000 )
+        if( (cn != 1 && cn != 3 && cn != 4) || sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
@@ -460,8 +463,8 @@ struct RemapVec_8u
             {                                      \
                 v_uint8x16 rrggbb, dummy;          \
                 v_uint16x8 rrggbb8, dummy8;        \
-                v_uint8x16 rgb0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
-                v_uint8x16 rgb1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + 3), 0, 0, 0)); \
+                v_uint8x16 rgb0 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p), 0, 0, 0)); \
+                v_uint8x16 rgb1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + 3), 0, 0, 0)); \
                 v_zip(rgb0, rgb1, rrggbb, dummy);  \
                 v_expand(rrggbb, rrggbb8, dummy8); \
                 result = v_reinterpret_as_s16(rrggbb8); \
@@ -479,15 +482,15 @@ struct RemapVec_8u
             CV_DbgAssert(p <= src_limit_8bytes);   \
             v_uint8x16 rrggbbaa, dummy;            \
             v_uint16x8 rrggbbaa8, dummy8;          \
-            v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(int*)(p), 0, 0, 0)); \
-            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
+            v_uint8x16 rgba0 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p), 0, 0, 0)); \
+            v_uint8x16 rgba1 = v_reinterpret_as_u8(v_int32x4(*(unaligned_int*)(p + v_int32x4::nlanes), 0, 0, 0)); \
             v_zip(rgba0, rgba1, rrggbbaa, dummy);  \
             v_expand(rrggbbaa, rrggbbaa8, dummy8); \
             result = v_reinterpret_as_s16(rrggbbaa8); \
         }
 #define CV_PICK_AND_PACK4(base,offset)             \
-            v_uint16x8(*(ushort*)(base + offset[0]), *(ushort*)(base + offset[1]), \
-                       *(ushort*)(base + offset[2]), *(ushort*)(base + offset[3]), \
+            v_uint16x8(*(unaligned_ushort*)(base + offset[0]), *(unaligned_ushort*)(base + offset[1]), \
+                       *(unaligned_ushort*)(base + offset[2]), *(unaligned_ushort*)(base + offset[3]), \
                        0, 0, 0, 0)
 
         if( cn == 1 )
@@ -662,7 +665,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
         cval[k] = saturate_cast<T>(_borderValue[k & 3]);
 
     unsigned width1 = std::max(ssize.width-1, 0), height1 = std::max(ssize.height-1, 0);
-    CV_Assert( ssize.area() > 0 );
+    CV_Assert( !ssize.empty() );
 #if CV_SIMD128
     if( _src.type() == CV_8UC3 )
         width1 = std::max(ssize.width-2, 0);
@@ -1094,9 +1097,6 @@ public:
         int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
         int bcols0 = std::min(buf_size/brows0, dst->cols);
         brows0 = std::min(buf_size/bcols0, dst->rows);
-#if CV_SIMD128
-        bool useSIMD = hasSIMD128();
-#endif
 
         Mat _bufxy(brows0, bcols0, CV_16SC2), _bufa;
         if( !nnfunc )
@@ -1143,7 +1143,6 @@ public:
                             x1 = 0;
 
                             #if CV_SIMD128
-                            if( useSIMD )
                             {
                                 int span = v_float32x4::nlanes;
                                 for( ; x1 <= bcols - span * 2; x1 += span * 2 )
@@ -1185,7 +1184,6 @@ public:
                         x1 = 0;
 
                         #if CV_SIMD128
-                        if (useSIMD)
                         {
                             v_uint16x8 v_scale = v_setall_u16(INTER_TAB_SIZE2 - 1);
                             int span = v_uint16x8::nlanes;
@@ -1203,7 +1201,6 @@ public:
 
                         x1 = 0;
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -1241,7 +1238,6 @@ public:
                         x1 = 0;
 
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                             v_int32x4 v_scale2 = v_setall_s32(INTER_TAB_SIZE - 1), v_scale3 = v_setall_s32(INTER_TAB_SIZE);
@@ -1597,12 +1593,12 @@ static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation
 
         ctx.setImmediateBorder(prevBorder);
     }
-    catch (ivx::RuntimeError & e)
+    catch (const ivx::RuntimeError & e)
     {
         CV_Error(CV_StsInternal, e.what());
         return false;
     }
-    catch (ivx::WrapperError & e)
+    catch (const ivx::WrapperError & e)
     {
         CV_Error(CV_StsInternal, e.what());
         return false;
@@ -1669,7 +1665,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
                 InputArray _map1, InputArray _map2,
                 int interpolation, int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     static RemapNNFunc nn_tab[] =
     {
@@ -1704,7 +1700,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         remapLanczos4<Cast<double, double>, float, 1>, 0
     };
 
-    CV_Assert( _map1.size().area() > 0 );
+    CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
@@ -1831,7 +1827,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                       OutputArray _dstmap1, OutputArray _dstmap2,
                       int dstm1type, bool nninterpolate )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
     Size size = map1.size();
@@ -1894,9 +1890,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         size.height = 1;
     }
 
-#if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-#endif
 #if CV_TRY_SSE4_1
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
 #endif
@@ -1927,7 +1920,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         int span = v_int16x8::nlanes;
                         for( ; x <= size.width - span; x += span )
@@ -1957,7 +1949,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -1998,10 +1989,11 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
             {
                 #if CV_SIMD128
                 int span = v_float32x4::nlanes;
-                if( useSIMD )
+                {
                     for( ; x <= (size.width << 1) - span * 2; x += span * 2 )
                         v_store(dst1 + x, v_pack(v_round(v_load(src1f + x)),
                                                  v_round(v_load(src1f + x + span))));
+                }
                 #endif
                 for( ; x < size.width; x++ )
                 {
@@ -2018,7 +2010,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 {
                     #if CV_SIMD128
-                    if( useSIMD )
                     {
                         v_float32x4 v_scale = v_setall_f32((float)INTER_TAB_SIZE);
                         v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -2059,7 +2050,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
             #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint16x8 v_mask2 =  v_setall_u16(INTER_TAB_SIZE2-1);
                 v_uint32x4 v_zero =   v_setzero_u32(), v_mask = v_setall_u32(INTER_TAB_SIZE-1);
@@ -2109,7 +2099,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC2 )
         {
             #if CV_SIMD128
-            if( useSIMD )
             {
                 v_int16x8 v_mask2 = v_setall_s16(INTER_TAB_SIZE2-1);
                 v_int32x4 v_zero = v_setzero_s32(), v_mask = v_setall_s32(INTER_TAB_SIZE-1);
@@ -2185,9 +2174,6 @@ public:
     #if CV_TRY_AVX2
         bool useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
     #endif
-    #if CV_SIMD128
-        bool useSIMD = hasSIMD128();
-    #endif
     #if CV_TRY_SSE4_1
         bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
     #endif
@@ -2222,7 +2208,6 @@ public:
                         #endif
                         {
                             #if CV_SIMD128
-                            if( useSIMD )
                             {
                                 v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
                                 int span = v_uint16x8::nlanes;
@@ -2256,7 +2241,6 @@ public:
                             x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
                         #endif
                         #if CV_SIMD128
-                        if( useSIMD )
                         {
                             v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
                             v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
@@ -2409,7 +2393,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
     scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
     float M[9] = {0};
@@ -2513,7 +2497,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     UMat dst = _dst.getUMat();
 
     double M[9] = {0};
@@ -2589,7 +2573,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
@@ -2605,7 +2589,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                                  borderValue, OCL_OP_AFFINE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     CV_Assert( src.cols > 0 && src.rows > 0 );
     if( dst.data == src.data )
@@ -2853,7 +2837,7 @@ public:
             }
         }
 
-        IppStatus status = CV_INSTRUMENT_FUN_IPP(func,(src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode));
+        IppStatus status = CV_INSTRUMENT_FUN_IPP(func,(src.ptr();, srcsize, (int)src.step[0], srcroi, dst.ptr(), (int)dst.step[0], dstroi, coeffs, mode));
         if (status != ippStsNoErr)
             *ok = false;
         else
@@ -2877,7 +2861,7 @@ private:
 
 namespace hal {
 
-void warpPerspectve(int src_type,
+void warpPerspective(int src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                     const double M[9], int interpolation, int borderType, const double borderValue[4])
@@ -2897,7 +2881,7 @@ void warpPerspectve(int src_type,
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert( _src.total() > 0 );
 
@@ -2911,7 +2895,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                               OCL_OP_PERSPECTIVE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
 
     if( dst.data == src.data )
@@ -2988,14 +2972,14 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if( !(flags & WARP_INVERSE_MAP) )
         invert(matM, matM);
 
-    hal::warpPerspectve(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+    hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                         matM.ptr<double>(), interpolation, borderType, borderValue.val);
 }
 
 
 cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     angle *= CV_PI/180;
     double alpha = std::cos(angle)*scale;
@@ -3038,9 +3022,9 @@ cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
  * where:
  *   cij - matrix coefficients, c22 = 1
  */
-cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
+cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
@@ -3061,7 +3045,7 @@ cv::Mat cv::getPerspectiveTransform( const Point2f src[], const Point2f dst[] )
         b[i+4] = dst[i].y;
     }
 
-    solve( A, B, X, DECOMP_SVD );
+    solve(A, B, X, solveMethod);
     M.ptr<double>()[8] = 1.;
 
     return M;
@@ -3150,11 +3134,11 @@ void cv::invertAffineTransform(InputArray _matM, OutputArray __iM)
         CV_Error( CV_StsUnsupportedFormat, "" );
 }
 
-cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst)
+cv::Mat cv::getPerspectiveTransform(InputArray _src, InputArray _dst, int solveMethod)
 {
     Mat src = _src.getMat(), dst = _dst.getMat();
     CV_Assert(src.checkVector(2, CV_32F) == 4 && dst.checkVector(2, CV_32F) == 4);
-    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data);
+    return getPerspectiveTransform((const Point2f*)src.data, (const Point2f*)dst.data, solveMethod);
 }
 
 cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)
@@ -3283,6 +3267,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
 
     if (!(flags & CV_WARP_INVERSE_MAP))
     {
+        CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
         int phi, rho;
 
@@ -3329,6 +3314,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         Mat src = _dst.getMat();
         Size ssize = _dst.size();
         ssize.height -= 2 * ANGLE_BORDER;
+        CV_Assert(!ssize.empty());
         const double Kangle = CV_2PI / ssize.height;
         double Kmag;
         if (semiLog)

@@ -43,38 +43,12 @@
 
 #include "opencv2/ts/ocl_test.hpp"
 
-#ifdef HAVE_OPENCL
-
-#define DUMP_CONFIG_PROPERTY(propertyName, propertyValue) \
-    do { \
-        std::stringstream ssName, ssValue;\
-        ssName << propertyName;\
-        ssValue << (propertyValue); \
-        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
-    } while (false)
-
-#define DUMP_MESSAGE_STDOUT(msg) \
-    do { \
-        std::cout << msg << std::endl; \
-    } while (false)
-
-#include <opencv2/core/opencl/opencl_info.hpp>
-
-#endif // HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
 using namespace cv;
 
 int test_loop_times = 1; // TODO Read from command line / environment
-
-#ifdef HAVE_OPENCL
-void dumpOpenCLDevice()
-{
-    cv::dumpOpenCLInformation();
-}
-#endif // HAVE_OPENCL
 
 Mat TestUtils::readImage(const String &fileName, int flags)
 {

@@ -616,6 +616,7 @@ public:
             expDiffSum += v; // sum_j(exp(L_ij - L_iq))
         }
 
+        CV_Assert(expDiffSum > 0);
         if(probs)
             L.convertTo(*probs, ptype, 1./expDiffSum);
 

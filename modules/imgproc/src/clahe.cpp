@@ -230,7 +230,7 @@ namespace
             src_(src), dst_(dst), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY)
         {
             buf.allocate(src.cols << 2);
-            ind1_p = (int *)buf;
+            ind1_p = buf.data();
             ind2_p = ind1_p + src.cols;
             xa_p = (float *)(ind2_p + src.cols);
             xa1_p = xa_p + src.cols;
@@ -346,7 +346,7 @@ namespace
 
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
 

@@ -520,13 +520,13 @@ int main( int argc, char *argv[] )
     string data_filename;
     int method = 0;
 
-    cv::CommandLineParser parser(argc, argv, "{data|../data/letter-recognition.data|}{save||}{load||}{boost||}"
+    cv::CommandLineParser parser(argc, argv, "{data|letter-recognition.data|}{save||}{load||}{boost||}"
             "{mlp||}{knn knearest||}{nbayes||}{svm||}");
-    data_filename = parser.get<string>("data");
+    data_filename = samples::findFile(parser.get<string>("data"));
     if (parser.has("save"))
         filename_to_save = parser.get<string>("save");
     if (parser.has("load"))
-        filename_to_load = parser.get<string>("load");
+        filename_to_load = samples::findFile(parser.get<string>("load"));
     if (parser.has("boost"))
         method = 1;
     else if (parser.has("mlp"))

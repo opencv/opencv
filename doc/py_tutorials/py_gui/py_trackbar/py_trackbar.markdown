@@ -37,6 +37,7 @@ cv.namedWindow('image')
 
 # create trackbars for color change
 cv.createTrackbar('R','image',0,255,nothing)
+
 cv.createTrackbar('G','image',0,255,nothing)
 cv.createTrackbar('B','image',0,255,nothing)
 

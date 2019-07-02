@@ -45,7 +45,7 @@ def sharpen(my_image):
 ## [basic_method]
 
 def main(argv):
-    filename = "../../../../data/lena.jpg"
+    filename = 'lena.jpg'
 
     img_codec = cv.IMREAD_COLOR
     if argv:
@@ -53,12 +53,12 @@ def main(argv):
         if len(argv) >= 2 and sys.argv[2] == "G":
             img_codec = cv.IMREAD_GRAYSCALE
 
-    src = cv.imread(filename, img_codec)
+    src = cv.imread(cv.samples.findFile(filename), img_codec)
 
     if src is None:
         print("Can't open image [" + filename + "]")
         print("Usage:")
-        print("mat_mask_operations.py [image_path -- default ../../../../data/lena.jpg] [G -- grayscale]")
+        print("mat_mask_operations.py [image_path -- default lena.jpg] [G -- grayscale]")
         return -1
 
     cv.namedWindow("Input", cv.WINDOW_AUTOSIZE)
@@ -69,7 +69,7 @@ def main(argv):
 
     dst0 = sharpen(src)
 
-    t = (time.time() - t) / 1000
+    t = (time.time() - t)
     print("Hand written function time passed in seconds: %s" % t)
 
     cv.imshow("Output", dst0)
@@ -86,7 +86,7 @@ def main(argv):
     # ddepth = -1, means destination image has depth same as input image
     ## [filter2D]
 
-    t = (time.time() - t) / 1000
+    t = (time.time() - t)
     print("Built-in filter2D time passed in seconds:     %s" % t)
 
     cv.imshow("Output", dst1)

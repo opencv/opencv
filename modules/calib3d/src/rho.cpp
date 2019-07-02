@@ -127,8 +127,8 @@ struct RHO_HEST{
      */
 
     virtual inline int    ensureCapacity(unsigned N, double beta){
-        (void)N;
-        (void)beta;
+        CV_UNUSED(N);
+        CV_UNUSED(beta);
 
         return 1;
     }
@@ -2164,7 +2164,7 @@ inline void   RHO_HEST_REFC::refine(void){
          * order to compute a candidate homography (newH).
          *
          * The system above is solved by Cholesky decomposition of a
-         * sufficently-damped JtJ into a lower-triangular matrix (and its
+         * sufficiently-damped JtJ into a lower-triangular matrix (and its
          * transpose), whose inverse is then computed. This inverse (and its
          * transpose) then multiply Jte in order to find dH.
          */

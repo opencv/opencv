@@ -25,7 +25,7 @@ from common import splitfn
 # built-in modules
 import os
 
-if __name__ == '__main__':
+def main():
     import sys
     import getopt
     from glob import glob
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     obj_points = []
     img_points = []
-    h, w = cv.imread(img_names[0], 0).shape[:2]  # TODO: use imquery call to retrieve results
+    h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]  # TODO: use imquery call to retrieve results
 
     def processImage(fn):
         print('processing %s... ' % fn)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         if debug_dir:
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
             cv.drawChessboardCorners(vis, pattern_size, corners, found)
-            path, name, ext = splitfn(fn)
+            _path, name, _ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_chess.png')
             cv.imwrite(outfile, vis)
 
@@ -126,4 +126,10 @@ if __name__ == '__main__':
         print('Undistorted image written to: %s' % outfile)
         cv.imwrite(outfile, dst)
 
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

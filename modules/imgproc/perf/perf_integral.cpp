@@ -11,7 +11,7 @@ typedef perf::TestBaseWithParam<Size_MatType_OutMatDepth_t> Size_MatType_OutMatD
 PERF_TEST_P(Size_MatType_OutMatDepth, integral,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(CV_8UC1, CV_8UC4),
+                testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
                 testing::Values(CV_32S, CV_32F, CV_64F)
                 )
             )
@@ -32,9 +32,9 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
 
 PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
             testing::Combine(
-                testing::Values(::perf::szVGA, ::perf::sz1080p),
-                testing::Values(CV_8UC1, CV_8UC4),
-                testing::Values(CV_32S, CV_32F)
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
+                testing::Values(CV_32S, CV_32F, CV_64F)
                 )
             )
 {
@@ -57,9 +57,9 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
 
 PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
              testing::Combine(
-                 testing::Values( ::perf::szVGA, ::perf::szODD , ::perf::sz1080p ),
-                 testing::Values( CV_8UC1, CV_8UC4 ),
-                 testing::Values( CV_32S, CV_32F )
+                 testing::Values(TYPICAL_MAT_SIZES),
+                 testing::Values( CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4 ),
+                 testing::Values( CV_32S, CV_32F, CV_64F )
                  )
              )
 {

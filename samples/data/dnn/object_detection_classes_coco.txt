@@ -9,7 +9,7 @@ truck
 boat
 traffic light
 fire hydrant
-
+street sign
 stop sign
 parking meter
 bench
@@ -23,11 +23,11 @@ elephant
 bear
 zebra
 giraffe
-
+hat
 backpack
 umbrella
-
-
+shoe
+eye glasses
 handbag
 tie
 suitcase
@@ -42,7 +42,7 @@ skateboard
 surfboard
 tennis racket
 bottle
-
+plate
 wine glass
 cup
 fork
@@ -63,12 +63,12 @@ chair
 couch
 potted plant
 bed
-
+mirror
 dining table
-
-
+window
+desk
 toilet
-
+door
 tv
 laptop
 mouse
@@ -80,7 +80,7 @@ oven
 toaster
 sink
 refrigerator
-
+blender
 book
 clock
 vase

@@ -17,7 +17,7 @@ CV_IMPL CvScalar cvSum( const CvArr* srcarr )
             sum = cv::Scalar(sum[coi-1]);
         }
     }
-    return sum;
+    return cvScalar(sum);
 }
 
 CV_IMPL int cvCountNonZero( const CvArr* imgarr )
@@ -43,7 +43,7 @@ cvAvg( const void* imgarr, const void* maskarr )
             mean = cv::Scalar(mean[coi-1]);
         }
     }
-    return mean;
+    return cvScalar(mean);
 }
 
 

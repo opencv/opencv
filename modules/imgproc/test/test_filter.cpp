@@ -50,11 +50,11 @@ public:
 
 protected:
     int prepare_test_case( int test_case_idx );
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
-    CvSize aperture_size;
-    CvPoint anchor;
+    Size aperture_size;
+    Point anchor;
     int max_aperture_size;
     bool fp_kernel;
     bool inplace;
@@ -70,19 +70,19 @@ CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
     test_array[REF_OUTPUT].push_back(NULL);
     max_aperture_size = 13;
     inplace = false;
-    aperture_size = cvSize(0,0);
-    anchor = cvPoint(0,0);
+    aperture_size = Size(0,0);
+    anchor = Point(0,0);
     element_wise_relative_error = false;
 }
 
 
-int CV_FilterBaseTest::read_params( CvFileStorage* fs )
+int CV_FilterBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -403,9 +403,9 @@ void CV_FilterTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng)%3;
+    int depth = cvtest::randInt(rng)%4;
     int cn = CV_MAT_CN(types[INPUT][0]);
-    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : CV_32F;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, cn);
 }
 
@@ -420,9 +420,9 @@ double CV_FilterTest::get_success_error_level( int /*test_case_idx*/, int /*i*/,
 
 void CV_FilterTest::run_func()
 {
-    CvMat kernel = test_mat[INPUT][1];
+    CvMat kernel = cvMat(test_mat[INPUT][1]);
     cvFilter2D( test_array[inplace ? OUTPUT : INPUT][0],
-                test_array[OUTPUT][0], &kernel, anchor );
+                test_array[OUTPUT][0], &kernel, cvPoint(anchor));
 }
 
 
@@ -457,10 +457,11 @@ void CV_DerivBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng) % 2;
-    depth = depth == 0 ? CV_8U : CV_32F;
+    int depth = cvtest::randInt(rng) % 4;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
     types[INPUT][0] = CV_MAKETYPE(depth,1);
-    types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
+    int sameDepth = cvtest::randInt(rng) % 2;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = sameDepth ? depth : CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     _aperture_size = (cvtest::randInt(rng)%5)*2 - 1;
     sizes[INPUT][1] = aperture_size = cvSize(_aperture_size, _aperture_size);
 }
@@ -535,11 +536,9 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_SobelTest::run_func()
 {
-    cvSobel( test_array[inplace ? OUTPUT : INPUT][0],
-             test_array[OUTPUT][0], dx, dy, _aperture_size );
-    /*cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
+    cv::Sobel( test_mat[inplace ? OUTPUT : INPUT][0],
                test_mat[OUTPUT][0], test_mat[OUTPUT][0].depth(),
-               dx, dy, _aperture_size, 1, 0, border );*/
+               dx, dy, _aperture_size, 1, 0, border );
 }
 
 
@@ -654,8 +653,9 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_LaplaceTest::run_func()
 {
-    cvLaplace( test_array[inplace ? OUTPUT : INPUT][0],
-               test_array[OUTPUT][0], _aperture_size );
+    cv::Laplacian( test_mat[inplace ? OUTPUT : INPUT][0],
+                   test_mat[OUTPUT][0],test_mat[OUTPUT][0].depth(),
+                   _aperture_size, 1, 0, cv::BORDER_REPLICATE );
 }
 
 
@@ -1119,7 +1119,7 @@ void CV_PyramidBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     const int depthes[] = {CV_8U, CV_16S, CV_16U, CV_32F};
 
     RNG& rng = ts->get_rng();
-    CvSize sz;
+    CvSize sz = {0, 0};
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     int depth = depthes[cvtest::randInt(rng) % (sizeof(depthes)/sizeof(depthes[0]))];
@@ -1265,7 +1265,7 @@ public:
     CV_FeatureSelBaseTest( int width_factor );
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1289,15 +1289,15 @@ CV_FeatureSelBaseTest::CV_FeatureSelBaseTest( int _width_factor )
 }
 
 
-int CV_FeatureSelBaseTest::read_params( CvFileStorage* fs )
+int CV_FeatureSelBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 9 );
-    max_block_size = cvReadInt( find_param( fs, "max_block_size" ), max_block_size );
+    read( find_param( fs, "max_block_size" ), max_block_size, max_block_size );
     max_block_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -1666,12 +1666,11 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     int depth = cvtest::randInt(rng) % 2, sum_depth;
-    int cn = cvtest::randInt(rng) % 3 + 1;
+    int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sum_size;
 
     depth = depth == 0 ? CV_8U : CV_32F;
-    cn += cn == 2;
     int b = (cvtest::randInt(rng) & 1) != 0;
     sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
 
@@ -2102,6 +2101,12 @@ TEST(Imgproc_MorphEx, hitmiss_regression_8957)
     ref.at<uchar>(1, 1) = 255;
 
     ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
+
+    src.at<uchar>(1, 1) = 255;
+    ref.at<uchar>(0, 1) = 255;
+    ref.at<uchar>(2, 1) = 255;
+    cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
+    ASSERT_DOUBLE_EQ(cvtest::norm(dst, ref, NORM_INF), 0.);
 }
 
 TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
@@ -2117,6 +2122,185 @@ TEST(Imgproc_MorphEx, hitmiss_zero_kernel)
     cv::morphologyEx(src, dst, MORPH_HITMISS, kernel);
 
     ASSERT_DOUBLE_EQ(cvtest::norm(dst, src, NORM_INF), 0.);
+}
+
+TEST(Imgproc_Filter2D, dftFilter2d_regression_10683)
+{
+    uchar src_[24*24] = {
+        0, 40, 0, 0, 255, 0, 0, 78, 131, 0, 196, 0, 255, 0, 0, 0, 0, 255, 70, 0, 255, 0, 0, 0,
+        0, 0, 255, 204, 0, 0, 255, 93, 255, 0, 0, 255, 12, 0, 0, 0, 255, 121, 0, 255, 0, 0, 0, 255,
+        0, 178, 0, 25, 67, 0, 165, 0, 255, 0, 0, 181, 151, 175, 0, 0, 32, 0, 0, 255, 165, 93, 0, 255,
+        255, 255, 0, 0, 255, 126, 0, 0, 0, 0, 133, 29, 9, 0, 220, 255, 0, 142, 255, 255, 255, 0, 255, 0,
+        255, 32, 255, 0, 13, 237, 0, 0, 0, 0, 0, 19, 90, 0, 0, 85, 122, 62, 95, 29, 255, 20, 0, 0,
+        0, 0, 166, 41, 0, 48, 70, 0, 68, 0, 255, 0, 139, 7, 63, 144, 0, 204, 0, 0, 0, 98, 114, 255,
+        105, 0, 0, 0, 0, 255, 91, 0, 73, 0, 255, 0, 0, 0, 255, 198, 21, 0, 0, 0, 255, 43, 153, 128,
+        0, 98, 26, 0, 101, 0, 0, 0, 255, 0, 0, 0, 255, 77, 56, 0, 241, 0, 169, 132, 0, 255, 186, 255,
+        255, 87, 0, 1, 0, 0, 10, 39, 120, 0, 23, 69, 207, 0, 0, 0, 0, 84, 0, 0, 0, 0, 255, 0,
+        255, 0, 0, 136, 255, 77, 247, 0, 67, 0, 15, 255, 0, 143, 0, 243, 255, 0, 0, 238, 255, 0, 255, 8,
+        42, 0, 0, 255, 29, 0, 0, 0, 255, 255, 255, 75, 0, 0, 0, 255, 0, 0, 255, 38, 197, 0, 255, 87,
+        0, 123, 17, 0, 234, 0, 0, 149, 0, 0, 255, 16, 0, 0, 0, 255, 0, 255, 0, 38, 0, 114, 255, 76,
+        0, 0, 8, 0, 255, 0, 0, 0, 220, 0, 11, 255, 0, 0, 55, 98, 0, 0, 0, 255, 0, 175, 255, 110,
+        235, 0, 175, 0, 255, 227, 38, 206, 0, 0, 255, 246, 0, 0, 123, 183, 255, 0, 0, 255, 0, 156, 0, 54,
+        0, 255, 0, 202, 0, 0, 0, 0, 157, 0, 255, 63, 0, 0, 0, 0, 0, 255, 132, 0, 255, 0, 0, 0,
+        0, 0, 0, 255, 0, 0, 128, 126, 0, 243, 46, 7, 0, 211, 108, 166, 0, 0, 162, 227, 0, 204, 0, 51,
+        255, 216, 0, 0, 43, 0, 255, 40, 188, 188, 255, 0, 0, 255, 34, 0, 0, 168, 0, 0, 0, 35, 0, 0,
+        0, 80, 131, 255, 0, 255, 10, 0, 0, 0, 180, 255, 209, 255, 173, 34, 0, 66, 0, 49, 0, 255, 83, 0,
+        0, 204, 0, 91, 0, 0, 0, 205, 84, 0, 0, 0, 92, 255, 91, 0, 126, 0, 185, 145, 0, 0, 9, 0,
+        255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 216, 0, 187, 221, 0, 0, 141, 0, 0, 209, 0, 0, 255, 0,
+        255, 0, 0, 154, 150, 0, 0, 0, 148, 0, 201, 255, 0, 255, 16, 0, 0, 160, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 255, 0, 255, 0, 255, 0, 255, 198, 255, 147, 131, 0, 255, 202, 0, 0, 0, 0, 255, 0,
+        0, 0, 0, 164, 181, 0, 0, 0, 69, 255, 31, 0, 255, 195, 0, 0, 255, 164, 109, 0, 0, 202, 0, 206,
+        0, 0, 61, 235, 33, 255, 77, 0, 0, 0, 0, 85, 0, 228, 0, 0, 0, 0, 255, 0, 0, 5, 255, 255
+    };
+    Mat_<uchar> src(24, 24, src_);
+    Mat dst = Mat::zeros(src.size(), src.type());
+
+    int sz = 12, size2 = sz * sz;
+    Mat kernel = Mat::ones(sz, sz, CV_32F) / size2;
+
+    uchar expected_[24*24] = {
+        83, 83, 77, 80, 76, 76, 76, 75, 71, 67, 72, 71, 73, 70, 80, 83, 86, 84, 89, 88, 88, 96, 99, 98,
+        83, 83, 77, 80, 76, 76, 76, 75, 71, 67, 72, 71, 73, 70, 80, 83, 86, 84, 89, 88, 88, 96, 99, 98,
+        82, 82, 77, 80, 77, 75, 74, 75, 70, 68, 71, 72, 72, 72, 82, 84, 88, 88, 93, 92, 93, 100, 105, 104,
+        76, 76, 72, 77, 73, 74, 73, 74, 69, 68, 71, 71, 73, 72, 82, 81, 86, 87, 92, 91, 92, 98, 103, 102,
+        75, 75, 72, 77, 73, 72, 75, 76, 74, 71, 73, 75, 76, 72, 81, 80, 85, 87, 90, 89, 90, 97, 102, 97,
+        74, 74, 71, 77, 72, 74, 77, 76, 74, 72, 74, 76, 77, 76, 84, 83, 85, 87, 90, 92, 93, 100, 102, 99,
+        72, 72, 69, 71, 68, 73, 73, 73, 70, 69, 74, 72, 75, 75, 81, 82, 85, 87, 90, 94, 96, 103, 102, 101,
+        71, 71, 68, 70, 68, 71, 73, 71, 69, 68, 74, 72, 73, 73, 81, 80, 84, 89, 91, 99, 102, 107, 106, 105,
+        74, 74, 70, 69, 67, 73, 76, 72, 69, 70, 79, 75, 74, 75, 82, 83, 88, 91, 92, 100, 104, 108, 106, 105,
+        75, 75, 71, 70, 67, 75, 76, 71, 67, 68, 75, 72, 72, 75, 81, 83, 87, 89, 89, 97, 102, 107, 103, 103,
+        69, 69, 67, 67, 65, 72, 74, 71, 70, 70, 75, 74, 74, 75, 80, 80, 84, 85, 85, 92, 96, 100, 97, 97,
+        67, 67, 67, 68, 67, 77, 79, 75, 74, 76, 81, 78, 81, 80, 84, 81, 84, 83, 83, 91, 94, 95, 93, 93,
+        73, 73, 71, 73, 70, 80, 82, 79, 80, 83, 85, 82, 82, 82, 87, 84, 88, 87, 84, 91, 93, 94, 93, 92,
+        72, 72, 74, 75, 71, 80, 81, 79, 80, 82, 82, 80, 82, 84, 88, 83, 87, 87, 83, 88, 88, 89, 90, 90,
+        78, 78, 81, 80, 74, 84, 86, 82, 85, 86, 85, 81, 83, 83, 86, 84, 85, 84, 78, 85, 82, 83, 85, 84,
+        81, 81, 84, 81, 75, 86, 90, 85, 89, 91, 89, 84, 86, 87, 90, 87, 89, 85, 78, 84, 79, 80, 81, 81,
+        76, 76, 80, 79, 73, 86, 90, 87, 92, 95, 92, 87, 91, 92, 93, 87, 89, 84, 77, 81, 76, 74, 76, 76,
+        77, 77, 80, 77, 72, 83, 86, 86, 93, 95, 91, 87, 92, 92, 93, 87, 90, 84, 79, 79, 75, 72, 75, 72,
+        80, 80, 81, 79, 72, 82, 86, 86, 95, 97, 89, 87, 89, 89, 91, 85, 88, 84, 79, 80, 73, 69, 74, 73,
+        82, 82, 82, 80, 74, 83, 86, 87, 98, 100, 90, 90, 93, 94, 94, 89, 90, 84, 82, 79, 71, 68, 72, 69,
+        76, 76, 77, 76, 70, 81, 83, 88, 99, 102, 92, 91, 97, 97, 97, 90, 90, 86, 83, 81, 70, 67, 70, 68,
+        75, 75, 76, 74, 69, 79, 84, 88, 102, 106, 95, 94, 99, 98, 98, 90, 89, 86, 82, 79, 67, 62, 65, 62,
+        80, 80, 82, 78, 71, 82, 87, 90, 105, 108, 96, 94, 99, 98, 97, 88, 88, 85, 81, 79, 65, 61, 65, 60,
+        77, 77, 80, 75, 66, 76, 81, 87, 102, 105, 92, 91, 95, 97, 96, 88, 89, 88, 84, 81, 67, 63, 68, 63
+    };
+    Mat_<uchar> expected(24, 24, expected_);
+
+    for(int r = 0; r < src.rows / 3; ++r)
+    {
+        for(int c = 0; c < src.cols / 3; ++c)
+        {
+            cv::Rect region(c * 3, r * 3, 3, 3);
+            Mat roi_i(src, region);
+            Mat roi_o(dst, region);
+            cv::filter2D(roi_i, roi_o, -1, kernel);
+        }
+    }
+
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 2);
+}
+
+TEST(Imgproc_Filter2D, dftFilter2d_regression_13179)
+{
+    uchar src_[24*24] = {
+        0, 40, 0, 0, 255, 0, 0, 78, 131, 0, 196, 0, 255, 0, 0, 0, 0, 255, 70, 0, 255, 0, 0, 0,
+        0, 0, 255, 204, 0, 0, 255, 93, 255, 0, 0, 255, 12, 0, 0, 0, 255, 121, 0, 255, 0, 0, 0, 255,
+        0, 178, 0, 25, 67, 0, 165, 0, 255, 0, 0, 181, 151, 175, 0, 0, 32, 0, 0, 255, 165, 93, 0, 255,
+        255, 255, 0, 0, 255, 126, 0, 0, 0, 0, 133, 29, 9, 0, 220, 255, 0, 142, 255, 255, 255, 0, 255, 0,
+        255, 32, 255, 0, 13, 237, 0, 0, 0, 0, 0, 19, 90, 0, 0, 85, 122, 62, 95, 29, 255, 20, 0, 0,
+        0, 0, 166, 41, 0, 48, 70, 0, 68, 0, 255, 0, 139, 7, 63, 144, 0, 204, 0, 0, 0, 98, 114, 255,
+        105, 0, 0, 0, 0, 255, 91, 0, 73, 0, 255, 0, 0, 0, 255, 198, 21, 0, 0, 0, 255, 43, 153, 128,
+        0, 98, 26, 0, 101, 0, 0, 0, 255, 0, 0, 0, 255, 77, 56, 0, 241, 0, 169, 132, 0, 255, 186, 255,
+        255, 87, 0, 1, 0, 0, 10, 39, 120, 0, 23, 69, 207, 0, 0, 0, 0, 84, 0, 0, 0, 0, 255, 0,
+        255, 0, 0, 136, 255, 77, 247, 0, 67, 0, 15, 255, 0, 143, 0, 243, 255, 0, 0, 238, 255, 0, 255, 8,
+        42, 0, 0, 255, 29, 0, 0, 0, 255, 255, 255, 75, 0, 0, 0, 255, 0, 0, 255, 38, 197, 0, 255, 87,
+        0, 123, 17, 0, 234, 0, 0, 149, 0, 0, 255, 16, 0, 0, 0, 255, 0, 255, 0, 38, 0, 114, 255, 76,
+        0, 0, 8, 0, 255, 0, 0, 0, 220, 0, 11, 255, 0, 0, 55, 98, 0, 0, 0, 255, 0, 175, 255, 110,
+        235, 0, 175, 0, 255, 227, 38, 206, 0, 0, 255, 246, 0, 0, 123, 183, 255, 0, 0, 255, 0, 156, 0, 54,
+        0, 255, 0, 202, 0, 0, 0, 0, 157, 0, 255, 63, 0, 0, 0, 0, 0, 255, 132, 0, 255, 0, 0, 0,
+        0, 0, 0, 255, 0, 0, 128, 126, 0, 243, 46, 7, 0, 211, 108, 166, 0, 0, 162, 227, 0, 204, 0, 51,
+        255, 216, 0, 0, 43, 0, 255, 40, 188, 188, 255, 0, 0, 255, 34, 0, 0, 168, 0, 0, 0, 35, 0, 0,
+        0, 80, 131, 255, 0, 255, 10, 0, 0, 0, 180, 255, 209, 255, 173, 34, 0, 66, 0, 49, 0, 255, 83, 0,
+        0, 204, 0, 91, 0, 0, 0, 205, 84, 0, 0, 0, 92, 255, 91, 0, 126, 0, 185, 145, 0, 0, 9, 0,
+        255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 216, 0, 187, 221, 0, 0, 141, 0, 0, 209, 0, 0, 255, 0,
+        255, 0, 0, 154, 150, 0, 0, 0, 148, 0, 201, 255, 0, 255, 16, 0, 0, 160, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 255, 0, 255, 0, 255, 0, 255, 198, 255, 147, 131, 0, 255, 202, 0, 0, 0, 0, 255, 0,
+        0, 0, 0, 164, 181, 0, 0, 0, 69, 255, 31, 0, 255, 195, 0, 0, 255, 164, 109, 0, 0, 202, 0, 206,
+        0, 0, 61, 235, 33, 255, 77, 0, 0, 0, 0, 85, 0, 228, 0, 0, 0, 0, 255, 0, 0, 5, 255, 255
+    };
+    cv::Mat_<uchar> src(24, 24, src_);
+
+    uchar expected_[16*16] = {
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255, 70,  0,255,255,  0,255,  0,  0,
+         0,234,138,  0,255,  0,  0,255,  8,  0,255,255,  0,255,  0,  0,
+         0,  0,255,  0,255,228,  0,255,255,  0,255,255,  0,255,  0,  5,
+         0,  0,255,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,253,  0,  0,255,  0,  0,255,  0,  0,255,255,  0,255,  0,  0,
+         0,255,  0,  0,255,  0,  0,255,  0,  0,255, 93,  0,255,  0,255,
+         0,255,  0,  0,255,  0,182,255,  0,  0,255,  0,  0,255,  0,  0,
+         0,  0,253,  0,228,  0,255,255,  0,  0,255,  0,  0,  0,  0, 75,
+         0,  0,255,  0,  0,  0,255,255,  0,255,206,  0,  1,162,  0,255,
+         0,  0,255,  0,  0,  0,255,255,  0,255,255,  0,  0,255,  0,255,
+         0,  0,255,  0,  0,  0,255,255,  0,255,255,  0,255,255,  0,255,
+         0,  0,255,255,  0,  0,255,  0,  0,255,255,  0,255,168,  0,255,
+         0,  0,255,255,  0,  0,255, 26,  0,255,255,  0,255,255,  0,255,
+         0,  0,255,255,  0,  0,255,  0,  0,255,255,  0,255,255,  0,255,
+    };
+    cv::Mat_<uchar> expected(16, 16, expected_);
+
+    cv::Mat kernel = cv::getGaborKernel(cv::Size(13, 13), 8, 0, 3, 0.25);
+
+    cv::Mat roi(src, cv::Rect(0, 0, 16, 16));
+
+    cv::Mat filtered(16, 16, roi.type());
+
+    cv::filter2D(roi, filtered, -1, kernel);
+
+    EXPECT_LE(cvtest::norm(filtered, expected, cv::NORM_INF), 2);
+}
+
+TEST(Imgproc_MedianBlur, hires_regression_13409)
+{
+    Mat src(2048, 2048, CV_8UC1), dst_hires, dst_ref;
+    randu(src, 0, 256);
+
+    medianBlur(src, dst_hires, 9);
+    medianBlur(src(Rect(512, 512, 1024, 1024)), dst_ref, 9);
+
+    ASSERT_EQ(0.0, cvtest::norm(dst_hires(Rect(516, 516, 1016, 1016)), dst_ref(Rect(4, 4, 1016, 1016)), NORM_INF));
+}
+
+TEST(Imgproc_Sobel, s16_regression_13506)
+{
+    Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
+                                     164,   3,  51, 124, 151,  89, 154, 117,  36,  88, 116, 117, 180, 112, 147, 124,
+                                      63,  50, 115, 103,  83, 148, 106,  79, 213, 106, 135,  53,  79, 106, 122, 112,
+                                     218, 107,  81, 126,  78, 138,  85, 142, 151, 108, 104, 158, 155,  81, 112, 178,
+                                     184,  96, 187, 148, 150, 112, 138, 162, 222, 146, 128,  49, 124,  46, 165, 104,
+                                     119, 164,  77, 144, 186,  98, 106, 148, 155, 157, 160, 151, 156, 149,  43, 122,
+                                     106, 155, 120, 132, 159, 115, 126, 188,  44,  79, 164, 201, 153,  97, 139, 133,
+                                     133,  98, 111, 165,  66, 106, 131,  85, 176, 156,  67, 108, 142,  91,  74, 137);
+    Mat ref = (Mat_<short>(8, 16) <<     0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0,
+                                     -1020, -796, -489, -469,  -247,  317,  760,  1429,  1983,  1384,   254, -459, -899, -1197, -1172, -1058,
+                                      2552, 2340, 1617,  591,     9,   96,  722,  1985,  2746,  1916,   676,    9, -635, -1115,  -779,  -380,
+                                      3546, 3349, 2838, 2206,  1388,  669,  938,  1880,  2252,  1785,  1083,  606,  180,  -298,  -464,  -418,
+                                       816,  966, 1255, 1652,  1619,  924,  535,   288,     5,   601,  1581, 1870, 1520,   625,  -627, -1260,
+                                      -782, -610, -395, -267,  -122,  -42, -317, -1378, -2293, -1451,   596, 1870, 1679,   763,   -69,  -394,
+                                      -882, -681, -463, -818, -1167, -732, -463, -1042, -1604, -1592, -1047, -334, -104,  -117,   229,   512,
+                                         0,    0,    0,    0,     0,    0,    0,     0,     0,     0,     0,    0,    0,     0,     0,     0);
+    Mat dst;
+    Sobel(src, dst, CV_16S, 0, 1, 5);
+    ASSERT_EQ(0.0, cvtest::norm(dst, ref, NORM_INF));
+}
+
+TEST(Imgproc_Pyrdown, issue_12961)
+{
+    Mat src(9, 9, CV_8UC1, Scalar::all(0));
+    Mat dst;
+    cv::pyrDown(src, dst);
+    ASSERT_EQ(0.0, cv::norm(dst));
 }
 
 }} // namespace

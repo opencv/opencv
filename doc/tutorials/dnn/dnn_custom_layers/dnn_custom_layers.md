@@ -32,11 +32,11 @@ Unspecified error: Can't create layer "layer_name" of type "MyType" in function 
 To import the model correctly you have to derive a class from cv::dnn::Layer with
 the following methods:
 
-@snippet dnn/custom_layers.cpp A custom layer interface
+@snippet dnn/custom_layers.hpp A custom layer interface
 
 And register it before the import:
 
-@snippet dnn/custom_layers.cpp Register a custom layer
+@snippet dnn/custom_layers.hpp Register a custom layer
 
 @note `MyType` is a type of unimplemented layer from the thrown exception.
 
@@ -44,27 +44,27 @@ Let's see what all the methods do:
 
 - Constructor
 
-@snippet dnn/custom_layers.cpp MyLayer::MyLayer
+@snippet dnn/custom_layers.hpp MyLayer::MyLayer
 
 Retrieves hyper-parameters from cv::dnn::LayerParams. If your layer has trainable
 weights they will be already stored in the Layer's member cv::dnn::Layer::blobs.
 
 - A static method `create`
 
-@snippet dnn/custom_layers.cpp MyLayer::create
+@snippet dnn/custom_layers.hpp MyLayer::create
 
 This method should create an instance of you layer and return cv::Ptr with it.
 
 - Output blobs' shape computation
 
-@snippet dnn/custom_layers.cpp MyLayer::getMemoryShapes
+@snippet dnn/custom_layers.hpp MyLayer::getMemoryShapes
 
 Returns layer's output shapes depends on input shapes. You may request an extra
 memory using `internals`.
 
 - Run a layer
 
-@snippet dnn/custom_layers.cpp MyLayer::forward
+@snippet dnn/custom_layers.hpp MyLayer::forward
 
 Implement a layer's logic here. Compute outputs for given inputs.
 
@@ -74,7 +74,7 @@ the second invocation of `forward` will has the same data at `outputs` and `inte
 
 - Optional `finalize` method
 
-@snippet dnn/custom_layers.cpp MyLayer::finalize
+@snippet dnn/custom_layers.hpp MyLayer::finalize
 
 The chain of methods are the following: OpenCV deep learning engine calls `create`
 method once then it calls `getMemoryShapes` for an every created layer then you
@@ -108,11 +108,11 @@ layer {
 
 This way our implementation can look like:
 
-@snippet dnn/custom_layers.cpp InterpLayer
+@snippet dnn/custom_layers.hpp InterpLayer
 
 Next we need to register a new layer type and try to import the model.
 
-@snippet dnn/custom_layers.cpp Register InterpLayer
+@snippet dnn/custom_layers.hpp Register InterpLayer
 
 ## Example: custom layer from TensorFlow
 This is an example of how to import a network with [tf.image.resize_bilinear](https://www.tensorflow.org/versions/master/api_docs/python/tf/image/resize_bilinear)
@@ -185,11 +185,11 @@ Custom layers import from TensorFlow is designed to put all layer's `attr` into
 cv::dnn::LayerParams but input `Const` blobs into cv::dnn::Layer::blobs.
 In our case resize's output shape will be stored in layer's `blobs[0]`.
 
-@snippet dnn/custom_layers.cpp ResizeBilinearLayer
+@snippet dnn/custom_layers.hpp ResizeBilinearLayer
 
 Next we register a layer and try to import the model.
 
-@snippet dnn/custom_layers.cpp Register ResizeBilinearLayer
+@snippet dnn/custom_layers.hpp Register ResizeBilinearLayer
 
 ## Define a custom layer in Python
 The following example shows how to customize OpenCV's layers in Python.

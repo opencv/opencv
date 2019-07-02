@@ -46,6 +46,8 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 
+#ifdef HAVE_IMGCODEC_PXM
+
 namespace cv
 {
 
@@ -100,5 +102,7 @@ public:
 };
 
 }
+
+#endif // HAVE_IMGCODEC_PXM
 
 #endif/*_GRFMT_PxM_H_*/

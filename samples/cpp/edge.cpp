@@ -43,12 +43,12 @@ static void help()
 {
     printf("\nThis sample demonstrates Canny edge detection\n"
            "Call:\n"
-           "    /.edge [image_name -- Default is ../data/fruits.jpg]\n\n");
+           "    /.edge [image_name -- Default is fruits.jpg]\n\n");
 }
 
 const char* keys =
 {
-    "{help h||}{@image |../data/fruits.jpg|input image name}"
+    "{help h||}{@image |fruits.jpg|input image name}"
 };
 
 int main( int argc, const char** argv )
@@ -57,7 +57,7 @@ int main( int argc, const char** argv )
     CommandLineParser parser(argc, argv, keys);
     string filename = parser.get<string>(0);
 
-    image = imread(filename, IMREAD_COLOR);
+    image = imread(samples::findFile(filename), IMREAD_COLOR);
     if(image.empty())
     {
         printf("Cannot read image file: %s\n", filename.c_str());

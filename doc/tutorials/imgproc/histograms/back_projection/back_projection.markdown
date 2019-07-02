@@ -1,6 +1,9 @@
 Back Projection {#tutorial_back_projection}
 ===============
 
+@prev_tutorial{tutorial_histogram_comparison}
+@next_tutorial{tutorial_template_matching}
+
 Goal
 ----
 
@@ -67,46 +70,104 @@ Code
     -   Calculate the histogram (and update it if the bins change) and the backprojection of the
         same image.
     -   Display the backprojection and the histogram in windows.
--   **Downloadable code**:
 
-    -#  Click
+@add_toggle_cpp
+-   **Downloadable code**:
+    -   Click
         [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp)
         for the basic version (explained in this tutorial).
-    -#  For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
+    -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
         skin area) you can check the [improved
         demo](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
-    -#  ...or you can always check out the classical
+    -   ...or you can always check out the classical
         [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
 @include samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp
+@end_toggle
+
+@add_toggle_java
+-   **Downloadable code**:
+    -   Click
+        [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java)
+        for the basic version (explained in this tutorial).
+    -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
+        skin area) you can check the [improved
+        demo](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo2.java)
+    -   ...or you can always check out the classical
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
+        in samples.
+
+-   **Code at glance:**
+@include samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**:
+    -   Click
+        [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py)
+        for the basic version (explained in this tutorial).
+    -   For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the
+        skin area) you can check the [improved
+        demo](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo2.py)
+    -   ...or you can always check out the classical
+        [camshiftdemo](https://github.com/opencv/opencv/tree/master/samples/cpp/camshiftdemo.cpp)
+        in samples.
+
+-   **Code at glance:**
+@include samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py
+@end_toggle
 
 Explanation
 -----------
 
--#  Declare the matrices to store our images and initialize the number of bins to be used by our
-    histogram:
-    @code{.cpp}
-    Mat src; Mat hsv; Mat hue;
-    int bins = 25;
-    @endcode
--#  Read the input image and transform it to HSV format:
-    @code{.cpp}
-    src = imread( argv[1], 1 );
-    cvtColor( src, hsv, COLOR_BGR2HSV );
-    @endcode
--#  For this tutorial, we will use only the Hue value for our 1-D histogram (check out the fancier
+-   Read the input image:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Read the image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Read the image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Read the image
+    @end_toggle
+
+-   Transform it to HSV format:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Transform it to HSV
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Transform it to HSV
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Transform it to HSV
+    @end_toggle
+
+-   For this tutorial, we will use only the Hue value for our 1-D histogram (check out the fancier
     code in the links above if you want to use the more standard H-S histogram, which yields better
     results):
-    @code{.cpp}
-    hue.create( hsv.size(), hsv.depth() );
-    int ch[] = { 0, 0 };
-    mixChannels( &hsv, 1, &hue, 1, ch, 1 );
-    @endcode
-    as you see, we use the function @ref cv::mixChannels to get only the channel 0 (Hue) from
-    the hsv image. It gets the following parameters:
 
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Use only the Hue value
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Use only the Hue value
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Use only the Hue value
+    @end_toggle
+
+-   as you see, we use the function @ref cv::mixChannels to get only the channel 0 (Hue) from
+    the hsv image. It gets the following parameters:
     -   **&hsv:** The source array from which the channels will be copied
     -   **1:** The number of source arrays
     -   **&hue:** The destination array of the copied channels
@@ -115,59 +176,108 @@ Explanation
         case, the Hue(0) channel of &hsv is being copied to the 0 channel of &hue (1-channel)
     -   **1:** Number of index pairs
 
--#  Create a Trackbar for the user to enter the bin values. Any change on the Trackbar means a call
+-   Create a Trackbar for the user to enter the bin values. Any change on the Trackbar means a call
     to the **Hist_and_Backproj** callback function.
-    @code{.cpp}
-    char* window_image = "Source image";
-    namedWindow( window_image, WINDOW_AUTOSIZE );
-    createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
-    Hist_and_Backproj(0, 0);
-    @endcode
--#  Show the image and wait for the user to exit the program:
-    @code{.cpp}
-    imshow( window_image, src );
 
-    waitKey(0);
-    return 0;
-    @endcode
--#  **Hist_and_Backproj function:** Initialize the arguments needed for @ref cv::calcHist . The
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Create Trackbar to enter the number of bins
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Create Trackbar to enter the number of bins
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Create Trackbar to enter the number of bins
+    @end_toggle
+
+-   Show the image and wait for the user to exit the program:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Show the image
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Show the image
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Show the image
+    @end_toggle
+
+-   **Hist_and_Backproj function:** Initialize the arguments needed for @ref cv::calcHist . The
     number of bins comes from the Trackbar:
-    @code{.cpp}
-    void Hist_and_Backproj(int, void* )
-    {
-      MatND hist;
-      int histSize = MAX( bins, 2 );
-      float hue_range[] = { 0, 180 };
-      const float* ranges = { hue_range };
-    @endcode
--#  Calculate the Histogram and normalize it to the range \f$[0,255]\f$
-    @code{.cpp}
-    calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false );
-    normalize( hist, hist, 0, 255, NORM_MINMAX, -1, Mat() );
-    @endcode
--#  Get the Backprojection of the same image by calling the function @ref cv::calcBackProject
-    @code{.cpp}
-    MatND backproj;
-    calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
-    @endcode
-    all the arguments are known (the same as used to calculate the histogram), only we add the
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp initialize
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java initialize
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py initialize
+    @end_toggle
+
+-   Calculate the Histogram and normalize it to the range \f$[0,255]\f$
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Get the Histogram and normalize it
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Get the Histogram and normalize it
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Get the Histogram and normalize it
+    @end_toggle
+
+-   Get the Backprojection of the same image by calling the function @ref cv::calcBackProject
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Get Backprojection
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Get Backprojection
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Get Backprojection
+    @end_toggle
+
+-   all the arguments are known (the same as used to calculate the histogram), only we add the
     backproj matrix, which will store the backprojection of the source image (&hue)
 
--#  Display backproj:
-    @code{.cpp}
-    imshow( "BackProj", backproj );
-    @endcode
--#  Draw the 1-D Hue histogram of the image:
-    @code{.cpp}
-    int w = 400; int h = 400;
-    int bin_w = cvRound( (double) w / histSize );
-    Mat histImg = Mat::zeros( w, h, CV_8UC3 );
+-   Display backproj:
 
-    for( int i = 0; i < bins; i ++ )
-       { rectangle( histImg, Point( i*bin_w, h ), Point( (i+1)*bin_w, h - cvRound( hist.at<float>(i)*h/255.0 ) ), Scalar( 0, 0, 255 ), -1 ); }
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Draw the backproj
+    @end_toggle
 
-    imshow( "Histogram", histImg );
-    @endcode
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Draw the backproj
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Draw the backproj
+    @end_toggle
+
+-   Draw the 1-D Hue histogram of the image:
+
+    @add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp Draw the histogram
+    @end_toggle
+
+    @add_toggle_java
+    @snippet samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo1.java Draw the histogram
+    @end_toggle
+
+    @add_toggle_python
+    @snippet samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo1.py Draw the histogram
+    @end_toggle
 
 Results
 -------

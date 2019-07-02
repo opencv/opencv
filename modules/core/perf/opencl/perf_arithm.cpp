@@ -117,7 +117,7 @@ OCL_PERF_TEST_P(LogFixture, Log, ::testing::Combine(
     OCL_TEST_CYCLE() cv::log(src, dst);
 
     if (CV_MAT_DEPTH(type) >= CV_32F)
-        SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+        SANITY_CHECK(dst, 2e-4, ERROR_RELATIVE);
     else
         SANITY_CHECK(dst, 1);
 }

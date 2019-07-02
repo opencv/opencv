@@ -4,7 +4,9 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
+import org.opencv.core.Size;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.DMatch;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
@@ -220,6 +222,19 @@ public class ConvertersTest extends OpenCVTestCase {
         truth.add(new Rect(2, 2, 5, 2));
         truth.add(new Rect(0, 0, 6, 4));
         assertListRectEquals(truth, rectangles);
+    }
+
+    public void testMat_to_vector_RotatedRect() {
+        Mat src = new Mat(2, 1, CvType.CV_32FC(5));
+        src.put(0, 0, 2, 2, 5, 2, 7,
+                      0, 6, 4, 1, 3);
+        List<RotatedRect> rectangles = new ArrayList<RotatedRect>();
+
+        Converters.Mat_to_vector_RotatedRect(src, rectangles);
+        List<RotatedRect> truth = new ArrayList<RotatedRect>();
+        truth.add(new RotatedRect(new Point(2, 2), new Size(5, 2), 7));
+        truth.add(new RotatedRect(new Point(0, 6), new Size(4, 1), 3));
+        assertListRotatedRectEquals(truth, rectangles);
     }
 
     public void testMat_to_vector_uchar() {
@@ -465,6 +480,19 @@ public class ConvertersTest extends OpenCVTestCase {
         assertMatEqual(truth, dst);
     }
 
+    public void testVector_RotatedRect_to_Mat() {
+        List<RotatedRect> rectangles = new ArrayList<RotatedRect>();
+        rectangles.add(new RotatedRect(new Point(2, 2), new Size(5, 2), 7));
+        rectangles.add(new RotatedRect(new Point(0, 0), new Size(6, 4), 3));
+
+        Mat dst = Converters.vector_RotatedRect_to_Mat(rectangles);
+
+        Mat truth = new Mat(2, 1, CvType.CV_32FC(5));
+        truth.put(0, 0, 2, 2, 5, 2, 7,
+                        0, 0, 6, 4, 3);
+        assertMatEqual(truth, dst, EPS);
+    }
+
     public void testVector_uchar_to_Mat() {
         List<Byte> bytes = new ArrayList<Byte>();
         byte value1 = 1;
@@ -498,5 +526,4 @@ public class ConvertersTest extends OpenCVTestCase {
         fail("Not yet implemented");
 
     }
-
 }

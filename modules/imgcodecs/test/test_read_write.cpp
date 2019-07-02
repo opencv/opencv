@@ -105,15 +105,19 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
     "jp2",
 #endif
 #if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/
     "exr",
 #endif
     "bmp",
+#ifdef HAVE_IMGCODEC_PXM
     "ppm",
-    "ras"
+#endif
+#ifdef HAVE_IMGCODEC_SUNRASTER
+    "ras",
+#endif
 };
 
 INSTANTIATE_TEST_CASE_P(imgcodecs, Imgcodecs_Image, testing::ValuesIn(exts));

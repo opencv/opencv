@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -43,18 +43,22 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfIO.h>
+#include "ImfIO.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
+
 #include <fstream>
 #include <sstream>
 
-namespace Imf {
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 //-------------------------------------------
 // class StdIFStream -- an implementation of
-// class IStream based on class std::ifstream
+// class OPENEXR_IMF_INTERNAL_NAMESPACE::IStream based on class std::ifstream
 //-------------------------------------------
 
-class StdIFStream: public IStream
+class StdIFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::IStream
 {
   public:
 
@@ -63,23 +67,30 @@ class StdIFStream: public IStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     StdIFStream (const char fileName[]);
 
-
+    
     //---------------------------------------------------------
     // A constructor that uses a std::ifstream that has already
     // been opened by the caller.  The StdIFStream's destructor
     // will not close the std::ifstream.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     StdIFStream (std::ifstream &is, const char fileName[]);
 
 
+    IMF_EXPORT
     virtual ~StdIFStream ();
 
+    IMF_EXPORT
     virtual bool	read (char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellg ();
+    IMF_EXPORT
     virtual void	seekg (Int64 pos);
+    IMF_EXPORT
     virtual void	clear ();
 
   private:
@@ -91,10 +102,10 @@ class StdIFStream: public IStream
 
 //-------------------------------------------
 // class StdOFStream -- an implementation of
-// class OStream based on class std::ofstream
+// class OPENEXR_IMF_INTERNAL_NAMESPACE::OStream based on class std::ofstream
 //-------------------------------------------
 
-class StdOFStream: public OStream
+class StdOFStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
 {
   public:
 
@@ -103,8 +114,9 @@ class StdOFStream: public OStream
     // The destructor will close the file.
     //-------------------------------------------------------
 
+    IMF_EXPORT
     StdOFStream (const char fileName[]);
-
+    
 
     //---------------------------------------------------------
     // A constructor that uses a std::ofstream that has already
@@ -112,13 +124,18 @@ class StdOFStream: public OStream
     // will not close the std::ofstream.
     //---------------------------------------------------------
 
+    IMF_EXPORT
     StdOFStream (std::ofstream &os, const char fileName[]);
 
 
+    IMF_EXPORT
     virtual ~StdOFStream ();
 
+    IMF_EXPORT
     virtual void	write (const char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellp ();
+    IMF_EXPORT
     virtual void	seekp (Int64 pos);
 
   private:
@@ -130,19 +147,24 @@ class StdOFStream: public OStream
 
 //------------------------------------------------
 // class StdOSStream -- an implementation of class
-// OStream, based on class std::ostringstream
+// OPENEXR_IMF_INTERNAL_NAMESPACE::OStream, based on class std::ostringstream
 //------------------------------------------------
 
-class StdOSStream: public OStream
+class StdOSStream: public OPENEXR_IMF_INTERNAL_NAMESPACE::OStream
 {
   public:
 
+    IMF_EXPORT
     StdOSStream ();
 
+    IMF_EXPORT
     virtual void	write (const char c[/*n*/], int n);
+    IMF_EXPORT
     virtual Int64	tellp ();
+    IMF_EXPORT
     virtual void	seekp (Int64 pos);
 
+    IMF_EXPORT
     std::string		str () const {return _os.str();}
 
   private:
@@ -151,6 +173,6 @@ class StdOSStream: public OStream
 };
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

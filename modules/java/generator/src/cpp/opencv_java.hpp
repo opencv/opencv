@@ -29,7 +29,7 @@
 
 #define ARRAYLIST(ENV) static_cast<jclass>(ENV->NewGlobalRef(ENV->FindClass("java/util/ArrayList")))
 #define LIST_ADD(ENV, LIST) ENV->GetMethodID(LIST, "add", "(Ljava/lang/Object;)Z")
-#define LIST_GET(ENV, LIST) ENV->GetMethodID(LIST, "get", "((I)Ljava/lang/Object;")
+#define LIST_GET(ENV, LIST) ENV->GetMethodID(LIST, "get", "(I)Ljava/lang/Object;")
 #define LIST_SIZE(ENV, LIST) ENV->GetMethodID(LIST, "size", "()I")
 #define LIST_CLEAR(ENV, LIST) ENV->GetMethodID(LIST, "clear", "()V")
 

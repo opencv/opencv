@@ -27,7 +27,7 @@
 __kernel void MaxPoolForward(const int nthreads,
     __global T* bottom_data, const int num, const int channels, const int height, const int width,
     const int pooled_height, const int pooled_width, const int kernel_h, const int kernel_w,
-    const int stride_h, const int stride_w, const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w, const int pad_t, const int pad_l, const int pad_b, const int pad_r,
     __global T* top_data
 #ifdef MASK
     , __global float* mask
@@ -41,8 +41,8 @@ __kernel void MaxPoolForward(const int nthreads,
     int ph = (index / pooled_width) % pooled_height;
     int c = (index / pooled_width / pooled_height) % channels;
     int n = index / pooled_width / pooled_height / channels;
-    int hstart = ph * stride_h - pad_h;
-    int wstart = pw * stride_w - pad_w;
+    int hstart = ph * stride_h - pad_t;
+    int wstart = pw * stride_w - pad_l;
     const int hend = min(hstart + kernel_h, height);
     const int wend = min(wstart + kernel_w, width);
     hstart = max(hstart, 0);
@@ -71,7 +71,7 @@ __kernel void MaxPoolForward(const int nthreads,
 __kernel void AvePoolForward(const int nthreads,
     __global T* bottom_data, const int num, const int channels, const int height, const int width,
     const int pooled_height, const int pooled_width, const int kernel_h, const int kernel_w,
-    const int stride_h, const int stride_w, const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w, const int pad_t, const int pad_l, const int pad_b, const int pad_r,
     __global T* top_data
 #ifdef MASK
     , __global float* mask // NOT USED
@@ -84,9 +84,9 @@ __kernel void AvePoolForward(const int nthreads,
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
     int c = (index / pooled_width / pooled_height) % channels;
-    int n = index / pooled_width / pooled_height / channels; int hstart = ph * stride_h - pad_h; int wstart = pw * stride_w - pad_w;
-    int hend = min(hstart + kernel_h, height + pad_h);
-    int wend = min(wstart + kernel_w, width + pad_w);
+    int n = index / pooled_width / pooled_height / channels; int hstart = ph * stride_h - pad_t; int wstart = pw * stride_w - pad_l;
+    int hend = min(hstart + kernel_h, height + pad_b);
+    int wend = min(wstart + kernel_w, width + pad_r);
     const int pool_size = (hend - hstart) * (wend - wstart);
     hstart = max(hstart, 0);
     wstart = max(wstart, 0);

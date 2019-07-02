@@ -33,8 +33,8 @@ int erode_dilate_pos = 0;
 // callback function for open/close trackbar
 static void OpenClose(int, void*)
 {
-    int n = open_close_pos - max_iters;
-    int an = n > 0 ? n : -n;
+    int n = open_close_pos;
+    int an = abs(n);
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
         morphologyEx(src, dst, MORPH_OPEN, element);
@@ -46,8 +46,8 @@ static void OpenClose(int, void*)
 // callback function for erode/dilate trackbar
 static void ErodeDilate(int, void*)
 {
-    int n = erode_dilate_pos - max_iters;
-    int an = n > 0 ? n : -n;
+    int n = erode_dilate_pos;
+    int an = abs(n);
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
         erode(src, dst, element);
@@ -59,13 +59,13 @@ static void ErodeDilate(int, void*)
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||}{ @image | ../data/baboon.jpg | }");
+    cv::CommandLineParser parser(argc, argv, "{help h||}{ @image | baboon.jpg | }");
     if (parser.has("help"))
     {
         help();
         return 0;
     }
-    std::string filename = parser.get<std::string>("@image");
+    std::string filename = samples::findFile(parser.get<std::string>("@image"));
     if( (src = imread(filename,IMREAD_COLOR)).empty() )
     {
         help();
@@ -78,7 +78,14 @@ int main( int argc, char** argv )
 
     open_close_pos = erode_dilate_pos = max_iters;
     createTrackbar("iterations", "Open/Close",&open_close_pos,max_iters*2+1,OpenClose);
+    setTrackbarMin("iterations", "Open/Close", -max_iters);
+    setTrackbarMax("iterations", "Open/Close", max_iters);
+    setTrackbarPos("iterations", "Open/Close", 0);
+
     createTrackbar("iterations", "Erode/Dilate",&erode_dilate_pos,max_iters*2+1,ErodeDilate);
+    setTrackbarMin("iterations", "Erode/Dilate", -max_iters);
+    setTrackbarMax("iterations", "Erode/Dilate", max_iters);
+    setTrackbarPos("iterations", "Erode/Dilate", 0);
 
     for(;;)
     {

@@ -5,35 +5,45 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-const char* keys =
+#ifdef CV_CXX11
+#include <mutex>
+#include <thread>
+#include <queue>
+#endif
+
+#include "common.hpp"
+
+std::string keys =
     "{ help  h     | | Print help message. }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ model m     | | Path to a binary file of model contains trained weights. "
-                      "It could be a file with extensions .caffemodel (Caffe), "
-                      ".pb (TensorFlow), .t7 or .net (Torch), .weights (Darknet) }"
-    "{ config c    | | Path to a text file of model contains network configuration. "
-                      "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet) }"
+    "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
+    "{ device      |  0 | camera device number. }"
+    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes to label detected objects. }"
-    "{ mean        | | Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces. }"
-    "{ scale       |  1 | Preprocess input image by multiplying on a scale factor. }"
-    "{ width       | -1 | Preprocess input image by resizing to a specific width. }"
-    "{ height      | -1 | Preprocess input image by resizing to a specific height. }"
-    "{ rgb         |    | Indicate that model works with RGB input images instead BGR ones. }"
     "{ thr         | .5 | Confidence threshold. }"
+    "{ nms         | .4 | Non-maximum suppression threshold. }"
     "{ backend     |  0 | Choose one of computation backends: "
-                         "0: default C++ backend, "
+                         "0: automatically (by default), "
                          "1: Halide language (http://halide-lang.org/), "
-                         "2: Intel's Deep Learning Inference Engine (https://software.seek.intel.com/deep-learning-deployment)}"
-    "{ target      |  0 | Choose one of target computation devices: "
-                         "0: CPU target (by default),"
-                         "1: OpenCL }";
+                         "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "3: OpenCV implementation }"
+    "{ target      | 0 | Choose one of target computation devices: "
+                         "0: CPU target (by default), "
+                         "1: OpenCL, "
+                         "2: OpenCL fp16 (half-float precision), "
+                         "3: VPU }"
+    "{ async       | 0 | Number of asynchronous forwards at the same time. "
+                        "Choose 0 for synchronous mode }";
 
 using namespace cv;
 using namespace dnn;
 
-float confThreshold;
+float confThreshold, nmsThreshold;
 std::vector<std::string> classes;
+
+inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
+                       const Scalar& mean, bool swapRB);
 
 void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net);
 
@@ -41,11 +51,68 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 
 void callback(int pos, void* userdata);
 
-std::vector<String> getOutputsNames(const Net& net);
+#ifdef CV_CXX11
+template <typename T>
+class QueueFPS : public std::queue<T>
+{
+public:
+    QueueFPS() : counter(0) {}
+
+    void push(const T& entry)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        std::queue<T>::push(entry);
+        counter += 1;
+        if (counter == 1)
+        {
+            // Start counting from a second frame (warmup).
+            tm.reset();
+            tm.start();
+        }
+    }
+
+    T get()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        T entry = this->front();
+        this->pop();
+        return entry;
+    }
+
+    float getFPS()
+    {
+        tm.stop();
+        double fps = counter / tm.getTimeSec();
+        tm.start();
+        return static_cast<float>(fps);
+    }
+
+    void clear()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        while (!this->empty())
+            this->pop();
+    }
+
+    unsigned int counter;
+
+private:
+    TickMeter tm;
+    std::mutex mutex;
+};
+#endif  // CV_CXX11
 
 int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
+
+    const std::string modelName = parser.get<String>("@alias");
+    const std::string zooFile = parser.get<String>("zoo");
+
+    keys += genPreprocArguments(modelName, zooFile);
+
+    parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run object detection deep learning networks using OpenCV.");
     if (argc == 1 || parser.has("help"))
     {
@@ -54,11 +121,16 @@ int main(int argc, char** argv)
     }
 
     confThreshold = parser.get<float>("thr");
+    nmsThreshold = parser.get<float>("nms");
     float scale = parser.get<float>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
+    size_t async = parser.get<int>("async");
+    CV_Assert(parser.has("model"));
+    std::string modelPath = findFile(parser.get<String>("model"));
+    std::string configPath = findFile(parser.get<String>("config"));
 
     // Open file with classes names.
     if (parser.has("classes"))
@@ -75,10 +147,10 @@ int main(int argc, char** argv)
     }
 
     // Load a model.
-    CV_Assert(parser.has("model"));
-    Net net = readNet(parser.get<String>("model"), parser.get<String>("config"), parser.get<String>("framework"));
+    Net net = readNet(modelPath, configPath, parser.get<String>("framework"));
     net.setPreferableBackend(parser.get<int>("backend"));
     net.setPreferableTarget(parser.get<int>("target"));
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
 
     // Create a window
     static const std::string kWinName = "Deep learning object detection in OpenCV";
@@ -91,7 +163,111 @@ int main(int argc, char** argv)
     if (parser.has("input"))
         cap.open(parser.get<String>("input"));
     else
-        cap.open(0);
+        cap.open(parser.get<int>("device"));
+
+#ifdef CV_CXX11
+    bool process = true;
+
+    // Frames capturing thread
+    QueueFPS<Mat> framesQueue;
+    std::thread framesThread([&](){
+        Mat frame;
+        while (process)
+        {
+            cap >> frame;
+            if (!frame.empty())
+                framesQueue.push(frame.clone());
+            else
+                break;
+        }
+    });
+
+    // Frames processing thread
+    QueueFPS<Mat> processedFramesQueue;
+    QueueFPS<std::vector<Mat> > predictionsQueue;
+    std::thread processingThread([&](){
+        std::queue<AsyncArray> futureOutputs;
+        Mat blob;
+        while (process)
+        {
+            // Get a next frame
+            Mat frame;
+            {
+                if (!framesQueue.empty())
+                {
+                    frame = framesQueue.get();
+                    if (async)
+                    {
+                        if (futureOutputs.size() == async)
+                            frame = Mat();
+                    }
+                    else
+                        framesQueue.clear();  // Skip the rest of frames
+                }
+            }
+
+            // Process the frame
+            if (!frame.empty())
+            {
+                preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
+                processedFramesQueue.push(frame);
+
+                if (async)
+                {
+                    futureOutputs.push(net.forwardAsync());
+                }
+                else
+                {
+                    std::vector<Mat> outs;
+                    net.forward(outs, outNames);
+                    predictionsQueue.push(outs);
+                }
+            }
+
+            while (!futureOutputs.empty() &&
+                   futureOutputs.front().wait_for(std::chrono::seconds(0)))
+            {
+                AsyncArray async_out = futureOutputs.front();
+                futureOutputs.pop();
+                Mat out;
+                async_out.get(out);
+                predictionsQueue.push({out});
+            }
+        }
+    });
+
+    // Postprocessing and rendering loop
+    while (waitKey(1) < 0)
+    {
+        if (predictionsQueue.empty())
+            continue;
+
+        std::vector<Mat> outs = predictionsQueue.get();
+        Mat frame = processedFramesQueue.get();
+
+        postprocess(frame, outs, net);
+
+        if (predictionsQueue.counter > 1)
+        {
+            std::string label = format("Camera: %.2f FPS", framesQueue.getFPS());
+            putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+
+            label = format("Network: %.2f FPS", predictionsQueue.getFPS());
+            putText(frame, label, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+
+            label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
+            putText(frame, label, Point(0, 45), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        }
+        imshow(kWinName, frame);
+    }
+
+    process = false;
+    framesThread.join();
+    processingThread.join();
+
+#else  // CV_CXX11
+    if (async)
+        CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
 
     // Process frames.
     Mat frame, blob;
@@ -104,21 +280,10 @@ int main(int argc, char** argv)
             break;
         }
 
-        // Create a 4D blob from a frame.
-        Size inpSize(inpWidth > 0 ? inpWidth : frame.cols,
-                     inpHeight > 0 ? inpHeight : frame.rows);
-        blobFromImage(frame, blob, scale, inpSize, mean, swapRB, false);
+        preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
 
-        // Run a model.
-        net.setInput(blob);
-        if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
-        {
-            resize(frame, frame, inpSize);
-            Mat imInfo = (Mat_<float>(1, 3) << inpSize.height, inpSize.width, 1.6f);
-            net.setInput(imInfo, "im_info");
-        }
         std::vector<Mat> outs;
-        net.forward(outs, getOutputsNames(net));
+        net.forward(outs, outNames);
 
         postprocess(frame, outs, net);
 
@@ -131,7 +296,27 @@ int main(int argc, char** argv)
 
         imshow(kWinName, frame);
     }
+#endif  // CV_CXX11
     return 0;
+}
+
+inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
+                       const Scalar& mean, bool swapRB)
+{
+    static Mat blob;
+    // Create a 4D blob from a frame.
+    if (inpSize.width <= 0) inpSize.width = frame.cols;
+    if (inpSize.height <= 0) inpSize.height = frame.rows;
+    blobFromImage(frame, blob, 1.0, inpSize, Scalar(), swapRB, false, CV_8U);
+
+    // Run a model.
+    net.setInput(blob, "", scale, mean);
+    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
+    {
+        resize(frame, frame, inpSize);
+        Mat imInfo = (Mat_<float>(1, 3) << inpSize.height, inpSize.width, 1.6f);
+        net.setInput(imInfo, "im_info");
+    }
 }
 
 void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
@@ -139,53 +324,47 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
 
-    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)  // Faster-RCNN or R-FCN
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect> boxes;
+    if (outLayerType == "DetectionOutput")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
         // [batchId, classId, confidence, left, top, right, bottom]
-        CV_Assert(outs.size() == 1);
-        float* data = (float*)outs[0].data;
-        for (size_t i = 0; i < outs[0].total(); i += 7)
+        CV_Assert(outs.size() > 0);
+        for (size_t k = 0; k < outs.size(); k++)
         {
-            float confidence = data[i + 2];
-            if (confidence > confThreshold)
+            float* data = (float*)outs[k].data;
+            for (size_t i = 0; i < outs[k].total(); i += 7)
             {
-                int left = (int)data[i + 3];
-                int top = (int)data[i + 4];
-                int right = (int)data[i + 5];
-                int bottom = (int)data[i + 6];
-                int classId = (int)(data[i + 1]) - 1;  // Skip 0th background class id.
-                drawPred(classId, confidence, left, top, right, bottom, frame);
-            }
-        }
-    }
-    else if (outLayerType == "DetectionOutput")
-    {
-        // Network produces output blob with a shape 1x1xNx7 where N is a number of
-        // detections and an every detection is a vector of values
-        // [batchId, classId, confidence, left, top, right, bottom]
-        CV_Assert(outs.size() == 1);
-        float* data = (float*)outs[0].data;
-        for (size_t i = 0; i < outs[0].total(); i += 7)
-        {
-            float confidence = data[i + 2];
-            if (confidence > confThreshold)
-            {
-                int left = (int)(data[i + 3] * frame.cols);
-                int top = (int)(data[i + 4] * frame.rows);
-                int right = (int)(data[i + 5] * frame.cols);
-                int bottom = (int)(data[i + 6] * frame.rows);
-                int classId = (int)(data[i + 1]) - 1;  // Skip 0th background class id.
-                drawPred(classId, confidence, left, top, right, bottom, frame);
+                float confidence = data[i + 2];
+                if (confidence > confThreshold)
+                {
+                    int left   = (int)data[i + 3];
+                    int top    = (int)data[i + 4];
+                    int right  = (int)data[i + 5];
+                    int bottom = (int)data[i + 6];
+                    int width  = right - left + 1;
+                    int height = bottom - top + 1;
+                    if (width * height <= 1)
+                    {
+                        left   = (int)(data[i + 3] * frame.cols);
+                        top    = (int)(data[i + 4] * frame.rows);
+                        right  = (int)(data[i + 5] * frame.cols);
+                        bottom = (int)(data[i + 6] * frame.rows);
+                        width  = right - left + 1;
+                        height = bottom - top + 1;
+                    }
+                    classIds.push_back((int)(data[i + 1]) - 1);  // Skip 0th background class id.
+                    boxes.push_back(Rect(left, top, width, height));
+                    confidences.push_back(confidence);
+                }
             }
         }
     }
     else if (outLayerType == "Region")
     {
-        std::vector<int> classIds;
-        std::vector<float> confidences;
-        std::vector<Rect> boxes;
         for (size_t i = 0; i < outs.size(); ++i)
         {
             // Network produces output blob with a shape NxC where N is a number of
@@ -213,18 +392,19 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
                 }
             }
         }
-        std::vector<int> indices;
-        NMSBoxes(boxes, confidences, confThreshold, 0.4f, indices);
-        for (size_t i = 0; i < indices.size(); ++i)
-        {
-            int idx = indices[i];
-            Rect box = boxes[idx];
-            drawPred(classIds[idx], confidences[idx], box.x, box.y,
-                     box.x + box.width, box.y + box.height, frame);
-        }
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
+
+    std::vector<int> indices;
+    NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
+    for (size_t i = 0; i < indices.size(); ++i)
+    {
+        int idx = indices[i];
+        Rect box = boxes[idx];
+        drawPred(classIds[idx], confidences[idx], box.x, box.y,
+                 box.x + box.width, box.y + box.height, frame);
+    }
 }
 
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
@@ -250,18 +430,4 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 void callback(int pos, void*)
 {
     confThreshold = pos * 0.01f;
-}
-
-std::vector<String> getOutputsNames(const Net& net)
-{
-    static std::vector<String> names;
-    if (names.empty())
-    {
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        std::vector<String> layersNames = net.getLayerNames();
-        names.resize(outLayers.size());
-        for (size_t i = 0; i < outLayers.size(); ++i)
-            names[i] = layersNames[outLayers[i] - 1];
-    }
-    return names;
 }

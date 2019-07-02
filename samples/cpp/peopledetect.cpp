@@ -72,7 +72,10 @@ int main(int argc, char** argv)
     if (file.empty())
         cap.open(camera);
     else
-        cap.open(file.c_str());
+    {
+        file = samples::findFileOrKeep(file);
+        cap.open(file);
+    }
     if (!cap.isOpened())
     {
         cout << "Can not open video stream: '" << (file.empty() ? "<camera>" : file) << "'" << endl;

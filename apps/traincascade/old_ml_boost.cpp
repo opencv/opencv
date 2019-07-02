@@ -168,7 +168,7 @@ CvBoostTree::try_split_node( CvDTreeNode* node )
         // store the responses for the corresponding training samples
         double* weak_eval = ensemble->get_weak_response()->data.db;
         cv::AutoBuffer<int> inn_buf(node->sample_count);
-        const int* labels = data->get_cv_labels( node, (int*)inn_buf );
+        const int* labels = data->get_cv_labels(node, inn_buf.data());
         int i, count = node->sample_count;
         double value = node->value;
 
@@ -191,7 +191,7 @@ CvBoostTree::calc_node_dir( CvDTreeNode* node )
     if( data->get_var_type(vi) >= 0 ) // split on categorical var
     {
         cv::AutoBuffer<int> inn_buf(n);
-        const int* cat_labels = data->get_cat_var_data( node, vi, (int*)inn_buf );
+        const int* cat_labels = data->get_cat_var_data(node, vi, inn_buf.data());
         const int* subset = node->split->subset;
         double sum = 0, sum_abs = 0;
 
@@ -210,7 +210,7 @@ CvBoostTree::calc_node_dir( CvDTreeNode* node )
     else // split on ordered var
     {
         cv::AutoBuffer<uchar> inn_buf(2*n*sizeof(int)+n*sizeof(float));
-        float* values_buf = (float*)(uchar*)inn_buf;
+        float* values_buf = (float*)inn_buf.data();
         int* sorted_indices_buf = (int*)(values_buf + n);
         int* sample_indices_buf = sorted_indices_buf + n;
         const float* values = 0;
@@ -260,7 +260,7 @@ CvBoostTree::find_split_ord_class( CvDTreeNode* node, int vi, float init_quality
     cv::AutoBuffer<uchar> inn_buf;
     if( !_ext_buf )
         inn_buf.allocate(n*(3*sizeof(int)+sizeof(float)));
-    uchar* ext_buf = _ext_buf ? _ext_buf : (uchar*)inn_buf;
+    uchar* ext_buf = _ext_buf ? _ext_buf : inn_buf.data();
     float* values_buf = (float*)ext_buf;
     int* sorted_indices_buf = (int*)(values_buf + n);
     int* sample_indices_buf = sorted_indices_buf + n;
@@ -369,7 +369,7 @@ CvBoostTree::find_split_cat_class( CvDTreeNode* node, int vi, float init_quality
     cv::AutoBuffer<uchar> inn_buf((2*mi+3)*sizeof(double) + mi*sizeof(double*));
     if( !_ext_buf)
         inn_buf.allocate( base_size + 2*n*sizeof(int) );
-    uchar* base_buf = (uchar*)inn_buf;
+    uchar* base_buf = inn_buf.data();
     uchar* ext_buf = _ext_buf ? _ext_buf : base_buf + base_size;
 
     int* cat_labels_buf = (int*)ext_buf;
@@ -490,7 +490,7 @@ CvBoostTree::find_split_ord_reg( CvDTreeNode* node, int vi, float init_quality, 
     cv::AutoBuffer<uchar> inn_buf;
     if( !_ext_buf )
         inn_buf.allocate(2*n*(sizeof(int)+sizeof(float)));
-    uchar* ext_buf = _ext_buf ? _ext_buf : (uchar*)inn_buf;
+    uchar* ext_buf = _ext_buf ? _ext_buf : inn_buf.data();
 
     float* values_buf = (float*)ext_buf;
     int* indices_buf = (int*)(values_buf + n);
@@ -559,7 +559,7 @@ CvBoostTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init_quality, 
     cv::AutoBuffer<uchar> inn_buf(base_size);
     if( !_ext_buf )
         inn_buf.allocate(base_size + n*(2*sizeof(int) + sizeof(float)));
-    uchar* base_buf = (uchar*)inn_buf;
+    uchar* base_buf = inn_buf.data();
     uchar* ext_buf = _ext_buf ? _ext_buf : base_buf + base_size;
 
     int* cat_labels_buf = (int*)ext_buf;
@@ -652,7 +652,7 @@ CvBoostTree::find_surrogate_split_ord( CvDTreeNode* node, int vi, uchar* _ext_bu
     cv::AutoBuffer<uchar> inn_buf;
     if( !_ext_buf )
         inn_buf.allocate(n*(2*sizeof(int)+sizeof(float)));
-    uchar* ext_buf = _ext_buf ? _ext_buf : (uchar*)inn_buf;
+    uchar* ext_buf = _ext_buf ? _ext_buf : inn_buf.data();
     float* values_buf = (float*)ext_buf;
     int* indices_buf = (int*)(values_buf + n);
     int* sample_indices_buf = indices_buf + n;
@@ -733,7 +733,7 @@ CvBoostTree::find_surrogate_split_cat( CvDTreeNode* node, int vi, uchar* _ext_bu
     cv::AutoBuffer<uchar> inn_buf(base_size);
     if( !_ext_buf )
         inn_buf.allocate(base_size + n*sizeof(int));
-    uchar* ext_buf = _ext_buf ? _ext_buf : (uchar*)inn_buf;
+    uchar* ext_buf = _ext_buf ? _ext_buf : inn_buf.data();
     int* cat_labels_buf = (int*)ext_buf;
     const int* cat_labels = data->get_cat_var_data(node, vi, cat_labels_buf);
 
@@ -797,7 +797,7 @@ CvBoostTree::calc_node_value( CvDTreeNode* node )
     int i, n = node->sample_count;
     const double* weights = ensemble->get_weights()->data.db;
     cv::AutoBuffer<uchar> inn_buf(n*(sizeof(int) + ( data->is_classifier ? sizeof(int) : sizeof(int) + sizeof(float))));
-    int* labels_buf = (int*)(uchar*)inn_buf;
+    int* labels_buf = (int*)inn_buf.data();
     const int* labels = data->get_cv_labels(node, labels_buf);
     double* subtree_weights = ensemble->get_subtree_weights()->data.db;
     double rcw[2] = {0,0};
@@ -1147,7 +1147,7 @@ CvBoost::update_weights( CvBoostTree* tree )
             _buf_size += data->get_length_subbuf()*(sizeof(float)+sizeof(uchar));
     }
     inn_buf.allocate(_buf_size);
-    uchar* cur_buf_pos = (uchar*)inn_buf;
+    uchar* cur_buf_pos = inn_buf.data();
 
     if ( (params.boost_type == LOGIT) || (params.boost_type == GENTLE) )
     {
@@ -2122,12 +2122,12 @@ CvBoost::train( const Mat& _train_data, int _tflag,
                const Mat& _missing_mask,
                CvBoostParams _params, bool _update )
 {
-    train_data_hdr = _train_data;
+    train_data_hdr = cvMat(_train_data);
     train_data_mat = _train_data;
-    responses_hdr = _responses;
+    responses_hdr = cvMat(_responses);
     responses_mat = _responses;
 
-    CvMat vidx = _var_idx, sidx = _sample_idx, vtype = _var_type, mmask = _missing_mask;
+    CvMat vidx = cvMat(_var_idx), sidx = cvMat(_sample_idx), vtype = cvMat(_var_type), mmask = cvMat(_missing_mask);
 
     return train(&train_data_hdr, _tflag, &responses_hdr, vidx.data.ptr ? &vidx : 0,
           sidx.data.ptr ? &sidx : 0, vtype.data.ptr ? &vtype : 0,
@@ -2138,7 +2138,7 @@ float
 CvBoost::predict( const Mat& _sample, const Mat& _missing,
                   const Range& slice, bool raw_mode, bool return_sum ) const
 {
-    CvMat sample = _sample, mmask = _missing;
+    CvMat sample = cvMat(_sample), mmask = cvMat(_missing);
     /*if( weak_responses )
     {
         int weak_count = cvSliceLength( slice, weak );

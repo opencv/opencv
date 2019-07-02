@@ -18,7 +18,7 @@ static void help()
                "   [--try-flip]\n"
                "   [filename|camera_index]\n\n"
             "see facedetect.cmd for one call:\n"
-            "./facedetect --cascade=\"../../data/haarcascades/haarcascade_frontalface_alt.xml\" --nested-cascade=\"../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml\" --scale=1.3\n\n"
+            "./facedetect --cascade=\"data/haarcascades/haarcascade_frontalface_alt.xml\" --nested-cascade=\"data/haarcascades/haarcascade_eye_tree_eyeglasses.xml\" --scale=1.3\n\n"
             "During execution:\n\tHit any key to quit.\n"
             "\tUsing OpenCV version " << CV_VERSION << "\n" << endl;
 }
@@ -41,8 +41,8 @@ int main( int argc, const char** argv )
 
     cv::CommandLineParser parser(argc, argv,
         "{help h||}"
-        "{cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|}"
-        "{nested-cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
+        "{cascade|data/haarcascades/haarcascade_frontalface_alt.xml|}"
+        "{nested-cascade|data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
         "{scale|1|}{try-flip||}{@filename||}"
     );
     if (parser.has("help"))
@@ -62,9 +62,9 @@ int main( int argc, const char** argv )
         parser.printErrors();
         return 0;
     }
-    if ( !nestedCascade.load( nestedCascadeName ) )
+    if (!nestedCascade.load(samples::findFileOrKeep(nestedCascadeName)))
         cerr << "WARNING: Could not load classifier cascade for nested objects" << endl;
-    if( !cascade.load( cascadeName ) )
+    if (!cascade.load(samples::findFile(cascadeName)))
     {
         cerr << "ERROR: Could not load classifier cascade" << endl;
         help();
@@ -74,21 +74,31 @@ int main( int argc, const char** argv )
     {
         int camera = inputName.empty() ? 0 : inputName[0] - '0';
         if(!capture.open(camera))
-            cout << "Capture from camera #" <<  camera << " didn't work" << endl;
-    }
-    else if( inputName.size() )
-    {
-        image = imread( inputName, 1 );
-        if( image.empty() )
         {
-            if(!capture.open( inputName ))
+            cout << "Capture from camera #" <<  camera << " didn't work" << endl;
+            return 1;
+        }
+    }
+    else if (!inputName.empty())
+    {
+        image = imread(samples::findFileOrKeep(inputName), IMREAD_COLOR);
+        if (image.empty())
+        {
+            if (!capture.open(samples::findFileOrKeep(inputName)))
+            {
                 cout << "Could not read " << inputName << endl;
+                return 1;
+            }
         }
     }
     else
     {
-        image = imread( "../data/lena.jpg", 1 );
-        if(image.empty()) cout << "Couldn't read ../data/lena.jpg" << endl;
+        image = imread(samples::findFile("lena.jpg"), IMREAD_COLOR);
+        if (image.empty())
+        {
+            cout << "Couldn't read lena.jpg" << endl;
+            return 1;
+        }
     }
 
     if( capture.isOpened() )

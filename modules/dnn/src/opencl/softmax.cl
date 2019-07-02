@@ -24,6 +24,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  **************************************************************************************/
 
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 __kernel void kernel_channel_max(const int num, const int channels,
     const int spatial_dim, __global const T* data, __global T* out) {
   int index = get_global_id(0);
@@ -40,12 +44,12 @@ __kernel void kernel_channel_max(const int num, const int channels,
 
 __kernel void kernel_channel_subtract(const int count,
     const int num, const int channels,
-    const int spatial_dim, __global const T* channel_max, __global T* data) {
+    const int spatial_dim, __global const T* channel_max, __global const T* src, __global T* data) {
   int index = get_global_id(0);
   if(index < count) {
     int n = index / channels / spatial_dim;
     int s = index % spatial_dim;
-    data[index] -= channel_max[n * spatial_dim + s];
+    data[index] = exp(src[index] - channel_max[n * spatial_dim + s]);
   }
 }
 

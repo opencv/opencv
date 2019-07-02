@@ -127,10 +127,12 @@ namespace cv
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
+        typedef PtrStepSz<unsigned short> PtrStepSzus;
         typedef PtrStepSz<float> PtrStepSzf;
         typedef PtrStepSz<int> PtrStepSzi;
 
         typedef PtrStep<unsigned char> PtrStepb;
+        typedef PtrStep<unsigned short> PtrStepus;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
 

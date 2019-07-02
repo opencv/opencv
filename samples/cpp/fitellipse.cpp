@@ -171,7 +171,7 @@ static void help()
     "contours and approximate it by ellipses. Three methods are used to find the \n"
     "elliptical fits: fitEllipse, fitEllipseAMS and fitEllipseDirect.\n"
     "Call:\n"
-    "./fitellipse [image_name -- Default ../data/stuff.jpg]\n" << endl;
+    "./fitellipse [image_name -- Default ellipses.jpg]\n" << endl;
 }
 
 int sliderPos = 70;
@@ -192,14 +192,14 @@ int main( int argc, char** argv )
     fitEllipseAMSQ    = true;
     fitEllipseDirectQ = true;
 
-    cv::CommandLineParser parser(argc, argv,"{help h||}{@image|../data/ellipses.jpg|}");
+    cv::CommandLineParser parser(argc, argv,"{help h||}{@image|ellipses.jpg|}");
     if (parser.has("help"))
     {
         help();
         return 0;
     }
     string filename = parser.get<string>("@image");
-    image = imread(filename, 0);
+    image = imread(samples::findFile(filename), 0);
     if( image.empty() )
     {
         cout << "Couldn't open image " << filename << "\n";

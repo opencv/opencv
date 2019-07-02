@@ -15,15 +15,21 @@
 #include "tf_io.hpp"
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void RemoveIdentityOps(tensorflow::GraphDef& net);
 
 void simplifySubgraphs(tensorflow::GraphDef& net);
 
-Mat getTensorContent(const tensorflow::TensorProto &tensor);
+Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy = true);
 
-CV__DNN_EXPERIMENTAL_NS_END
+void releaseTensor(tensorflow::TensorProto* tensor);
+
+void sortByExecutionOrder(tensorflow::GraphDef& net);
+
+void removePhaseSwitches(tensorflow::GraphDef& net);
+
+CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
 #endif  // HAVE_PROTOBUF

@@ -17,7 +17,7 @@ using namespace cv;
 bool DeviceHandler::init(MFXVideoSession &session)
 {
     mfxStatus res = MFX_ERR_NONE;
-    mfxIMPL impl = MFX_IMPL_AUTO;
+    mfxIMPL impl = MFX_IMPL_AUTO_ANY;
     mfxVersion ver = { {19, 1} };
 
     res = session.Init(impl, &ver);
@@ -96,7 +96,7 @@ SurfacePool::SurfacePool(ushort width_, ushort height_, ushort count, const mfxF
     for(int i = 0; i < count; ++i)
     {
         mfxFrameSurface1 &surface = surfaces[i];
-        uint8_t * dataPtr = buffers + oneSize * i;
+        uint8_t * dataPtr = buffers.data() + oneSize * i;
         memset(&surface, 0, sizeof(mfxFrameSurface1));
         surface.Info = frameInfo;
         surface.Data.Y = dataPtr;
@@ -196,5 +196,3 @@ bool WriteBitstream::isOpened() const
 {
     return output.is_open();
 }
-
-//==================================================================================================

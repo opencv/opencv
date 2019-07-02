@@ -13,7 +13,7 @@ static void help()
 {
     cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
             "Usage:\n"
-            "./watershed [image_name -- default is ../data/fruits.jpg]\n" << endl;
+            "./watershed [image_name -- default is fruits.jpg]\n" << endl;
 
 
     cout << "Hot keys: \n"
@@ -48,18 +48,18 @@ static void onMouse( int event, int x, int y, int flags, void* )
 
 int main( int argc, char** argv )
 {
-    cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | ../data/fruits.jpg | }");
+    cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | fruits.jpg | }");
     if (parser.has("help"))
     {
         help();
         return 0;
     }
-    string filename = parser.get<string>("@input");
+    string filename = samples::findFile(parser.get<string>("@input"));
     Mat img0 = imread(filename, 1), imgGray;
 
     if( img0.empty() )
     {
-        cout << "Couldn'g open image " << filename << ". Usage: watershed <image_name>\n";
+        cout << "Couldn't open image " << filename << ". Usage: watershed <image_name>\n";
         return 0;
     }
     help();

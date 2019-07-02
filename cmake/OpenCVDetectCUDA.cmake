@@ -3,19 +3,28 @@ if(WIN32 AND NOT MSVC)
   return()
 endif()
 
-if(NOT APPLE AND CV_CLANG)
+if(NOT UNIX AND CV_CLANG)
   message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
-set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-if(ANDROID)
-  set(CUDA_TARGET_OS_VARIANT "Android")
+if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.com/cmake/cmake/merge_requests/663
+      OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
+    AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
+  ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "LINK_PRIVATE")
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+else()
+  # Use OpenCV's patched "FindCUDA" module
+  set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+  if(ANDROID)
+    set(CUDA_TARGET_OS_VARIANT "Android")
+  endif()
+  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+
+  list(REMOVE_AT CMAKE_MODULE_PATH 0)
 endif()
-find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
-
-list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
@@ -26,6 +35,16 @@ if(CUDA_FOUND)
 
   if(WITH_CUBLAS)
     set(HAVE_CUBLAS 1)
+  endif()
+
+  if(WITH_CUDNN)
+      set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+      find_host_package(CUDNN "${MIN_VER_CUDNN}")
+      list(REMOVE_AT CMAKE_MODULE_PATH 0)
+
+      if(CUDNN_FOUND)
+        set(HAVE_CUDNN 1)
+      endif()
   endif()
 
   if(WITH_NVCUVID)
@@ -43,7 +62,7 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
-  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta")
+  set(_generations "Fermi" "Kepler" "Maxwell" "Pascal" "Volta" "Turing")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
@@ -61,6 +80,12 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  endif()
+
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin "2.0")
@@ -72,11 +97,14 @@ if(CUDA_FOUND)
     set(__cuda_arch_bin "6.0 6.1")
   elseif(CUDA_GENERATION STREQUAL "Volta")
     set(__cuda_arch_bin "7.0")
+  elseif(CUDA_GENERATION STREQUAL "Turing")
+    set(__cuda_arch_bin "7.5")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
     if(NOT _nvcc_res EQUAL 0)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
@@ -90,23 +118,26 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+      execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                        RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
-        set(__cuda_arch_bin "5.3 6.2 7.0")
+        set(__cuda_arch_bin "5.3 6.2 7.2")
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
         string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
       endif()
       set(__cuda_arch_ptx "")
     else()
-      if(${CUDA_VERSION} VERSION_LESS "9.0")
+      if(CUDA_VERSION VERSION_LESS "9.0")
         set(__cuda_arch_bin "2.0 3.0 3.5 3.7 5.0 5.2 6.0 6.1")
-      else()
+      elseif(CUDA_VERSION VERSION_LESS "10.0")
         set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0")
+      else()
+        set(__cuda_arch_bin "3.0 3.5 3.7 5.0 5.2 6.0 6.1 7.0 7.5")
       endif()
     endif()
   endif()
@@ -179,6 +210,13 @@ if(CUDA_FOUND)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var}_backup_in_cuda_compile_ "${${var}}")
 
+      if (CV_CLANG)
+        # we remove -Winconsistent-missing-override and -Qunused-arguments
+        # just in case we are compiling CUDA with gcc but OpenCV with clang
+        string(REPLACE "-Winconsistent-missing-override" "" ${var} "${${var}}")
+        string(REPLACE "-Qunused-arguments" "" ${var} "${${var}}")
+      endif()
+
       # we remove /EHa as it generates warnings under windows
       string(REPLACE "/EHa" "" ${var} "${${var}}")
 
@@ -203,6 +241,16 @@ if(CUDA_FOUND)
 
       # cc1: warning: command line option '-Wsuggest-override' is valid for C++/ObjC++ but not for C
       string(REPLACE "-Wsuggest-override" "" ${var} "${${var}}")
+
+      # issue: #11552 (from OpenCVCompilerOptions.cmake)
+      string(REGEX REPLACE "-Wimplicit-fallthrough(=[0-9]+)? " "" ${var} "${${var}}")
+
+      # removal of custom specified options
+      if(OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS)
+        foreach(__flag ${OPENCV_CUDA_NVCC_FILTEROUT_OPTIONS})
+          string(REPLACE "${__flag}" "" ${var} "${${var}}")
+        endforeach()
+      endif()
     endforeach()
   endmacro()
 
@@ -255,6 +303,13 @@ if(HAVE_CUDA)
     endforeach()
   endif()
 
+  if(HAVE_CUDNN)
+    foreach(p ${CUDNN_LIBRARIES})
+      get_filename_component(_tmp ${p} PATH)
+      list(APPEND CUDA_LIBS_PATH ${_tmp})
+    endforeach()
+  endif()
+
   if(HAVE_CUFFT)
     foreach(p ${CUDA_cufft_LIBRARY})
       get_filename_component(_tmp ${p} PATH)
@@ -273,7 +328,10 @@ if(HAVE_CUDA)
     set(CUDA_cublas_LIBRARY_ABS ${CUDA_cublas_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cublas_LIBRARY ${CUDA_cublas_LIBRARY})
   endif()
-
+  if(HAVE_CUDNN)
+    set(CUDNN_LIBRARIES_ABS ${CUDNN_LIBRARIES})
+    ocv_convert_to_lib_name(CUDNN_LIBRARIES ${CUDNN_LIBRARIES})
+  endif()
   if(HAVE_CUFFT)
     set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})

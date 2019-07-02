@@ -242,7 +242,7 @@ bool HalideScheduler::process(Ptr<BackendNode>& node)
     std::map<std::string, Halide::Func> funcsMap;  // Scheduled functions.
     // For every function, from top to bottom, we try to find a scheduling node.
     // Scheduling is successful (return true) if for the first function (top)
-    // node is respresented.
+    // node is represented.
     CV_Assert(!node.empty());
     std::vector<Halide::Func>& funcs = node.dynamicCast<HalideBackendNode>()->funcs;
     for (int i = funcs.size() - 1; i >= 0; --i)

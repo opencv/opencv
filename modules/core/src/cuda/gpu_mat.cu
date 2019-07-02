@@ -76,7 +76,7 @@ namespace
         }
         __device__ __host__ void deallocate(uchar* ptr, size_t numBytes) CV_OVERRIDE
         {
-            (void)numBytes;
+            CV_UNUSED(numBytes);
 #ifndef __CUDA_ARCH__
             CV_CUDEV_SAFE_CALL(cudaFree(ptr));
 #endif

@@ -1,6 +1,7 @@
 package org.opencv.test.calib3d;
 
 import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
@@ -13,6 +14,15 @@ import org.opencv.test.OpenCVTestCase;
 import org.opencv.imgproc.Imgproc;
 
 public class Calib3dTest extends OpenCVTestCase {
+
+    Size size;
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+
+        size = new Size(3, 3);
+    }
 
     public void testCalibrateCameraListOfMatListOfMatSizeMatMatListOfMatListOfMat() {
         fail("Not yet implemented");
@@ -177,7 +187,7 @@ public class Calib3dTest extends OpenCVTestCase {
         Size patternSize = new Size(9, 6);
         MatOfPoint2f corners = new MatOfPoint2f();
         Calib3d.findChessboardCorners(grayChess, patternSize, corners);
-        assertTrue(!corners.empty());
+        assertFalse(corners.empty());
     }
 
     public void testFindChessboardCornersMatSizeMatInt() {
@@ -185,7 +195,16 @@ public class Calib3dTest extends OpenCVTestCase {
         MatOfPoint2f corners = new MatOfPoint2f();
         Calib3d.findChessboardCorners(grayChess, patternSize, corners, Calib3d.CALIB_CB_ADAPTIVE_THRESH + Calib3d.CALIB_CB_NORMALIZE_IMAGE
                 + Calib3d.CALIB_CB_FAST_CHECK);
-        assertTrue(!corners.empty());
+        assertFalse(corners.empty());
+    }
+
+    public void testFind4QuadCornerSubpix() {
+        Size patternSize = new Size(9, 6);
+        MatOfPoint2f corners = new MatOfPoint2f();
+        Size region_size = new Size(5, 5);
+        Calib3d.findChessboardCorners(grayChess, patternSize, corners);
+        Calib3d.find4QuadCornerSubpix(grayChess, corners, region_size);
+        assertFalse(corners.empty());
     }
 
     public void testFindCirclesGridMatSizeMat() {
@@ -602,4 +621,159 @@ public class Calib3dTest extends OpenCVTestCase {
         Calib3d.computeCorrespondEpilines(left, 1, fundamental, lines);
         assertMatEqual(truth, lines, EPS);
     }
+
+    public void testConstants()
+    {
+        // calib3d.hpp: some constants have conflict with constants from 'fisheye' namespace
+        assertEquals(1, Calib3d.CALIB_USE_INTRINSIC_GUESS);
+        assertEquals(2, Calib3d.CALIB_FIX_ASPECT_RATIO);
+        assertEquals(4, Calib3d.CALIB_FIX_PRINCIPAL_POINT);
+        assertEquals(8, Calib3d.CALIB_ZERO_TANGENT_DIST);
+        assertEquals(16, Calib3d.CALIB_FIX_FOCAL_LENGTH);
+        assertEquals(32, Calib3d.CALIB_FIX_K1);
+        assertEquals(64, Calib3d.CALIB_FIX_K2);
+        assertEquals(128, Calib3d.CALIB_FIX_K3);
+        assertEquals(0x0800, Calib3d.CALIB_FIX_K4);
+        assertEquals(0x1000, Calib3d.CALIB_FIX_K5);
+        assertEquals(0x2000, Calib3d.CALIB_FIX_K6);
+        assertEquals(0x4000, Calib3d.CALIB_RATIONAL_MODEL);
+        assertEquals(0x8000, Calib3d.CALIB_THIN_PRISM_MODEL);
+        assertEquals(0x10000, Calib3d.CALIB_FIX_S1_S2_S3_S4);
+        assertEquals(0x40000, Calib3d.CALIB_TILTED_MODEL);
+        assertEquals(0x80000, Calib3d.CALIB_FIX_TAUX_TAUY);
+        assertEquals(0x100000, Calib3d.CALIB_USE_QR);
+        assertEquals(0x200000, Calib3d.CALIB_FIX_TANGENT_DIST);
+        assertEquals(0x100, Calib3d.CALIB_FIX_INTRINSIC);
+        assertEquals(0x200, Calib3d.CALIB_SAME_FOCAL_LENGTH);
+        assertEquals(0x400, Calib3d.CALIB_ZERO_DISPARITY);
+        assertEquals((1 << 17), Calib3d.CALIB_USE_LU);
+        assertEquals((1 << 22), Calib3d.CALIB_USE_EXTRINSIC_GUESS);
+    }
+
+    public void testGetDefaultNewCameraMatrixMat() {
+        Mat mtx = Calib3d.getDefaultNewCameraMatrix(gray0);
+
+        assertFalse(mtx.empty());
+        assertEquals(0, Core.countNonZero(mtx));
+    }
+
+    public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
+        Mat mtx = Calib3d.getDefaultNewCameraMatrix(gray0, size, true);
+
+        assertFalse(mtx.empty());
+        assertFalse(0 == Core.countNonZero(mtx));
+        // TODO_: write better test
+    }
+
+    public void testInitUndistortRectifyMap() {
+        fail("Not yet implemented");
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
+        cameraMatrix.put(0, 0, 1, 0, 1);
+        cameraMatrix.put(1, 0, 0, 1, 1);
+        cameraMatrix.put(2, 0, 0, 0, 1);
+
+        Mat R = new Mat(3, 3, CvType.CV_32F, new Scalar(2));
+        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+
+        Mat distCoeffs = new Mat();
+        Mat map1 = new Mat();
+        Mat map2 = new Mat();
+
+        // TODO: complete this test
+        Calib3d.initUndistortRectifyMap(cameraMatrix, distCoeffs, R, newCameraMatrix, size, CvType.CV_32F, map1, map2);
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMat() {
+        fail("Not yet implemented");
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F);
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F);
+        // Size imageSize = new Size(2, 2);
+
+        cameraMatrix.put(0, 0, 1, 0, 1);
+        cameraMatrix.put(1, 0, 0, 1, 2);
+        cameraMatrix.put(2, 0, 0, 0, 1);
+
+        distCoeffs.put(0, 0, 1, 3, 2, 4);
+        truth = new Mat(3, 3, CvType.CV_32F);
+        truth.put(0, 0, 0, 0, 0);
+        truth.put(1, 0, 0, 0, 0);
+        truth.put(2, 0, 0, 3, 0);
+        // TODO: No documentation for this function
+        // Calib3d.initWideAngleProjMap(cameraMatrix, distCoeffs, imageSize,
+        // 5, m1type, truthput1, truthput2);
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatInt() {
+        fail("Not yet implemented");
+    }
+
+    public void testInitWideAngleProjMapMatMatSizeIntIntMatMatIntDouble() {
+        fail("Not yet implemented");
+    }
+
+    public void testUndistortMatMatMatMat() {
+        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 0, 1);
+                put(1, 0, 0, 1, 2);
+                put(2, 0, 0, 0, 1);
+            }
+        };
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 3, 2, 4);
+            }
+        };
+
+        Calib3d.undistort(src, dst, cameraMatrix, distCoeffs);
+
+        truth = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 0, 0, 0);
+                put(1, 0, 0, 0, 0);
+                put(2, 0, 0, 3, 0);
+            }
+        };
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testUndistortMatMatMatMatMat() {
+        Mat src = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_32F) {
+            {
+                put(0, 0, 1, 0, 1);
+                put(1, 0, 0, 1, 2);
+                put(2, 0, 0, 0, 1);
+            }
+        };
+        Mat distCoeffs = new Mat(1, 4, CvType.CV_32F) {
+            {
+                put(0, 0, 2, 1, 4, 5);
+            }
+        };
+        Mat newCameraMatrix = new Mat(3, 3, CvType.CV_32F, new Scalar(1));
+
+        Calib3d.undistort(src, dst, cameraMatrix, distCoeffs, newCameraMatrix);
+
+        truth = new Mat(3, 3, CvType.CV_32F, new Scalar(3));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
+    public void testUndistortPointsListOfPointListOfPointMatMat() {
+        MatOfPoint2f src = new MatOfPoint2f(new Point(1, 2), new Point(3, 4), new Point(-1, -1));
+        MatOfPoint2f dst = new MatOfPoint2f();
+        Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
+        Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
+
+        Calib3d.undistortPoints(src, dst, cameraMatrix, distCoeffs);
+
+        assertEquals(src.size(), dst.size());
+        for(int i=0; i<src.toList().size(); i++) {
+            //Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
+            assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
+        }
+    }
+
 }

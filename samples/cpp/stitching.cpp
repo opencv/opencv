@@ -8,7 +8,6 @@
 using namespace std;
 using namespace cv;
 
-bool try_use_gpu = false;
 bool divide_images = false;
 Stitcher::Mode mode = Stitcher::PANORAMA;
 vector<Mat> imgs;
@@ -20,21 +19,23 @@ int parseCmdArgs(int argc, char** argv);
 int main(int argc, char* argv[])
 {
     int retval = parseCmdArgs(argc, argv);
-    if (retval) return -1;
+    if (retval) return EXIT_FAILURE;
 
+    //![stitching]
     Mat pano;
-    Ptr<Stitcher> stitcher = Stitcher::create(mode, try_use_gpu);
+    Ptr<Stitcher> stitcher = Stitcher::create(mode);
     Stitcher::Status status = stitcher->stitch(imgs, pano);
 
     if (status != Stitcher::OK)
     {
         cout << "Can't stitch images, error code = " << int(status) << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
+    //![stitching]
 
     imwrite(result_name, pano);
     cout << "stitching completed successfully\n" << result_name << " saved!";
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 
@@ -45,9 +46,6 @@ void printUsage(char** argv)
          "Flags:\n"
          "  --d3\n"
          "      internally creates three chunks of each image to increase stitching success\n"
-         "  --try_use_gpu (yes|no)\n"
-         "      Try to use GPU. The default value is 'no'. All default values\n"
-         "      are for CPU mode.\n"
          "  --mode (panorama|scans)\n"
          "      Determines configuration of stitcher. The default is 'panorama',\n"
          "      mode suitable for creating photo panoramas. Option 'scans' is suitable\n"
@@ -63,7 +61,7 @@ int parseCmdArgs(int argc, char** argv)
     if (argc == 1)
     {
         printUsage(argv);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     for (int i = 1; i < argc; ++i)
@@ -71,20 +69,7 @@ int parseCmdArgs(int argc, char** argv)
         if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
         {
             printUsage(argv);
-            return -1;
-        }
-        else if (string(argv[i]) == "--try_use_gpu")
-        {
-            if (string(argv[i + 1]) == "no")
-                try_use_gpu = false;
-            else if (string(argv[i + 1]) == "yes")
-                try_use_gpu = true;
-            else
-            {
-                cout << "Bad --try_use_gpu flag value\n";
-                return -1;
-            }
-            i++;
+            return EXIT_FAILURE;
         }
         else if (string(argv[i]) == "--d3")
         {
@@ -104,17 +89,17 @@ int parseCmdArgs(int argc, char** argv)
             else
             {
                 cout << "Bad --mode flag value\n";
-                return -1;
+                return EXIT_FAILURE;
             }
             i++;
         }
         else
         {
-            Mat img = imread(argv[i]);
+            Mat img = imread(samples::findFile(argv[i]));
             if (img.empty())
             {
                 cout << "Can't read image '" << argv[i] << "'\n";
-                return -1;
+                return EXIT_FAILURE;
             }
 
             if (divide_images)
@@ -130,5 +115,5 @@ int parseCmdArgs(int argc, char** argv)
                 imgs.push_back(img);
         }
     }
-    return 0;
+    return EXIT_SUCCESS;
 }

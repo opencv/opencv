@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tensorflow;
+package opencv_tensorflow;
 option cc_enable_arenas = true;
 option java_outer_classname = "GraphProtos";
 option java_multiple_files = true;
@@ -86,7 +86,7 @@ message NodeDef {
   //              | ( ("gpu" | "cpu") ":" ([1-9][0-9]* | "*") )
   //
   // Valid values for this string include:
-  // * "@other/node"                         (colocate with "other/node")
+  // * "@other/node"                         (collocate with "other/node")
   // * "/job:worker/replica:0/task:1/gpu:3"  (full specification)
   // * "/job:worker/gpu:3"                   (partial specification)
   // * ""                                    (no specification)

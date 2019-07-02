@@ -48,16 +48,16 @@ inline void InitDefaults() {
   InitDefaultsVersionDef();
 }
 }  // namespace protobuf_versions_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 class VersionDef;
 class VersionDefDefaultTypeInternal;
 extern VersionDefDefaultTypeInternal _VersionDef_default_instance_;
-}  // namespace tensorflow
-namespace tensorflow {
+}  // namespace opencv_tensorflow
+namespace opencv_tensorflow {
 
 // ===================================================================
 
-class VersionDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.VersionDef) */ {
+class VersionDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.VersionDef) */ {
  public:
   VersionDef();
   virtual ~VersionDef();
@@ -175,7 +175,7 @@ class VersionDef : public ::google::protobuf::Message /* @@protoc_insertion_poin
   ::google::protobuf::int32 min_consumer() const;
   void set_min_consumer(::google::protobuf::int32 value);
 
-  // @@protoc_insertion_point(class_scope:tensorflow.VersionDef)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.VersionDef)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
@@ -206,13 +206,13 @@ inline void VersionDef::clear_producer() {
   producer_ = 0;
 }
 inline ::google::protobuf::int32 VersionDef::producer() const {
-  // @@protoc_insertion_point(field_get:tensorflow.VersionDef.producer)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.VersionDef.producer)
   return producer_;
 }
 inline void VersionDef::set_producer(::google::protobuf::int32 value) {
 
   producer_ = value;
-  // @@protoc_insertion_point(field_set:tensorflow.VersionDef.producer)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.VersionDef.producer)
 }
 
 // int32 min_consumer = 2;
@@ -220,13 +220,13 @@ inline void VersionDef::clear_min_consumer() {
   min_consumer_ = 0;
 }
 inline ::google::protobuf::int32 VersionDef::min_consumer() const {
-  // @@protoc_insertion_point(field_get:tensorflow.VersionDef.min_consumer)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.VersionDef.min_consumer)
   return min_consumer_;
 }
 inline void VersionDef::set_min_consumer(::google::protobuf::int32 value) {
 
   min_consumer_ = value;
-  // @@protoc_insertion_point(field_set:tensorflow.VersionDef.min_consumer)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.VersionDef.min_consumer)
 }
 
 // repeated int32 bad_consumers = 3;
@@ -237,25 +237,25 @@ inline void VersionDef::clear_bad_consumers() {
   bad_consumers_.Clear();
 }
 inline ::google::protobuf::int32 VersionDef::bad_consumers(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.VersionDef.bad_consumers)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.VersionDef.bad_consumers)
   return bad_consumers_.Get(index);
 }
 inline void VersionDef::set_bad_consumers(int index, ::google::protobuf::int32 value) {
   bad_consumers_.Set(index, value);
-  // @@protoc_insertion_point(field_set:tensorflow.VersionDef.bad_consumers)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.VersionDef.bad_consumers)
 }
 inline void VersionDef::add_bad_consumers(::google::protobuf::int32 value) {
   bad_consumers_.Add(value);
-  // @@protoc_insertion_point(field_add:tensorflow.VersionDef.bad_consumers)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.VersionDef.bad_consumers)
 }
 inline const ::google::protobuf::RepeatedField< ::google::protobuf::int32 >&
 VersionDef::bad_consumers() const {
-  // @@protoc_insertion_point(field_list:tensorflow.VersionDef.bad_consumers)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.VersionDef.bad_consumers)
   return bad_consumers_;
 }
 inline ::google::protobuf::RepeatedField< ::google::protobuf::int32 >*
 VersionDef::mutable_bad_consumers() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.VersionDef.bad_consumers)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.VersionDef.bad_consumers)
   return &bad_consumers_;
 }
 
@@ -265,7 +265,7 @@ VersionDef::mutable_bad_consumers() {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)
 

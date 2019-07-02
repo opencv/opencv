@@ -1,5 +1,3 @@
-/* $Id: tif_thunder.c,v 1.13 2016-09-04 21:32:56 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.

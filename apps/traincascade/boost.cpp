@@ -30,7 +30,6 @@ using cv::ParallelLoopBody;
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
-#include "cxmisc.h"
 
 #include "cvconfig.h"
 
@@ -383,7 +382,7 @@ CvDTreeNode* CvCascadeBoostTrainData::subsample_data( const CvMat* _subsample_id
             int ci = get_var_type(vi);
             CV_Assert( ci < 0 );
 
-            int *src_idx_buf = (int*)(uchar*)inn_buf;
+            int *src_idx_buf = (int*)inn_buf.data();
             float *src_val_buf = (float*)(src_idx_buf + sample_count);
             int* sample_indices_buf = (int*)(src_val_buf + sample_count);
             const int* src_idx = 0;
@@ -423,7 +422,7 @@ CvDTreeNode* CvCascadeBoostTrainData::subsample_data( const CvMat* _subsample_id
         }
 
         // subsample cv_lables
-        const int* src_lbls = get_cv_labels(data_root, (int*)(uchar*)inn_buf);
+        const int* src_lbls = get_cv_labels(data_root, (int*)inn_buf.data());
         if (is_buf_16u)
         {
             unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
@@ -440,7 +439,7 @@ CvDTreeNode* CvCascadeBoostTrainData::subsample_data( const CvMat* _subsample_id
         }
 
         // subsample sample_indices
-        const int* sample_idx_src = get_sample_indices(data_root, (int*)(uchar*)inn_buf);
+        const int* sample_idx_src = get_sample_indices(data_root, (int*)inn_buf.data());
         if (is_buf_16u)
         {
             unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*get_length_subbuf() +
@@ -543,7 +542,7 @@ void CvCascadeBoostTrainData::setData( const CvFeatureEvaluator* _featureEvaluat
     featureEvaluator = _featureEvaluator;
 
     max_c_count = MAX( 2, featureEvaluator->getMaxCatCount() );
-    _resp = featureEvaluator->getCls();
+    _resp = cvMat(featureEvaluator->getCls());
     responses = &_resp;
     // TODO: check responses: elements must be 0 or 1
 
@@ -815,7 +814,7 @@ struct FeatureIdxOnlyPrecalc : ParallelLoopBody
     void operator()( const Range& range ) const
     {
         cv::AutoBuffer<float> valCache(sample_count);
-        float* valCachePtr = (float*)valCache;
+        float* valCachePtr = valCache.data();
         for ( int fi = range.start; fi < range.end; fi++)
         {
             for( int si = 0; si < sample_count; si++ )
@@ -1084,7 +1083,7 @@ void CvCascadeBoostTree::split_node_data( CvDTreeNode* node )
     CvMat* buf = data->buf;
     size_t length_buf_row = data->get_length_subbuf();
     cv::AutoBuffer<uchar> inn_buf(n*(3*sizeof(int)+sizeof(float)));
-    int* tempBuf = (int*)(uchar*)inn_buf;
+    int* tempBuf = (int*)inn_buf.data();
     bool splitInputData;
 
     complete_node_dir(node);
@@ -1398,7 +1397,7 @@ void CvCascadeBoost::update_weights( CvBoostTree* tree )
     int inn_buf_size = ((params.boost_type == LOGIT) || (params.boost_type == GENTLE) ? n*sizeof(int) : 0) +
                        ( !tree ? n*sizeof(int) : 0 );
     cv::AutoBuffer<uchar> inn_buf(inn_buf_size);
-    uchar* cur_inn_buf_pos = (uchar*)inn_buf;
+    uchar* cur_inn_buf_pos = inn_buf.data();
     if ( (params.boost_type == LOGIT) || (params.boost_type == GENTLE) )
     {
         step = CV_IS_MAT_CONT(data->responses_copy->type) ?

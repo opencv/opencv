@@ -50,8 +50,8 @@
 //! @addtogroup imgcodecs_ios
 //! @{
 
-UIImage* MatToUIImage(const cv::Mat& image);
-void UIImageToMat(const UIImage* image,
-                         cv::Mat& m, bool alphaExist = false);
+CV_EXPORTS UIImage* MatToUIImage(const cv::Mat& image);
+CV_EXPORTS void UIImageToMat(const UIImage* image,
+                             cv::Mat& m, bool alphaExist = false);
 
 //! @}

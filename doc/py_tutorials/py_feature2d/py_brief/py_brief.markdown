@@ -12,7 +12,7 @@ Theory
 
 We know SIFT uses 128-dim vector for descriptors. Since it is using floating point numbers, it takes
 basically 512 bytes. Similarly SURF also takes minimum of 256 bytes (for 64-dim). Creating such a
-vector for thousands of features takes a lot of memory which are not feasible for resouce-constraint
+vector for thousands of features takes a lot of memory which are not feasible for resource-constraint
 applications especially for embedded systems. Larger the memory, longer the time it takes for
 matching.
 

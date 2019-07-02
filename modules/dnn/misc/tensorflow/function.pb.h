@@ -65,7 +65,7 @@ inline void InitDefaults() {
   InitDefaultsGradientDef();
 }
 }  // namespace protobuf_function_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 class FunctionDef;
 class FunctionDefDefaultTypeInternal;
 extern FunctionDefDefaultTypeInternal _FunctionDef_default_instance_;
@@ -81,12 +81,12 @@ extern FunctionDef_Node_AttrEntry_DoNotUseDefaultTypeInternal _FunctionDef_Node_
 class GradientDef;
 class GradientDefDefaultTypeInternal;
 extern GradientDefDefaultTypeInternal _GradientDef_default_instance_;
-}  // namespace tensorflow
-namespace tensorflow {
+}  // namespace opencv_tensorflow
+namespace opencv_tensorflow {
 
 // ===================================================================
 
-class FunctionDefLibrary : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.FunctionDefLibrary) */ {
+class FunctionDefLibrary : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.FunctionDefLibrary) */ {
  public:
   FunctionDefLibrary();
   virtual ~FunctionDefLibrary();
@@ -180,39 +180,39 @@ class FunctionDefLibrary : public ::google::protobuf::Message /* @@protoc_insert
 
   // accessors -------------------------------------------------------
 
-  // repeated .tensorflow.FunctionDef function = 1;
+  // repeated .opencv_tensorflow.FunctionDef function = 1;
   int function_size() const;
   void clear_function();
   static const int kFunctionFieldNumber = 1;
-  const ::tensorflow::FunctionDef& function(int index) const;
-  ::tensorflow::FunctionDef* mutable_function(int index);
-  ::tensorflow::FunctionDef* add_function();
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef >*
+  const ::opencv_tensorflow::FunctionDef& function(int index) const;
+  ::opencv_tensorflow::FunctionDef* mutable_function(int index);
+  ::opencv_tensorflow::FunctionDef* add_function();
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef >*
       mutable_function();
-  const ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef >&
+  const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef >&
       function() const;
 
-  // repeated .tensorflow.GradientDef gradient = 2;
+  // repeated .opencv_tensorflow.GradientDef gradient = 2;
   int gradient_size() const;
   void clear_gradient();
   static const int kGradientFieldNumber = 2;
-  const ::tensorflow::GradientDef& gradient(int index) const;
-  ::tensorflow::GradientDef* mutable_gradient(int index);
-  ::tensorflow::GradientDef* add_gradient();
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::GradientDef >*
+  const ::opencv_tensorflow::GradientDef& gradient(int index) const;
+  ::opencv_tensorflow::GradientDef* mutable_gradient(int index);
+  ::opencv_tensorflow::GradientDef* add_gradient();
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::GradientDef >*
       mutable_gradient();
-  const ::google::protobuf::RepeatedPtrField< ::tensorflow::GradientDef >&
+  const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::GradientDef >&
       gradient() const;
 
-  // @@protoc_insertion_point(class_scope:tensorflow.FunctionDefLibrary)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.FunctionDefLibrary)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   template <typename T> friend class ::google::protobuf::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef > function_;
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::GradientDef > gradient_;
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef > function_;
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::GradientDef > gradient_;
   mutable int _cached_size_;
   friend struct ::protobuf_function_2eproto::TableStruct;
   friend void ::protobuf_function_2eproto::InitDefaultsFunctionDefLibraryImpl();
@@ -220,13 +220,13 @@ class FunctionDefLibrary : public ::google::protobuf::Message /* @@protoc_insert
 // -------------------------------------------------------------------
 
 class FunctionDef_Node_AttrEntry_DoNotUse : public ::google::protobuf::internal::MapEntry<FunctionDef_Node_AttrEntry_DoNotUse,
-    ::std::string, ::tensorflow::AttrValue,
+    ::std::string, ::opencv_tensorflow::AttrValue,
     ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
     ::google::protobuf::internal::WireFormatLite::TYPE_MESSAGE,
     0 > {
 public:
   typedef ::google::protobuf::internal::MapEntry<FunctionDef_Node_AttrEntry_DoNotUse,
-    ::std::string, ::tensorflow::AttrValue,
+    ::std::string, ::opencv_tensorflow::AttrValue,
     ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
     ::google::protobuf::internal::WireFormatLite::TYPE_MESSAGE,
     0 > SuperType;
@@ -240,7 +240,7 @@ public:
 
 // -------------------------------------------------------------------
 
-class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.FunctionDef.Node) */ {
+class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.FunctionDef.Node) */ {
  public:
   FunctionDef_Node();
   virtual ~FunctionDef_Node();
@@ -401,13 +401,13 @@ class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertio
   const ::google::protobuf::RepeatedPtrField< ::std::string>& dep() const;
   ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_dep();
 
-  // map<string, .tensorflow.AttrValue> attr = 5;
+  // map<string, .opencv_tensorflow.AttrValue> attr = 5;
   int attr_size() const;
   void clear_attr();
   static const int kAttrFieldNumber = 5;
-  const ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >&
+  const ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >&
       attr() const;
-  ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >*
+  ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >*
       mutable_attr();
 
   // string op = 2;
@@ -433,7 +433,7 @@ class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertio
   void unsafe_arena_set_allocated_op(
       ::std::string* op);
 
-  // @@protoc_insertion_point(class_scope:tensorflow.FunctionDef.Node)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.FunctionDef.Node)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
@@ -445,7 +445,7 @@ class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertio
   ::google::protobuf::RepeatedPtrField< ::std::string> dep_;
   ::google::protobuf::internal::MapField<
       FunctionDef_Node_AttrEntry_DoNotUse,
-      ::std::string, ::tensorflow::AttrValue,
+      ::std::string, ::opencv_tensorflow::AttrValue,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
       ::google::protobuf::internal::WireFormatLite::TYPE_MESSAGE,
       0 > attr_;
@@ -456,7 +456,7 @@ class FunctionDef_Node : public ::google::protobuf::Message /* @@protoc_insertio
 };
 // -------------------------------------------------------------------
 
-class FunctionDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.FunctionDef) */ {
+class FunctionDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.FunctionDef) */ {
  public:
   FunctionDef();
   virtual ~FunctionDef();
@@ -552,49 +552,49 @@ class FunctionDef : public ::google::protobuf::Message /* @@protoc_insertion_poi
 
   // accessors -------------------------------------------------------
 
-  // repeated .tensorflow.FunctionDef.Node node = 2;
+  // repeated .opencv_tensorflow.FunctionDef.Node node = 2;
   int node_size() const;
   void clear_node();
   static const int kNodeFieldNumber = 2;
-  const ::tensorflow::FunctionDef_Node& node(int index) const;
-  ::tensorflow::FunctionDef_Node* mutable_node(int index);
-  ::tensorflow::FunctionDef_Node* add_node();
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef_Node >*
+  const ::opencv_tensorflow::FunctionDef_Node& node(int index) const;
+  ::opencv_tensorflow::FunctionDef_Node* mutable_node(int index);
+  ::opencv_tensorflow::FunctionDef_Node* add_node();
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef_Node >*
       mutable_node();
-  const ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef_Node >&
+  const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef_Node >&
       node() const;
 
-  // .tensorflow.OpDef signature = 1;
+  // .opencv_tensorflow.OpDef signature = 1;
   bool has_signature() const;
   void clear_signature();
   static const int kSignatureFieldNumber = 1;
   private:
   void _slow_mutable_signature();
   public:
-  const ::tensorflow::OpDef& signature() const;
-  ::tensorflow::OpDef* release_signature();
-  ::tensorflow::OpDef* mutable_signature();
-  void set_allocated_signature(::tensorflow::OpDef* signature);
+  const ::opencv_tensorflow::OpDef& signature() const;
+  ::opencv_tensorflow::OpDef* release_signature();
+  ::opencv_tensorflow::OpDef* mutable_signature();
+  void set_allocated_signature(::opencv_tensorflow::OpDef* signature);
   void unsafe_arena_set_allocated_signature(
-      ::tensorflow::OpDef* signature);
-  ::tensorflow::OpDef* unsafe_arena_release_signature();
+      ::opencv_tensorflow::OpDef* signature);
+  ::opencv_tensorflow::OpDef* unsafe_arena_release_signature();
 
-  // @@protoc_insertion_point(class_scope:tensorflow.FunctionDef)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.FunctionDef)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   template <typename T> friend class ::google::protobuf::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef_Node > node_;
-  ::tensorflow::OpDef* signature_;
+  ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef_Node > node_;
+  ::opencv_tensorflow::OpDef* signature_;
   mutable int _cached_size_;
   friend struct ::protobuf_function_2eproto::TableStruct;
   friend void ::protobuf_function_2eproto::InitDefaultsFunctionDefImpl();
 };
 // -------------------------------------------------------------------
 
-class GradientDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:tensorflow.GradientDef) */ {
+class GradientDef : public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:opencv_tensorflow.GradientDef) */ {
  public:
   GradientDef();
   virtual ~GradientDef();
@@ -734,7 +734,7 @@ class GradientDef : public ::google::protobuf::Message /* @@protoc_insertion_poi
   void unsafe_arena_set_allocated_gradient_func(
       ::std::string* gradient_func);
 
-  // @@protoc_insertion_point(class_scope:tensorflow.GradientDef)
+  // @@protoc_insertion_point(class_scope:opencv_tensorflow.GradientDef)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
@@ -758,63 +758,63 @@ class GradientDef : public ::google::protobuf::Message /* @@protoc_insertion_poi
 #endif  // __GNUC__
 // FunctionDefLibrary
 
-// repeated .tensorflow.FunctionDef function = 1;
+// repeated .opencv_tensorflow.FunctionDef function = 1;
 inline int FunctionDefLibrary::function_size() const {
   return function_.size();
 }
 inline void FunctionDefLibrary::clear_function() {
   function_.Clear();
 }
-inline const ::tensorflow::FunctionDef& FunctionDefLibrary::function(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDefLibrary.function)
+inline const ::opencv_tensorflow::FunctionDef& FunctionDefLibrary::function(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDefLibrary.function)
   return function_.Get(index);
 }
-inline ::tensorflow::FunctionDef* FunctionDefLibrary::mutable_function(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDefLibrary.function)
+inline ::opencv_tensorflow::FunctionDef* FunctionDefLibrary::mutable_function(int index) {
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDefLibrary.function)
   return function_.Mutable(index);
 }
-inline ::tensorflow::FunctionDef* FunctionDefLibrary::add_function() {
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDefLibrary.function)
+inline ::opencv_tensorflow::FunctionDef* FunctionDefLibrary::add_function() {
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDefLibrary.function)
   return function_.Add();
 }
-inline ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef >*
+inline ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef >*
 FunctionDefLibrary::mutable_function() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDefLibrary.function)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDefLibrary.function)
   return &function_;
 }
-inline const ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef >&
+inline const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef >&
 FunctionDefLibrary::function() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDefLibrary.function)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDefLibrary.function)
   return function_;
 }
 
-// repeated .tensorflow.GradientDef gradient = 2;
+// repeated .opencv_tensorflow.GradientDef gradient = 2;
 inline int FunctionDefLibrary::gradient_size() const {
   return gradient_.size();
 }
 inline void FunctionDefLibrary::clear_gradient() {
   gradient_.Clear();
 }
-inline const ::tensorflow::GradientDef& FunctionDefLibrary::gradient(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDefLibrary.gradient)
+inline const ::opencv_tensorflow::GradientDef& FunctionDefLibrary::gradient(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDefLibrary.gradient)
   return gradient_.Get(index);
 }
-inline ::tensorflow::GradientDef* FunctionDefLibrary::mutable_gradient(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDefLibrary.gradient)
+inline ::opencv_tensorflow::GradientDef* FunctionDefLibrary::mutable_gradient(int index) {
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDefLibrary.gradient)
   return gradient_.Mutable(index);
 }
-inline ::tensorflow::GradientDef* FunctionDefLibrary::add_gradient() {
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDefLibrary.gradient)
+inline ::opencv_tensorflow::GradientDef* FunctionDefLibrary::add_gradient() {
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDefLibrary.gradient)
   return gradient_.Add();
 }
-inline ::google::protobuf::RepeatedPtrField< ::tensorflow::GradientDef >*
+inline ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::GradientDef >*
 FunctionDefLibrary::mutable_gradient() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDefLibrary.gradient)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDefLibrary.gradient)
   return &gradient_;
 }
-inline const ::google::protobuf::RepeatedPtrField< ::tensorflow::GradientDef >&
+inline const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::GradientDef >&
 FunctionDefLibrary::gradient() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDefLibrary.gradient)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDefLibrary.gradient)
   return gradient_;
 }
 
@@ -832,64 +832,64 @@ inline void FunctionDef_Node::clear_ret() {
   ret_.Clear();
 }
 inline const ::std::string& FunctionDef_Node::ret(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.Node.ret)
   return ret_.Get(index);
 }
 inline ::std::string* FunctionDef_Node::mutable_ret(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.Node.ret)
   return ret_.Mutable(index);
 }
 inline void FunctionDef_Node::set_ret(int index, const ::std::string& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.ret)
   ret_.Mutable(index)->assign(value);
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::set_ret(int index, ::std::string&& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.ret)
   ret_.Mutable(index)->assign(std::move(value));
 }
 #endif
 inline void FunctionDef_Node::set_ret(int index, const char* value) {
   GOOGLE_DCHECK(value != NULL);
   ret_.Mutable(index)->assign(value);
-  // @@protoc_insertion_point(field_set_char:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.FunctionDef.Node.ret)
 }
 inline void FunctionDef_Node::set_ret(int index, const char* value, size_t size) {
   ret_.Mutable(index)->assign(
     reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.FunctionDef.Node.ret)
 }
 inline ::std::string* FunctionDef_Node::add_ret() {
-  // @@protoc_insertion_point(field_add_mutable:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_add_mutable:opencv_tensorflow.FunctionDef.Node.ret)
   return ret_.Add();
 }
 inline void FunctionDef_Node::add_ret(const ::std::string& value) {
   ret_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.ret)
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::add_ret(::std::string&& value) {
   ret_.Add(std::move(value));
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.ret)
 }
 #endif
 inline void FunctionDef_Node::add_ret(const char* value) {
   GOOGLE_DCHECK(value != NULL);
   ret_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add_char:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_add_char:opencv_tensorflow.FunctionDef.Node.ret)
 }
 inline void FunctionDef_Node::add_ret(const char* value, size_t size) {
   ret_.Add()->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_add_pointer:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_add_pointer:opencv_tensorflow.FunctionDef.Node.ret)
 }
 inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
 FunctionDef_Node::ret() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDef.Node.ret)
   return ret_;
 }
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 FunctionDef_Node::mutable_ret() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDef.Node.ret)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDef.Node.ret)
   return &ret_;
 }
 
@@ -898,20 +898,20 @@ inline void FunctionDef_Node::clear_op() {
   op_.ClearToEmpty(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline const ::std::string& FunctionDef_Node::op() const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.Node.op)
   return op_.Get();
 }
 inline void FunctionDef_Node::set_op(const ::std::string& value) {
 
   op_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.op)
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::set_op(::std::string&& value) {
 
   op_.Set(
     &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_rvalue:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_set_rvalue:opencv_tensorflow.FunctionDef.Node.op)
 }
 #endif
 inline void FunctionDef_Node::set_op(const char* value) {
@@ -919,22 +919,22 @@ inline void FunctionDef_Node::set_op(const char* value) {
 
   op_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_char:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.FunctionDef.Node.op)
 }
 inline void FunctionDef_Node::set_op(const char* value,
     size_t size) {
 
   op_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.FunctionDef.Node.op)
 }
 inline ::std::string* FunctionDef_Node::mutable_op() {
 
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.Node.op)
   return op_.Mutable(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline ::std::string* FunctionDef_Node::release_op() {
-  // @@protoc_insertion_point(field_release:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.FunctionDef.Node.op)
 
   return op_.Release(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
@@ -946,10 +946,10 @@ inline void FunctionDef_Node::set_allocated_op(::std::string* op) {
   }
   op_.SetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), op,
       GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.FunctionDef.Node.op)
 }
 inline ::std::string* FunctionDef_Node::unsafe_arena_release_op() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.FunctionDef.Node.op)
   GOOGLE_DCHECK(GetArenaNoVirtual() != NULL);
 
   return op_.UnsafeArenaRelease(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
@@ -965,7 +965,7 @@ inline void FunctionDef_Node::unsafe_arena_set_allocated_op(
   }
   op_.UnsafeArenaSetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
       op, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tensorflow.FunctionDef.Node.op)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opencv_tensorflow.FunctionDef.Node.op)
 }
 
 // repeated string arg = 3;
@@ -976,64 +976,64 @@ inline void FunctionDef_Node::clear_arg() {
   arg_.Clear();
 }
 inline const ::std::string& FunctionDef_Node::arg(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.Node.arg)
   return arg_.Get(index);
 }
 inline ::std::string* FunctionDef_Node::mutable_arg(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.Node.arg)
   return arg_.Mutable(index);
 }
 inline void FunctionDef_Node::set_arg(int index, const ::std::string& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.arg)
   arg_.Mutable(index)->assign(value);
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::set_arg(int index, ::std::string&& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.arg)
   arg_.Mutable(index)->assign(std::move(value));
 }
 #endif
 inline void FunctionDef_Node::set_arg(int index, const char* value) {
   GOOGLE_DCHECK(value != NULL);
   arg_.Mutable(index)->assign(value);
-  // @@protoc_insertion_point(field_set_char:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.FunctionDef.Node.arg)
 }
 inline void FunctionDef_Node::set_arg(int index, const char* value, size_t size) {
   arg_.Mutable(index)->assign(
     reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.FunctionDef.Node.arg)
 }
 inline ::std::string* FunctionDef_Node::add_arg() {
-  // @@protoc_insertion_point(field_add_mutable:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_add_mutable:opencv_tensorflow.FunctionDef.Node.arg)
   return arg_.Add();
 }
 inline void FunctionDef_Node::add_arg(const ::std::string& value) {
   arg_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.arg)
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::add_arg(::std::string&& value) {
   arg_.Add(std::move(value));
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.arg)
 }
 #endif
 inline void FunctionDef_Node::add_arg(const char* value) {
   GOOGLE_DCHECK(value != NULL);
   arg_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add_char:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_add_char:opencv_tensorflow.FunctionDef.Node.arg)
 }
 inline void FunctionDef_Node::add_arg(const char* value, size_t size) {
   arg_.Add()->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_add_pointer:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_add_pointer:opencv_tensorflow.FunctionDef.Node.arg)
 }
 inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
 FunctionDef_Node::arg() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDef.Node.arg)
   return arg_;
 }
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 FunctionDef_Node::mutable_arg() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDef.Node.arg)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDef.Node.arg)
   return &arg_;
 }
 
@@ -1045,79 +1045,79 @@ inline void FunctionDef_Node::clear_dep() {
   dep_.Clear();
 }
 inline const ::std::string& FunctionDef_Node::dep(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.Node.dep)
   return dep_.Get(index);
 }
 inline ::std::string* FunctionDef_Node::mutable_dep(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.Node.dep)
   return dep_.Mutable(index);
 }
 inline void FunctionDef_Node::set_dep(int index, const ::std::string& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.dep)
   dep_.Mutable(index)->assign(value);
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::set_dep(int index, ::std::string&& value) {
-  // @@protoc_insertion_point(field_set:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.FunctionDef.Node.dep)
   dep_.Mutable(index)->assign(std::move(value));
 }
 #endif
 inline void FunctionDef_Node::set_dep(int index, const char* value) {
   GOOGLE_DCHECK(value != NULL);
   dep_.Mutable(index)->assign(value);
-  // @@protoc_insertion_point(field_set_char:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.FunctionDef.Node.dep)
 }
 inline void FunctionDef_Node::set_dep(int index, const char* value, size_t size) {
   dep_.Mutable(index)->assign(
     reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.FunctionDef.Node.dep)
 }
 inline ::std::string* FunctionDef_Node::add_dep() {
-  // @@protoc_insertion_point(field_add_mutable:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_add_mutable:opencv_tensorflow.FunctionDef.Node.dep)
   return dep_.Add();
 }
 inline void FunctionDef_Node::add_dep(const ::std::string& value) {
   dep_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.dep)
 }
 #if LANG_CXX11
 inline void FunctionDef_Node::add_dep(::std::string&& value) {
   dep_.Add(std::move(value));
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.Node.dep)
 }
 #endif
 inline void FunctionDef_Node::add_dep(const char* value) {
   GOOGLE_DCHECK(value != NULL);
   dep_.Add()->assign(value);
-  // @@protoc_insertion_point(field_add_char:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_add_char:opencv_tensorflow.FunctionDef.Node.dep)
 }
 inline void FunctionDef_Node::add_dep(const char* value, size_t size) {
   dep_.Add()->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_add_pointer:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_add_pointer:opencv_tensorflow.FunctionDef.Node.dep)
 }
 inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
 FunctionDef_Node::dep() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDef.Node.dep)
   return dep_;
 }
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 FunctionDef_Node::mutable_dep() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDef.Node.dep)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDef.Node.dep)
   return &dep_;
 }
 
-// map<string, .tensorflow.AttrValue> attr = 5;
+// map<string, .opencv_tensorflow.AttrValue> attr = 5;
 inline int FunctionDef_Node::attr_size() const {
   return attr_.size();
 }
-inline const ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >&
+inline const ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >&
 FunctionDef_Node::attr() const {
-  // @@protoc_insertion_point(field_map:tensorflow.FunctionDef.Node.attr)
+  // @@protoc_insertion_point(field_map:opencv_tensorflow.FunctionDef.Node.attr)
   return attr_.GetMap();
 }
-inline ::google::protobuf::Map< ::std::string, ::tensorflow::AttrValue >*
+inline ::google::protobuf::Map< ::std::string, ::opencv_tensorflow::AttrValue >*
 FunctionDef_Node::mutable_attr() {
-  // @@protoc_insertion_point(field_mutable_map:tensorflow.FunctionDef.Node.attr)
+  // @@protoc_insertion_point(field_mutable_map:opencv_tensorflow.FunctionDef.Node.attr)
   return attr_.MutableMap();
 }
 
@@ -1125,42 +1125,42 @@ FunctionDef_Node::mutable_attr() {
 
 // FunctionDef
 
-// .tensorflow.OpDef signature = 1;
+// .opencv_tensorflow.OpDef signature = 1;
 inline bool FunctionDef::has_signature() const {
   return this != internal_default_instance() && signature_ != NULL;
 }
-inline const ::tensorflow::OpDef& FunctionDef::signature() const {
-  const ::tensorflow::OpDef* p = signature_;
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.signature)
-  return p != NULL ? *p : *reinterpret_cast<const ::tensorflow::OpDef*>(
-      &::tensorflow::_OpDef_default_instance_);
+inline const ::opencv_tensorflow::OpDef& FunctionDef::signature() const {
+  const ::opencv_tensorflow::OpDef* p = signature_;
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.signature)
+  return p != NULL ? *p : *reinterpret_cast<const ::opencv_tensorflow::OpDef*>(
+      &::opencv_tensorflow::_OpDef_default_instance_);
 }
-inline ::tensorflow::OpDef* FunctionDef::release_signature() {
-  // @@protoc_insertion_point(field_release:tensorflow.FunctionDef.signature)
+inline ::opencv_tensorflow::OpDef* FunctionDef::release_signature() {
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.FunctionDef.signature)
 
-  ::tensorflow::OpDef* temp = signature_;
+  ::opencv_tensorflow::OpDef* temp = signature_;
   if (GetArenaNoVirtual() != NULL) {
     temp = ::google::protobuf::internal::DuplicateIfNonNull(temp, NULL);
   }
   signature_ = NULL;
   return temp;
 }
-inline ::tensorflow::OpDef* FunctionDef::unsafe_arena_release_signature() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.FunctionDef.signature)
+inline ::opencv_tensorflow::OpDef* FunctionDef::unsafe_arena_release_signature() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.FunctionDef.signature)
 
-  ::tensorflow::OpDef* temp = signature_;
+  ::opencv_tensorflow::OpDef* temp = signature_;
   signature_ = NULL;
   return temp;
 }
-inline ::tensorflow::OpDef* FunctionDef::mutable_signature() {
+inline ::opencv_tensorflow::OpDef* FunctionDef::mutable_signature() {
 
   if (signature_ == NULL) {
     _slow_mutable_signature();
   }
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.signature)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.signature)
   return signature_;
 }
-inline void FunctionDef::set_allocated_signature(::tensorflow::OpDef* signature) {
+inline void FunctionDef::set_allocated_signature(::opencv_tensorflow::OpDef* signature) {
   ::google::protobuf::Arena* message_arena = GetArenaNoVirtual();
   if (message_arena == NULL) {
     delete reinterpret_cast< ::google::protobuf::MessageLite*>(signature_);
@@ -1177,36 +1177,36 @@ inline void FunctionDef::set_allocated_signature(::tensorflow::OpDef* signature)
 
   }
   signature_ = signature;
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.FunctionDef.signature)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.FunctionDef.signature)
 }
 
-// repeated .tensorflow.FunctionDef.Node node = 2;
+// repeated .opencv_tensorflow.FunctionDef.Node node = 2;
 inline int FunctionDef::node_size() const {
   return node_.size();
 }
 inline void FunctionDef::clear_node() {
   node_.Clear();
 }
-inline const ::tensorflow::FunctionDef_Node& FunctionDef::node(int index) const {
-  // @@protoc_insertion_point(field_get:tensorflow.FunctionDef.node)
+inline const ::opencv_tensorflow::FunctionDef_Node& FunctionDef::node(int index) const {
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.FunctionDef.node)
   return node_.Get(index);
 }
-inline ::tensorflow::FunctionDef_Node* FunctionDef::mutable_node(int index) {
-  // @@protoc_insertion_point(field_mutable:tensorflow.FunctionDef.node)
+inline ::opencv_tensorflow::FunctionDef_Node* FunctionDef::mutable_node(int index) {
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.FunctionDef.node)
   return node_.Mutable(index);
 }
-inline ::tensorflow::FunctionDef_Node* FunctionDef::add_node() {
-  // @@protoc_insertion_point(field_add:tensorflow.FunctionDef.node)
+inline ::opencv_tensorflow::FunctionDef_Node* FunctionDef::add_node() {
+  // @@protoc_insertion_point(field_add:opencv_tensorflow.FunctionDef.node)
   return node_.Add();
 }
-inline ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef_Node >*
+inline ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef_Node >*
 FunctionDef::mutable_node() {
-  // @@protoc_insertion_point(field_mutable_list:tensorflow.FunctionDef.node)
+  // @@protoc_insertion_point(field_mutable_list:opencv_tensorflow.FunctionDef.node)
   return &node_;
 }
-inline const ::google::protobuf::RepeatedPtrField< ::tensorflow::FunctionDef_Node >&
+inline const ::google::protobuf::RepeatedPtrField< ::opencv_tensorflow::FunctionDef_Node >&
 FunctionDef::node() const {
-  // @@protoc_insertion_point(field_list:tensorflow.FunctionDef.node)
+  // @@protoc_insertion_point(field_list:opencv_tensorflow.FunctionDef.node)
   return node_;
 }
 
@@ -1219,20 +1219,20 @@ inline void GradientDef::clear_function_name() {
   function_name_.ClearToEmpty(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline const ::std::string& GradientDef::function_name() const {
-  // @@protoc_insertion_point(field_get:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.GradientDef.function_name)
   return function_name_.Get();
 }
 inline void GradientDef::set_function_name(const ::std::string& value) {
 
   function_name_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.GradientDef.function_name)
 }
 #if LANG_CXX11
 inline void GradientDef::set_function_name(::std::string&& value) {
 
   function_name_.Set(
     &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_rvalue:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_set_rvalue:opencv_tensorflow.GradientDef.function_name)
 }
 #endif
 inline void GradientDef::set_function_name(const char* value) {
@@ -1240,22 +1240,22 @@ inline void GradientDef::set_function_name(const char* value) {
 
   function_name_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_char:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.GradientDef.function_name)
 }
 inline void GradientDef::set_function_name(const char* value,
     size_t size) {
 
   function_name_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.GradientDef.function_name)
 }
 inline ::std::string* GradientDef::mutable_function_name() {
 
-  // @@protoc_insertion_point(field_mutable:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.GradientDef.function_name)
   return function_name_.Mutable(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline ::std::string* GradientDef::release_function_name() {
-  // @@protoc_insertion_point(field_release:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.GradientDef.function_name)
 
   return function_name_.Release(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
@@ -1267,10 +1267,10 @@ inline void GradientDef::set_allocated_function_name(::std::string* function_nam
   }
   function_name_.SetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), function_name,
       GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.GradientDef.function_name)
 }
 inline ::std::string* GradientDef::unsafe_arena_release_function_name() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.GradientDef.function_name)
   GOOGLE_DCHECK(GetArenaNoVirtual() != NULL);
 
   return function_name_.UnsafeArenaRelease(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
@@ -1286,7 +1286,7 @@ inline void GradientDef::unsafe_arena_set_allocated_function_name(
   }
   function_name_.UnsafeArenaSetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
       function_name, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tensorflow.GradientDef.function_name)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opencv_tensorflow.GradientDef.function_name)
 }
 
 // string gradient_func = 2;
@@ -1294,20 +1294,20 @@ inline void GradientDef::clear_gradient_func() {
   gradient_func_.ClearToEmpty(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline const ::std::string& GradientDef::gradient_func() const {
-  // @@protoc_insertion_point(field_get:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_get:opencv_tensorflow.GradientDef.gradient_func)
   return gradient_func_.Get();
 }
 inline void GradientDef::set_gradient_func(const ::std::string& value) {
 
   gradient_func_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_set:opencv_tensorflow.GradientDef.gradient_func)
 }
 #if LANG_CXX11
 inline void GradientDef::set_gradient_func(::std::string&& value) {
 
   gradient_func_.Set(
     &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_rvalue:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_set_rvalue:opencv_tensorflow.GradientDef.gradient_func)
 }
 #endif
 inline void GradientDef::set_gradient_func(const char* value) {
@@ -1315,22 +1315,22 @@ inline void GradientDef::set_gradient_func(const char* value) {
 
   gradient_func_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_char:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_set_char:opencv_tensorflow.GradientDef.gradient_func)
 }
 inline void GradientDef::set_gradient_func(const char* value,
     size_t size) {
 
   gradient_func_.Set(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_pointer:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_set_pointer:opencv_tensorflow.GradientDef.gradient_func)
 }
 inline ::std::string* GradientDef::mutable_gradient_func() {
 
-  // @@protoc_insertion_point(field_mutable:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_mutable:opencv_tensorflow.GradientDef.gradient_func)
   return gradient_func_.Mutable(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
 inline ::std::string* GradientDef::release_gradient_func() {
-  // @@protoc_insertion_point(field_release:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_release:opencv_tensorflow.GradientDef.gradient_func)
 
   return gradient_func_.Release(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), GetArenaNoVirtual());
 }
@@ -1342,10 +1342,10 @@ inline void GradientDef::set_allocated_gradient_func(::std::string* gradient_fun
   }
   gradient_func_.SetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), gradient_func,
       GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_set_allocated:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_set_allocated:opencv_tensorflow.GradientDef.gradient_func)
 }
 inline ::std::string* GradientDef::unsafe_arena_release_gradient_func() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_unsafe_arena_release:opencv_tensorflow.GradientDef.gradient_func)
   GOOGLE_DCHECK(GetArenaNoVirtual() != NULL);
 
   return gradient_func_.UnsafeArenaRelease(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
@@ -1361,7 +1361,7 @@ inline void GradientDef::unsafe_arena_set_allocated_gradient_func(
   }
   gradient_func_.UnsafeArenaSetAllocated(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
       gradient_func, GetArenaNoVirtual());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tensorflow.GradientDef.gradient_func)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:opencv_tensorflow.GradientDef.gradient_func)
 }
 
 #ifdef __GNUC__
@@ -1378,7 +1378,7 @@ inline void GradientDef::unsafe_arena_set_allocated_gradient_func(
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)
 

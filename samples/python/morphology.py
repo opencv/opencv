@@ -21,9 +21,7 @@ import numpy as np
 import cv2 as cv
 
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     import sys
     from itertools import cycle
     from common import draw_str
@@ -31,9 +29,9 @@ if __name__ == '__main__':
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/baboon.jpg'
+        fn = 'baboon.jpg'
 
-    img = cv.imread(fn)
+    img = cv.imread(cv.samples.findFile(fn))
 
     if img is None:
         print('Failed to load image file:', fn)
@@ -93,4 +91,11 @@ if __name__ == '__main__':
             else:
                 cur_str_mode = str_modes.next()
         update()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

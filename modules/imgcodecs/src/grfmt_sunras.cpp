@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "grfmt_sunras.hpp"
 
+#ifdef HAVE_IMGCODEC_SUNRASTER
+
 namespace cv
 {
 
@@ -82,13 +84,13 @@ bool  SunRasterDecoder::readHeader()
 
     if( !m_strm.open( m_filename )) return false;
 
-    CV_TRY
+    try
     {
         m_strm.skip( 4 );
         m_width  = m_strm.getDWord();
         m_height = m_strm.getDWord();
         m_bpp    = m_strm.getDWord();
-        int palSize = 3*(1 << m_bpp);
+        int palSize = (m_bpp > 0 && m_bpp <= 8) ? (3*(1 << m_bpp)) : 0;
 
         m_strm.skip( 4 );
         m_encoding = (SunRasType)m_strm.getDWord();
@@ -142,7 +144,7 @@ bool  SunRasterDecoder::readHeader()
             }
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
     }
 
@@ -158,7 +160,7 @@ bool  SunRasterDecoder::readHeader()
 
 bool  SunRasterDecoder::readData( Mat& img )
 {
-    int color = img.channels() > 1;
+    bool color = img.channels() > 1;
     uchar* data = img.ptr();
     size_t step = img.step;
     uchar  gray_palette[256] = {0};
@@ -172,14 +174,12 @@ bool  SunRasterDecoder::readData( Mat& img )
         return false;
 
     AutoBuffer<uchar> _src(src_pitch + 32);
-    uchar* src = _src;
-    AutoBuffer<uchar> _bgr(m_width*3 + 32);
-    uchar* bgr = _bgr;
+    uchar* src = _src.data();
 
     if( !color && m_maptype == RMT_EQUAL_RGB )
         CvtPaletteToGray( m_palette, gray_palette, 1 << m_bpp );
 
-    CV_TRY
+    try
     {
         m_strm.setPos( m_offset );
 
@@ -338,16 +338,18 @@ bad_decoding_end:
         case 24:
             for( y = 0; y < m_height; y++, data += step )
             {
-                m_strm.getBytes( color ? data : bgr, src_pitch );
+                m_strm.getBytes(src, src_pitch );
 
                 if( color )
                 {
                     if( m_type == RAS_FORMAT_RGB )
-                        icvCvt_RGB2BGR_8u_C3R( data, 0, data, 0, cvSize(m_width,1) );
+                        icvCvt_RGB2BGR_8u_C3R(src, 0, data, 0, Size(m_width,1) );
+                    else
+                        memcpy(data, src, std::min(step, (size_t)src_pitch));
                 }
                 else
                 {
-                    icvCvt_BGR2Gray_8u_C3C1R( bgr, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGR2Gray_8u_C3C1R(src, 0, data, 0, Size(m_width,1),
                                               m_type == RAS_FORMAT_RGB ? 2 : 0 );
                 }
             }
@@ -362,10 +364,10 @@ bad_decoding_end:
                 m_strm.getBytes( src + 3, src_pitch );
 
                 if( color )
-                    icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, Size(m_width,1),
                                               m_type == RAS_FORMAT_RGB ? 2 : 0 );
                 else
-                    icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, cvSize(m_width,1),
+                    icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, Size(m_width,1),
                                                m_type == RAS_FORMAT_RGB ? 2 : 0 );
             }
             result = true;
@@ -374,7 +376,7 @@ bad_decoding_end:
             CV_Error(Error::StsInternal, "");
         }
     }
-    CV_CATCH_ALL
+    catch( ... )
     {
     }
 
@@ -427,3 +429,5 @@ bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 }
 
 }
+
+#endif // HAVE_IMGCODEC_SUNRASTER

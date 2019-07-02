@@ -266,7 +266,7 @@ public:
     virtual bool getDetectShadows() const CV_OVERRIDE { return bShadowDetection; }
     virtual void setDetectShadows(bool detectshadows) CV_OVERRIDE
     {
-        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+        if (bShadowDetection == detectshadows)
             return;
         bShadowDetection = detectshadows;
 #ifdef HAVE_OPENCL
@@ -575,7 +575,7 @@ public:
 
         for( int y = y0; y < y1; y++ )
         {
-            const float* data = buf;
+            const float* data = buf.data();
             if( src->depth() != CV_32F )
                 src->row(y).convertTo(Mat(1, ncols, CV_32FC(nchannels), (void*)data), CV_32F);
             else
@@ -844,7 +844,7 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
     if (opencl_ON)
@@ -884,7 +884,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 template <typename T, int CN>
 void BackgroundSubtractorMOG2Impl::getBackgroundImage_intern(OutputArray backgroundImage) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat meanBackground(frameSize, frameType, Scalar::all(0));
     int firstGaussianIdx = 0;

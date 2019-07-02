@@ -128,7 +128,7 @@ struct CHullCmpPoints
 
 void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat points = _points.getMat();
@@ -147,11 +147,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     bool is_float = depth == CV_32F;
     AutoBuffer<Point*> _pointer(total);
     AutoBuffer<int> _stack(total + 2), _hullbuf(total);
-    Point** pointer = _pointer;
+    Point** pointer = _pointer.data();
     Point2f** pointerf = (Point2f**)pointer;
     Point* data0 = points.ptr<Point>();
-    int* stack = _stack;
-    int* hullbuf = _hullbuf;
+    int* stack = _stack.data();
+    int* hullbuf = _hullbuf.data();
 
     CV_Assert(points.isContinuous());
 
@@ -267,7 +267,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
 void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defects )
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     Mat points = _points.getMat();
     int i, j = 0, npoints = points.checkVector(2, CV_32S);

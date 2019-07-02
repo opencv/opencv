@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     if (video.size() == 1 && isdigit(video[0]))
         capture.open(parser.get<int>("@video"));
     else
-        capture.open(video);
+        capture.open(samples::findFileOrKeep(video));  // keep GStreamer pipelines
     int nframes = 0;
     if (capture.isOpened())
     {

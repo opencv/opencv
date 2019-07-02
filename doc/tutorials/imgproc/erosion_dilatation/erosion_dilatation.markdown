@@ -1,6 +1,9 @@
 Eroding and Dilating {#tutorial_erosion_dilatation}
 ====================
 
+@prev_tutorial{tutorial_gausian_median_blur_bilateral_filter}
+@next_tutorial{tutorial_opening_closing_hats}
+
 Goal
 ----
 
@@ -10,9 +13,6 @@ In this tutorial you will learn how to:
     the following OpenCV functions:
     -   @ref cv::erode
     -   @ref cv::dilate
-
-Interesting fact
------------
 
 @note The explanation below belongs to the book **Learning OpenCV** by Bradski and Kaehler.
 
@@ -38,19 +38,14 @@ Morphological Operations
 -   As the kernel \f$B\f$ is scanned over the image, we compute the maximal pixel value overlapped by
     \f$B\f$ and replace the image pixel in the anchor point position with that maximal value. As you can
     deduce, this maximizing operation causes bright regions within an image to "grow" (therefore the
-    name *dilation*). Take the above image as an example. Applying dilation we can get:
+    name *dilation*).
+-   The dilatation operation is: \f$\texttt{dst} (x,y) =  \max _{(x',y'):  \, \texttt{element} (x',y') \ne0 } \texttt{src} (x+x',y+y')\f$
+
+-   Take the above image as an example. Applying dilation we can get:
 
     ![](images/Morphology_1_Tutorial_Theory_Dilation.png)
 
-The background (bright) dilates around the black regions of the letter.
-
-To better grasp the idea and avoid possible confusion, in this other example we have inverted the original
-image such as the object in white is now the letter. We have performed two dilatations with a rectangular
-structuring element of size `3x3`.
-
-![Left image: original image inverted, right image: resulting dilatation](images/Morphology_1_Tutorial_Theory_Dilatation_2.png)
-
-The dilatation makes the object in white bigger.
+-   The bright area of the letter dilates around the black regions of the background.
 
 ### Erosion
 
@@ -58,31 +53,39 @@ The dilatation makes the object in white bigger.
     area of given kernel.
 -   As the kernel \f$B\f$ is scanned over the image, we compute the minimal pixel value overlapped by
     \f$B\f$ and replace the image pixel under the anchor point with that minimal value.
+-   The erosion operation is: \f$\texttt{dst} (x,y) =  \min _{(x',y'):  \, \texttt{element} (x',y') \ne0 } \texttt{src} (x+x',y+y')\f$
 -   Analagously to the example for dilation, we can apply the erosion operator to the original image
-    (shown above). You can see in the result below that the bright areas of the image (the
-    background, apparently), get thinner, whereas the dark zones (the "writing") gets bigger.
+    (shown above). You can see in the result below that the bright areas of the image get thinner,
+    whereas the dark zones gets bigger.
 
     ![](images/Morphology_1_Tutorial_Theory_Erosion.png)
-
-In similar manner, the corresponding image results by applying erosion operation on the inverted original image (two erosions
-with a rectangular structuring element of size `3x3`):
-
-![Left image: original image inverted, right image: resulting erosion](images/Morphology_1_Tutorial_Theory_Erosion_2.png)
-
-The erosion makes the object in white smaller.
 
 Code
 ----
 
+@add_toggle_cpp
 This tutorial's code is shown below. You can also download it
 [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
+@end_toggle
+
+@add_toggle_java
+This tutorial's code is shown below. You can also download it
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java)
+@include samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java
+@end_toggle
+
+@add_toggle_python
+This tutorial's code is shown below. You can also download it
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py)
+@include samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py
+@end_toggle
 
 Explanation
 -----------
 
 -#  Most of the material shown here is trivial (if you have any doubt, please refer to the tutorials in
-    previous sections). Let's check the general structure of the program:
+    previous sections). Let's check the general structure of the C++ program:
 
     -   Load an image (can be BGR or grayscale)
     -   Create two windows (one for dilation output, the other for erosion)

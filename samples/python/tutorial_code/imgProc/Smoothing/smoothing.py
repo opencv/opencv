@@ -17,10 +17,10 @@ def main(argv):
     cv.namedWindow(window_name, cv.WINDOW_AUTOSIZE)
 
     # Load the source image
-    imageName = argv[0] if len(argv) > 0 else "../data/lena.jpg"
+    imageName = argv[0] if len(argv) > 0 else 'lena.jpg'
 
     global src
-    src = cv.imread(imageName, 1)
+    src = cv.imread(cv.samples.findFile(imageName))
     if src is None:
         print ('Error opening image')
         print ('Usage: smoothing.py [image_name -- default ../data/lena.jpg] \n')
@@ -88,7 +88,7 @@ def main(argv):
 def display_caption(caption):
     global dst
     dst = np.zeros(src.shape, src.dtype)
-    rows, cols, ch = src.shape
+    rows, cols, _ch = src.shape
     cv.putText(dst, caption,
                 (int(cols / 4), int(rows / 2)),
                 cv.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))

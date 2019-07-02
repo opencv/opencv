@@ -153,15 +153,15 @@ padding etc. This function takes following arguments:
 
 -   **borderType** - Flag defining what kind of border to be added. It can be following types:
     -   **cv.BORDER_CONSTANT** - Adds a constant colored border. The value should be given
-            as next argument.
-        -   **cv.BORDER_REFLECT** - Border will be mirror reflection of the border elements,
-            like this : *fedcba|abcdefgh|hgfedcb*
-        -   **cv.BORDER_REFLECT_101** or **cv.BORDER_DEFAULT** - Same as above, but with a
-            slight change, like this : *gfedcb|abcdefgh|gfedcba*
-        -   **cv.BORDER_REPLICATE** - Last element is replicated throughout, like this:
-            *aaaaaa|abcdefgh|hhhhhhh*
-        -   **cv.BORDER_WRAP** - Can't explain, it will look like this :
-            *cdefgh|abcdefgh|abcdefg*
+        as next argument.
+    -   **cv.BORDER_REFLECT** - Border will be mirror reflection of the border elements,
+        like this : *fedcba|abcdefgh|hgfedcb*
+    -   **cv.BORDER_REFLECT_101** or **cv.BORDER_DEFAULT** - Same as above, but with a
+        slight change, like this : *gfedcb|abcdefgh|gfedcba*
+    -   **cv.BORDER_REPLICATE** - Last element is replicated throughout, like this:
+        *aaaaaa|abcdefgh|hhhhhhh*
+    -   **cv.BORDER_WRAP** - Can't explain, it will look like this :
+        *cdefgh|abcdefgh|abcdefg*
 
 -   **value** - Color of border if border type is cv.BORDER_CONSTANT
 

@@ -3,8 +3,6 @@
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_VIDEO_OUTPUT
-
 namespace opencv_test
 {
 using namespace perf;
@@ -29,7 +27,7 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   const string filename = getDataPath(get<0>(GetParam()));
   const bool isColor = get<1>(GetParam());
   Mat image = imread(filename, isColor ? IMREAD_COLOR : IMREAD_GRAYSCALE );
-#if defined(HAVE_MSMF) && !defined(HAVE_VFW) && !defined(HAVE_FFMPEG) // VFW has greater priority
+#if defined(HAVE_MSMF) && !defined(HAVE_FFMPEG)
   const string outfile = cv::tempfile(".wmv");
   const int fourcc = VideoWriter::fourcc('W', 'M', 'V', '3');
 #else
@@ -38,11 +36,12 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
 #endif
 
   VideoWriter writer(outfile, fourcc, 25, cv::Size(image.cols, image.rows), isColor);
+  if (!writer.isOpened())
+      throw SkipTestException("Video file can not be opened");
+
   TEST_CYCLE_N(100) { writer << image; }
   SANITY_CHECK_NOTHING();
   remove(outfile.c_str());
 }
 
 } // namespace
-
-#endif // HAVE_VIDEO_OUTPUT

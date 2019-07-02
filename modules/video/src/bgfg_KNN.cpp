@@ -229,7 +229,7 @@ public:
     virtual bool getDetectShadows() const CV_OVERRIDE { return bShadowDetection; }
     virtual void setDetectShadows(bool detectshadows) CV_OVERRIDE
     {
-        if ((bShadowDetection && detectshadows) || (!bShadowDetection && !detectshadows))
+        if (bShadowDetection == detectshadows)
             return;
         bShadowDetection = detectshadows;
 #ifdef HAVE_OPENCL
@@ -728,7 +728,7 @@ void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()
 
 void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
     if (opencl_ON)
@@ -814,7 +814,7 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
 #ifdef HAVE_OPENCL
     if (opencl_ON)

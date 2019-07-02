@@ -48,24 +48,53 @@ namespace opencv_test { namespace {
 template<typename TString>
 static std::string _tf(TString filename)
 {
-    return (getOpenCVExtraDir() + "/dnn/") + filename;
+    return findDataFile(std::string("dnn/") + filename);
 }
+
+class Test_Caffe_nets : public DNNTestLayer
+{
+public:
+    void testFaster(const std::string& proto, const std::string& model, const Mat& ref,
+                    double scoreDiff = 0.0, double iouDiff = 0.0)
+    {
+        checkBackend();
+        Net net = readNetFromCaffe(findDataFile("dnn/" + proto),
+                                   findDataFile("dnn/" + model, false));
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        Mat img = imread(findDataFile("dnn/dog416.png"));
+        resize(img, img, Size(800, 600));
+        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
+        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
+
+        net.setInput(blob, "data");
+        net.setInput(imInfo, "im_info");
+        // Output has shape 1x1xNx7 where N - number of detections.
+        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+        Mat out = net.forward();
+        scoreDiff = scoreDiff ? scoreDiff : default_l1;
+        iouDiff = iouDiff ? iouDiff : default_lInf;
+        normAssertDetections(ref, out, ("model name: " + model).c_str(), 0.8, scoreDiff, iouDiff);
+    }
+};
 
 TEST(Test_Caffe, memory_read)
 {
-    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt");
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
-    string dataProto;
-    ASSERT_TRUE(readFileInMemory(proto, dataProto));
-    string dataModel;
-    ASSERT_TRUE(readFileInMemory(model, dataModel));
+    std::vector<char> dataProto;
+    readFileContent(proto, dataProto);
 
-    Net net = readNetFromCaffe(dataProto.c_str(), dataProto.size());
+    std::vector<char> dataModel;
+    readFileContent(model, dataModel);
+
+    Net net = readNetFromCaffe(dataProto.data(), dataProto.size());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     ASSERT_FALSE(net.empty());
 
-    Net net2 = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                dataModel.c_str(), dataModel.size());
+    Net net2 = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                dataModel.data(), dataModel.size());
     ASSERT_FALSE(net2.empty());
 }
 
@@ -81,30 +110,81 @@ TEST(Test_Caffe, read_googlenet)
     ASSERT_FALSE(net.empty());
 }
 
-typedef testing::TestWithParam<tuple<bool, DNNTarget> > Reproducibility_AlexNet;
+TEST_P(Test_Caffe_nets, Axpy)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+
+    String proto = _tf("axpy.prototxt");
+    Net net = readNetFromCaffe(proto);
+
+    checkBackend();
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    int size[] = {1, 2, 3, 4};
+    int scale_size[] = {1, 2, 1, 1};
+    Mat scale(4, &scale_size[0], CV_32F);
+    Mat shift(4, &size[0], CV_32F);
+    Mat inp(4, &size[0], CV_32F);
+    randu(scale, -1.0f, 1.0f);
+    randu(shift, -1.0f, 1.0f);
+    randu(inp, -1.0f, 1.0f);
+
+    net.setInput(scale, "scale");
+    net.setInput(shift, "shift");
+    net.setInput(inp, "data");
+
+    Mat out = net.forward();
+
+    Mat ref(4, &size[0], inp.type());
+    for (int i = 0; i < inp.size[1]; i++) {
+        for (int h = 0; h < inp.size[2]; h++) {
+            for (int w = 0; w < inp.size[3]; w++) {
+                int idx[] = {0, i, h, w};
+                int scale_idx[] = {0, i, 0, 0};
+                ref.at<float>(idx) = inp.at<float>(idx) * scale.at<float>(scale_idx) +
+                                     shift.at<float>(idx);
+            }
+        }
+    }
+    float l1 = (target == DNN_TARGET_OPENCL_FP16) ? 2e-4 : 1e-5;
+    float lInf = (target == DNN_TARGET_OPENCL_FP16) ? 1e-3 : 1e-4;
+    normAssert(ref, out, "", l1, lInf);
+}
+
+typedef testing::TestWithParam<tuple<bool, Target> > Reproducibility_AlexNet;
 TEST_P(Reproducibility_AlexNet, Accuracy)
 {
+    Target targetId = get<1>(GetParam());
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
+
     bool readFromMemory = get<0>(GetParam());
     Net net;
     {
-        const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+        const string proto = findDataFile("dnn/bvlc_alexnet.prototxt");
         const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
         if (readFromMemory)
         {
-            string dataProto;
-            ASSERT_TRUE(readFileInMemory(proto, dataProto));
-            string dataModel;
-            ASSERT_TRUE(readFileInMemory(model, dataModel));
+            std::vector<char> dataProto;
+            readFileContent(proto, dataProto);
+            std::vector<char> dataModel;
+            readFileContent(model, dataModel);
 
-            net = readNetFromCaffe(dataProto.c_str(), dataProto.size(),
-                                   dataModel.c_str(), dataModel.size());
+            net = readNetFromCaffe(dataProto.data(), dataProto.size(),
+                                   dataModel.data(), dataModel.size());
         }
         else
             net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
 
-    net.setPreferableTarget(get<1>(GetParam()));
+    const float l1 = 1e-5;
+    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
 
     Mat sample = imread(_tf("grace_hopper_227.png"));
     ASSERT_TRUE(!sample.empty());
@@ -112,21 +192,24 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false), "data");
     Mat out = net.forward("prob");
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
-    normAssert(ref, out);
+    normAssert(ref, out, "", l1, lInf);
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(), availableDnnTargets()));
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_AlexNet, Combine(testing::Bool(),
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))));
 
-#if !defined(_WIN32) || defined(_WIN64)
 TEST(Reproducibility_FCN, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
+
     Net net;
     {
-        const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt", false);
-        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel", false);
+        const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt");
+        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel");
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("street.png"));
     ASSERT_TRUE(!sample.empty());
@@ -144,17 +227,18 @@ TEST(Reproducibility_FCN, Accuracy)
 
     normAssert(ref, out);
 }
-#endif
 
 TEST(Reproducibility_SSD, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB, CV_TEST_TAG_DEBUG_LONG);
     Net net;
     {
-        const string proto = findDataFile("dnn/ssd_vgg16.prototxt", false);
+        const string proto = findDataFile("dnn/ssd_vgg16.prototxt");
         const string model = findDataFile("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", false);
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat sample = imread(_tf("street.png"));
     ASSERT_TRUE(!sample.empty());
@@ -167,64 +251,93 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssertDetections(ref, out);
+    normAssertDetections(ref, out, "", FLT_MIN);
 }
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_MobileNet_SSD;
+typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
 TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 {
     const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
     const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
 
-    net.setPreferableTarget(GetParam());
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
 
     Mat sample = imread(_tf("street.png"));
 
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     net.setInput(inp);
-    Mat out = net.forward();
+    Mat out = net.forward().clone();
 
+    ASSERT_EQ(out.size[2], 100);
+
+    const float scores_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.5e-2 : 1e-5;
+    const float boxes_iou_diff = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 6.3e-2 : 1e-4;
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
-    normAssertDetections(ref, out);
+    normAssertDetections(ref, out, "", FLT_MIN, scores_diff, boxes_iou_diff);
 
     // Check that detections aren't preserved.
     inp.setTo(0.0f);
     net.setInput(inp);
-    out = net.forward();
-    out = out.reshape(1, out.total() / 7);
+    Mat zerosOut = net.forward();
+    zerosOut = zerosOut.reshape(1, zerosOut.total() / 7);
 
-    const int numDetections = out.rows;
+    const int numDetections = zerosOut.rows;
     ASSERT_NE(numDetections, 0);
     for (int i = 0; i < numDetections; ++i)
     {
-        float confidence = out.ptr<float>(i)[2];
+        float confidence = zerosOut.ptr<float>(i)[2];
         ASSERT_EQ(confidence, 0);
     }
 
+    // There is something wrong with Reshape layer in Myriad plugin and
+    // regression with DLIE/OCL_FP16 target.
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        if ((targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2) ||
+            targetId == DNN_TARGET_OPENCL_FP16)
+            return;
+    }
+
     // Check batching mode.
-    ref = ref.reshape(1, numDetections);
     inp = blobFromImages(std::vector<Mat>(2, sample), 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     net.setInput(inp);
     Mat outBatch = net.forward();
 
     // Output blob has a shape 1x1x2Nx7 where N is a number of detection for
     // a single sample in batch. The first numbers of detection vectors are batch id.
-    outBatch = outBatch.reshape(1, outBatch.total() / 7);
-    EXPECT_EQ(outBatch.rows, 2 * numDetections);
-    normAssert(outBatch.rowRange(0, numDetections), ref);
-    normAssert(outBatch.rowRange(numDetections, 2 * numDetections).colRange(1, 7), ref.colRange(1, 7));
+    // For Inference Engine backend there is -1 delimiter which points the end of detections.
+    const int numRealDetections = ref.size[2];
+    EXPECT_EQ(outBatch.size[2], 2 * numDetections);
+    out = out.reshape(1, numDetections).rowRange(0, numRealDetections);
+    outBatch = outBatch.reshape(1, 2 * numDetections);
+    for (int i = 0; i < 2; ++i)
+    {
+        Mat pred = outBatch.rowRange(i * numRealDetections, (i + 1) * numRealDetections);
+        EXPECT_EQ(countNonZero(pred.col(0) != i), 0);
+        normAssert(pred.colRange(1, 7), out.colRange(1, 7));
+    }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_MobileNet_SSD, dnnBackendsAndTargets());
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_ResNet50;
+typedef testing::TestWithParam<Target> Reproducibility_ResNet50;
 TEST_P(Reproducibility_ResNet50, Accuracy)
 {
-    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt", false),
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
+
+    Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt"),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
 
-    int targetId = GetParam();
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
+
+    float l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-5 : 1e-5;
+    float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 6e-3 : 1e-4;
 
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
     ASSERT_TRUE(!input.empty());
@@ -233,31 +346,34 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
-    normAssert(ref, out);
+    normAssert(ref, out, "", l1, lInf);
 
-    if (targetId == DNN_TARGET_OPENCL)
+    if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
     {
         UMat out_umat;
         net.forward(out_umat);
-        normAssert(ref, out_umat, "out_umat");
+        normAssert(ref, out_umat, "out_umat", l1, lInf);
 
         std::vector<UMat> out_umats;
         net.forward(out_umats);
-        normAssert(ref, out_umats[0], "out_umat_vector");
+        normAssert(ref, out_umats[0], "out_umat_vector", l1, lInf);
     }
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
-typedef testing::TestWithParam<DNNTarget> Reproducibility_SqueezeNet_v1_1;
+typedef testing::TestWithParam<Target> Reproducibility_SqueezeNet_v1_1;
 TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
 {
-    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt", false),
-                               findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
-
     int targetId = GetParam();
+    if(targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt"),
+                               findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
-    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false);
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(227,227), Scalar(), false, true);
     ASSERT_TRUE(!input.empty());
 
     Mat out;
@@ -274,24 +390,27 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     Mat ref = blobFromNPY(_tf("squeezenet_v1.1_prob.npy"));
     normAssert(ref, out);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1, availableDnnTargets());
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_SqueezeNet_v1_1,
+    testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 TEST(Reproducibility_AlexNet_fp16, Accuracy)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
-    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_alexnet.prototxt");
     const string model = findDataFile("dnn/bvlc_alexnet.caffemodel", false);
 
     shrinkCaffeModel(model, "bvlc_alexnet.caffemodel_fp16");
     Net net = readNetFromCaffe(proto, "bvlc_alexnet.caffemodel_fp16");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
-    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png", false));
+    Mat sample = imread(findDataFile("dnn/grace_hopper_227.png"));
 
-    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false));
+    net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar()));
     Mat out = net.forward();
-    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy", false));
+    Mat ref = blobFromNPY(findDataFile("dnn/caffe_alexnet_prob.npy"));
     normAssert(ref, out, "", l1, lInf);
 }
 
@@ -300,11 +419,12 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     const float l1 = 1e-5;
     const float lInf = 3e-3;
 
-    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt", false);
+    const string proto = findDataFile("dnn/bvlc_googlenet.prototxt");
     const string model = findDataFile("dnn/bvlc_googlenet.caffemodel", false);
 
     shrinkCaffeModel(model, "bvlc_googlenet.caffemodel_fp16");
     Net net = readNetFromCaffe(proto, "bvlc_googlenet.caffemodel_fp16");
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     std::vector<Mat> inpMats;
     inpMats.push_back( imread(_tf("googlenet_0.png")) );
@@ -319,10 +439,10 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
 }
 
 // https://github.com/richzhang/colorization
-TEST(Reproducibility_Colorization, Accuracy)
+TEST_P(Test_Caffe_nets, Colorization)
 {
-    const float l1 = 3e-5;
-    const float lInf = 3e-3;
+    applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    checkBackend();
 
     Mat inp = blobFromNPY(_tf("colorization_inp.npy"));
     Mat ref = blobFromNPY(_tf("colorization_out.npy"));
@@ -331,6 +451,8 @@ TEST(Reproducibility_Colorization, Accuracy)
     const string proto = findDataFile("dnn/colorization_deploy_v2.prototxt", false);
     const string model = findDataFile("dnn/colorization_release_v2.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     net.getLayer(net.getLayerId("class8_ab"))->blobs.push_back(kernel);
     net.getLayer(net.getLayerId("conv8_313_rh"))->blobs.push_back(Mat(1, 313, CV_32F, 2.606));
@@ -338,30 +460,54 @@ TEST(Reproducibility_Colorization, Accuracy)
     net.setInput(inp);
     Mat out = net.forward();
 
+    // Reference output values are in range [-29.1, 69.5]
+    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.25 : 4e-4;
+    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 5.3 : 3e-3;
+    if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    {
+        l1 = 0.6; lInf = 15;
+    }
     normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
-TEST(Reproducibility_DenseNet_121, Accuracy)
+TEST_P(Test_Caffe_nets, DenseNet_121)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
     const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
 
     Mat inp = imread(_tf("dog416.png"));
-    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224));
+    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224), Scalar(), true, true);
     Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
 
     Net net = readNetFromCaffe(proto, model);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     net.setInput(inp);
     Mat out = net.forward();
 
-    normAssert(out, ref);
+    // Reference is an array of 1000 values from a range [-6.16, 7.9]
+    float l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.017; lInf = 0.0795;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.11; lInf = 0.5;
+    }
+    normAssert(out, ref, "", l1, lInf);
+    expectNoFallbacksFromIE(net);
 }
 
 TEST(Test_Caffe, multiple_inputs)
 {
-    const string proto = findDataFile("dnn/layers/net_input.prototxt", false);
+    const string proto = findDataFile("dnn/layers/net_input.prototxt");
     Net net = readNetFromCaffe(proto);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
 
     Mat first_image(10, 11, CV_32FC3);
     Mat second_image(10, 11, CV_32FC3);
@@ -385,7 +531,30 @@ TEST(Test_Caffe, multiple_inputs)
     normAssert(out, first_image + second_image);
 }
 
-typedef testing::TestWithParam<tuple<std::string, DNNTarget> > opencv_face_detector;
+TEST(Test_Caffe, shared_weights)
+{
+  const string proto = findDataFile("dnn/layers/shared_weights.prototxt");
+  const string model = findDataFile("dnn/layers/shared_weights.caffemodel");
+
+  Net net = readNetFromCaffe(proto, model);
+
+  Mat input_1 = (Mat_<float>(2, 2) << 0., 2., 4., 6.);
+  Mat input_2 = (Mat_<float>(2, 2) << 1., 3., 5., 7.);
+
+  Mat blob_1 = blobFromImage(input_1);
+  Mat blob_2 = blobFromImage(input_2);
+
+  net.setInput(blob_1, "input_1");
+  net.setInput(blob_2, "input_2");
+  net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+  Mat sum = net.forward();
+
+  EXPECT_EQ(sum.at<float>(0,0), 12.);
+  EXPECT_EQ(sum.at<float>(0,1), 16.);
+}
+
+typedef testing::TestWithParam<tuple<std::string, Target> > opencv_face_detector;
 TEST_P(opencv_face_detector, Accuracy)
 {
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
@@ -393,10 +562,10 @@ TEST_P(opencv_face_detector, Accuracy)
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
     Net net = readNetFromCaffe(proto, model);
-    Mat img = imread(findDataFile("gpu/lbpcascade/er.png", false));
+    Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
 
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
     net.setInput(blob);
@@ -419,38 +588,62 @@ INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     )
 );
 
-TEST(Test_Caffe, FasterRCNN_and_RFCN)
+TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 {
-    std::string models[] = {"VGG16_faster_rcnn_final.caffemodel", "ZF_faster_rcnn_final.caffemodel",
-                            "resnet50_rfcn_final.caffemodel"};
-    std::string protos[] = {"faster_rcnn_vgg16.prototxt", "faster_rcnn_zf.prototxt",
-                            "rfcn_pascal_voc_resnet50.prototxt"};
-    Mat refs[] = {(Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
-                                        0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
-                                        0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166),
-                  (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
-                                        0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
-                                        0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176),
-                  (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
-                                        0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16)};
-    for (int i = 0; i < 3; ++i)
-    {
-        std::string proto = findDataFile("dnn/" + protos[i], false);
-        std::string model = findDataFile("dnn/" + models[i], false);
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
-        Net net = readNetFromCaffe(proto, model);
-        Mat img = imread(findDataFile("dnn/dog416.png", false));
-        resize(img, img, Size(800, 600));
-        Mat blob = blobFromImage(img, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
-        Mat imInfo = (Mat_<float>(1, 3) << img.rows, img.cols, 1.6f);
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 
-        net.setInput(blob, "data");
-        net.setInput(imInfo, "im_info");
-        // Output has shape 1x1xNx7 where N - number of detections.
-        // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
-        Mat out = net.forward();
-        normAssertDetections(refs[i], out, ("model name: " + models[i]).c_str(), 0.8);
-    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
+
+    static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
+                                           0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
+                                           0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166);
+    testFaster("faster_rcnn_vgg16.prototxt", "VGG16_faster_rcnn_final.caffemodel", ref);
 }
+
+TEST_P(Test_Caffe_nets, FasterRCNN_zf)
+{
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
+        CV_TEST_TAG_DEBUG_LONG
+    );
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
+                                           0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
+                                           0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
+    testFaster("faster_rcnn_zf.prototxt", "ZF_faster_rcnn_final.caffemodel", ref);
+}
+
+TEST_P(Test_Caffe_nets, RFCN)
+{
+    applyTestTag(
+        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+    double scoreDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 4e-3 : default_l1;
+    double iouDiff = (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) ? 8e-2 : default_lInf;
+    static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
+                                           0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
+    testFaster("rfcn_pascal_voc_resnet50.prototxt", "resnet50_rfcn_final.caffemodel", ref, scoreDiff, iouDiff);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
 
 }} // namespace

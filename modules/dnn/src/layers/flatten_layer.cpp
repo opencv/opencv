@@ -64,8 +64,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_DEFAULT ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine();
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -82,12 +82,6 @@ public:
         int numAxes = inputs[0].size();
         int startAxis = clamp(_startAxis, numAxes);
         int endAxis = clamp(_endAxis, numAxes);
-
-        for (size_t i = 1; i < inputs.size(); i++)
-        {
-            CV_Assert(inputs[i] == inputs[0]);
-        }
-
 
         CV_Assert(startAxis >= 0);
         CV_Assert(endAxis >= startAxis && endAxis < (int)numAxes);
@@ -109,6 +103,16 @@ public:
         outputs.resize(inputs.size(), outputShapeVec);
 
         return true;
+    }
+
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        int numAxes = inputs[0].dims;
+        _startAxis = clamp(_startAxis, numAxes);
+        _endAxis = clamp(_endAxis, numAxes);
     }
 
 #ifdef HAVE_OPENCL
@@ -140,40 +144,37 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN((preferableTarget == DNN_TARGET_OPENCL) &&
-                   outputs_arr.isUMatVector() &&
-                   OCL_PERFORMANCE_CHECK(ocl::Device::getDefault().isIntel()),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   outputs_arr.isUMatVector(),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-    }
-
-    void forward(std::vector<Mat*> &inputs, std::vector<Mat> &outputs, std::vector<Mat> &internals) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
             MatShape outShape = shape(outputs[i]);
-            outputs[i] = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
+            if (inputs[i].data != outputs[i].data)
+            {
+                inputs[i].reshape(1, (int)outShape.size(), &outShape[0]).copyTo(outputs[i]);
+            }
         }
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
 #ifdef HAVE_INF_ENGINE
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Flatten";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-        ieLayer->params["axis"] = format("%d", _startAxis);
-        ieLayer->params["end_axis"] = format("%d", _endAxis);
+    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+    {
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        ieLayer.setType("Flatten");
+        ieLayer.getParameters()["axis"] = (size_t)_startAxis;
+        ieLayer.getParameters()["end_axis"] = _endAxis;  // Do not cast to size_t because it might be negative.
+        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     int _startAxis;
     int _endAxis;

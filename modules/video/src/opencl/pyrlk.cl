@@ -53,9 +53,6 @@
 #define LM_H (LSy*GRIDSIZE+2)
 #define BUFFER  (LSx*LSy)
 #define BUFFER2 BUFFER>>1
-#ifndef WAVE_SIZE
-#define WAVE_SIZE 1
-#endif
 
 #ifdef CPU
 
@@ -78,7 +75,7 @@ inline void reduce3(float val1, float val2, float val3,  __local float* smem1,  
     }
 }
 
-inline void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid)
+inline void reduce2(float val1, float val2, __local float* smem1, __local float* smem2, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -95,7 +92,7 @@ inline void reduce2(float val1, float val2, volatile __local float* smem1, volat
     }
 }
 
-inline void reduce1(float val1, volatile __local float* smem1, int tid)
+inline void reduce1(float val1, __local float* smem1, int tid)
 {
     smem1[tid] = val1;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -111,7 +108,7 @@ inline void reduce1(float val1, volatile __local float* smem1, int tid)
 }
 #else
 inline void reduce3(float val1, float val2, float val3,
-             __local volatile float* smem1, __local volatile float* smem2, __local volatile float* smem3, int tid)
+             __local float* smem1, __local float* smem2, __local float* smem3, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -123,38 +120,39 @@ inline void reduce3(float val1, float val2, float val3,
         smem1[tid] += smem1[tid + 32];
         smem2[tid] += smem2[tid + 32];
         smem3[tid] += smem3[tid + 32];
-#if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16)
     {
-#endif
         smem1[tid] += smem1[tid + 16];
         smem2[tid] += smem2[tid + 16];
         smem3[tid] += smem3[tid + 16];
-#if WAVE_SIZE <16
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid<1)
+    if (tid < 8)
     {
-#endif
-        local float8* m1 = (local float8*)smem1;
-        local float8* m2 = (local float8*)smem2;
-        local float8* m3 = (local float8*)smem3;
-        float8 t1 = m1[0]+m1[1];
-        float8 t2 = m2[0]+m2[1];
-        float8 t3 = m3[0]+m3[1];
-        float4 t14 = t1.lo + t1.hi;
-        float4 t24 = t2.lo + t2.hi;
-        float4 t34 = t3.lo + t3.hi;
-        smem1[0] = t14.x+t14.y+t14.z+t14.w;
-        smem2[0] = t24.x+t24.y+t24.z+t24.w;
-        smem3[0] = t34.x+t34.y+t34.z+t34.w;
+        smem1[tid] += smem1[tid + 8];
+        smem2[tid] += smem2[tid + 8];
+        smem3[tid] += smem3[tid + 8];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+        smem1[tid] += smem1[tid + 4];
+        smem2[tid] += smem2[tid + 4];
+        smem3[tid] += smem3[tid + 4];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid == 0)
+    {
+        smem1[0] = (smem1[0] + smem1[1]) + (smem1[2] + smem1[3]);
+        smem2[0] = (smem2[0] + smem2[1]) + (smem2[2] + smem2[3]);
+        smem3[0] = (smem3[0] + smem3[1]) + (smem3[2] + smem3[3]);
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-inline void reduce2(float val1, float val2, __local volatile float* smem1, __local volatile float* smem2, int tid)
+inline void reduce2(float val1, float val2, __local float* smem1, __local float* smem2, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -164,33 +162,35 @@ inline void reduce2(float val1, float val2, __local volatile float* smem1, __loc
     {
         smem1[tid] += smem1[tid + 32];
         smem2[tid] += smem2[tid + 32];
-#if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16)
     {
-#endif
         smem1[tid] += smem1[tid + 16];
         smem2[tid] += smem2[tid + 16];
-#if WAVE_SIZE <16
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid<1)
+    if (tid < 8)
     {
-#endif
-        local float8* m1 = (local float8*)smem1;
-        local float8* m2 = (local float8*)smem2;
-        float8 t1 = m1[0]+m1[1];
-        float8 t2 = m2[0]+m2[1];
-        float4 t14 = t1.lo + t1.hi;
-        float4 t24 = t2.lo + t2.hi;
-        smem1[0] = t14.x+t14.y+t14.z+t14.w;
-        smem2[0] = t24.x+t24.y+t24.z+t24.w;
+        smem1[tid] += smem1[tid + 8];
+        smem2[tid] += smem2[tid + 8];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+        smem1[tid] += smem1[tid + 4];
+        smem2[tid] += smem2[tid + 4];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid == 0)
+    {
+        smem1[0] = (smem1[0] + smem1[1]) + (smem1[2] + smem1[3]);
+        smem2[0] = (smem2[0] + smem2[1]) + (smem2[2] + smem2[3]);
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-inline void reduce1(float val1, __local volatile float* smem1, int tid)
+inline void reduce1(float val1, __local float* smem1, int tid)
 {
     smem1[tid] = val1;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -198,23 +198,26 @@ inline void reduce1(float val1, __local volatile float* smem1, int tid)
     if (tid < 32)
     {
         smem1[tid] += smem1[tid + 32];
-#if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16)
     {
-#endif
         smem1[tid] += smem1[tid + 16];
-#if WAVE_SIZE <16
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid<1)
+    if (tid < 8)
     {
-#endif
-        local float8* m1 = (local float8*)smem1;
-        float8 t1 = m1[0]+m1[1];
-        float4 t14 = t1.lo + t1.hi;
-        smem1[0] = t14.x+t14.y+t14.z+t14.w;
+        smem1[tid] += smem1[tid + 8];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 4)
+    {
+        smem1[tid] += smem1[tid + 4];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid == 0)
+    {
+        smem1[0] = (smem1[0] + smem1[1]) + (smem1[2] + smem1[3]);
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 }

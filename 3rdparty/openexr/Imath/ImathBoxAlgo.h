@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002-2010, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -67,8 +67,8 @@
 //				    Vec3<T> &enterPoint,
 //				    Vec3<T> &exitPoint)
 //
-//	bool intersects(const Box<Vec3<T>> &box,
-//			const Line3<T> &ray,
+//	bool intersects(const Box<Vec3<T>> &box, 
+//			const Line3<T> &ray, 
 //			Vec3<T> intersectionPoint)
 //
 //	bool intersects(const Box<Vec3<T>> &box, const Line3<T> &ray)
@@ -79,8 +79,9 @@
 #include "ImathMatrix.h"
 #include "ImathLineAlgo.h"
 #include "ImathPlane.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 template <class T>
@@ -96,12 +97,12 @@ clip (const T &p, const Box<T> &box)
 
     for (int i = 0; i < int (box.min.dimensions()); i++)
     {
-    if (p[i] < box.min[i])
-        q[i] = box.min[i];
-    else if (p[i] > box.max[i])
-        q[i] = box.max[i];
-    else
-        q[i] = p[i];
+	if (p[i] < box.min[i])
+	    q[i] = box.min[i];
+	else if (p[i] > box.max[i])
+	    q[i] = box.max[i];
+	else
+	    q[i] = p[i];
     }
 
     return q;
@@ -128,31 +129,31 @@ closestPointOnBox (const Vec3<T> &p, const Box< Vec3<T> > &box)
     //
 
     if (box.isEmpty())
-    return p;
+	return p;
 
     Vec3<T> q = closestPointInBox (p, box);
 
     if (q == p)
     {
-    Vec3<T> d1 = p - box.min;
-    Vec3<T> d2 = box.max - p;
+	Vec3<T> d1 = p - box.min;
+	Vec3<T> d2 = box.max - p;
 
-    Vec3<T> d ((d1.x < d2.x)? d1.x: d2.x,
-           (d1.y < d2.y)? d1.y: d2.y,
-           (d1.z < d2.z)? d1.z: d2.z);
+	Vec3<T> d ((d1.x < d2.x)? d1.x: d2.x,
+		   (d1.y < d2.y)? d1.y: d2.y,
+		   (d1.z < d2.z)? d1.z: d2.z);
 
-    if (d.x < d.y && d.x < d.z)
-    {
-        q.x = (d1.x < d2.x)? box.min.x: box.max.x;
-    }
-    else if (d.y < d.z)
-    {
-        q.y = (d1.y < d2.y)? box.min.y: box.max.y;
-    }
-    else
-    {
-        q.z = (d1.z < d2.z)? box.min.z: box.max.z;
-    }
+	if (d.x < d.y && d.x < d.z)
+	{
+	    q.x = (d1.x < d2.x)? box.min.x: box.max.x;
+	}
+	else if (d.y < d.z)
+	{
+	    q.y = (d1.y < d2.y)? box.min.y: box.max.y;
+	}
+	else
+	{
+	    q.z = (d1.z < d2.z)? box.min.z: box.max.z;
+	}
     }
 
     return q;
@@ -178,7 +179,7 @@ transform (const Box< Vec3<S> > &box, const Matrix44<T> &m)
     //
 
     if (box.isEmpty() || box.isInfinite())
-    return box;
+	return box;
 
     //
     // If the last column of m is (0 0 0 1) then m is an affine
@@ -187,33 +188,33 @@ transform (const Box< Vec3<S> > &box, const Matrix44<T> &m)
 
     if (m[0][3] == 0 && m[1][3] == 0 && m[2][3] == 0 && m[3][3] == 1)
     {
-    Box< Vec3<S> > newBox;
+	Box< Vec3<S> > newBox;
 
-    for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++) 
         {
-        newBox.min[i] = newBox.max[i] = (S) m[3][i];
+	    newBox.min[i] = newBox.max[i] = (S) m[3][i];
 
-        for (int j = 0; j < 3; j++)
+	    for (int j = 0; j < 3; j++) 
             {
-        S a, b;
+		S a, b;
 
-        a = (S) m[j][i] * box.min[j];
-        b = (S) m[j][i] * box.max[j];
+		a = (S) m[j][i] * box.min[j];
+		b = (S) m[j][i] * box.max[j];
 
-        if (a < b)
+		if (a < b) 
                 {
-            newBox.min[i] += a;
-            newBox.max[i] += b;
-        }
-        else
+		    newBox.min[i] += a;
+		    newBox.max[i] += b;
+		}
+		else 
                 {
-            newBox.min[i] += b;
-            newBox.max[i] += a;
-        }
-        }
-    }
+		    newBox.min[i] += b;
+		    newBox.max[i] += a;
+		}
+	    }
+	}
 
-    return newBox;
+	return newBox;
     }
 
     //
@@ -235,8 +236,8 @@ transform (const Box< Vec3<S> > &box, const Matrix44<T> &m)
 
     Box< Vec3<S> > newBox;
 
-    for (int i = 0; i < 8; i++)
-    newBox.extendBy (points[i] * m);
+    for (int i = 0; i < 8; i++) 
+	newBox.extendBy (points[i] * m);
 
     return newBox;
 }
@@ -263,7 +264,7 @@ transform (const Box< Vec3<S> > &box,
 
     if (box.isEmpty() || box.isInfinite())
     {
-    return;
+	return;
     }
 
     //
@@ -273,31 +274,31 @@ transform (const Box< Vec3<S> > &box,
 
     if (m[0][3] == 0 && m[1][3] == 0 && m[2][3] == 0 && m[3][3] == 1)
     {
-    for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++) 
         {
-        result.min[i] = result.max[i] = (S) m[3][i];
+	    result.min[i] = result.max[i] = (S) m[3][i];
 
-        for (int j = 0; j < 3; j++)
+	    for (int j = 0; j < 3; j++) 
             {
-        S a, b;
+		S a, b;
 
-        a = (S) m[j][i] * box.min[j];
-        b = (S) m[j][i] * box.max[j];
+		a = (S) m[j][i] * box.min[j];
+		b = (S) m[j][i] * box.max[j];
 
-        if (a < b)
+		if (a < b) 
                 {
-            result.min[i] += a;
-            result.max[i] += b;
-        }
-        else
+		    result.min[i] += a;
+		    result.max[i] += b;
+		}
+		else 
                 {
-            result.min[i] += b;
-            result.max[i] += a;
-        }
-        }
-    }
+		    result.min[i] += b;
+		    result.max[i] += a;
+		}
+	    }
+	}
 
-    return;
+	return;
     }
 
     //
@@ -317,8 +318,8 @@ transform (const Box< Vec3<S> > &box,
     points[0][2] = points[2][2] = points[4][2] = points[6][2] = box.min[2];
     points[1][2] = points[3][2] = points[5][2] = points[7][2] = box.max[2];
 
-    for (int i = 0; i < 8; i++)
-    result.extendBy (points[i] * m);
+    for (int i = 0; i < 8; i++) 
+	result.extendBy (points[i] * m);
 }
 
 
@@ -337,37 +338,37 @@ affineTransform (const Box< Vec3<S> > &box, const Matrix44<T> &m)
 
     if (box.isEmpty() || box.isInfinite())
     {
-    //
-    // A transformed empty or infinite box is still empty or infinite
-    //
+	//
+	// A transformed empty or infinite box is still empty or infinite
+	//
 
-    return box;
+	return box;
     }
 
     Box< Vec3<S> > newBox;
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) 
     {
-    newBox.min[i] = newBox.max[i] = (S) m[3][i];
+	newBox.min[i] = newBox.max[i] = (S) m[3][i];
 
-    for (int j = 0; j < 3; j++)
-    {
-        S a, b;
+	for (int j = 0; j < 3; j++) 
+	{
+	    S a, b;
 
-        a = (S) m[j][i] * box.min[j];
-        b = (S) m[j][i] * box.max[j];
+	    a = (S) m[j][i] * box.min[j];
+	    b = (S) m[j][i] * box.max[j];
 
-        if (a < b)
-        {
-        newBox.min[i] += a;
-        newBox.max[i] += b;
-        }
-        else
-        {
-        newBox.min[i] += b;
-        newBox.max[i] += a;
-        }
-    }
+	    if (a < b) 
+	    {
+		newBox.min[i] += a;
+		newBox.max[i] += b;
+	    }
+	    else 
+	    {
+		newBox.min[i] += b;
+		newBox.max[i] += a;
+	    }
+	}
     }
 
     return newBox;
@@ -390,44 +391,44 @@ affineTransform (const Box< Vec3<S> > &box,
 
     if (box.isEmpty())
     {
-    //
-    // A transformed empty box is still empty
-    //
+	//
+	// A transformed empty box is still empty
+	//
         result.makeEmpty();
-    return;
+	return;
     }
 
     if (box.isInfinite())
     {
-    //
-    // A transformed infinite box is still infinite
-    //
+	//
+	// A transformed infinite box is still infinite
+	//
         result.makeInfinite();
-    return;
+	return;
     }
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) 
     {
-    result.min[i] = result.max[i] = (S) m[3][i];
+	result.min[i] = result.max[i] = (S) m[3][i];
 
-    for (int j = 0; j < 3; j++)
-    {
-        S a, b;
+	for (int j = 0; j < 3; j++) 
+	{
+	    S a, b;
 
-        a = (S) m[j][i] * box.min[j];
-        b = (S) m[j][i] * box.max[j];
+	    a = (S) m[j][i] * box.min[j];
+	    b = (S) m[j][i] * box.max[j];
 
-        if (a < b)
-        {
-        result.min[i] += a;
-        result.max[i] += b;
-        }
-        else
-        {
-        result.min[i] += b;
-        result.max[i] += a;
-        }
-    }
+	    if (a < b) 
+	    {
+		result.min[i] += a;
+		result.max[i] += b;
+	    }
+	    else 
+	    {
+		result.min[i] += b;
+		result.max[i] += a;
+	    }
+	}
     }
 }
 
@@ -435,9 +436,9 @@ affineTransform (const Box< Vec3<S> > &box,
 template <class T>
 bool
 findEntryAndExitPoints (const Line3<T> &r,
-            const Box<Vec3<T> > &b,
-            Vec3<T> &entry,
-            Vec3<T> &exit)
+			const Box<Vec3<T> > &b,
+			Vec3<T> &entry,
+			Vec3<T> &exit)
 {
     //
     // Compute the points where a ray, r, enters and exits a box, b:
@@ -463,11 +464,11 @@ findEntryAndExitPoints (const Line3<T> &r,
 
     if (b.isEmpty())
     {
-    //
-    // No ray intersects an empty box
-    //
+	//
+	// No ray intersects an empty box
+	//
 
-    return false;
+	return false;
     }
 
     //
@@ -499,73 +500,73 @@ findEntryAndExitPoints (const Line3<T> &r,
 
     if (r.dir.x >= 0)
     {
-    T d1 = b.max.x - r.pos.x;
-    T d2 = b.min.x - r.pos.x;
+	T d1 = b.max.x - r.pos.x;
+	T d2 = b.min.x - r.pos.x;
 
-    if (r.dir.x > 1 ||
-        (abs (d1) < TMAX * r.dir.x &&
-         abs (d2) < TMAX * r.dir.x))
-    {
-        T t1 = d1 / r.dir.x;
-        T t2 = d2 / r.dir.x;
+	if (r.dir.x > 1 ||
+	    (abs (d1) < TMAX * r.dir.x &&
+	     abs (d2) < TMAX * r.dir.x))
+	{
+	    T t1 = d1 / r.dir.x;
+	    T t2 = d2 / r.dir.x;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = b.max.x;
-        exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
-        exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
-        }
+		exit.x = b.max.x; 
+		exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
+		exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = b.min.x;
-        entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
-        entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
-        }
-    }
-    else if (r.pos.x < b.min.x || r.pos.x > b.max.x)
-    {
-        return false;
-    }
+		entry.x = b.min.x; 
+		entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
+		entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
+	else if (r.pos.x < b.min.x || r.pos.x > b.max.x)
+	{
+	    return false;
+	}
     }
     else // r.dir.x < 0
     {
-    T d1 = b.min.x - r.pos.x;
-    T d2 = b.max.x - r.pos.x;
+	T d1 = b.min.x - r.pos.x;
+	T d2 = b.max.x - r.pos.x;
 
-    if (r.dir.x < -1 ||
-        (abs (d1) < -TMAX * r.dir.x &&
-         abs (d2) < -TMAX * r.dir.x))
-    {
-        T t1 = d1 / r.dir.x;
-        T t2 = d2 / r.dir.x;
+	if (r.dir.x < -1 ||
+	    (abs (d1) < -TMAX * r.dir.x &&
+	     abs (d2) < -TMAX * r.dir.x))
+	{
+	    T t1 = d1 / r.dir.x;
+	    T t2 = d2 / r.dir.x;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = b.min.x;
-        exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
-        exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
-        }
+		exit.x = b.min.x; 
+		exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
+		exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = b.max.x;
-        entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
-        entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
-        }
-    }
-    else if (r.pos.x < b.min.x || r.pos.x > b.max.x)
-    {
-        return false;
-    }
+		entry.x = b.max.x; 
+		entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
+		entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
+	else if (r.pos.x < b.min.x || r.pos.x > b.max.x)
+	{
+	    return false;
+	}
     }
 
     //
@@ -574,73 +575,73 @@ findEntryAndExitPoints (const Line3<T> &r,
 
     if (r.dir.y >= 0)
     {
-    T d1 = b.max.y - r.pos.y;
-    T d2 = b.min.y - r.pos.y;
+	T d1 = b.max.y - r.pos.y;
+	T d2 = b.min.y - r.pos.y;
 
-    if (r.dir.y > 1 ||
-        (abs (d1) < TMAX * r.dir.y &&
-         abs (d2) < TMAX * r.dir.y))
-    {
-        T t1 = d1 / r.dir.y;
-        T t2 = d2 / r.dir.y;
+	if (r.dir.y > 1 ||
+	    (abs (d1) < TMAX * r.dir.y &&
+	     abs (d2) < TMAX * r.dir.y))
+	{
+	    T t1 = d1 / r.dir.y;
+	    T t2 = d2 / r.dir.y;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
-        exit.y = b.max.y;
-        exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
-        }
+		exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
+		exit.y = b.max.y; 
+		exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
-        entry.y = b.min.y;
-        entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
-        }
-    }
-    else if (r.pos.y < b.min.y || r.pos.y > b.max.y)
-    {
-        return false;
-    }
+		entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
+		entry.y = b.min.y; 
+		entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
+	else if (r.pos.y < b.min.y || r.pos.y > b.max.y)
+	{
+	    return false;
+	}
     }
     else // r.dir.y < 0
     {
-    T d1 = b.min.y - r.pos.y;
-    T d2 = b.max.y - r.pos.y;
+	T d1 = b.min.y - r.pos.y;
+	T d2 = b.max.y - r.pos.y;
 
-    if (r.dir.y < -1 ||
-        (abs (d1) < -TMAX * r.dir.y &&
-         abs (d2) < -TMAX * r.dir.y))
-    {
-        T t1 = d1 / r.dir.y;
-        T t2 = d2 / r.dir.y;
+	if (r.dir.y < -1 ||
+	    (abs (d1) < -TMAX * r.dir.y &&
+	     abs (d2) < -TMAX * r.dir.y))
+	{
+	    T t1 = d1 / r.dir.y;
+	    T t2 = d2 / r.dir.y;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
-        exit.y = b.min.y;
-        exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
-        }
+		exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
+		exit.y = b.min.y; 
+		exit.z = clamp (r.pos.z + t1 * r.dir.z, b.min.z, b.max.z);
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
-        entry.y = b.max.y;
-        entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
-        }
-    }
-    else if (r.pos.y < b.min.y || r.pos.y > b.max.y)
-    {
-        return false;
-    }
+		entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
+		entry.y = b.max.y; 
+		entry.z = clamp (r.pos.z + t2 * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
+	else if (r.pos.y < b.min.y || r.pos.y > b.max.y)
+	{
+	    return false;
+	}
     }
 
     //
@@ -649,73 +650,73 @@ findEntryAndExitPoints (const Line3<T> &r,
 
     if (r.dir.z >= 0)
     {
-    T d1 = b.max.z - r.pos.z;
-    T d2 = b.min.z - r.pos.z;
+	T d1 = b.max.z - r.pos.z;
+	T d2 = b.min.z - r.pos.z;
 
-    if (r.dir.z > 1 ||
-        (abs (d1) < TMAX * r.dir.z &&
-         abs (d2) < TMAX * r.dir.z))
-    {
-        T t1 = d1 / r.dir.z;
-        T t2 = d2 / r.dir.z;
+	if (r.dir.z > 1 ||
+	    (abs (d1) < TMAX * r.dir.z &&
+	     abs (d2) < TMAX * r.dir.z))
+	{
+	    T t1 = d1 / r.dir.z;
+	    T t2 = d2 / r.dir.z;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
-        exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
-        exit.z = b.max.z;
-        }
+		exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
+		exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
+		exit.z = b.max.z; 
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
-        entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
-        entry.z = b.min.z;
-        }
-    }
-    else if (r.pos.z < b.min.z || r.pos.z > b.max.z)
-    {
-        return false;
-    }
+		entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
+		entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
+		entry.z = b.min.z; 
+	    }
+	}
+	else if (r.pos.z < b.min.z || r.pos.z > b.max.z)
+	{
+	    return false;
+	}
     }
     else // r.dir.z < 0
     {
-    T d1 = b.min.z - r.pos.z;
-    T d2 = b.max.z - r.pos.z;
+	T d1 = b.min.z - r.pos.z;
+	T d2 = b.max.z - r.pos.z;
 
-    if (r.dir.z < -1 ||
-        (abs (d1) < -TMAX * r.dir.z &&
-         abs (d2) < -TMAX * r.dir.z))
-    {
-        T t1 = d1 / r.dir.z;
-        T t2 = d2 / r.dir.z;
+	if (r.dir.z < -1 ||
+	    (abs (d1) < -TMAX * r.dir.z &&
+	     abs (d2) < -TMAX * r.dir.z))
+	{
+	    T t1 = d1 / r.dir.z;
+	    T t2 = d2 / r.dir.z;
 
-        if (tBackMin > t1)
-        {
-        tBackMin = t1;
+	    if (tBackMin > t1)
+	    {
+		tBackMin = t1;
 
-        exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
-        exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
-        exit.z = b.min.z;
-        }
+		exit.x = clamp (r.pos.x + t1 * r.dir.x, b.min.x, b.max.x);
+		exit.y = clamp (r.pos.y + t1 * r.dir.y, b.min.y, b.max.y);
+		exit.z = b.min.z; 
+	    }
 
-        if (tFrontMax < t2)
-        {
-        tFrontMax = t2;
+	    if (tFrontMax < t2)
+	    {
+		tFrontMax = t2;
 
-        entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
-        entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
-        entry.z = b.max.z;
-        }
-    }
-    else if (r.pos.z < b.min.z || r.pos.z > b.max.z)
-    {
-        return false;
-    }
+		entry.x = clamp (r.pos.x + t2 * r.dir.x, b.min.x, b.max.x);
+		entry.y = clamp (r.pos.y + t2 * r.dir.y, b.min.y, b.max.y);
+		entry.z = b.max.z; 
+	    }
+	}
+	else if (r.pos.z < b.min.z || r.pos.z > b.max.z)
+	{
+	    return false;
+	}
     }
 
     return tFrontMax <= tBackMin;
@@ -752,21 +753,21 @@ intersects (const Box< Vec3<T> > &b, const Line3<T> &r, Vec3<T> &ip)
 
     if (b.isEmpty())
     {
-    //
-    // No ray intersects an empty box
-    //
+	//
+	// No ray intersects an empty box
+	//
 
-    return false;
+	return false;
     }
 
     if (b.intersects (r.pos))
     {
-    //
-    // The ray starts inside the box
-    //
+	//
+	// The ray starts inside the box
+	//
 
-    ip = r.pos;
-    return true;
+	ip = r.pos;
+	return true;
     }
 
     //
@@ -793,68 +794,68 @@ intersects (const Box< Vec3<T> > &b, const Line3<T> &r, Vec3<T> &ip)
 
     if (r.dir.x > 0)
     {
-    if (r.pos.x > b.max.x)
-        return false;
+	if (r.pos.x > b.max.x)
+	    return false;
 
-    T d = b.max.x - r.pos.x;
+	T d = b.max.x - r.pos.x;
 
-    if (r.dir.x > 1 || d < TMAX * r.dir.x)
-    {
-        T t = d / r.dir.x;
+	if (r.dir.x > 1 || d < TMAX * r.dir.x)
+	{
+	    T t = d / r.dir.x;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.x <= b.min.x)
-    {
-        T d = b.min.x - r.pos.x;
-        T t = (r.dir.x > 1 || d < TMAX * r.dir.x)? d / r.dir.x: TMAX;
+	if (r.pos.x <= b.min.x)
+	{
+	    T d = b.min.x - r.pos.x;
+	    T t = (r.dir.x > 1 || d < TMAX * r.dir.x)? d / r.dir.x: TMAX;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        ip.x = b.min.x;
-        ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
-        ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
-        }
-    }
+		ip.x = b.min.x; 
+		ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
+		ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
     }
     else if (r.dir.x < 0)
     {
-    if (r.pos.x < b.min.x)
-        return false;
+	if (r.pos.x < b.min.x)
+	    return false;
 
-    T d = b.min.x - r.pos.x;
+	T d = b.min.x - r.pos.x;
 
-    if (r.dir.x < -1 || d > TMAX * r.dir.x)
-    {
-        T t = d / r.dir.x;
+	if (r.dir.x < -1 || d > TMAX * r.dir.x)
+	{
+	    T t = d / r.dir.x;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.x >= b.max.x)
-    {
-        T d = b.max.x - r.pos.x;
-        T t = (r.dir.x < -1 || d > TMAX * r.dir.x)? d / r.dir.x: TMAX;
+	if (r.pos.x >= b.max.x)
+	{
+	    T d = b.max.x - r.pos.x;
+	    T t = (r.dir.x < -1 || d > TMAX * r.dir.x)? d / r.dir.x: TMAX;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        ip.x = b.max.x;
-        ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
-        ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
-        }
-    }
+		ip.x = b.max.x; 
+		ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
+		ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
     }
     else // r.dir.x == 0
     {
-    if (r.pos.x < b.min.x || r.pos.x > b.max.x)
-        return false;
+	if (r.pos.x < b.min.x || r.pos.x > b.max.x)
+	    return false;
     }
 
     //
@@ -863,68 +864,68 @@ intersects (const Box< Vec3<T> > &b, const Line3<T> &r, Vec3<T> &ip)
 
     if (r.dir.y > 0)
     {
-    if (r.pos.y > b.max.y)
-        return false;
+	if (r.pos.y > b.max.y)
+	    return false;
 
-    T d = b.max.y - r.pos.y;
+	T d = b.max.y - r.pos.y;
 
-    if (r.dir.y > 1 || d < TMAX * r.dir.y)
-    {
-        T t = d / r.dir.y;
+	if (r.dir.y > 1 || d < TMAX * r.dir.y)
+	{
+	    T t = d / r.dir.y;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.y <= b.min.y)
-    {
-        T d = b.min.y - r.pos.y;
-        T t = (r.dir.y > 1 || d < TMAX * r.dir.y)? d / r.dir.y: TMAX;
+	if (r.pos.y <= b.min.y)
+	{
+	    T d = b.min.y - r.pos.y;
+	    T t = (r.dir.y > 1 || d < TMAX * r.dir.y)? d / r.dir.y: TMAX;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
-        ip.y = b.min.y;
-        ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
-        }
-    }
+		ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
+		ip.y = b.min.y; 
+		ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
     }
     else if (r.dir.y < 0)
     {
-    if (r.pos.y < b.min.y)
-        return false;
+	if (r.pos.y < b.min.y)
+	    return false;
 
-    T d = b.min.y - r.pos.y;
+	T d = b.min.y - r.pos.y;
 
-    if (r.dir.y < -1 || d > TMAX * r.dir.y)
-    {
-        T t = d / r.dir.y;
+	if (r.dir.y < -1 || d > TMAX * r.dir.y)
+	{
+	    T t = d / r.dir.y;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.y >= b.max.y)
-    {
-        T d = b.max.y - r.pos.y;
-        T t = (r.dir.y < -1 || d > TMAX * r.dir.y)? d / r.dir.y: TMAX;
+	if (r.pos.y >= b.max.y)
+	{
+	    T d = b.max.y - r.pos.y;
+	    T t = (r.dir.y < -1 || d > TMAX * r.dir.y)? d / r.dir.y: TMAX;
+	    
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
-
-        ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
-        ip.y = b.max.y;
-        ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
-        }
-    }
+		ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
+		ip.y = b.max.y; 
+		ip.z = clamp (r.pos.z + t * r.dir.z, b.min.z, b.max.z);
+	    }
+	}
     }
     else // r.dir.y == 0
     {
-    if (r.pos.y < b.min.y || r.pos.y > b.max.y)
-        return false;
+	if (r.pos.y < b.min.y || r.pos.y > b.max.y)
+	    return false;
     }
 
     //
@@ -933,68 +934,68 @@ intersects (const Box< Vec3<T> > &b, const Line3<T> &r, Vec3<T> &ip)
 
     if (r.dir.z > 0)
     {
-    if (r.pos.z > b.max.z)
-        return false;
+	if (r.pos.z > b.max.z)
+	    return false;
 
-    T d = b.max.z - r.pos.z;
+	T d = b.max.z - r.pos.z;
 
-    if (r.dir.z > 1 || d < TMAX * r.dir.z)
-    {
-        T t = d / r.dir.z;
+	if (r.dir.z > 1 || d < TMAX * r.dir.z)
+	{
+	    T t = d / r.dir.z;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.z <= b.min.z)
-    {
-        T d = b.min.z - r.pos.z;
-        T t = (r.dir.z > 1 || d < TMAX * r.dir.z)? d / r.dir.z: TMAX;
+	if (r.pos.z <= b.min.z)
+	{
+	    T d = b.min.z - r.pos.z;
+	    T t = (r.dir.z > 1 || d < TMAX * r.dir.z)? d / r.dir.z: TMAX;
+	    
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
-
-        ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
-        ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
-        ip.z = b.min.z;
-        }
-    }
+		ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
+		ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
+		ip.z = b.min.z; 
+	    }
+	}
     }
     else if (r.dir.z < 0)
     {
-    if (r.pos.z < b.min.z)
-        return false;
+	if (r.pos.z < b.min.z)
+	    return false;
 
-    T d = b.min.z - r.pos.z;
+	T d = b.min.z - r.pos.z;
 
-    if (r.dir.z < -1 || d > TMAX * r.dir.z)
-    {
-        T t = d / r.dir.z;
+	if (r.dir.z < -1 || d > TMAX * r.dir.z)
+	{
+	    T t = d / r.dir.z;
 
-        if (tBackMin > t)
-        tBackMin = t;
-    }
+	    if (tBackMin > t)
+		tBackMin = t;
+	}
 
-    if (r.pos.z >= b.max.z)
-    {
-        T d = b.max.z - r.pos.z;
-        T t = (r.dir.z < -1 || d > TMAX * r.dir.z)? d / r.dir.z: TMAX;
+	if (r.pos.z >= b.max.z)
+	{
+	    T d = b.max.z - r.pos.z;
+	    T t = (r.dir.z < -1 || d > TMAX * r.dir.z)? d / r.dir.z: TMAX;
+	    
+	    if (tFrontMax < t)
+	    {
+		tFrontMax = t;
 
-        if (tFrontMax < t)
-        {
-        tFrontMax = t;
-
-        ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
-        ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
-        ip.z = b.max.z;
-        }
-    }
+		ip.x = clamp (r.pos.x + t * r.dir.x, b.min.x, b.max.x);
+		ip.y = clamp (r.pos.y + t * r.dir.y, b.min.y, b.max.y);
+		ip.z = b.max.z; 
+	    }
+	}
     }
     else // r.dir.z == 0
     {
-    if (r.pos.z < b.min.z || r.pos.z > b.max.z)
-        return false;
+	if (r.pos.z < b.min.z || r.pos.z > b.max.z)
+	    return false;
     }
 
     return tFrontMax <= tBackMin;
@@ -1010,6 +1011,6 @@ intersects (const Box< Vec3<T> > &box, const Line3<T> &ray)
 }
 
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHBOXALGO_H

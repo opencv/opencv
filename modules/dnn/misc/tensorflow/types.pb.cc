@@ -19,8 +19,8 @@
 #include "third_party/protobuf/version.h"
 #endif
 // @@protoc_insertion_point(includes)
-namespace tensorflow {
-}  // namespace tensorflow
+namespace opencv_tensorflow {
+}  // namespace opencv_tensorflow
 namespace protobuf_types_2eproto {
 const ::google::protobuf::EnumDescriptor* file_level_enum_descriptors[1];
 const ::google::protobuf::uint32 TableStruct::offsets[1] = {};
@@ -48,28 +48,28 @@ void protobuf_RegisterTypes(const ::std::string&) {
 void AddDescriptorsImpl() {
   InitDefaults();
   static const char descriptor[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
-      "\n\013types.proto\022\ntensorflow*\234\005\n\010DataType\022\016"
-      "\n\nDT_INVALID\020\000\022\014\n\010DT_FLOAT\020\001\022\r\n\tDT_DOUBL"
-      "E\020\002\022\014\n\010DT_INT32\020\003\022\014\n\010DT_UINT8\020\004\022\014\n\010DT_IN"
-      "T16\020\005\022\013\n\007DT_INT8\020\006\022\r\n\tDT_STRING\020\007\022\020\n\014DT_"
-      "COMPLEX64\020\010\022\014\n\010DT_INT64\020\t\022\013\n\007DT_BOOL\020\n\022\014"
-      "\n\010DT_QINT8\020\013\022\r\n\tDT_QUINT8\020\014\022\r\n\tDT_QINT32"
-      "\020\r\022\017\n\013DT_BFLOAT16\020\016\022\r\n\tDT_QINT16\020\017\022\016\n\nDT"
-      "_QUINT16\020\020\022\r\n\tDT_UINT16\020\021\022\021\n\rDT_COMPLEX1"
-      "28\020\022\022\013\n\007DT_HALF\020\023\022\020\n\014DT_FLOAT_REF\020e\022\021\n\rD"
-      "T_DOUBLE_REF\020f\022\020\n\014DT_INT32_REF\020g\022\020\n\014DT_U"
-      "INT8_REF\020h\022\020\n\014DT_INT16_REF\020i\022\017\n\013DT_INT8_"
-      "REF\020j\022\021\n\rDT_STRING_REF\020k\022\024\n\020DT_COMPLEX64"
-      "_REF\020l\022\020\n\014DT_INT64_REF\020m\022\017\n\013DT_BOOL_REF\020"
-      "n\022\020\n\014DT_QINT8_REF\020o\022\021\n\rDT_QUINT8_REF\020p\022\021"
-      "\n\rDT_QINT32_REF\020q\022\023\n\017DT_BFLOAT16_REF\020r\022\021"
-      "\n\rDT_QINT16_REF\020s\022\022\n\016DT_QUINT16_REF\020t\022\021\n"
-      "\rDT_UINT16_REF\020u\022\025\n\021DT_COMPLEX128_REF\020v\022"
-      "\017\n\013DT_HALF_REF\020wB,\n\030org.tensorflow.frame"
-      "workB\013TypesProtosP\001\370\001\001b\006proto3"
+      "\n\013types.proto\022\021opencv_tensorflow*\234\005\n\010Dat"
+      "aType\022\016\n\nDT_INVALID\020\000\022\014\n\010DT_FLOAT\020\001\022\r\n\tD"
+      "T_DOUBLE\020\002\022\014\n\010DT_INT32\020\003\022\014\n\010DT_UINT8\020\004\022\014"
+      "\n\010DT_INT16\020\005\022\013\n\007DT_INT8\020\006\022\r\n\tDT_STRING\020\007"
+      "\022\020\n\014DT_COMPLEX64\020\010\022\014\n\010DT_INT64\020\t\022\013\n\007DT_B"
+      "OOL\020\n\022\014\n\010DT_QINT8\020\013\022\r\n\tDT_QUINT8\020\014\022\r\n\tDT"
+      "_QINT32\020\r\022\017\n\013DT_BFLOAT16\020\016\022\r\n\tDT_QINT16\020"
+      "\017\022\016\n\nDT_QUINT16\020\020\022\r\n\tDT_UINT16\020\021\022\021\n\rDT_C"
+      "OMPLEX128\020\022\022\013\n\007DT_HALF\020\023\022\020\n\014DT_FLOAT_REF"
+      "\020e\022\021\n\rDT_DOUBLE_REF\020f\022\020\n\014DT_INT32_REF\020g\022"
+      "\020\n\014DT_UINT8_REF\020h\022\020\n\014DT_INT16_REF\020i\022\017\n\013D"
+      "T_INT8_REF\020j\022\021\n\rDT_STRING_REF\020k\022\024\n\020DT_CO"
+      "MPLEX64_REF\020l\022\020\n\014DT_INT64_REF\020m\022\017\n\013DT_BO"
+      "OL_REF\020n\022\020\n\014DT_QINT8_REF\020o\022\021\n\rDT_QUINT8_"
+      "REF\020p\022\021\n\rDT_QINT32_REF\020q\022\023\n\017DT_BFLOAT16_"
+      "REF\020r\022\021\n\rDT_QINT16_REF\020s\022\022\n\016DT_QUINT16_R"
+      "EF\020t\022\021\n\rDT_UINT16_REF\020u\022\025\n\021DT_COMPLEX128"
+      "_REF\020v\022\017\n\013DT_HALF_REF\020wB,\n\030org.tensorflo"
+      "w.frameworkB\013TypesProtosP\001\370\001\001b\006proto3"
   };
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-      descriptor, 750);
+      descriptor, 757);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "types.proto", &protobuf_RegisterTypes);
 }
@@ -85,7 +85,7 @@ struct StaticDescriptorInitializer {
   }
 } static_descriptor_initializer;
 }  // namespace protobuf_types_2eproto
-namespace tensorflow {
+namespace opencv_tensorflow {
 const ::google::protobuf::EnumDescriptor* DataType_descriptor() {
   protobuf_types_2eproto::protobuf_AssignDescriptorsOnce();
   return protobuf_types_2eproto::file_level_enum_descriptors[0];
@@ -139,6 +139,6 @@ bool DataType_IsValid(int value) {
 
 
 // @@protoc_insertion_point(namespace_scope)
-}  // namespace tensorflow
+}  // namespace opencv_tensorflow
 
 // @@protoc_insertion_point(global_scope)

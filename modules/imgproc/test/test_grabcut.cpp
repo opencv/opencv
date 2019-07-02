@@ -89,7 +89,6 @@ void CV_GrabcutTest::run( int /* start_from */)
     Mat exp_bgdModel, exp_fgdModel;
 
     Mat mask;
-    mask = Scalar(0);
     Mat bgdModel, fgdModel;
     grabCut( img, mask, rect, bgdModel, fgdModel, 0, GC_INIT_WITH_RECT );
     bgdModel.copyTo(exp_bgdModel);

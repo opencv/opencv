@@ -22,6 +22,7 @@ if PY3:
 
 import numpy as np
 import cv2 as cv
+
 import video
 from common import nothing, getsize
 
@@ -44,9 +45,8 @@ def merge_lappyr(levels):
     return np.uint8(np.clip(img, 0, 255))
 
 
-if __name__ == '__main__':
+def main():
     import sys
-    print(__doc__)
 
     try:
         fn = sys.argv[1]
@@ -72,3 +72,11 @@ if __name__ == '__main__':
 
         if cv.waitKey(1) == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

@@ -225,8 +225,8 @@ bool  PngDecoder::readData( Mat& img )
 {
     volatile bool result = false;
     AutoBuffer<uchar*> _buffer(m_height);
-    uchar** buffer = _buffer;
-    int color = img.channels() > 1;
+    uchar** buffer = _buffer.data();
+    bool color = img.channels() > 1;
 
     png_structp png_ptr = (png_structp)m_png_ptr;
     png_infop info_ptr = (png_infop)m_info_ptr;
@@ -426,7 +426,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
 
-                    png_write_image( png_ptr, buffer );
+                    png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
 
                     result = true;

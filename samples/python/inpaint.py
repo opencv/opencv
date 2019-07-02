@@ -20,18 +20,17 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 from common import Sketcher
 
-if __name__ == '__main__':
+def main():
     import sys
     try:
         fn = sys.argv[1]
     except:
-        fn = '../data/fruits.jpg'
+        fn = 'fruits.jpg'
 
-    print(__doc__)
-
-    img = cv.imread(fn)
+    img = cv.imread(cv.samples.findFile(fn))
     if img is None:
         print('Failed to load image file:', fn)
         sys.exit(1)
@@ -51,4 +50,11 @@ if __name__ == '__main__':
             img_mark[:] = img
             mark[:] = 0
             sketch.show()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

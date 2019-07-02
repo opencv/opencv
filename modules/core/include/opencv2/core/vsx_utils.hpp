@@ -22,37 +22,37 @@
 
 typedef __vector unsigned char vec_uchar16;
 #define vec_uchar16_set(...) (vec_uchar16){__VA_ARGS__}
-#define vec_uchar16_sp(c)    (__VSX_S16__(vec_uchar16, c))
+#define vec_uchar16_sp(c)    (__VSX_S16__(vec_uchar16, (unsigned char)c))
 #define vec_uchar16_c(v)     ((vec_uchar16)(v))
 #define vec_uchar16_z        vec_uchar16_sp(0)
 
 typedef __vector signed char vec_char16;
 #define vec_char16_set(...) (vec_char16){__VA_ARGS__}
-#define vec_char16_sp(c)    (__VSX_S16__(vec_char16, c))
+#define vec_char16_sp(c)    (__VSX_S16__(vec_char16, (signed char)c))
 #define vec_char16_c(v)     ((vec_char16)(v))
 #define vec_char16_z        vec_char16_sp(0)
 
 typedef __vector unsigned short vec_ushort8;
 #define vec_ushort8_set(...) (vec_ushort8){__VA_ARGS__}
-#define vec_ushort8_sp(c)    (__VSX_S8__(vec_ushort8, c))
+#define vec_ushort8_sp(c)    (__VSX_S8__(vec_ushort8, (unsigned short)c))
 #define vec_ushort8_c(v)     ((vec_ushort8)(v))
 #define vec_ushort8_z        vec_ushort8_sp(0)
 
 typedef __vector signed short vec_short8;
 #define vec_short8_set(...) (vec_short8){__VA_ARGS__}
-#define vec_short8_sp(c)    (__VSX_S8__(vec_short8, c))
+#define vec_short8_sp(c)    (__VSX_S8__(vec_short8, (signed short)c))
 #define vec_short8_c(v)     ((vec_short8)(v))
 #define vec_short8_z        vec_short8_sp(0)
 
 typedef __vector unsigned int vec_uint4;
 #define vec_uint4_set(...) (vec_uint4){__VA_ARGS__}
-#define vec_uint4_sp(c)    (__VSX_S4__(vec_uint4, c))
+#define vec_uint4_sp(c)    (__VSX_S4__(vec_uint4, (unsigned int)c))
 #define vec_uint4_c(v)     ((vec_uint4)(v))
 #define vec_uint4_z        vec_uint4_sp(0)
 
 typedef __vector signed int vec_int4;
 #define vec_int4_set(...)  (vec_int4){__VA_ARGS__}
-#define vec_int4_sp(c)     (__VSX_S4__(vec_int4, c))
+#define vec_int4_sp(c)     (__VSX_S4__(vec_int4, (signed int)c))
 #define vec_int4_c(v)      ((vec_int4)(v))
 #define vec_int4_z         vec_int4_sp(0)
 
@@ -64,13 +64,13 @@ typedef __vector float vec_float4;
 
 typedef __vector unsigned long long vec_udword2;
 #define vec_udword2_set(...) (vec_udword2){__VA_ARGS__}
-#define vec_udword2_sp(c)    (__VSX_S2__(vec_udword2, c))
+#define vec_udword2_sp(c)    (__VSX_S2__(vec_udword2, (unsigned long long)c))
 #define vec_udword2_c(v)     ((vec_udword2)(v))
 #define vec_udword2_z        vec_udword2_sp(0)
 
 typedef __vector signed long long vec_dword2;
 #define vec_dword2_set(...) (vec_dword2){__VA_ARGS__}
-#define vec_dword2_sp(c)    (__VSX_S2__(vec_dword2, c))
+#define vec_dword2_sp(c)    (__VSX_S2__(vec_dword2, (signed long long)c))
 #define vec_dword2_c(v)     ((vec_dword2)(v))
 #define vec_dword2_z        vec_dword2_sp(0)
 
@@ -130,19 +130,21 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 #       undef vec_mul
 #   endif
 /*
- * there's no a direct instruction for supporting 16-bit multiplication in ISA 2.07,
+ * there's no a direct instruction for supporting 8-bit, 16-bit multiplication in ISA 2.07,
  * XLC Implement it by using instruction "multiply even", "multiply odd" and "permute"
- * todo: Do I need to support 8-bit ?
 **/
-#   define VSX_IMPL_MULH(Tvec, Tcast)                                               \
-    VSX_FINLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                         \
-    {                                                                               \
-        static const vec_uchar16 even_perm = {0, 1, 16, 17, 4, 5, 20, 21,           \
-                                              8, 9, 24, 25, 12, 13, 28, 29};        \
-        return vec_perm(Tcast(vec_mule(a, b)), Tcast(vec_mulo(a, b)), even_perm);   \
+#   define VSX_IMPL_MULH(Tvec, cperm)                                        \
+    VSX_FINLINE(Tvec) vec_mul(const Tvec& a, const Tvec& b)                  \
+    {                                                                        \
+        static const vec_uchar16 ev_od = {cperm};                            \
+        return vec_perm((Tvec)vec_mule(a, b), (Tvec)vec_mulo(a, b), ev_od);  \
     }
-    VSX_IMPL_MULH(vec_short8,  vec_short8_c)
-    VSX_IMPL_MULH(vec_ushort8, vec_ushort8_c)
+    #define VSX_IMPL_MULH_P16 0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+    VSX_IMPL_MULH(vec_char16,  VSX_IMPL_MULH_P16)
+    VSX_IMPL_MULH(vec_uchar16, VSX_IMPL_MULH_P16)
+    #define VSX_IMPL_MULH_P8 0, 1, 16, 17, 4, 5, 20, 21, 8, 9, 24, 25, 12, 13, 28, 29
+    VSX_IMPL_MULH(vec_short8,  VSX_IMPL_MULH_P8)
+    VSX_IMPL_MULH(vec_ushort8, VSX_IMPL_MULH_P8)
     // vmuluwm can be used for unsigned or signed integers, that's what they said
     VSX_IMPL_2VRG(vec_int4,  vec_int4,  vmuluwm, vec_mul)
     VSX_IMPL_2VRG(vec_uint4, vec_uint4, vmuluwm, vec_mul)
@@ -203,7 +205,7 @@ VSX_FINLINE(rt) fnm(const rg& a, const rg& b)  \
 
 #if __GNUG__ < 5
 // vec_xxpermdi in gcc4 missing little-endian supports just like clang
-#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
+#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
 #else
 #   define vec_permi vec_xxpermdi
 #endif // __GNUG__ < 5
@@ -289,6 +291,8 @@ VSX_IMPL_1RG(vec_udword2, wi, vec_float4,  wf, xvcvspuxds, vec_ctulo)
  *
  * So we're not able to use inline asm and only use built-in functions that CLANG supports
  * and use __builtin_convertvector if clang missng any of vector conversions built-in functions
+ *
+ * todo: clang asm template bug is fixed, need to reconsider the current workarounds.
 */
 
 // convert vector helper
@@ -320,7 +324,7 @@ VSX_FINLINE(rt) fnm(const rg& a) { return __builtin_convertvector(a, rt); }
 #   define vec_xxsldwi(a, b, c) vec_sld(a, b, (c) * 4)
 #else
 // vec_xxpermdi is missing little-endian supports in clang 4 just like gcc4
-#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ ((c & 1) << 1 | c >> 1)))
+#   define vec_permi(a, b, c) vec_xxpermdi(b, a, (3 ^ (((c) & 1) << 1 | (c) >> 1)))
 #endif // __clang_major__ < 5
 
 // shift left double by word immediate
@@ -466,7 +470,7 @@ VSX_IMPL_CONV_EVEN_2_4(vec_uint4,  vec_double2, vec_ctu, vec_ctuo)
     VSX_FINLINE(rt) fnm(const rg& a, int only_truncate) \
     {                                                   \
         assert(only_truncate == 0);                     \
-        (void)only_truncate;                            \
+        CV_UNUSED(only_truncate);                            \
         return fn2(a);                                  \
     }
     VSX_IMPL_CONV_2VARIANT(vec_int4,   vec_float4,  vec_cts, vec_cts)

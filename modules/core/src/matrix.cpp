@@ -7,7 +7,7 @@
 
 namespace cv {
 
-void MatAllocator::map(UMatData*, int) const
+void MatAllocator::map(UMatData*, AccessFlag) const
 {
 }
 
@@ -85,7 +85,7 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
-    CV_INSTRUMENT_REGION()
+    CV_INSTRUMENT_REGION();
 
     if(!usrc || !udst)
         return;
@@ -118,7 +118,7 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
 
 BufferPoolController* MatAllocator::getBufferPoolController(const char* id) const
 {
-    (void)id;
+    CV_UNUSED(id);
     static DummyBufferPoolController dummy;
     return &dummy;
 }
@@ -127,7 +127,7 @@ class StdMatAllocator CV_FINAL : public MatAllocator
 {
 public:
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+                       void* data0, size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -154,7 +154,7 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         if(!u) return false;
         return true;
@@ -262,31 +262,36 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
     }
 }
 
-static void updateContinuityFlag(Mat& m)
+int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step)
 {
     int i, j;
-    for( i = 0; i < m.dims; i++ )
+    for( i = 0; i < dims; i++ )
     {
-        if( m.size[i] > 1 )
+        if( size[i] > 1 )
             break;
     }
 
-    for( j = m.dims-1; j > i; j-- )
+    uint64 t = (uint64)size[std::min(i, dims-1)]*CV_MAT_CN(flags);
+    for( j = dims-1; j > i; j-- )
     {
-        if( m.step[j]*m.size[j] < m.step[j-1] )
+        t *= size[j];
+        if( step[j]*size[j] < step[j-1] )
             break;
     }
 
-    uint64 t = (uint64)m.step[0]*m.size[0];
-    if( j <= i && t == (size_t)t )
-        m.flags |= Mat::CONTINUOUS_FLAG;
-    else
-        m.flags &= ~Mat::CONTINUOUS_FLAG;
+    if( j <= i && t == (uint64)(int)t )
+        return flags | Mat::CONTINUOUS_FLAG;
+    return flags & ~Mat::CONTINUOUS_FLAG;
+}
+
+void Mat::updateContinuityFlag()
+{
+    flags = cv::updateContinuityFlag(flags, dims, size.p, step.p);
 }
 
 void finalizeHdr(Mat& m)
 {
-    updateContinuityFlag(m);
+    m.updateContinuityFlag();
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
@@ -350,15 +355,16 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if(!a)
             a = a0;
-        CV_TRY
+        try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
-        CV_CATCH_ALL
+        catch (...)
         {
-            if(a != a0)
-                u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            if (a == a0)
+                throw;
+            u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -405,12 +411,12 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
         rs[1] = _colRange;
         for( int i = 2; i < m.dims; i++ )
             rs[i] = Range::all();
-        *this = m(rs);
+        *this = m(rs.data());
         return;
     }
 
     *this = m;
-    CV_TRY
+    try
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -427,18 +433,16 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
                        && _colRange.end <= m.cols );
             cols = _colRange.size();
             data += _colRange.start*elemSize();
-            flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
             flags |= SUBMATRIX_FLAG;
         }
     }
-    CV_CATCH_ALL
+    catch(...)
     {
         release();
-        CV_RETHROW();
+        throw;
     }
 
-    if( rows == 1 )
-        flags |= CONTINUOUS_FLAG;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -455,8 +459,6 @@ Mat::Mat(const Mat& m, const Rect& roi)
     allocator(m.allocator), u(m.u), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
-    flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
-    flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
 
     size_t esz = CV_ELEM_SIZE(flags);
     data += roi.x*esz;
@@ -468,6 +470,7 @@ Mat::Mat(const Mat& m, const Rect& roi)
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
+    updateContinuityFlag();
 
     if( rows <= 0 || cols <= 0 )
     {
@@ -522,7 +525,7 @@ Mat::Mat(const Mat& m, const Range* ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
@@ -548,7 +551,7 @@ Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
-    updateContinuityFlag(*this);
+    updateContinuityFlag();
 }
 
 
@@ -575,10 +578,7 @@ Mat Mat::diag(int d) const
     m.size[1] = m.cols = 1;
     m.step[0] += (len > 1 ? esz : 0);
 
-    if( m.rows > 1 )
-        m.flags &= ~CONTINUOUS_FLAG;
-    else
-        m.flags |= CONTINUOUS_FLAG;
+    m.updateContinuityFlag();
 
     if( size() != Size(1,1) )
         m.flags |= SUBMATRIX_FLAG;
@@ -597,28 +597,24 @@ void Mat::pop_back(size_t nelems)
     {
         size.p[0] -= (int)nelems;
         dataend -= nelems*step.p[0];
-        /*if( size.p[0] <= 1 )
-        {
-            if( dims <= 2 )
-                flags |= CONTINUOUS_FLAG;
-            else
-                updateContinuityFlag(*this);
-        }*/
     }
 }
 
 
 void Mat::push_back_(const void* elem)
 {
-    int r = size.p[0];
+    size_t r = size.p[0];
     if( isSubmatrix() || dataend + step.p[0] > datalimit )
         reserve( std::max(r + 1, (r*3+1)/2) );
 
     size_t esz = elemSize();
     memcpy(data + r*step.p[0], elem, esz);
-    size.p[0] = r + 1;
+    size.p[0] = int(r + 1);
     dataend += step.p[0];
-    if( esz < step.p[0] )
+    uint64 tsz = size.p[0];
+    for( int i = 1; i < dims; i++ )
+        tsz *= size.p[i];
+    if( esz < step.p[0] || tsz != (uint64)(int)tsz )
         flags &= ~CONTINUOUS_FLAG;
 }
 
@@ -714,7 +710,8 @@ void Mat::resize(size_t nelems, const Scalar& s)
 
 void Mat::push_back(const Mat& elems)
 {
-    int r = size.p[0], delta = elems.size.p[0];
+    size_t r = size.p[0];
+    size_t delta = elems.size.p[0];
     if( delta == 0 )
         return;
     if( this == &elems )
@@ -731,7 +728,7 @@ void Mat::push_back(const Mat& elems)
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
-    size.p[0] = r;
+    size.p[0] = int(r);
     if( !eq )
         CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
@@ -740,7 +737,7 @@ void Mat::push_back(const Mat& elems)
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
-    size.p[0] += delta;
+    size.p[0] += int(delta);
     dataend += step.p[0]*delta;
 
     //updateContinuityFlag(*this);
@@ -749,7 +746,7 @@ void Mat::push_back(const Mat& elems)
         memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
     else
     {
-        Mat part = rowRange(r, r + delta);
+        Mat part = rowRange(int(r), int(r + delta));
         elems.copyTo(part);
     }
 }
@@ -792,10 +789,7 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
-    if( esz*cols == step[0] || rows == 1 )
-        flags |= CONTINUOUS_FLAG;
-    else
-        flags &= ~CONTINUOUS_FLAG;
+    updateContinuityFlag();
     return *this;
 }
 
@@ -905,7 +899,7 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
-        setSize(hdr, _newndims, (int*)newsz_buf, NULL, true);
+        setSize(hdr, _newndims, newsz_buf.data(), NULL, true);
 
         return hdr;
     }
@@ -947,6 +941,79 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
     ? (int)(total()*channels()/_elemChannels) : -1;
+}
+
+
+static inline Size getContinuousSize_(int flags, int cols, int rows, int widthScale)
+{
+    int64 sz = (int64)cols * rows * widthScale;
+    bool has_int_overflow = sz >= INT_MAX;
+    bool isContiguous = (flags & Mat::CONTINUOUS_FLAG) != 0;
+    return (isContiguous && !has_int_overflow)
+            ? Size((int)sz, 1)
+            : Size(cols * widthScale, rows);
+}
+
+Size getContinuousSize2D(Mat& m1, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    return getContinuousSize_(m1.flags,
+                              m1.cols, m1.rows, widthScale);
+}
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    CV_CheckLE(m2.dims, 2, "");
+    const Size sz1 = m1.size();
+    if (sz1 != m2.size())  // reshape all matrixes to the same size (#4159)
+    {
+        size_t total_sz = m1.total();
+        CV_CheckEQ(total_sz, m2.total(), "");
+        bool is_m1_vector = m1.cols == 1 || m1.rows == 1;
+        bool is_m2_vector = m2.cols == 1 || m2.rows == 1;
+        CV_Assert(is_m1_vector); CV_Assert(is_m2_vector);
+        int total = (int)total_sz;  // vector-column
+        bool isContiguous = ((m1.flags & m2.flags) & Mat::CONTINUOUS_FLAG) != 0;
+        bool has_int_overflow = ((int64)total_sz * widthScale) >= INT_MAX;
+        if (isContiguous && !has_int_overflow)
+            total = 1; // vector-row
+        m1 = m1.reshape(0, total);
+        m2 = m2.reshape(0, total);
+        CV_Assert(m1.cols == m2.cols && m1.rows == m2.rows);
+        return Size(m1.cols * widthScale, m1.rows);
+    }
+    return getContinuousSize_(m1.flags & m2.flags,
+                              m1.cols, m1.rows, widthScale);
+}
+
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale)
+{
+    CV_CheckLE(m1.dims, 2, "");
+    CV_CheckLE(m2.dims, 2, "");
+    CV_CheckLE(m3.dims, 2, "");
+    const Size sz1 = m1.size();
+    if (sz1 != m2.size() || sz1 != m3.size())  // reshape all matrixes to the same size (#4159)
+    {
+        size_t total_sz = m1.total();
+        CV_CheckEQ(total_sz, m2.total(), "");
+        CV_CheckEQ(total_sz, m3.total(), "");
+        bool is_m1_vector = m1.cols == 1 || m1.rows == 1;
+        bool is_m2_vector = m2.cols == 1 || m2.rows == 1;
+        bool is_m3_vector = m3.cols == 1 || m3.rows == 1;
+        CV_Assert(is_m1_vector); CV_Assert(is_m2_vector); CV_Assert(is_m3_vector);
+        int total = (int)total_sz;  // vector-column
+        bool isContiguous = ((m1.flags & m2.flags & m3.flags) & Mat::CONTINUOUS_FLAG) != 0;
+        bool has_int_overflow = ((int64)total_sz * widthScale) >= INT_MAX;
+        if (isContiguous && !has_int_overflow)
+            total = 1; // vector-row
+        m1 = m1.reshape(0, total);
+        m2 = m2.reshape(0, total);
+        m3 = m3.reshape(0, total);
+        CV_Assert(m1.cols == m2.cols && m1.rows == m2.rows && m1.cols == m3.cols && m1.rows == m3.rows);
+        return Size(m1.cols * widthScale, m1.rows);
+    }
+    return getContinuousSize_(m1.flags & m2.flags & m3.flags,
+                              m1.cols, m1.rows, widthScale);
 }
 
 } // cv::

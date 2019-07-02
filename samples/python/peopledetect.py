@@ -30,17 +30,15 @@ def draw_detections(img, rects, thickness = 1):
         cv.rectangle(img, (x+pad_w, y+pad_h), (x+w-pad_w, y+h-pad_h), (0, 255, 0), thickness)
 
 
-if __name__ == '__main__':
+def main():
     import sys
     from glob import glob
     import itertools as it
 
-    print(__doc__)
-
     hog = cv.HOGDescriptor()
     hog.setSVMDetector( cv.HOGDescriptor_getDefaultPeopleDetector() )
 
-    default = ['../data/basketball2.png '] if len(sys.argv[1:]) == 0 else []
+    default = [cv.samples.findFile('basketball2.png')] if len(sys.argv[1:]) == 0 else []
 
     for fn in it.chain(*map(glob, default + sys.argv[1:])):
         print(fn, ' - ',)
@@ -68,4 +66,11 @@ if __name__ == '__main__':
         ch = cv.waitKey()
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

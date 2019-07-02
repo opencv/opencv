@@ -42,7 +42,7 @@ TEST(Imgcodecs_Png, regression_ImreadVSCvtColor)
     Mat original_image = imread(imgName);
     Mat gray_by_codec = imread(imgName, IMREAD_GRAYSCALE);
     Mat gray_by_cvt;
-    cvtColor(original_image, gray_by_cvt, CV_BGR2GRAY);
+    cvtColor(original_image, gray_by_cvt, COLOR_BGR2GRAY);
 
     Mat diff;
     absdiff(gray_by_codec, gray_by_cvt, diff);

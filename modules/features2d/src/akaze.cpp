@@ -60,8 +60,8 @@ namespace cv
     class AKAZE_Impl : public AKAZE
     {
     public:
-        AKAZE_Impl(int _descriptor_type, int _descriptor_size, int _descriptor_channels,
-                 float _threshold, int _octaves, int _sublevels, int _diffusivity)
+        AKAZE_Impl(DescriptorType _descriptor_type, int _descriptor_size, int _descriptor_channels,
+                 float _threshold, int _octaves, int _sublevels, KAZE::DiffusivityType _diffusivity)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
@@ -77,8 +77,8 @@ namespace cv
 
         }
 
-        void setDescriptorType(int dtype) CV_OVERRIDE { descriptor = dtype; }
-        int getDescriptorType() const CV_OVERRIDE { return descriptor; }
+        void setDescriptorType(DescriptorType dtype) CV_OVERRIDE{ descriptor = dtype; }
+        DescriptorType getDescriptorType() const CV_OVERRIDE{ return descriptor; }
 
         void setDescriptorSize(int dsize) CV_OVERRIDE { descriptor_size = dsize; }
         int getDescriptorSize() const CV_OVERRIDE { return descriptor_size; }
@@ -95,8 +95,8 @@ namespace cv
         void setNOctaveLayers(int octaveLayers_) CV_OVERRIDE { sublevels = octaveLayers_; }
         int getNOctaveLayers() const CV_OVERRIDE { return sublevels; }
 
-        void setDiffusivity(int diff_) CV_OVERRIDE { diffusivity = diff_; }
-        int getDiffusivity() const CV_OVERRIDE { return diffusivity; }
+        void setDiffusivity(KAZE::DiffusivityType diff_) CV_OVERRIDE{ diffusivity = diff_; }
+        KAZE::DiffusivityType getDiffusivity() const CV_OVERRIDE{ return diffusivity; }
 
         // returns the descriptor size in bytes
         int descriptorSize() const CV_OVERRIDE
@@ -167,7 +167,7 @@ namespace cv
                               OutputArray descriptors,
                               bool useProvidedKeypoints) CV_OVERRIDE
         {
-            CV_INSTRUMENT_REGION()
+            CV_INSTRUMENT_REGION();
 
             CV_Assert( ! image.empty() );
 
@@ -218,28 +218,28 @@ namespace cv
 
         void read(const FileNode& fn) CV_OVERRIDE
         {
-            descriptor = (int)fn["descriptor"];
+            descriptor = static_cast<DescriptorType>((int)fn["descriptor"]);
             descriptor_channels = (int)fn["descriptor_channels"];
             descriptor_size = (int)fn["descriptor_size"];
             threshold = (float)fn["threshold"];
             octaves = (int)fn["octaves"];
             sublevels = (int)fn["sublevels"];
-            diffusivity = (int)fn["diffusivity"];
+            diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
         }
 
-        int descriptor;
+        DescriptorType descriptor;
         int descriptor_channels;
         int descriptor_size;
         float threshold;
         int octaves;
         int sublevels;
-        int diffusivity;
+        KAZE::DiffusivityType diffusivity;
     };
 
-    Ptr<AKAZE> AKAZE::create(int descriptor_type,
+    Ptr<AKAZE> AKAZE::create(DescriptorType descriptor_type,
                              int descriptor_size, int descriptor_channels,
                              float threshold, int octaves,
-                             int sublevels, int diffusivity)
+                             int sublevels, KAZE::DiffusivityType diffusivity)
     {
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
                                    threshold, octaves, sublevels, diffusivity);

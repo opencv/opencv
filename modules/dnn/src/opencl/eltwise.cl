@@ -40,9 +40,9 @@
 //
 //M*/
 
-#define Dtype float
-#define Dtype4 float4
-#define Dtype8 float8
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
 
 __kernel void op_sum4(__global const Dtype * A,
                       __global const Dtype * B,
@@ -73,20 +73,20 @@ __kernel void op_sum4(__global const Dtype * A,
         a2 = vload4(i, src0_read + 2 * A_col_size);
         a3 = vload4(i, src0_read + 3 * A_col_size);
 
-        dot0 = a0 * coeff1 + b0 * coeff2;
-        dot1 = a1 * coeff1 + b1 * coeff2;
-        dot2 = a2 * coeff1 + b2 * coeff2;
-        dot3 = a3 * coeff1 + b3 * coeff2;
+        dot0 = a0 * (Dtype4)coeff1 + b0 * (Dtype4)coeff2;
+        dot1 = a1 * (Dtype4)coeff1 + b1 * (Dtype4)coeff2;
+        dot2 = a2 * (Dtype4)coeff1 + b2 * (Dtype4)coeff2;
+        dot3 = a3 * (Dtype4)coeff1 + b3 * (Dtype4)coeff2;
 #else
         a0 = vload4(i, dst0_read);
         a1 = vload4(i, dst0_read + A_col_size);
         a2 = vload4(i, dst0_read + 2 * A_col_size);
         a3 = vload4(i, dst0_read + 3 * A_col_size);
 
-        dot0 = a0 + b0 * coeff2;
-        dot1 = a1 + b1 * coeff2;
-        dot2 = a2 + b2 * coeff2;
-        dot3 = a3 + b3 * coeff2;
+        dot0 = a0 + b0 * (Dtype4)coeff2;
+        dot1 = a1 + b1 * (Dtype4)coeff2;
+        dot2 = a2 + b2 * (Dtype4)coeff2;
+        dot3 = a3 + b3 * (Dtype4)coeff2;
 #endif
         vstore4(dot0, i, dst0_read);
         vstore4(dot1, i, dst0_read + A_col_size);

@@ -65,7 +65,7 @@ that should be used to find the match.
     -#  **Mask image (M):** The mask, a grayscale image that masks the template
 
 
--   Only two matching methods currently accept a mask: CV_TM_SQDIFF and CV_TM_CCORR_NORMED (see
+-   Only two matching methods currently accept a mask: TM_SQDIFF and TM_CCORR_NORMED (see
     below for explanation of all the matching methods available in opencv).
 
 
@@ -86,23 +86,23 @@ that should be used to find the match.
 Good question. OpenCV implements Template matching in the function **matchTemplate()**. The
 available methods are 6:
 
--#  **method=CV_TM_SQDIFF**
+-#  **method=TM_SQDIFF**
 
     \f[R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2\f]
 
--#  **method=CV_TM_SQDIFF_NORMED**
+-#  **method=TM_SQDIFF_NORMED**
 
     \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
 
--#  **method=CV_TM_CCORR**
+-#  **method=TM_CCORR**
 
     \f[R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))\f]
 
--#  **method=CV_TM_CCORR_NORMED**
+-#  **method=TM_CCORR_NORMED**
 
     \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
 
--#  **method=CV_TM_CCOEFF**
+-#  **method=TM_CCOEFF**
 
     \f[R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I'(x+x',y+y'))\f]
 
@@ -110,7 +110,7 @@ available methods are 6:
 
     \f[\begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array}\f]
 
--#  **method=CV_TM_CCOEFF_NORMED**
+-#  **method=TM_CCOEFF_NORMED**
 
     \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }\f]
 

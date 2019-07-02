@@ -702,4 +702,26 @@ TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
 TEST(ML_EM, save_load) { CV_EMTest_SaveLoad test; test.safe_run(); }
 TEST(ML_EM, classification) { CV_EMTest_Classification test; test.safe_run(); }
 
+TEST(ML_KNearest, regression_12347)
+{
+    Mat xTrainData = (Mat_<float>(5,2) << 1, 1.1, 1.1, 1, 2, 2, 2.1, 2, 2.1, 2.1);
+    Mat yTrainLabels = (Mat_<float>(5,1) << 1, 1, 2, 2, 2);
+    Ptr<KNearest> knn = KNearest::create();
+    knn->train(xTrainData, ml::ROW_SAMPLE, yTrainLabels);
+
+    Mat xTestData = (Mat_<float>(2,2) << 1.1, 1.1, 2, 2.2);
+    Mat zBestLabels, neighbours, dist;
+    // check output shapes:
+    int K = 16, Kexp = std::min(K, xTrainData.rows);
+    knn->findNearest(xTestData, K, zBestLabels, neighbours, dist);
+    EXPECT_EQ(xTestData.rows, zBestLabels.rows);
+    EXPECT_EQ(neighbours.cols, Kexp);
+    EXPECT_EQ(dist.cols, Kexp);
+    // see if the result is still correct:
+    K = 2;
+    knn->findNearest(xTestData, K, zBestLabels, neighbours, dist);
+    EXPECT_EQ(1, zBestLabels.at<float>(0,0));
+    EXPECT_EQ(2, zBestLabels.at<float>(1,0));
+}
+
 }} // namespace

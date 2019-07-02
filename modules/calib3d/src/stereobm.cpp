@@ -204,10 +204,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         tab[x] = (uchar)(x - OFS < -ftzero ? 0 : x - OFS > ftzero ? ftzero*2 : x - OFS + ftzero);
     uchar val0 = tab[0 + OFS];
 
-#if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-#endif
-
     for( y = 0; y < size.height-1; y += 2 )
     {
         const uchar* srow1 = src.ptr<uchar>(y);
@@ -221,7 +217,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         x = 1;
 
 #if CV_SIMD128
-        if( useSIMD )
         {
             v_int16x8 ftz = v_setall_s16((short) ftzero);
             v_int16x8 ftz2 = v_setall_s16((short)(ftzero*2));
@@ -268,7 +263,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         uchar* dptr = dst.ptr<uchar>(y);
         x = 0;
 #if CV_SIMD128
-        if( useSIMD )
         {
             v_uint8x16 val0_16 = v_setall_u8(val0);
             for(; x <= size.width-16; x+=16 )
@@ -284,7 +278,39 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
 static const int DISPARITY_SHIFT_16S = 4;
 static const int DISPARITY_SHIFT_32S = 8;
 
+template <typename T>
+struct dispShiftTemplate
+{ };
+
+template<>
+struct dispShiftTemplate<short>
+{
+    enum { value = DISPARITY_SHIFT_16S };
+};
+
+template<>
+struct dispShiftTemplate<int>
+{
+    enum { value = DISPARITY_SHIFT_32S };
+};
+
+template <typename T>
+inline T dispDescale(int /*v1*/, int /*v2*/, int /*d*/);
+
+template<>
+inline short dispDescale(int v1, int v2, int d)
+{
+    return (short)((v1*256 + (d != 0 ? v2*256/d : 0) + 15) >> 4);
+}
+
+template <>
+inline int dispDescale(int v1, int v2, int d)
+{
+    return (int)(v1*256 + (d != 0 ? v2*256/d : 0)); // no need to add 127, this will be converted to float
+}
+
 #if CV_SIMD128
+template <typename dType>
 static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                                             Mat& disp, Mat& cost, StereoBMParams& state,
                                             uchar* buf, int _dy0, int _dy1 )
@@ -302,7 +328,8 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
-    short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT_16S);
+    const int disp_shift = dispShiftTemplate<dType>::value;
+    dType FILTERED = (dType)((mindisp - 1) << disp_shift);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
     int *htext;
@@ -310,7 +337,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     const uchar* lptr0 = left.ptr() + lofs;
     const uchar* rptr0 = right.ptr() + rofs;
     const uchar *lptr, *lptr_sub, *rptr;
-    short* dptr = disp.ptr<short>();
+    dType* dptr = disp.ptr<dType>();
     int sstep = (int)left.step;
     int dstep = (int)(disp.step/sizeof(dptr[0]));
     int cstep = (height + dy0 + dy1)*ndisp;
@@ -527,10 +554,10 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
             {
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, p-n, d);
             }
             else
-                dptr[y*dstep] = (short)((ndisp - mind - 1 + mindisp)*16);
+                dptr[y*dstep] = dispDescale<dType>(ndisp - mind - 1 + mindisp, 0, 0);
             costptr[y*coststep] = sad[mind];
         }
     }
@@ -540,8 +567,8 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
 template <typename mType>
 static void
 findStereoCorrespondenceBM( const Mat& left, const Mat& right,
-                           Mat& disp, Mat& cost, const StereoBMParams& state,
-                           uchar* buf, int _dy0, int _dy1, const int disp_shift )
+                            Mat& disp, Mat& cost, const StereoBMParams& state,
+                            uchar* buf, int _dy0, int _dy1 )
 {
 
     const int ALIGN = 16;
@@ -557,11 +584,10 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
     int uniquenessRatio = state.uniquenessRatio;
+    const int disp_shift = dispShiftTemplate<mType>::value;
     mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
 #if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-    if( useSIMD )
     {
         CV_Assert (ndisp % 8 == 0);
     }
@@ -603,7 +629,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int lval = lptr[0];
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint8x16 lv = v_setall_u8((uchar)lval);
 
@@ -672,7 +697,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int lval = lptr[0];
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint8x16 lv = v_setall_u8((uchar)lval);
                 for( ; d <= ndisp - 16; d += 16 )
@@ -735,7 +759,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         {
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 for( d = 0; d <= ndisp-8; d += 8 )
                 {
@@ -765,7 +788,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_int32x4 d0_4 = v_int32x4(0, 1, 2, 3);
                 v_int32x4 dd_4 = v_setall_s32(4);
@@ -849,8 +871,8 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (mType)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15)
-                                 >> (DISPARITY_SHIFT_32S - disp_shift));
+                dptr[y*dstep] = dispDescale<mType>(ndisp - mind - 1 + mindisp, p-n, d);
+
                 costptr[y*coststep] = sad[mind];
             }
         }
@@ -969,9 +991,6 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         validDisparityRect = _validDisparityRect;
         slidingSumBuf = &_slidingSumBuf;
         cost = &_cost;
-#if CV_SIMD128
-        useSIMD = hasSIMD128();
-#endif
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -980,7 +999,10 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         int _row0 = std::min(cvRound(range.start * rows / nstripes), rows);
         int _row1 = std::min(cvRound(range.end * rows / nstripes), rows);
         uchar *ptr = slidingSumBuf->ptr() + range.start * stripeBufSize;
-        int FILTERED = (state->minDisparity - 1)*16;
+
+        int dispShift = disp->type() == CV_16S ? DISPARITY_SHIFT_16S :
+                                                 DISPARITY_SHIFT_32S;
+        int FILTERED = (state->minDisparity - 1) << dispShift;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
         if( roi.height == 0 )
@@ -1006,17 +1028,20 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         Mat cost_i = state->disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
 #if CV_SIMD128
-        if( useSIMD && useShorts )
+        if (useShorts)
         {
-            findStereoCorrespondenceBM_SIMD( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            if( disp_i.type() == CV_16S)
+                findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
+            else
+                findStereoCorrespondenceBM_SIMD<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1);
         }
         else
 #endif
         {
             if( disp_i.type() == CV_16S )
-                findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1, DISPARITY_SHIFT_16S );
+                findStereoCorrespondenceBM<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
             else
-                findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1, DISPARITY_SHIFT_32S );
+                findStereoCorrespondenceBM<int>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
         }
 
         if( state->disp12MaxDiff >= 0 )
@@ -1043,7 +1068,6 @@ protected:
     size_t stripeBufSize;
     bool useShorts;
     Rect validDisparityRect;
-    bool useSIMD;
 };
 
 class StereoBMImpl CV_FINAL : public StereoBM
@@ -1061,7 +1085,7 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
     {
-        CV_INSTRUMENT_REGION()
+        CV_INSTRUMENT_REGION();
 
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
         Size leftsize = leftarr.size();
@@ -1090,7 +1114,7 @@ public:
             CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
-            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisble by 16" );
+            CV_Error( Error::StsOutOfRange, "numDisparities must be positive and divisible by 16" );
 
         if( params.textureThreshold < 0 )
             CV_Error( Error::StsOutOfRange, "texture threshold must be non-negative" );
@@ -1104,7 +1128,6 @@ public:
         else
             disp_shift = DISPARITY_SHIFT_32S;
 
-
         int FILTERED = (params.minDisparity - 1) << disp_shift;
 
 #ifdef HAVE_OPENCL
@@ -1115,6 +1138,9 @@ public:
             {
                 if(ocl_stereobm(left, right, disparr, &params))
                 {
+                    disp_shift = DISPARITY_SHIFT_16S;
+                    FILTERED = (params.minDisparity - 1) << disp_shift;
+
                     if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
                         filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
                     if (dtype == CV_32F)
@@ -1184,8 +1210,8 @@ public:
         parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
 
         Rect validDisparityRect(0, 0, width, height), R1 = params.roi1, R2 = params.roi2;
-        validDisparityRect = getValidDisparityROI(R1.area() > 0 ? R1 : validDisparityRect,
-                                                  R2.area() > 0 ? R2 : validDisparityRect,
+        validDisparityRect = getValidDisparityROI(!R1.empty() ? R1 : validDisparityRect,
+                                                  !R2.empty() ? R2 : validDisparityRect,
                                                   params.minDisparity, params.numDisparities,
                                                   params.SADWindowSize);
 

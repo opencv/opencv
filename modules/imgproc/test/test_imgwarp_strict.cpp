@@ -527,7 +527,7 @@ double CV_Resize_Test::getWeight(double a, double b, int x)
 void CV_Resize_Test::resize_area()
 {
     Size ssize = src.size(), dsize = reference_dst.size();
-    CV_Assert(ssize.area() > 0 && dsize.area() > 0);
+    CV_Assert(!ssize.empty() && !dsize.empty());
     int cn = src.channels();
 
     CV_Assert(scale_x >= 1.0 && scale_y >= 1.0);
@@ -654,7 +654,7 @@ void CV_Resize_Test::generate_buffer(double scale, dim& _dim)
 void CV_Resize_Test::resize_generic()
 {
     Size dsize = reference_dst.size(), ssize = src.size();
-    CV_Assert(dsize.area() > 0 && ssize.area() > 0);
+    CV_Assert(!dsize.empty() && !ssize.empty());
 
     dim dims[] = { dim(dsize.width), dim(dsize.height) };
     if (interpolation == INTER_NEAREST)
@@ -884,7 +884,7 @@ void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
     CV_Assert(mapx.type() == CV_16SC2 && mapy.empty());
 
     Size ssize = _src.size(), dsize = _dst.size();
-    CV_Assert(ssize.area() > 0 && dsize.area() > 0);
+    CV_Assert(!ssize.empty() && !dsize.empty());
     int cn = _src.channels();
 
     for (int dy = 0; dy < dsize.height; ++dy)
@@ -1106,8 +1106,8 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
 {
     Size dsize = _dst.size();
 
-    CV_Assert(_src.size().area() > 0);
-    CV_Assert(dsize.area() > 0);
+    CV_Assert(!_src.empty());
+    CV_Assert(!dsize.empty());
     CV_Assert(_src.type() == _dst.type());
 
     Mat tM;
@@ -1228,8 +1228,8 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
 {
     Size ssize = _src.size(), dsize = _dst.size();
 
-    CV_Assert(ssize.area() > 0);
-    CV_Assert(dsize.area() > 0);
+    CV_Assert(!ssize.empty());
+    CV_Assert(!dsize.empty());
     CV_Assert(_src.type() == _dst.type());
 
     if (M.depth() != CV_64F)
