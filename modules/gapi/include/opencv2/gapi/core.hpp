@@ -1352,7 +1352,7 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see cv::InterpolationFlags
 
-@sa  warpAffine, warpPerspective, remap
+@sa  warpAffine, warpPerspective, remap, resizeP
  */
 GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
@@ -1368,7 +1368,7 @@ Output image size will have the size dsize, the depth of output is the same as o
 @param dsize output image size;
 @param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
 
-@sa  warpAffine, warpPerspective, remap
+@sa  warpAffine, warpPerspective, remap, resize
  */
 GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
