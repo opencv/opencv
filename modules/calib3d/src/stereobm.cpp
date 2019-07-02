@@ -534,12 +534,12 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                     v_expand(sad8, sad4_l, sad4_h);
                     mask4 = thresh4 > sad4_l;
                     mask4 = mask4 & ((d1 > d4) | (d4 > d2));
-                    if( v_signmask(mask4) )
+                    if( v_check_any(mask4) )
                         break;
                     d4 += dd_4;
                     mask4 = thresh4 > sad4_h;
                     mask4 = mask4 & ((d1 > d4) | (d4 > d2));
-                    if( v_signmask(mask4) )
+                    if( v_check_any(mask4) )
                         break;
                     d4 += dd_4;
                 }

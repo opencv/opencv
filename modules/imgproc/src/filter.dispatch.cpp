@@ -1160,9 +1160,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
             corrDepth = ddepth == CV_64F ? CV_64F : CV_32F;
             temp.create(Size(width, height), CV_MAKETYPE(corrDepth, dst_channels));
         }
-        crossCorr(src, kernel, temp, src.size(),
-                  CV_MAKETYPE(corrDepth, src_channels),
-                  anchor, 0, borderType);
+        crossCorr(src, kernel, temp, anchor, 0, borderType);
         add(temp, delta, temp);
         if (temp.data != dst_data) {
             temp.convertTo(dst, dst.type());
@@ -1172,9 +1170,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
             temp = Mat(Size(width, height), dtype, dst_data, dst_step);
         else
             temp.create(Size(width, height), dtype);
-        crossCorr(src, kernel, temp, src.size(),
-                  CV_MAKETYPE(ddepth, src_channels),
-                  anchor, delta, borderType);
+        crossCorr(src, kernel, temp, anchor, delta, borderType);
         if (temp.data != dst_data)
             temp.copyTo(dst);
     }
