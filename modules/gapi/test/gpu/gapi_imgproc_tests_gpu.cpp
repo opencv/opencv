@@ -11,7 +11,7 @@
 
 namespace
 {
-const auto getArgsImgprocGpu = [] () { return cv::compile_args(cv::gapi::imgproc::gpu::kernels()); };
+#define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::imgproc::gpu::kernels()); }
 }  // anonymous namespace
 
 namespace opencv_test
@@ -23,7 +23,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1, CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                                 Values(3, 4, 5, 7),
                                 Values(cv::BORDER_DEFAULT)));
@@ -33,7 +33,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1, CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                                 Values(3,5),
                                 Values(cv::BORDER_DEFAULT)));  //TODO: 8UC1 doesn't work
@@ -44,7 +44,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_8U, SepFilterTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceFilter(1e-4f, 0.01).to_compare_obj()),
                                 Values(3)));
 
@@ -53,7 +53,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestGPU_other, SepFilterTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1, CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceFilter(1e-4f, 0.01).to_compare_obj()),
                                 Values(3)));
 
@@ -62,7 +62,7 @@ INSTANTIATE_TEST_CASE_P(BlurTestGPU, BlurTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
                                 Values(3,5),
                                 Values(cv::BORDER_DEFAULT)));
@@ -72,7 +72,7 @@ INSTANTIATE_TEST_CASE_P(gaussBlurTestGPU, GaussianBlurTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceFilter(1e-5f, 0.01).to_compare_obj()),
                                 Values(3)));  // FIXIT 5
 
@@ -81,7 +81,7 @@ INSTANTIATE_TEST_CASE_P(MedianBlurTestGPU, MedianBlurTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(3, 5)));
 
@@ -90,7 +90,7 @@ INSTANTIATE_TEST_CASE_P(ErodeTestGPU, ErodeTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(cv::MorphShapes::MORPH_RECT,
@@ -102,7 +102,7 @@ INSTANTIATE_TEST_CASE_P(Erode3x3TestGPU, Erode3x3Test,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(1,2,4)));
 
@@ -111,7 +111,7 @@ INSTANTIATE_TEST_CASE_P(DilateTestGPU, DilateTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(cv::MorphShapes::MORPH_RECT,
@@ -123,7 +123,7 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3TestGPU, Dilate3x3Test,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj()),
                                 Values(1,2,4)));
 
@@ -132,7 +132,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU, SobelTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
                                 Values(3, 5),
                                 Values(0, 1),
@@ -143,7 +143,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestGPU32F, SobelTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_32F),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
                                 Values(3, 5),
                                 Values(0, 1),
@@ -154,7 +154,7 @@ INSTANTIATE_TEST_CASE_P(EqHistTestGPU, EqHistTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsExact().to_compare_obj())));  // FIXIT Non reliable check
 
 INSTANTIATE_TEST_CASE_P(CannyTestGPU, CannyTest,
@@ -162,7 +162,7 @@ INSTANTIATE_TEST_CASE_P(CannyTestGPU, CannyTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsSimilarPoints(0, 0.05).to_compare_obj()),
                                 Values(3.0, 120.0),
                                 Values(125.0, 240.0),
@@ -174,7 +174,7 @@ INSTANTIATE_TEST_CASE_P(RGB2GrayTestGPU, RGB2GrayTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2GrayTestGPU, BGR2GrayTest,
@@ -182,7 +182,7 @@ INSTANTIATE_TEST_CASE_P(BGR2GrayTestGPU, BGR2GrayTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUVTestGPU, RGB2YUVTest,
@@ -190,7 +190,7 @@ INSTANTIATE_TEST_CASE_P(RGB2YUVTestGPU, RGB2YUVTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(YUV2RGBTestGPU, YUV2RGBTest,
@@ -198,7 +198,7 @@ INSTANTIATE_TEST_CASE_P(YUV2RGBTestGPU, YUV2RGBTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2LabTestGPU, RGB2LabTest,
@@ -206,7 +206,7 @@ INSTANTIATE_TEST_CASE_P(RGB2LabTestGPU, RGB2LabTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(AbsSimilarPoints(1, 0.05).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2LUVTestGPU, BGR2LUVTest,
@@ -214,7 +214,7 @@ INSTANTIATE_TEST_CASE_P(BGR2LUVTestGPU, BGR2LUVTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(5e-3, 6).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(LUV2BGRTestGPU, LUV2BGRTest,
@@ -222,7 +222,7 @@ INSTANTIATE_TEST_CASE_P(LUV2BGRTestGPU, LUV2BGRTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2YUVTestGPU, BGR2YUVTest,
@@ -230,7 +230,7 @@ INSTANTIATE_TEST_CASE_P(BGR2YUVTestGPU, BGR2YUVTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(YUV2BGRTestGPU, YUV2BGRTest,
@@ -238,7 +238,7 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRTestGPU, YUV2BGRTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(getArgsImgprocGpu),
+                                Values(IMGPROC_GPU),
                                 Values(ToleranceColor(1e-3).to_compare_obj())));
 
 } // opencv_test
