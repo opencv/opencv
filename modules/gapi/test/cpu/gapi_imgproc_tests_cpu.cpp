@@ -25,7 +25,7 @@ INSTANTIATE_TEST_CASE_P(Filter2DTestCPU, Filter2DTest,
                                         cv::Size(128, 128)),
                                 Values(-1, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 4, 5, 7),
                                 Values(cv::BORDER_DEFAULT)));
 
@@ -35,7 +35,7 @@ INSTANTIATE_TEST_CASE_P(BoxFilterTestCPU, BoxFilterTest,
                                        cv::Size(640, 480)),
                                 Values(-1, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsTolerance(0).to_compare_f()),
+                                Values(AbsTolerance(0).to_compare_obj()),
                                 Values(3,5),
                                 Values(cv::BORDER_DEFAULT)));
 
@@ -45,7 +45,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestCPU_8U, SepFilterTest,
                                         cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3)));
 
 INSTANTIATE_TEST_CASE_P(SepFilterTestCPU_other, SepFilterTest,
@@ -54,7 +54,7 @@ INSTANTIATE_TEST_CASE_P(SepFilterTestCPU_other, SepFilterTest,
                                        cv::Size(640, 480)),
                                 Values(-1, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3)));
 
 INSTANTIATE_TEST_CASE_P(BlurTestCPU, BlurTest,
@@ -63,7 +63,7 @@ INSTANTIATE_TEST_CASE_P(BlurTestCPU, BlurTest,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsTolerance(0.0).to_compare_f()),
+                                Values(AbsTolerance(0.0).to_compare_obj()),
                                 Values(3,5),
                                 Values(cv::BORDER_DEFAULT)));
 
@@ -73,7 +73,7 @@ INSTANTIATE_TEST_CASE_P(gaussBlurTestCPU, GaussianBlurTest,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5)));
 
 INSTANTIATE_TEST_CASE_P(MedianBlurTestCPU, MedianBlurTest,
@@ -82,7 +82,7 @@ INSTANTIATE_TEST_CASE_P(MedianBlurTestCPU, MedianBlurTest,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5)));
 
 INSTANTIATE_TEST_CASE_P(ErodeTestCPU, ErodeTest,
@@ -91,7 +91,7 @@ INSTANTIATE_TEST_CASE_P(ErodeTestCPU, ErodeTest,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(cv::MorphShapes::MORPH_RECT,
                                        cv::MorphShapes::MORPH_CROSS,
@@ -103,7 +103,7 @@ INSTANTIATE_TEST_CASE_P(Erode3x3TestCPU, Erode3x3Test,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(1,2,4)));
 
 INSTANTIATE_TEST_CASE_P(DilateTestCPU, DilateTest,
@@ -112,7 +112,7 @@ INSTANTIATE_TEST_CASE_P(DilateTestCPU, DilateTest,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(cv::MorphShapes::MORPH_RECT,
                                        cv::MorphShapes::MORPH_CROSS,
@@ -124,7 +124,7 @@ INSTANTIATE_TEST_CASE_P(Dilate3x3TestCPU, Dilate3x3Test,
                                        cv::Size(640, 480)),
                                 Values(SAME_TYPE),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(1,2,4)));
 
 INSTANTIATE_TEST_CASE_P(SobelTestCPU, SobelTest,
@@ -133,7 +133,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestCPU, SobelTest,
                                        cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(0, 1),
                                 Values(1, 2)));
@@ -144,7 +144,7 @@ INSTANTIATE_TEST_CASE_P(SobelTestCPU32F, SobelTest,
                                        cv::Size(640, 480)),
                                 Values(CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(0, 1),
                                 Values(1, 2)));
@@ -155,7 +155,7 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU, SobelXYTest,
                                        cv::Size(640, 480)),
                                 Values(-1, CV_16S, CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(1, 2),
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
@@ -167,7 +167,7 @@ INSTANTIATE_TEST_CASE_P(SobelXYTestCPU32F, SobelXYTest,
                                        cv::Size(640, 480)),
                                 Values(CV_32F),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(3, 5),
                                 Values(1, 2),
                                 Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT),
@@ -179,7 +179,7 @@ INSTANTIATE_TEST_CASE_P(EqHistTestCPU, EqHistTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
@@ -187,7 +187,7 @@ INSTANTIATE_TEST_CASE_P(CannyTestCPU, CannyTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsSimilarPoints(0, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(0, 0.05).to_compare_obj()),
                                 Values(3.0, 120.0),
                                 Values(125.0, 240.0),
                                 Values(3, 5),
@@ -199,7 +199,7 @@ INSTANTIATE_TEST_CASE_P(RGB2GrayTestCPU, RGB2GrayTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2GrayTestCPU, BGR2GrayTest,
                         Combine(Values(CV_8UC3),
@@ -207,7 +207,7 @@ INSTANTIATE_TEST_CASE_P(BGR2GrayTestCPU, BGR2GrayTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC1),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUVTestCPU, RGB2YUVTest,
                         Combine(Values(CV_8UC3),
@@ -215,7 +215,7 @@ INSTANTIATE_TEST_CASE_P(RGB2YUVTestCPU, RGB2YUVTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(YUV2RGBTestCPU, YUV2RGBTest,
                         Combine(Values(CV_8UC3),
@@ -223,7 +223,7 @@ INSTANTIATE_TEST_CASE_P(YUV2RGBTestCPU, YUV2RGBTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(NV12toRGBTestCPU, NV12toRGBTest,
                         Combine(Values(CV_8UC1),
@@ -231,7 +231,7 @@ INSTANTIATE_TEST_CASE_P(NV12toRGBTestCPU, NV12toRGBTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(NV12toBGRTestCPU, NV12toBGRTest,
                         Combine(Values(CV_8UC1),
@@ -239,7 +239,7 @@ INSTANTIATE_TEST_CASE_P(NV12toBGRTestCPU, NV12toBGRTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2LabTestCPU, RGB2LabTest,
                         Combine(Values(CV_8UC3),
@@ -247,7 +247,7 @@ INSTANTIATE_TEST_CASE_P(RGB2LabTestCPU, RGB2LabTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2LUVTestCPU, BGR2LUVTest,
                         Combine(Values(CV_8UC3),
@@ -255,7 +255,7 @@ INSTANTIATE_TEST_CASE_P(BGR2LUVTestCPU, BGR2LUVTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(LUV2BGRTestCPU, LUV2BGRTest,
                         Combine(Values(CV_8UC3),
@@ -263,7 +263,7 @@ INSTANTIATE_TEST_CASE_P(LUV2BGRTestCPU, LUV2BGRTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BGR2YUVTestCPU, BGR2YUVTest,
                         Combine(Values(CV_8UC3),
@@ -271,7 +271,7 @@ INSTANTIATE_TEST_CASE_P(BGR2YUVTestCPU, BGR2YUVTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(YUV2BGRTestCPU, YUV2BGRTest,
                         Combine(Values(CV_8UC3),
@@ -279,7 +279,7 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRTestCPU, YUV2BGRTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2HSVTestCPU, RGB2HSVTest,
                         Combine(Values(CV_8UC3),
@@ -287,7 +287,7 @@ INSTANTIATE_TEST_CASE_P(RGB2HSVTestCPU, RGB2HSVTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(BayerGR2RGBTestCPU, BayerGR2RGBTest,
                         Combine(Values(CV_8UC1),
@@ -295,7 +295,7 @@ INSTANTIATE_TEST_CASE_P(BayerGR2RGBTestCPU, BayerGR2RGBTest,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsExact().to_compare_f())));
+                                Values(AbsExact().to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(RGB2YUV422TestCPU, RGB2YUV422Test,
                         Combine(Values(CV_8UC3),
@@ -303,5 +303,5 @@ INSTANTIATE_TEST_CASE_P(RGB2YUV422TestCPU, RGB2YUV422Test,
                                        cv::Size(640, 480)),
                                 Values(CV_8UC2),
                                 Values(getArgsImgprocCpu),
-                                Values(AbsTolerance(1).to_compare_f())));
+                                Values(AbsTolerance(1).to_compare_obj())));
 } // opencv_test

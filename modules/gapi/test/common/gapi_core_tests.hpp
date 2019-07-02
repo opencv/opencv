@@ -115,7 +115,7 @@ struct PrintNormCoreParams
     std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
     {
         std::stringstream ss;
-        using AllParams = Params<compare_scalar_f,NormTypes>;
+        using AllParams = Params<CompareScalars,NormTypes>;
         const AllParams::params_t& params = info.param;
         cv::Size sz = AllParams::getCommon<1>(params);  // size
         ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
@@ -144,9 +144,9 @@ GAPI_TEST_FIXTURE(MinTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(MaxTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffCTest, initMatsRandU, <>, 0)
-GAPI_TEST_FIXTURE(SumTest, initMatrixRandU, FIXTURE_API(compare_scalar_f), 1, cmpF)
-GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(compare_f), 1, cmpF)
-GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(compare_scalar_f,NormTypes), 2,
+GAPI_TEST_FIXTURE(SumTest, initMatrixRandU, FIXTURE_API(CompareScalars), 1, cmpF)
+GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(CompareScalars,NormTypes), 2,
     cmpF, opType)
 GAPI_TEST_FIXTURE(IntegralTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
@@ -154,9 +154,9 @@ GAPI_TEST_FIXTURE(ThresholdOTTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
 GAPI_TEST_FIXTURE(InRangeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split3Test, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split4Test, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(compare_f,int,cv::Size), 3,
+GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
     cmpF, interp, sz_out)
-GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(compare_f,int,double,double), 4,
+GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(CompareMats,int,double,double), 4,
     cmpF, interp, fx, fy)
 GAPI_TEST_FIXTURE(Merge3Test, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(Merge4Test, initMatsRandU, <>, 0)
@@ -168,11 +168,11 @@ GAPI_TEST_FIXTURE(ConcatVertTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertVecTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatHorVecTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(LUTTest, initNothing, <>, 0)
-GAPI_TEST_FIXTURE(ConvertToTest, initNothing, FIXTURE_API(compare_f, double, double), 3,
+GAPI_TEST_FIXTURE(ConvertToTest, initNothing, FIXTURE_API(CompareMats, double, double), 3,
     cmpF, alpha, beta)
 GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degrees)
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
+GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(CompareMats,double,double,int,MatType), 5,
     cmpF, a, b, norm_type, ddepth)
 } // opencv_test
 

@@ -25,7 +25,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatMatTest,
                                    cv::Size(128, 128)),
                             Values(-1, CV_8U, CV_32F),
                             Values(getArgsCoreCpu),
-                            Values(AbsExact().to_compare_f()),
+                            Values(AbsExact().to_compare_obj()),
                             Values( opPlusM, opMinusM, opDivM,
                                     opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
 
@@ -36,7 +36,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatScalarTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 Values(getArgsCoreCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER)));
@@ -48,7 +48,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatMatTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAnd, opOr, opXor )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatScalarTest,
@@ -58,7 +58,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatScalarTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestCPU, NotOperatorTest,

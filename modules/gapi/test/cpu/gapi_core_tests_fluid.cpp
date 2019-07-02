@@ -120,7 +120,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestFluid, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 Values(getArgsCoreFluid),
-                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f())));
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(LUTTestFluid, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
@@ -139,7 +139,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToFluid, ConvertToTest,
                                        cv::Size(128, 128)),
                                 Values(CV_8U, CV_16U, CV_32F),
                                 Values(getArgsCoreFluid),
-                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                                 Values(2.5, 1.0, -1.0),
                                 Values(250.0, 0.0, -128.0)));
 
@@ -249,7 +249,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
                                        cv::Size(30, 30)),
                                 Values(-1),
                                 Values(getArgsCoreFluid),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),

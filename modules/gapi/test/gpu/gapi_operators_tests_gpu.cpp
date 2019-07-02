@@ -23,7 +23,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
                                    cv::Size(128, 128)),
                             Values(-1, CV_8U, CV_32F),
                             Values(getArgsCoreGpu),
-                            Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+                            Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
                             Values( opPlusM, opMinusM, opDivM,
                                     opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
 
@@ -34,7 +34,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 Values(getArgsCoreGpu),
-                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_f()),
+                                Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER)));
@@ -46,7 +46,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatMatTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreGpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAnd, opOr, opXor )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
@@ -56,7 +56,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreGpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestGPU, NotOperatorTest,

@@ -204,7 +204,7 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                 Values(SAME_TYPE),
                                 //Values(1e-5),
                                 Values(getArgsCoreCpu),
-                                Values(AbsToleranceScalar(1e-5).to_compare_f())));
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -229,7 +229,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestCPU, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(getArgsCoreCpu),
-                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f())));
+                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -238,7 +238,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
                                 Values(getArgsCoreCpu),
-                                Values(AbsToleranceScalar(1e-5).to_compare_f()),
+                                Values(AbsToleranceScalar(1e-5).to_compare_obj()),
                                 Values(NORM_INF, NORM_L1, NORM_L2)),
                         opencv_test::PrintNormCoreParams());
 
@@ -301,7 +301,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreCpu),
-                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(64,64),
                                        cv::Size(30,30))));
@@ -313,7 +313,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreCpu),
-                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(0.5, 0.1),
                                 Values(0.5, 0.1)));
@@ -383,7 +383,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToCPU, ConvertToTest,
                                        cv::Size(128, 128)),
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F),
                                 Values(getArgsCoreCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(2.5, 1.0, -1.0),
                                 Values(250.0, 0.0, -128.0)));
 
@@ -425,7 +425,7 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                        cv::Size(640, 480)),
                                 Values(-1),
                                 Values(getArgsCoreCpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(0.0, 15.0),
                                 Values(1.0, 120.0, 255.0),
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),

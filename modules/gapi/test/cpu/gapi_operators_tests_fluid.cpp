@@ -23,7 +23,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestFluid, MathOperatorMatMatTest,
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 Values(getArgsCoreFluid),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opPlusM, opMinusM, opDivM,
                                         opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
 
@@ -35,7 +35,7 @@ INSTANTIATE_TEST_CASE_P(DISABLED_MathOperatorTestFluid, MathOperatorMatScalarTes
                                        cv::Size(128, 128)),
                                 Values(-1, CV_8U, CV_32F),
                                 Values(getArgsCoreFluid),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
                                         opGT, opLT, opGE, opLE, opEQ, opNE,
                                         opGTR, opLTR, opGER, opLER, opEQR, opNER)));
@@ -47,7 +47,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestFluid, MathOperatorMatMatTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreFluid),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAnd, opOr, opXor )));
 
 //FIXME: Some Mat/Scalar Fluid kernels are not there yet!
@@ -58,7 +58,7 @@ INSTANTIATE_TEST_CASE_P(DISABLED_BitwiseOperatorTestFluid, MathOperatorMatScalar
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreFluid),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestFluid, NotOperatorTest,

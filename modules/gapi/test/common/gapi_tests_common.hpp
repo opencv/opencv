@@ -225,6 +225,28 @@ struct TestWithParamBase : TestFunctional,
 // Example: FIXTURE_API(int, bool) expands to <int, bool>
 #define FIXTURE_API(...) <__VA_ARGS__>
 
+template<typename T1, typename T2>
+struct CompareF
+{
+    using callable_t = std::function<bool(const T1& a, const T2& b)>;
+    CompareF(callable_t&& cmp, std::string&& desc) :
+        _comparator(std::move(cmp)), _desc(std::move(desc)) {}
+    bool operator()(const T1& a, const T2& b) const
+    {
+        return _comparator(a, b);
+    }
+    friend std::ostream& operator<<(std::ostream& os, const CompareF<T1, T2>& cmp_object)
+    {
+        return os << cmp_object._desc;
+    }
+private:
+    callable_t _comparator;
+    std::string _desc;
+};
+
+using CompareMats = CompareF<cv::Mat, cv::Mat>;
+using CompareScalars = CompareF<cv::Scalar, cv::Scalar>;
+
 template<typename T>
 struct Wrappable
 {
@@ -235,6 +257,12 @@ struct Wrappable
         {
             return t(a, b);
         };
+    }
+
+    CompareF<cv::Mat, cv::Mat> to_compare_obj()
+    {
+        T t = *static_cast<T*const>(this);
+        return CompareF<cv::Mat, cv::Mat>(to_compare_f(), t.desc());
     }
 };
 
@@ -248,6 +276,12 @@ struct WrappableScalar
         {
             return t(a, b);
         };
+    }
+
+    CompareF<cv::Scalar, cv::Scalar> to_compare_obj()
+    {
+        T t = *static_cast<T*const>(this);
+        return CompareF<cv::Scalar, cv::Scalar>(to_compare_f(), t.desc());
     }
 };
 
@@ -268,7 +302,7 @@ public:
             return true;
         }
     }
-private:
+    std::string desc() { return "AbsExact()"; }
 };
 
 class AbsTolerance : public Wrappable<AbsTolerance>
@@ -288,6 +322,7 @@ public:
             return true;
         }
     }
+    std::string desc() { return "AbsTolerance(" + std::to_string(_tol) + ")"; }
 private:
     double _tol;
 };
@@ -315,6 +350,11 @@ public:
                 return true;
             }
         }
+    }
+    std::string desc() {
+        std::stringstream ss;
+        ss << "Tolerance_FloatRel_IntAbs(" << _tol << ", " << _tol8u << ")";
+        return ss.str();
     }
 private:
     double _tol;
@@ -344,6 +384,11 @@ public:
         {
             return true;
         }
+    }
+    std::string desc() {
+        std::stringstream ss;
+        ss << "AbsSimilarPoints(" << _tol << ", " << _percent << ")";
+        return ss.str();
     }
 private:
     double _tol;
@@ -377,6 +422,11 @@ public:
         }
         return true;
     }
+    std::string desc() {
+        std::stringstream ss;
+        ss << "ToleranceFilter(" << _tol << ", " << _tol8u << ", " << _inf_tol << ")";
+        return ss.str();
+    }
 private:
     double _tol;
     double _tol8u;
@@ -405,6 +455,11 @@ public:
         }
         return true;
     }
+    std::string desc() {
+        std::stringstream ss;
+        ss << "ToleranceColor(" << _tol << ", " << _inf_tol << ")";
+        return ss.str();
+    }
 private:
     double _tol;
     double _inf_tol;
@@ -427,26 +482,21 @@ public:
             return true;
         }
     }
+    std::string desc() { return "AbsToleranceScalar(" + std::to_string(_tol) + ")"; }
 private:
     double _tol;
 };
 
+static inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
+{
+    return os << "compare_f";
+}
+
+static inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
+{
+    return os << "compare_scalar_f";
+}
+
 } // namespace opencv_test
-
-namespace
-{
-    inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
-    {
-        return os << "compare_f";
-    }
-}
-
-namespace
-{
-    inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
-    {
-        return os << "compare_scalar_f";
-    }
-}
 
 #endif //OPENCV_GAPI_TESTS_COMMON_HPP

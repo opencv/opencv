@@ -187,7 +187,7 @@ INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
                                 Values(getArgsCoreGpu),
-                                Values(AbsToleranceScalar(1e-3).to_compare_f())));//TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-3).to_compare_obj())));//TODO: too relaxed?
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -212,7 +212,7 @@ INSTANTIATE_TEST_CASE_P(AddWeightedTestGPU, AddWeightedTest,
                                        cv::Size(128, 128)),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(getArgsCoreGpu),
-                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f())));
+                                Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -221,7 +221,7 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
                                 Values(getArgsCoreGpu),
-                                Values(AbsToleranceScalar(1e-3).to_compare_f()), //TODO: too relaxed?
+                                Values(AbsToleranceScalar(1e-3).to_compare_obj()), //TODO: too relaxed?
                                 Values(NORM_INF, NORM_L1, NORM_L2)),
                         opencv_test::PrintNormCoreParams());
 
@@ -284,7 +284,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreGpu),
-                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(cv::Size(64,64),
                                        cv::Size(30,30))));
@@ -296,7 +296,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(getArgsCoreGpu),
-                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
                                 Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
                                 Values(0.5, 0.1),
                                 Values(0.5, 0.1)));
@@ -366,7 +366,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToGPU, ConvertToTest,
                                        cv::Size(128, 128)),
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F),
                                 Values(getArgsCoreGpu),
-                                Values(AbsExact().to_compare_f()),
+                                Values(AbsExact().to_compare_obj()),
                                 Values(2.5, 1.0, -1.0),
                                 Values(250.0, 0.0, -128.0)));
 
