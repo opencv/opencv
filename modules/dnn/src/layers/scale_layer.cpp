@@ -189,7 +189,7 @@ public:
 
         auto input_shape = input_wrapper->getShape();
 
-        /* the weights might require broadcasting to scale */
+        /* the weights/bias might require broadcasting to scale/shift */
         int end_axis = [&] {
             for (int endAxis = axis + 1; endAxis <= input_shape.size(); ++endAxis)
                 if (total(input_shape, axis, endAxis) == numParams)
@@ -205,11 +205,7 @@ public:
         else if (hasWeights)
             csl::kernels::scaleN<float>(stream, output, input, inner_size, weights);
         else
-        {
-            /* rarely used codepath; hence, not optimized TODO */
-            csl::tensor_ops::copy(stream, output, input);
-            csl::tensor_ops::add<float>(stream, 1.0, output, 1.0, bias);
-        }
+            csl::kernels::biasN<float>(stream, output, input, inner_size, bias);
     }
 
     void initCUDA(
@@ -232,7 +228,7 @@ public:
             /* if the weights are provided, bias will be in blobs[1]; otherwise, it will be in blobs[0]
              * in either case, it is at the end of the blobs vector => bias = blobs.back()
              */
-            biasTensor = createTensorHeaderFromMat(blobs[1]);
+            biasTensor = createTensorHeaderFromMat(blobs.back());
             copyMatToTensor<float>(biasTensor, blobs.back(), stream);
         }
     }
@@ -360,7 +356,7 @@ Ptr<Layer> ShiftLayer::create(const LayerParams& params)
     scaleParams.type = "Scale";
     scaleParams.blobs = params.blobs;
     scaleParams.set("bias_term", true);
-    scaleParams.set("axis", 0);
+    scaleParams.set("axis", 1);
     return Ptr<ScaleLayer>(new ScaleLayerImpl(scaleParams));
 }
 

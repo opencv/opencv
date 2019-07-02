@@ -17,6 +17,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
     namespace raw {
         template <class T>
+        __global__ void bias1(span<T> output, view<T> input, T beta)
+        {
+            for (auto i : grid_stride_range(output.size()))
+                output[i] = input[i] + beta;
+        }
+
+        template <class T>
+        __global__ void biasN(span<T> output, view<T> input, std::size_t inner_size, view<T> bias)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                const auto bias_idx = (i / inner_size) % bias.size();
+                output[i] = input[i] + bias[bias_idx];
+            }
+        }
+
+        template <class T>
         __global__ void scale1(span<T> output, view<T> input, T alpha)
         {
             for (auto i : grid_stride_range(output.size()))
@@ -48,6 +64,35 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             }
         }
     }
+
+    template <class T>
+    void bias1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T beta) {
+        CV_Assert(is_shape_same(input, output));
+
+        auto kernel = raw::scale1<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, beta);
+    }
+
+    template void bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
+    template void bias1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
+
+    template <class T>
+    void biasN(
+        const Stream& stream,
+        TensorSpan<T> output,
+        TensorView<T> input, std::size_t inner_size,
+        TensorView<T> bias)
+    {
+        CV_Assert(is_shape_same(input, output));
+
+        auto kernel = raw::biasN<T>;
+        auto policy = make_policy(kernel, 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size, bias);
+    }
+
+    template void biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
+    template void biasN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>);
 
     template <class T>
     void scale1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha) {

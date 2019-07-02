@@ -51,6 +51,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     void concat_with_offsets(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& axis_offsets);
 
     template <class T>
+    void bias1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha);
+
+    template <class T>
+    void biasN(const Stream& stream,
+        TensorSpan<T> output,
+        TensorView<T> input, std::size_t inner_size,
+        TensorView<T> bias);
+
+    template <class T>
     void scale1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha);
 
     template <class T>
