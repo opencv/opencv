@@ -132,14 +132,25 @@ using compare_f = std::function<bool(const cv::Mat &a, const cv::Mat &b)>;
 
 using compare_scalar_f = std::function<bool(const cv::Scalar &a, const cv::Scalar &b)>;
 
+// FIXME: re-use MatType. current problem: "special values" interpreted incorrectly (-1 is printed
+//        as 16FC512)
+struct MatType2
+{
+public:
+    MatType2(int val = 0) : _value(val) {}
+    operator int() const { return _value; }
+private:
+    int _value;
+};
+
 // Universal parameter wrapper for common (pre-defined) and specific (user-defined) parameters
 template<typename ...SpecificParams>
 struct Params
 {
     using gcomp_args_function_t = cv::GCompileArgs(*)();
-    using common_params_t = std::tuple<int, cv::Size, int, gcomp_args_function_t>;
+    using common_params_t = std::tuple<MatType2, cv::Size, MatType2, gcomp_args_function_t>;
     using specific_params_t = std::tuple<SpecificParams...>;
-    using params_t = std::tuple<int, cv::Size, int, gcomp_args_function_t, SpecificParams...>;
+    using params_t = std::tuple<MatType2, cv::Size, MatType2, gcomp_args_function_t, SpecificParams...>;
     static constexpr const size_t common_params_size = std::tuple_size<common_params_t>::value;
     static constexpr const size_t specific_params_size = std::tuple_size<specific_params_t>::value;
 
@@ -169,9 +180,9 @@ struct TestWithParamBase : TestFunctional,
 {
     using AllParams = Params<SpecificParams...>;
 
-    MatType type = getCommonParam<0>();
+    MatType2 type = getCommonParam<0>();
     cv::Size sz = getCommonParam<1>();
-    MatType dtype = getCommonParam<2>();
+    MatType2 dtype = getCommonParam<2>();
 
     TestWithParamBase()
     {
@@ -235,10 +246,7 @@ struct CompareF
     {
         return _comparator(a, b);
     }
-    friend std::ostream& operator<<(std::ostream& os, const CompareF<T1, T2>& cmp_object)
-    {
-        return os << cmp_object._desc;
-    }
+    const std::string& desc() const { return _desc; }
 private:
     callable_t _comparator;
     std::string _desc;
@@ -486,17 +494,76 @@ public:
 private:
     double _tol;
 };
+} // namespace opencv_test
 
-static inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
+namespace
+{
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_f&)
 {
     return os << "compare_f";
 }
 
-static inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_scalar_f&)
 {
     return os << "compare_scalar_f";
 }
+}  // anonymous namespace
 
-} // namespace opencv_test
+namespace opencv_test
+{
+inline std::ostream& operator<<(std::ostream& os, const opencv_test::MatType2& v)
+{
+    switch (v)
+    {
+        case -1: return os << "same(unallocated)";
+        case opencv_test::SAME_TYPE: return os << "same(allocated)";
+        default: PrintTo(MatType(v), &os); return os;
+    }
+}
+
+template<typename T1, typename T2>
+std::ostream& operator<<(std::ostream& os, const CompareF<T1, T2>& cmp_object)
+{
+    return os << cmp_object.desc();
+}
+}
+
+// Note: namespace must match the namespace of the type of the printed object
+namespace cv
+{
+inline std::ostream& operator<<(std::ostream& os, CmpTypes op)
+{
+#define CASE(v) case CmpTypes::v: os << #v; break
+    switch (op)
+    {
+        CASE(CMP_EQ);
+        CASE(CMP_GT);
+        CASE(CMP_GE);
+        CASE(CMP_LT);
+        CASE(CMP_LE);
+        CASE(CMP_NE);
+    }
+#undef CASE
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, NormTypes op)
+{
+#define CASE(v) case NormTypes::v: os << #v; break
+    switch (op)
+    {
+        CASE(NORM_INF);
+        CASE(NORM_L1);
+        CASE(NORM_L2);
+        CASE(NORM_L2SQR);
+        CASE(NORM_HAMMING);
+        CASE(NORM_HAMMING2);
+        CASE(NORM_RELATIVE);
+        CASE(NORM_MINMAX);
+    }
+#undef CASE
+    return os;
+}
+}  // namespace cv
 
 #endif //OPENCV_GAPI_TESTS_COMMON_HPP

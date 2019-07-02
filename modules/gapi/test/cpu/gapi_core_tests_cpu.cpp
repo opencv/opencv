@@ -28,8 +28,7 @@ INSTANTIATE_TEST_CASE_P(AddTestCPU, MathOpTest,
                                 Values(ADD, MUL),
                                 testing::Bool(),
                                 Values(1.0),
-                                Values(false)),
-                        opencv_test::PrintMathOpCoreParams());
+                                Values(false)));
 
 INSTANTIATE_TEST_CASE_P(MulTestCPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -41,8 +40,7 @@ INSTANTIATE_TEST_CASE_P(MulTestCPU, MathOpTest,
                                 Values(MUL),
                                 testing::Bool(),
                                 Values(1.0, 0.5, 2.0),
-                                Values(false)),
-                        opencv_test::PrintMathOpCoreParams());
+                                Values(false)));
 
 INSTANTIATE_TEST_CASE_P(SubTestCPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -54,8 +52,7 @@ INSTANTIATE_TEST_CASE_P(SubTestCPU, MathOpTest,
                                 Values(SUB),
                                 testing::Bool(),
                                 Values (1.0),
-                                testing::Bool()),
-                        opencv_test::PrintMathOpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(DivTestCPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -67,8 +64,7 @@ INSTANTIATE_TEST_CASE_P(DivTestCPU, MathOpTest,
                                 Values(DIV),
                                 testing::Bool(),
                                 Values (1.0, 0.5, 2.0),
-                                testing::Bool()),
-                        opencv_test::PrintMathOpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(MulTestCPU, MulDoubleTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -159,8 +155,7 @@ INSTANTIATE_TEST_CASE_P(CompareTestCPU, CmpTest,
                                 Values(CV_8U),
                                 Values(CORE_CPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool()),
-                        opencv_test::PrintCmpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -169,8 +164,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
                                 Values(CORE_CPU),
-                                Values(AND, OR, XOR)),
-                        opencv_test::PrintBWCoreParams());
+                                Values(AND, OR, XOR)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestCPU, NotTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -239,8 +233,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(SAME_TYPE),
                                 Values(CORE_CPU),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj()),
-                                Values(NORM_INF, NORM_L1, NORM_L2)),
-                        opencv_test::PrintNormCoreParams());
+                                Values(NORM_INF, NORM_L1, NORM_L2)));
 
 INSTANTIATE_TEST_CASE_P(IntegralTestCPU, IntegralTest,
                         Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),

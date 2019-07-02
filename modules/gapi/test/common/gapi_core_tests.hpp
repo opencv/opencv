@@ -30,102 +30,35 @@ enum bitwiseOp
     NOT = 3
 };
 
-namespace
+// Note: namespace must match the namespace of the type of the printed object
+inline std::ostream& operator<<(std::ostream& os, mathOp op)
 {
-const char *MathOperations[] = {"ADD", "SUB", "MUL", "DIV"};
-const char *BitwiseOperations[] = {"And", "Or", "Xor"};
-const char *CompareOperations[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
-//corresponds to OpenCV
-const char *NormOperations[] = {"", "NORM_INF", "NORM_L1", "","NORM_L2"};
-// helper function that returns correct string representation for dtype
-const auto dtypeToStr = [] (int v) { return (v == -1) ? std::string("neg1") : std::to_string(v); };
+#define CASE(v) case mathOp::v: os << #v; break
+    switch (op)
+    {
+        CASE(ADD);
+        CASE(SUB);
+        CASE(MUL);
+        CASE(DIV);
+    }
+#undef CASE
+    return os;
 }
 
-
-struct PrintMathOpCoreParams
+// Note: namespace must match the namespace of the type of the printed object
+inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
 {
-    // NB: _all_ test parameters (that _vary_) must be a part of the std::string returned.
-    //     otherwise, 2 test instantiations that differ _only_ in 1 parameter, that is not appended
-    //     to the printed string, are going to have _the same_ instantiation suffixes which is not
-    //     allowed by GTest.
-    //
-    // Example: [ in_type is not part of the string ] ADD_640x480 with in_type CV_8U vs ADD_640x480
-    //          with in_type CV_16U. We have 2 instantiation suffixes that are the same: ADD_640x480
-    //          (for CV_8U) && ADD_640x480 (for CV_16U) => there's no difference between the two
-    //          because the names are identical when in_type is not taken into account.
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
+#define CASE(v) case bitwiseOp::v: os << #v; break
+    switch (op)
     {
-        std::stringstream ss;
-        using AllParams = Params<mathOp,bool,double,bool>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<MathOperations[AllParams::getSpecific<0>(params)]  // mathOp
-                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<(int)AllParams::getSpecific<2>(params)  // scale
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params))  // dtype
-                    <<"_"<<AllParams::getSpecific<3>(params);  // doReverseOp
-        return ss.str();
-   }
-};
-
-struct PrintCmpCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<CmpTypes,bool>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<CompareOperations[AllParams::getSpecific<0>(params)]  // CmpType
-                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
-        return ss.str();
-   }
-};
-
-struct PrintBWCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<bitwiseOp>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<BitwiseOperations[AllParams::getSpecific<0>(params)]  // bitwiseOp
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
-        return ss.str();
-   }
-};
-
-struct PrintNormCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<CompareScalars,NormTypes>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<dtypeToStr(AllParams::getCommon<2>(params));  // dtype
-        return ss.str();
-   }
-};
+        CASE(AND);
+        CASE(OR);
+        CASE(XOR);
+        CASE(NOT);
+    }
+#undef CASE
+    return os;
+}
 
 GAPI_TEST_FIXTURE(MathOpTest, initMatsRandU, FIXTURE_API(mathOp,bool,double,bool), 4,
     opType, testWithScalar, scale, doReverseOp)

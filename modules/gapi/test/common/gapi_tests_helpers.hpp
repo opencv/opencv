@@ -15,6 +15,7 @@ namespace opencv_test
 
 // out_type == in_type in matrices initialization if out_type is marked as SAME_TYPE
 enum {
+    // TODO: how (and why) is it different from -1??
     SAME_TYPE = std::numeric_limits<int>::max()
 };
 

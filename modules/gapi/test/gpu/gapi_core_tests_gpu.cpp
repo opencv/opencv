@@ -27,8 +27,7 @@ INSTANTIATE_TEST_CASE_P(AddTestGPU, MathOpTest,
                                 Values(ADD, MUL),
                                 testing::Bool(),
                                 Values(1.0),
-                                Values(false)),
-                        opencv_test::PrintMathOpCoreParams());
+                                Values(false)));
 
 INSTANTIATE_TEST_CASE_P(MulTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -40,8 +39,7 @@ INSTANTIATE_TEST_CASE_P(MulTestGPU, MathOpTest,
                                 Values(MUL),
                                 testing::Bool(),
                                 Values(1.0, 0.5, 2.0),
-                                Values(false)),
-                        opencv_test::PrintMathOpCoreParams());
+                                Values(false)));
 
 INSTANTIATE_TEST_CASE_P(SubTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -53,8 +51,7 @@ INSTANTIATE_TEST_CASE_P(SubTestGPU, MathOpTest,
                                 Values(SUB),
                                 testing::Bool(),
                                 Values (1.0),
-                                testing::Bool()),
-                        opencv_test::PrintMathOpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(DivTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -66,8 +63,7 @@ INSTANTIATE_TEST_CASE_P(DivTestGPU, MathOpTest,
                                 Values(DIV),
                                 testing::Bool(),
                                 Values (1.0, 0.5, 2.0),
-                                testing::Bool()),
-                        opencv_test::PrintMathOpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(MulTestGPU, MulDoubleTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -143,8 +139,7 @@ INSTANTIATE_TEST_CASE_P(CompareTestGPU, CmpTest,
                                 Values(CV_8U),
                                 Values(CORE_GPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-                                testing::Bool()),
-                        opencv_test::PrintCmpCoreParams());
+                                testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
@@ -153,8 +148,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                                        cv::Size(128, 128)),
                                 Values(SAME_TYPE),
                                 Values(CORE_GPU),
-                                Values(AND, OR, XOR)),
-                        opencv_test::PrintBWCoreParams());
+                                Values(AND, OR, XOR)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
@@ -222,8 +216,7 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                                 Values(SAME_TYPE),
                                 Values(CORE_GPU),
                                 Values(AbsToleranceScalar(1e-3).to_compare_obj()), //TODO: too relaxed?
-                                Values(NORM_INF, NORM_L1, NORM_L2)),
-                        opencv_test::PrintNormCoreParams());
+                                Values(NORM_INF, NORM_L1, NORM_L2)));
 
 INSTANTIATE_TEST_CASE_P(IntegralTestGPU, IntegralTest,
                         Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
