@@ -75,7 +75,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
             // Now ask kernel for it's output meta.
             // Resulting out_args may have a larger size than op.outs, since some
             // outputs could stay unused (unconnected)
-            const auto& out_metas = op.k.outMeta(input_meta_args, op.args);
+            const auto out_metas = op.k.outMeta(input_meta_args, op.args);
 
             // Walk through operation's outputs, update meta of output objects
             // appropriately
