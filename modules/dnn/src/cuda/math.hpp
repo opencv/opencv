@@ -51,6 +51,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <> inline __device__ float pow(float val, float exp) { return powf(val, exp); }
         template <> inline __device__ double pow(double val, double exp) { return ::pow(val, exp); }
 
+        template <class T> __device__ T sqrt(T val);
+        template <> inline __device__ float sqrt(float val) { return sqrtf(val); }
+        template <> inline __device__ double sqrt(double val) { return ::sqrt(val); }
+
         template <class T>
         __device__ T sigmoid(T val) { return T(1) / (1 + exp(-val)); }
     }

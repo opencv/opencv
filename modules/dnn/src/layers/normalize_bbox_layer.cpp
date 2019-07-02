@@ -42,7 +42,14 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv { namespace dnn {
 
@@ -70,7 +77,8 @@ public:
 
             return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -256,6 +264,69 @@ public:
             outData += numPlanes * planeSize;
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+        auto input_shape = input_wrapper->getShape();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        auto start_axis = clamp(startAxis, input_shape.size());
+        auto end_axis = clamp(endAxis, input_shape.size());
+
+        auto outer_size = total(input_shape, 0, start_axis);
+        auto mid_size = total(input_shape, start_axis, end_axis + 1);
+        auto inner_size = total(input_shape, end_axis + 1, -1);
+
+        auto scratch_ptr = reinterpret_cast<float*>(csl::WorkspaceAccessor::get(workspace).get());
+        auto scratch = csl::span<float>(csl::DevicePtr<float>(scratch_ptr), workspace.size());
+        csl::kernels::normalize<float>(stream, output, input, outer_size, mid_size, inner_size, pnorm, epsilon, scratch);
+
+        if (!blobs.empty()) {
+            Mat weightsMat = blobs[0];
+            if (weightsMat.total() == 1)
+            {
+                csl::kernels::scale1<float>(stream, output, input, weightsMat.at<float>(0, 0));
+            }
+            else
+            {
+                CV_Assert(weightsTensor.size() == mid_size);
+                csl::kernels::scaleN<float>(stream, output, input, inner_size, weightsTensor);
+            }
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+
+        if (!blobs.empty() && blobs[0].total() != 1)
+        {
+            const auto& weightsMat = blobs[0];
+            weightsTensor = createTensorHeaderFromMat(weightsMat);
+            copyMatToTensor<float>(weightsTensor, weightsMat, stream);
+        }
+    }
+
+    csl::Tensor<float> weightsTensor;
+    csl::Stream stream;
+#endif
 
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE

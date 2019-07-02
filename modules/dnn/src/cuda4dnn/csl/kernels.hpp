@@ -84,6 +84,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     template <class T>
     void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& order);
 
+    template <class T>
+    void normalize(
+        const Stream& stream,
+        span<T> output, view<T> input,
+        std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm, T epsilon,
+        span<T> workspace);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */
