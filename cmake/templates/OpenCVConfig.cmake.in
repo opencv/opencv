@@ -106,7 +106,21 @@ set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
 set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 
 set(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
-set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
+set(__OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
+
+set(OpenCV_INCLUDE_DIRS "")
+foreach(d ${__OpenCV_INCLUDE_DIRS})
+  get_filename_component(__d "${d}" REALPATH)
+  if(NOT EXISTS "${__d}")
+    if(NOT OpenCV_FIND_QUIETLY)
+      message(WARNING "OpenCV: Include directory doesn't exist: '${d}'. OpenCV installation may be broken. Skip...")
+    endif()
+  else()
+    list(APPEND OpenCV_INCLUDE_DIRS "${__d}")
+  endif()
+endforeach()
+unset(__d)
+
 
 if(NOT TARGET opencv_core)
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)

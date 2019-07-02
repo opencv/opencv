@@ -1096,15 +1096,30 @@ inline int v_signmask(const v_int32x4& a)
 { return v_signmask(v_reinterpret_as_u32(a)); }
 inline int v_signmask(const v_float32x4& a)
 { return v_signmask(v_reinterpret_as_u32(a)); }
-#if CV_SIMD128_64F
 inline int v_signmask(const v_uint64x2& a)
 {
     int64x1_t m0 = vdup_n_s64(0);
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), vcombine_s64(m0, m0));
     return (int)vgetq_lane_u64(v0, 0) + ((int)vgetq_lane_u64(v0, 1) << 1);
 }
+inline int v_signmask(const v_int64x2& a)
+{ return v_signmask(v_reinterpret_as_u64(a)); }
+#if CV_SIMD128_64F
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_u64(a)); }
+#endif
+
+inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(a)); }
+#if CV_SIMD128_64F
+inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(a)); }
 #endif
 
 #define OPENCV_HAL_IMPL_NEON_CHECK_ALLANY(_Tpvec, suffix, shift) \
