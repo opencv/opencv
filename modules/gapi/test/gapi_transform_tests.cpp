@@ -85,14 +85,16 @@ TEST(KernelPackageTransform, CreatePackage)
         < gmat_in_gmat_out
         , gmat2_in_gmat_out
         , gmat2_in_gmat3_out
+        , gmatp_in_gmatp_out
         , gsc_in_gmat_out
         , gmat_in_gsc_out
         , garr_in_gmat_out
         , gmat_in_garr_out
+        , gmat_gsc_garray_in_gmat2_out
         >();
 
     auto tr = pkg.get_transformations();
-    EXPECT_EQ(7u, tr.size());
+    EXPECT_EQ(9u, tr.size());
 }
 
 TEST(KernelPackageTransform, Include)
@@ -114,30 +116,74 @@ TEST(KernelPackageTransform, Combine)
     EXPECT_EQ(2u, tr.size());
 }
 
+namespace {
+    template <typename T>
+    inline bool ProtoContainsT(const cv::GProtoArg &arg) {
+        return cv::GProtoArg::index_of<T>() == arg.index();
+    }
+} // anonymous namespace
+
 TEST(KernelPackageTransform, gmat_gsc_in_gmat_out)
 {
     auto tr = gmat_gsc_garray_in_gmat2_out::transformation();
-    auto pattern = tr.pattern();
-    auto subst = tr.substitute();
 
-    EXPECT_EQ(3u, pattern.priv().m_ins.size());
-    EXPECT_EQ(2u, pattern.priv().m_outs.size());
-    EXPECT_EQ(3u, subst.priv().m_ins.size());
-    EXPECT_EQ(2u, subst.priv().m_outs.size());
+    auto check = [](const cv::GComputation &comp){
+        const auto &p = comp.priv();
+        EXPECT_EQ(3u, p.m_ins.size());
+        EXPECT_EQ(2u, p.m_outs.size());
 
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(pattern.priv().m_ins[0])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(pattern.priv().m_outs[0])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GSCALAR, GArg(util::get<GScalar>(pattern.priv().m_ins[1])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(pattern.priv().m_outs[1])).kind);
-    // FIXME: cannot currently recognize initial type of array
-    EXPECT_NO_THROW(util::get<cv::detail::GArrayU>(pattern.priv().m_ins[2]));
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_ins[0]));
+        EXPECT_TRUE(ProtoContainsT<GScalar>(p.m_ins[1]));
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_ins[2]));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_ins[2]).holds<int>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_ins[2]).holds<char>());
 
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(subst.priv().m_ins[0])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(subst.priv().m_outs[0])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GSCALAR, GArg(util::get<GScalar>(subst.priv().m_ins[1])).kind);
-    EXPECT_EQ(cv::detail::ArgKind::GMAT,    GArg(util::get<GMat>(subst.priv().m_outs[1])).kind);
-    // FIXME: cannot currently recognize initial type of array
-    EXPECT_NO_THROW(util::get<cv::detail::GArrayU>(subst.priv().m_ins[2]));
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[0]));
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[1]));
+    };
+
+    check(tr.pattern());
+    check(tr.substitute());
+}
+
+TEST(KernelPackageTransform, gmat_in_garr_out)
+{
+    auto tr = gmat_in_garr_out::transformation();
+
+    auto check = [](const cv::GComputation &comp){
+        const auto &p = comp.priv();
+        EXPECT_EQ(1u, p.m_ins.size());
+        EXPECT_EQ(1u, p.m_outs.size());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_ins[0]));
+
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_outs[0]));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_outs[0]).holds<int>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_outs[0]).holds<float>());
+    };
+
+    check(tr.pattern());
+    check(tr.substitute());
+}
+
+TEST(KernelPackageTransform, garr_in_gmat_out)
+{
+    auto tr = garr_in_gmat_out::transformation();
+
+    auto check = [](const cv::GComputation &comp){
+        const auto &p = comp.priv();
+        EXPECT_EQ(1u, p.m_ins.size());
+        EXPECT_EQ(1u, p.m_outs.size());
+
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_ins[0]));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_ins[0]).holds<int>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_ins[0]).holds<bool>());
+
+        EXPECT_TRUE(ProtoContainsT<GMat>(p.m_outs[0]));
+    };
+
+    check(tr.pattern());
+    check(tr.substitute());
 }
 
 } // namespace opencv_test
