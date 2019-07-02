@@ -136,4 +136,18 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 
 TEST(Imgproc_ConnectedComponents, regression) { CV_ConnectedComponentsTest test; test.safe_run(); }
 
+TEST(Imgproc_ConnectedComponents, grana_buffer_overflow)
+{
+    cv::Mat darkMask;
+    darkMask.create(31, 87, CV_8U);
+    darkMask = 0;
+
+    cv::Mat labels;
+    cv::Mat stats;
+    cv::Mat centroids;
+
+    int nbComponents = cv::connectedComponentsWithStats(darkMask, labels, stats, centroids, 8, CV_32S, cv::CCL_GRANA);
+    EXPECT_EQ(1, nbComponents);
+}
+
 }} // namespace
