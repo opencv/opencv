@@ -631,9 +631,24 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
-const MultiLoad::iterator& MultiLoad::end() const {
-    static const iterator s_end(0);
-    return s_end;
+MultiLoad::const_iterator MultiLoad::begin() const {
+    MultiLoad copy(*this);
+    if(!m_file.empty()) copy.read(m_file);
+    else copy.decode(m_buf);
+    return copy;
+}
+
+const MultiLoad::const_iterator& MultiLoad::end() const {
+    static MultiLoad end;
+    return end;
+}
+
+bool MultiLoad::operator==(const MultiLoad &other) const {
+    if(this == &other) return true;
+    if(!m_decoder && !other.m_decoder) return true;
+    if(!m_decoder) return !other.valid();
+    if(!other.m_decoder) return !valid();
+    return m_buf.data == other.m_buf.data && m_file == other.m_file;
 }
 
 MultiLoad::MultiLoad(int default_flags) : m_default_flags(default_flags), m_has_current(false)
@@ -672,11 +687,8 @@ void MultiLoad::clear()
         m_decoder.release();
     }
 
-    if (!m_tempfile.empty()) {
-        if (0 != remove(m_tempfile.c_str())) {
-            std::cerr << "unable to remove temporary file:" << m_tempfile << std::endl << std::flush;
-        }
-        m_tempfile.clear();
+    if (m_tempfile) {
+        m_tempfile.release();
     }
 
     m_file.clear();
@@ -694,19 +706,19 @@ bool MultiLoad::load(const String *filename, const _InputArray *buf, int flags) 
         if (!m_decoder) return false;
 
         if (!m_decoder->setSource(m_buf)) {
-            m_tempfile = tempfile();
-            FILE *f = fopen(m_tempfile.c_str(), "wb");
-            if (!f)
-                return false;
+            m_tempfile = Ptr<TempFile>(new TempFile(tempfile()));
+            FILE *f = fopen(m_tempfile->file().c_str(), "wb");
+            if (!f) return false;
+
             size_t bufSize = m_buf.cols * m_buf.rows * m_buf.elemSize();
             if (fwrite(m_buf.ptr(), 1, bufSize, f) != bufSize) {
                 fclose(f);
-                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile);
+                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile->file());
             }
             if (fclose(f) != 0) {
-                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile);
+                CV_Error(Error::StsError, "failed to write image data to temporary file " + m_tempfile->file());
             }
-            filename = &m_tempfile;
+            filename = &m_tempfile->file();
         }
     }
 
@@ -829,13 +841,20 @@ bool MultiLoad::next() {
     return m_has_current = m_decoder && m_decoder->nextPage();
 }
 
-bool MultiLoad::iterator::operator==(const cv::MultiLoad::iterator &other) const {
-    MultiLoad const *const a = m_parent;
-    MultiLoad const *const b = other.m_parent;
-    if (a == b) return true;
-    if (!a) return !b->valid();
-    if (!b) return !a->valid();
-    return false;
+MultiLoad::TempFile::TempFile(const String &file): m_file(file) {
+}
+
+MultiLoad::TempFile::~TempFile(){
+    if (!m_file.empty()) {
+        if (0 != remove(m_file.c_str())) {
+            std::cerr << "unable to remove temporary file:" << m_file << std::endl << std::flush;
+        }
+        m_file.clear();
+    }
+}
+
+const String& MultiLoad::TempFile::file() const {
+    return m_file;
 }
 }
 

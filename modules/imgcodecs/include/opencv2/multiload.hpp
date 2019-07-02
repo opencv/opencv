@@ -31,17 +31,8 @@ namespace cv
     class CV_EXPORTS_W MultiLoad
     {
     public:
-        class iterator {
-        public:
-            Mat operator*() const { return **m_parent; }
-            bool operator==(const iterator &other) const;
-            bool operator!=(const iterator &other) const { return !(*this == other); }
-            void operator++() { m_parent->next(); }
-        private:
-            friend class MultiLoad;
-            MultiLoad *m_parent;
-            iterator(MultiLoad *parent) : m_parent(parent) {}
-        };
+        typedef MultiLoad iterator;
+        typedef iterator const_iterator;
 
         /** @brief Initialize loader.
          *
@@ -53,10 +44,10 @@ namespace cv
         ~MultiLoad();
 
         /// iterate over pages: begin
-        iterator begin() { return iterator(this); }
+        const_iterator begin() const;
 
         /// iterate over pages: end
-        const iterator& end() const;
+        const const_iterator& end() const;
 
         /// Get default load flags
         CV_WRAP int getDefaultFlags() const {
@@ -287,19 +278,28 @@ namespace cv
         /// @copydoc next()
         bool operator++(int) { return next(); }
 
+        bool operator==(const MultiLoad &other) const;
+        bool operator!=(const MultiLoad &other) const { return !(*this == other); }
+
     private:
+        /// Automatically remove file.
+        class TempFile {
+        public:
+            explicit TempFile(const String &file);
+            ~TempFile();
+            const String &file() const;
+        private:
+            String m_file;
+            TempFile(const TempFile&);
+            TempFile& operator=(const TempFile&);
+        };
+
         String m_file;
         Mat m_buf;
-        String m_tempfile;
+        Ptr<TempFile> m_tempfile;
         Ptr <BaseImageDecoder> m_decoder;
         int m_default_flags;
         bool m_has_current;
-
-        /// no copy because of @c m_tempfile
-        MultiLoad(const MultiLoad &);
-
-        /// no assign because of @c m_tempfile
-        MultiLoad &operator=(const MultiLoad &);
 
         /// called by read() and decode(): @c filename XOR @c buf
         /// @param filename name of file
