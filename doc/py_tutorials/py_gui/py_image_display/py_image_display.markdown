@@ -30,7 +30,7 @@ See the code below:
 import numpy as np
 import cv2 as cv
 
-# Load an color image in grayscale
+# Load a color image in grayscale
 img = cv.imread('messi5.jpg',0)
 @endcode
 
