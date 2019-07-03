@@ -67,7 +67,7 @@ template<> struct PyOpenCV_Converter<std::map<int, cv::String> > {
 };
 
 // TODO: don't know how to implement this, this only keeps the compiler quiet
-// used by new versions of imwrite() and imencode()
+// used by MultiLoad
 template<> struct PyOpenCV_Converter<std::map<cv::String, cv::String> > {
     static bool to(PyObject*, std::map<cv::String, std::string>&, const char*) {
         CV_Error(cv::Error::StsBadFunc, "not yet implemented");
