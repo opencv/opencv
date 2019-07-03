@@ -24,6 +24,8 @@
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/own/scalar.hpp>
 
+#include <opencv2/gapi/streaming/cap.hpp>
+
 namespace cv {
 
 class GArg;
@@ -92,6 +94,7 @@ using GRunArg  = util::variant<
     cv::Scalar,
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
+    cv::gapi::GVideoCapture, // FIXME: How bad it is?
     cv::gapi::own::Mat,
     cv::gapi::own::Scalar,
     cv::detail::VectorRef

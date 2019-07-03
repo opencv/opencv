@@ -15,6 +15,7 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
 #include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
@@ -95,6 +96,7 @@ namespace detail
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
+    template<>           struct GTypeOf<cv::gapi::GVideoCapture> { using type = cv::GMat;    };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::gapi::own::Scalar> { using type = cv::GScalar;   };

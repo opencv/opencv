@@ -15,6 +15,7 @@
 #include <opencv2/gapi/gproto.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gcompiled.hpp>
+#include <opencv2/gapi/gstreaming.hpp>
 
 namespace cv {
 
@@ -394,6 +395,32 @@ public:
                        typename detail::MkSeq<sizeof...(Ts)-1>::type());
     }
 
+
+    // FIXME: Document properly in the Doxygen format
+    // Video-oriented pipeline compilation:
+    // 1. A generic version
+    GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
+
+    // 2. Direct metadata version
+    template<typename... Ts>
+    auto compileStreaming(const Ts&... metas) ->
+        typename std::enable_if<detail::are_meta_descrs<Ts...>::value, GStreamingCompiled>::type
+    {
+        return compileStreaming(GMetaArgs{GMetaArg(metas)...}, GCompileArgs());
+    }
+
+    // 2. Direct metadata + compile arguments version
+    template<typename... Ts>
+    auto compileStreaming(const Ts&... meta_and_compile_args) ->
+        typename std::enable_if<detail::are_meta_descrs_but_last<Ts...>::value
+                                && std::is_same<GCompileArgs, detail::last_type_t<Ts...> >::value,
+                                GStreamingCompiled>::type
+    {
+        //FIXME: wrapping meta_and_compile_args into a tuple to unwrap them inside a helper function is the overkill
+        return compileStreaming(std::make_tuple(meta_and_compile_args...),
+                                typename detail::MkSeq<sizeof...(Ts)-1>::type());
+    }
+
     // Internal use only
     /// @private
     Priv& priv();
@@ -402,7 +429,7 @@ public:
 
 protected:
 
-    // 4. Helper method for (3)
+    // 4. Helper methods for (3)
     /// @private
     template<typename... Ts, int... IIs>
     GCompiled compile(const std::tuple<Ts...> &meta_and_compile_args, detail::Seq<IIs...>)
@@ -410,6 +437,13 @@ protected:
         GMetaArgs meta_args = {GMetaArg(std::get<IIs>(meta_and_compile_args))...};
         GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
         return compile(std::move(meta_args), std::move(comp_args));
+    }
+    template<typename... Ts, int... IIs>
+    GStreamingCompiled compileStreaming(const std::tuple<Ts...> &meta_and_compile_args, detail::Seq<IIs...>)
+    {
+        GMetaArgs meta_args = {GMetaArg(std::get<IIs>(meta_and_compile_args))...};
+        GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
+        return compileStreaming(std::move(meta_args), std::move(comp_args));
     }
     /// @private
     std::shared_ptr<Priv> m_priv;

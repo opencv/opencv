@@ -484,6 +484,12 @@ namespace core {
             return (ddepth < 0 ? in : in.withDepth(ddepth));
         }
     };
+
+    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.copy") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
+        }
+    };
 }
 
 //! @addtogroup gapi_math
@@ -1653,6 +1659,8 @@ number of channels as src and the depth =ddepth.
 GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
                             int norm_type, int ddepth = -1);
 //! @} gapi_transform
+
+GAPI_EXPORTS GMat copy(const GMat& src);
 
 } //namespace gapi
 } //namespace cv

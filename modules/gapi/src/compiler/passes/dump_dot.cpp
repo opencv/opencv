@@ -172,7 +172,6 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
                 }
             }
             break;
-
         case NodeKind::SLOT:
             {
                 const auto obj_name = format_obj(gim.metadata(nh).get<DataSlot>()
@@ -185,7 +184,16 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
                 }
             }
             break;
-
+        case NodeKind::EMIT:
+            {
+                for (auto out_nh : nh->outNodes())
+                {
+                    const auto obj_name = format_obj(gim.metadata(out_nh).get<DataSlot>()
+                                                     .original_data_node);
+                    os << "\"emit:" << nh << "\" -> \"slot:" << obj_name << "\"\n";
+                }
+            }
+            break;
         default:
             GAPI_Assert(false);
             break;

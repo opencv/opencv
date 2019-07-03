@@ -17,7 +17,9 @@ endif()
 
 set(the_description "OpenCV G-API Core Module")
 
-ocv_add_module(gapi opencv_imgproc)
+## FIXME: This is a huge dependency!
+ocv_add_module(gapi opencv_imgproc opencv_videoio)
+
 
 file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
@@ -57,6 +59,7 @@ set(gapi_srcs
     src/compiler/gislandmodel.cpp
     src/compiler/gcompiler.cpp
     src/compiler/gcompiled.cpp
+    src/compiler/gstreaming.cpp
     src/compiler/passes/helpers.cpp
     src/compiler/passes/dump_dot.cpp
     src/compiler/passes/islands.cpp
@@ -66,9 +69,11 @@ set(gapi_srcs
     src/compiler/passes/transformations.cpp
     src/compiler/passes/pattern_matching.cpp
     src/compiler/passes/perform_substitution.cpp
+    src/compiler/passes/streaming.cpp
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)

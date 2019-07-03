@@ -558,6 +558,14 @@ GAPI_OCV_KERNEL(GCPUNormalize, cv::gapi::core::GNormalize)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
+{
+    static void run(const cv::Mat& src, cv::Mat& out)
+    {
+        src.copyTo(out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -626,6 +634,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUConvertTo
          , GCPUSqrt
          , GCPUNormalize
+         , GCPUCopy
          >();
     return pkg;
 }
