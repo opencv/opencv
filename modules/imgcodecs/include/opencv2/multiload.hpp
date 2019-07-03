@@ -123,7 +123,19 @@ namespace cv
          * @return the requested page of a multi-image or an empty matrix
          * @sa imread()
          */
-        Mat at(int idx, int flags, std::map<String, String> *properties, Mat *dst = 0) const;
+        Mat at(int idx, int flags, std::map<String, String> *properties = 0, Mat *dst = 0) const;
+
+        /** @brief Return an arbitrary page.
+         *
+         * Returns a selected page of a multi-image using the default-flags.
+         *
+         * @param idx index of page to load (0 ... size() - 1)
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
+         * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
+         * @return the requested page of a multi-image or an empty matrix
+         * @sa at(int,int,Mat*) const
+         */
+        Mat at(int idx, std::map<String, String> *properties = 0, Mat *dst = 0) const { return at(idx, m_default_flags, properties, dst); }
 
         /** @brief Return an arbitrary page.
          *
@@ -136,50 +148,6 @@ namespace cv
          * @sa imread()
          */
         CV_WRAP Mat at(int idx, int flags, CV_OUT std::map<String, String> &properties) const { return at(idx, flags, &properties); }
-
-        /** @brief Return an arbitrary page.
-         *
-         * Returns a selected page of a multi-image.
-         *
-         * @param idx index of page to load (0 ... size() - 1)
-         * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
-         * @return the requested page of a multi-image or an empty matrix
-         * @sa imread()
-         */
-        CV_WRAP Mat at(int idx, int flags) const { return at(idx, flags, nullptr, nullptr); }
-
-        /** @brief Return an arbitrary page.
-         *
-         * Returns a selected page of a multi-image using the default-flags.
-         *
-         * @param idx index of page to load (0 ... size() - 1)
-         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
-         * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
-         * @return the requested page of a multi-image or an empty matrix
-         * @sa at(int,int,Mat*) const
-         */
-        Mat at(int idx, std::map<String, String> *properties, Mat *dst = 0) const { return at(idx, m_default_flags, properties, dst); }
-
-        /** @brief Return an arbitrary page.
-         *
-         * Returns a selected page of a multi-image using the default-flags.
-         *
-         * @param idx index of page to load (0 ... size() - 1)
-         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
-         * @return the requested page of a multi-image or an empty matrix
-         * @sa at(int,int,Mat*) const
-         */
-        CV_WRAP Mat at(int idx, CV_OUT std::map<String, String> &properties) const { return at(idx, &properties); }
-
-        /** @brief Return an arbitrary page.
-         *
-         * Returns a selected page of a multi-image using the default-flags.
-         *
-         * @param idx index of page to load (0 ... size() - 1)
-         * @return the requested page of a multi-image or an empty matrix
-         * @sa at(int,int,Mat*) const
-         */
-        CV_WRAP Mat at(int idx) const { return at(idx, nullptr); }
 
         /** @brief Return an arbitrary page.
          *
@@ -201,7 +169,18 @@ namespace cv
          * @return the current page of a multi-image or an empty matrix
          * @sa imread()
          */
-        Mat current(int flags, std::map<String, String> *properties, Mat *dst = 0) const;
+        Mat current(int flags, std::map<String, String> *properties = 0, Mat *dst = 0) const;
+
+        /** @brief Return the current page.
+         *
+         * Return the page set by next() using default-flags.
+         *
+         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
+         * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
+         * @return the current page of a multi-image or an empty matrix
+         * @sa current(int,Mat*) const
+         */
+        Mat current(std::map<String, String> *properties = 0, Mat *dst = 0) const { return current(m_default_flags, properties, dst); }
 
         /** @brief Return the current page.
          *
@@ -213,46 +192,6 @@ namespace cv
          * @sa imread()
          */
         CV_WRAP Mat current(int flags, CV_OUT std::map<String, String> &properties) const { return current(flags, &properties); }
-
-        /** @brief Return the current page.
-         *
-         * Return the page set by next().
-         *
-         * @param flags The same flags as in imread() except drivers, see cv::ImreadModes.
-         * @return the current page of a multi-image or an empty matrix
-         * @sa imread()
-         */
-        CV_WRAP Mat current(int flags) const { return current(flags, nullptr); }
-
-        /** @brief Return the current page.
-         *
-         * Return the page set by next() using default-flags.
-         *
-         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
-         * @param dst The optional output placeholder for the loaded/decoded matrix, see imdecode().
-         * @return the current page of a multi-image or an empty matrix
-         * @sa current(int,Mat*) const
-         */
-        Mat current(std::map<String, String> *properties, Mat *dst = 0) const { return current(m_default_flags, properties, dst); }
-
-        /** @brief Return the current page.
-         *
-         * Return the page set by next() using default-flags.
-         *
-         * @param properties additional properties like "dpi-x", "dpi-y", "document-name", "page-name", "page-number"  or TIFF/EXIF-tags in string-form.
-         * @return the current page of a multi-image or an empty matrix
-         * @sa current(int,Mat*) const
-         */
-        CV_WRAP Mat current(CV_OUT std::map<String, String> &properties) const { return current(&properties); }
-
-        /** @brief Return the current page.
-         *
-         * Return the page set by next() using default-flags.
-         *
-         * @return the current page of a multi-image or an empty matrix
-         * @sa current(int,Mat*) const
-         */
-        CV_WRAP Mat current() const { return current(nullptr); }
 
         /** @brief Return the current page.
          *
