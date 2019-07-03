@@ -205,7 +205,7 @@ TEST(Reproducibility_FCN, Accuracy)
     Net net;
     {
         const string proto = findDataFile("dnn/fcn8s-heavy-pascal.prototxt");
-        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel");
+        const string model = findDataFile("dnn/fcn8s-heavy-pascal.caffemodel", false);
         net = readNetFromCaffe(proto, model);
         ASSERT_FALSE(net.empty());
     }
