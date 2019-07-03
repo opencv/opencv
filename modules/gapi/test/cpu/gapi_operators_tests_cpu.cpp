@@ -66,6 +66,6 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestCPU, NotOperatorTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 }

@@ -95,7 +95,7 @@ INSTANTIATE_TEST_CASE_P(MeanTestCPU, MeanTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(-1, SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(MaskTestCPU, MaskTest,
@@ -103,7 +103,7 @@ INSTANTIATE_TEST_CASE_P(MaskTestCPU, MaskTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(SelectTestCPU, SelectTest,
@@ -111,7 +111,7 @@ INSTANTIATE_TEST_CASE_P(SelectTestCPU, SelectTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartCPU, Polar2CartTest,
@@ -135,7 +135,7 @@ INSTANTIATE_TEST_CASE_P(PhaseCPU, PhaseTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 testing::Bool()));
 
@@ -144,7 +144,7 @@ INSTANTIATE_TEST_CASE_P(SqrtCPU, SqrtTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(CompareTestCPU, CmpTest,
@@ -162,7 +162,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestCPU, BitwiseTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(AND, OR, XOR)));
 
@@ -171,7 +171,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotTestCPU, NotTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(MinTestCPU, MinTest,
@@ -179,7 +179,7 @@ INSTANTIATE_TEST_CASE_P(MinTestCPU, MinTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(MaxTestCPU, MaxTest,
@@ -187,7 +187,7 @@ INSTANTIATE_TEST_CASE_P(MaxTestCPU, MaxTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
@@ -195,7 +195,7 @@ INSTANTIATE_TEST_CASE_P(SumTestCPU, SumTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 //Values(1e-5),
                                 Values(CORE_CPU),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj())));
@@ -205,7 +205,7 @@ INSTANTIATE_TEST_CASE_P(AbsDiffTestCPU, AbsDiffTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCTestCPU, AbsDiffCTest,
@@ -213,7 +213,7 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCTestCPU, AbsDiffCTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(AddWeightedTestCPU, AddWeightedTest,
@@ -230,7 +230,7 @@ INSTANTIATE_TEST_CASE_P(NormTestCPU, NormTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj()),
                                 Values(NORM_INF, NORM_L1, NORM_L2)));
@@ -248,7 +248,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestCPU, ThresholdTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC,
                                     cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)));
@@ -258,7 +258,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestCPU, ThresholdOTTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(cv::THRESH_OTSU, cv::THRESH_TRIANGLE)));
 
@@ -268,7 +268,7 @@ INSTANTIATE_TEST_CASE_P(InRangeTestCPU, InRangeTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(Split3TestCPU, Split3Test,
@@ -332,7 +332,7 @@ INSTANTIATE_TEST_CASE_P(RemapTestCPU, RemapTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(FlipTestCPU, FlipTest,
@@ -340,7 +340,7 @@ INSTANTIATE_TEST_CASE_P(FlipTestCPU, FlipTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(0,1,-1)));
 
@@ -349,7 +349,7 @@ INSTANTIATE_TEST_CASE_P(CropTestCPU, CropTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
@@ -385,7 +385,7 @@ INSTANTIATE_TEST_CASE_P(ConcatHorTestCPU, ConcatHorTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(ConcatVertTestCPU, ConcatVertTest,
@@ -393,7 +393,7 @@ INSTANTIATE_TEST_CASE_P(ConcatVertTestCPU, ConcatVertTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(ConcatVertVecTestCPU, ConcatVertVecTest,
@@ -401,7 +401,7 @@ INSTANTIATE_TEST_CASE_P(ConcatVertVecTestCPU, ConcatVertVecTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(ConcatHorVecTestCPU, ConcatHorVecTest,
@@ -409,7 +409,7 @@ INSTANTIATE_TEST_CASE_P(ConcatHorVecTestCPU, ConcatHorVecTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,

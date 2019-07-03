@@ -51,7 +51,7 @@ INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCTestFluid, AbsDiffCTest,
@@ -59,7 +59,7 @@ INSTANTIATE_TEST_CASE_P(AbsDiffCTestFluid, AbsDiffCTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestFluid, BitwiseTest,
@@ -68,7 +68,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestFluid, BitwiseTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID),
                                 Values(AND, OR, XOR)));
 
@@ -78,7 +78,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseNotTestFluid, NotTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(MinTestFluid, MinTest,
@@ -87,7 +87,7 @@ INSTANTIATE_TEST_CASE_P(MinTestFluid, MinTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(MaxTestFluid, MaxTest,
@@ -96,7 +96,7 @@ INSTANTIATE_TEST_CASE_P(MaxTestFluid, MaxTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(CompareTestFluid, CmpTest,
@@ -180,7 +180,7 @@ INSTANTIATE_TEST_CASE_P(SelectTestFluid, SelectTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartFluid, Polar2CartTest,
@@ -204,7 +204,7 @@ INSTANTIATE_TEST_CASE_P(PhaseFluid, PhaseTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID),
                                 testing::Bool()));
 
@@ -213,7 +213,7 @@ INSTANTIATE_TEST_CASE_P(SqrtFluid, SqrtTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
@@ -222,7 +222,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestFluid, ThresholdTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV,
                                        cv::THRESH_TRUNC,
@@ -234,7 +234,7 @@ INSTANTIATE_TEST_CASE_P(InRangeTestFluid, InRangeTest,
                                        cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
-                                Values(SAME_TYPE),
+                                Values(-1),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,

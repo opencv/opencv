@@ -184,11 +184,6 @@ struct TestWithParamBase : TestFunctional,
     cv::Size sz = getCommonParam<1>();
     MatType2 dtype = getCommonParam<2>();
 
-    TestWithParamBase()
-    {
-        if (dtype == SAME_TYPE) { dtype = type; }
-    }
-
     // Get common (pre-defined) parameter value by index
     template<size_t I>
     inline auto getCommonParam() const
@@ -515,8 +510,7 @@ inline std::ostream& operator<<(std::ostream& os, const opencv_test::MatType2& v
 {
     switch (v)
     {
-        case -1: return os << "same(unallocated)";
-        case opencv_test::SAME_TYPE: return os << "same(allocated)";
+        case -1: return os << "SAME_TYPE";
         default: PrintTo(MatType(v), &os); return os;
     }
 }
