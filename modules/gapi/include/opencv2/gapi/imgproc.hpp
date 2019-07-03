@@ -880,7 +880,10 @@ GAPI_EXPORTS GMat RGB2YUV422(const GMat& src);
 The function converts an input image from NV12 color space to RGB.
 The conventional ranges for Y, U, and V channel values are 0 to 255.
 
-Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC3.
+Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC1.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number,
+image type is @ref CV_8UC1.
 
 @note Function textual ID is "org.opencv.imgproc.colorconvert.nv12torgbp"
 
@@ -895,7 +898,10 @@ GAPI_EXPORTS GMatP NV12toRGBp(const GMat &src_y, const GMat &src_uv);
 The function converts an input image from NV12 color space to BGR.
 The conventional ranges for Y, U, and V channel values are 0 to 255.
 
-Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC3.
+Output image must be 8-bit unsigned planar 3-channel image @ref CV_8UC1.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number,
+image type is @ref CV_8UC1.
 
 @note Function textual ID is "org.opencv.imgproc.colorconvert.nv12torgbp"
 

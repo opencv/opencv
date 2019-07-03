@@ -1359,12 +1359,14 @@ GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, doub
 /** @brief Resizes a planar image.
 
 The function resizes the image src down to or up to the specified size.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
 
 Output image size will have the size dsize, the depth of output is the same as of src.
 
 @note Function textual ID is "org.opencv.core.transform.resizeP"
 
-@param src input image, must be of @ref CV_8UC3 type;
+@param src input image, must be of @ref CV_8UC1 type;
 @param dsize output image size;
 @param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
 
