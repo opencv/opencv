@@ -55,10 +55,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <> inline __device__ float sqrt(float val) { return sqrtf(val); }
         template <> inline __device__ double sqrt(double val) { return ::sqrt(val); }
 
+        template <class T> __device__ T rsqrt(T val);
+        template <> inline __device__ float rsqrt(float val) { return rsqrtf(val); }
+        template <> inline __device__ double rsqrt(double val) { return ::rsqrt(val); }
+
         template <class T> __device__ T sigmoid(T val) { return T(1) / (1 + exp(-val)); }
 
         template <class T> __device__ T clamp(T value, T lower, T upper) { return min(max(value, lower), upper); }
     }
+
+
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
 

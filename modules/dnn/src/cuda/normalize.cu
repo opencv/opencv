@@ -5,6 +5,7 @@
 #include "array.hpp"
 #include "math.hpp"
 #include "reduce.hpp"
+#include "atomics.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/kernel_utils.hpp"
@@ -17,142 +18,57 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
-        template <class T>
-        __global__ void reduce_sum_powN(span<T> output,
-            view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm)
+        template <class T> static
+        __global__ void zero(span<T> output) {
+            for (auto idx : grid_stride_range(output.size()))
+                output[idx] = 0;
+        }
+
+        template <class T> static
+        __global__ void reduce_sum_abs(span<T> output, view<T> input, std::size_t outer_stride, std::size_t mid_stride)
         {
-            for (int i = 0; i < outer_size; i++) {
-                for (int j = 0; j < mid_size; j++) {
-                    const auto outer_offset = i * mid_size * inner_size;
-                    const auto mid_offset = j * mid_size;
-                    const auto total_offset = outer_offset + mid_offset;
+            for (auto idx : grid_stride_range(input.size())) {
+                const auto outer_idx = idx / outer_stride;
+                const auto inner_idx = idx % mid_stride;
 
-                    T thread_sum = 0;
-                    for (auto idx : grid_stride_range(inner_size)) {
-                        const auto full_idx = total_offset + idx;
-                        thread_sum += utils::pow<T>(utils::abs(input[full_idx]), norm);
-                    }
-
-                    auto warp_sum = utils::warpReduceSum(thread_sum);
-                    if ((threadIdx.x & (warpSize - 1)) == 0)
-                        atomicAdd(&output[total_offset], warp_sum);
-                }
+                auto sum_idx = outer_idx * mid_stride + inner_idx;
+                atomicAdd(&output[sum_idx], utils::abs(input[idx]));
             }
         }
 
-        template <class T>
-        __global__ void scale_inverse_powN(span<T> output,
-            view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T episilon, T norm,
-            view<T> sums)
-        {
-            for (int i = 0; i < outer_size; i++) {
-                for (int j = 0; j < mid_size; j++) {
-                    const auto outer_offset = i * mid_size * inner_size;
-                    const auto mid_offset = j * mid_size;
-                    const auto total_offset = outer_offset + mid_offset;
-
-                    const auto scale = 1 / utils::pow(sums[total_offset] + episilon, 1 / norm);
-                    for (auto idx : grid_stride_range(inner_size)) {
-                        const auto full_idx = total_offset + idx;
-                        output[full_idx] = input[full_idx] * scale;
-                    }
-                }
-            }
+        template <class T> static
+        __global__ void reciprocal(span<T> output, T epsilon) {
+            for (auto idx : grid_stride_range(output.size()))
+                output[idx] = 1 / (output[idx] + epsilon);
         }
 
-        template <class T>
-        __global__ void reduce_sum_powN_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size, T pnorm)
+        template <class T> static
+        __global__ void reduce_sum_squared(span<T> output, view<T> input, std::size_t outer_stride, std::size_t mid_stride)
         {
-            for (int i = 0; i < outer_size; i++) {
-                const auto outer_offset = i * mid_size;
+           for (auto idx : grid_stride_range(input.size())) {
+                const auto outer_idx = idx / outer_stride;
+                const auto inner_idx = idx % mid_stride;
 
-                T thread_sum = 0;
-                for (auto idx : grid_stride_range(mid_size)) {
-                    const auto full_idx = outer_offset + idx;
-                    thread_sum += utils::pow<T>(input[full_idx], pnorm);
-                }
-
-                auto warp_sum = utils::warpReduceSum(thread_sum);
-                if ((threadIdx.x & (warpSize - 1)) == 0)
-                    atomicAdd(&output[i], warp_sum);
-            }
+                auto sum_idx = outer_idx * mid_stride + inner_idx;
+                atomicAdd(&output[sum_idx], input[idx] * input[idx]);
+           }
         }
 
-        template <class T>
-        __global__ void scale_inverse_powN_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size, T epsilon, T pnorm,
-            view<T> sums)
-        {
-            for (int i = 0; i < outer_size; i++) {
-                const auto outer_offset = i * mid_size;
-                const auto scale = 1 / utils::pow<T>(sums[i] + epsilon, 1/pnorm);
-                for (auto idx : grid_stride_range(mid_size)) {
-                    const auto full_idx = outer_offset + idx;
-                    output[full_idx] = input[full_idx] * scale;
-                }
-            }
+        template <class T> static
+        __global__ void rsqrt(span<T> output, T epsilon) {
+            for (auto idx : grid_stride_range(output.size()))
+                output[idx] = utils::rsqrt(output[idx] + epsilon);
         }
 
-        template <class T>
-        __global__ void reduce_sum_pow2_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size)
+        template <class T> static
+        __global__ void apply_norm(span<T> output, view<T> input, std::size_t outer_stride, std::size_t mid_stride, view<T> sums)
         {
-            for (int i = 0; i < outer_size; i++) {
-                const auto outer_offset = i * mid_size;
+            for (auto idx : grid_stride_range(output.size())) {
+                const auto outer_idx = idx / outer_stride;
+                const auto inner_idx = idx % mid_stride;
 
-                T thread_sum = 0;
-                for (auto idx : grid_stride_range(mid_size)) {
-                    const auto full_idx = outer_offset + idx;
-                    thread_sum += input[full_idx] * input[full_idx];
-                }
-
-                auto warp_sum = utils::warpReduceSum(thread_sum);
-                if ((threadIdx.x & (warpSize - 1)) == 0)
-                    atomicAdd(&output[i], warp_sum);
-            }
-        }
-
-        template <class T>
-        __global__ void scale_inverse_pow2_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size, T epsilon,
-            view<T> sums)
-        {
-            for (int i = 0; i < outer_size; i++) {
-                const auto outer_offset = i * mid_size;
-                const auto scale = 1 / utils::sqrt(sums[i] + epsilon);
-                for (auto idx : grid_stride_range(mid_size)) {
-                    const auto full_idx = outer_offset + idx;
-                    output[full_idx] = input[full_idx] * scale;
-                }
-            }
-        }
-
-        template <class T>
-        __global__ void reduce_sum_pow1_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size)
-        {
-            for (int i = 0; i < outer_size; i++) {
-                const auto outer_offset = i * mid_size;
-
-                T thread_sum = 0;
-                for (auto idx : grid_stride_range(mid_size)) {
-                    const auto full_idx = outer_offset + idx;
-                    thread_sum += utils::abs(input[full_idx]);
-                }
-
-                auto warp_sum = utils::warpReduceSum(thread_sum);
-                if ((threadIdx.x & (warpSize - 1)) == 0)
-                    atomicAdd(&output[i], warp_sum);
-            }
-        }
-
-        template <class T>
-        __global__ void scale_inverse_pow1_inner1(span<T> output, view<T> input, std::size_t outer_size, std::size_t mid_size, T epsilon,
-            view<T> sums)
-        {
-            for (int i = 0; i < outer_size; i++) {
-                 const auto outer_offset = i * mid_size;
-                 const auto scale = 1/(sums[i] + epsilon);
-                 for (auto idx : grid_stride_range(mid_size)) {
-                     const auto full_idx = outer_offset + idx;
-                     output[full_idx] = input[full_idx] * scale;
-                 }
+                auto sum_idx = outer_idx * mid_stride + inner_idx;
+                output[idx] = input[idx] * sums[sum_idx];
             }
         }
     }
@@ -162,48 +78,41 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const Stream& stream,
         span<T> output,
         view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm, T epsilon,
-        span<T> workspace)
+        span<T> workspace_)
     {
-        if (inner_size == 1) {
-            CV_Assert(workspace.size() >= outer_size);
-            if (norm == 1) {
-                auto reduce_kernel = raw::reduce_sum_pow1_inner1<T>;
-                auto policy = make_policy(reduce_kernel, 0, stream);
-                launch_kernel(reduce_kernel, policy, workspace, input, outer_size, mid_size);
+        CV_Assert(norm == 1 || norm == 2);
+        CV_Assert(workspace_.size() >= outer_size * inner_size);
 
-                auto scale_kernel = raw::scale_inverse_pow1_inner1<T>;
-                policy = make_policy(scale_kernel, 0, stream);
-                launch_kernel(scale_kernel, policy, output, input, outer_size, mid_size, epsilon, workspace);
-            } else if (norm == 2) {
-                auto reduce_kernel = raw::reduce_sum_pow2_inner1<T>;
-                auto policy = make_policy(reduce_kernel, 0, stream);
-                launch_kernel(reduce_kernel, policy, workspace, input, outer_size, mid_size);
+        auto sums = span<T>(workspace_.data(), outer_size * inner_size);
 
-                auto scale_kernel = raw::scale_inverse_pow2_inner1<T>;
-                policy = make_policy(scale_kernel, 0, stream);
-                launch_kernel(scale_kernel, policy, output, input, outer_size, mid_size, epsilon, workspace);
-            } else {
-                auto reduce_kernel = raw::reduce_sum_powN_inner1<T>;
-                auto policy = make_policy(reduce_kernel, 0, stream);
-                launch_kernel(reduce_kernel, policy, workspace, input, outer_size, mid_size, norm);
+        auto zero_kernel = raw::zero<T>;
+        auto policy = make_policy(zero_kernel, 0, stream);
+        launch_kernel(zero_kernel, policy, sums);
 
-                auto scale_kernel = raw::scale_inverse_powN_inner1<T>;
-                policy = make_policy(scale_kernel, 0, stream);
-                launch_kernel(scale_kernel, policy, output, input, outer_size, mid_size, epsilon, norm, workspace);
-            }
+        if (norm == 1) {
+            auto reduce_kernel = raw::reduce_sum_abs<T>;
+            policy = make_policy(reduce_kernel, 0, stream);
+            launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
+
+            auto reciprocal_kernel = raw::reciprocal<T>;
+            policy = make_policy(reciprocal_kernel, 0, stream);
+            launch_kernel(reciprocal_kernel, policy, sums, epsilon);
         } else {
-            auto reduce_kernel = raw::reduce_sum_powN<T>;
-            auto policy = make_policy(reduce_kernel, 0, stream);
-            launch_kernel(reduce_kernel, policy, workspace, input, outer_size, mid_size, inner_size, norm);
+            auto reduce_kernel = raw::reduce_sum_squared<T>;
+            policy = make_policy(reduce_kernel, 0, stream);
+            launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
 
-            auto scale_kernel = raw::scale_inverse_powN<T>;
-            policy = make_policy(scale_kernel, 0, stream);
-            launch_kernel(scale_kernel, policy, output, input, outer_size, mid_size, inner_size, epsilon, norm, workspace);
+            auto rsqrt_kernel = raw::rsqrt<T>;
+            policy = make_policy(rsqrt_kernel, 0, stream);
+            launch_kernel(rsqrt_kernel, policy, sums, epsilon);
         }
+
+        auto scale_kernel = raw::apply_norm<T>;
+        policy = make_policy(scale_kernel, 0, stream);
+        launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 
     template void normalize<float>(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, float, float, span<float>);
-    /* double variant not available due to efficient atomicAdd implementation */
-    //template void normalize<double>(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, unsigned, span<double>);
+    template void normalize<double>(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, double, double, span<double>);
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */

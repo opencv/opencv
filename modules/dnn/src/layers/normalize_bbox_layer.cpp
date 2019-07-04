@@ -78,7 +78,7 @@ public:
             return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA());
+               (backendId == DNN_BACKEND_CUDA && haveCUDA() && (pnorm == 1.0 || pnorm == 2.0));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -269,8 +269,7 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
+        csl::Workspace& workspace) override
     {
         CV_Assert(inputs.size() == 1 && outputs.size() == 1);
 
@@ -322,6 +321,16 @@ public:
             weightsTensor = createTensorHeaderFromMat(weightsMat);
             copyMatToTensor<float>(weightsTensor, weightsMat, stream);
         }
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input_shape = input_wrapper->getShape();
+
+        auto start_axis = clamp(startAxis, input_shape.size());
+        auto end_axis = clamp(endAxis, input_shape.size());
+
+        auto outer_size = total(input_shape, 0, start_axis);
+        auto inner_size = total(input_shape, end_axis + 1, -1);
+        scratch_mem_in_bytes = outer_size * inner_size * sizeof(float);
     }
 
     csl::Tensor<float> weightsTensor;
