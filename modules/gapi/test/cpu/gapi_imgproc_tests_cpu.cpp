@@ -264,6 +264,24 @@ INSTANTIATE_TEST_CASE_P(NV12toBGRTestCPU, NV12toBGRTest,
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_f())));
 
+INSTANTIATE_TEST_CASE_P(NV12toRGBpTestCPU, NV12toRGBpTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(true),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_f())));
+
+INSTANTIATE_TEST_CASE_P(NV12toBGRpTestCPU, NV12toBGRpTest,
+                        Combine(Values(CV_8UC1),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480)),
+                                Values(CV_8UC3),
+                                Values(true),
+                                Values(IMGPROC_CPU),
+                                Values(AbsExact().to_compare_f())));
+
 INSTANTIATE_TEST_CASE_P(RGB2LabTestCPU, RGB2LabTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),

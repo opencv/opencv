@@ -309,6 +309,43 @@ GAPI_OCV_KERNEL(GCPURGB2YUV422, cv::gapi::imgproc::GRGB2YUV422)
     }
 };
 
+static void toPlanar(const cv::Mat& in, cv::Mat& out)
+{
+    GAPI_Assert(out.depth() == in.depth());
+    GAPI_Assert(out.channels() == 1);
+    GAPI_Assert(in.channels() == 3);
+    GAPI_Assert(out.cols == in.cols);
+    GAPI_Assert(out.rows == 3*in.rows);
+
+    std::vector<cv::Mat> outs(3);
+    for (int i = 0; i < 3; i++) {
+        outs[i] = out(cv::Rect(0, i*in.rows, in.cols, in.rows));
+    }
+    cv::split(in, outs);
+}
+
+
+GAPI_OCV_KERNEL(GCPUNV12toRGBp, cv::gapi::imgproc::GNV12toRGBp)
+{
+    static void run(const cv::Mat& inY, const cv::Mat& inUV, cv::Mat& out)
+    {
+        cv::Mat rgb;
+        cv::cvtColorTwoPlane(inY, inUV, rgb, cv::COLOR_YUV2RGB_NV12);
+        toPlanar(rgb, out);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
+{
+    static void run(const cv::Mat& inY, const cv::Mat& inUV, cv::Mat& out)
+    {
+        cv::Mat rgb;
+        cv::cvtColorTwoPlane(inY, inUV, rgb, cv::COLOR_YUV2BGR_NV12);
+        toPlanar(rgb, out);
+    }
+};
+
+
 cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -339,6 +376,8 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUBayerGR2RGB
         , GCPURGB2HSV
         , GCPURGB2YUV422
+        , GCPUNV12toRGBp
+        , GCPUNV12toBGRp
         >();
     return pkg;
 }

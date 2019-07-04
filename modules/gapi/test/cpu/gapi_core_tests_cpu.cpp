@@ -338,6 +338,19 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
                                 Values(cv::Size(64,64),
                                        cv::Size(30,30))));
 
+INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(false),
+                                Values(CORE_CPU),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(cv::INTER_LINEAR),
+                                Values(cv::Size(64,64),
+                                       cv::Size(30,30))));
+
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::Size(1280, 720),
