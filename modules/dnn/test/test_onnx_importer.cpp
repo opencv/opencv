@@ -192,6 +192,16 @@ TEST_P(Test_ONNX_layers, AvePooling3D)
     testONNXModels("ave_pool3d");
 }
 
+TEST_P(Test_ONNX_layers, PoolConv3D)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+    testONNXModels("pool_conv_3d");
+}
+
 TEST_P(Test_ONNX_layers, BatchNormalization)
 {
     testONNXModels("batch_norm");
