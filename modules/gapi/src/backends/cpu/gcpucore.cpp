@@ -461,6 +461,22 @@ GAPI_OCV_KERNEL(GCPUResize, cv::gapi::core::GResize)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUResizeP, cv::gapi::core::GResizeP)
+{
+    static void run(const cv::Mat& in, cv::Size out_sz, int interp, cv::Mat& out)
+    {
+        int inH = in.rows / 3;
+        int inW = in.cols;
+        int outH = out.rows / 3;
+        int outW = out.cols;
+        for (int i = 0; i < 3; i++) {
+            auto in_plane = in(cv::Rect(0, i*inH, inW, inH));
+            auto out_plane = out(cv::Rect(0, i*outH, outW, outH));
+            cv::resize(in_plane, out_plane, out_sz, 0, 0, interp);
+        }
+    }
+};
+
 GAPI_OCV_KERNEL(GCPURemap, cv::gapi::core::GRemap)
 {
     static void run(const cv::Mat& in, const cv::Mat& x, const cv::Mat& y, int a, int b, cv::Scalar s, cv::Mat& out)
@@ -589,6 +605,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUSplit3
          , GCPUSplit4
          , GCPUResize
+         , GCPUResizeP
          , GCPUMerge3
          , GCPUMerge4
          , GCPURemap

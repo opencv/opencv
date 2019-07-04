@@ -398,6 +398,16 @@ namespace core {
         }
     };
 
+    G_TYPED_KERNEL(GResizeP, <GMatP(GMatP,Size,int)>, "org.opencv.core.transform.resizeP") {
+        static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.planar);
+            GAPI_Assert(interp == cv::INTER_LINEAR);
+            return in.withSize(sz);
+        }
+    };
+
     G_TYPED_KERNEL(GMerge3, <GMat(GMat,GMat,GMat)>, "org.opencv.core.transform.merge3") {
         static GMatDesc outMeta(GMatDesc in, GMatDesc, GMatDesc) {
             // Preserve depth and add channel component
@@ -1342,9 +1352,27 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see cv::InterpolationFlags
 
-@sa  warpAffine, warpPerspective, remap
+@sa  warpAffine, warpPerspective, remap, resizeP
  */
 GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+
+/** @brief Resizes a planar image.
+
+The function resizes the image src down to or up to the specified size.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
+
+Output image size will have the size dsize, the depth of output is the same as of src.
+
+@note Function textual ID is "org.opencv.core.transform.resizeP"
+
+@param src input image, must be of @ref CV_8UC1 type;
+@param dsize output image size;
+@param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
+
+@sa  warpAffine, warpPerspective, remap, resize
+ */
+GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
 /** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
 

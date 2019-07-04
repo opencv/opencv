@@ -169,5 +169,15 @@ GMat RGB2YUV422(const GMat& src) {
     return imgproc::GRGB2YUV422::on(src);
 }
 
+GMatP NV12toRGBp(const GMat &y, const GMat &uv)
+{
+    return imgproc::GNV12toRGBp::on(y, uv);
+}
+
+GMatP NV12toBGRp(const GMat &y, const GMat &uv)
+{
+    return imgproc::GNV12toBGRp::on(y, uv);
+}
+
 } //namespace gapi
 } //namespace cv
