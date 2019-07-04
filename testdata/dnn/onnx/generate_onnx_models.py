@@ -338,3 +338,16 @@ class Eltwise(nn.Module):
 input = Variable(torch.randn(1, 1, 2, 3, 4))
 model = Eltwise()
 save_data_and_model("eltwise3d", input, model)
+
+class Clip(nn.Module):
+
+    def __init__(self):
+        super(Clip, self).__init__()
+
+    def forward(self, x):
+
+        return torch.clamp(x, -0.1, 0.2)
+
+model = Clip()
+input = Variable(torch.rand(1, 10, 2, 2))
+save_data_and_model('clip', input, model)
