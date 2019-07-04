@@ -136,6 +136,11 @@ TEST_P(Test_ONNX_layers, ReLU)
     testONNXModels("ReLU");
 }
 
+TEST_P(Test_ONNX_layers, Clip)
+{
+    testONNXModels("clip", npy);
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
     testONNXModels("maxpooling_sigmoid");

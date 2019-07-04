@@ -530,6 +530,13 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.type = "Power";
             }
         }
+        else if (layer_type == "Clip")
+        {
+            layerParams.type = "ReLU6";
+            replaceLayerParam(layerParams, "min", "min_value");
+            replaceLayerParam(layerParams, "max", "max_value");
+
+        }
         else if (layer_type == "LeakyRelu")
         {
             layerParams.type = "ReLU";

@@ -1370,6 +1370,24 @@ void TFImporter::populateNet(Net dstNet)
 
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
         }
+        else if (type == "MaxPoolGrad")
+        {
+            CV_Assert(layer.input_size() == 3);
+
+            layerParams.set("pool_k_h", 0);
+            layerParams.set("pool_k_w", 0);
+            layerParams.set("pool_stride_h", 0);
+            layerParams.set("pool_stride_w", 0);
+            layerParams.set("pool_pad_h", 0);
+            layerParams.set("pool_pad_w", 0);
+
+            int id = dstNet.addLayer(name, "MaxUnpool", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(2)), id, 0);
+            connect(layer_id, dstNet, parsePin(layer.input(1) + ":1"), id, 1);
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 2);
+        }
         else if (type == "Placeholder")
         {
             if (!hasLayerAttr(layer, "dtype") ||
