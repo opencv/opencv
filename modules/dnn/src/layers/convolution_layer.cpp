@@ -532,7 +532,7 @@ public:
         const Mat* input_;
         const Mat* weights_;
         Mat* output_;
-        int outShape[4];
+        int outShape[4]; // used only for conv2d
         std::vector<size_t> kernel_size, pads_begin, pads_end, strides, dilations;
         int ngroups_, nstripes_;
         std::vector<int> ofstab_;
@@ -557,13 +557,13 @@ public:
                          const std::vector<size_t>& dilations,
                          const ActivationLayer* activ, int ngroups, int nstripes )
         {
-            size_t kernel_total = std::accumulate(kernel_size.begin(), kernel_size.end(),
-                                                  1, std::multiplies<size_t>());
+            size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
+                                           1, std::multiplies<size_t>());
             CV_Assert_N(
                        (input.dims == 4 || input.dims == 5) && (input.dims == output.dims),
                        input.size[0] == output.size[0],
                        weights.rows == output.size[1],
-                       weights.cols == (input.size[1]/ngroups)*kernel_total,
+                       weights.cols == (input.size[1]/ngroups)*karea,
                        input.type() == output.type(),
                        input.type() == weights.type(),
                        input.type() == CV_32FC1,
@@ -590,23 +590,26 @@ public:
             int height = input.size[input.dims - 2];
             int inpCn = inpCnAll / ngroups;
 
-            p.is1x1_ = kernel_size.size() == 2 && kernel_size[0] == 1 && kernel_size[1] == 1 &&
-                       pads_begin.size() == 2 && pads_begin[0] == 0 && pads_begin[1] == 0;
-            p.useAVX = checkHardwareSupport(CPU_AVX) && kernel_size.size() == 2;
-            p.useAVX2 = checkHardwareSupport(CPU_AVX2) && kernel_size.size() == 2;
-            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX && kernel_size.size() == 2;
+            bool isConv2D = kernel_size.size() == 2;
+
+            p.is1x1_ = isConv2D && kernel_size[0] == 1 && kernel_size[1] == 1 &&
+                       pads_begin[0] == 0  && pads_begin[1] == 0;
+
+            p.useAVX    = checkHardwareSupport(CPU_AVX)  && isConv2D;
+            p.useAVX2   = checkHardwareSupport(CPU_AVX2) && isConv2D;
+            p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
 
             int ncn = std::min(inpCn, (int)BLK_SIZE_CN);
 
-            int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
+            int kernel_d = !isConv2D? kernel_size[0] : 1;
             int kernel_h = kernel_size[kernel_size.size() - 2];
             int kernel_w = kernel_size.back();
 
-            int dil_d = (dilations.size() == 3) ? dilations[0] : 1;
+            int dil_d = !isConv2D? dilations[0] : 1;
             int dil_h = dilations[dilations.size() - 2];
             int dil_w = dilations.back();
 
-            p.ofstab_.resize(kernel_total * ncn);
+            p.ofstab_.resize(karea * ncn);
             int* ofstab = &p.ofstab_[0];
 
             for( int k = 0; k < ncn; k++ )
@@ -614,7 +617,7 @@ public:
                     for( int k_r = 0; k_r < kernel_h; k_r++ )
                         for( int k_c = 0; k_c < kernel_w; k_c++ )
                             ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
-                            (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
+                                   (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
 
             p.biasvec_ = &biasvec;
             p.reluslope_ = &reluslope;
@@ -627,39 +630,39 @@ public:
         {
             const int valign = ConvolutionLayerImpl::VEC_ALIGN;
             int ngroups = ngroups_, batchSize = input_->size[0]*ngroups;
+            bool isConv2D = input_->dims == 4;
 
-            int outD = (output_->dims == 5) ? output_->size[2] : 1;
             int outW = output_->size[output_->dims - 1];
             int outH = output_->size[output_->dims - 2];
             int outCn = output_->size[1]/ngroups;
 
-            int depth = (input_->dims == 5) ? input_->size[2] : 1;
+            int depth = !isConv2D? input_->size[2] : 1;
             int height = input_->size[input_->dims - 2];
             int width = input_->size[input_->dims - 1];
             int inpCn = input_->size[1]/ngroups;
 
             const int nstripes = nstripes_;
 
-            int kernel_d = (kernel_size.size() == 3) ? kernel_size[0] : 1;
+            int kernel_d = !isConv2D? kernel_size[0] : 1;
             int kernel_h = kernel_size[kernel_size.size() - 2];
             int kernel_w = kernel_size.back();
             int karea = kernel_w*kernel_h*kernel_d;
 
-            int pad_d = (pads_begin.size() == 3) ? pads_begin[0] : 0;
+            int pad_d = !isConv2D? pads_begin[0] : 0;
             int pad_t = pads_begin[pads_begin.size() - 2];
             int pad_l = pads_begin.back();
 
-            int stride_d = (strides.size() == 3) ? strides[0] : 0;
+            int stride_d = !isConv2D? strides[0] : 0;
             int stride_h = strides[strides.size() - 2];
             int stride_w = strides.back();
 
-            int dilation_d = (dilations.size() == 3) ? dilations[0] : 1;
+            int dilation_d = !isConv2D? dilations[0] : 1;
             int dilation_h = dilations[dilations.size() - 2];
             int dilation_w = dilations.back();
 
             int i, j, k;
-            size_t inpPlaneSize = depth*height*width;
-            size_t outPlaneSize = outD*outH*outW;
+            size_t inpPlaneSize = input_->total(2);
+            size_t outPlaneSize = output_->total(2);
             bool is1x1 = is1x1_;
 
             int stripesPerSample;
@@ -728,10 +731,10 @@ public:
                     for( int ofs0 = stripeStart; ofs0 < stripeEnd; ofs0 += BLK_SIZE )
                     {
                         int ofs, ofs1 = std::min(ofs0 + BLK_SIZE, stripeEnd);
-                        int tmp = ofs0 / outW;
-                        int out_d = tmp / outH;
-                        int out_i = tmp - out_d * outH;
-                        int out_j = ofs0 - tmp * outW;
+
+                        int out_d = ofs0 / (outH * outW);
+                        int out_i = (ofs0 - out_d * outH * outW) / outW;
+                        int out_j = ofs0 % outW;
 
                         // do im2row for a part of input tensor
                         float* rowbuf = rowbuf0;
@@ -769,7 +772,7 @@ public:
                                 {
                                     // this condition should be true for most of the tensor elements, i.e.
                                     // most of the time the kernel aperture is inside the tensor X-Y plane.
-                                    if( kernel_size.size() == 2 && ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
+                                    if( isConv2D && ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
                                     {
                                         for( k = 0; k < vsz; k++ )
                                         {
@@ -1151,9 +1154,10 @@ public:
         CV_Assert(inputs.size() == outputs.size());
 
         int64 flops = 0;
+        int karea = std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<size_t>());
         for (int i = 0; i < inputs.size(); i++)
         {
-            flops += total(outputs[i])*(CV_BIG_INT(2)*kernel.area()*inputs[i][1] + 1);
+            flops += total(outputs[i])*(CV_BIG_INT(2)*karea*inputs[i][1] + 1);
         }
 
         return flops;
