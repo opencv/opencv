@@ -968,13 +968,15 @@ static std::string findData(const std::string& relative_path, bool required, boo
                 std::string prefix = path_join(datapath, subdir);
                 std::string result_;
                 CHECK_FILE_WITH_PREFIX(prefix, result_);
-#if 1  // check for misused 'optional' mode
                 if (!required && !result_.empty())
                 {
                     std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
-                    CV_Assert(required || result_.empty());
+                    static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
+                    if (checkOptionalFlag)
+                    {
+                        CV_Assert(required || result_.empty());
+                    }
                 }
-#endif
                 if (!result_.empty())
                     return result_;
             }

@@ -124,7 +124,7 @@ int initUndistortRectifyMapLine_AVX(float* m1f, float* m2f, short* m1, ushort* m
             _mm256_mul_pd(__matTilt_20, __xd), _mm256_mul_pd(__matTilt_21, __yd)), __matTilt_22);
 #endif
         __m256d __invProj = _mm256_blendv_pd(
-            __one, _mm256_div_pd(__one, __vecTilt2),
+            _mm256_div_pd(__one, __vecTilt2), __one,
             _mm256_cmp_pd(__vecTilt2, _mm256_setzero_pd(), _CMP_EQ_OQ));
 
 #if CV_FMA3

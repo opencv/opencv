@@ -1469,4 +1469,34 @@ TEST(Calib3d_UndistortPoints, outputShape)
     }
 }
 
+TEST(Calib3d_initUndistortRectifyMap, regression_14467)
+{
+    Size size_w_h(512 + 3, 512);
+    Matx33f k(
+        6200, 0, size_w_h.width / 2.0f,
+        0, 6200, size_w_h.height / 2.0f,
+        0, 0, 1
+    );
+
+    Mat mesh_uv(size_w_h, CV_32FC2);
+    for (int i = 0; i < size_w_h.height; i++)
+    {
+        for (int j = 0; j < size_w_h.width; j++)
+        {
+            mesh_uv.at<Vec2f>(i, j) = Vec2f((float)j, (float)i);
+        }
+    }
+
+    Matx<double, 1, 14> d(
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        0.09, 0.0
+    );
+    Mat mapxy, dst;
+    initUndistortRectifyMap(k, d, noArray(), k, size_w_h, CV_32FC2, mapxy, noArray());
+    undistortPoints(mapxy.reshape(2, (int)mapxy.total()), dst, k, d, noArray(), k);
+    dst = dst.reshape(2, mapxy.rows);
+    EXPECT_LE(cvtest::norm(dst, mesh_uv, NORM_INF), 1e-3);
+}
+
 }} // namespace
