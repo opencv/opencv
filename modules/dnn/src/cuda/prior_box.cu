@@ -91,8 +91,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::size_t layerWidth, std::size_t layerHeight, std::size_t imageWidth, std::size_t imageHeight,
         T stepX, T stepY)
     {
+        auto num_points = layerWidth * layerHeight;
         auto kernel = raw::prior_box<T, Normalize>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, num_points, 0, stream);
         launch_kernel(kernel, policy,
             output, boxWidth, boxHeight, offsetX, offsetY,
             layerWidth, layerHeight, imageWidth, imageHeight,
@@ -129,20 +130,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         if (clip) {
             auto output_span_c1 = span<T>(output.data(), channel_size);
             auto kernel = raw::prior_box_clip<T>;
-            auto policy = make_policy(kernel, 0, stream);
+            auto policy = make_policy(kernel, output_span_c1.size(), 0, stream);
             launch_kernel(kernel, policy, output_span_c1);
         }
 
         auto output_span_c2 = span<T>(output.data() + channel_size, channel_size);
         if (variance.size() == 1) {
             auto kernel = raw::prior_box_set_variance1<T>;
-            auto policy = make_policy(kernel, 0, stream);
+            auto policy = make_policy(kernel, output_span_c2.size(), 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance[0]);
         } else {
             utils::array<T, 4> variance_k;
             variance_k.assign(std::begin(variance), std::end(variance));
             auto kernel = raw::prior_box_set_variance4<T>;
-            auto policy = make_policy(kernel, 0, stream);
+            auto policy = make_policy(kernel, output_span_c2.size()/4, 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance_k);
         }
     }

@@ -59,7 +59,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 
         auto kernel = raw::permute<T, N>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, input.size(), 0, stream);
         launch_kernel(kernel, policy, order_k, output, outStride_k, input, inStride_k);
     }
 

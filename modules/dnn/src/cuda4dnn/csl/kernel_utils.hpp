@@ -37,10 +37,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         cudaStream_t stream;
     };
 
+    /* this overload shouldn't be necessary; we should always try to provide a bound on the number of threads */
+    /*
     template <class Kernel> inline
     execution_policy make_policy(Kernel kernel, std::size_t sharedMem = 0, const Stream& stream = 0) {
         int grid_size, block_size;
         CUDA4DNN_CHECK_CUDA(cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size, kernel, sharedMem));
+        return execution_policy(grid_size, block_size, sharedMem, stream);
+    }*/
+
+    template <class Kernel> inline
+    execution_policy make_policy(Kernel kernel, std::size_t max_threads, std::size_t sharedMem = 0, const Stream& stream = 0) {
+        CV_Assert(max_threads > 0);
+
+        int grid_size, block_size;
+        CUDA4DNN_CHECK_CUDA(cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size, kernel, sharedMem));
+        if (grid_size * block_size > max_threads) {
+            grid_size = (max_threads + block_size - 1) / block_size;
+            if (block_size > max_threads)
+                block_size = std::max<std::size_t>(64, max_threads);
+        }
+
+        CV_Assert(grid_size >= 1 && block_size >= 1);
         return execution_policy(grid_size, block_size, sharedMem, stream);
     }
 

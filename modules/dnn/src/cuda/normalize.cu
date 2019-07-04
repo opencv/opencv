@@ -86,29 +86,29 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         auto sums = span<T>(workspace_.data(), outer_size * inner_size);
 
         auto zero_kernel = raw::zero<T>;
-        auto policy = make_policy(zero_kernel, 0, stream);
+        auto policy = make_policy(zero_kernel, sums.size(), 0, stream);
         launch_kernel(zero_kernel, policy, sums);
 
         if (norm == 1) {
             auto reduce_kernel = raw::reduce_sum_abs<T>;
-            policy = make_policy(reduce_kernel, 0, stream);
+            policy = make_policy(reduce_kernel, input.size(), 0, stream);
             launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
 
             auto reciprocal_kernel = raw::reciprocal<T>;
-            policy = make_policy(reciprocal_kernel, 0, stream);
+            policy = make_policy(reciprocal_kernel, sums.size(), 0, stream);
             launch_kernel(reciprocal_kernel, policy, sums, epsilon);
         } else {
             auto reduce_kernel = raw::reduce_sum_squared<T>;
-            policy = make_policy(reduce_kernel, 0, stream);
+            policy = make_policy(reduce_kernel, input.size(), 0, stream);
             launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
 
             auto rsqrt_kernel = raw::rsqrt<T>;
-            policy = make_policy(rsqrt_kernel, 0, stream);
+            policy = make_policy(rsqrt_kernel, sums.size(), 0, stream);
             launch_kernel(rsqrt_kernel, policy, sums, epsilon);
         }
 
         auto scale_kernel = raw::apply_norm<T>;
-        policy = make_policy(scale_kernel, 0, stream);
+        policy = make_policy(scale_kernel, output.size(), 0, stream);
         launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 

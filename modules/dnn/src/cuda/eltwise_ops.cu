@@ -49,7 +49,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(output.size() == x.size());
 
         auto kernel = raw::eltwise_max_2<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, x, y);
     }
 
@@ -62,7 +62,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(output.size() == x.size());
 
         auto kernel = raw::eltwise_sum_2<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, x, y);
     }
 
@@ -80,7 +80,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         auto kernel = raw::eltwise_sum_coeff_2<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, coeff_x, x, coeff_y, y);
     }
 
@@ -93,7 +93,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(output.size() == x.size());
 
         auto kernel = raw::eltwise_prod_2<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, x, y);
     }
 

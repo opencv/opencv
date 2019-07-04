@@ -76,7 +76,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::size_t input_axis_size = input.get_axis_size(axis);
         std::size_t output_axis_size = output.get_axis_size(axis);
 
-        auto policy = make_policy(raw::concat<T>, 0, stream);
+        auto policy = make_policy(raw::concat<T>, input.size(), 0, stream);
         launch_kernel(raw::concat<T>, policy,
             output, output_axis_size, output_axis_offset,
             input, input_axis_size, concat_size);
@@ -101,7 +101,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 
         auto kernel = raw::concat_with_offsets<T, N>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, input.size(), 0, stream);
         launch_kernel(kernel, policy, output, outStride_k, outOffset_k, input, inStride_k);
     }
 

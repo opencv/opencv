@@ -70,7 +70,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
 
         auto kernel = raw::scale1<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, beta);
     }
 
@@ -87,7 +87,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
 
         auto kernel = raw::biasN<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, bias);
     }
 
@@ -99,7 +99,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
 
         auto kernel = raw::scale1<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, alpha);
     }
 
@@ -116,7 +116,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
 
         auto kernel = raw::scaleN<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, weights);
     }
 
@@ -128,7 +128,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(is_shape_same(input, output));
 
         auto kernel = raw::scale1_with_bias1<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, alpha, beta);
     }
 
@@ -146,7 +146,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(weights.size() == bias.size());
 
         auto kernel = raw::scaleN_with_biasN<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, weights, bias);
     }
 

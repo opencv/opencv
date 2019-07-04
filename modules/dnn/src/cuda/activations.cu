@@ -94,7 +94,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::abs<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src);
     }
 
@@ -106,7 +106,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::tanh<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src);
     }
 
@@ -118,7 +118,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::sigmoid<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src);
     }
 
@@ -130,7 +130,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::bnll<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src);
     }
 
@@ -142,7 +142,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::elu<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src);
     }
 
@@ -154,7 +154,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::relu<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src, slope);
     }
 
@@ -167,7 +167,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(floor <= ceiling);
 
         auto kernel = raw::clipped_relu<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src, floor, ceiling);
     }
 
@@ -179,7 +179,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::axiswise_relu<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src, inner_size, slope);
     }
 
@@ -191,7 +191,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(src.size() >= dest.size());
 
         auto kernel = raw::power<T>;
-        auto policy = make_policy(kernel, 0, stream);
+        auto policy = make_policy(kernel, dest.size(), 0, stream);
         launch_kernel(kernel, policy, dest, src, exp, scale, shift);
     }
 
