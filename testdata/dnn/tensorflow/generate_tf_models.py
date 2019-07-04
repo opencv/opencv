@@ -791,7 +791,14 @@ runModel(inp, 'conv2d_transpose_1:0', 'keras_deconv_same_v2')
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 2, 4, 3], 'ContentImage')
 runModel(inp, 'Relu:0', 'keras_batch_norm_training')
+################################################################################
+from tensorflow.python.ops.nn_grad import _MaxPoolGrad as MaxUnPooling2D
 
+inp = tf.placeholder(tf.float32, [1, 7, 7, 3], 'input')
+pool = tf.layers.max_pooling2d(inp, pool_size=(2, 2), strides=(2, 2))
+conv = tf.layers.conv2d(inputs=pool, filters=3, kernel_size=[1, 1], padding='VALID')
+unpool = MaxUnPooling2D(pool.op, conv)
+save(inp, unpool, 'max_pool_grad')
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
