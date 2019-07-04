@@ -353,6 +353,22 @@ input = Variable(torch.rand(1, 3, 4, 4))
 model = InstanceNorm()
 save_data_and_model("instancenorm", input, model)
 
+class PoolConv(nn.Module):
+
+    def __init__(self):
+        super(PoolConv, self).__init__()
+        self.pool = nn.MaxPool3d((3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1))
+        self.conv = nn.Conv3d(2, 2, kernel_size=3, stride=1, padding=1)
+
+    def forward(self, x):
+        x = self.pool(x)
+        y = self.conv(x)
+        return y
+
+input = Variable(torch.randn(1, 2, 4, 4, 19))
+model = PoolConv()
+save_data_and_model("pool_conv_3d", input, model)
+
 class Clip(nn.Module):
 
     def __init__(self):
