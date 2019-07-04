@@ -543,22 +543,36 @@ void ONNXImporter::populateNet(Net dstNet)
                 CV_Error(Error::StsNotImplemented,
                          "Expected input, scale, bias");
 
-            layerParams.type = "InstanceNorm";
-            replaceLayerParam(layerParams, "epsilon", "eps");
+            layerParams.blobs.resize(4);
+            layerParams.blobs[2] = getBlob(node_proto, constBlobs, 1);  // weightData
+            layerParams.blobs[3] = getBlob(node_proto, constBlobs, 2);  // biasData
+            layerParams.set("has_bias", true);
+            layerParams.set("has_weight", true);
 
-            if (!node_proto.input(1).empty()) {
-                layerParams.set("has_weight", true);
-                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 1));  // weightData
-            } else {
-                layerParams.set("has_weight", false);
-            }
+            // Get number of channels in input
+            int size = layerParams.blobs[2].total();
+            layerParams.blobs[0] = Mat::zeros(size, 1, CV_32F); // mean
+            layerParams.blobs[1] = Mat::ones(size, 1, CV_32F); // std
 
-            if (!node_proto.input(2).empty()) {
-                layerParams.set("has_bias", true);
-                layerParams.blobs.push_back(getBlob(node_proto, constBlobs, 2)); // biasData
-            } else {
-                layerParams.set("has_bias", false);
-            }
+            LayerParams mvnParams;
+            mvnParams.name = layerParams.name + "/MVN";
+            mvnParams.type = "MVN";
+            mvnParams.set("eps", layerParams.get<float>("epsilon"));
+            layerParams.erase("epsilon");
+
+            //Create MVN layer
+            int id = dstNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
+            //Connect to input
+            layerId = layer_id.find(node_proto.input(0));
+            CV_Assert(layerId != layer_id.end());
+            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+            //Add shape
+            layer_id.insert(std::make_pair(mvnParams.name, LayerInfo(id, 0)));
+            outShapes[mvnParams.name] = outShapes[node_proto.input(0)];
+
+            //Replace Batch Norm's input to MVN
+            node_proto.set_input(0, mvnParams.name);
+            layerParams.type = "BatchNorm";
         }
         else if (layer_type == "BatchNormalization")
         {
@@ -865,6 +879,7 @@ void ONNXImporter::populateNet(Net dstNet)
 
         int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
         layer_id.insert(std::make_pair(layerParams.name, LayerInfo(id, 0)));
+
 
         std::vector<MatShape> layerInpShapes, layerOutShapes, layerInternalShapes;
         for (int j = 0; j < node_proto.input_size(); j++) {

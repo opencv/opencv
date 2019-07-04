@@ -510,15 +510,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<BatchNormLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS InstanceNormLayer : public ActivationLayer
-    {
-    public:
-        bool hasWeights, hasBias;
-        float epsilon;
-
-        static Ptr<InstanceNormLayer> create(const LayerParams &params);
-    };
-
     class CV_EXPORTS MaxUnpoolLayer : public Layer
     {
     public:

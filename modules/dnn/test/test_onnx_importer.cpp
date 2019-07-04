@@ -75,8 +75,10 @@ public:
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
 {
-
-    testONNXModels("instancenorm", npy, 1, 1, false, false);
+    if (target == DNN_TARGET_MYRIAD)
+        testONNXModels("instancenorm", npy, 0, 0, false, false);
+    else
+        testONNXModels("instancenorm", npy);
 }
 
 TEST_P(Test_ONNX_layers, MaxPooling)
