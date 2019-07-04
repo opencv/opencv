@@ -287,6 +287,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         struct params_type {
             std::vector<std::size_t> input_shape;
+            std::vector<std::size_t> output_shape;
 
             std::vector<std::size_t> window_size;
             std::vector<std::size_t> padding;
@@ -304,9 +305,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             inputTensorDesc = TensorDescriptor(params.input_shape);
             poolingDesc = PoolingDescriptor(params.window_size, params.padding, params.stride, params.type);
 
-            std::vector<int> output_dim;
-            getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
-            outputTensorDesc = TensorDescriptor(output_dim);
+            //std::vector<int> output_dim;
+            //getPoolingForwardOutputDim(poolingDesc, inputTensorDesc, output_dim);
+            outputTensorDesc = TensorDescriptor(params.output_shape);
         }
 
         Pooling& operator=(const Pooling&) = delete;

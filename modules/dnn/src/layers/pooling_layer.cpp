@@ -391,11 +391,38 @@ public:
             CV_Error(Error::StsNotImplemented, "Specified padding mode not supported by PoolingLayer");
         }
 
+        /* in some scenarios, the extra padding may not change the output at all */
+        for (int i = 2; i < rank; i++) {
+            auto total_padding = common_padding[i] * 2 + padding_left[i] + padding_right[i];
+            auto rem = (input_shape[i] + total_padding - kernel_size[i - 2]) % strides[i - 2];
+            if (rem && padding_right[i] > 0)
+                padding_right[i]--;
+        }
+
         /* csl::Pooling supports symmetric padding only; hence, we deal with asymmetric padding by
          * copying the input to a bigger tensor and padding the sides manually
          */
         for (int i = 0; i < rank; i++)
             input_shape[i] += padding_left[i] + padding_right[i];
+
+        std::vector<std::size_t> output_shape(rank);
+        output_shape[0] = input_shape[0];
+        output_shape[1] = input_shape[1];
+        for (int i = 2; i < rank; i++)
+        {
+            auto total_padding = common_padding[i] * 2 + padding_left[i] + padding_right[i];
+            output_shape[i] = (input_shape[i] + total_padding - kernel_size[i - 2]) / strides[i - 2] + 1;
+        }
+
+        /* try to avoid input transformation using cuDNN's flexibility */
+        if (input_shape != input_wrapper->getShape() &&
+            std::all_of(std::begin(padding_left), std::end(padding_left), [](std::size_t i) {return i == 0; }))
+        {
+            /* we don't need a transformation since cuDNN allows smaller or bigger output dimensions for
+             * from the dimensions calculated from the arithmetic
+             */
+            input_shape = input_wrapper->getShape();
+        }
 
         /* if the actual input shape and the new input shape do not match; we need to transform the input */
         transform_required = input_shape != input_wrapper->getShape();
@@ -407,6 +434,7 @@ public:
 
         csl::Pooling<float>::params_type params;
         params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        params.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         params.window_size = kernel_size;
         params.padding.assign(std::begin(common_padding) + 2, std::end(common_padding));
         params.stride = strides;
