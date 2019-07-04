@@ -243,8 +243,8 @@ TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
     runTensorFlowNet("max_pool3d");
 }
 
@@ -253,8 +253,8 @@ TEST_P(Test_TensorFlow_layers, AvePooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
     runTensorFlowNet("ave_pool3d");
 }
 
