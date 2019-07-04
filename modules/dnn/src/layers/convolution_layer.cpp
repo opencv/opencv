@@ -1398,7 +1398,7 @@ public:
         }
 
         /* csl::Convolution supports symmetric padding only; hence, we deal with asymmetric padding by
-         * copying the input to a bigger tensor and pad the sides manually
+         * copying the input to a bigger tensor and padding the ends manually
          */
         for (int i = 0; i < rank; i++)
             input_shape[i] += padding_left[i] + padding_right[i];

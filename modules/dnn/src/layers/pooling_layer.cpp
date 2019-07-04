@@ -300,13 +300,17 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_UNUSED(workspace);
-
         if (computeMaxIdx)
-            CV_Error(Error::StsNotImplemented, "Pooling layer does not support caching max indicies");
+            CV_Error(Error::StsNotImplemented, "Pooling layer does not support caching max indices");
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto input = input_wrapper->getView();
+
+        if (!transformedInput.empty())
+        {
+            inputTransformer.transform(input, transformedInput);
+            input = csl::TensorView<float>(transformedInput);
+        }
 
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto output = output_wrapper->getSpan();
@@ -327,13 +331,84 @@ public:
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
         auto input_shape = input_wrapper->getShape();
 
-        if (pads_begin != pads_end)
-            CV_Error(Error::StsNotImplemented, "Asymmetric padding for pooling layer is not supported by CUDA backend");
+        /* 1d, 2d, 3d pooling are supported */
+        CV_Assert(input_shape.size() >= 3 || input_shape.size() <= 5);
+
+        const auto rank = input_shape.size();
+
+        /* left and right are misleading as the padding is applicable for any number of dimensions
+         * but we use those identifiers to avoid confusion with `pads_begin` and `pads_end`
+         */
+        std::vector<std::size_t> common_padding(rank, 0);
+        std::vector<std::size_t> padding_left(rank, 0), padding_right(rank, 0);
+        if (padMode.empty())
+        {
+            /* cuDNN rounds down by default; hence, if ceilMode is false, we do nothing
+             * otherwise, we add extra padding towards the end so that the convolution arithmetic yeilds
+             * the correct output size without having to deal with fancy fractional sizes
+             */
+            auto pads_end_modified = pads_end;
+            if (ceilMode)
+            {
+                for (int i = 0; i < kernel_size.size(); i++) {
+                    auto rem = (input_shape[i + 2] + pads_begin[i] + pads_end[i] - kernel_size[i]) % strides[i];
+                    if(rem)
+                        pads_end_modified[i] += strides[i] - rem;
+                }
+            }
+
+            for (int i = 2; i < common_padding.size(); i++)
+            {
+                common_padding[i] = std::min(pads_begin[i - 2], pads_end_modified[i - 2]);
+                padding_left[i] = pads_begin[i - 2] - common_padding[i];
+                padding_right[i] = pads_end_modified[i - 2] - common_padding[i];
+            }
+        }
+        else if(padMode == "VALID") { /* nothing to do as the paddings are already preset to zero */ }
+        else if (padMode == "SAME")
+        {
+            /* TensorFlow Logic:
+             * total_padding[i] = (o[i] - 1) * s[i] + effective_k[i] - i[i]
+             *
+             * if total padding is odd, the input is padded towards the end
+             */
+            std::vector<int> inShape(std::begin(input_shape) + 2, std::end(input_shape)), outShape;
+            getConvPoolOutParams(inShape, kernel_size, strides, padMode, std::vector<size_t>(kernel_size.size(), 1), outShape);
+
+            for (int i = 2; i < rank; i++)
+            {
+                const auto j = i - 2; /* window idx */
+                const auto required_total_padding =
+                    std::max<int>(0, (outShape[j] - 1) * strides[j] + kernel_size[j] - inShape[j]);
+
+                common_padding[i] = required_total_padding / 2;
+                padding_left[i] = 0;
+                padding_right[i] = required_total_padding % 2;
+            }
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Specified padding mode not supported by PoolingLayer");
+        }
+
+        /* csl::Pooling supports symmetric padding only; hence, we deal with asymmetric padding by
+         * copying the input to a bigger tensor and padding the sides manually
+         */
+        for (int i = 0; i < rank; i++)
+            input_shape[i] += padding_left[i] + padding_right[i];
+
+        /* if the actual input shape and the new input shape do not match; we need to transform the input */
+        transform_required = input_shape != input_wrapper->getShape();
+        if (transform_required)
+        {
+            transformedInput.resize(std::begin(input_shape), std::end(input_shape));
+            inputTransformer = csl::TensorTransform<float>(cudnnHandle, padding_left, padding_right);
+        }
 
         csl::Pooling<float>::params_type params;
         params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
         params.window_size = kernel_size;
-        params.padding = pads_begin;
+        params.padding.assign(std::begin(common_padding) + 2, std::end(common_padding));
         params.stride = strides;
 
         if (type == MAX)
@@ -342,7 +417,7 @@ public:
         }
         else if (type == AVE)
         {
-            if(avePoolPaddedArea)
+            if (avePoolPaddedArea)
                 params.type = csl::Pooling<float>::pooling_type::AVERAGE_INCLUDE_PADDING;
             else
                 params.type = csl::Pooling<float>::pooling_type::AVERAGE_EXCLUDE_PADDING;
@@ -350,16 +425,15 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
 
-        if(ceilMode)
-            params.rounding_mode = csl::Pooling<float>::rounding_type::CEILING;
-        else
-            params.rounding_mode = csl::Pooling<float>::rounding_type::FLOOR;
-
         pooler = csl::Pooling<float>(cudnnHandle, params);
     }
 
     csl::cudnn::Handle cudnnHandle;
     csl::Pooling<float> pooler;
+
+    bool transform_required;
+    csl::Tensor<float> transformedInput;
+    csl::TensorTransform<float> inputTransformer;
 #endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
