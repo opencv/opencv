@@ -77,9 +77,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void prior_box_set_variance4(span<T> output, array<T, 4> variance) {
-            for (auto i : grid_stride_range(output.size()/4)) {
-                for (int j = 0; j < variance.size(); j++)
-                    output[i * 4 + j] = variance[j];
+            for (auto i : grid_stride_range(output.size())) {
+                const auto vidx = i % variance.size();
+                output[i] = variance[vidx];
             }
         }
     }
@@ -143,7 +143,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             utils::array<T, 4> variance_k;
             variance_k.assign(std::begin(variance), std::end(variance));
             auto kernel = raw::prior_box_set_variance4<T>;
-            auto policy = make_policy(kernel, output_span_c2.size()/4, 0, stream);
+            auto policy = make_policy(kernel, output_span_c2.size(), 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance_k);
         }
     }
