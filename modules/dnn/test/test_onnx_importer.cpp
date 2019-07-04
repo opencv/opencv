@@ -571,10 +571,10 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
 
-    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
     Mat image0 = imread(findDataFile("dnn/dog416.png"));
     Mat image1 = imread(findDataFile("dnn/street.png"));
 
