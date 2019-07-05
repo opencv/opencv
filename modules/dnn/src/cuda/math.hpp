@@ -10,7 +10,7 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace utils {
-        template <class T> __device__ T abs(T val);
+        template <class T> __device__ T abs(T val) { return (val < 0 ? -val : val); }
         template <> inline __device__ float abs(float val) { return fabsf(val); }
         template <> inline __device__ double abs(double val) { return fabs(val); }
 
@@ -18,11 +18,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <> inline __device__ float exp(float val) { return expf(val); }
         template <> inline __device__ double exp(double val) { return ::exp(val); }
 
-        template <class T> __device__ T max(T x, T y);
+        template <class T> __device__ T max(T x, T y) { return ::max(x, y); }
         template <> inline __device__ float max(float x, float y) { return fmaxf(x, y); }
         template <> inline __device__ double max(double x, double y) { return fmax(x, y); }
 
-        template <class T> __device__ T min(T x, T y);
+        template <class T> __device__ T min(T x, T y) { return ::min(x, y); }
         template <> inline __device__ float min(float x, float y) { return fminf(x, y); }
         template <> inline __device__ double min(double x, double y) { return fmin(x, y); }
 

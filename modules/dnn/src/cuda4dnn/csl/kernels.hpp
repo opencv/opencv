@@ -112,6 +112,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
         T stepX, T stepY,
         bool normalize, bool clip);
 
+    template <class T>
+    void resize_nn(const Stream& stream, TensorSpan<T> output, TensorView<T> input);
+
+    template <class T>
+    void resize_bilinear(const Stream& stream, TensorSpan<T> output, TensorView<T> input, float scale_y, float scale_x);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

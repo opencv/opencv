@@ -6,8 +6,15 @@
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv { namespace dnn {
 
@@ -58,7 +65,8 @@ public:
                    (interpolation == "bilinear");
         }
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -158,6 +166,43 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        if (interpolation == "nearest")
+            csl::kernels::resize_nn<float>(stream, output, input);
+        else if (interpolation == "bilinear")
+            csl::kernels::resize_bilinear<float>(stream, output, input, scaleHeight, scaleWidth);
+        else
+            CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<cv::Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+    }
+
+    csl::Stream stream;
+#endif
 
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
