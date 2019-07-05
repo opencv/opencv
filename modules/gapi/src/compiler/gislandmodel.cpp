@@ -223,6 +223,14 @@ ade::NodeHandle GIslandModel::mkEmitNode(Graph &g, std::size_t in_idx)
     return nh;
 }
 
+ade::NodeHandle GIslandModel::mkSinkNode(Graph &g, std::size_t out_idx)
+{
+    ade::NodeHandle nh = g.createNode();
+    g.metadata(nh).set(cv::gimpl::NodeKind{cv::gimpl::NodeKind::SINK});
+    g.metadata(nh).set(cv::gimpl::Sink{out_idx});
+    return nh;
+}
+
 void GIslandModel::syncIslandTags(Graph &g, ade::Graph &orig_g)
 {
     GModel::Graph gm(orig_g);

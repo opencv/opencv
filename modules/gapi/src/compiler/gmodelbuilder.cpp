@@ -139,6 +139,15 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                     std::size_t port  = ade::util::index(it);
                     GShape shape      = ade::util::value(it);
 
+                    if (shape == GShape::GARRAY)
+                    {
+                    std::cout << "Just created a new GArray origin "
+                              << &node.priv()
+                              << "/"
+                              << port
+                              << std::endl;
+                    }
+
                     GOrigin org { shape, node, port};
                     origins.insert(org);
                 }
@@ -303,5 +312,15 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_DataNode(const GOrigin &origin)
         m_graph_data[origin] = nh;
         return nh;
     }
-    else return it->second;
+    else
+    {
+        // FIXME: One of the ugliest workarounds ever
+        if (it->first.ctor.index() == it->first.ctor.index_of<cv::util::monostate>()
+            && origin.ctor.index() !=    origin.ctor.index_of<cv::util::monostate>()) {
+            // meanwhile update existing object
+            std::cout << "Patching... " << std::endl;
+            m_gm.metadata(it->second).get<Data>().ctor = origin.ctor;
+        }
+        return it->second;
+    }
 }

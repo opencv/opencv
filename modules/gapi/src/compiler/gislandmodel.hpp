@@ -129,7 +129,7 @@ public:
 struct NodeKind
 {
     static const char *name() { return "NodeKind"; }
-    enum { ISLAND, SLOT, EMIT} k;
+    enum { ISLAND, SLOT, EMIT, SINK} k;
 };
 
 // FIXME: Rename to Island (as soon as current GModel::Island is renamed
@@ -159,6 +159,12 @@ struct Emitter
     std::shared_ptr<GIslandEmitter> object;
 };
 
+struct Sink
+{
+    static const char *name() { return "Sink"; }
+    std::size_t proto_index;
+};
+
 namespace GIslandModel
 {
     using Graph = ade::TypedGraph
@@ -167,6 +173,7 @@ namespace GIslandModel
         , DataSlot
         , IslandExec
         , Emitter
+        , Sink
         , ade::passes::TopologicalSortData
         >;
 
@@ -177,6 +184,7 @@ namespace GIslandModel
         , DataSlot
         , IslandExec
         , Emitter
+        , Sink
         , ade::passes::TopologicalSortData
         >;
 
@@ -187,6 +195,7 @@ namespace GIslandModel
     ade::NodeHandle mkIslandNode(Graph &g, const gapi::GBackend &bknd, const ade::NodeHandle &op_nh, const ade::Graph &orig_g);
     ade::NodeHandle mkIslandNode(Graph &g, std::shared_ptr<GIsland>&& isl);
     ade::NodeHandle mkEmitNode(Graph &g, std::size_t in_idx); // streaming-related
+    ade::NodeHandle mkSinkNode(Graph &g, std::size_t out_idx); // streaming-related
 
     // GIslandModel API
     void syncIslandTags(Graph &g, ade::Graph &orig_g);

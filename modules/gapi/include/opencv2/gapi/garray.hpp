@@ -114,6 +114,8 @@ namespace detail
         std::size_t    m_elemSize = 0ul;
         cv::GArrayDesc m_desc;
         virtual ~BasicVectorRef() {}
+
+        virtual void mov(BasicVectorRef &ref) = 0;
     };
 
     template<typename T> class VectorRefT: public BasicVectorRef
@@ -200,6 +202,12 @@ namespace detail
             if (isRWOwn()) return  util::get<rw_own_t>(m_ref);
             util::throw_error(std::logic_error("Impossible happened"));
         }
+
+        virtual void mov(BasicVectorRef &v) {
+            VectorRefT<T> *tv = dynamic_cast<VectorRefT<T>*>(&v);
+            GAPI_Assert(tv != nullptr);
+            wref() = std::move(tv->wref());
+        }
     };
 
     // This class strips type information from VectorRefT<> and makes it usable
@@ -220,6 +228,14 @@ namespace detail
         }
 
     public:
+        const BasicVectorRef* inspect() const {
+            return  m_ref.get();
+        }
+
+        void mov(VectorRef &v) {
+            m_ref->mov(*v.m_ref);
+        }
+
         VectorRef() = default;
         template<typename T> explicit VectorRef(const std::vector<T>& vec) : m_ref(new VectorRefT<T>(vec)) {}
         template<typename T> explicit VectorRef(std::vector<T>& vec)       : m_ref(new VectorRefT<T>(vec)) {}
@@ -281,7 +297,9 @@ public:
     explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
         : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
 
-    detail::GArrayU strip() const { return m_ref; }
+    detail::GArrayU strip() const {
+        return m_ref;
+    }
 
 private:
     // Host type (or Flat type) - the type this GArray is actually

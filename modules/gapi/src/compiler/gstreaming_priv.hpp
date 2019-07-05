@@ -19,6 +19,9 @@ namespace gimpl
 };
 
 // FIXME: GAPI_EXPORTS is here only due to tests and Windows linker issues
+// FIXME: It seems it clearly duplicates the GStreamingCompiled and
+// GStreamingExecutable APIs so is highly redundant now.
+// Same applies to GCompiled/GCompiled::Priv/GExecutor.
 class GAPI_EXPORTS GStreamingCompiled::Priv
 {
     GMetaArgs  m_metas;    // passed by user
@@ -39,7 +42,10 @@ public:
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
+    bool try_pull(cv::GRunArgsP &&outs);
     void stop();
+
+    bool running() const;
 };
 
 } // namespace cv

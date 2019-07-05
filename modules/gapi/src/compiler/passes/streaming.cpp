@@ -65,6 +65,14 @@ void addStreaming(ade::passes::PassContext &ctx)
         auto emit_nh = GIslandModel::mkEmitNode(igm, in_idx);
         igm.link(emit_nh, orig_to_isl.at(in_nh));
     }
+
+    // Same for output slots
+    for (auto &&it : ade::util::indexed(proto.out_nhs)) {
+        const auto out_idx = ade::util::index(it);
+        const auto out_nh  = ade::util::value(it);
+        auto sink_nh = GIslandModel::mkSinkNode(igm, out_idx);
+        igm.link(orig_to_isl.at(out_nh), sink_nh);
+    }
 }
 
 }}} // cv::gimpl::passes

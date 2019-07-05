@@ -50,21 +50,17 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
         storage    = Data::Storage::CONST_VAL;
         g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
-    return data_h;
-}
-
-ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
-{
-    ade::NodeHandle data_h = g.createNode();
-    g.metadata(data_h).set(NodeType{NodeType::DATA});
-
-    const auto id = g.metadata().get<DataObjectCounter>().GetNewId(shape);
-    GMetaArg meta;
-    HostCtor ctor;
-    Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
-
-    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    if (origin.shape == GShape::GARRAY) {
+        std::cout << "Creating a GArray from "
+                  << &origin.node.priv()
+                  << "/"
+                  << origin.port
+                  << " -- ctor "
+                  << origin.ctor.index()
+                  << std::endl;
+    }
+    auto ctor_copy = origin.ctor;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, storage});
     return data_h;
 }
 

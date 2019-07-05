@@ -80,11 +80,20 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
+bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
+{
+    return m_exec->try_pull(std::move(outs));
+}
+
 void cv::GStreamingCompiled::Priv::stop()
 {
     m_exec->stop();
 }
 
+bool cv::GStreamingCompiled::Priv::running() const
+{
+    return m_exec->running();
+}
 
 // GStreamingCompiled public implementation ////////////////////////////////////
 cv::GStreamingCompiled::GStreamingCompiled()
@@ -113,9 +122,19 @@ bool cv::GStreamingCompiled::pull(cv::GRunArgsP &&outs)
     return m_priv->pull(std::move(outs));
 }
 
+bool cv::GStreamingCompiled::try_pull(cv::GRunArgsP &&outs)
+{
+    return m_priv->try_pull(std::move(outs));
+}
+
 void cv::GStreamingCompiled::stop()
 {
     m_priv->stop();
+}
+
+bool cv::GStreamingCompiled::running() const
+{
+    return m_priv->running();
 }
 
 cv::GStreamingCompiled::operator bool() const

@@ -178,9 +178,11 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
                                                  .original_data_node);
                 for (auto cons_nh : nh->outNodes())
                 {
-                    os << "\"slot:" << obj_name << "\" -> \""
-                       << gim.metadata(cons_nh).get<FusedIsland>().object->name()
-                       << "\"\n";
+                    if (gim.metadata(cons_nh).get<NodeKind>().k == NodeKind::ISLAND) {
+                        os << "\"slot:" << obj_name << "\" -> \""
+                           << gim.metadata(cons_nh).get<FusedIsland>().object->name()
+                           << "\"\n";
+                    } // other data consumers -- sinks -- are processed separately
                 }
             }
             break;
@@ -191,6 +193,16 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
                     const auto obj_name = format_obj(gim.metadata(out_nh).get<DataSlot>()
                                                      .original_data_node);
                     os << "\"emit:" << nh << "\" -> \"slot:" << obj_name << "\"\n";
+                }
+            }
+            break;
+        case NodeKind::SINK:
+            {
+                for (auto in_nh : nh->inNodes())
+                {
+                    const auto obj_name = format_obj(gim.metadata(in_nh).get<DataSlot>()
+                                                     .original_data_node);
+                    os << "\"slot:" << obj_name << "\" -> \"sink:" << nh << "\"\n";
                 }
             }
             break;

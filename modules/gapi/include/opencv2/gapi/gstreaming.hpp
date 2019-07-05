@@ -34,7 +34,20 @@ public:
      *    false marks end of the stream.
      */
     bool pull(cv::GRunArgsP &&outs);
+
+    /**
+     * @return true if data has been obtained, and
+     *    false if it was not. Note: false here doesn't
+     *    mark the end of the stream.
+     */
+    bool try_pull(cv::GRunArgsP &&outs);
+
     void stop();
+
+    /**
+     * @return true if the current stream is not over yet.
+     */
+    bool running() const;
 
     /// @private
     Priv& priv();
