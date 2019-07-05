@@ -246,7 +246,6 @@ INSTANTIATE_TEST_CASE_P(NV12toRGBpTestCPU, NV12toRGBpTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(true),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_f())));
 
@@ -255,7 +254,6 @@ INSTANTIATE_TEST_CASE_P(NV12toBGRpTestCPU, NV12toBGRpTest,
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480)),
                                 Values(CV_8UC3),
-                                Values(true),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_f())));
 
