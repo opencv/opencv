@@ -660,7 +660,7 @@ public:
             int dilation_h = dilations[dilations.size() - 2];
             int dilation_w = dilations.back();
 
-            int i, j, k;
+            int i, j, k, d;
             size_t inpPlaneSize = input_->total(2);
             size_t outPlaneSize = output_->total(2);
             bool is1x1 = is1x1_;
@@ -799,7 +799,7 @@ public:
                                         memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
                                         for( k = 0; k < ncn; k++ )
                                         {
-                                            for (int d = d0; d < d1; d++)
+                                            for ( d = d0; d < d1; d++)
                                             {
                                                 for( i = i0; i < i1; i++ )
                                                 {
