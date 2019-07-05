@@ -136,6 +136,11 @@ TEST_P(Test_ONNX_layers, ReLU)
     testONNXModels("ReLU");
 }
 
+TEST_P(Test_ONNX_layers, Clip)
+{
+    testONNXModels("clip", npy);
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
     testONNXModels("maxpooling_sigmoid");
@@ -225,7 +230,7 @@ TEST_P(Test_ONNX_layers, Multiplication)
 
 TEST_P(Test_ONNX_layers, Constant)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_2018R5);

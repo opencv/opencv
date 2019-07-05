@@ -99,55 +99,60 @@ public:
         return nz;
     }
 
-    bool getSubset( const Mat& m1, const Mat& m2,
-                    Mat& ms1, Mat& ms2, RNG& rng,
-                    int maxAttempts=1000 ) const
+    bool getSubset( const Mat& m1, const Mat& m2, Mat& ms1, Mat& ms2, RNG& rng, int maxAttempts=1000 ) const
     {
         cv::AutoBuffer<int> _idx(modelPoints);
         int* idx = _idx.data();
-        int i = 0, j, k, iters = 0;
-        int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
-        int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
-        int esz1 = (int)m1.elemSize1()*d1, esz2 = (int)m2.elemSize1()*d2;
-        int count = m1.checkVector(d1), count2 = m2.checkVector(d2);
-        const int *m1ptr = m1.ptr<int>(), *m2ptr = m2.ptr<int>();
+
+        const int d1 = m1.channels() > 1 ? m1.channels() : m1.cols;
+        const int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
+
+        int esz1 = (int)m1.elemSize1() * d1;
+        int esz2 = (int)m2.elemSize1() * d2;
+        CV_Assert((esz1 % sizeof(int)) == 0 && (esz2 % sizeof(int)) == 0);
+        esz1 /= sizeof(int);
+        esz2 /= sizeof(int);
+
+        const int count = m1.checkVector(d1);
+        const int count2 = m2.checkVector(d2);
+        CV_Assert(count >= modelPoints && count == count2);
+
+        const int *m1ptr = m1.ptr<int>();
+        const int *m2ptr = m2.ptr<int>();
 
         ms1.create(modelPoints, 1, CV_MAKETYPE(m1.depth(), d1));
         ms2.create(modelPoints, 1, CV_MAKETYPE(m2.depth(), d2));
 
-        int *ms1ptr = ms1.ptr<int>(), *ms2ptr = ms2.ptr<int>();
+        int *ms1ptr = ms1.ptr<int>();
+        int *ms2ptr = ms2.ptr<int>();
 
-        CV_Assert( count >= modelPoints && count == count2 );
-        CV_Assert( (esz1 % sizeof(int)) == 0 && (esz2 % sizeof(int)) == 0 );
-        esz1 /= sizeof(int);
-        esz2 /= sizeof(int);
-
-        for(; iters < maxAttempts; iters++)
+        for( int iters = 0; iters < maxAttempts; ++iters )
         {
-            for( i = 0; i < modelPoints && iters < maxAttempts; )
+            int i;
+
+            for( i = 0; i < modelPoints; ++i )
             {
-                int idx_i = 0;
-                for(;;)
-                {
-                    idx_i = idx[i] = rng.uniform(0, count);
-                    for( j = 0; j < i; j++ )
-                        if( idx_i == idx[j] )
-                            break;
-                    if( j == i )
-                        break;
-                }
-                for( k = 0; k < esz1; k++ )
+                int idx_i;
+
+                for ( idx_i = rng.uniform(0, count);
+                    std::find(idx, idx + i, idx_i) != idx + i;
+                    idx_i = rng.uniform(0, count) )
+                {}
+
+                idx[i] = idx_i;
+
+                for( int k = 0; k < esz1; ++k )
                     ms1ptr[i*esz1 + k] = m1ptr[idx_i*esz1 + k];
-                for( k = 0; k < esz2; k++ )
+
+                for( int k = 0; k < esz2; ++k )
                     ms2ptr[i*esz2 + k] = m2ptr[idx_i*esz2 + k];
-                i++;
             }
-            if( i == modelPoints && !cb->checkSubset(ms1, ms2, i) )
-                continue;
-            break;
+
+            if( cb->checkSubset(ms1, ms2, i) )
+                return true;
         }
 
-        return i == modelPoints && iters < maxAttempts;
+        return false;
     }
 
     bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE

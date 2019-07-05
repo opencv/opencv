@@ -301,6 +301,11 @@ GMat resize(const GMat& src, const Size& dsize, double fx, double fy, int interp
     return core::GResize::on(src, dsize, fx, fy, interpolation);
 }
 
+GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation)
+{
+    return core::GResizeP::on(src, dsize, interpolation);
+}
+
 GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
            int interpolation, int borderMode,
            const Scalar& borderValue)

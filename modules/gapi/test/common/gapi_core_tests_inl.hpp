@@ -848,6 +848,37 @@ TEST_P(ResizeTestFxFy, AccuracyTest)
     ResizeAccuracyTest(cmpF, type, interp, sz, cv::Size{0, 0}, fx, fy, getCompileArgs());
 }
 
+TEST_P(ResizePTest, AccuracyTest)
+{
+    constexpr int planeNum = 3;
+    cv::Size sz_in_p {sz.width,  sz.height*planeNum};
+    cv::Size sz_out_p{sz_out.width, sz_out.height*planeNum};
+
+    cv::Mat in_mat(sz_in_p, CV_8UC1);
+    cv::randn(in_mat, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
+
+    cv::Mat out_mat    (sz_out_p, CV_8UC1);
+    cv::Mat out_mat_ocv_p(sz_out_p, CV_8UC1);
+
+    cv::GMatP in;
+    auto out = cv::gapi::resizeP(in, sz_out, interp);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    c.compile(cv::descr_of(in_mat).asPlanar(planeNum), getCompileArgs())
+             (cv::gin(in_mat), cv::gout(out_mat));
+
+    for (int i = 0; i < planeNum; i++) {
+        const cv::Mat in_mat_roi = in_mat(cv::Rect(0, i*sz.height,  sz.width,  sz.height));
+        cv::Mat out_mat_roi = out_mat_ocv_p(cv::Rect(0, i*sz_out.height, sz_out.width, sz_out.height));
+        cv::resize(in_mat_roi, out_mat_roi, sz_out, 0, 0, interp);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat, out_mat_ocv_p));
+    }
+}
+
 TEST_P(Merge3Test, AccuracyTest)
 {
     cv::Mat in_mat3(sz, type);

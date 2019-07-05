@@ -891,6 +891,17 @@ inline int v_signmask(const v_uint64x2& a)
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
 
+inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(a)); }
+
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
 { return vec_all_lt(a.val, _Tpvec().val); }

@@ -85,6 +85,11 @@ static void handleMessage(GstElement * pipeline);
 
 namespace {
 
+#if defined __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 template<typename T> static inline void GSafePtr_addref(T* ptr)
 {
     if (ptr)
@@ -108,6 +113,10 @@ template<> inline void GSafePtr_release<GstEncodingContainerProfile>(GstEncoding
 
 template<> inline void GSafePtr_addref<char>(char* pPtr);  // declaration only. not defined. should not be used
 template<> inline void GSafePtr_release<char>(char** pPtr) { if (pPtr) { g_free(*pPtr); *pPtr = NULL; } }
+
+#if defined __clang__
+# pragma clang diagnostic pop
+#endif
 
 template <typename T>
 class GSafePtr
