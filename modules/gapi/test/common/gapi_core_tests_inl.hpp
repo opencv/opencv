@@ -1267,6 +1267,39 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
+TEST_P(InitOutTest, TestWithAdd)
+{
+    in_mat1 = cv::Mat(sz, type);
+    in_mat2 = cv::Mat(sz, type);
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::add(in1, in2, dtype);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+
+    const auto run_and_compare = [&c, this] ()
+    {
+        // G-API code //////////////////////////////////////////////////////////////
+        c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+        // OpenCV code /////////////////////////////////////////////////////////////
+        cv::add(in_mat1, in_mat2, out_mat_ocv, cv::noArray());
+
+        // Comparison //////////////////////////////////////////////////////////////
+        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    };
+
+    // run for uninitialized output
+    run_and_compare();
+
+    // run for initialized output (can be initialized with a different size)
+    initOutMats(out_sz, type);
+    run_and_compare();
+}
+
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_INL_HPP

@@ -165,6 +165,7 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
     cmpF, a, b, norm_type, ddepth)
+GAPI_TEST_FIXTURE(InitOutTest, initNothing, <cv::Size>, 1, out_sz)
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

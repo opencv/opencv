@@ -426,6 +426,19 @@ INSTANTIATE_TEST_CASE_P(ConcatVertTestGPU, ConcatVertTest,
                                 Values(false),
                                 Values(CORE_GPU)));
 
+INSTANTIATE_TEST_CASE_P(InitOutTestGPU, InitOutTest,
+                        Combine(Values(CV_8UC3, CV_16SC4, CV_32FC1),
+                                Values(cv::Size(640, 480)),
+                                Values(-1),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(CORE_GPU),
+                                Values(cv::Size(640, 480),      // same size
+                                       cv::Size(250, 320),      // out size < in size
+                                       cv::Size(1920, 1080),    // out size > in size
+                                       cv::Size(640, 400),      // out width = in width
+                                       cv::Size(10, 480)        // out height = in height
+                                       )));
+
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
 #if 0
 INSTANTIATE_TEST_CASE_P(ConcatVertVecTestGPU, ConcatVertVecTest,

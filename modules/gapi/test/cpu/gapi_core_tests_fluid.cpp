@@ -283,6 +283,19 @@ INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
                                        cv::Size(64, 64),
                                        cv::Size(30, 30))));
 
+INSTANTIATE_TEST_CASE_P(InitOutTestFluid, InitOutTest,
+                        Combine(Values(CV_8UC3, CV_16SC4, CV_32FC1),
+                                Values(cv::Size(640, 480)),
+                                Values(-1),
+/*init output matrices or not*/ testing::Bool(),
+                                Values(CORE_FLUID),
+                                Values(cv::Size(640, 480),      // same size
+                                       cv::Size(250, 320),      // out size < in size
+                                       cv::Size(1920, 1080),    // out size > in size
+                                       cv::Size(640, 400),      // out width = in width
+                                       cv::Size(10, 480)        // out height = in height
+                                       )));
+
 //----------------------------------------------------------------------
 // FIXME: Clean-up test configurations which are enabled already
 #if 0

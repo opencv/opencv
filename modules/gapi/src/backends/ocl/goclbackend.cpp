@@ -150,6 +150,22 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
     // has received from user (or from another Island, or mix...)
     // FIXME: Check input/output objects against GIsland protocol
 
+    // NB: We must clean-up m_res before this function returns because internally (bindInArg,
+    //     bindOutArg) we work with cv::UMats, not cv::Mats that were originally placed into the
+    //     input/output objects. If this is not done and cv::UMat "leaves" the local function scope,
+    //     certain problems may occur.
+    //
+    //     For example, if the original output (cv::Mat) is re-initialized by the user but we still
+    //     hold cv::UMat -> we get cv::UMat that has a parent that was already destroyed. Also,
+    //     since we don't own the data (the user does), there's no point holding it after we're done
+    //     - cv::UMat must "live" in a local scope.
+
+    // FIXME: is it safe (and wise) to clean by an assignment of an empty object? what about data
+    //        that doesn't belong to us (not in input/output objects)?
+    const auto clean_up = [] (cv::gimpl::Mag* p) { *p = cv::gimpl::Mag(); };
+    // RAII wrapper to clean-up m_res
+    std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
+
     for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second, true);
     for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second, true);
 
