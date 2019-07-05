@@ -1977,6 +1977,7 @@ struct Net::Impl
     void fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     {
         if( !fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
+                        preferableBackend != DNN_BACKEND_CUDA &&
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE))
             return;
 
