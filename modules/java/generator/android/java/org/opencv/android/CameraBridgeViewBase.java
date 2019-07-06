@@ -30,7 +30,7 @@ import android.view.SurfaceView;
 public abstract class CameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = "CameraBridge";
-    private static final int MAX_UNSPECIFIED = -1;
+    protected static final int MAX_UNSPECIFIED = -1;
     private static final int STOPPED = 0;
     private static final int STARTED = 1;
 
@@ -481,6 +481,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         for (Object size : supportedSizes) {
             int width = accessor.getWidth(size);
             int height = accessor.getHeight(size);
+            Log.d(TAG, "trying size: " + width + "x" + height);
 
             if (width <= maxAllowedWidth && height <= maxAllowedHeight) {
                 if (width >= calcWidth && height >= calcHeight) {
@@ -488,6 +489,13 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                     calcHeight = (int) height;
                 }
             }
+        }
+        if ((calcWidth == 0 || calcHeight == 0) && supportedSizes.size() > 0)
+        {
+            Log.i(TAG, "fallback to the first frame size");
+            Object size = supportedSizes.get(0);
+            calcWidth = accessor.getWidth(size);
+            calcHeight = accessor.getHeight(size);
         }
 
         return new Size(calcWidth, calcHeight);
