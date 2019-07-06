@@ -118,6 +118,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     template <class T>
     void resize_bilinear(const Stream& stream, TensorSpan<T> output, TensorView<T> input, float scale_y, float scale_x);
 
+
+    template <class T>
+    void slice(const Stream& stream,
+        TensorSpan<T> output, TensorView<T> input,
+        const std::vector<std::size_t>& offsets);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

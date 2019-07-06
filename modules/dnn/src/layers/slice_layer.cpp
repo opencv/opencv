@@ -41,12 +41,19 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -112,6 +119,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA  && haveCUDA()) ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
 #ifdef HAVE_INF_ENGINE
                 INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
@@ -259,6 +267,44 @@ public:
             inpMat(sliceRanges[i]).copyTo(outputs[i]);
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_Assert(inputs.size() == 1);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        for (int i = 0; i < outputs.size(); ++i)
+        {
+            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
+            auto output = output_wrapper->getSpan();
+
+            std::vector<std::size_t> offsets;
+            for (const auto& range : sliceRanges[i])
+                offsets.push_back(range.start);
+            csl::kernels::slice(stream, output, input, offsets);
+        }
+    }
+
+    void initCUDA(
+        csl::Stream stream_,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<cv::Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        stream = std::move(stream_);
+    }
+
+    csl::Stream stream;
+#endif
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
