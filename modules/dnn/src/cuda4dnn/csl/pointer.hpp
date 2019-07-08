@@ -127,6 +127,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         pointer ptr;
     };
 
+    template <class T>
+    bool is_aligned(DevicePtr<const T> ptr, std::size_t alignment) {
+        auto addr = reinterpret_cast<std::intptr_t>(ptr.get());
+        return addr % alignment == 0;
+    }
+
     /** copies \p n elements from \p src to \p dest4
      *
      * \param[in]   src     device pointer
