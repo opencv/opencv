@@ -1352,7 +1352,7 @@ struct ChannelsPReLUFunctor
         const csl::Stream& stream
     )
     {
-       if(slopeTensor)
+       if(!slopeTensor)
        {
            slopeTensor = std::make_shared<csl::Tensor<float>>();
             *slopeTensor = createTensorHeaderFromMat(scale);
