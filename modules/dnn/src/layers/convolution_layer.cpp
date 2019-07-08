@@ -1532,7 +1532,8 @@ public:
         }
         else
 #endif  // HAVE_INF_ENGINE
-            return kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
+            return (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -2057,6 +2058,166 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input = input_wrapper->getView();
+
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto output = output_wrapper->getSpan();
+
+        convoluter.transpose_convolve(output, input, filtersTensor, workspace);
+        if (hasBias() || fusedBias)
+            csl::tensor_ops::add<float>(cudnnHandle, 1.0, output, 1.0, biasTensor);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        cudnnHandle = std::move(cudnn_handle);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input_shape = input_wrapper->getShape();
+
+        /* 1d, 2d, 3d deconvolutions are supported */
+        CV_Assert(input_shape.size() >= 3 || input_shape.size() <= 5);
+
+        CV_Assert(blobs.size() >= 1);
+        const auto& filtersMat = blobs[0];
+
+        const auto rank = input_shape.size();
+        const auto input_feature_maps = input_shape[1];
+        const auto output_feature_maps = numOutput;
+        const auto output_feature_maps_per_group = filtersMat.size[1];
+        const auto groups = output_feature_maps / output_feature_maps_per_group;
+        CV_Assert(output_feature_maps % output_feature_maps_per_group == 0);
+
+        auto output_shape = input_shape;
+        output_shape[1] = output_feature_maps;
+        if (padMode.empty())
+        {
+            for (int i = 0; i < kernel_size.size(); i++)
+                output_shape[i + 2] =
+                    (strides[i] * (input_shape[2 + i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
+        }
+        else if (padMode == "VALID")
+        {
+            for (int i = 0; i < kernel_size.size(); i++)
+                output_shape[i + 2] =
+                    (strides[i] * (input_shape[2 + i] - 1) + kernel_size[i] + adjust_pads[i]);
+        }
+        else if (padMode == "SAME")
+        {
+            for (int i = 0; i < kernel_size.size(); i++)
+                output_shape[i + 2] = (strides[i] * (input_shape[2 + i] - 1) + 1 + adjust_pads[i]);
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "[0] Specified padding mode not supported by DeconvolutionLayer");
+
+        Mat filterWeightsSource = filtersMat;
+        if (fusedWeights)
+        {
+            filterWeightsSource = weightsMat.clone();
+            transpose(weightsMat, filterWeightsSource);
+        }
+
+        filtersTensor = createTensorHeaderFromMat(filterWeightsSource);
+        copyMatToTensor<float>(filtersTensor, filterWeightsSource, stream);
+
+        if (hasBias() || fusedBias)
+        {
+            biasTensor = createTensorHeaderFromMat(biasesMat);
+            copyMatToTensor<float>(biasTensor, biasesMat, stream);
+
+            std::vector<int> biasShape(rank, 1);
+            biasShape[1] = output_feature_maps;
+            biasTensor.reshape(std::begin(biasShape), std::end(biasShape));
+        }
+
+        /* left and right are misleading as the padding is applicable for any number of dimensions
+         * but we use those identifiers to avoid confusion with `pads_begin` and `pads_end`
+         */
+        std::vector<std::size_t> common_padding(rank, 0);
+        std::vector<int> padding_left(rank, 0), padding_right(rank, 0);
+        if (padMode.empty())
+        {
+            for (int i = 2; i < common_padding.size(); i++)
+            {
+                common_padding[i] = std::min(pads_begin[i - 2], pads_end[i - 2]);
+                padding_left[i] = pads_begin[i - 2] - common_padding[i];
+                padding_right[i] = pads_end[i - 2] - common_padding[i];
+            }
+        }
+        else if (padMode == "VALID") { /* nothing to do as the paddings are already preset to zero */ }
+        else if (padMode == "SAME")
+        {
+            /* TensorFlow Logic (for convolution):
+             * total_padding[i] = (o[i] - 1) * s[i] + effective_k[i] - i[i]
+             *
+             * if total padding is odd, the input is padded towards the end
+             */
+            for (int i = 2; i < rank; i++)
+            {
+                const auto j = i - 2; /* filter index */
+                const auto effective_kernel_size = dilations[j] * (kernel_size[j] - 1) + 1;
+                const auto required_total_padding =
+                    std::max<int>(0, (input_shape[i] - 1) * strides[j] + effective_kernel_size - output_shape[i]);
+
+                common_padding[i] = required_total_padding / 2;
+                padding_left[i] = 0;
+                padding_right[i] = required_total_padding % 2;
+            }
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "[1] Specified padding mode not supported by DeconvolutionLayer");
+        }
+
+        for (int i = 0; i < rank; i++)
+            if (padding_left[i] != 0 || padding_right[i] != 0)
+                CV_Error(Error::StsNotImplemented, "Padding configuration requires asymmetric padding and hence is not supported.");
+
+        csl::TransposeConvolution<float>::params_type params;
+
+        auto& ishape = params.input_shape;
+        ishape.assign(std::begin(input_shape), std::end(input_shape));
+
+        auto& oshape = params.output_shape;
+        oshape.assign(std::begin(output_shape), std::end(output_shape));
+
+        auto& fshape = params.filter_shape;
+        fshape.resize(ishape.size());
+        fshape[0] = input_feature_maps;
+        fshape[1] = output_feature_maps_per_group;
+        std::copy(std::begin(kernel_size), std::end(kernel_size), std::begin(fshape) + 2);
+        CV_Assert(fshape.size() == kernel_size.size() + 2);
+
+        params.padding.assign(std::begin(common_padding) + 2, std::end(common_padding));
+        params.stride = strides;
+        params.dialation = dilations;
+        params.groups = groups;
+
+        convoluter = csl::TransposeConvolution<float>(cudnnHandle, params);
+        scratch_mem_in_bytes = convoluter.get_workspace_size();
+    }
+
+    csl::cudnn::Handle cudnnHandle;
+    csl::Tensor<float> filtersTensor, biasTensor;
+    csl::TransposeConvolution<float> convoluter;
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

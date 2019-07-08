@@ -278,6 +278,77 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     };
 
     template <class T>
+    class TransposeConvolution {
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        using FilterDescriptor = cudnn::FilterDescriptor<T>;
+        using ConvolutionDescriptor = cudnn::ConvolutionDescriptor<T>;
+        using TransposeConvolutionAlgorithm = cudnn::TransposeConvolutionAlgorithm<T>;
+
+    public:
+        struct params_type {
+            std::vector<std::size_t> input_shape;
+            std::vector<std::size_t> output_shape;
+
+            std::vector<std::size_t> filter_shape;
+
+            std::vector<std::size_t> padding;
+            std::vector<std::size_t> stride;
+            std::vector<std::size_t> dialation;
+
+            std::size_t groups;
+        };
+
+        TransposeConvolution() = default;
+        TransposeConvolution(const TransposeConvolution&) = delete;
+        TransposeConvolution(TransposeConvolution&&) = default;
+        TransposeConvolution(cudnn::Handle handle, const params_type& params) {
+            cudnnHandle = std::move(handle);
+
+            filterDesc = FilterDescriptor(params.filter_shape);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dialation, params.groups);
+
+            /* input_shape is the output shape for convolution
+             * output_shape is the input shape for convolution
+             */
+            convInputTensorDesc = TensorDescriptor(params.output_shape);
+
+            std::vector<int> conv_output_dims;
+            getConvolutionForwardOutputDim(convDesc, filterDesc, convInputTensorDesc, conv_output_dims);
+
+            /* the convolution output must be identical to what cuDNN expects */
+            CV_Assert(std::equal(std::begin(conv_output_dims), std::end(conv_output_dims), std::begin(params.input_shape)));
+
+            convOutputTensorDesc = TensorDescriptor(params.input_shape);
+
+            algo = TransposeConvolutionAlgorithm(cudnnHandle, convDesc, filterDesc, convOutputTensorDesc, convInputTensorDesc);
+        }
+
+        TransposeConvolution& operator=(const TransposeConvolution&) = delete;
+        TransposeConvolution& operator=(TransposeConvolution&&) = default;
+
+        std::size_t get_workspace_size() const noexcept {
+            return algo.get_workspace_size();
+        }
+
+        void transpose_convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, const Workspace& scratchpad) {
+            cudnn::transpose_convolve<T>(
+                cudnnHandle,
+                convDesc, algo, scratchpad,
+                filterDesc, filters.get(),
+                convOutputTensorDesc, input.get(),
+                1.0, 0.0, convInputTensorDesc, output.get()
+            );
+        }
+
+    private:
+        cudnn::Handle cudnnHandle;
+        TensorDescriptor convInputTensorDesc, convOutputTensorDesc;
+        FilterDescriptor filterDesc;
+        ConvolutionDescriptor convDesc;
+        TransposeConvolutionAlgorithm algo;
+    };
+
+    template <class T>
     class Pooling {
         using TensorDescriptor = cudnn::TensorDescriptor<T>;
         using PoolingDescriptor = cudnn::PoolingDescriptor;
