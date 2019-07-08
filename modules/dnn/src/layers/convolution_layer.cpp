@@ -47,6 +47,7 @@
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iostream>
+#include <numeric>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -72,6 +73,21 @@ public:
         int ngroups = params.get<int>("group", 1);
         CV_Assert(numOutput % ngroups == 0);
 
+        if (params.has("adj_pad")) {
+            adjust_pads.clear();
+            const DictValue& adj_pad = params.get("adj_pad");
+            for (int i = 0; i < adj_pad.size(); i++) {
+                CV_Assert(adj_pad.get<int>(i) < strides[i]);
+                adjust_pads.push_back(adj_pad.get<int>(i));
+            }
+        } else {
+            if (kernel_size.size() == 2) {
+                adjust_pads.push_back(params.get<int>("adj_h", 0));
+                adjust_pads.push_back(params.get<int>("adj_w", 0));
+            } else if (kernel_size.size() == 3) {
+                adjust_pads = std::vector<size_t>(3, 0);
+            }
+        }
         if (kernel_size.size() == 2) {
             kernel = Size(kernel_size[1], kernel_size[0]);
             stride = Size(strides[1], strides[0]);
@@ -82,14 +98,10 @@ public:
             pad = Size(pads_begin[1], pads_begin[0]);
             dilation = Size(dilations[1], dilations[0]);
 
-            adjust_pads.push_back(params.get<int>("adj_h", 0));
-            adjust_pads.push_back(params.get<int>("adj_w", 0));
-
             adjustPad.height = adjust_pads[0];
             adjustPad.width = adjust_pads[1];
-            CV_Assert(adjustPad.width < stride.width &&
-                      adjustPad.height < stride.height);
         }
+
         fusedWeights = false;
         fusedBias = false;
     }
@@ -1136,24 +1148,34 @@ public:
 
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         {
-            if (kernel_size.size() == 3)
-                CV_Error(Error::StsNotImplemented, "Unsupported deconvolution3D layer");
+            if (kernel_size.size() == 3 && preferableTarget != DNN_TARGET_CPU) {
+                return false;
+            }
 
-            if (adjustPad.height || adjustPad.width)
+            if (std::accumulate(adjust_pads.begin(), adjust_pads.end(), 1, std::plus<size_t>()) > 0)
             {
                 if (padMode.empty())
                 {
-                    if (preferableTarget != DNN_TARGET_CPU && group != 1)
+                    if ((kernel_size.size() == 3 || preferableTarget != DNN_TARGET_CPU) && group != 1)
                     {
-                        if ((adjustPad.height && pad.height) || (adjustPad.width && pad.width))
+                        for (int i = 0; i < adjust_pads.size(); i++) {
+                            if (adjust_pads[i] && pads_begin[i])
+                                return false;
+                        }
+                    }
+                    for (int i = 0; i < adjust_pads.size(); i++) {
+                        if (pads_end[i] < adjust_pads[i])
                             return false;
                     }
-                    return pad.width >= adjustPad.width && pad.height >= adjustPad.height;
+                    return true;
                 }
                 else if (padMode == "SAME")
                 {
-                    return kernel.width >= pad.width + 1 + adjustPad.width &&
-                           kernel.height >= pad.height + 1 + adjustPad.height;
+                    for (int i = 0; i < adjust_pads.size(); i++) {
+                        if (kernel_size[i] < pads_begin[i] + 1 + adjust_pads[i])
+                            return false;
+                    }
+                    return true;
                 }
                 else if (padMode == "VALID")
                     return false;
@@ -1751,11 +1773,14 @@ public:
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &) CV_OVERRIDE
     {
-        auto ieWeights = wrapToInfEngineBlob(blobs[0], InferenceEngine::Layout::OIHW);
+        InferenceEngine::Layout layout = blobs[0].dims == 5? InferenceEngine::Layout::NCDHW :
+                                                             InferenceEngine::Layout::OIHW;
+
+        auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
         if (fusedWeights)
         {
             ieWeights = InferenceEngine::make_shared_blob<float>(
-                                InferenceEngine::Precision::FP32, InferenceEngine::Layout::OIHW,
+                                InferenceEngine::Precision::FP32, layout,
                                 ieWeights->dims());
             ieWeights->allocate();
 
@@ -1764,7 +1789,7 @@ public:
             transpose(weightsMat, newWeights);
         }
 
-        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
+        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or NCDHW layout
         const int group = numOutput / outGroupCn;
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
@@ -1776,12 +1801,19 @@ public:
 
         if (padMode.empty())
         {
-            ieLayer.setPaddingsEnd({pads_end[0] - adjust_pads[0], pads_end[1] - adjust_pads[1]});
+            std::vector<size_t> paddings_end;
+            for (int i = 0; i < pads_end.size(); i++) {
+                paddings_end.push_back(pads_end[i] - adjust_pads[i]);
+            }
+            ieLayer.setPaddingsEnd(paddings_end);
         }
         else if (padMode == "SAME")
         {
-            ieLayer.setPaddingsEnd({kernel_size[0] - pads_begin[0] - 1 - adjust_pads[0],
-                                    kernel_size[1] - pads_begin[1] - 1 - adjust_pads[1]});
+            std::vector<size_t> paddings_end;
+            for (int i = 0; i < pads_begin.size(); i++) {
+                paddings_end.push_back(kernel_size[i] - pads_begin[i] - 1 - adjust_pads[i]);
+            }
+            ieLayer.setPaddingsEnd(paddings_end);
         }
         ieLayer.setGroup((size_t)group);
         ieLayer.setOutDepth((size_t)numOutput);
@@ -1801,10 +1833,12 @@ public:
 
         float flops = 0;
         int outChannels = blobs[0].size[0];
+        size_t karea = std::accumulate(kernel_size.begin(), kernel_size.end(),
+                                       1, std::multiplies<size_t>());
 
         for (int i = 0; i < inputs.size(); i++)
         {
-            flops += CV_BIG_INT(2)*outChannels*kernel.area()*total(inputs[i]);
+            flops += CV_BIG_INT(2)*outChannels*karea*total(inputs[i]);
         }
 
         return flops;
