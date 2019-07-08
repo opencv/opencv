@@ -159,10 +159,15 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
     //     hold cv::UMat -> we get cv::UMat that has a parent that was already destroyed. Also,
     //     since we don't own the data (the user does), there's no point holding it after we're done
     //     - cv::UMat must "live" in a local scope.
-
-    // FIXME: is it safe (and wise) to clean by an assignment of an empty object? what about data
-    //        that doesn't belong to us (not in input/output objects)?
-    const auto clean_up = [] (cv::gimpl::Mag* p) { *p = cv::gimpl::Mag(); };
+    const auto clean_up = [&input_objs, &output_objs] (cv::gimpl::Mag* p)
+    {
+        // Only clean-up UMat entries from current scope, we know that inputs and outputs are stored
+        // as UMats from the context below, so the following procedure is safe
+        auto& umats = p->slot<cv::UMat>();
+        // NB: avoid clearing the whole magazine, there's also pre-allocated internal data
+        for (auto& it : input_objs)  umats.erase(it.first.id);
+        for (auto& it : output_objs) umats.erase(it.first.id);
+    };
     // RAII wrapper to clean-up m_res
     std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
 
