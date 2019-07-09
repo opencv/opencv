@@ -2,9 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <cuda_runtime.h>
 
 #include "array.hpp"
+#include "vector_traits.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/kernel_utils.hpp"
@@ -12,10 +12,60 @@
 #include "../cuda4dnn/csl/pointer.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
 
+#include <cuda_runtime.h>
+
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
         /* Reference: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/concat_layer.cu */
+        template <class T>
+        __global__ void concat_vec4(
+            span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
+            view<T> input, std::size_t input_axis_size, std::size_t concat_size)
+        {
+            using vector_type = typename get_vector_type<T, 4>::type;
+
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
+
+            /* we need to copy all the elements of input to some location in the output */
+            for (auto in_idx : grid_stride_range(input.size() / 4)) {
+                const auto idx = in_idx * 4;
+                const auto total_concat_size = concat_size * input_axis_size;
+                const auto concat_num = idx / total_concat_size;
+                const auto concat_index = idx % total_concat_size;
+                const auto top_index = concat_index +
+                    (concat_num * output_axis_size + output_axis_offset) * concat_size;
+
+                const auto out_idx = top_index / 4;
+                dstPtr[out_idx] = srcPtr[in_idx];
+            }
+        }
+
+        template <class T>
+        __global__ void concat_vec2(
+            span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
+            view<T> input, std::size_t input_axis_size, std::size_t concat_size)
+        {
+            using vector_type = typename get_vector_type<T, 2>::type;
+
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
+
+            /* we need to copy all the elements of input to some location in the output */
+            for (auto in_idx : grid_stride_range(input.size() / 2)) {
+                const auto idx = in_idx * 2;
+                const auto total_concat_size = concat_size * input_axis_size;
+                const auto concat_num = idx / total_concat_size;
+                const auto concat_index = idx % total_concat_size;
+                const auto top_index = concat_index +
+                    (concat_num * output_axis_size + output_axis_offset) * concat_size;
+
+                const auto out_idx = top_index / 2;
+                dstPtr[out_idx] = srcPtr[in_idx];
+            }
+        }
+
         template <class T>
         __global__ void concat(
             span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
@@ -69,6 +119,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         TensorSpan<T> output, std::size_t output_axis_offset,
         TensorView<T> input, std::size_t axis)
     {
+        /* let's call the axis of interest as the channel axis for the purpose of the following discussion
+         * even though it can be any axis
+         *
+         * for each batch item:
+         *    we move all the channels from the input (which together for a single batch item is contiguous)
+         *    of a batch item to its corresponding contiguous place in the output
+         *
+         * for a valid vector operation, the size of each copy block must be aligned
+         * input must be aligned
+         * all the destination locations in the output must be aligned
+         */
         std::size_t concat_size = 1;
         for (int i = axis + 1; i < output.rank; i++)
             concat_size *= output.get_axis_size(i);
@@ -76,10 +137,36 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::size_t input_axis_size = input.get_axis_size(axis);
         std::size_t output_axis_size = output.get_axis_size(axis);
 
-        auto policy = make_policy(raw::concat<T>, input.size(), 0, stream);
-        launch_kernel(raw::concat<T>, policy,
-            output, output_axis_size, output_axis_offset,
-            input, input_axis_size, concat_size);
+        std::size_t copy_block_size = concat_size * input_axis_size;
+        std::size_t copy_block_stride = concat_size * output_axis_size;
+        std::size_t starting_offset = output_axis_offset * concat_size;
+
+        /* in a nutshell, all this concat operation does is copy several blocks of size `copy_block_size`
+         * to the output starting from `starting_offset` with blocks in the output strided by `copy_block_stride`
+         */
+
+        bool is_aligned_4 = copy_block_size % 4 == 0 && copy_block_stride % 4 == 0 && starting_offset % 4 == 0;
+        bool is_aligned_2 = copy_block_size % 2 == 0 && copy_block_stride % 2 == 0 && starting_offset % 2 == 0;
+
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && is_aligned_4) {
+            auto kernel = raw::concat_vec4<T>;
+            auto policy = make_policy(kernel, input.size() / 4, 0, stream);
+            launch_kernel(kernel, policy,
+                output, output_axis_size, output_axis_offset,
+                input, input_axis_size, concat_size);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2) && is_aligned_2) {
+            auto kernel = raw::concat_vec2<T>;
+            auto policy = make_policy(kernel, input.size() / 2, 0, stream);
+            launch_kernel(kernel, policy,
+                output, output_axis_size, output_axis_offset,
+                input, input_axis_size, concat_size);
+        } else {
+            auto kernel = raw::concat<T>;
+            auto policy = make_policy(kernel, input.size(), 0, stream);
+            launch_kernel(kernel, policy,
+                output, output_axis_size, output_axis_offset,
+                input, input_axis_size, concat_size);
+        }
     }
 
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
