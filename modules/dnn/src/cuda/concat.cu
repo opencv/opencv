@@ -92,21 +92,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             view<T> input, array<int, N> in_strides)
         {
             for (auto i : grid_stride_range(input.size())) {
-                /* compute input axis indices corresponding to element 'i' */
-                array<std::size_t, N> in_index;
-                in_index[0] = i / in_strides[0];
-                for (int j = 1; j < N; j++)
-                    in_index[j] = (i % in_strides[j - 1]) / in_strides[j];
-
-                /* compute output axis indices corresponding to element 'i' */
-                array<std::size_t, N> out_index;
-                for (int j = 0; j < N; j++)
-                    out_index[j] = out_offset[j] + in_index[j];
-
-                /* compute output element number from output axis indices */
-                std::size_t oidx = 0;
-                for (int j = 0; j < N; j++)
-                    oidx += out_index[j] * out_strides[j];
+                int in_index = i / in_strides[0];
+                int out_index = out_offset[0] + in_index;
+                int oidx = out_index * out_strides[0];
+                for (int j = 1; j < N; j++) {
+                    in_index = (i % in_strides[j - 1]) / in_strides[j];
+                    out_index = out_offset[j] + in_index;
+                    oidx += out_index * out_strides[j];
+                }
 
                 output[oidx] = input[i];
             }
