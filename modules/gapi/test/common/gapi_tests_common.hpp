@@ -262,10 +262,10 @@ struct Wrappable
         };
     }
 
-    CompareF<cv::Mat, cv::Mat> to_compare_obj()
+    CompareMats to_compare_obj()
     {
         T t = *static_cast<T*const>(this);
-        return CompareF<cv::Mat, cv::Mat>(to_compare_f(), t.desc());
+        return CompareMats(to_compare_f(), t.desc());
     }
 };
 
@@ -281,10 +281,10 @@ struct WrappableScalar
         };
     }
 
-    CompareF<cv::Scalar, cv::Scalar> to_compare_obj()
+    CompareScalars to_compare_obj()
     {
         T t = *static_cast<T*const>(this);
-        return CompareF<cv::Scalar, cv::Scalar>(to_compare_f(), t.desc());
+        return CompareScalars(to_compare_f(), t.desc());
     }
 };
 

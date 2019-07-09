@@ -306,7 +306,7 @@ INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_CPU),
-                                Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
                                 Values(cv::INTER_LINEAR),
                                 Values(cv::Size(64,64),
                                        cv::Size(30,30))));
