@@ -158,7 +158,6 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
     //     For example, if the original output (cv::Mat) is re-initialized by the user but we still
     //     hold cv::UMat -> we get cv::UMat that has a parent that was already destroyed. Also,
     //     since we don't own the data (the user does), there's no point holding it after we're done
-    //     - cv::UMat must "live" in a local scope.
     const auto clean_up = [&input_objs, &output_objs] (cv::gimpl::Mag* p)
     {
         // Only clean-up UMat entries from current scope, we know that inputs and outputs are stored

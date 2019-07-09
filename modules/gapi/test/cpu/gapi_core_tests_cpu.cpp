@@ -490,16 +490,12 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
                                 Values(-1, CV_8U, CV_16U, CV_16S, CV_32F)));
 
-INSTANTIATE_TEST_CASE_P(InitOutTestCPU, InitOutTest,
+INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
                         Combine(Values(CV_8UC3, CV_16SC4, CV_32FC1),
                                 Values(cv::Size(640, 480)),
                                 Values(-1),
 /*init output matrices or not*/ testing::Bool(),
                                 Values(CORE_CPU),
-                                Values(cv::Size(640, 480),      // same size
-                                       cv::Size(250, 320),      // out size < in size
-                                       cv::Size(1920, 1080),    // out size > in size
-                                       cv::Size(640, 400),      // out width = in width
-                                       cv::Size(10, 480)        // out height = in height
-                                       )));
+                                Values(cv::Size(640, 400),
+                                       cv::Size(10, 480))));
 }

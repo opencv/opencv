@@ -1267,7 +1267,7 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
-TEST_P(InitOutTest, TestWithAdd)
+TEST_P(ReInitOutTest, TestWithAdd)
 {
     in_mat1 = cv::Mat(sz, type);
     in_mat2 = cv::Mat(sz, type);
