@@ -480,7 +480,8 @@ public:
         if (plugin_api->Writer_open)
         {
             CV_Assert(plugin_api->Writer_release);
-            if (CV_ERROR_OK == plugin_api->Writer_open(filename.empty() ? 0 : filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
+            CV_Assert(!filename.empty());
+            if (CV_ERROR_OK == plugin_api->Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
             {
                 CV_Assert(writer);
                 return makePtr<PluginWriter>(plugin_api, writer);

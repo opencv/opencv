@@ -38,7 +38,16 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
-#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+//#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
+//there is no way to suppress warnigns from IE only at this moment, so we are forced to suppress warnings globally
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+
+#if defined(__GNUC__)
 #pragma GCC visibility push(default)
 #endif
 
@@ -46,7 +55,7 @@
 
 #include <ie_builders.hpp>
 
-#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
+#if defined(__GNUC__)
 #pragma GCC visibility pop
 #endif
 
@@ -84,7 +93,7 @@ public:
 
     void initPlugin(InferenceEngine::ICNNNetwork& net);
 
-    void addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs);
+    void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
 private:
     InferenceEngine::Builder::Network netBuilder;

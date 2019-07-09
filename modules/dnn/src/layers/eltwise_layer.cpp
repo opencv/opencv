@@ -140,7 +140,7 @@ public:
                         const std::vector<float>& coeffs, EltwiseOp op,
                         const ActivationLayer* activ, int nstripes)
         {
-            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 4, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
+            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 5, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
             CV_Assert(coeffs.empty() || coeffs.size() == (size_t)nsrcs);
 
             for( int i = 0; i < nsrcs; i++ )
@@ -156,9 +156,9 @@ public:
             p.dst = &dst;
             p.op = op;
             p.nstripes = nstripes;
-            p.channels = (dst.dims == 4 ? dst.size[1] : 1);
-            p.planeSize = (dst.dims >= 3 ? dst.size[dst.dims - 1] * dst.size[dst.dims - 2] :
-                                           dst.size[dst.dims - 1]);
+            p.channels = (dst.dims >= 4 ? dst.size[1] : 1);
+
+            p.planeSize = dst.total(dst.dims >= 4 ? 2 : 1);
             CV_Assert(dst.total() == dst.size[0] * p.channels * p.planeSize);
 
             bool simpleCoeffs = true;

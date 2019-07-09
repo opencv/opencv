@@ -911,24 +911,34 @@ void addDataSearchSubDirectory(const std::string& subdir)
 
 static std::string findData(const std::string& relative_path, bool required, bool findDirectory)
 {
-#define TEST_TRY_FILE_WITH_PREFIX(prefix) \
+#define CHECK_FILE_WITH_PREFIX(prefix, result) \
 { \
+    result.clear(); \
     std::string path = path_join(prefix, relative_path); \
     /*printf("Trying %s\n", path.c_str());*/ \
     if (findDirectory) \
     { \
         if (isDirectory(path)) \
-            return path; \
+            result = path; \
     } \
     else \
     { \
         FILE* f = fopen(path.c_str(), "rb"); \
         if(f) { \
             fclose(f); \
-            return path; \
+            result = path; \
         } \
     } \
 }
+
+#define TEST_TRY_FILE_WITH_PREFIX(prefix) \
+{ \
+    std::string result__; \
+    CHECK_FILE_WITH_PREFIX(prefix, result__); \
+    if (!result__.empty()) \
+        return result__; \
+}
+
 
     const std::vector<std::string>& search_path = TS::ptr()->data_search_path;
     for(size_t i = search_path.size(); i > 0; i--)
@@ -956,7 +966,19 @@ static std::string findData(const std::string& relative_path, bool required, boo
             {
                 const std::string& subdir = search_subdir[i - 1];
                 std::string prefix = path_join(datapath, subdir);
-                TEST_TRY_FILE_WITH_PREFIX(prefix);
+                std::string result_;
+                CHECK_FILE_WITH_PREFIX(prefix, result_);
+                if (!required && !result_.empty())
+                {
+                    std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
+                    static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
+                    if (checkOptionalFlag)
+                    {
+                        CV_Assert(required || result_.empty());
+                    }
+                }
+                if (!result_.empty())
+                    return result_;
             }
         }
     }

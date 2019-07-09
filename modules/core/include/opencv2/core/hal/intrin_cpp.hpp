@@ -1072,6 +1072,7 @@ template<typename _Tp, int n> inline typename V_TypeTraits< typename V_TypeTrait
 }
 
 /** @brief Get negative values mask
+@deprecated v_signmask depends on a lane count heavily and therefore isn't universal enough
 
 Returned value is a bit mask with bits set to 1 on places corresponding to negative packed values indexes.
 Example:
@@ -1086,6 +1087,23 @@ template<typename _Tp, int n> inline int v_signmask(const v_reg<_Tp, n>& a)
     for( int i = 0; i < n; i++ )
         mask |= (V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) < 0) << i;
     return mask;
+}
+
+/** @brief Get first negative lane index
+
+Returned value is an index of first negative lane (undefined for input of all positive values)
+Example:
+@code{.cpp}
+v_int32x4 r; // set to {0, 0, -1, -1}
+int idx = v_heading_zeros(r); // idx = 2
+@endcode
+*/
+template <typename _Tp, int n> inline int v_scan_forward(const v_reg<_Tp, n>& a)
+{
+    for (int i = 0; i < n; i++)
+        if(V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) < 0)
+            return i;
+    return 0;
 }
 
 /** @brief Check if all packed values are less than zero

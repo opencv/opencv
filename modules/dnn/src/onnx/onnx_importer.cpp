@@ -162,6 +162,8 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
               std::vector<Mat>& outputs)
 {
     Ptr<Layer> layer = LayerFactory::createLayerInstance(params.type, params);
+    CV_Assert((bool)layer);
+
     std::vector<MatShape> inpShapes(inputs.size());
     int ddepth = CV_32F;
     for (size_t i = 0; i < inputs.size(); ++i)
@@ -527,6 +529,13 @@ void ONNXImporter::populateNet(Net dstNet)
                 layerParams.set("scale", scale);
                 layerParams.type = "Power";
             }
+        }
+        else if (layer_type == "Clip")
+        {
+            layerParams.type = "ReLU6";
+            replaceLayerParam(layerParams, "min", "min_value");
+            replaceLayerParam(layerParams, "max", "max_value");
+
         }
         else if (layer_type == "LeakyRelu")
         {

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_IMGPROC_PERF_TESTS_INL_HPP
@@ -68,7 +68,7 @@ PERF_TEST_P_(SepFilterPerfTest, TestPerformance)
     cv::Mat kernelY(kernSize, 1, CV_32F);
     randu(kernelX, -1, 1);
     randu(kernelY, -1, 1);
-    initMatsRandN(type, sz, dtype, false);
+    initMatrixRandN(type, sz, dtype, false);
 
     cv::Point anchor = cv::Point(-1, -1);
 
@@ -110,7 +110,7 @@ PERF_TEST_P_(Filter2DPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, borderType, dtype, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, dtype, false);
+    initMatrixRandN(type, sz, dtype, false);
 
     cv::Point anchor = {-1, -1};
     double delta = 0;
@@ -160,7 +160,7 @@ PERF_TEST_P_(BoxFilterPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, filterSize, sz, borderType, dtype, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, dtype, false);
+    initMatrixRandN(type, sz, dtype, false);
 
     cv::Point anchor = {-1, -1};
     bool normalize = true;
@@ -204,7 +204,7 @@ PERF_TEST_P_(BlurPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, filterSize, sz, borderType, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     cv::Point anchor = {-1, -1};
 
@@ -250,7 +250,7 @@ PERF_TEST_P_(GaussianBlurPerfTest, TestPerformance)
     cv::Size kSize = cv::Size(kernSize, kernSize);
     auto& rng = cv::theRNG();
     double sigmaX = rng();
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::GaussianBlur(in_mat1, out_mat_ocv, kSize, sigmaX);
@@ -289,7 +289,7 @@ PERF_TEST_P_(MedianBlurPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -330,7 +330,7 @@ PERF_TEST_P_(ErodePerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, kernType,  compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
 
@@ -373,7 +373,7 @@ PERF_TEST_P_(Erode3x3PerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, numIters, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3, 3));
 
@@ -416,7 +416,7 @@ PERF_TEST_P_(DilatePerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, kernType, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     cv::Mat kernel = cv::getStructuringElement(kernType, cv::Size(kernSize, kernSize));
 
@@ -459,7 +459,7 @@ PERF_TEST_P_(Dilate3x3PerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, numIters, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, type, false);
+    initMatrixRandN(type, sz, type, false);
 
     cv::Mat kernel = cv::getStructuringElement(cv::MorphShapes::MORPH_RECT, cv::Size(3, 3));
 
@@ -502,7 +502,7 @@ PERF_TEST_P_(SobelPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, kernSize, sz, dtype, dx, dy, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, dtype, false);
+    initMatrixRandN(type, sz, dtype, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -545,7 +545,7 @@ PERF_TEST_P_(SobelXYPerfTest, TestPerformance)
     cv::Mat out_mat_ocv2;
     cv::Mat out_mat_gapi2;
 
-    initMatsRandN(type, sz, dtype, false);
+    initMatrixRandN(type, sz, dtype, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -590,7 +590,7 @@ PERF_TEST_P_(CannyPerfTest, TestPerformance)
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, sz, thrLow, thrUp, apSize, l2gr, compile_args) = GetParam();
 
-    initMatsRandN(type, sz, CV_8UC1, false);
+    initMatrixRandN(type, sz, CV_8UC1, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -628,7 +628,7 @@ PERF_TEST_P_(EqHistPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC1, sz, CV_8UC1, false);
+    initMatrixRandN(CV_8UC1, sz, CV_8UC1, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -666,7 +666,7 @@ PERF_TEST_P_(RGB2GrayPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC1, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -704,7 +704,7 @@ PERF_TEST_P_(BGR2GrayPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC1, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -742,7 +742,7 @@ PERF_TEST_P_(RGB2YUVPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -780,7 +780,7 @@ PERF_TEST_P_(YUV2RGBPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -818,7 +818,7 @@ PERF_TEST_P_(RGB2LabPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -856,7 +856,7 @@ PERF_TEST_P_(BGR2LUVPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -894,7 +894,7 @@ PERF_TEST_P_(LUV2BGRPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     // OpenCV code /////////////////////////////////////////////////////////////
     {
@@ -932,7 +932,7 @@ PERF_TEST_P_(BGR2YUVPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BGR2YUV);
 
@@ -962,7 +962,7 @@ PERF_TEST_P_(YUV2BGRPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
 
     cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2BGR);
 
@@ -990,7 +990,7 @@ PERF_TEST_P_(BayerGR2RGBPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC1, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3, false);
 
     cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BayerGR2RGB);
 
@@ -1018,7 +1018,7 @@ PERF_TEST_P_(RGB2HSVPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC3, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
     cv::cvtColor(in_mat1, in_mat1, cv::COLOR_BGR2RGB);
 
     cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_RGB2HSV);
@@ -1047,7 +1047,7 @@ PERF_TEST_P_(RGB2YUV422PerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     cv::GCompileArgs compile_args = get<2>(GetParam());
 
-    initMatsRandN(CV_8UC3, sz, CV_8UC2, false);
+    initMatrixRandN(CV_8UC3, sz, CV_8UC2, false);
     cv::cvtColor(in_mat1, in_mat1, cv::COLOR_BGR2RGB);
 
     convertRGB2YUV422Ref(in_mat1, out_mat_ocv);

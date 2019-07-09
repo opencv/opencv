@@ -5,6 +5,12 @@
 #ifndef OPENCV_HAL_INTRIN_AVX512_HPP
 #define OPENCV_HAL_INTRIN_AVX512_HPP
 
+#if defined(_MSC_VER) && (_MSC_VER < 1920/*MSVS2019*/)
+# pragma warning(disable:4146)  // unary minus operator applied to unsigned type, result still unsigned
+# pragma warning(disable:4309)  // 'argument': truncation of constant value
+# pragma warning(disable:4310)  // cast truncates constant value
+#endif
+
 #define CVT_ROUND_MODES_IMPLEMENTED 0
 
 #define CV_SIMD512 1
@@ -1599,13 +1605,13 @@ inline v_float64x8 v_lut(const double* tab, const v_int32x16& idxvec)
 inline void v_lut_deinterleave(const float* tab, const v_int32x16& idxvec, v_float32x16& x, v_float32x16& y)
 {
     x.val = _mm512_i32gather_ps(idxvec.val, tab, 4);
-    y.val = _mm512_i32gather_ps(idxvec.val, tab + 1, 4);
+    y.val = _mm512_i32gather_ps(idxvec.val, &tab[1], 4);
 }
 
 inline void v_lut_deinterleave(const double* tab, const v_int32x16& idxvec, v_float64x8& x, v_float64x8& y)
 {
     x.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab, 8);
-    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab + 1, 8);
+    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), &tab[1], 8);
 }
 
 inline v_int8x64 v_interleave_pairs(const v_int8x64& vec)
@@ -2713,7 +2719,7 @@ OPENCV_HAL_IMPL_AVX512_LOADSTORE_INTERLEAVE(v_float64x8, double, f64, v_uint64x8
 ////////// Mask and checks /////////
 
 /** Mask **/
-inline int64 v_signmask(const v_int8x64& a) { return (int64)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline int64 v_signmask(const v_int8x64& a) { return (int64)_mm512_movepi8_mask(a.val); }
 inline int v_signmask(const v_int16x32& a) { return (int)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline int v_signmask(const v_int32x16& a) { return (int)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline int v_signmask(const v_int64x8& a) { return (int)_mm512_cmp_epi64_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
@@ -2727,7 +2733,7 @@ inline int v_signmask(const v_float64x8& a) { return v_signmask(v_reinterpret_as
 
 /** Checks **/
 inline bool v_check_all(const v_int8x64& a) { return !(bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
-inline bool v_check_any(const v_int8x64& a) { return (bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline bool v_check_any(const v_int8x64& a) { return (bool)_mm512_movepi8_mask(a.val); }
 inline bool v_check_all(const v_int16x32& a) { return !(bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
 inline bool v_check_any(const v_int16x32& a) { return (bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline bool v_check_all(const v_int32x16& a) { return !(bool)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
@@ -2747,6 +2753,22 @@ inline bool v_check_any(const v_uint8x64& a) { return v_check_any(v_reinterpret_
 inline bool v_check_any(const v_uint16x32& a) { return v_check_any(v_reinterpret_as_s16(a)); }
 inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_uint64x8& a) { return v_check_any(v_reinterpret_as_s64(a)); }
+
+inline int v_scan_forward(const v_int8x64& a)
+{
+    int64 mask = _mm512_movepi8_mask(a.val);
+    int mask32 = (int)mask;
+    return mask != 0 ? mask32 != 0 ? trailingZeros32(mask32) : 32 + trailingZeros32((int)(mask >> 32)) : 0;
+}
+inline int v_scan_forward(const v_uint8x64& a) { return v_scan_forward(v_reinterpret_as_s8(a)); }
+inline int v_scan_forward(const v_int16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_uint16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_int32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_uint32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_float32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_int64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 

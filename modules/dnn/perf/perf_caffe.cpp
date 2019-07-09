@@ -38,7 +38,7 @@ namespace opencv_test {
 
 static caffe::Net<float>* initNet(std::string proto, std::string weights)
 {
-    proto = findDataFile(proto, false);
+    proto = findDataFile(proto);
     weights = findDataFile(weights, false);
 
 #ifdef HAVE_CLCAFFE

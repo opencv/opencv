@@ -2528,6 +2528,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     double c = _t[idx], nt = cvNorm(&t, 0, CV_L2);
     _uu[idx] = c > 0 ? 1 : -1;
 
+    CV_Assert(nt > 0.0);
+
     // calculate global Z rotation
     cvCrossProduct(&t,&uu,&ww);
     double nw = cvNorm(&ww, 0, CV_L2);

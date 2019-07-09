@@ -13,6 +13,30 @@ static bool printTestTag = false;
 static std::vector<std::string> currentDirectTestTags, currentImpliedTestTags;
 static std::vector<const ::testing::TestInfo*> skipped_tests;
 
+static std::map<std::string, int>& getTestTagsSkipCounts()
+{
+    static std::map<std::string, int> testTagsSkipCounts;
+    return testTagsSkipCounts;
+}
+static std::map<std::string, int>& getTestTagsSkipExtraCounts()
+{
+    static std::map<std::string, int> testTagsSkipExtraCounts;
+    return testTagsSkipExtraCounts;
+}
+static void increaseTagsSkipCount(const std::string& tag, bool isMain)
+{
+    std::map<std::string, int>& counts = isMain ? getTestTagsSkipCounts() : getTestTagsSkipExtraCounts();
+    std::map<std::string, int>::iterator i = counts.find(tag);
+    if (i == counts.end())
+    {
+        counts[tag] = 1;
+    }
+    else
+    {
+        i->second++;
+    }
+}
+
 static std::vector<std::string>& getTestTagsSkipList()
 {
     static std::vector<std::string> testSkipWithTags;
@@ -31,6 +55,17 @@ static std::vector<std::string>& getTestTagsSkipList()
         initialized = true;
     }
     return testSkipWithTags;
+}
+
+void registerGlobalSkipTag(const std::string& skipTag)
+{
+    std::vector<std::string>& skipTags = getTestTagsSkipList();
+    for (size_t i = 0; i < skipTags.size(); ++i)
+    {
+        if (skipTag == skipTags[i])
+            return;  // duplicate
+    }
+    skipTags.push_back(skipTag);
 }
 
 static std::vector<std::string>& getTestTagsForceList()
@@ -156,7 +191,27 @@ public:
     {
         if (!skipped_tests.empty())
         {
-            std::cout << "[   SKIP   ] " << skipped_tests.size() << " tests via tags" << std::endl;
+            std::cout << "[ SKIPSTAT ] " << skipped_tests.size() << " tests via tags" << std::endl;
+            const std::vector<std::string>& skipTags = getTestTagsSkipList();
+            const std::map<std::string, int>& counts = getTestTagsSkipCounts();
+            const std::map<std::string, int>& countsExtra = getTestTagsSkipExtraCounts();
+            for (std::vector<std::string>::const_iterator i = skipTags.begin(); i != skipTags.end(); ++i)
+            {
+                int c1 = 0;
+                std::map<std::string, int>::const_iterator i1 = counts.find(*i);
+                if (i1 != counts.end()) c1 = i1->second;
+                int c2 = 0;
+                std::map<std::string, int>::const_iterator i2 = countsExtra.find(*i);
+                if (i2 != countsExtra.end()) c2 = i2->second;
+                if (c2 > 0)
+                {
+                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests (" << c2 << " times in extra skip list)" << std::endl;
+                }
+                else if (c1 > 0)
+                {
+                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests" << std::endl;
+                }
+            }
         }
         skipped_tests.clear();
     }
@@ -255,13 +310,14 @@ void checkTestTags()
         if (isTestTagForced(testTag))
             return;
     }
+    std::string skip_message;
     for (size_t i = 0; i < testTags.size(); ++i)
     {
         const std::string& testTag = testTags[i];
         if (isTestTagSkipped(testTag, skipTag))
         {
-            skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
-            throw SkipTestException("Test with tag '" + testTag + "' is skipped ('" + skipTag + "' is in skip list)");
+            increaseTagsSkipCount(skipTag, skip_message.empty());
+            if (skip_message.empty()) skip_message = "Test with tag '" + testTag + "' is skipped ('" + skipTag + "' is in skip list)";
         }
     }
     const std::vector<std::string>& testTagsImplied = currentImpliedTestTags;
@@ -270,9 +326,15 @@ void checkTestTags()
         const std::string& testTag = testTagsImplied[i];
         if (isTestTagSkipped(testTag, skipTag))
         {
-            skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
-            throw SkipTestException("Test with tag '" + testTag + "' is skipped ('" + skipTag + "' is in skip list)");
+            increaseTagsSkipCount(skipTag, skip_message.empty());
+            if (skip_message.empty()) skip_message = "Test with tag '" + testTag + "' is skipped (implied '" + skipTag + "' is in skip list)";
         }
+    }
+
+    if (!skip_message.empty())
+    {
+        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
+        throw SkipTestException(skip_message);
     }
 }
 

@@ -2542,7 +2542,8 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h * sizeof(int));
+            const int chunksSizeAndLabelsSize = h + 1;
+            int *chunksSizeAndLabels = (int *)cv::fastMalloc(chunksSizeAndLabelsSize * sizeof(int));
 
             //Tree of labels
             LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
@@ -2561,6 +2562,7 @@ namespace cv{
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
+                CV_Assert(i + 1 < chunksSizeAndLabelsSize);
                 flattenL(P, LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
             }
 
