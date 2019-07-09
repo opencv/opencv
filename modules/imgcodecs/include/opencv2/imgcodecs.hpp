@@ -101,8 +101,10 @@ enum ImwriteFlags {
        IMWRITE_TIFF_PAGENUMBER1 = 260, //! For TIFF: first page number (current)
        IMWRITE_TIFF_PAGENUMBER2 = 261, //! For TIFF: second page number (total)
        IMWRITE_TIFF_APPEND = 262, //!< For TIFF, append to existing data.
+       IMWRITE_TIFF_ROWSPERSTRIP = 278, //! For TIFF: rows per strip. Deviant numeric value (TIFFTAG_ROWSPERSTRIP) for backward-compatibility.
+       // be careful about 278 and 317 for IMWRITE_TIFF_ROWSPERSTRIP and IMWRITE_TIFF_PREDICTOR
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272, //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
-       // be careful about 317 for IMWRITE_TIFF_PREDICTOR
+       // be careful about 278 and 317 for IMWRITE_TIFF_ROWSPERSTRIP and IMWRITE_TIFF_PREDICTOR
        IMWRITE_TIFF_STR_IMAGEDESCRIPTION = 400, //! For TIFF: string-parameter
        IMWRITE_TIFF_STR_DOCUMENTNAME = 401, //! For TIFF: string-parameter
        IMWRITE_TIFF_STR_PAGENAME = 402, //! For TIFF: string-parameter

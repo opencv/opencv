@@ -1095,7 +1095,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
 
         int rowsPerStrip = (int)((1 << 13) / fileStep);
-        readParam(params, TIFFTAG_ROWSPERSTRIP, rowsPerStrip);
+        readParam(params, IMWRITE_TIFF_ROWSPERSTRIP, rowsPerStrip);
         rowsPerStrip = std::max(1, std::min(height, rowsPerStrip));
 
         int colorspace = channels > 1 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
