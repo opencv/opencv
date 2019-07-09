@@ -62,8 +62,8 @@ We need **CMake** to configure the installation, **GCC** for compilation, **Pyth
 
 ```
 sudo apt-get install cmake
-sudo apt-get install python-devel numpy
-sudo apt-get install gcc gcc-c++
+sudo apt-get install python-dev python-numpy
+sudo apt-get install gcc g++
 ```
 
 Next we need **GTK** support for GUI features, Camera support (v4l), Media Support

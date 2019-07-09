@@ -294,14 +294,14 @@ OCL_TEST_P(CvtColor8u, GRAY2BGR555) { performTest(1, 2, CVTCODE(GRAY2BGR555)); }
 
 // RGBA <-> mRGBA
 
-#ifdef HAVE_IPP
+#if defined(HAVE_IPP) || defined(__arm__)
 #define IPP_EPS depth <= CV_32S ? 1 : 1e-3
 #else
 #define IPP_EPS 1e-3
 #endif
 
 OCL_TEST_P(CvtColor8u, RGBA2mRGBA) { performTest(4, 4, CVTCODE(RGBA2mRGBA), IPP_EPS); }
-OCL_TEST_P(CvtColor8u, mRGBA2RGBA) { performTest(4, 4, CVTCODE(mRGBA2RGBA)); }
+OCL_TEST_P(CvtColor8u, mRGBA2RGBA) { performTest(4, 4, CVTCODE(mRGBA2RGBA), IPP_EPS); }
 
 // RGB <-> Lab
 
