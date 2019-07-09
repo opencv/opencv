@@ -7,6 +7,7 @@
 
 #include "../test_precomp.hpp"
 #include "../common/gapi_core_tests.hpp"
+#include "../common/gapi_backend_test_helpers.hpp"
 #include <opencv2/gapi/cpu/core.hpp>
 
 namespace
@@ -16,21 +17,28 @@ namespace
 
 namespace opencv_test
 {
-
 // FIXME: Wut? See MulTestCPU/MathOpTest below (duplicate?)
-INSTANTIATE_TEST_CASE_P(AddTestCPU, MathOpTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values( -1, CV_8U, CV_16U, CV_32F ),
-/*init output matrices or not*/ testing::Bool(),
-                                Values(CORE_CPU),
-                                Values(ADD, MUL),
-                                testing::Bool(),
-                                Values(1.0),
-                                Values(false)),
-                        opencv_test::PrintMathOpCoreParams());
+
+// Maintenance Note: usage of compile args here is not very scalable, but we can probably workaround
+//                   it somehow e.g. wrap in another lambda and do combine inside
+#define INSTANTIATE_MATH_OP_1(NameSuffix, CompileArgs) \
+    INSTANTIATE_TEST_CASE_P(AddTest##NameSuffix, MathOpTest, \
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ), \
+                                Values(cv::Size(1280, 720), \
+                                       cv::Size(640, 480), \
+                                       cv::Size(128, 128)), \
+                                Values( -1, CV_8U, CV_16U, CV_32F ), \
+/*init output matrices or not*/ testing::Bool(), \
+                                Values(CompileArgs), \
+                                Values(ADD, MUL), \
+                                testing::Bool(), \
+                                Values(1.0), \
+                                Values(false)), \
+                        opencv_test::PrintMathOpCoreParams()); \
+
+// Now we have all 3 backends tested with the same arguments with a one-liner
+// FIXME: same arguments is not always the case
+REGISTER_FOR_ALL(INSTANTIATE_MATH_OP_1)
 
 INSTANTIATE_TEST_CASE_P(MulTestCPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
