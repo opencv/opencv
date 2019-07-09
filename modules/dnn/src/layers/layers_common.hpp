@@ -60,7 +60,8 @@ namespace cv
 namespace dnn
 {
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
-                                std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations, cv::String &padMode);
+                                std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations,
+                                cv::String &padMode, std::vector<size_t>& adjust_pads);
 
 void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, bool &globalPooling,
                             std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end, std::vector<size_t>& strides, cv::String &padMode);

@@ -645,38 +645,33 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
 
+            if (!layerParams.has("kernel_size"))
+                CV_Error(Error::StsNotImplemented,
+                         "Required attribute 'kernel_size' is not present.");
+
             if (layerParams.has("output_shape"))
             {
                 const DictValue& outShape = layerParams.get("output_shape");
-
-                if (outShape.size() != 4)
-                    CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
-
                 DictValue stride = layerParams.get("stride");
-                const int strideY = stride.getIntValue(0);
-                const int strideX = stride.getIntValue(1);
-                const int outH = outShape.getIntValue(2);
-                const int outW = outShape.getIntValue(3);
+                DictValue kernel = layerParams.get("kernel_size");
 
-                if (layerParams.get<String>("pad_mode") == "SAME")
+                String padMode;
+                std::vector<int> adjust_pads;
+                if (layerParams.has("pad_mode"))
                 {
-                    layerParams.set("adj_w", (outW - 1) % strideX);
-                    layerParams.set("adj_h", (outH - 1) % strideY);
-                }
-                else if (layerParams.get<String>("pad_mode") == "VALID")
-                {
-                    if (!layerParams.has("kernel_size"))
-                        CV_Error(Error::StsNotImplemented,
-                                 "Required attribute 'kernel_size' is not present.");
+                    padMode = toUpperCase(layerParams.get<String>("pad_mode"));
+                    if (padMode != "SAME" && padMode != "VALID")
+                        CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-                    DictValue kernel = layerParams.get("kernel_size");
-                    layerParams.set("adj_h", (outH - kernel.getIntValue(0)) % strideY);
-                    layerParams.set("adj_w", (outW - kernel.getIntValue(1)) % strideX);
+                    for (int i = 0; i < stride.size(); i++)
+                        adjust_pads.push_back(padMode == "SAME" ? (outShape.get<int>(2 + i) - 1) % stride.get<int>(i) :
+                                                                  (outShape.get<int>(2 + i) - kernel.get<int>(i)) % stride.get<int>(i));
+                    layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
                 }
             }
             else if (layerParams.has("output_padding"))
             {
-                replaceLayerParam(layerParams, "output_padding", "adj_pad");
+                replaceLayerParam(layerParams, "output_padding", "adj");
             }
         }
         else if (layer_type == "Transpose")

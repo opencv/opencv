@@ -67,27 +67,12 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode);
+        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads);
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
         CV_Assert(numOutput % ngroups == 0);
 
-        if (params.has("adj_pad")) {
-            adjust_pads.clear();
-            const DictValue& adj_pad = params.get("adj_pad");
-            for (int i = 0; i < adj_pad.size(); i++) {
-                CV_Assert(adj_pad.get<int>(i) < strides[i]);
-                adjust_pads.push_back(adj_pad.get<int>(i));
-            }
-        } else {
-            if (kernel_size.size() == 2) {
-                adjust_pads.push_back(params.get<int>("adj_h", 0));
-                adjust_pads.push_back(params.get<int>("adj_w", 0));
-            } else if (kernel_size.size() == 3) {
-                adjust_pads = std::vector<size_t>(3, 0);
-            }
-        }
         if (kernel_size.size() == 2) {
             kernel = Size(kernel_size[1], kernel_size[0]);
             stride = Size(strides[1], strides[0]);
@@ -100,6 +85,10 @@ public:
 
             adjustPad.height = adjust_pads[0];
             adjustPad.width = adjust_pads[1];
+        }
+
+        for (int i = 0; i < adjust_pads.size(); i++) {
+            CV_Assert(adjust_pads[i] < strides[i]);
         }
 
         fusedWeights = false;
@@ -1789,7 +1778,7 @@ public:
             transpose(weightsMat, newWeights);
         }
 
-        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or NCDHW layout
+        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or OIDHW layout
         const int group = numOutput / outGroupCn;
 
         InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
