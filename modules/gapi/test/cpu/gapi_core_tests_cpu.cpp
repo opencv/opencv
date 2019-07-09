@@ -489,4 +489,11 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                 Values(1.0, 120.0, 255.0),
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
                                 Values(-1, CV_8U, CV_16U, CV_16S, CV_32F)));
+
+INSTANTIATE_TEST_CASE_P(BackendOutputTestCPU, BackendOutputTest,
+                        Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
+                                Values(cv::Size(50, 50)),
+                                Values(-1),
+                                Values(false),
+                                Values(CORE_CPU)));
 }

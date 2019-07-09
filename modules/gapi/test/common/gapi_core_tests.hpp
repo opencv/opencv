@@ -165,6 +165,16 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
     cmpF, a, b, norm_type, ddepth)
+struct BackendOutputTest : TestWithParamBase<>
+{
+    BackendOutputTest()
+    {
+        in_mat1 = cv::Mat(sz, type);
+        in_mat2 = cv::Mat(sz, type);
+        cv::randu(in_mat1, cv::Scalar::all(1), cv::Scalar::all(15));
+        cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(15));
+    }
+};
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP
