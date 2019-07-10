@@ -2,32 +2,36 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include "types.hpp"
 #include "vector_traits.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/pointer.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
 
-#include <cstddef>
 #include <cuda_runtime.h>
+
+#include <cstddef>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
+        using index_type = gpu::index_type;
+        using size_type = gpu::size_type;
+
         template <class T>
-        __global__ void bias1(span<T> output, view<T> input, T beta)
-        {
+        __global__ void bias1(span<T> output, view<T> input, T beta) {
             for (auto i : grid_stride_range(output.size()))
                 output[i] = input[i] + beta;
         }
 
         template <class T>
-        __global__ void biasN_vec4(span<T> output, view<T> input, std::size_t inner_size, view<T> bias)
-        {
+        __global__ void biasN_vec4(span<T> output, view<T> input, size_type inner_size, view<T> bias) {
             using vector_type = typename get_vector_type<T, 4>::type;
 
             vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
@@ -35,7 +39,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 4;
             for (auto i : grid_stride_range(output.size() / 4)) {
-                const auto bias_idx = (i / inner_size) % bias.size();
+                const index_type bias_idx = (i / inner_size) % bias.size();
 
                 vector_type vec = srcPtr[i];
                 vec.w = vec.w + bias[bias_idx];
@@ -47,7 +51,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void biasN_vec2(span<T> output, view<T> input, std::size_t inner_size, view<T> bias)
+        __global__ void biasN_vec2(span<T> output, view<T> input, size_type inner_size, view<T> bias)
         {
             using vector_type = typename get_vector_type<T, 2>::type;
 
@@ -56,7 +60,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 2;
             for (auto i : grid_stride_range(output.size() / 2)) {
-                const auto bias_idx = (i / inner_size) % bias.size();
+                const index_type bias_idx = (i / inner_size) % bias.size();
 
                 vector_type vec = srcPtr[i];
                 vec.x = vec.x + bias[bias_idx];
@@ -66,10 +70,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void biasN(span<T> output, view<T> input, std::size_t inner_size, view<T> bias)
+        __global__ void biasN(span<T> output, view<T> input, size_type inner_size, view<T> bias)
         {
             for (auto i : grid_stride_range(output.size())) {
-                const auto bias_idx = (i / inner_size) % bias.size();
+                const index_type bias_idx = (i / inner_size) % bias.size();
                 output[i] = input[i] + bias[bias_idx];
             }
         }
@@ -82,7 +86,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN_vec4(span<T> output, view<T> input, std::size_t inner_size, view<T> weights)
+        __global__ void scaleN_vec4(span<T> output, view<T> input, size_type inner_size, view<T> weights)
         {
             using vector_type = typename get_vector_type<T, 4>::type;
 
@@ -91,7 +95,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 4;
             for (auto i : grid_stride_range(output.size() / 4)) {
-                auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec = srcPtr[i];
                 vec.w = vec.w * weights[scale_idx];
@@ -103,7 +107,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN_vec2(span<T> output, view<T> input, std::size_t inner_size, view<T> weights)
+        __global__ void scaleN_vec2(span<T> output, view<T> input, size_type inner_size, view<T> weights)
         {
             using vector_type = typename get_vector_type<T, 2>::type;
 
@@ -112,7 +116,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 2;
             for (auto i : grid_stride_range(output.size() / 2)) {
-                auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec = srcPtr[i];
                 vec.x = vec.x * weights[scale_idx];
@@ -122,10 +126,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN(span<T> output, view<T> input, std::size_t inner_size, view<T> weights)
+        __global__ void scaleN(span<T> output, view<T> input, size_type inner_size, view<T> weights)
         {
             for (auto i : grid_stride_range(output.size())) {
-                const auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
                 output[i] = input[i] * weights[scale_idx];
             }
         }
@@ -138,7 +142,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN_with_biasN_vec4(span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias)
+        __global__ void scaleN_with_biasN_vec4(span<T> output, view<T> input, size_type inner_size, view<T> weights, view<T> bias)
         {
             using vector_type = typename get_vector_type<T, 4>::type;
 
@@ -147,7 +151,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 4;
             for (auto i : grid_stride_range(output.size() / 4)) {
-                auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec = srcPtr[i];
                 vec.w = vec.w * weights[scale_idx] + bias[scale_idx];
@@ -159,7 +163,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN_with_biasN_vec2(span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias)
+        __global__ void scaleN_with_biasN_vec2(span<T> output, view<T> input, size_type inner_size, view<T> weights, view<T> bias)
         {
             using vector_type = typename get_vector_type<T, 2>::type;
 
@@ -168,7 +172,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             inner_size /= 2;
             for (auto i : grid_stride_range(output.size() / 2)) {
-                auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
 
                 vector_type vec = srcPtr[i];
                 vec.x = vec.x * weights[scale_idx] + bias[scale_idx];
@@ -178,10 +182,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void scaleN_with_biasN(span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias)
+        __global__ void scaleN_with_biasN(span<T> output, view<T> input, size_type inner_size, view<T> weights, view<T> bias)
         {
             for (auto i : grid_stride_range(output.size())) {
-                const auto scale_idx = (i / inner_size) % weights.size();
+                const index_type scale_idx = (i / inner_size) % weights.size();
                 output[i] = input[i] * weights[scale_idx] + bias[scale_idx];
             }
         }

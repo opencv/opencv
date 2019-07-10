@@ -3,18 +3,25 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "array.hpp"
+#include "types.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
 
-#include <cstddef>
 #include <cuda_runtime.h>
 
+#include <cstddef>
+
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+
+    using index_type = gpu::index_type;
+    using size_type = gpu::size_type;
 
     namespace raw {
         template <class T, std::size_t N>
@@ -22,17 +29,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T, std::size_t N>
         __global__ void permute(
-            array<int, N> axis_order,
-            span<T> output, array<int, N> outStrides,
-            view<T> input, array<int, N> inStrides)
+            array<index_type, N> axis_order,
+            span<T> output, array<size_type, N> outStrides,
+            view<T> input, array<size_type, N> inStrides)
         {
             for (auto i : grid_stride_range(input.size())) {
-                int oldPosition = 0;
-                int newPosition = i;
+                index_type oldPosition = 0;
+                index_type newPosition = i;
 
                 for (int j = 0; j < N; j++)
                 {
-                    int order = axis_order[j];
+                    auto order = axis_order[j];
                     oldPosition += (newPosition / outStrides[j]) * inStrides[order];
                     newPosition %= outStrides[j];
                 }
@@ -53,8 +60,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(outStride.size() == N);
         CV_Assert(inStride.size() == N);
 
-        utils::array<int, N> order_k, outStride_k, inStride_k;
+        utils::array<index_type, N> order_k;
         order_k.assign(std::begin(order), std::end(order));
+
+        utils::array<size_type, N> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 

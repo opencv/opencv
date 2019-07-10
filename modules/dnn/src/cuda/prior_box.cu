@@ -4,34 +4,39 @@
 
 #include "array.hpp"
 #include "math.hpp"
-#include "reduce.hpp"
+#include "types.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/span.hpp"
+
+#include <cuda_runtime.h>
 
 #include <cstddef>
-#include <cuda_runtime.h>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
+        using index_type = gpu::index_type;
+        using size_type = gpu::size_type;
+
         template <class T, bool Normalize>
         __global__ void prior_box(
             span<T> output,
             view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY,
-            std::size_t layerWidth, std::size_t layerHeight,
-            std::size_t imageWidth, std::size_t imageHeight,
+            size_type layerWidth, size_type layerHeight,
+            size_type imageWidth, size_type imageHeight,
             T stepX, T stepY)
         {
             /* num_points contains the number of points in the feature map of interest
              * each iteration of the stride loop selects a point and generates prior boxes for it
              */
-            std::size_t num_points = layerWidth * layerHeight;
+            size_type num_points = layerWidth * layerHeight;
             for (auto idx : grid_stride_range(num_points)) {
-                auto x = idx % layerWidth,
-                     y = idx / layerWidth;
+                const index_type x = idx % layerWidth,
+                                 y = idx / layerWidth;
 
                 DevicePtr<T> output_ptr = output.data() + idx * 4 * offsetX.size() * boxWidth.size();
 
@@ -78,7 +83,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void prior_box_set_variance4(span<T> output, array<T, 4> variance) {
             for (auto i : grid_stride_range(output.size())) {
-                const auto vidx = i % variance.size();
+                const index_type vidx = i % variance.size();
                 output[i] = variance[vidx];
             }
         }

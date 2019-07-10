@@ -3,32 +3,39 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "array.hpp"
+#include "types.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/span.hpp"
+
+#include <opencv2/core.hpp>
+
+#include <cuda_runtime.h>
 
 #include <cstddef>
-#include <cuda_runtime.h>
-#include <iostream>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
+    using index_type = gpu::index_type;
+    using size_type = gpu::size_type;
+
     namespace raw {
-        template <class T, std::size_t N>
+        template <class T, unsigned N>
         using array = utils::array<T, N>;
 
-        template <class T, std::size_t N>
+        template <class T, unsigned N>
         __global__ void slice(
-            span<T> output, array<int, N> out_strides,
-            view<T> input, array<int, N> in_strides, array<int, N> in_offset)
+            span<T> output, array<size_type, N> out_strides,
+            view<T> input, array<size_type, N> in_strides, array<index_type, N> in_offset)
         {
             for (auto i : grid_stride_range(output.size())) {
-                /* compute output axis indices corresponding to element 'i' */
-                int out_index = i / out_strides[0];
-                int in_index = in_offset[0] + out_index;
-                int iidx = in_index * in_strides[0];
+                index_type out_index = i / out_strides[0];
+                index_type in_index = in_offset[0] + out_index;
+                index_type iidx = in_index * in_strides[0];
                 for (int j = 1; j < N; j++) {
                     out_index = (i % out_strides[j - 1]) / out_strides[j];
                     in_index = in_offset[j] + out_index;
@@ -40,7 +47,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
-    template <class T, std::size_t N> static
+    template <class T, unsigned N> static
     void launch_slice_kernel(
         const Stream& stream,
         span<T> output, const std::vector<std::size_t>& outStride,
@@ -50,9 +57,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(inStride.size() == N);
         CV_Assert(inOffset.size() == N);
 
-        utils::array<int, N> outStride_k, inStride_k, inOffset_k;
+        utils::array<size_type, N> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
+
+        utils::array<index_type, N> inOffset_k;
         inOffset_k.assign(std::begin(inOffset), std::end(inOffset));
 
         auto kernel = raw::slice<T, N>;

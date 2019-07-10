@@ -3,69 +3,76 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "math.hpp"
+#include "types.hpp"
 #include "vector_traits.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/span.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
 
-#include <cstddef>
 #include <cuda_runtime.h>
+
+#include <cstddef>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
     namespace raw {
+
+        using index_type = gpu::index_type;
+        using size_type = gpu::size_type;
+
         template <class T>
-        __global__ void abs(span<T> dest, view<T> src) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void abs(span<T> output, view<T> input) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::abs;
-                dest[i] = abs(src[i]);
+                output[i] = abs(input[i]);
             }
         }
 
         template <class T>
-        __global__ void tanh(span<T> dest, view<T> src) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void tanh(span<T> output, view<T> input) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::tanh;
-                dest[i] = tanh(src[i]);
+                output[i] = tanh(input[i]);
             }
         }
 
         template <class T>
-        __global__ void sigmoid(span<T> dest, view<T> src) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void sigmoid(span<T> output, view<T> input) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::sigmoid;
-                dest[i] = sigmoid(src[i]);
+                output[i] = sigmoid(input[i]);
             }
         }
 
         template <class T>
-        __global__ void bnll(span<T> dest, view<T> src) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void bnll(span<T> output, view<T> input) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::log1pexp;
-                dest[i] = src[i] > 0 ? src[i] + log1pexp(-src[i]) : log1pexp(src[i]);
+                output[i] = input[i] > 0 ? input[i] + log1pexp(-input[i]) : log1pexp(input[i]);
             }
         }
 
         template <class T>
-        __global__ void elu(span<T> dest, view<T> src) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void elu(span<T> output, view<T> input) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::exp;
-                dest[i] = src[i] >= 0 ? src[i] : (exp(src[i]) - 1);
+                output[i] = input[i] >= 0 ? input[i] : expm1(input[i]);
             }
         }
 
         template <class T>
-        __global__ void relu_vec4(span<T> dest, view<T> src, T slope) {
+        __global__ void relu_vec4(span<T> output, view<T> input, T slope) {
             using vector_type = typename get_vector_type<T, 4>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size() / 4)) {
+            for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec = srcPtr[i];
                 vec.w = vec.w >= 0.0 ? vec.w : slope * vec.w;
                 vec.x = vec.x >= 0.0 ? vec.x : slope * vec.x;
@@ -76,13 +83,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void relu_vec2(span<T> dest, view<T> src, T slope) {
+        __global__ void relu_vec2(span<T> output, view<T> input, T slope) {
             using vector_type = typename get_vector_type<T, 2>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size() / 2)) {
+            for (auto i : grid_stride_range(output.size() / 2)) {
                 vector_type vec = srcPtr[i];
                 vec.x = vec.x >= 0.0 ? vec.x : slope * vec.x;
                 vec.y = vec.y >= 0.0 ? vec.y : slope * vec.y;
@@ -91,74 +98,71 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void relu(span<T> dest, view<T> src, T slope) {
-            for (auto i : grid_stride_range(dest.size()))
-                dest[i] = src[i] >= 0.0 ? src[i] : slope * src[i];
+        __global__ void relu(span<T> output, view<T> input, T slope) {
+            for (auto i : grid_stride_range(output.size()))
+                output[i] = input[i] >= 0.0 ? input[i] : slope * input[i];
         }
 
         template <class T>
-        __global__ void clipped_relu_vec4(span<T> dest, view<T> src, T floor, T ceiling) {
+        __global__ void clipped_relu_vec4(span<T> output, view<T> input, T floor, T ceiling) {
             using vector_type = typename get_vector_type<T, 4>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size()/4)) {
-                using utils::max;
-                using utils::min;
+            for (auto i : grid_stride_range(output.size() / 4)) {
+                using utils::clamp;
 
                 vector_type vec = srcPtr[i];
-                vec.w = min(max(vec.w, floor), ceiling);
-                vec.x = min(max(vec.x, floor), ceiling);
-                vec.y = min(max(vec.y, floor), ceiling);
-                vec.z = min(max(vec.z, floor), ceiling);
+                vec.w = clamp(vec.w, floor, ceiling);
+                vec.x = clamp(vec.x, floor, ceiling);
+                vec.y = clamp(vec.y, floor, ceiling);
+                vec.z = clamp(vec.z, floor, ceiling);
                 dstPtr[i] = vec;
             }
         }
 
         template <class T>
-        __global__ void clipped_relu_vec2(span<T> dest, view<T> src, T floor, T ceiling) {
+        __global__ void clipped_relu_vec2(span<T> output, view<T> input, T floor, T ceiling) {
             using vector_type = typename get_vector_type<T, 2>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size()/2)) {
-                using utils::max;
-                using utils::min;
+            for (auto i : grid_stride_range(output.size() / 2)) {
+                using utils::clamp;
 
                 vector_type vec = srcPtr[i];
-                vec.x = min(max(vec.x, floor), ceiling);
-                vec.y = min(max(vec.y, floor), ceiling);
+                vec.x = clamp(vec.x, floor, ceiling);
+                vec.y = clamp(vec.y, floor, ceiling);
                 dstPtr[i] = vec;
             }
         }
 
         template <class T>
-        __global__ void clipped_relu(span<T> dest, view<T> src, T floor, T ceiling) {
-            for (auto i : grid_stride_range(dest.size())) {
-                using utils::max;
-                using utils::min;
-                dest[i] = min(max(src[i], floor), ceiling);
+        __global__ void clipped_relu(span<T> output, view<T> input, T floor, T ceiling) {
+            for (auto i : grid_stride_range(output.size())) {
+                using utils::clamp;
+                output[i] = clamp(input[i], floor, ceiling);
             }
         }
 
         template <class T>
-        __global__ void axiswise_relu(span<T> dest, view<T> src, std::size_t inner_size, view<T> slope) {
-            for (auto i : grid_stride_range(dest.size())) {
-                const auto c = (i % inner_size) / slope.size();
-                dest[i] = src[i] < 0 ? src[i] * slope[c] : src[i];
+        __global__ void axiswise_relu(span<T> output, view<T> input, size_type inner_size, view<T> slope) {
+            for (auto i : grid_stride_range(output.size())) {
+                const index_type c = (i % inner_size) / static_cast<size_type>(slope.size());
+                output[i] = input[i] < 0 ? input[i] * slope[c] : input[i];
             }
         }
 
         template <class T>
-        __global__ void power_vec4(span<T> dest, view<T> src, T exp, T scale, T shift) {
+        __global__ void power_vec4(span<T> output, view<T> input, T exp, T scale, T shift) {
             using vector_type = typename get_vector_type<T, 4>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size()/4)) {
+            for (auto i : grid_stride_range(output.size() / 4)) {
                 using utils::pow;
 
                 vector_type vec = srcPtr[i];
@@ -171,13 +175,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void power_vec2(span<T> dest, view<T> src, T exp, T scale, T shift) {
+        __global__ void power_vec2(span<T> output, view<T> input, T exp, T scale, T shift) {
             using vector_type = typename get_vector_type<T, 2>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(dest.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(src.data().get());
+            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
+            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            for (auto i : grid_stride_range(dest.size()/2)) {
+            for (auto i : grid_stride_range(output.size() / 2)) {
                 using utils::pow;
 
                 vector_type vec = srcPtr[i];
@@ -188,89 +192,89 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void power(span<T> dest, view<T> src, T exp, T scale, T shift) {
-            for (auto i : grid_stride_range(dest.size())) {
+        __global__ void power(span<T> output, view<T> input, T exp, T scale, T shift) {
+            for (auto i : grid_stride_range(output.size())) {
                 using utils::pow;
-                dest[i] = pow(shift + scale * src[i], exp);
+                output[i] = pow(shift + scale * input[i], exp);
             }
         }
     }
 
     template <class T>
-    void abs(const Stream& stream, span<T> dest, view<T> src) {
-        CV_Assert(src.size() >= dest.size());
+    void abs(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::abs<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input);
     }
 
-    template void abs<float>(const Stream& stream, span<float> dest, view<float> src);
-    template void abs<double>(const Stream& stream, span<double> dest, view<double> src);
+    template void abs<float>(const Stream& stream, span<float> output, view<float> input);
+    template void abs<double>(const Stream& stream, span<double> output, view<double> input);
 
     template <class T>
-    void tanh(const Stream& stream, span<T> dest, view<T> src) {
-        CV_Assert(src.size() >= dest.size());
+    void tanh(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::tanh<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input);
     }
 
     template void tanh<float>(const Stream&, span<float>, view<float>);
     template void tanh<double>(const Stream&, span<double>, view<double>);
 
     template <class T>
-    void sigmoid(const Stream& stream, span<T> dest, view<T> src) {
-        CV_Assert(src.size() >= dest.size());
+    void sigmoid(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::sigmoid<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input);
     }
 
     template void sigmoid<float>(const Stream&, span<float>, view<float>);
     template void sigmoid<double>(const Stream&, span<double>, view<double>);
 
     template <class T>
-    void bnll(const Stream& stream, span<T> dest, view<T> src) {
-        CV_Assert(src.size() >= dest.size());
+    void bnll(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::bnll<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input);
     }
 
     template void bnll<float>(const Stream&, span<float>, view<float>);
     template void bnll<double>(const Stream&, span<double>, view<double>);
 
     template <class T>
-    void elu(const Stream& stream, span<T> dest, view<T> src) {
-        CV_Assert(src.size() >= dest.size());
+    void elu(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::elu<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input);
     }
 
     template void elu<float>(const Stream&, span<float>, view<float>);
     template void elu<double>(const Stream&, span<double>, view<double>);
 
     template <class T>
-    void relu(const Stream& stream, span<T> dest, view<T> src, T slope) {
-        CV_Assert(src.size() >= dest.size());
-        if(is_fully_aligned<T>(dest, 4) && is_fully_aligned<T>(src, 4)) {
+    void relu(const Stream& stream, span<T> output, view<T> input, T slope) {
+        CV_Assert(input.size() == output.size());
+        if(is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
             auto kernel = raw::relu_vec4<T>;
-            auto policy = make_policy(kernel, dest.size() / 4, 0, stream);
-            launch_kernel(kernel, policy, dest, src, slope);
-        } else if (is_fully_aligned<T>(dest, 2) && is_fully_aligned<T>(src, 2)) {
+            auto policy = make_policy(kernel, output.size() / 4, 0, stream);
+            launch_kernel(kernel, policy, output, input, slope);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
             auto kernel = raw::relu_vec2<T>;
-            auto policy = make_policy(kernel, dest.size() / 2, 0, stream);
-            launch_kernel(kernel, policy, dest, src, slope);
+            auto policy = make_policy(kernel, output.size() / 2, 0, stream);
+            launch_kernel(kernel, policy, output, input, slope);
         } else {
             auto kernel = raw::relu<T>;
-            auto policy = make_policy(kernel, dest.size(), 0, stream);
-            launch_kernel(kernel, policy, dest, src, slope);
+            auto policy = make_policy(kernel, output.size(), 0, stream);
+            launch_kernel(kernel, policy, output, input, slope);
         }
     }
 
@@ -278,22 +282,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void relu<double>(const Stream&, span<double>, view<double>, double);
 
     template <class T>
-    void clipped_relu(const Stream& stream, span<T> dest, view<T> src, T floor, T ceiling) {
-        CV_Assert(src.size() >= dest.size());
+    void clipped_relu(const Stream& stream, span<T> output, view<T> input, T floor, T ceiling) {
+        CV_Assert(input.size() == output.size());
         CV_Assert(floor <= ceiling);
 
-        if (is_fully_aligned<T>(dest, 4) && is_fully_aligned<T>(src, 4)) {
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
             auto kernel = raw::clipped_relu_vec4<T>;
-            auto policy = make_policy(kernel, dest.size() / 4, 0, stream);
-            launch_kernel(kernel, policy, dest, src, floor, ceiling);
-        } else if (is_fully_aligned<T>(dest, 2) && is_fully_aligned<T>(src, 2)) {
+            auto policy = make_policy(kernel, output.size() / 4, 0, stream);
+            launch_kernel(kernel, policy, output, input, floor, ceiling);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
             auto kernel = raw::clipped_relu_vec2<T>;
-            auto policy = make_policy(kernel, dest.size() / 2, 0, stream);
-            launch_kernel(kernel, policy, dest, src, floor, ceiling);
+            auto policy = make_policy(kernel, output.size() / 2, 0, stream);
+            launch_kernel(kernel, policy, output, input, floor, ceiling);
         } else {
             auto kernel = raw::clipped_relu<T>;
-            auto policy = make_policy(kernel, dest.size(), 0, stream);
-            launch_kernel(kernel, policy, dest, src, floor, ceiling);
+            auto policy = make_policy(kernel, output.size(), 0, stream);
+            launch_kernel(kernel, policy, output, input, floor, ceiling);
         }
     }
 
@@ -301,32 +305,33 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void clipped_relu<double>(const Stream&, span<double>, view<double>, double, double);
 
     template <class T>
-    void axiswise_relu(const Stream& stream, span<T> dest, view<T> src, view<T> slope, std::size_t inner_size) {
-        CV_Assert(src.size() >= dest.size());
+    void axiswise_relu(const Stream& stream, span<T> output, view<T> input, view<T> slope, std::size_t inner_size) {
+        CV_Assert(input.size() == output.size());
 
         auto kernel = raw::axiswise_relu<T>;
-        auto policy = make_policy(kernel, dest.size(), 0, stream);
-        launch_kernel(kernel, policy, dest, src, inner_size, slope);
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size, slope);
     }
 
     template void axiswise_relu<float>(const Stream&, span<float>, view<float>, view<float>, std::size_t);
     template void axiswise_relu<double>(const Stream&, span<double>, view<double>, view<double>, std::size_t);
 
     template <class T>
-    void power(const Stream& stream, span<T> dest, view<T> src, T exp, T scale, T shift) {
-        CV_Assert(src.size() >= dest.size());
-        if (is_fully_aligned<T>(dest, 4) && is_fully_aligned<T>(src, 4) && dest.size() > 1024 * 16 * 4) {
+    void power(const Stream& stream, span<T> output, view<T> input, T exp, T scale, T shift) {
+        CV_Assert(input.size() == output.size());
+
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && output.size() > 1024 * 16 * 4) {
             auto kernel = raw::power_vec4<T>;
-            auto policy = make_policy(kernel, dest.size() / 4, 0, stream);
-            launch_kernel(kernel, policy, dest, src, exp, scale, shift);
-        } else if (is_fully_aligned<T>(dest, 2) && is_fully_aligned<T>(src, 2) && dest.size() > 1024 * 16 * 2) {
+            auto policy = make_policy(kernel, output.size() / 4, 0, stream);
+            launch_kernel(kernel, policy, output, input, exp, scale, shift);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2) && output.size() > 1024 * 16 * 2) {
             auto kernel = raw::power_vec2<T>;
-            auto policy = make_policy(kernel, dest.size() / 2, 0, stream);
-            launch_kernel(kernel, policy, dest, src, exp, scale, shift);
+            auto policy = make_policy(kernel, output.size() / 2, 0, stream);
+            launch_kernel(kernel, policy, output, input, exp, scale, shift);
         } else {
             auto kernel = raw::power<T>;
-            auto policy = make_policy(kernel, dest.size(), 0, stream);
-            launch_kernel(kernel, policy, dest, src, exp, scale, shift);
+            auto policy = make_policy(kernel, output.size(), 0, stream);
+            launch_kernel(kernel, policy, output, input, exp, scale, shift);
         }
     }
 

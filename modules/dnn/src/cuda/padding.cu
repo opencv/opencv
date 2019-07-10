@@ -4,18 +4,24 @@
 
 #include "array.hpp"
 #include "math.hpp"
+#include "types.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
 
-#include <cstddef>
 #include <cuda_runtime.h>
 
+#include <cstddef>
+
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+    using index_type = gpu::index_type;
+    using size_type = gpu::size_type;
 
     namespace raw {
         template <class T, std::size_t N>
@@ -23,25 +29,25 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T, std::size_t N>
         __global__ void copy_with_reflection101(
-            span<T> output, array<int, N> out_strides, array<int, N> start, array<int, N> end,
-            view<T> input, array<int, N> in_strides)
+            span<T> output, array<size_type, N> out_strides, array<index_type, N> start, array<index_type, N> end,
+            view<T> input, array<size_type, N> in_strides)
         {
             for (auto i : grid_stride_range(output.size())) {
                 /* compute output axis indices corresponding to element 'i' */
-                array<int, N> out_index;
+                array<index_type, N> out_index;
                 out_index[0] = i / out_strides[0];
                 for (int j = 1; j < N; j++)
                     out_index[j] = (i % out_strides[j - 1]) / out_strides[j];
 
                 /* compute input axis indices corresponding to output axis indices */
-                using utils::abs;
-                array<int, N> in_index;
+                array<index_type, N> in_index;
                 for (int j = 0; j < N; j++) {
                     /* if out_index < start, the point is in the left reflection region
                      * the reflected value's index is the absolute value of the difference
                      *
                      * otherwise, if the value is in the copy region, out_index - start gives the input index
                      */
+                    using utils::abs;
                     in_index[j] = abs(out_index[j] - start[j]);
 
                     /* if out_index >= end, it's in the right reflection region */
@@ -50,7 +56,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 }
 
                 /* compute input element number from input axis indices */
-                int iidx = 0;
+                index_type iidx = 0;
                 for (int j = 0; j < N; j++)
                     iidx += in_index[j] * in_strides[j];
 
@@ -70,10 +76,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(inStride.size() == N);
         CV_Assert(ranges.size() == N);
 
-        utils::array<int, N> outStride_k, start_k, end_k, inStride_k;
+        utils::array<size_type, N> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 
+        utils::array<index_type, N> start_k, end_k;
         for (int i = 0; i < N; i++) {
             start_k[i] = ranges[i].first;
             end_k[i] = ranges[i].second;

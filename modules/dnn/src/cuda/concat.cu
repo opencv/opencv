@@ -4,37 +4,44 @@
 
 
 #include "array.hpp"
+#include "types.hpp"
 #include "vector_traits.hpp"
+#include "grid_stride_loop.hpp"
+#include "execution.hpp"
 
 #include "../cuda4dnn/csl/kernels.hpp"
-#include "../cuda4dnn/csl/kernel_utils.hpp"
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/pointer.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+#include "../cuda4dnn/csl/tensor.hpp"
+#include "../cuda4dnn/csl/span.hpp"
 
 #include <cuda_runtime.h>
 
+#include <cstddef>
+
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+
+    using index_type = gpu::index_type;
+    using size_type = gpu::size_type;
 
     namespace raw {
         /* Reference: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/concat_layer.cu */
         template <class T>
         __global__ void concat_vec4(
-            span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
-            view<T> input, std::size_t input_axis_size, std::size_t concat_size)
+            span<T> output, size_type output_axis_size, index_type output_axis_offset,
+            view<T> input, size_type input_axis_size, size_type concat_size)
         {
             using vector_type = typename get_vector_type<T, 4>::type;
 
             vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
             const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            /* we need to copy all the elements of input to some location in the output */
+            const auto total_concat_size = concat_size * input_axis_size;
+
             for (auto in_idx : grid_stride_range(input.size() / 4)) {
-                const auto idx = in_idx * 4;
-                const auto total_concat_size = concat_size * input_axis_size;
-                const auto concat_num = idx / total_concat_size;
-                const auto concat_index = idx % total_concat_size;
-                const auto top_index = concat_index +
+                const index_type idx = in_idx * 4;
+                const index_type concat_num = idx / total_concat_size;
+                const index_type concat_index = idx % total_concat_size;
+                const index_type top_index = concat_index +
                     (concat_num * output_axis_size + output_axis_offset) * concat_size;
 
                 const auto out_idx = top_index / 4;
@@ -44,21 +51,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void concat_vec2(
-            span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
-            view<T> input, std::size_t input_axis_size, std::size_t concat_size)
+            span<T> output, size_type output_axis_size, index_type output_axis_offset,
+            view<T> input, size_type input_axis_size, size_type concat_size)
         {
             using vector_type = typename get_vector_type<T, 2>::type;
 
             vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
             const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
 
-            /* we need to copy all the elements of input to some location in the output */
+            const auto total_concat_size = concat_size * input_axis_size;
+
             for (auto in_idx : grid_stride_range(input.size() / 2)) {
-                const auto idx = in_idx * 2;
-                const auto total_concat_size = concat_size * input_axis_size;
-                const auto concat_num = idx / total_concat_size;
-                const auto concat_index = idx % total_concat_size;
-                const auto top_index = concat_index +
+                const index_type idx = in_idx * 2;
+                const index_type concat_num = idx / total_concat_size;
+                const index_type concat_index = idx % total_concat_size;
+                const index_type top_index = concat_index +
                     (concat_num * output_axis_size + output_axis_offset) * concat_size;
 
                 const auto out_idx = top_index / 2;
@@ -68,15 +75,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void concat(
-            span<T> output, std::size_t output_axis_size, std::size_t output_axis_offset,
-            view<T> input, std::size_t input_axis_size, std::size_t concat_size)
+            span<T> output, size_type output_axis_size, index_type output_axis_offset,
+            view<T> input, size_type input_axis_size, size_type concat_size)
         {
-            /* we need to copy all the elements of input to some location in the output */
+            /* we need to copy all the elements of input to some location in the output
+             * we copy blocks of size `total_concat_size` to some location in the output
+             */
+            const auto total_concat_size = concat_size * input_axis_size;
+
             for (auto idx : grid_stride_range(input.size())) {
-                const auto total_concat_size = concat_size * input_axis_size;
-                const auto concat_num = idx / total_concat_size;
-                const auto concat_index = idx % total_concat_size;
-                const auto top_index = concat_index +
+                const index_type concat_num = idx / total_concat_size;
+                const index_type concat_index = idx % total_concat_size;
+                const index_type top_index = concat_index +
                     (concat_num * output_axis_size + output_axis_offset) * concat_size;
 
                 output[top_index] = input[idx];
@@ -88,13 +98,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T, std::size_t N>
         __global__ void concat_with_offsets(
-            span<T> output, array<int, N> out_strides, array<int, N> out_offset,
-            view<T> input, array<int, N> in_strides)
+            span<T> output, array<size_type, N> out_strides, array<index_type, N> out_offset,
+            view<T> input, array<size_type, N> in_strides)
         {
             for (auto i : grid_stride_range(input.size())) {
-                int in_index = i / in_strides[0];
-                int out_index = out_offset[0] + in_index;
-                int oidx = out_index * out_strides[0];
+                index_type in_index = i / in_strides[0];
+                index_type out_index = out_offset[0] + in_index;
+                index_type oidx = out_index * out_strides[0];
                 for (int j = 1; j < N; j++) {
                     in_index = (i % in_strides[j - 1]) / in_strides[j];
                     out_index = out_offset[j] + in_index;
@@ -175,10 +185,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(outOffset.size() == N);
         CV_Assert(inStride.size() == N);
 
-        utils::array<int, N> outStride_k, outOffset_k, inStride_k;
+        utils::array<size_type, N> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
-        outOffset_k.assign(std::begin(outOffset), std::end(outOffset));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
+
+        utils::array<index_type, N> outOffset_k;
+        outOffset_k.assign(std::begin(outOffset), std::end(outOffset));
 
         auto kernel = raw::concat_with_offsets<T, N>;
         auto policy = make_policy(kernel, input.size(), 0, stream);

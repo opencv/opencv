@@ -18,6 +18,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <> inline __device__ float exp(float val) { return expf(val); }
         template <> inline __device__ double exp(double val) { return ::exp(val); }
 
+        template <class T> __device__ T expm1(T val);
+        template <> inline __device__ float expm1(float val) { return expm1f(val); }
+        template <> inline __device__ double expm1(double val) { return ::expm1(val); }
+
         template <class T> __device__ T max(T x, T y) { return ::max(x, y); }
         template <> inline __device__ float max(float x, float y) { return fmaxf(x, y); }
         template <> inline __device__ double max(double x, double y) { return fmax(x, y); }
