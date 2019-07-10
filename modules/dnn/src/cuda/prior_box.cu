@@ -5,6 +5,7 @@
 #include "array.hpp"
 #include "math.hpp"
 #include "types.hpp"
+#include "vector_traits.hpp"
 #include "grid_stride_loop.hpp"
 #include "execution.hpp"
 
@@ -30,6 +31,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             size_type imageWidth, size_type imageHeight,
             T stepX, T stepY)
         {
+            /* each box consists of two pair of coordinates and hence 4 values in total */
+            /* since the entire output consists (first channel at least) of these boxes,
+             * we are garunteeed that the output is aligned to a boundary of 4 values
+             */
+            using vector_type = typename get_vector_type<T, 4>::type;
+            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+
             /* num_points contains the number of points in the feature map of interest
              * each iteration of the stride loop selects a point and generates prior boxes for it
              */
@@ -38,26 +46,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 const index_type x = idx % layerWidth,
                                  y = idx / layerWidth;
 
-                DevicePtr<T> output_ptr = output.data() + idx * 4 * offsetX.size() * boxWidth.size();
-
+                index_type output_offset_v4 = idx * offsetX.size() * boxWidth.size();
                 for (int i = 0; i < boxWidth.size(); i++) {
                     for (int j = 0; j < offsetX.size(); j++) {
                         float center_x = (x + offsetX[j]) * stepX;
                         float center_y = (y + offsetY[j]) * stepY;
 
+                        vector_type vec;
                         if(Normalize) {
-                            output_ptr[0] = (center_x - boxWidth[i] * 0.5f) / imageWidth;
-                            output_ptr[1] = (center_y - boxHeight[i] * 0.5f) / imageHeight;
-                            output_ptr[2] = (center_x + boxWidth[i] * 0.5f) / imageWidth;
-                            output_ptr[3] = (center_y + boxHeight[i] * 0.5f) / imageHeight;
+                            vec.x = (center_x - boxWidth[i] * 0.5f) / imageWidth;
+                            vec.y = (center_y - boxHeight[i] * 0.5f) / imageHeight;
+                            vec.z = (center_x + boxWidth[i] * 0.5f) / imageWidth;
+                            vec.w = (center_y + boxHeight[i] * 0.5f) / imageHeight;
                         } else {
-                            output_ptr[0] = center_x - boxWidth[i] * 0.5f;
-                            output_ptr[1] = center_y - boxHeight[i] * 0.5f;
-                            output_ptr[2] = center_x + boxWidth[i] * 0.5f - 1.0f;
-                            output_ptr[3] = center_y + boxHeight[i] * 0.5f - 1.0f;
+                            vec.x = center_x - boxWidth[i] * 0.5f;
+                            vec.y = center_y - boxHeight[i] * 0.5f;
+                            vec.z = center_x + boxWidth[i] * 0.5f - 1.0f;
+                            vec.w = center_y + boxHeight[i] * 0.5f - 1.0f;
                         }
 
-                        output_ptr += 4;
+                        outputPtr_v4[output_offset_v4] = vec;
+                        output_offset_v4++;
                     }
                 }
             }
@@ -73,8 +82,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void prior_box_set_variance1(span<T> output, T variance) {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = variance;
+            using vector_type = typename get_vector_type<T, 4>::type;
+            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+            for (auto i : grid_stride_range(output.size() / 4)) {
+                vector_type vec;
+                vec.x = variance;
+                vec.y = variance;
+                vec.z = variance;
+                vec.w = variance;
+                outputPtr_v4[i] = vec;
+            }
         }
 
         template <class T, std::size_t N>
@@ -82,9 +99,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void prior_box_set_variance4(span<T> output, array<T, 4> variance) {
-            for (auto i : grid_stride_range(output.size())) {
-                const index_type vidx = i % variance.size();
-                output[i] = variance[vidx];
+            using vector_type = typename get_vector_type<T, 4>::type;
+            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+            for (auto i : grid_stride_range(output.size() / 4)) {
+                vector_type vec;
+                vec.x = variance[0];
+                vec.y = variance[1];
+                vec.z = variance[2];
+                vec.w = variance[3];
+                outputPtr_v4[i] = vec;
             }
         }
     }
@@ -142,13 +165,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         auto output_span_c2 = span<T>(output.data() + channel_size, channel_size);
         if (variance.size() == 1) {
             auto kernel = raw::prior_box_set_variance1<T>;
-            auto policy = make_policy(kernel, output_span_c2.size(), 0, stream);
+            auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance[0]);
         } else {
             utils::array<T, 4> variance_k;
             variance_k.assign(std::begin(variance), std::end(variance));
             auto kernel = raw::prior_box_set_variance4<T>;
-            auto policy = make_policy(kernel, output_span_c2.size(), 0, stream);
+            auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance_k);
         }
     }
