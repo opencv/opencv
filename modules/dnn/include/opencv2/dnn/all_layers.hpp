@@ -86,6 +86,15 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<Layer> create(const LayerParams &params);
     };
 
+    /**
+     * Shape layer 
+     */
+    class CV_EXPORTS ShapeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {

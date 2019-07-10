@@ -1280,6 +1280,13 @@ void TFImporter::populateNet(Net dstNet)
         else if (type == "Const")
         {
         }
+        else if (type == "Shape")
+        {
+            int id = dstNet.addLayer(name, "Shape", layerParams);
+            layer_id[name] = id;
+
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
         else if (type == "LRN")
         {
             if(hasLayerAttr(layer, "alpha")) {
