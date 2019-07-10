@@ -808,7 +808,8 @@ TEST_P(Split4Test, AccuracyTest)
     }
 }
 
-static void ResizeAccuracyTest(compare_f cmpF, int type, int interp, cv::Size sz_in, cv::Size sz_out, double fx, double fy, cv::GCompileArgs&& compile_args)
+static void ResizeAccuracyTest(const CompareMats& cmpF, int type, int interp, cv::Size sz_in,
+    cv::Size sz_out, double fx, double fy, cv::GCompileArgs&& compile_args)
 {
     cv::Mat in_mat1 (sz_in, type );
     cv::Scalar mean = cv::Scalar::all(127);
