@@ -58,17 +58,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     template <class T>
     using view = span<const T>;
 
+    /** returns true if the address of a span/view is aligned to \p alignment number of elements (not bytes) */
     template <class T>
     bool is_address_aligned(view<T> v, std::size_t alignment) {
-        return is_aligned(v.data(), alignment);
+        return is_aligned(v.data(), alignment * sizeof(T));
     }
 
+    /** returns true if the size of a span/view is a multiple of \p alignment */
     template <class T>
     bool is_size_aligned(view<T> v, std::size_t alignment) {
         return v.size() % alignment == 0;
     }
 
-    /** @brief returns true if the address and the size of the span/view is aligned to a boundary */
+    /** @brief returns true if the address and the size of the span/view is aligned
+     * \p alignment refers to the number of elements (not bytes)
+     */
     template <class T>
     bool is_fully_aligned(view<T> v, std::size_t alignment) {
         return is_address_aligned(v, alignment) && is_size_aligned(v, alignment);
