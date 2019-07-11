@@ -612,12 +612,23 @@ public:
             p.ofstab_.resize(karea * ncn);
             int* ofstab = &p.ofstab_[0];
 
-            for( int k = 0; k < ncn; k++ )
-                for (int k_d = 0; k_d < kernel_d; k_d++)
+            if (isConv2D)
+            {
+                for( int k = 0; k < ncn; k++ )
                     for( int k_r = 0; k_r < kernel_h; k_r++ )
                         for( int k_c = 0; k_c < kernel_w; k_c++ )
-                            ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
-                                   (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
+                            ofstab[(k*kernel_h + k_r)*kernel_w + k_c] =
+                                   (k*height + k_r*dil_h)*width + k_c*dil_w;
+            }
+            else
+            {
+                for( int k = 0; k < ncn; k++ )
+                    for (int k_d = 0; k_d < kernel_d; k_d++)
+                        for( int k_r = 0; k_r < kernel_h; k_r++ )
+                            for( int k_c = 0; k_c < kernel_w; k_c++ )
+                                ofstab[(k*kernel_d*kernel_h + k_d*kernel_h + k_r)*kernel_w + k_c] =
+                                       (k*depth*height + k_d*dil_d*height + k_r*dil_h)*width + k_c*dil_w;
+            }
 
             p.biasvec_ = &biasvec;
             p.reluslope_ = &reluslope;
@@ -739,75 +750,117 @@ public:
                         // do im2row for a part of input tensor
                         float* rowbuf = rowbuf0;
 
-                        for( ofs = ofs0; ofs < ofs1; out_d += (out_i + 1) / outH, out_i = (out_i + 1) % outH, out_j = 0 )
+                        if (isConv2D)
                         {
-                            int delta = std::min(ofs1 - ofs, outW - out_j);
-                            int out_j1 = out_j + delta;
-
-                            int in_d = out_d * stride_d - pad_d;
-                            int in_i = out_i * stride_h - pad_t;
-                            int in_j = out_j * stride_w - pad_l;
-                            const float* imgptr = data_inp0 + (cn0*depth*height + in_d*height + in_i)*width + in_j;
-                            ofs += delta;
-
-                            // do im2row for a part of input tensor
-                            if( is1x1 )
+                            for( ofs = ofs0; ofs < ofs1; out_j = 0, ++out_i )
                             {
-                                for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w )
-                                {
-                                    for( k = 0; k < vsz; k++ )
-                                        rowbuf[k] = imgptr[k*inpPlaneSize];
-                                }
-                            }
-                            else
-                            {
-                                int d0 = std::max(0, (-in_d + dilation_d - 1) / dilation_d);
-                                int d1 = std::min(kernel_d, (depth - in_d + dilation_d - 1) / dilation_d);
+                                int delta = std::min(ofs1 - ofs, outW - out_j);
+                                int out_j1 = out_j + delta;
 
-                                bool ok_i = 0 <= in_i && in_i < height - (kernel_h-1)*dilation_h;
-                                int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
-                                int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
+                                int in_i = out_i * stride_h - pad_t;
+                                int in_j = out_j * stride_w - pad_l;
+                                const float* imgptr = data_inp0 + (cn0*height + in_i)*width + in_j;
+                                ofs += delta;
 
-                                for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w, in_j += stride_w )
+                                // do im2row for a part of input tensor
+                                if( is1x1 )
                                 {
-                                    // this condition should be true for most of the tensor elements, i.e.
-                                    // most of the time the kernel aperture is inside the tensor X-Y plane.
-                                    if( isConv2D && ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
+                                    for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w )
                                     {
                                         for( k = 0; k < vsz; k++ )
-                                        {
-                                            int k1 = ofstab[k];
-                                            float v0 = imgptr[k1];
-                                            float v1 = imgptr[k1 + stride_w];
-                                            rowbuf[k] = v0;
-                                            rowbuf[k+vsz_a] = v1;
-                                        }
-                                        out_j++;
-                                        rowbuf += vsz_a;
-                                        imgptr += stride_w;
-                                        in_j += stride_w;
+                                            rowbuf[k] = imgptr[k*inpPlaneSize];
                                     }
-                                    else
-                                    {
-                                        int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
-                                        int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
+                                }
+                                else
+                                {
+                                    bool ok_i = 0 <= in_i && in_i < height - (kernel_h-1)*dilation_h;
+                                    int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
+                                    int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
 
-                                        // here some non-continuous sub-row of the row will not be
-                                        // filled from the tensor; we need to make sure that the uncovered
-                                        // elements are explicitly set to 0's. the easiest way is to
-                                        // set all the elements to 0's before the loop.
-                                        memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
-                                        for( k = 0; k < ncn; k++ )
+                                    for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w, in_j += stride_w )
+                                    {
+                                        // this condition should be true for most of the tensor elements, i.e.
+                                        // most of the time the kernel aperture is inside the tensor X-Y plane.
+                                        if( ok_i && out_j + 2 <= out_j1 && 0 <= in_j && in_j + stride_w*2 <= width - (kernel_w-1)*dilation_w )
                                         {
-                                            for ( d = d0; d < d1; d++)
+                                            for( k = 0; k < vsz; k++ )
+                                            {
+                                                int k1 = ofstab[k];
+                                                float v0 = imgptr[k1];
+                                                float v1 = imgptr[k1 + stride_w];
+                                                rowbuf[k] = v0;
+                                                rowbuf[k+vsz_a] = v1;
+                                            }
+                                            out_j++;
+                                            rowbuf += vsz_a;
+                                            imgptr += stride_w;
+                                            in_j += stride_w;
+                                        }
+                                        else
+                                        {
+                                            int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
+                                            int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
+
+                                            // here some non-continuous sub-row of the row will not be
+                                            // filled from the tensor; we need to make sure that the uncovered
+                                            // elements are explicitly set to 0's. the easiest way is to
+                                            // set all the elements to 0's before the loop.
+                                            memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
+                                            for( k = 0; k < ncn; k++ )
                                             {
                                                 for( i = i0; i < i1; i++ )
                                                 {
                                                     for( j = j0; j < j1; j++ )
                                                     {
-                                                        int imgofs = k*(depth*width*height) + d*dilation_d*width*height + i*(dilation_h*width) + j*dilation_w;
-                                                        rowbuf[(k*kernel_d*kernel_h + d*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
+                                                        int imgofs = k*(width*height) + i*(dilation_h*width) + j*dilation_w;
+                                                        rowbuf[(k*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
                                                     }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for( ofs = ofs0; ofs < ofs1; out_d += (out_i + 1) / outH, out_i = (out_i + 1) % outH, out_j = 0 )
+                            {
+                                int delta = std::min(ofs1 - ofs, outW - out_j);
+                                int out_j1 = out_j + delta;
+
+                                int in_d = out_d * stride_d - pad_d;
+                                int in_i = out_i * stride_h - pad_t;
+                                int in_j = out_j * stride_w - pad_l;
+                                const float* imgptr = data_inp0 + (cn0*depth*height + in_d*height + in_i)*width + in_j;
+                                ofs += delta;
+
+                                int d0 = std::max(0, (-in_d + dilation_d - 1) / dilation_d);
+                                int d1 = std::min(kernel_d, (depth - in_d + dilation_d - 1) / dilation_d);
+
+                                int i0 = std::max(0, (-in_i + dilation_h-1)/dilation_h);
+                                int i1 = std::min(kernel_h, (height - in_i + dilation_h-1)/dilation_h);
+
+                                for( ; out_j < out_j1; out_j++, rowbuf += vsz_a, imgptr += stride_w, in_j += stride_w )
+                                {
+                                    int j0 = std::max(0, (-in_j + dilation_w-1)/dilation_w);
+                                    int j1 = std::min(kernel_w, (width - in_j + dilation_w-1)/dilation_w);
+
+                                    // here some non-continuous sub-row of the row will not be
+                                    // filled from the tensor; we need to make sure that the uncovered
+                                    // elements are explicitly set to 0's. the easiest way is to
+                                    // set all the elements to 0's before the loop.
+                                    memset(rowbuf, 0, vsz*sizeof(rowbuf[0]));
+                                    for( k = 0; k < ncn; k++ )
+                                    {
+                                        for ( d = d0; d < d1; d++)
+                                        {
+                                            for( i = i0; i < i1; i++ )
+                                            {
+                                                for( j = j0; j < j1; j++ )
+                                                {
+                                                    int imgofs = k*(depth*width*height) + d*dilation_d*width*height + i*(dilation_h*width) + j*dilation_w;
+                                                    rowbuf[(k*kernel_d*kernel_h + d*kernel_h + i)*kernel_w + j] = imgptr[imgofs];
                                                 }
                                             }
                                         }
