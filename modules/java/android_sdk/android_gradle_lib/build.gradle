@@ -7,6 +7,13 @@ android {
     defaultConfig {
         minSdkVersion @ANDROID_MIN_SDK_VERSION@
         targetSdkVersion @ANDROID_TARGET_SDK_VERSION@
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=@ANDROID_STL@"
+                targets "opencv_jni_shared"
+            }
+        }
     }
 
     buildTypes {
@@ -35,6 +42,12 @@ android {
             aidl.srcDirs = ['src']
             res.srcDirs = ['@OpenCV_SOURCE_DIR@/modules/java/android_sdk/android_gradle_lib/res']
             manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
 }
