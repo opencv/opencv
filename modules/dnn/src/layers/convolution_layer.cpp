@@ -1132,7 +1132,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW layout
+        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or IODHW layout
         const int group = numOutput / outGroupCn;
 
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
@@ -1141,11 +1141,11 @@ public:
                 return false;
             }
 
-            if (std::accumulate(adjust_pads.begin(), adjust_pads.end(), 1, std::plus<size_t>()) > 0)
+            if (std::accumulate(adjust_pads.begin(), adjust_pads.end(), 0, std::plus<size_t>()) > 0)
             {
                 if (padMode.empty())
                 {
-                    if ((kernel_size.size() == 3 || preferableTarget != DNN_TARGET_CPU) && group != 1)
+                    if (preferableTarget != DNN_TARGET_CPU && group != 1)
                     {
                         for (int i = 0; i < adjust_pads.size(); i++) {
                             if (adjust_pads[i] && pads_begin[i])
@@ -1175,7 +1175,7 @@ public:
                 return preferableTarget == DNN_TARGET_CPU;
             }
             if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                return dilation.width == 1 && dilation.height == 1;
+                return std::accumulate(dilations.begin(), dilations.end(), 1, std::multiplies<size_t>()) == 1;
             return true;
         }
         else

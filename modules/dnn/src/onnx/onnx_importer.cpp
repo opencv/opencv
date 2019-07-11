@@ -652,7 +652,7 @@ void ONNXImporter::populateNet(Net dstNet)
             if (layerParams.has("output_shape"))
             {
                 const DictValue& outShape = layerParams.get("output_shape");
-                DictValue stride = layerParams.get("stride");
+                DictValue strides = layerParams.get("stride");
                 DictValue kernel = layerParams.get("kernel_size");
 
                 String padMode;
@@ -663,9 +663,13 @@ void ONNXImporter::populateNet(Net dstNet)
                     if (padMode != "SAME" && padMode != "VALID")
                         CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-                    for (int i = 0; i < stride.size(); i++)
-                        adjust_pads.push_back(padMode == "SAME" ? (outShape.get<int>(2 + i) - 1) % stride.get<int>(i) :
-                                                                  (outShape.get<int>(2 + i) - kernel.get<int>(i)) % stride.get<int>(i));
+                    for (int i = 0; i < strides.size(); i++)
+                    {
+                        int sz = outShape.get<int>(2 + i);
+                        int stride = strides.get<int>(i);
+                        adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
+                                                                 (sz - kernel.get<int>(i)) % stride);
+                    }
                     layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
                 }
             }
