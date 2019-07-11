@@ -469,23 +469,20 @@ public:
             csl::tensor_ops::gemm<float>(cublasHandle, 0.0, output, 1.0, false, input, true, weightsTensor);
 
             if (bias)
-            {
-                output.reshape(batch_size, 1, output_size, 1);
-                csl::tensor_ops::add<float>(cudnnHandle, 1.0, output, 1.0, biasTensor);
-            }
+                csl::kernels::biasN<float>(stream, output, output, 1, biasTensor);
         }
     }
 
     void initCUDA(
-        csl::Stream stream,
+        csl::Stream stream_,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
+        stream = std::move(stream_);
         cublasHandle = std::move(cublas_handle);
-        cudnnHandle = std::move(cudnn_handle);
 
         weightsTensor = createTensorHeaderFromMat(weightsMat);
         CV_Assert(get_effective_rank(weightsTensor) == 2);
@@ -500,9 +497,9 @@ public:
         }
     }
 
-    csl::Tensor<float> weightsTensor, biasTensor;
+    csl::Stream stream;
     csl::cublas::Handle cublasHandle;
-    csl::cudnn::Handle cudnnHandle;
+    csl::Tensor<float> weightsTensor, biasTensor;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
