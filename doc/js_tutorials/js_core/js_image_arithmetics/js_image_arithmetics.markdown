@@ -40,6 +40,8 @@ cv.subtract(src1, src2, dst, mask, dtype);
 src1.delete(); src2.delete(); dst.delete(); mask.delete();
 @endcode
 
+Note that when used with RGBA images, the alpha channel of the resulting mat may be zero.
+
 Bitwise Operations
 ------------------
 
