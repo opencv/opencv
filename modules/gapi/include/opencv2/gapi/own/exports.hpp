@@ -11,20 +11,8 @@
 #   if defined(__OPENCV_BUILD)
 #       include <opencv2/core/base.hpp>
 #       define GAPI_EXPORTS CV_EXPORTS
-
-#   elif !defined(GAPI_STANDALONE)
-#       if defined _WIN32
-#           define GAPI_EXPORTS __declspec(dllexport)
-#       elif defined __GNUC__ && __GNUC__ >= 4
-#           define GAPI_EXPORTS __attribute__ ((visibility ("default")))
-#       endif
-
-#       ifndef GAPI_EXPORTS
-#           define GAPI_EXPORTS
-#       endif
-#   else  // GAPI_EXPORTS is intentionally not set in standalone build
+#   else
 #       define GAPI_EXPORTS
-
 #   endif
 
 #endif // OPENCV_GAPI_OWN_TYPES_HPP
