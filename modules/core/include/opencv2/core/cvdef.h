@@ -627,7 +627,7 @@ Cv64suf;
 \****************************************************************************************/
 
 #ifndef CV_NOEXCEPT
-#  ifdef CV_CXX11
+#  if defined(CV_CXX11) && (!defined(_MSC_VER) || _MSC_VER > 1800) /* MSVC 2015 and above */
 #    define CV_NOEXCEPT noexcept
 #  endif
 #endif
