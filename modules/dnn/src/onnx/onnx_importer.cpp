@@ -405,13 +405,11 @@ void ONNXImporter::populateNet(Net dstNet)
 
             if (layer_type == "ReduceMean")
             {
-                if (layerParams.get<int>("keepdims") == 0 || !layerParams.has("axes") ||
-                    layerParams.get("axes").size() > 2)
+                if (layerParams.get<int>("keepdims") == 0 || !layerParams.has("axes"))
                     CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMean operation.");
 
                 DictValue axes = layerParams.get("axes");
-                if (!((axes.size() == 2 && axes.get<int>(0) == 2 && axes.get<int>(1) == 3) ||
-                      (axes.size() == 1 && (axes.get<int>(0) == 2 || axes.get<int>(0) == 3))))
+                if (axes.size() != 2 || axes.get<int>(0) != 2 || axes.get<int>(1) != 3)
                         CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
             }
         }
