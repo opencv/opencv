@@ -139,6 +139,14 @@ struct MatType2
 public:
     MatType2(int val = 0) : _value(val) {}
     operator int() const { return _value; }
+    friend std::ostream& operator<<(std::ostream& os, const MatType2& t)
+    {
+        switch (t)
+        {
+            case -1: return os << "SAME_TYPE";
+            default: PrintTo(MatType(t), &os); return os;
+        }
+    }
 private:
     int _value;
 };
@@ -235,16 +243,19 @@ template<typename T1, typename T2>
 struct CompareF
 {
     using callable_t = std::function<bool(const T1& a, const T2& b)>;
-    CompareF(callable_t&& cmp, std::string&& desc) :
-        _comparator(std::move(cmp)), _desc(std::move(desc)) {}
+    CompareF(callable_t&& cmp, std::string&& cmp_name) :
+        _comparator(std::move(cmp)), _name(std::move(cmp_name)) {}
     bool operator()(const T1& a, const T2& b) const
     {
         return _comparator(a, b);
     }
-    const std::string& desc() const { return _desc; }
+    friend std::ostream& operator<<(std::ostream& os, const CompareF<T1, T2>& obj)
+    {
+        return os << obj._name;
+    }
 private:
     callable_t _comparator;
-    std::string _desc;
+    std::string _name;
 };
 
 using CompareMats = CompareF<cv::Mat, cv::Mat>;
@@ -265,7 +276,9 @@ struct Wrappable
     CompareMats to_compare_obj()
     {
         T t = *static_cast<T*const>(this);
-        return CompareMats(to_compare_f(), t.desc());
+        std::stringstream ss;
+        ss << t;
+        return CompareMats(to_compare_f(), ss.str());
     }
 };
 
@@ -284,7 +297,9 @@ struct WrappableScalar
     CompareScalars to_compare_obj()
     {
         T t = *static_cast<T*const>(this);
-        return CompareScalars(to_compare_f(), t.desc());
+        std::stringstream ss;
+        ss << t;
+        return CompareScalars(to_compare_f(), ss.str());
     }
 };
 
@@ -305,7 +320,10 @@ public:
             return true;
         }
     }
-    std::string desc() { return "AbsExact()"; }
+    friend std::ostream& operator<<(std::ostream& os, const AbsExact&)
+    {
+        return os << "AbsExact()";
+    }
 };
 
 class AbsTolerance : public Wrappable<AbsTolerance>
@@ -325,7 +343,10 @@ public:
             return true;
         }
     }
-    std::string desc() { return "AbsTolerance(" + std::to_string(_tol) + ")"; }
+    friend std::ostream& operator<<(std::ostream& os, const AbsTolerance& obj)
+    {
+        return os << "AbsTolerance(" << std::to_string(obj._tol) << ")";
+    }
 private:
     double _tol;
 };
@@ -354,10 +375,9 @@ public:
             }
         }
     }
-    std::string desc() {
-        std::stringstream ss;
-        ss << "Tolerance_FloatRel_IntAbs(" << _tol << ", " << _tol8u << ")";
-        return ss.str();
+    friend std::ostream& operator<<(std::ostream& os, const Tolerance_FloatRel_IntAbs& obj)
+    {
+        return os << "Tolerance_FloatRel_IntAbs(" << obj._tol << ", " << obj._tol8u << ")";
     }
 private:
     double _tol;
@@ -388,10 +408,9 @@ public:
             return true;
         }
     }
-    std::string desc() {
-        std::stringstream ss;
-        ss << "AbsSimilarPoints(" << _tol << ", " << _percent << ")";
-        return ss.str();
+    friend std::ostream& operator<<(std::ostream& os, const AbsSimilarPoints& obj)
+    {
+        return os << "AbsSimilarPoints(" << obj._tol << ", " << obj._percent << ")";
     }
 private:
     double _tol;
@@ -425,10 +444,10 @@ public:
         }
         return true;
     }
-    std::string desc() {
-        std::stringstream ss;
-        ss << "ToleranceFilter(" << _tol << ", " << _tol8u << ", " << _inf_tol << ")";
-        return ss.str();
+    friend std::ostream& operator<<(std::ostream& os, const ToleranceFilter& obj)
+    {
+        return os << "ToleranceFilter(" << obj._tol << ", " << obj._tol8u << ", "
+                  << obj._inf_tol << ")";
     }
 private:
     double _tol;
@@ -458,10 +477,9 @@ public:
         }
         return true;
     }
-    std::string desc() {
-        std::stringstream ss;
-        ss << "ToleranceColor(" << _tol << ", " << _inf_tol << ")";
-        return ss.str();
+    friend std::ostream& operator<<(std::ostream& os, const ToleranceColor& obj)
+    {
+        return os << "ToleranceColor(" << obj._tol << ", " << obj._inf_tol << ")";
     }
 private:
     double _tol;
@@ -485,7 +503,10 @@ public:
             return true;
         }
     }
-    std::string desc() { return "AbsToleranceScalar(" + std::to_string(_tol) + ")"; }
+    friend std::ostream& operator<<(std::ostream& os, const AbsToleranceScalar& obj)
+    {
+        return os << "AbsToleranceScalar(" << std::to_string(obj._tol) << ")";
+    }
 private:
     double _tol;
 };
@@ -503,24 +524,6 @@ inline std::ostream& operator<<(std::ostream& os, const opencv_test::compare_sca
     return os << "compare_scalar_f";
 }
 }  // anonymous namespace
-
-namespace opencv_test
-{
-inline std::ostream& operator<<(std::ostream& os, const opencv_test::MatType2& v)
-{
-    switch (v)
-    {
-        case -1: return os << "SAME_TYPE";
-        default: PrintTo(MatType(v), &os); return os;
-    }
-}
-
-template<typename T1, typename T2>
-std::ostream& operator<<(std::ostream& os, const CompareF<T1, T2>& cmp_object)
-{
-    return os << cmp_object.desc();
-}
-}
 
 // Note: namespace must match the namespace of the type of the printed object
 namespace cv
