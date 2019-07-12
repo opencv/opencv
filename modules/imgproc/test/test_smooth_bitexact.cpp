@@ -158,4 +158,12 @@ TEST(GaussianBlur_Bitexact, Linear8U)
     }
 }
 
+TEST(GaussianBlur_Bitexact, regression_15015)
+{
+    Mat src(100,100,CV_8UC3,Scalar(255,255,255));
+    Mat dst;
+    GaussianBlur(src, dst, Size(5, 5), 9);
+    ASSERT_EQ(0.0, cvtest::norm(dst, src, NORM_INF));
+}
+
 }} // namespace

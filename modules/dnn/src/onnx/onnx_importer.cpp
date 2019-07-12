@@ -682,42 +682,37 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("num_output", layerParams.blobs[0].size[1] * layerParams.get<int>("group", 1));
             layerParams.set("bias_term", node_proto.input_size() == 3);
 
+            if (!layerParams.has("kernel_size"))
+                CV_Error(Error::StsNotImplemented,
+                         "Required attribute 'kernel_size' is not present.");
+
             if (layerParams.has("output_shape"))
             {
                 const DictValue& outShape = layerParams.get("output_shape");
+                DictValue strides = layerParams.get("stride");
+                DictValue kernel = layerParams.get("kernel_size");
 
-                if (outShape.size() != 4)
-                    CV_Error(Error::StsNotImplemented, "Output shape must have 4 elements.");
-
-                DictValue stride = layerParams.get("stride");
-                const int strideY = stride.getIntValue(0);
-                const int strideX = stride.getIntValue(1);
-                const int outH = outShape.getIntValue(2);
-                const int outW = outShape.getIntValue(3);
-
-                if (layerParams.get<String>("pad_mode") == "SAME")
+                String padMode;
+                std::vector<int> adjust_pads;
+                if (layerParams.has("pad_mode"))
                 {
-                    layerParams.set("adj_w", (outW - 1) % strideX);
-                    layerParams.set("adj_h", (outH - 1) % strideY);
-                }
-                else if (layerParams.get<String>("pad_mode") == "VALID")
-                {
-                    if (!layerParams.has("kernel_size"))
-                        CV_Error(Error::StsNotImplemented,
-                                 "Required attribute 'kernel_size' is not present.");
+                    padMode = toUpperCase(layerParams.get<String>("pad_mode"));
+                    if (padMode != "SAME" && padMode != "VALID")
+                        CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-                    DictValue kernel = layerParams.get("kernel_size");
-                    layerParams.set("adj_h", (outH - kernel.getIntValue(0)) % strideY);
-                    layerParams.set("adj_w", (outW - kernel.getIntValue(1)) % strideX);
+                    for (int i = 0; i < strides.size(); i++)
+                    {
+                        int sz = outShape.get<int>(2 + i);
+                        int stride = strides.get<int>(i);
+                        adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
+                                                                 (sz - kernel.get<int>(i)) % stride);
+                    }
+                    layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
                 }
             }
             else if (layerParams.has("output_padding"))
             {
-                const DictValue& adj_pad = layerParams.get("output_padding");
-                if (adj_pad.size() != 2)
-                    CV_Error(Error::StsNotImplemented, "Deconvolution3D layer is not supported");
-                layerParams.set("adj_w", adj_pad.get<int>(1));
-                layerParams.set("adj_h", adj_pad.get<int>(0));
+                replaceLayerParam(layerParams, "output_padding", "adj");
             }
         }
         else if (layer_type == "Transpose")
