@@ -380,3 +380,19 @@ class Clip(nn.Module):
 model = Clip()
 input = Variable(torch.rand(1, 10, 2, 2))
 save_data_and_model('clip', input, model)
+
+input = Variable(torch.randn(1, 3, 6, 6, 6))
+deconv = nn.ConvTranspose3d(3, 3, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(0, 0, 0), bias=False)
+save_data_and_model("deconv3d", input, deconv)
+
+input = Variable(torch.randn(1, 3, 5, 4, 4))
+deconv = nn.ConvTranspose3d(3, 5, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(0, 0, 0), bias=True)
+save_data_and_model("deconv3d_bias", input, deconv)
+
+input = Variable(torch.randn(1, 3, 5, 5, 5))
+deconv = nn.ConvTranspose3d(3, 2, kernel_size=(4, 3, 3), stride=(1, 1, 1), padding=(1, 0, 1), bias=True)
+save_data_and_model("deconv3d_pad", input, deconv)
+
+input = Variable(torch.randn(1, 3, 4, 5, 3))
+deconv = nn.ConvTranspose3d(3, 5, kernel_size=(2, 3, 1), stride=(2, 2, 2), padding=(1, 2, 1), output_padding=1, bias=True)
+save_data_and_model("deconv3d_adjpad", input, deconv)
