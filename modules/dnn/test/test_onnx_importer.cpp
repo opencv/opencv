@@ -162,6 +162,11 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
+TEST_P(Test_ONNX_layers, ReduceMean)
+{
+    testONNXModels("reduce_mean", npy);
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
     testONNXModels("maxpooling_sigmoid");
