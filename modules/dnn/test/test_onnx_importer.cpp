@@ -127,6 +127,19 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, Deconvolution3D)
+{
+#if defined(INF_ENGINE_RELEASE)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+#endif
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("deconv3d");
+    testONNXModels("deconv3d_bias");
+    testONNXModels("deconv3d_pad");
+    testONNXModels("deconv3d_adjpad");
+}
+
 TEST_P(Test_ONNX_layers, Dropout)
 {
     testONNXModels("dropout");
