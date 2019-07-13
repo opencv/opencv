@@ -60,13 +60,23 @@ CV_SUPPRESS_DEPRECATED_END
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
+#if defined(_MSC_VER) && defined(_UNICODE)
+#define OPENCL_FUNC_TO_CHECK_1_1 L"clEnqueueReadBufferRect"
+#else
 #define OPENCL_FUNC_TO_CHECK_1_1 "clEnqueueReadBufferRect"
+#endif
+
 #define ERROR_MSG_CANT_LOAD "Failed to load OpenCL runtime\n"
 #define ERROR_MSG_INVALID_VERSION "Failed to load OpenCL runtime (expected version 1.1+)\n"
 
 static const char* getRuntimePath(const char* defaultPath)
 {
-    const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
+    const char* envPath =
+#ifdef NO_GETENV
+        NULL;
+#else
+        getenv("OPENCV_OPENCL_RUNTIME");
+#endif
     if (envPath)
     {
         static const char disabled_str[] = "disabled";
@@ -150,7 +160,16 @@ static void* WinGetProcAddress(const char* name)
     }
     if (!handle)
         return NULL;
+#ifndef _WIN32_WCE
     return (void*)GetProcAddress(handle, name);
+#else
+    const int nameSize = MultiByteToWideChar(0,0,name,-1,NULL,0);
+    LPWSTR* wname = new LPWSTR[nameSize];
+    MultiByteToWideChar(0,0,name,-1,*wname,nameSize);
+    void* address = (void*)GetProcAddress(handle, *wname);
+    delete wname;
+    return address;
+#endif
 }
 #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
 #endif // _WIN32

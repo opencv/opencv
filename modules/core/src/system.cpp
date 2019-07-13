@@ -378,7 +378,7 @@ struct HWFeatures
 
     void initialize(void)
     {
-#ifndef WINRT
+#ifndef NO_GETENV
         if (getenv("OPENCV_DUMP_CONFIG"))
         {
             fprintf(stderr, "\nOpenCV build configuration is:\n%s\n",
@@ -614,10 +614,10 @@ struct HWFeatures
     {
         bool dump = true;
         const char* disabled_features =
-#ifndef WINRT
-                getenv("OPENCV_CPU_DISABLE");
-#else
+#ifdef NO_GETENV
                 NULL;
+#else
+                getenv("OPENCV_CPU_DISABLE");
 #endif
         if (disabled_features && disabled_features[0] != 0)
         {
@@ -892,7 +892,7 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef WINRT
+#ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
@@ -913,6 +913,19 @@ String tempfile( const char* suffix )
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
     fname = String(aname);
     RoUninitialize();
+#elif _WIN32_WCE
+    LPWSTR temp_dir2[MAX_PATH+1] = {0};
+    LPWSTR temp_file[MAX_PATH+1] = {0};
+
+    ::GetTempPath(sizeof(temp_dir2), *temp_dir2);
+
+    if(0 != ::GetTempFileName(*temp_dir2, L"ocv", 0, *temp_file)) {
+        DeleteFile(*temp_file);
+        char aname[MAX_PATH];
+        size_t copied = wcstombs(aname, *temp_file, MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        fname = String(aname);
+    }
 #else
     char temp_dir2[MAX_PATH] = { 0 };
     char temp_file[MAX_PATH] = { 0 };
@@ -1691,7 +1704,14 @@ public:
         id(CV_XADD(&g_threadNum, 1))
     {
 #ifdef OPENCV_WITH_ITT
-        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
+        std::string thread_name = cv::format("OpenCVThread-%03d", id);
+#if defined _WIN32 && defined _UNICODE
+        std::wstring ws_thread_name;
+        ws_thread_name.assign(thread_name.begin(), thread_name.end());
+        __itt_thread_set_name(ws_thread_name.c_str());
+#else
+        __itt_thread_set_name(thread_name.c_str());
+#endif
 #endif
     }
 };

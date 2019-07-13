@@ -641,7 +641,9 @@ Cv64suf;
 #ifdef OPENCV_STDINT_HEADER
 #include OPENCV_STDINT_HEADER
 #elif defined(__cplusplus)
-#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
+#if defined(_WIN32_WCE)
+#include <stdint.h>
+#elif defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
 namespace cv {
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
