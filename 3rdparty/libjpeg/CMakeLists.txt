@@ -15,7 +15,7 @@ else()
   ocv_list_filterout(lib_srcs jmemnobs.c)
 endif()
 
-if(WINRT)
+if(WINRT OR WINCE)
     add_definitions(-DNO_GETENV)
     get_directory_property( DirDefs COMPILE_DEFINITIONS )
     message(STATUS "Adding NO_GETENV to compiler definitions for WINRT:")
