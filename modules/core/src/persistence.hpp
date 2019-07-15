@@ -55,7 +55,7 @@ size_t base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with
 size_t base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero = true);
 std::string make_base64_header(const char * dt);
 bool read_base64_header(std::vector<char> const & header, std::string & dt);
-void make_seq(void * binary_data, int elem_cnt, const char * dt, CvSeq & seq);
+void make_seq(::CvFileStorage* fs, const uchar* binary_data, size_t elem_cnt, const char * dt, CvSeq & seq);
 void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
 
 class Base64ContextEmitter;
