@@ -496,4 +496,12 @@ INSTANTIATE_TEST_CASE_P(BackendOutputTestCPU, BackendOutputTest,
                                 Values(-1),
                                 Values(false),
                                 Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(BackendOutputLargeSizeWithCorrectSubmatrixTestCPU,
+                        BackendOutputLargeSizeWithCorrectSubmatrixTest,
+                        Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
+                                Values(cv::Size(50, 50)),
+                                Values(-1),
+                                Values(false),
+                                Values(CORE_CPU)));
 }

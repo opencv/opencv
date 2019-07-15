@@ -1398,7 +1398,7 @@ TEST_P(BackendOutputTest, LargeSize)
     EXPECT_EQ(sz, out_mat_gapi.size());
 }
 
-TEST_P(BackendOutputTest, LargeSizeWithCorrectSubmatrix)
+TEST_P(BackendOutputLargeSizeWithCorrectSubmatrixTest, LargeSizeWithCorrectSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
     auto out_mat_gapi_copy = out_mat_gapi; // shallow copy to ensure previous data is not deleted
