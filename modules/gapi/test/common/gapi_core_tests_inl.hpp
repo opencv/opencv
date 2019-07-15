@@ -1387,7 +1387,6 @@ TEST_P(BackendOutputTest, SmallSizeWithSubmatrix)
 TEST_P(BackendOutputTest, LargeSize)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
-    const auto orig_addr = out_mat_gapi.data;
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1399,10 +1398,9 @@ TEST_P(BackendOutputTest, LargeSize)
     cv::multiply(in_mat1, in_mat2, out_mat_ocv);
 
     // Comparison //////////////////////////////////////////////////////////////
-    // Expected: size is changed, output is not reallocated
+    // Expected: size is changed, output is reallocated
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
     EXPECT_EQ(sz, out_mat_gapi.size());
-    EXPECT_EQ(orig_addr, out_mat_gapi.data);
 }
 
 TEST_P(BackendOutputTest, LargeSizeWithCorrectSubmatrix)
