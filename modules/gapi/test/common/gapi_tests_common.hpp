@@ -539,7 +539,7 @@ inline std::ostream& operator<<(std::ostream& os, CmpTypes op)
         CASE(CMP_LT);
         CASE(CMP_LE);
         CASE(CMP_NE);
-        default: throw std::runtime_error("unknown CmpTypes value");
+        default: GAPI_Assert(false && "unknown CmpTypes value");
     }
 #undef CASE
     return os;
@@ -558,7 +558,7 @@ inline std::ostream& operator<<(std::ostream& os, NormTypes op)
         CASE(NORM_HAMMING2);
         CASE(NORM_RELATIVE);
         CASE(NORM_MINMAX);
-        default: throw std::runtime_error("unknown NormTypes value");
+        default: GAPI_Assert(false && "unknown NormTypes value");
     }
 #undef CASE
     return os;
