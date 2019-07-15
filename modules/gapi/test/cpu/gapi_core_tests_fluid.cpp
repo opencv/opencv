@@ -206,7 +206,7 @@ INSTANTIATE_TEST_CASE_P(PhaseFluid, PhaseTest,
                                        cv::Size(128, 128)),
                                 Values(-1),
                                 Values(CORE_FLUID),
-                                testing::Bool()));
+         /* angle_in_degrees */ testing::Bool()));
 
 INSTANTIATE_TEST_CASE_P(SqrtFluid, SqrtTest,
                         Combine(Values(CV_32F, CV_32FC3),

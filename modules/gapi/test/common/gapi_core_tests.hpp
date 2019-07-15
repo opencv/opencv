@@ -40,6 +40,7 @@ inline std::ostream& operator<<(std::ostream& os, mathOp op)
         CASE(SUB);
         CASE(MUL);
         CASE(DIV);
+        default: throw std::runtime_error("unknown mathOp value");
     }
 #undef CASE
     return os;
@@ -55,6 +56,7 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
         CASE(OR);
         CASE(XOR);
         CASE(NOT);
+        default: throw std::runtime_error("unknown bitwiseOp value");
     }
 #undef CASE
     return os;
