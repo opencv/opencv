@@ -1160,7 +1160,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     const int N = 256;
     int i, j, h[N] = {0};
     #if CV_ENABLE_UNROLLED
-    int h2[3][N] = {0};
+    int h_unrolled[3][N] = {};
     #endif
     for( i = 0; i < size.height; i++ )
     {
@@ -1170,9 +1170,9 @@ getThreshVal_Otsu_8u( const Mat& _src )
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h2[0][v1]++;
+            h[v0]++; h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h2[1][v0]++; h2[2][v1]++;
+            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
@@ -1183,7 +1183,7 @@ getThreshVal_Otsu_8u( const Mat& _src )
     for( i = 0; i < N; i++ )
     {
         #if CV_ENABLE_UNROLLED
-        h[i] += h2[0][i] + h2[1][i] + h2[2][i];
+        h[i] += h_unrolled[0][i] + h_unrolled[1][i] + h_unrolled[2][i];
         #endif
         mu += i*(double)h[i];
     }
@@ -1232,7 +1232,7 @@ getThreshVal_Triangle_8u( const Mat& _src )
     const int N = 256;
     int i, j, h[N] = {0};
     #if CV_ENABLE_UNROLLED
-    int h2[3][N] = {0};
+    int h_unrolled[3][N] = {};
     #endif
     for( i = 0; i < size.height; i++ )
     {
@@ -1242,9 +1242,9 @@ getThreshVal_Triangle_8u( const Mat& _src )
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h2[0][v1]++;
+            h[v0]++; h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h2[1][v0]++; h2[2][v1]++;
+            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
@@ -1258,7 +1258,7 @@ getThreshVal_Triangle_8u( const Mat& _src )
     #if CV_ENABLE_UNROLLED
     for( i = 0; i < N; i++ )
     {
-        h[i] += h2[0][i] + h2[1][i] + h2[2][i];
+        h[i] += h_unrolled[0][i] + h_unrolled[1][i] + h_unrolled[2][i];
     }
     #endif
 
