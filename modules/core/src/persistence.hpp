@@ -262,7 +262,7 @@ void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection )
 char* icvFSResizeWriteBuffer( CvFileStorage* fs, char* ptr, int len );
 int icvCalcStructSize( const char* dt, int initial_size );
 int icvCalcElemSize( const char* dt, int initial_size );
-void CV_NORETURN icvParseError( CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line );
+void CV_NORETURN icvParseError(const CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line);
 char* icvEncodeFormat( int elem_type, char* dt );
 int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len );
 int icvDecodeSimpleFormat( const char* dt );
