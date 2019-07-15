@@ -1287,7 +1287,7 @@ TEST_P(BackendOutputTest, EmptyOutput)
 TEST_P(BackendOutputTest, CorrectOutput)
 {
     out_mat_gapi = cv::Mat(sz, type);
-    const auto orig_addr = out_mat_gapi.data;
+    auto out_mat_gapi_copy = out_mat_gapi;  // shallow copy to ensure previous data is not deleted
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1302,11 +1302,10 @@ TEST_P(BackendOutputTest, CorrectOutput)
     // Expected: output is unchanged
     EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
     EXPECT_EQ(sz, out_mat_gapi.size());
-    EXPECT_EQ(orig_addr, out_mat_gapi.data);
+    EXPECT_EQ(out_mat_gapi_copy.data, out_mat_gapi.data);
 }
 
 // FIXME: known issue with OCL backend - PR #14985
-// FIXME: the data is reallocated
 TEST_P(BackendOutputTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
 {
     // G-API code //////////////////////////////////////////////////////////////
@@ -1316,8 +1315,6 @@ TEST_P(BackendOutputTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
 
     const auto run_and_compare = [&c, this] ()
     {
-        const auto orig_addr = out_mat_gapi.data;
-
         // G-API code //////////////////////////////////////////////////////////////
         c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
 
@@ -1325,12 +1322,10 @@ TEST_P(BackendOutputTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
         cv::add(in_mat1, in_mat2, out_mat_ocv, cv::noArray());
 
         // Comparison //////////////////////////////////////////////////////////////
+        // Expected: size is changed, type is changed, output is reallocated
         EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
         EXPECT_EQ(sz, out_mat_gapi.size());
-
         EXPECT_EQ(type, out_mat_gapi.type());
-
-        EXPECT_EQ(orig_addr, out_mat_gapi.data);
     };
 
     const auto chan = CV_MAT_CN(type);
@@ -1406,10 +1401,10 @@ TEST_P(BackendOutputTest, LargeSize)
 TEST_P(BackendOutputTest, LargeSizeWithCorrectSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
-    const auto orig_addr = out_mat_gapi.data;
+    auto out_mat_gapi_copy = out_mat_gapi; // shallow copy to ensure previous data is not deleted
 
     cv::Mat out_mat_gapi_submat = out_mat_gapi(cv::Rect({5, 8}, sz));
-    const auto orig_addr_submat = out_mat_gapi_submat.data;
+    auto out_mat_gapi_submat_copy = out_mat_gapi_submat;
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1426,18 +1421,18 @@ TEST_P(BackendOutputTest, LargeSizeWithCorrectSubmatrix)
     EXPECT_EQ(sz, out_mat_gapi_submat.size());
     EXPECT_EQ(sz * 2, out_mat_gapi.size());
 
-    EXPECT_EQ(orig_addr, out_mat_gapi.data);
-    EXPECT_EQ(orig_addr_submat, out_mat_gapi_submat.data);
+    EXPECT_EQ(out_mat_gapi_copy.data, out_mat_gapi.data);
+    EXPECT_EQ(out_mat_gapi_submat_copy.data, out_mat_gapi_submat.data);
     EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
 }
 
 TEST_P(BackendOutputTest, LargeSizeWithSmallSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
-    const auto orig_addr = out_mat_gapi.data;
+    auto out_mat_gapi_copy = out_mat_gapi; // shallow copy to ensure previous data is not deleted
 
     cv::Mat out_mat_gapi_submat = out_mat_gapi(cv::Rect({5, 8}, sz / 2));
-    const auto orig_addr_submat = out_mat_gapi_submat.data;
+    auto out_mat_gapi_submat_copy = out_mat_gapi_submat;
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1454,9 +1449,9 @@ TEST_P(BackendOutputTest, LargeSizeWithSmallSubmatrix)
     EXPECT_EQ(sz, out_mat_gapi_submat.size());
     EXPECT_EQ(sz * 2, out_mat_gapi.size());
 
-    EXPECT_EQ(orig_addr, out_mat_gapi.data);
-    EXPECT_NE(orig_addr_submat, out_mat_gapi_submat.data);
-    EXPECT_NE(orig_addr, out_mat_gapi_submat.datastart);
+    EXPECT_EQ(out_mat_gapi_copy.data, out_mat_gapi.data);
+    EXPECT_NE(out_mat_gapi_submat_copy.data, out_mat_gapi_submat.data);
+    EXPECT_NE(out_mat_gapi_copy.data, out_mat_gapi_submat.datastart);
 }
 
 } // opencv_test
