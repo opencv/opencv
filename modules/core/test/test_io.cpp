@@ -724,10 +724,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
 
-            cvStartWriteStruct( *fs, "rawdata", CV_NODE_SEQ | CV_NODE_FLOW, "binary" );
+            fs << "rawdata" << "[:";
             for (int i = 0; i < (int)rawdata_N/10; i++)
-                cvWriteRawData(*fs, rawdata.data() + i * 10, 10, data_t::signature());
-            cvEndWriteStruct( *fs );
+                fs.writeRaw(data_t::signature(), (const uchar*)&rawdata[i * 10], sizeof(data_t) * 10);
+            fs << "]";
 
             size_t sz = 0;
             if (useMemory)
@@ -763,7 +763,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
 
             /* raw data */
             std::vector<data_t>(rawdata_N).swap(rawdata);
-            cvReadRawData(*fs, fs["rawdata"].node, rawdata.data(), data_t::signature());
+            fs["rawdata"].readRaw(data_t::signature(), (uchar*)&rawdata[0], rawdata.size() * sizeof(data_t));
 
             fs.release();
         }
@@ -925,7 +925,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
         {
             cv::FileStorage fs(file_name, cv::FileStorage::READ);
             std::vector<int> data_in(rawdata.size());
-            fs["manydata"][0].readRaw("i", (uchar *)data_in.data(), data_in.size());
+            fs["manydata"][0].readRaw("i", (uchar *)data_in.data(), data_in.size() * sizeof(data_in[0]));
             EXPECT_TRUE(fs["manydata"][0].isSeq());
             EXPECT_TRUE(std::equal(rawdata.begin(), rawdata.end(), data_in.begin()));
             cv::String str_in;
@@ -957,7 +957,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
             EXPECT_TRUE(fs["manydata"][0].isString());
             EXPECT_EQ(str_in, str_out);
             std::vector<int> data_in(rawdata.size());
-            fs["manydata"][1].readRaw("i", (uchar *)data_in.data(), data_in.size());
+            fs["manydata"][1].readRaw("i", (uchar *)data_in.data(), data_in.size() * sizeof(data_in[0]));
             EXPECT_TRUE(fs["manydata"][1].isSeq());
             EXPECT_TRUE(std::equal(rawdata.begin(), rawdata.end(), data_in.begin()));
             fs.release();
