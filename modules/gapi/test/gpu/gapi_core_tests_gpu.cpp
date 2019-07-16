@@ -383,7 +383,6 @@ INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestGPU, BackendOutputAllocationT
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
-                                Values(false),
                                 Values(CORE_GPU)));
 
 // FIXME: there's an issue in OCL backend with matrix reallocation that shouldn't happen
@@ -392,7 +391,6 @@ INSTANTIATE_TEST_CASE_P(DISABLED_BackendOutputAllocationLargeSizeWithCorrectSubm
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
-                                Values(false),
                                 Values(CORE_GPU)));
 
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
