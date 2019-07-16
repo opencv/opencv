@@ -165,9 +165,9 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
     cmpF, a, b, norm_type, ddepth)
-struct BackendOutputTest : TestWithParamBase<>
+struct BackendOutputAllocationTest : TestWithParamBase<>
 {
-    BackendOutputTest()
+    BackendOutputAllocationTest()
     {
         in_mat1 = cv::Mat(sz, type);
         in_mat2 = cv::Mat(sz, type);
@@ -176,7 +176,7 @@ struct BackendOutputTest : TestWithParamBase<>
     }
 };
 // FIXME: move all tests from this fixture to the base class once all issues are resolved
-struct BackendOutputLargeSizeWithCorrectSubmatrixTest : BackendOutputTest {};
+struct BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest : BackendOutputAllocationTest {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

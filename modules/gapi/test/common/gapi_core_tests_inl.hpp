@@ -1267,7 +1267,7 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
-TEST_P(BackendOutputTest, EmptyOutput)
+TEST_P(BackendOutputAllocationTest, EmptyOutput)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1284,7 +1284,7 @@ TEST_P(BackendOutputTest, EmptyOutput)
     EXPECT_EQ(sz, out_mat_gapi.size());
 }
 
-TEST_P(BackendOutputTest, CorrectOutput)
+TEST_P(BackendOutputAllocationTest, CorrectOutput)
 {
     out_mat_gapi = cv::Mat(sz, type);
     auto out_mat_gapi_copy = out_mat_gapi;  // shallow copy to ensure previous data is not deleted
@@ -1306,7 +1306,7 @@ TEST_P(BackendOutputTest, CorrectOutput)
 }
 
 // FIXME: known issue with OCL backend - PR #14985
-TEST_P(BackendOutputTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
+TEST_P(BackendOutputAllocationTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
@@ -1337,7 +1337,7 @@ TEST_P(BackendOutputTest, DISABLED_IncorrectOutputMetaAndLargeBuffer)
     run_and_compare();
 }
 
-TEST_P(BackendOutputTest, SmallSize)
+TEST_P(BackendOutputAllocationTest, SmallSize)
 {
     out_mat_gapi = cv::Mat(sz / 2, type);
 
@@ -1356,7 +1356,7 @@ TEST_P(BackendOutputTest, SmallSize)
     EXPECT_EQ(sz, out_mat_gapi.size());
 }
 
-TEST_P(BackendOutputTest, SmallSizeWithSubmatrix)
+TEST_P(BackendOutputAllocationTest, SmallSizeWithSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz / 2, type);
 
@@ -1379,7 +1379,7 @@ TEST_P(BackendOutputTest, SmallSizeWithSubmatrix)
     EXPECT_NE(out_mat_gapi.datastart, out_mat_gapi_submat.datastart);
 }
 
-TEST_P(BackendOutputTest, LargeSize)
+TEST_P(BackendOutputAllocationTest, LargeSize)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
 
@@ -1398,7 +1398,7 @@ TEST_P(BackendOutputTest, LargeSize)
     EXPECT_EQ(sz, out_mat_gapi.size());
 }
 
-TEST_P(BackendOutputLargeSizeWithCorrectSubmatrixTest, LargeSizeWithCorrectSubmatrix)
+TEST_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest, LargeSizeWithCorrectSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
     auto out_mat_gapi_copy = out_mat_gapi; // shallow copy to ensure previous data is not deleted
@@ -1426,7 +1426,7 @@ TEST_P(BackendOutputLargeSizeWithCorrectSubmatrixTest, LargeSizeWithCorrectSubma
     EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
 }
 
-TEST_P(BackendOutputTest, LargeSizeWithSmallSubmatrix)
+TEST_P(BackendOutputAllocationTest, LargeSizeWithSmallSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
     auto out_mat_gapi_copy = out_mat_gapi; // shallow copy to ensure previous data is not deleted

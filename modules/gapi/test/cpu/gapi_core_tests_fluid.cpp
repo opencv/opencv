@@ -283,15 +283,15 @@ INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
                                        cv::Size(64, 64),
                                        cv::Size(30, 30))));
 
-INSTANTIATE_TEST_CASE_P(BackendOutputTestFluid, BackendOutputTest,
+INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestFluid, BackendOutputAllocationTest,
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
                                 Values(false),
                                 Values(CORE_FLUID)));
 
-INSTANTIATE_TEST_CASE_P(BackendOutputLargeSizeWithCorrectSubmatrixTestFluid,
-                        BackendOutputLargeSizeWithCorrectSubmatrixTest,
+INSTANTIATE_TEST_CASE_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTestFluid,
+                        BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest,
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
