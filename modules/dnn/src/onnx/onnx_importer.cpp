@@ -401,8 +401,8 @@ void ONNXImporter::populateNet(Net dstNet)
         {
             CV_Assert(node_proto.input_size() == 1);
             layerParams.type = "Pooling";
-            layerParams.set("pool", layer_type == "GlobalAveragePool" || layer_type == "ReduceMean" ? "AVE" : "MAX");
-            layerParams.set("global_pooling", layer_type != "ReduceMean");
+            layerParams.set("pool", layer_type == "GlobalMaxPool"? "MAX" : "AVE");
+            layerParams.set("global_pooling", layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool");
 
             if (layer_type == "ReduceMean")
             {
@@ -416,8 +416,10 @@ void ONNXImporter::populateNet(Net dstNet)
                 DictValue axes = layerParams.get("axes");
                 CV_Assert(axes.size() <= inpShape.size() - 2);
                 std::vector<int> kernel_size(inpShape.size() - 2, 1);
-                for (int i = 0; i < axes.size(); i++)
+                for (int i = 0; i < axes.size(); i++) {
+                    CV_Assert_N(axes.get<int>(i) >= 2 + i, axes.get<int>(i) < inpShape.size());
                     kernel_size[axes.get<int>(i) - 2] = inpShape[axes.get<int>(i)];
+                }
 
                 layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
             }
@@ -769,15 +771,8 @@ void ONNXImporter::populateNet(Net dstNet)
             MatShape inpShape = outShapes[node_proto.input(0)];
             int axis = axes.getIntValue(0);
             CV_Assert(0 <= axis && axis <= inpShape.size());
-
-            std::vector<int> outShape;
-            for (int i = 0; i < axis; i++) {
-                outShape.push_back(inpShape[i]);
-            }
-            outShape.push_back(1);
-            for (int i = axis; i < inpShape.size(); i++) {
-                outShape.push_back(inpShape[i]);
-            }
+            std::vector<int> outShape = inpShape;
+            outShape.insert(outShape.begin() + axis, 1);
             layerParams.type = "Reshape";
             layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
         }
