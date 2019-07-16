@@ -1705,14 +1705,7 @@ public:
         id(CV_XADD(&g_threadNum, 1))
     {
 #ifdef OPENCV_WITH_ITT
-        std::string thread_name = cv::format("OpenCVThread-%03d", id);
-#if defined _WIN32 && defined _UNICODE
-        std::wstring ws_thread_name;
-        ws_thread_name.assign(thread_name.begin(), thread_name.end());
-        __itt_thread_set_name(ws_thread_name.c_str());
-#else
-        __itt_thread_set_name(thread_name.c_str());
-#endif
+        __itt_thread_set_name(cv::format("OpenCVThread-%03d", id).c_str());
 #endif
     }
 };
