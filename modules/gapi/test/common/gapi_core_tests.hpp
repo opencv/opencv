@@ -30,91 +30,37 @@ enum bitwiseOp
     NOT = 3
 };
 
-namespace
+// Note: namespace must match the namespace of the type of the printed object
+inline std::ostream& operator<<(std::ostream& os, mathOp op)
 {
-const char *MathOperations[] = {"ADD", "SUB", "MUL", "DIV"};
-const char *BitwiseOperations[] = {"And", "Or", "Xor"};
-const char *CompareOperations[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
-//corresponds to OpenCV
-const char *NormOperations[] = {"", "NORM_INF", "NORM_L1", "","NORM_L2"};
+#define CASE(v) case mathOp::v: os << #v; break
+    switch (op)
+    {
+        CASE(ADD);
+        CASE(SUB);
+        CASE(MUL);
+        CASE(DIV);
+        default: GAPI_Assert(false && "unknown mathOp value");
+    }
+#undef CASE
+    return os;
 }
 
-
-struct PrintMathOpCoreParams
+// Note: namespace must match the namespace of the type of the printed object
+inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
 {
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
+#define CASE(v) case bitwiseOp::v: os << #v; break
+    switch (op)
     {
-        std::stringstream ss;
-        using AllParams = Params<mathOp,bool,double,bool>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<MathOperations[AllParams::getSpecific<0>(params)]  // mathOp
-                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<(int)AllParams::getSpecific<2>(params)  // scale
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<(AllParams::getCommon<2>(params)+1)  // dtype
-                    <<"_"<<AllParams::getCommon<3>(params)  // createOutputMatrices
-                    <<"_"<<AllParams::getSpecific<3>(params);  // doReverseOp
-        return ss.str();
-   }
-};
-
-struct PrintCmpCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<CmpTypes,bool>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<CompareOperations[AllParams::getSpecific<0>(params)]  // CmpType
-                    <<"_"<<AllParams::getSpecific<1>(params)  // testWithScalar
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
-        return ss.str();
-   }
-};
-
-struct PrintBWCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<bitwiseOp>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<BitwiseOperations[AllParams::getSpecific<0>(params)]  // bitwiseOp
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height
-                    <<"_"<<AllParams::getCommon<3>(params);  // createOutputMatrices
-        return ss.str();
-   }
-};
-
-struct PrintNormCoreParams
-{
-    template <class TestParams>
-    std::string operator()(const ::testing::TestParamInfo<TestParams>& info) const
-    {
-        std::stringstream ss;
-        using AllParams = Params<compare_scalar_f,NormTypes>;
-        const AllParams::params_t& params = info.param;
-        cv::Size sz = AllParams::getCommon<1>(params);  // size
-        ss<<NormOperations[AllParams::getSpecific<1>(params)]  // NormTypes
-                    <<"_"<<AllParams::getCommon<0>(params)  // type
-                    <<"_"<<sz.width
-                    <<"x"<<sz.height;
-        return ss.str();
-   }
-};
+        CASE(AND);
+        CASE(OR);
+        CASE(XOR);
+        CASE(NOT);
+        default: GAPI_Assert(false && "unknown bitwiseOp value");
+    }
+#undef CASE
+    return os;
+}
 
 GAPI_TEST_FIXTURE(MathOpTest, initMatsRandU, FIXTURE_API(mathOp,bool,double,bool), 4,
     opType, testWithScalar, scale, doReverseOp)
@@ -133,9 +79,9 @@ GAPI_TEST_FIXTURE(MinTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(MaxTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffTest, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(AbsDiffCTest, initMatsRandU, <>, 0)
-GAPI_TEST_FIXTURE(SumTest, initMatrixRandU, FIXTURE_API(compare_scalar_f), 1, cmpF)
-GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(compare_f), 1, cmpF)
-GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(compare_scalar_f,NormTypes), 2,
+GAPI_TEST_FIXTURE(SumTest, initMatrixRandU, FIXTURE_API(CompareScalars), 1, cmpF)
+GAPI_TEST_FIXTURE(AddWeightedTest, initMatsRandU, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(NormTest, initMatrixRandU, FIXTURE_API(CompareScalars,NormTypes), 2,
     cmpF, opType)
 GAPI_TEST_FIXTURE(IntegralTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ThresholdTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
@@ -143,11 +89,11 @@ GAPI_TEST_FIXTURE(ThresholdOTTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
 GAPI_TEST_FIXTURE(InRangeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split3Test, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split4Test, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(compare_f,int,cv::Size), 3,
+GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
     cmpF, interp, sz_out)
-GAPI_TEST_FIXTURE(ResizePTest, initNothing, FIXTURE_API(compare_f,int,cv::Size), 3,
+GAPI_TEST_FIXTURE(ResizePTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
     cmpF, interp, sz_out)
-GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(compare_f,int,double,double), 4,
+GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(CompareMats,int,double,double), 4,
     cmpF, interp, fx, fy)
 GAPI_TEST_FIXTURE(Merge3Test, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(Merge4Test, initMatsRandU, <>, 0)
@@ -159,11 +105,11 @@ GAPI_TEST_FIXTURE(ConcatVertTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatVertVecTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(ConcatHorVecTest, initNothing, <>, 0)
 GAPI_TEST_FIXTURE(LUTTest, initNothing, <>, 0)
-GAPI_TEST_FIXTURE(ConvertToTest, initNothing, FIXTURE_API(compare_f, double, double), 3,
+GAPI_TEST_FIXTURE(ConvertToTest, initNothing, FIXTURE_API(CompareMats, double, double), 3,
     cmpF, alpha, beta)
 GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degrees)
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(compare_f,double,double,int,MatType), 5,
+GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(CompareMats,double,double,int,MatType2), 5,
     cmpF, a, b, norm_type, ddepth)
 struct BackendOutputAllocationTest : TestWithParamBase<>
 {
