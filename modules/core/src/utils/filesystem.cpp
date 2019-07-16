@@ -88,13 +88,10 @@ cv::String join(const cv::String& base, const cv::String& path)
 cv::String canonical(const cv::String& path)
 {
     cv::String result;
-    const char* result_str =
-#ifdef NO_GETENV
-        NULL;
-#elif defined(_WIN32)
-        _fullpath(NULL, path.c_str(), 0);
+#ifdef _WIN32
+    const char* result_str = _fullpath(NULL, path.c_str(), 0);
 #else
-        realpath(path.c_str(), NULL);
+    const char* result_str = realpath(path.c_str(), NULL);
 #endif
     if (result_str)
     {
@@ -425,25 +422,12 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
     {
         cv::String default_cache_path;
 #ifdef _WIN32
-#ifdef _WIN32_WCE
-        LPWSTR tmp_path_buf[MAX_PATH+1] = {0};
-        LPWSTR temp_file[MAX_PATH+1] = {0};
-        ::GetTempPath(sizeof(tmp_path_buf), *tmp_path_buf);
-        if (0 != ::GetTempFileName(*tmp_path_buf, L"ocv_cache", 0, *temp_file)) {
-            DeleteFile(*temp_file);
-            char aname[MAX_PATH];
-            size_t copied = wcstombs(aname, *temp_file, MAX_PATH);
-            CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-            default_cache_path = aname;
-        }
-#else
         char tmp_path_buf[MAX_PATH+1] = {0};
         DWORD res = GetTempPath(MAX_PATH, tmp_path_buf);
         if (res > 0 && res <= MAX_PATH)
         {
             default_cache_path = tmp_path_buf;
         }
-#endif // _WIN32_WCE
 #elif defined __ANDROID__
         // no defaults
 #elif defined __APPLE__
