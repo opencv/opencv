@@ -22,7 +22,8 @@ namespace cv {
     namespace dnn {
         constexpr bool IS_DNN_CUDA_TARGET(int id) {
             switch (id) {
-            case DNN_TARGET_CUDA_FP32:
+            case DNN_TARGET_CUDA_FP32: /* [[fallthrough]] */
+            case DNN_TARGET_CUDA_FP64:
                 return true;
             }
             return false;
@@ -148,6 +149,8 @@ namespace cv {
             {
             case DNN_TARGET_CUDA_FP32:
                 return cuda4dnn::cxx_utils::make_unique<NodeType<float>>(std::forward<Args>(args)...);
+            case DNN_TARGET_CUDA_FP64:
+                return cuda4dnn::cxx_utils::make_unique<NodeType<double>>(std::forward<Args>(args)...);
             default:
                 CV_Assert(IS_DNN_CUDA_TARGET(targetId));
             }
@@ -320,13 +323,12 @@ namespace cv {
             std::shared_ptr<shared_block_type> shared_block;
         };
 
-        template <class T> constexpr int getCUDATarget();
-        template <> constexpr int getCUDATarget<float>() { return DNN_TARGET_CUDA_FP32; }
-
-        using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, getCUDATarget<float>()>;
+        using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, DNN_TARGET_CUDA_FP32>;
+        using CUDABackendWrapperFP64 = GenericCUDABackendWrapper<double, DNN_TARGET_CUDA_FP64>;
 
         template <class T> struct GetCUDABackendWrapperType_ { };
         template <> struct GetCUDABackendWrapperType_<float> { typedef CUDABackendWrapperFP32 type; };
+        template <> struct GetCUDABackendWrapperType_<double> { typedef CUDABackendWrapperFP64 type; };
 
         template <class T>
         using GetCUDABackendWrapperType = typename GetCUDABackendWrapperType_<T>::type;

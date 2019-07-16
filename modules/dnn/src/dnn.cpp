@@ -150,8 +150,10 @@ private:
 #endif
 
 #ifdef HAVE_CUDA
-        if(haveCUDA())
+        if (haveCUDA()) {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP32));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP64));
+        }
 #endif
     }
     static inline bool checkIETarget(int target)
@@ -1025,10 +1027,17 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     else if (backendId == DNN_BACKEND_CUDA)
     {
         CV_Assert(haveCUDA());
-        CV_Assert(IS_DNN_CUDA_TARGET(targetId));
 
 #ifdef HAVE_CUDA
-        return CUDABackendWrapperFP32::create(m);
+        switch (targetId)
+        {
+        case DNN_TARGET_CUDA_FP32:
+            return CUDABackendWrapperFP32::create(m);
+        case DNN_TARGET_CUDA_FP64:
+            return CUDABackendWrapperFP64::create(m);
+        default:
+            CV_Assert(IS_DNN_CUDA_TARGET(targetId));
+        }
 #endif
     }
     else
@@ -1133,9 +1142,16 @@ struct Net::Impl
             else if (preferableBackend == DNN_BACKEND_CUDA)
             {
                 CV_Assert(haveCUDA());
-                CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
 #ifdef HAVE_CUDA
-                return CUDABackendWrapperFP32::create(baseBuffer, shape);
+                switch (preferableTarget)
+                {
+                case DNN_TARGET_CUDA_FP32:
+                    return CUDABackendWrapperFP32::create(baseBuffer, shape);
+                case DNN_TARGET_CUDA_FP64:
+                    return CUDABackendWrapperFP64::create(baseBuffer, shape);
+                default:
+                    CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
+                }
 #endif
             }
             else
@@ -1244,7 +1260,7 @@ struct Net::Impl
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
         CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
-                  preferableTarget == DNN_TARGET_CUDA_FP32);
+                  IS_DNN_CUDA_TARGET(preferableTarget));
 
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
@@ -1894,7 +1910,7 @@ struct Net::Impl
 #ifdef HAVE_CUDA
                 if (IS_DNN_CUDA_TARGET(preferableTarget))
                 {
-                    auto wrapper = ld.inputBlobsWrappers[i].dynamicCast<CUDABackendWrapperFP32>();
+                    auto wrapper = ld.inputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
                     wrapper->setStream(stream);
                 }
 #endif
@@ -1929,7 +1945,7 @@ struct Net::Impl
 #ifdef HAVE_CUDA
             if (IS_DNN_CUDA_TARGET(preferableTarget))
             {
-                auto wrapper = ld.outputBlobsWrappers[i].dynamicCast<CUDABackendWrapperFP32>();
+                auto wrapper = ld.outputBlobsWrappers[i].dynamicCast<CUDABackendWrapper>();
                 wrapper->setStream(stream);
             }
 #endif
