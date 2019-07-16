@@ -11,14 +11,13 @@ Implementation of padding layer, which adds paddings to input blob.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <vector>
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/padding.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -176,61 +175,7 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto input = input_wrapper->getView();
-
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto output = output_wrapper->getSpan();
-
-        auto effective_rank = get_effective_rank(input);
-        CV_Assert(get_effective_rank(input) == get_effective_rank(output));
-
-        /* suppose we require padding for the first spatial axis (H in NCHW or D in NCDHW)
-         *
-         * there could be a case where the batch axis, channel axis, and the first spatial axis are all one
-         * this would result in effective rank being less than the number of axes requiring padding
-         */
-        effective_rank = std::max(effective_rank, dstRanges.size());
-
-        for (int i = effective_rank - dstRanges.size(); i < effective_rank; i++)
-        {
-            if (dstRanges[i] == Range::all())
-                CV_Assert(input.get_axis_size(i) == output.get_axis_size(i));
-            else
-                CV_Assert(input.get_axis_size(i) == dstRanges[i].size());
-        }
-
-        if (paddingType == "constant")
-        {
-            csl::kernels::fill<float>(stream, output, paddingValue);
-
-            std::vector<std::size_t> offsets(effective_rank, 0);
-            for (int i = 0; i < dstRanges.size(); i++)
-            {
-                const auto delta = effective_rank - dstRanges.size();
-                if (dstRanges[i] != Range::all())
-                    offsets[delta + i] = dstRanges[i].start;
-            }
-
-            csl::kernels::concat_with_offsets<float>(stream, output, input, offsets);
-        }
-        else if (paddingType == "reflect")
-        {
-            std::vector<std::pair<std::size_t, std::size_t>> ranges(effective_rank);
-            for (int i = 0; i < effective_rank; i++)
-            {
-                const auto delta = effective_rank - dstRanges.size();
-                if (i < delta || dstRanges[i - delta] == Range::all())
-                    ranges[i] = { 0, input.get_axis_size(i) };
-                else
-                    ranges[i] = { dstRanges[i].start, dstRanges[i].end };
-            }
-            csl::kernels::copy_with_reflection101<float>(stream, output, input, ranges);
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Requested padding mode is not supported by padding layer.");
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
@@ -238,13 +183,21 @@ public:
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<cv::Ptr<BackendWrapper>>& inputs
+        const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
+        padding_type ptype;
+        if (paddingType == "constant")
+            ptype = padding_type::constant;
+        else if (paddingType == "reflect")
+            ptype = padding_type::reflection101;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
+
+        cudaNode = make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(stream_), ptype, paddingValue, dstRanges);
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

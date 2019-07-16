@@ -9,9 +9,9 @@
 #include "grid_stride_loop.hpp"
 #include "execution.hpp"
 
-#include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
+#include "../cuda4dnn/csl/kernels.hpp"
 
 #include <cuda_runtime.h>
 
@@ -22,12 +22,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     namespace raw {
         using index_type = gpu::index_type;
         using size_type = gpu::size_type;
-
-        template <class T>
-        __global__ void zero(span<T> output) {
-            for (auto idx : grid_stride_range(output.size()))
-                output[idx] = 0;
-        }
 
         template <class T>
         __global__ void reduce_sum_abs(span<T> output, view<T> input, size_type outer_stride, size_type mid_stride) {
@@ -88,13 +82,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         auto sums = span<T>(workspace.data(), outer_size * inner_size);
 
-        auto zero_kernel = raw::zero<T>;
-        auto policy = make_policy(zero_kernel, sums.size(), 0, stream);
-        launch_kernel(zero_kernel, policy, sums);
+        fill<T>(stream, sums, 0.0);
 
         if (norm == 1) {
             auto reduce_kernel = raw::reduce_sum_abs<T>;
-            policy = make_policy(reduce_kernel, input.size(), 0, stream);
+            auto policy = make_policy(reduce_kernel, input.size(), 0, stream);
             launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
 
             auto reciprocal_kernel = raw::reciprocal<T>;
@@ -102,7 +94,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             launch_kernel(reciprocal_kernel, policy, sums, epsilon);
         } else {
             auto reduce_kernel = raw::reduce_sum_squared<T>;
-            policy = make_policy(reduce_kernel, input.size(), 0, stream);
+            auto policy = make_policy(reduce_kernel, input.size(), 0, stream);
             launch_kernel(reduce_kernel, policy, sums, input, mid_size * inner_size, inner_size);
 
             auto rsqrt_kernel = raw::rsqrt<T>;
@@ -111,7 +103,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         auto scale_kernel = raw::apply_norm<T>;
-        policy = make_policy(scale_kernel, output.size(), 0, stream);
+        auto policy = make_policy(scale_kernel, output.size(), 0, stream);
         launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 

@@ -104,12 +104,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     void generate_prior_boxes(
         const Stream& stream,
         span<T> output,
-        view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY,
+        view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY, T stepX, T stepY,
         std::vector<T> variance,
         std::size_t numPriors,
         std::size_t layerWidth, std::size_t layerHeight,
         std::size_t imageWidth, std::size_t imageHeight,
-        T stepX, T stepY,
         bool normalize, bool clip);
 
     template <class T>

@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -57,8 +56,8 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/lrn.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -321,20 +320,10 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace) override
+        csl::Workspace& workspace
+    ) override
     {
-        CV_UNUSED(workspace);
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            lrn.normalize(input, output);
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
@@ -342,19 +331,18 @@ public:
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<Ptr<BackendWrapper>>& inputs) override
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
     {
-        cudnnHandle = std::move(cudnn_handle);
-
         if (type != CHANNEL_NRM)
             CV_Error(CV_StsNotImplemented, "Only LRN across channels is supported by the CUDA backend");
 
         float alphaSize = normBySize ? alpha : alpha * size;
-        lrn = csl::LRN<float>(cudnnHandle, size, alphaSize, beta, bias, csl::LRN<float>::lrn_type::ACROSS_CHANNELS);
+        cudaNode = make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
+            std::move(cudnn_handle), lrn_type::across_channels, size, alphaSize, beta, bias);
     }
 
-    csl::cudnn::Handle cudnnHandle;
-    csl::LRN<float> lrn;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

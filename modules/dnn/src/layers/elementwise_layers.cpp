@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -54,8 +53,8 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/activation.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -228,7 +227,6 @@ public:
         func.apply(src, dst, len, planeSize, cn0, cn1);
     }
 
-
 #ifdef HAVE_CUDA
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
@@ -236,21 +234,21 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        func.applyCUDA(inputs, outputs, workspace, stream);
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
+        cudaNode = func.initCUDA(preferableTarget, stream);
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -332,23 +330,9 @@ struct ReLUFunctor
     }
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::relu(stream, output, input, slope);
-        }
+        return make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);
     }
 #endif
 
@@ -424,8 +408,6 @@ struct ReLUFunctor
         return op;
     }
 #endif  // HAVE_VULKAN
-
-
 
     bool tryFuse(Ptr<dnn::Layer>&) { return false; }
 
@@ -518,23 +500,9 @@ struct ReLU6Functor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::clipped_relu(stream, output, input, minValue, maxValue);
-        }
+        return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
     }
 #endif
 
@@ -621,23 +589,9 @@ struct TanHFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::tanh(stream, output, input);
-        }
+        return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
     }
 #endif
 
@@ -724,23 +678,9 @@ struct SigmoidFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::sigmoid(stream, output, input);
-        }
+        return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
     }
 #endif
 
@@ -829,23 +769,9 @@ struct ELUFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::elu(stream, output, input);
-        }
+        return make_cuda_node<cuda4dnn::ELUOp>(target, stream);
     }
 #endif
 
@@ -935,23 +861,9 @@ struct AbsValFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::abs(stream, output, input);
-        }
+        return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
     }
 #endif
 
@@ -1038,23 +950,9 @@ struct BNLLFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::bnll(stream, output, input);
-        }
+        return make_cuda_node<cuda4dnn::BNLLOp>(target, stream);
     }
 #endif
 
@@ -1169,23 +1067,9 @@ struct PowerFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::power(stream, output, input, power, scale, shift);
-}
+        return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
     }
 #endif
 
@@ -1345,34 +1229,10 @@ struct ChannelsPReLUFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    void applyCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace,
-        const csl::Stream& stream
-    )
+    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
     {
-       if(!slopeTensor)
-       {
-           slopeTensor = std::make_shared<csl::Tensor<float>>();
-            *slopeTensor = createTensorHeaderFromMat(scale);
-           copyMatToTensor<float>(*slopeTensor, scale, stream);
-       }
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            csl::tensor_ops::channelwise_relu<float>(stream, output, input, *slopeTensor);
-        }
+        return make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(target, stream, scale);
     }
-
-    /* we have a shared_ptr here because csl::Tensor is non-copyable and these functors need to be copyable */
-    std::shared_ptr<csl::Tensor<float>> slopeTensor;
 #endif
 
 #ifdef HAVE_HALIDE

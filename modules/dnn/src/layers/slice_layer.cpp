@@ -41,7 +41,6 @@
 //M*/
 
 #include "../precomp.hpp"
-#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -51,8 +50,8 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/slice.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -275,35 +274,30 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_Assert(inputs.size() == 1);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto input = input_wrapper->getView();
-
-        for (int i = 0; i < outputs.size(); ++i)
-        {
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            std::vector<std::size_t> offsets;
-            for (const auto& range : sliceRanges[i])
-                offsets.push_back(range.start);
-            csl::kernels::slice(stream, output, input, offsets);
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<cv::Ptr<BackendWrapper>>& inputs
+        const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
+        std::vector<std::vector<std::size_t>> offsets;
+        for (const auto& ranges : sliceRanges)
+        {
+            std::vector<std::size_t> offsets_i;
+            for (const auto& range : ranges)
+                offsets_i.push_back(range.start);
+            offsets.push_back(std::move(offsets_i));
+        }
+
+        cudaNode = make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(stream), std::move(offsets));
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
 #ifdef HAVE_INF_ENGINE

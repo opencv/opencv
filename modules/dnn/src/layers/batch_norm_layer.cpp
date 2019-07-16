@@ -11,7 +11,6 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -21,8 +20,8 @@ Implementation of Batch Normalization layer.
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/batch_norm.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -321,39 +320,21 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto input = input_wrapper->getView();
-
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto output = output_wrapper->getSpan();
-
-        auto input_shape = input_wrapper->getShape();
-        std::size_t inner_size = total(input_shape, 2, -1);
-
-        csl::kernels::scaleN_with_biasN<float>(stream, output, input, inner_size, weightsTensor, biasTensor);
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
-
-        weightsTensor = createTensorHeaderFromMat(weights_);
-        copyMatToTensor<float>(weightsTensor, weights_, stream);
-
-        biasTensor = createTensorHeaderFromMat(bias_);
-        copyMatToTensor<float>(biasTensor, bias_, stream);
+        cudaNode = make_cuda_node<cuda4dnn::BatchNormOp>(preferableTarget, std::move(stream), weights_, bias_);
     }
 
-    csl::Tensor<float> weightsTensor, biasTensor;
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE

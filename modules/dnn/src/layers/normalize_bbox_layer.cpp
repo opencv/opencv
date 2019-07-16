@@ -42,14 +42,15 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/normalize_bbox.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
+
+#include <memory>
 
 namespace cv { namespace dnn {
 
@@ -269,40 +270,10 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace) override
+        csl::Workspace& workspace
+    ) override
     {
-        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto input = input_wrapper->getView();
-        auto input_shape = input_wrapper->getShape();
-
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto output = output_wrapper->getSpan();
-
-        auto start_axis = clamp(startAxis, input_shape.size());
-        auto end_axis = clamp(endAxis, input_shape.size());
-
-        auto outer_size = total(input_shape, 0, start_axis);
-        auto mid_size = total(input_shape, start_axis, end_axis + 1);
-        auto inner_size = total(input_shape, end_axis + 1, -1);
-
-        auto scratch_ptr = reinterpret_cast<float*>(csl::WorkspaceAccessor::get(workspace).get());
-        auto scratch = csl::span<float>(csl::DevicePtr<float>(scratch_ptr), workspace.size());
-        csl::kernels::normalize<float>(stream, output, input, outer_size, mid_size, inner_size, pnorm, epsilon, scratch);
-
-        if (!blobs.empty()) {
-            Mat weightsMat = blobs[0];
-            if (weightsMat.total() == 1)
-            {
-                csl::kernels::scale1<float>(stream, output, input, weightsMat.at<float>(0, 0));
-            }
-            else
-            {
-                CV_Assert(weightsTensor.size() == mid_size);
-                csl::kernels::scaleN<float>(stream, output, input, inner_size, weightsTensor);
-            }
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
@@ -313,28 +284,26 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
+        if(pnorm != 1 && pnorm != 2)
+            CV_Error(Error::StsNotImplemented, "Unsupported normalization mode");
 
-        if (!blobs.empty() && blobs[0].total() != 1)
-        {
-            const auto& weightsMat = blobs[0];
-            weightsTensor = createTensorHeaderFromMat(weightsMat);
-            copyMatToTensor<float>(weightsTensor, weightsMat, stream);
-        }
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
 
-        auto start_axis = clamp(startAxis, input_shape.size());
-        auto end_axis = clamp(endAxis, input_shape.size());
+        NormalizeConfiguration<float> config;
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.axis_start = clamp(startAxis, input_shape.size());
+        config.axis_end = clamp(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
+        config.norm = pnorm;
+        config.eps = epsilon;
 
-        auto outer_size = total(input_shape, 0, start_axis);
-        auto inner_size = total(input_shape, end_axis + 1, -1);
-        scratch_mem_in_bytes = outer_size * inner_size * sizeof(float);
+        const auto& weightsMat = blobs.empty() ? Mat() : blobs[0];
+        cudaNode = make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(stream_), weightsMat, config);
+
+        scratch_mem_in_bytes = cudaNode->get_workspace_memory_in_bytes();
     }
 
-    csl::Tensor<float> weightsTensor;
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
 #ifdef HAVE_INF_ENGINE

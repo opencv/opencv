@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
 #include <float.h>
@@ -53,8 +52,8 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/permute.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -384,43 +383,25 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace) override
+        csl::Workspace& workspace
+    ) override
     {
-        CV_UNUSED(workspace);
-        CV_Assert(outputs.size() == 1);
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            if (!_needsPermute)
-            {
-                if (input.get() != output.get())
-                    csl::tensor_ops::copy(stream, output, input);
-            }
-            else
-            {
-                std::vector<int> order(std::begin(_order), std::end(_order));
-                csl::tensor_ops::permute<float>(stream, output, input, order);
-            }
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<Ptr<BackendWrapper>>& inputs) override
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
     {
-        stream = std::move(stream_);
+        std::vector<int> order(std::begin(_order), std::end(_order));
+        cudaNode = make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(stream), std::move(order));
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE

@@ -12,6 +12,13 @@
 #include "cublas.hpp"
 #include "cudnn.hpp"
 
+#include "cudnn/convolution.hpp"
+#include "cudnn/pooling.hpp"
+#include "cudnn/lrn.hpp"
+#include "cudnn/softmax.hpp"
+#include "cudnn/transform.hpp"
+#include "cudnn/transpose_convolution.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>

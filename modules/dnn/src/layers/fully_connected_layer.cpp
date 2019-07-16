@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -53,8 +52,8 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/inner_product.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -430,76 +429,30 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_UNUSED(workspace);
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            auto actual_dims = input_wrapper->getShape().size();
-            CV_Assert(get_effective_rank(input) <= actual_dims);
-
-            auto extra_dims = input.rank - actual_dims;
-            auto flatten_start_axis = clamp(axis, actual_dims) + extra_dims;
-
-            std::size_t batch_size = 1;
-            for (int j = 0; j < flatten_start_axis; j++)
-                batch_size *= input.get_axis_size(j);
-
-            auto input_size = input.size() / batch_size;
-            CV_Assert(input_size == weightsTensor.get_axis_size(-1));
-
-            auto output_size = output.size() / batch_size;
-            CV_Assert(output_size == weightsTensor.get_axis_size(-2));
-
-            /* we treat the input and output as a matrix with dimensions (batch_size, input_size)
-             * and (batch_size, output_size) respectively
-             *
-             * weight matrix dimensions: (output_size, input_size)
-             *
-             * I(W^T) = O
-             * (batch_size, input_size) * (input_size, output_size) = (batch_size, output_size)
-             */
-            input.reshape(batch_size, input_size);
-            output.reshape(batch_size, output_size);
-            csl::tensor_ops::gemm<float>(cublasHandle, 0.0, output, 1.0, false, input, true, weightsTensor);
-
-            if (bias)
-                csl::kernels::biasN<float>(stream, output, output, 1, biasTensor);
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        stream = std::move(stream_);
-        cublasHandle = std::move(cublas_handle);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        weightsTensor = createTensorHeaderFromMat(weightsMat);
-        CV_Assert(get_effective_rank(weightsTensor) == 2);
-        copyMatToTensor<float>(weightsTensor, weightsMat, stream);
+        auto flatten_start_axis = [&] {
+            auto actual_dims = input_wrapper->getShape().size();
+            auto extra_dims = input_wrapper->getRank() - actual_dims;
+            return clamp(axis, actual_dims) + extra_dims;
+        }();
 
-        if (bias)
-        {
-            biasTensor = createTensorHeaderFromMat(biasMat);
-            copyMatToTensor<float>(biasTensor, biasMat, stream);
-            biasTensor.reshape(-1, 1);
-            CV_Assert(weightsTensor.get_axis_size(-2) == biasTensor.get_axis_size(-2));
-        }
+        auto biasMat_ = bias ? biasMat : Mat();
+        cudaNode = make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(stream), std::move(cublas_handle), flatten_start_axis, weightsMat, biasMat_);
     }
 
-    csl::Stream stream;
-    csl::cublas::Handle cublasHandle;
-    csl::Tensor<float> weightsTensor, biasTensor;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

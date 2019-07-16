@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -52,10 +51,11 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/concat.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
+
 
 namespace cv
 {
@@ -242,71 +242,6 @@ public:
     }
 #endif
 
-#ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace) override
-    {
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto output = output_wrapper->getSpan();
-        auto output_shape = output_wrapper->getShape();
-
-        auto concat_axis = [&] {
-            auto actual_dims = output_shape.size();
-            auto extra_dims = output.rank - actual_dims;
-            return clamp(axis, actual_dims) + extra_dims;
-        }();
-
-        if (!padding)
-        {
-            std::size_t output_axis_offset = 0;
-            for (std::size_t i = 0; i < inputs.size(); i++)
-            {
-                auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-                auto input = input_wrapper->getView();
-
-                csl::kernels::concat<float>(stream, output, output_axis_offset, input, concat_axis);
-
-                output_axis_offset += input.get_axis_size(concat_axis);
-            }
-        }
-        else /* if(padding) */
-        {
-            csl::memset(output.get(), 0, output.size(), stream);
-
-            std::size_t output_concat_axis_offset = 0;
-            for (size_t i = 0; i < inputs.size(); i++)
-            {
-                auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-                auto input = input_wrapper->getView();
-                auto input_shape = input_wrapper->getShape();
-
-                std::vector<std::size_t> offsets(input_shape.size());
-                for (int j = 0; j < offsets.size(); j++)
-                    offsets[j] = (output_shape[j] - input_shape[j]) / 2;
-                offsets[concat_axis] = output_concat_axis_offset;
-
-                csl::kernels::concat_with_offsets(stream, output, input, offsets);
-
-                output_concat_axis_offset += input.get_axis_size(concat_axis);
-            }
-        }
-    }
-
-    void initCUDA(
-        csl::Stream stream_,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
-        const std::vector<Ptr<BackendWrapper>>& inputs) override
-    {
-        stream = std::move(stream_);
-    }
-
-    csl::Stream stream;
-#endif
-
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -349,6 +284,39 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        cudaNode->forward(inputs, outputs, workspace);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+
+        auto concat_axis = [&] {
+            auto actual_dims = input_wrapper->getShape().size();
+            auto extra_dims = input_wrapper->getRank() - actual_dims;
+            return clamp(axis, actual_dims) + extra_dims;
+        }();
+
+        cudaNode = make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(stream), concat_axis, padding);
+    }
+
+    std::unique_ptr<CUDABackendNode> cudaNode;
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN

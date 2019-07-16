@@ -7,7 +7,6 @@
 
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
-#include "../op_cuda.hpp"
 #include "layers_common.hpp"
 
 #ifdef HAVE_OPENCL
@@ -15,8 +14,8 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/const.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -88,34 +87,28 @@ public:
 #endif  // HAVE_INF_ENGINE
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
+     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
         csl::Workspace& workspace
     ) override
     {
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        csl::tensor_ops::copy<float>(stream, output_wrapper->getSpan(), constTensor);
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<cv::Ptr<BackendWrapper>>& inputs
+        const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        /* host to device copy is more expensive than device to device copy; hence, we keep a copy
-         * of the blob in device memory and use it as the source for copy
-         */
-        stream = std::move(stream_);
-        constTensor = createTensorHeaderFromMat(blobs[0]);
-        copyMatToTensor<float>(constTensor, blobs[0], stream);
+        CV_Assert(blobs.size() == 1);
+        cudaNode = make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(stream), blobs[0]);
     }
 
-    csl::Stream stream;
-    csl::Tensor<float> constTensor;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
 };

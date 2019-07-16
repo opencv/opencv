@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -56,8 +55,8 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/softmax.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -301,23 +300,7 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_UNUSED(workspace);
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            auto actual_dims = input_wrapper->getShape().size();
-            CV_Assert(get_effective_rank(input) <= actual_dims);
-
-            auto extra_dims = input.rank - actual_dims;
-            auto channel_axis = clamp(axisRaw, actual_dims) + extra_dims;
-            csl::tensor_ops::softmax(cudnnHandle, output, input, channel_axis, logSoftMax);
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
@@ -328,10 +311,18 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        cudnnHandle = std::move(cudnn_handle);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+
+        auto channel_axis = [&] {
+            auto actual_dims = input_wrapper->getShape().size();
+            auto extra_dims = input_wrapper->getRank() - actual_dims;
+            return clamp(axisRaw, actual_dims) + extra_dims;
+        }();
+
+        cudaNode = make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(cudnn_handle), channel_axis, logSoftMax);
     }
 
-    csl::cudnn::Handle cudnnHandle;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

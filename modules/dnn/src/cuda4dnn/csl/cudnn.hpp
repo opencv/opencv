@@ -8,11 +8,5 @@
 #include <opencv2/dnn/csl/cudnn.hpp>
 
 #include "cudnn/cudnn.hpp"
-#include "cudnn/convolution.hpp"
-#include "cudnn/transpose_convolution.hpp"
-#include "cudnn/lrn.hpp"
-#include "cudnn/pooling.hpp"
-#include "cudnn/softmax.hpp"
-#include "cudnn/transform.hpp"
 
 #endif /* OPENCV_DNN_CUDA4DNN_CSL_CUDNN_HPP */

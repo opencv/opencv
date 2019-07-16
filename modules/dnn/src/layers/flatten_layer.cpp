@@ -42,15 +42,14 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include <float.h>
 #include <algorithm>
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/reshape.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -174,38 +173,24 @@ public:
     void forwardCUDA(
         std::vector<cv::Ptr<BackendWrapper>>& inputs,
         std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace) override
+        csl::Workspace& workspace
+    ) override
     {
-        CV_UNUSED(workspace);
-        CV_Assert(outputs.size() == 1);
-
-        for (std::size_t i = 0; i < inputs.size(); i++)
-        {
-            auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[i].dynamicCast<CUDABackendWrapperFP32>();
-            auto output = output_wrapper->getSpan();
-
-            if (input.get() != output.get())
-            {
-                input.reshape_as(output);
-                csl::tensor_ops::copy(stream, output, input);
-            }
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
-        const std::vector<Ptr<BackendWrapper>>& inputs) override
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
     {
-        stream = std::move(stream_);
+        cudaNode = make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(stream));
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
 #ifdef HAVE_INF_ENGINE

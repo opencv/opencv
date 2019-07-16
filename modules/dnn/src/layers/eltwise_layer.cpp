@@ -42,7 +42,6 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 
@@ -51,9 +50,8 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../cuda4dnn/csl/tensor.hpp"
-#include "../cuda4dnn/csl/tensor_ops.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/eltwise.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -390,80 +388,30 @@ public:
         csl::Workspace& workspace
     ) override
     {
-        CV_Assert(outputs.size() == 1);
-
-        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapperFP32>();
-        auto output = output_wrapper->getSpan();
-
-        /* optimized path for common case */
-        if (inputs.size() == 2)
-        {
-            auto input_wrapper_x = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-            auto input_x = input_wrapper_x->getView();
-
-            auto input_wrapper_y = inputs[1].dynamicCast<CUDABackendWrapperFP32>();
-            auto input_y = input_wrapper_y->getView();
-
-            switch(op)
-            {
-            case MAX: csl::kernels::eltwise_max_2<float>(stream, output, input_x, input_y); break;
-            case PROD: csl::kernels::eltwise_prod_2<float>(stream, output, input_x, input_y); break;
-            case SUM:
-                if (coeffs.empty() || (coeffs[0] == 1 && coeffs[1] == 1))
-                    csl::kernels::eltwise_sum_2<float>(stream, output, input_x, input_y);
-                else
-                    csl::kernels::eltwise_sum_coeff_2<float>(stream, output, coeffs[0], input_x, coeffs[1], input_y);
-                break;
-            }
-        }
-        else
-        {
-            auto input_wrapper_0 = inputs[0].dynamicCast<CUDABackendWrapperFP32>();
-            auto input_0 = input_wrapper_0->getView();
-
-            /* we first make a copy and then apply EltwiseOp cumulatively */
-            csl::tensor_ops::copy(stream, output, input_0);
-
-            for (std::size_t i = 1; i < inputs.size(); i++)
-            {
-                auto input_wrapper = inputs[i].dynamicCast<CUDABackendWrapperFP32>();
-                auto input = input_wrapper->getView();
-
-                switch (op)
-                {
-                case MAX: csl::kernels::eltwise_max_2<float>(stream, output, output, input); break;
-                case PROD: csl::kernels::eltwise_prod_2<float>(stream, output, output, input); break;
-                case SUM:
-                    if (coeffs.empty() || coeffs[i] == 1)
-                        csl::kernels::eltwise_sum_2<float>(stream, output, output, input);
-                    else
-                    {
-                        /* if this is the first op, we must scale output too */
-                        auto coeff_x = (i == 1) ? coeffs[0] : 1.0;
-                        csl::kernels::eltwise_sum_coeff_2<float>(stream, output, coeff_x, output, coeffs[i], input);
-                    }
-                    break;
-                }
-            }
-        }
+        cudaNode->forward(inputs, outputs, workspace);
     }
 
     void initCUDA(
-        csl::Stream stream_,
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
         std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        CV_Assert(inputs.size() >= 2);
-        CV_Assert(coeffs.size() == 0 || inputs.size() == coeffs.size());
-        CV_Assert(coeffs.size() == 0 || op == SUM);
+        eltwise_op op_ = [this] {
+            switch (op) {
+            case MAX: return eltwise_op::max;
+            case SUM: return eltwise_op::sum;
+            case PROD: return eltwise_op::product;
+            }
+            return eltwise_op::sum;
+        }();
 
-        stream = std::move(stream_);
+        cudaNode = make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(stream), op_, coeffs);
     }
 
-    csl::Stream stream;
+    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE

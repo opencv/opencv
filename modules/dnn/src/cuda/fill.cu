@@ -5,7 +5,6 @@
 #include "grid_stride_loop.hpp"
 #include "execution.hpp"
 
-#include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
@@ -19,6 +18,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
     namespace raw {
         template <class T>
+        __global__ void zero(span<T> output) {
+            for (auto idx : grid_stride_range(output.size()))
+                output[idx] = 0;
+        }
+
+        template <class T>
         __global__ void fill(span<T> output, T value) {
             for (auto i : grid_stride_range(output.size()))
                 output[i] = value;
@@ -27,9 +32,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
     template <class T>
     void fill(const Stream& stream, span<T> output, T value) {
-        auto kernel = raw::fill<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, value);
+        if (value == 0.0) {
+            auto kernel = raw::zero<T>;
+            auto policy = make_policy(kernel, output.size(), 0, stream);
+            launch_kernel(kernel, policy, output);
+        } else {
+            auto kernel = raw::fill<T>;
+            auto policy = make_policy(kernel, output.size(), 0, stream);
+            launch_kernel(kernel, policy, output, value);
+        }
     }
 
     template void fill<float>(const Stream&, span<float>, float);

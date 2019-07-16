@@ -8,7 +8,6 @@
 #include "grid_stride_loop.hpp"
 #include "execution.hpp"
 
-#include "../cuda4dnn/csl/kernels.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"

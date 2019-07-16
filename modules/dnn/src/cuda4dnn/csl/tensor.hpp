@@ -12,6 +12,8 @@
 #include "span.hpp"
 #include "workspace.hpp"
 
+#include "../cxx_utils/is_iterator.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>
@@ -85,7 +87,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Whatever arguments are accepted by the resize methods are accepted here.
          */
         template <class ...Args>
-        Tensor(Args... sizes) { resize(std::forward<Args>(sizes)...); }
+        Tensor(Args&&... sizes) { resize(std::forward<Args>(sizes)...); }
 
         Tensor& operator=(const Tensor&) = delete;
         Tensor& operator=(Tensor&& other) noexcept {
@@ -143,7 +145,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         template <class ForwardItr>
-        typename std::enable_if<!std::is_integral<ForwardItr>::value, void> // TODO is_iterator
+        typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type resize(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= rank);
@@ -201,7 +203,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         template <class ForwardItr>
-        typename std::enable_if<!std::is_integral<ForwardItr>::value, void> // TODO is_iterator
+        typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type reshape(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= rank);
@@ -316,7 +318,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 sizes[i] = parent.get_axis_size(i);
         }
 
-        /* returns the total number of elements in the span */
+        /** creates a subspan of a tensor (or span); refer to subspan method for more details */
+        template <class... Args>
+        TensorSpan(TensorSpan other, size_type offset, Args&&... args)
+            : TensorSpan(other.subspan(offset, std::forward<Args>(args)...))
+        {
+        }
+
+        /** returns the total number of elements in the span */
         CUDA4DNN_HOST/*_DEVICE*/ size_type size() const noexcept {
             return std::accumulate(std::begin(sizes), std::end(sizes), 1, std::multiplies<size_type>());
         }
@@ -368,7 +377,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         template <class ForwardItr> CUDA4DNN_HOST
-        typename std::enable_if<!std::is_integral<ForwardItr>::value, void> // TODO is_iterator
+        typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type reshape(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= rank);
@@ -452,7 +461,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         template <class ForwardItr> CUDA4DNN_HOST
-        typename std::enable_if<!std::is_integral<ForwardItr>::value, TensorSpan> // TODO is_iterator
+        typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, TensorSpan>
         ::type subspan(size_type offset, ForwardItr start, ForwardItr end) const {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= rank);
@@ -539,6 +548,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         TensorView(const tensor_type& parent) noexcept : ptr{ parent.get() } {
             for (std::size_t i = 0; i < rank; i++)
                 sizes[i] = parent.get_axis_size(i);
+        }
+
+        /** creates a subview of a tensor (or span or view); refer to subview method for more details */
+        template <class... Args>
+        TensorView(TensorView<T, rank_> other, size_type offset, Args&&... args) noexcept
+            : TensorView(other.subview(offset, std::forward<Args>(args)...))
+        {
         }
 
         TensorView& operator=(const TensorView&) = default;
@@ -684,7 +700,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         template <class ForwardItr> CUDA4DNN_HOST
-        typename std::enable_if<!std::is_integral<ForwardItr>::value, TensorView> // TODO is_iterator
+        typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, TensorView>
         ::type subview(size_type offset, ForwardItr start, ForwardItr end) const {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= rank);
