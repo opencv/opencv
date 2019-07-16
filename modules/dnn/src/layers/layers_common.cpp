@@ -148,8 +148,6 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
                             std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
                             std::vector<size_t>& strides, cv::String &padMode)
 {
-    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
-
     globalPooling = params.has("global_pooling") &&
                     params.get<bool>("global_pooling");
 
@@ -172,6 +170,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     {
         util::getKernelSize(params, kernel);
     }
+    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, !globalPooling? kernel.size() : 2);
 }
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
