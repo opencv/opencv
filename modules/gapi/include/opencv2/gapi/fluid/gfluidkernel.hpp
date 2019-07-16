@@ -99,12 +99,22 @@ struct GFluidOutputRois
     std::vector<cv::gapi::own::Rect> rois;
 };
 
+struct GFluidParallelOutputRois
+{
+    std::vector<GFluidOutputRois> parallel_rois;
+};
+
 namespace detail
 {
 template<> struct CompileArgTag<GFluidOutputRois>
 {
     static const char* tag() { return "gapi.fluid.outputRois"; }
 };
+template<> struct CompileArgTag<GFluidParallelOutputRois>
+{
+    static const char* tag() { return "gapi.fluid.parallelOutputRois"; }
+};
+
 } // namespace detail
 
 namespace detail
