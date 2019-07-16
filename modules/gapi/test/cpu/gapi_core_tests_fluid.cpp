@@ -258,7 +258,6 @@ INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestFluid, BackendOutputAllocatio
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
-                                Values(false),
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTestFluid,
@@ -266,7 +265,6 @@ INSTANTIATE_TEST_CASE_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest
                         Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
-                                Values(false),
                                 Values(CORE_FLUID)));
 
 //----------------------------------------------------------------------
