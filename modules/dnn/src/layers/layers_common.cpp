@@ -153,6 +153,7 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
 
     if (globalPooling)
     {
+        util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
         if(params.has("kernel_h") || params.has("kernel_w") || params.has("kernel_size"))
         {
             CV_Error(cv::Error::StsBadArg, "In global_pooling mode, kernel_size (or kernel_h and kernel_w) cannot be specified");
@@ -169,8 +170,8 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
     else
     {
         util::getKernelSize(params, kernel);
+        util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
     }
-    util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, !globalPooling? kernel.size() : 2);
 }
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,

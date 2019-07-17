@@ -164,9 +164,13 @@ TEST_P(Test_ONNX_layers, Clip)
 
 TEST_P(Test_ONNX_layers, ReduceMean)
 {
+    testONNXModels("reduce_mean");
+}
+
+TEST_P(Test_ONNX_layers, ReduceMean3D)
+{
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
-    testONNXModels("reduce_mean");
     testONNXModels("reduce_mean3d");
 }
 

@@ -417,8 +417,9 @@ void ONNXImporter::populateNet(Net dstNet)
                 CV_Assert(axes.size() <= inpShape.size() - 2);
                 std::vector<int> kernel_size(inpShape.size() - 2, 1);
                 for (int i = 0; i < axes.size(); i++) {
-                    CV_Assert_N(axes.get<int>(i) >= 2 + i, axes.get<int>(i) < inpShape.size());
-                    kernel_size[axes.get<int>(i) - 2] = inpShape[axes.get<int>(i)];
+                    int axis = axes.get<int>(i);
+                    CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
+                    kernel_size[axis - 2] = inpShape[axis];
                 }
 
                 layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
