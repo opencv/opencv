@@ -405,6 +405,8 @@ CV__DNN_INLINE_NS_BEGIN
 
         /** @brief Returns pointer to layer with specified id or name which the network use. */
         CV_WRAP Ptr<Layer> getLayer(LayerId layerId);
+        /** */
+        LayerParams getLayerParams(LayerId layerId);
 
         /** @brief Returns pointers to input layers of specific layer. */
         std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
