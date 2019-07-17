@@ -1410,6 +1410,9 @@ void TFImporter::populateNet(Net dstNet)
                 axis = toNCHW(axis);
             layerParams.set("axis", axis);
 
+            if (hasLayerAttr(layer, "num_split"))
+                layerParams.set("num_split", getLayerAttr(layer, "num_split").i());
+
             int id = dstNet.addLayer(name, "Slice", layerParams);
             layer_id[name] = id;
 
