@@ -792,6 +792,12 @@ runModel(inp, 'conv2d_transpose_1:0', 'keras_deconv_same_v2')
 inp = tf.placeholder(tf.float32, [1, 2, 4, 3], 'ContentImage')
 runModel(inp, 'Relu:0', 'keras_batch_norm_training')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 4], 'Split')
+features1 = tf.split(inp, num_or_size_splits=2, axis=3)[0]
+features2 = tf.split(inp, num_or_size_splits=2, axis=3)[1]
+merged = tf.concat([features1, features2], axis=3)
+save(inp, merged, 'split')
+################################################################################
 from tensorflow.python.ops.nn_grad import _MaxPoolGrad as MaxUnPooling2D
 
 inp = tf.placeholder(tf.float32, [1, 7, 7, 3], 'input')
