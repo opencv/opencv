@@ -78,6 +78,18 @@ TEST(readNet, Regression)
     EXPECT_FALSE(net.empty());
 }
 
+TEST(dump, Regression)
+{
+    Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
+                      findDataFile("dnn/squeezenet_v1.1.caffemodel"));
+
+    Mat input = blobFromImage(imread(findDataFile("dnn/googlenet_0.png")), 1.0f,
+                              Size(227,227), Scalar(), false, true);
+    net.setInput(input);
+    net.dump();
+    net.forward();
+}
+
 class FirstCustomLayer CV_FINAL : public Layer
 {
 public:

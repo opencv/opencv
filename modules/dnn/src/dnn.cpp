@@ -2907,7 +2907,9 @@ String Net::dump()
     if (impl->netInputLayer->inputsData.empty())
         CV_Error(Error::StsError, "Requested set input");
 
-    impl->setUpNet();
+    if (!impl->netWasAllocated)
+        impl->setUpNet();
+
     std::ostringstream out;
     std::map<int, LayerData>& map = impl->layers;
     int prefBackend = impl->preferableBackend;
