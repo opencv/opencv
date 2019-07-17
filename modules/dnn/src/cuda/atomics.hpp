@@ -7,9 +7,30 @@
 
 #include <cuda_runtime.h>
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 700
+#else
+inline __device__ void atomicAdd(__half* address, __half val) {
+    unsigned int* address_as_ui = (unsigned int *)((char *)address - ((size_t)address & 2));
+    unsigned int old = *address_as_ui;
+    unsigned int assumed;
+
+    do {
+        assumed = old;
+
+        __half_raw hsum;
+        hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+        __half tmpres = hsum + val;
+        hsum = __half_raw(tmpres);
+
+        old = (size_t)address & 2 ? (old & 0xffff) | (hsum.x << 16) : (old & 0xffff0000) | hsum.x;
+        old = atomicCAS(address_as_ui, assumed, old);
+} while (assumed != old);
+}
+#endif
+
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
 #else
-__device__ double atomicAdd(double* address, double val)
+inline __device__ double atomicAdd(double* address, double val)
 {
     unsigned long long int* address_as_ull = (unsigned long long int*)address;
     unsigned long long int old = *address_as_ull, assumed;

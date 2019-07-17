@@ -18,10 +18,13 @@
 #include <memory>
 #include <iterator>
 
+#include "cuda4dnn/csl/fp16.hpp"
+
 namespace cv {
     namespace dnn {
         constexpr bool IS_DNN_CUDA_TARGET(int id) {
             switch (id) {
+            case DNN_TARGET_CUDA_FP16: /* [[fallthrough]] */
             case DNN_TARGET_CUDA_FP32: /* [[fallthrough]] */
             case DNN_TARGET_CUDA_FP64:
                 return true;
@@ -61,6 +64,20 @@ namespace cv {
             void copyMatToTensor(const TensorSpan<T> tensor, const Mat& mat, const Stream& stream);
 
             template <> inline
+            void copyMatToTensor(const TensorSpan<half> tensor, const Mat& mat, const Stream& stream)
+            {
+                /* should perhaps convert cv::Mat of different type to the required type and copy */
+                CV_Assert(mat.type() == CV_32F);
+                CV_Assert(mat.total() >= tensor.size());
+
+                Mat source;
+                mat.convertTo(source, CV_16F);
+                CV_Assert(source.isContinuous());
+
+                memcpy<half>(tensor.get(), reinterpret_cast<half*>(source.data), tensor.size(), stream);
+            }
+
+            template <> inline
             void copyMatToTensor(const TensorSpan<float> tensor, const Mat& mat, const Stream& stream)
             {
                 /* should perhaps convert cv::Mat of different type to the required type and copy */
@@ -96,6 +113,20 @@ namespace cv {
              */
             template <class T>
             void copyTensorToMat(Mat& mat, TensorView<T> tensor, const Stream& stream);
+
+            template <> inline
+            void copyTensorToMat(Mat& mat, TensorView<half> tensor, const Stream& stream)
+            {
+                CV_Assert(mat.type() == CV_32F);
+                CV_Assert(mat.total() >= tensor.size());
+
+                Mat source(shape(mat), CV_16F);
+                CV_Assert(source.isContinuous());
+
+                memcpy<half>(reinterpret_cast<half*>(source.data), tensor.get(), tensor.size(), stream);
+
+                source.convertTo(mat, CV_32F);
+            }
 
             template <> inline
             void copyTensorToMat(Mat& mat, TensorView<float> tensor, const Stream& stream)
@@ -147,6 +178,8 @@ namespace cv {
         {
             switch (targetId)
             {
+            case DNN_TARGET_CUDA_FP16:
+                return cuda4dnn::cxx_utils::make_unique<NodeType<half>>(std::forward<Args>(args)...);
             case DNN_TARGET_CUDA_FP32:
                 return cuda4dnn::cxx_utils::make_unique<NodeType<float>>(std::forward<Args>(args)...);
             case DNN_TARGET_CUDA_FP64:
@@ -323,10 +356,12 @@ namespace cv {
             std::shared_ptr<shared_block_type> shared_block;
         };
 
+        using CUDABackendWrapperFP16 = GenericCUDABackendWrapper<half, DNN_TARGET_CUDA_FP32>;
         using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, DNN_TARGET_CUDA_FP32>;
         using CUDABackendWrapperFP64 = GenericCUDABackendWrapper<double, DNN_TARGET_CUDA_FP64>;
 
         template <class T> struct GetCUDABackendWrapperType_ { };
+        template <> struct GetCUDABackendWrapperType_<half> { typedef CUDABackendWrapperFP16 type; };
         template <> struct GetCUDABackendWrapperType_<float> { typedef CUDABackendWrapperFP32 type; };
         template <> struct GetCUDABackendWrapperType_<double> { typedef CUDABackendWrapperFP64 type; };
 

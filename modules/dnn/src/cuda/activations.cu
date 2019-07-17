@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "math.hpp"
 #include "types.hpp"
 #include "vector_traits.hpp"
@@ -12,8 +15,6 @@
 #include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
-
-#include <cuda_runtime.h>
 
 #include <cstddef>
 
@@ -52,7 +53,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void bnll(span<T> output, view<T> input) {
             for (auto i : grid_stride_range(output.size())) {
                 using utils::log1pexp;
-                output[i] = input[i] > 0 ? input[i] + log1pexp(-input[i]) : log1pexp(input[i]);
+                output[i] = input[i] > T(0) ? input[i] + log1pexp(-input[i]) : log1pexp(input[i]);
             }
         }
 
@@ -60,7 +61,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void elu(span<T> output, view<T> input) {
             for (auto i : grid_stride_range(output.size())) {
                 using utils::exp;
-                output[i] = input[i] >= 0 ? input[i] : expm1(input[i]);
+                output[i] = input[i] >= T(0) ? input[i] : expm1(input[i]);
             }
         }
 
@@ -73,10 +74,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec = srcPtr[i];
-                vec.w = vec.w >= 0.0 ? vec.w : slope * vec.w;
-                vec.x = vec.x >= 0.0 ? vec.x : slope * vec.x;
-                vec.y = vec.y >= 0.0 ? vec.y : slope * vec.y;
-                vec.z = vec.z >= 0.0 ? vec.z : slope * vec.z;
+                vec.w = vec.w >= T(0) ? vec.w : slope * vec.w;
+                vec.x = vec.x >= T(0) ? vec.x : slope * vec.x;
+                vec.y = vec.y >= T(0) ? vec.y : slope * vec.y;
+                vec.z = vec.z >= T(0) ? vec.z : slope * vec.z;
                 dstPtr[i] = vec;
             }
         }
@@ -90,8 +91,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
             for (auto i : grid_stride_range(output.size() / 2)) {
                 vector_type vec = srcPtr[i];
-                vec.x = vec.x >= 0.0 ? vec.x : slope * vec.x;
-                vec.y = vec.y >= 0.0 ? vec.y : slope * vec.y;
+                vec.x = vec.x >= T(0) ? vec.x : slope * vec.x;
+                vec.y = vec.y >= T(0) ? vec.y : slope * vec.y;
                 dstPtr[i] = vec;
             }
         }
@@ -99,7 +100,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void relu(span<T> output, view<T> input, T slope) {
             for (auto i : grid_stride_range(output.size()))
-                output[i] = input[i] >= 0.0 ? input[i] : slope * input[i];
+                output[i] = input[i] >= T(0) ? input[i] : slope * input[i];
         }
 
         template <class T>
@@ -150,7 +151,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         __global__ void axiswise_relu(span<T> output, view<T> input, size_type inner_size, view<T> slope) {
             for (auto i : grid_stride_range(output.size())) {
                 const index_type c = (i % inner_size) / static_cast<size_type>(slope.size());
-                output[i] = input[i] < 0 ? input[i] * slope[c] : input[i];
+                output[i] = input[i] < T(0) ? input[i] * slope[c] : input[i];
             }
         }
 
@@ -208,6 +209,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input);
     }
 
+    template void abs<__half>(const Stream& stream, span<__half> output, view<__half> input);
     template void abs<float>(const Stream& stream, span<float> output, view<float> input);
     template void abs<double>(const Stream& stream, span<double> output, view<double> input);
 
@@ -220,6 +222,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input);
     }
 
+    template void tanh<__half>(const Stream&, span<__half>, view<__half>);
     template void tanh<float>(const Stream&, span<float>, view<float>);
     template void tanh<double>(const Stream&, span<double>, view<double>);
 
@@ -232,6 +235,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input);
     }
 
+    template void sigmoid<__half>(const Stream&, span<__half>, view<__half>);
     template void sigmoid<float>(const Stream&, span<float>, view<float>);
     template void sigmoid<double>(const Stream&, span<double>, view<double>);
 
@@ -244,6 +248,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input);
     }
 
+    template void bnll<__half>(const Stream&, span<__half>, view<__half>);
     template void bnll<float>(const Stream&, span<float>, view<float>);
     template void bnll<double>(const Stream&, span<double>, view<double>);
 
@@ -256,6 +261,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input);
     }
 
+    template void elu<__half>(const Stream&, span<__half>, view<__half>);
     template void elu<float>(const Stream&, span<float>, view<float>);
     template void elu<double>(const Stream&, span<double>, view<double>);
 
@@ -277,13 +283,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void relu<__half>(const Stream&, span<__half>, view<__half>, __half);
     template void relu<float>(const Stream&, span<float>, view<float>, float);
     template void relu<double>(const Stream&, span<double>, view<double>, double);
 
     template <class T>
     void clipped_relu(const Stream& stream, span<T> output, view<T> input, T floor, T ceiling) {
         CV_Assert(input.size() == output.size());
-        CV_Assert(floor <= ceiling);
+        CV_Assert(double(floor) <= double(ceiling));
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
             auto kernel = raw::clipped_relu_vec4<T>;
@@ -300,6 +307,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void clipped_relu<__half>(const Stream&, span<__half>, view<__half>, __half, __half);
     template void clipped_relu<float>(const Stream&, span<float>, view<float>, float, float);
     template void clipped_relu<double>(const Stream&, span<double>, view<double>, double, double);
 
@@ -312,6 +320,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input, inner_size, slope);
     }
 
+    template void axiswise_relu<__half>(const Stream&, span<__half>, view<__half>, view<__half>, std::size_t);
     template void axiswise_relu<float>(const Stream&, span<float>, view<float>, view<float>, std::size_t);
     template void axiswise_relu<double>(const Stream&, span<double>, view<double>, view<double>, std::size_t);
 
@@ -334,6 +343,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void power<__half>(const Stream&, span<__half>, view<__half>, __half, __half, __half);
     template void power<float>(const Stream&, span<float>, view<float>, float, float, float);
     template void power<double>(const Stream&, span<double>, view<double>, double, double, double);
 

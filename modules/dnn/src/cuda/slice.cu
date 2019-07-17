@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "array.hpp"
 #include "types.hpp"
 #include "grid_stride_loop.hpp"
@@ -10,10 +13,9 @@
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
+#include "../cuda4dnn/csl/fp16.hpp"
 
 #include <opencv2/core.hpp>
-
-#include <cuda_runtime.h>
 
 #include <cstddef>
 
@@ -109,6 +111,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, const std::vector<std::size_t>&);
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, const std::vector<std::size_t>&);
     template void slice(const Stream&, TensorSpan<double>, TensorView<double>, const std::vector<std::size_t>&);
 

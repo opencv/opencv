@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "array.hpp"
 #include "math.hpp"
 #include "types.hpp"
@@ -12,8 +15,6 @@
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 #include "../cuda4dnn/csl/kernels.hpp"
-
-#include <cuda_runtime.h>
 
 #include <cstddef>
 
@@ -37,7 +38,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void reciprocal(span<T> output, T epsilon) {
             for (auto idx : grid_stride_range(output.size()))
-                output[idx] = 1 / (output[idx] + epsilon);
+                output[idx] = T(1) / (output[idx] + epsilon);
         }
 
         template <class T>
@@ -74,7 +75,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     void normalize(
         const Stream& stream,
         span<T> output,
-        view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm, T epsilon,
+        view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
         span<T> workspace)
     {
         CV_Assert(norm == 1 || norm == 2);
@@ -107,7 +108,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 
-    template void normalize<float>(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, float, float, span<float>);
-    template void normalize<double>(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, double, double, span<double>);
+    template void normalize(const Stream&, span<__half>, view<__half>, std::size_t, std::size_t, std::size_t, std::size_t, __half, span<__half>);
+    template void normalize(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, span<float>);
+    template void normalize(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, std::size_t, double, span<double>);
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */

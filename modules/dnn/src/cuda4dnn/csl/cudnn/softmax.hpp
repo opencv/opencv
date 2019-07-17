@@ -14,7 +14,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
     /** @brief computes softmax (or log softmax)
      *
-     * @tparam          T           matrix element type (must be `float` or `double`)
+     * @tparam          T           matrix element type (must be `half` or `float` or `double`)
      *
      * @param           handle      valid cuDNN handle
      * @param           outputDesc  tensor descriptor for A
@@ -26,13 +26,31 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      * Exception Guarantee: Basic
      */
     template <class T>
-    typename std::enable_if<std::is_same<T, float>::value || std::is_same<T, double>::value, void>
-    ::type softmax(const cudnn::Handle& handle,
+    void softmax(const cudnn::Handle& handle,
         const TensorDescriptor<T>& outputDesc, DevicePtr<T> output,
         const TensorDescriptor<T>& inputDesc, DevicePtr<const T> input,
         bool log)
     {
         T alpha = 1.0, beta = 0.0;
+        cudnnSoftmaxAlgorithm_t algo = log ? CUDNN_SOFTMAX_LOG : CUDNN_SOFTMAX_ACCURATE;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnSoftmaxForward(
+                HandleAccessor::get(handle),
+                algo, CUDNN_SOFTMAX_MODE_CHANNEL,
+                &alpha, inputDesc.get(), input.get(),
+                &beta, outputDesc.get(), output.get()
+            )
+        );
+    }
+
+    template <> inline
+    void softmax(const cudnn::Handle& handle,
+        const TensorDescriptor<half>& outputDesc, DevicePtr<half> output,
+        const TensorDescriptor<half>& inputDesc, DevicePtr<const half> input,
+        bool log)
+    {
+        /* we specalize for fp16 as the scaling factors must be provided as `float` */
+        float alpha = 1.0, beta = 0.0;
         cudnnSoftmaxAlgorithm_t algo = log ? CUDNN_SOFTMAX_LOG : CUDNN_SOFTMAX_ACCURATE;
         CUDA4DNN_CHECK_CUDNN(
             cudnnSoftmaxForward(

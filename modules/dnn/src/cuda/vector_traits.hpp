@@ -6,11 +6,23 @@
 #define OPENCV_DNN_SRC_CUDA_VECTOR_TYPE_TRAITS_HPP
 
 #include <cuda_runtime.h>
+#include <cuda_fp16.hpp>
 
 #include <cstddef>
 #include <type_traits>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+
+    struct __half4 {
+        __device__ __half4() : data{ 0.0, 0.0 } { }
+        union {
+            float2 data;
+            struct {
+                __half x, y, z, w;
+            };
+        };
+    };
+
     /* HOW TO ADD A NEW VECTOR TYPE?
      * - specialize `get_vector_type`
      * - specialize `detail::get_element_type`
@@ -22,6 +34,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
      */
     template <class T, std::size_t N>
     struct get_vector_type {};
+
+    template <> struct get_vector_type<__half, 1> { typedef __half type; };
+    template <> struct get_vector_type<__half, 2> { typedef __half2 type; };
+    template <> struct get_vector_type<__half, 4> { typedef __half4 type; };
 
     template <> struct get_vector_type<float, 1> { typedef float type; };
     template <> struct get_vector_type<float, 2> { typedef float2 type; };
@@ -36,6 +52,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         struct get_element_type { };
 
         /* only non-const specializations are required; const qualifications are automatically handled */
+        template <class X> struct get_element_type<__half, X> { typedef __half type; };
+        template <class X> struct get_element_type<__half2, X> { typedef __half type; };
+        template <class X> struct get_element_type<__half4, X> { typedef __half type; };
+
         template <class X> struct get_element_type<float, X> { typedef float type; };
         template <class X> struct get_element_type<float2, X> { typedef float type; };
         template <class X> struct get_element_type<float4, X> { typedef float type; };
@@ -150,7 +170,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     constexpr void set(V& v, std::size_t i, typename vector_traits<V>::element_type value) {
         return detail::accessor<V, vector_traits<V>::size()>::set(v, i, value);
     }
-
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
 

@@ -516,7 +516,7 @@ public:
         auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
         auto image_shape = image_wrapper->getShape();
 
-        PriorBoxConfiguration<float> config;
+        PriorBoxConfiguration config;
         config.feature_map_width = feature_map_shape.rbegin()[0];
         config.feature_map_height = feature_map_shape.rbegin()[1];
         config.image_width = image_shape.rbegin()[0];

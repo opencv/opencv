@@ -2,6 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+#include "../cuda4dnn/csl/fp16.hpp"
+
 #include "math.hpp"
 #include "grid_stride_loop.hpp"
 #include "execution.hpp"
@@ -10,8 +14,6 @@
 #include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
-
-#include <cuda_runtime.h>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
@@ -53,6 +55,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, x, y);
     }
 
+    template void eltwise_max_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_max_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
     template void eltwise_max_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
@@ -66,6 +69,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, x, y);
     }
 
+    template void eltwise_sum_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_sum_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
     template void eltwise_sum_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
@@ -84,6 +88,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, coeff_x, x, coeff_y, y);
     }
 
+    template void eltwise_sum_coeff_2(const Stream&, span<__half>, __half, view<__half>, __half, view<__half>);
     template void eltwise_sum_coeff_2(const Stream&, span<float>, float, view<float>, float, view<float>);
     template void eltwise_sum_coeff_2(const Stream&, span<double>, double, view<double>, double, view<double>);
 
@@ -97,6 +102,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, x, y);
     }
 
+    template void eltwise_prod_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_prod_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
     template void eltwise_prod_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 

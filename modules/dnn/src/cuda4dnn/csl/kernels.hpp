@@ -15,31 +15,31 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace kernels {
 
     template <class T>
-    void abs(const Stream& stream, span<T> dest, view<T> src);
+    void abs(const Stream& stream, span<T> output, view<T> input);
 
     template <class T>
-    void tanh(const Stream& stream, span<T> dest, view<T> src);
+    void tanh(const Stream& stream, span<T> output, view<T> input);
 
     template <class T>
-    void sigmoid(const Stream& stream, span<T> dest, view<T> src);
+    void sigmoid(const Stream& stream, span<T> output, view<T> input);
 
     template <class T>
-    void bnll(const Stream& stream, span<T> dest, view<T> src);
+    void bnll(const Stream& stream, span<T> output, view<T> input);
 
     template <class T>
-    void elu(const Stream& stream, span<T> dest, view<T> src);
+    void elu(const Stream& stream, span<T> output, view<T> input);
 
     template <class T>
-    void relu(const Stream& stream, span<T> dest, view<T> src, T slope);
+    void relu(const Stream& stream, span<T> output, view<T> input, T slope);
 
     template <class T>
-    void clipped_relu(const Stream& stream, span<T> dest, view<T> src, T floor, T ceiling);
+    void clipped_relu(const Stream& stream, span<T> output, view<T> input, T floor, T ceiling);
 
     template <class T>
-    void axiswise_relu(const Stream& stream, span<T> dest, view<T> src, view<T> slope, std::size_t inner_size);
+    void axiswise_relu(const Stream& stream, span<T> output, view<T> input, view<T> slope, std::size_t inner_size);
 
     template <class T>
-    void power(const Stream& stream, span<T> dest, view<T> src, T exp, T scale, T shift);
+    void power(const Stream& stream, span<T> output, view<T> input, T exp, T scale, T shift);
 
     template <class T>
     void concat(
@@ -97,15 +97,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     void normalize(
         const Stream& stream,
         span<T> output, view<T> input,
-        std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, T norm, T epsilon,
+        std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
         span<T> workspace);
 
     template <class T>
     void generate_prior_boxes(
         const Stream& stream,
         span<T> output,
-        view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY, T stepX, T stepY,
-        std::vector<T> variance,
+        view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
+        std::vector<float> variance,
         std::size_t numPriors,
         std::size_t layerWidth, std::size_t layerHeight,
         std::size_t imageWidth, std::size_t imageHeight,

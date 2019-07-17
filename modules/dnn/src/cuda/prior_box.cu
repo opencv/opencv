@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "array.hpp"
 #include "math.hpp"
 #include "types.hpp"
@@ -11,8 +14,6 @@
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
-
-#include <cuda_runtime.h>
 
 #include <cstddef>
 
@@ -25,7 +26,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T, bool Normalize>
         __global__ void prior_box(
             span<T> output,
-            view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY, T stepX, T stepY,
+            view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
             size_type layerWidth, size_type layerHeight,
             size_type imageWidth, size_type imageHeight)
         {
@@ -79,7 +80,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
 
         template <class T>
-        __global__ void prior_box_set_variance1(span<T> output, T variance) {
+        __global__ void prior_box_set_variance1(span<T> output, float variance) {
             using vector_type = typename get_vector_type<T, 4>::type;
             vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
             for (auto i : grid_stride_range(output.size() / 4)) {
@@ -96,7 +97,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         using array = utils::array<T, N>;
 
         template <class T>
-        __global__ void prior_box_set_variance4(span<T> output, array<T, 4> variance) {
+        __global__ void prior_box_set_variance4(span<T> output, array<float, 4> variance) {
             using vector_type = typename get_vector_type<T, 4>::type;
             vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
             for (auto i : grid_stride_range(output.size() / 4)) {
@@ -113,7 +114,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T, bool Normalize> static
     void launch_prior_box_kernel(
         const Stream& stream,
-        span<T> output, view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY, T stepX, T stepY,
+        span<T> output, view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
         std::size_t layerWidth, std::size_t layerHeight, std::size_t imageWidth, std::size_t imageHeight)
     {
         auto num_points = layerWidth * layerHeight;
@@ -128,8 +129,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     void generate_prior_boxes(
         const Stream& stream,
         span<T> output,
-        view<T> boxWidth, view<T> boxHeight, view<T> offsetX, view<T> offsetY, T stepX, T stepY,
-        std::vector<T> variance,
+        view<float> boxWidth, view<float> boxHeight, view<float> offsetX, view<float> offsetY, float stepX, float stepY,
+        std::vector<float> variance,
         std::size_t numPriors,
         std::size_t layerWidth, std::size_t layerHeight,
         std::size_t imageWidth, std::size_t imageHeight,
@@ -163,7 +164,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance[0]);
         } else {
-            utils::array<T, 4> variance_k;
+            utils::array<float, 4> variance_k;
             variance_k.assign(std::begin(variance), std::end(variance));
             auto kernel = raw::prior_box_set_variance4<T>;
             auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
@@ -171,10 +172,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void generate_prior_boxes(const Stream&, span<__half>, view<float>, view<float>, view<float>, view<float>, float, float,
+        std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
+
     template void generate_prior_boxes(const Stream&, span<float>, view<float>, view<float>, view<float>, view<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
-    template void generate_prior_boxes(const Stream&, span<double>, view<double>, view<double>, view<double>, view<double>, double, double,
-        std::vector<double>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
+    template void generate_prior_boxes(const Stream&, span<double>, view<float>, view<float>, view<float>, view<float>, float, float,
+        std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */

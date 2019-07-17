@@ -15,7 +15,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      *
      * \f$ C = \alpha AB + \beta C \f$
      *
-     * @tparam          T           matrix element type (must be `float` or `double`)
+     * @tparam          T           matrix element type (must be `half` or `float` or `double`)
      *
      * @param           handle      valid cuBLAS Handle
      * @param           transa      use transposed matrix of A for computation
@@ -35,8 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      * Exception Guarantee: Basic
      */
     template <class T>
-    typename std::enable_if<std::is_same<T, float>::value || std::is_same<T, double>::value, void>
-    ::type gemm(const Handle& handle,
+    void gemm(const Handle& handle,
         bool transa, bool transb,
         std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
         T alpha, const DevicePtr<const T> A, std::size_t lda,

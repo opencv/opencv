@@ -83,7 +83,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnLRNMode_t mode;
     };
 
-    template <class T> inline
+    template <class T>
     void LRNForward(
         const Handle& handle,
         const LRNDescriptor& lrnDesc,
@@ -99,6 +99,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
                 &alpha, inputDesc.get(), inputPtr.get(),
                 &beta, outputDesc.get(), outputPtr.get()
+            )
+        );
+    }
+
+    template <> inline
+    void LRNForward(
+       const Handle& handle,
+       const LRNDescriptor& lrnDesc,
+       const TensorDescriptor<half>& inputDesc,
+       DevicePtr<const half> inputPtr,
+        half alpha, half beta,
+       const TensorDescriptor<half>& outputDesc,
+       DevicePtr<half> outputPtr)
+    {
+        /* we specalize for fp16 as the scaling factors must be provided as `float` */
+        float alpha_ = alpha, beta_ = beta;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnLRNCrossChannelForward(
+                HandleAccessor::get(handle),
+                lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                &alpha_, inputDesc.get(), inputPtr.get(),
+                &beta_, outputDesc.get(), outputPtr.get()
             )
         );
     }

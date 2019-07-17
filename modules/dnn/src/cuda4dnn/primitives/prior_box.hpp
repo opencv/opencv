@@ -18,17 +18,16 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    template <class T>
     struct PriorBoxConfiguration {
         std::size_t feature_map_width, feature_map_height;
         std::size_t image_width, image_height;
 
         /* parameters for prior boxes for each feature point */
-        std::vector<T> box_widths, box_heights;
-        std::vector<T> offsets_x, offsets_y;
-        T stepX, stepY;
+        std::vector<float> box_widths, box_heights;
+        std::vector<float> offsets_x, offsets_y;
+        float stepX, stepY;
 
-        std::vector<T> variance;
+        std::vector<float> variance;
 
         /* number of priors per feature point */
         std::size_t num_priors;
@@ -45,8 +44,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        template <class V>
-        PriorBoxOp(csl::Stream stream_, const PriorBoxConfiguration<V>& config)
+        PriorBoxOp(csl::Stream stream_, const PriorBoxConfiguration& config)
             : stream(std::move(stream_))
         {
             feature_map_width = config.feature_map_width;
@@ -71,7 +69,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              * the four vectors and put them in a single tensor
              */
             auto total = box_widths.size() * 2 + offsets_x.size() * 2;
-            std::vector<T> merged_params;
+            std::vector<float> merged_params;
             merged_params.insert(std::end(merged_params), std::begin(box_widths), std::end(box_widths));
             merged_params.insert(std::end(merged_params), std::begin(box_heights), std::end(box_heights));
             merged_params.insert(std::end(merged_params), std::begin(offsets_x), std::end(offsets_x));
@@ -105,10 +103,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             /* we had stored all the parameters in a single tensor; now we create appropriate views
              * for each of the parameter arrays from the single tensor
              */
-            auto boxWidths  = csl::view<T>(paramsTensor.get(), box_size);
-            auto boxHeights = csl::view<T>(paramsTensor.get() + box_size, box_size);
-            auto offsetsX   = csl::view<T>(paramsTensor.get() + 2 * box_size, offset_size);
-            auto offsetsY   = csl::view<T>(paramsTensor.get() + 2 * box_size + offset_size, offset_size);
+            auto boxWidths  = csl::view<float>(paramsTensor.get(), box_size);
+            auto boxHeights = csl::view<float>(paramsTensor.get() + box_size, box_size);
+            auto offsetsX   = csl::view<float>(paramsTensor.get() + 2 * box_size, offset_size);
+            auto offsetsY   = csl::view<float>(paramsTensor.get() + 2 * box_size + offset_size, offset_size);
 
             csl::kernels::generate_prior_boxes<T>(stream, output,
                 boxWidths, boxHeights, offsetsX, offsetsY, stepX, stepY,
@@ -117,15 +115,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     private:
         csl::Stream stream;
-        csl::Tensor<T> paramsTensor; /* widths, heights, offsetsX, offsetsY */
+        csl::Tensor<float> paramsTensor; /* widths, heights, offsetsX, offsetsY */
 
         std::size_t feature_map_width, feature_map_height;
         std::size_t image_width, image_height;
 
         std::size_t box_size, offset_size;
-        T stepX, stepY;
+        float stepX, stepY;
 
-        std::vector<T> variance;
+        std::vector<float> variance;
 
         std::size_t num_priors;
         bool clip, normalize;

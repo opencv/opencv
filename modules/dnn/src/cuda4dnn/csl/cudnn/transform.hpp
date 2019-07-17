@@ -89,7 +89,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const TensorDescriptor<T>& outputDesc,
         DevicePtr<T> outputPtr)
     {
-        T alpha = 1, beta = 0;
+        T alpha = 1.0, beta = 0.0;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnTransformTensorEx(
+                HandleAccessor::get(handle),
+                transDesc.get(),
+                &alpha, inputDesc.get(), inputPtr.get(),
+                &beta, outputDesc.get(), outputPtr.get()
+            )
+        );
+    }
+
+    template <> inline
+    void transform(
+        const Handle& handle,
+        const TensorTransformDescriptor& transDesc,
+        const TensorDescriptor<half>& inputDesc,
+        DevicePtr<const half> inputPtr,
+        const TensorDescriptor<half>& outputDesc,
+        DevicePtr<half> outputPtr)
+    {
+        /* we specalize for fp16 as the scaling factors must be provided as `float` */
+        float alpha = 1.0, beta = 0.0;
         CUDA4DNN_CHECK_CUDNN(
             cudnnTransformTensorEx(
                 HandleAccessor::get(handle),

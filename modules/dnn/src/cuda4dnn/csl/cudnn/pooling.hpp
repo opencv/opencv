@@ -152,7 +152,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
-    template <class T> inline
+    template <class T>
     void pool(
         const Handle& handle,
         const PoolingDescriptor& poolingDesc,
@@ -168,6 +168,28 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 poolingDesc.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 &beta, outputDesc.get(), outputPtr.get()
+            )
+        );
+    }
+
+    template <> inline
+    void pool(
+        const Handle& handle,
+        const PoolingDescriptor& poolingDesc,
+        const TensorDescriptor<half>& inputDesc,
+        const DevicePtr<const half> inputPtr,
+        half alpha, half beta,
+        const TensorDescriptor<half>& outputDesc,
+        DevicePtr<half> outputPtr)
+    {
+        /* we specalize for fp16 as the scaling factors must be provided as `float` */
+        float alpha_ = alpha, beta_ = beta;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnPoolingForward(
+                HandleAccessor::get(handle),
+                poolingDesc.get(),
+                &alpha_, inputDesc.get(), inputPtr.get(),
+                &beta_, outputDesc.get(), outputPtr.get()
             )
         );
     }

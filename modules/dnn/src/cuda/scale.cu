@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "types.hpp"
 #include "vector_traits.hpp"
 #include "grid_stride_loop.hpp"
@@ -12,8 +15,6 @@
 #include "../cuda4dnn/csl/span.hpp"
 
 #include <opencv2/core.hpp>
-
-#include <cuda_runtime.h>
 
 #include <cstddef>
 
@@ -199,6 +200,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input, beta);
     }
 
+    template void bias1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
     template void bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
     template void bias1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
 
@@ -226,6 +228,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void biasN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>);
     template void biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
     template void biasN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>);
 
@@ -238,6 +241,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input, alpha);
     }
 
+    template void scale1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
     template void scale1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
     template void scale1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
 
@@ -265,6 +269,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void scaleN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>);
     template void scaleN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
     template void scaleN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>);
 
@@ -277,6 +282,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, input, alpha, beta);
     }
 
+    template void scale1_with_bias1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half, __half);
     template void scale1_with_bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
     template void scale1_with_bias1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double, double);
 
@@ -305,6 +311,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
+    template void scaleN_with_biasN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>, TensorView<__half>);
     template void scaleN_with_biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>, TensorView<float>);
     template void scaleN_with_biasN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>, TensorView<double>);
 

@@ -62,7 +62,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         std::size_t workspace_size;
     };
 
-    template <class T> inline
+    template <class T>
     void transpose_convolve(
         const Handle& handle,
         const ConvolutionDescriptor<T>& convDesc,
@@ -85,6 +85,35 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 convDesc.get(), convAlgo.get(),
                 WorkspaceAccessor::get(workspace).get(), workspace.size(),
                 &beta, outputDesc.get(), outputPtr.get()
+            )
+        );
+    }
+
+    template <> inline
+    void transpose_convolve(
+        const Handle& handle,
+        const ConvolutionDescriptor<half>& convDesc,
+        const TransposeConvolutionAlgorithm<half>& convAlgo,
+        const Workspace& workspace,
+        const FilterDescriptor<half>& filterDesc,
+        DevicePtr<const half> filterPtr,
+        const TensorDescriptor<half>& inputDesc,
+        DevicePtr<const half> inputPtr,
+        half alpha, half beta,
+        const TensorDescriptor<half>& outputDesc,
+        DevicePtr<half> outputPtr)
+    {
+        /* we specalize for fp16 as the scaling factors must be provided as `float` */
+        float alpha_ = alpha, beta_ = beta;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnConvolutionBackwardData(
+                HandleAccessor::get(handle),
+                &alpha_,
+                filterDesc.get(), filterPtr.get(),
+                inputDesc.get(), inputPtr.get(),
+                convDesc.get(), convAlgo.get(),
+                WorkspaceAccessor::get(workspace).get(), workspace.size(),
+                &beta_, outputDesc.get(), outputPtr.get()
             )
         );
     }

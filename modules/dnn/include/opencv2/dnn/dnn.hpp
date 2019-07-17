@@ -92,6 +92,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_MYRIAD,
         DNN_TARGET_VULKAN,
         DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
+        DNN_TARGET_CUDA_FP16,
         DNN_TARGET_CUDA_FP32,
         DNN_TARGET_CUDA_FP64
     };
@@ -566,6 +567,7 @@ CV__DNN_INLINE_NS_BEGIN
          * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |                   |
          * | DNN_TARGET_MYRIAD      |                    |                            + |                    |                   |
          * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
          * | DNN_TARGET_CUDA_FP32   |                    |                              |                    |                 + |
          * | DNN_TARGET_CUDA_FP64   |                    |                              |                    |                 + |
          */

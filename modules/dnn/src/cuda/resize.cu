@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
 #include "math.hpp"
 #include "types.hpp"
 #include "grid_stride_loop.hpp"
@@ -88,9 +91,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
                 output[idx] =
                     v_00 +
-                    (in_y - in_y0) * (v_10 - v_00) +
-                    (in_x - in_x0) * (v_01 - v_00) +
-                    (in_y - in_y0) * (in_x - in_x0) * (v_11 - v_01 - v_10 + v_00);
+                    T(in_y - in_y0) * T(v_10 - v_00) +
+                    T(in_x - in_x0) * T(v_01 - v_00) +
+                    T(in_y - in_y0) * T(in_x - in_x0) * T(v_11 - v_01 - v_10 + v_00);
             }
         }
     }
@@ -108,6 +111,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, out_height, out_width, input, in_height, in_width);
     }
 
+    template void resize_nn<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>);
     template void resize_nn<float>(const Stream&, TensorSpan<float>, TensorView<float>);
     template void resize_nn<double>(const Stream&, TensorSpan<double>, TensorView<double>);
 
@@ -124,6 +128,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         launch_kernel(kernel, policy, output, out_height, out_width, input, in_height, in_width, scale_y, scale_x);
     }
 
+    template void resize_bilinear<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, float, float);
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
     template void resize_bilinear<double>(const Stream&, TensorSpan<double>, TensorView<double>, float, float);
 

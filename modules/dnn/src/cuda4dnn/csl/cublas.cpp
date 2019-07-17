@@ -4,6 +4,7 @@
 
 #include "../../precomp.hpp"
 
+#include "fp16.hpp"
 #include "cublas.hpp"
 #include "stream.hpp"
 #include "pointer.hpp"
@@ -109,6 +110,37 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     Handle& Handle::operator=(Handle&&) noexcept = default;
 
     Handle::operator bool() const noexcept { return static_cast<bool>(handle); }
+
+    template <>
+    void gemm<half>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        half alpha, const DevicePtr<const half> A, std::size_t lda,
+        const DevicePtr<const half> B, std::size_t ldb,
+        half beta, const DevicePtr<half> C, std::size_t ldc)
+    {
+        CV_Assert(handle);
+
+        auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+            opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        int irows_c = static_cast<int>(rows_c),
+            icols_c = static_cast<int>(cols_c),
+            icommon_dim = static_cast<int>(common_dim),
+            ilda = static_cast<int>(lda),
+            ildb = static_cast<int>(ldb),
+            ildc = static_cast<int>(ldc);
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasHgemm(
+                HandleAccessor::get(handle),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda,
+                B.get(), ildb,
+                &beta, C.get(), ildc
+            )
+        );
+    }
 
     template <>
     void gemm<float>(const Handle& handle,
