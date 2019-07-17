@@ -76,6 +76,14 @@ public:
     }
 };
 
+TEST_P(Test_ONNX_layers, InstanceNorm)
+{
+    if (target == DNN_TARGET_MYRIAD)
+        testONNXModels("instancenorm", npy, 0, 0, false, false);
+    else
+        testONNXModels("instancenorm", npy);
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
     testONNXModels("maxpooling");
@@ -92,8 +100,8 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
     testONNXModels("conv3d");
     testONNXModels("conv3d_bias");
 }
@@ -117,6 +125,19 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("deconvolution_group", npy, 0, 0, false, false);
     testONNXModels("deconvolution_output_shape", npy, 0, 0, false, false);
     testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Deconvolution3D)
+{
+#if defined(INF_ENGINE_RELEASE)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_2018R5);
+#endif
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only DLIE backend on CPU is supported");
+    testONNXModels("deconv3d");
+    testONNXModels("deconv3d_bias");
+    testONNXModels("deconv3d_pad");
+    testONNXModels("deconv3d_adjpad");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)
@@ -177,8 +198,8 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
     testONNXModels("max_pool3d");
 }
 
@@ -187,9 +208,19 @@ TEST_P(Test_ONNX_layers, AvePooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
     testONNXModels("ave_pool3d");
+}
+
+TEST_P(Test_ONNX_layers, PoolConv3D)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    throw SkipTestException("Test is enabled starts from 2019R1");
+#endif
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+    testONNXModels("pool_conv_3d");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalization)
@@ -571,10 +602,10 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     throw SkipTestException("Test is enabled starts from 2019R1");
 #endif
-    if (backend != DNN_BACKEND_INFERENCE_ENGINE || target != DNN_TARGET_CPU)
-        throw SkipTestException("Only DLIE backend on CPU is supported");
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
 
-    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
     Mat image0 = imread(findDataFile("dnn/dog416.png"));
     Mat image1 = imread(findDataFile("dnn/street.png"));
 

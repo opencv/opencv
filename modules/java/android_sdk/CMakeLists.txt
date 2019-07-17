@@ -123,6 +123,16 @@ foreach(file ${seed_project_files_rel})
   endif()
 endforeach()
 
+# copy libcxx_helper
+set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/")
+file(GLOB_RECURSE __files_rel RELATIVE "${__base_dir}/" "${__base_dir}/libcxx_helper/*")
+foreach(file ${__files_rel})
+  configure_file("${__base_dir}/${file}" "${OPENCV_JAVA_DIR}/${file}" @ONLY)
+  list(APPEND depends "${__base_dir}/${file}")
+  get_filename_component(install_subdir "${file}" PATH)
+  install(FILES "${OPENCV_JAVA_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/../${install_subdir}" COMPONENT java)
+endforeach()
+
 list(APPEND depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
 ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Andoid SDK) source files" ${depends})
 file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")  # force rebuild after CMake run

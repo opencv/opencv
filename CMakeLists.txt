@@ -257,7 +257,7 @@ OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BL
 OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUDNN)
-OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" WITH_CUDA
+OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
@@ -916,30 +916,6 @@ foreach(hal ${OpenCV_HAL})
 endforeach()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
 unset(_hal_includes)
-
-
-# ----------------------------------------------------------------------------
-# Add CUDA libraries (needed for apps/tools, samples)
-# ----------------------------------------------------------------------------
-if(HAVE_CUDA)
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  if(HAVE_CUBLAS)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
-  endif()
-  if(HAVE_CUDNN)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDNN_LIBRARIES})
-  endif()
-  if(HAVE_CUFFT)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
-  endif()
-  foreach(p ${CUDA_LIBS_PATH})
-    if(MSVC AND CMAKE_GENERATOR MATCHES "Ninja|JOM")
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CMAKE_LIBRARY_PATH_FLAG}"${p}")
-    else()
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CMAKE_LIBRARY_PATH_FLAG}${p})
-    endif()
-  endforeach()
-endif()
 
 
 # ----------------------------------------------------------------------------
