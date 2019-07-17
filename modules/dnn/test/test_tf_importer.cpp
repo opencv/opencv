@@ -350,6 +350,11 @@ TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
     runTensorFlowNet("l2_normalize_3d");
 }
 
+TEST_P(Test_TensorFlow_layers, Split)
+{
+    runTensorFlowNet("split");
+}
+
 class Test_TensorFlow_nets : public DNNTestLayer {};
 
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
