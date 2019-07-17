@@ -1310,8 +1310,7 @@ TEST_P(BackendOutputAllocationTest, CorrectlyPreallocatedOutput)
     EXPECT_EQ(out_mat_gapi_ref.data, out_mat_gapi.data);
 }
 
-// FIXME: known issue with OCL backend - PR #14985
-TEST_P(BackendOutputAllocationTest, DISABLED_IncorrectOutputMeta)
+TEST_P(BackendOutputAllocationTest, IncorrectOutputMeta)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
