@@ -94,8 +94,16 @@ namespace
 
             auto graph_data = fluidExtractInputDataFromGraph(graph, nodes);
             const auto parallel_out_rois = cv::gimpl::getCompileArg<cv::GFluidParallelOutputRois>(args);
+            const auto gpfor             = cv::gimpl::getCompileArg<cv::GFluidParallelFor>(args);
+
+            auto serial_for = [](std::size_t count, std::function<void(std::size_t)> f){
+                for (std::size_t i  = 0; i < count; ++i){
+                    f(i);
+                }
+            };
+            auto pfor  = gpfor.has_value() ? gpfor.value().parallel_for : serial_for;
             return parallel_out_rois.has_value() ?
-                       EPtr{new cv::gimpl::GParallelFluidExecutable (graph, graph_data, std::move(parallel_out_rois.value().parallel_rois))}
+                       EPtr{new cv::gimpl::GParallelFluidExecutable (graph, graph_data, std::move(parallel_out_rois.value().parallel_rois), pfor)}
                      : EPtr{new cv::gimpl::GFluidExecutable         (graph, graph_data, std::move(rois.rois))}
             ;
         }
@@ -1325,7 +1333,9 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &input_objs,
 
 cv::gimpl::GParallelFluidExecutable::GParallelFluidExecutable(const ade::Graph                      &g,
                                                               const FluidGraphInputData             &graph_data,
-                                                              const std::vector<GFluidOutputRois>   &parallelOutputRois)
+                                                              const std::vector<GFluidOutputRois>   &parallelOutputRois,
+                                                              const decltype(parallel_for)          &pfor)
+: parallel_for(pfor)
 {
     for (auto&& rois : parallelOutputRois){
         tiles.emplace_back(new GFluidExecutable(g, graph_data, rois.rois));
@@ -1342,10 +1352,10 @@ void cv::gimpl::GParallelFluidExecutable::reshape(ade::Graph&, const GCompileArg
 void cv::gimpl::GParallelFluidExecutable::run(std::vector<InObj>  &&input_objs,
                                               std::vector<OutObj> &&output_objs)
 {
-    for (auto& tile : tiles ){
-        GAPI_Assert((bool)tile);
-        tile->run(input_objs, output_objs);
-    }
+    parallel_for(tiles.size(), [&, this](std::size_t index){
+        GAPI_Assert((bool)tiles[index]);
+        tiles[index]->run(input_objs, output_objs);
+    });
 }
 
 

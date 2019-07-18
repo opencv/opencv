@@ -166,10 +166,12 @@ class GParallelFluidExecutable final: public GIslandExecutable {
     GParallelFluidExecutable(const GParallelFluidExecutable&) = delete;  // due std::unique_ptr in members list
 
     std::vector<std::unique_ptr<GFluidExecutable>> tiles;
+    decltype(GFluidParallelFor::parallel_for) parallel_for;
 public:
     GParallelFluidExecutable(const ade::Graph                       &g,
                              const FluidGraphInputData              &graph_data,
-                             const std::vector<GFluidOutputRois>    &parallelOutputRois);
+                             const std::vector<GFluidOutputRois>    &parallelOutputRois,
+                             const decltype(parallel_for)           &pfor);
 
 
     virtual inline bool canReshape() const override { return false; }
