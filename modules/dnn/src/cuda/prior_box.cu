@@ -35,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
              * we are garunteeed that the output is aligned to a boundary of 4 values
              */
             using vector_type = typename get_vector_type<T, 4>::type;
-            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+            auto output_vPtr = vector_type::get_pointer(output.data());
 
             /* num_points contains the number of points in the feature map of interest
              * each iteration of the stride loop selects a point and generates prior boxes for it
@@ -53,18 +53,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
                         vector_type vec;
                         if(Normalize) {
-                            vec.x = (center_x - boxWidth[i] * 0.5f) / imageWidth;
-                            vec.y = (center_y - boxHeight[i] * 0.5f) / imageHeight;
-                            vec.z = (center_x + boxWidth[i] * 0.5f) / imageWidth;
-                            vec.w = (center_y + boxHeight[i] * 0.5f) / imageHeight;
+                            vec.data[0] = (center_x - boxWidth[i] * 0.5f) / imageWidth;
+                            vec.data[1] = (center_y - boxHeight[i] * 0.5f) / imageHeight;
+                            vec.data[2] = (center_x + boxWidth[i] * 0.5f) / imageWidth;
+                            vec.data[3] = (center_y + boxHeight[i] * 0.5f) / imageHeight;
                         } else {
-                            vec.x = center_x - boxWidth[i] * 0.5f;
-                            vec.y = center_y - boxHeight[i] * 0.5f;
-                            vec.z = center_x + boxWidth[i] * 0.5f - 1.0f;
-                            vec.w = center_y + boxHeight[i] * 0.5f - 1.0f;
+                            vec.data[0] = center_x - boxWidth[i] * 0.5f;
+                            vec.data[1] = center_y - boxHeight[i] * 0.5f;
+                            vec.data[2] = center_x + boxWidth[i] * 0.5f - 1.0f;
+                            vec.data[3] = center_y + boxHeight[i] * 0.5f - 1.0f;
                         }
 
-                        outputPtr_v4[output_offset_v4] = vec;
+                        v_store(output_vPtr[output_offset_v4], vec);
                         output_offset_v4++;
                     }
                 }
@@ -82,14 +82,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void prior_box_set_variance1(span<T> output, float variance) {
             using vector_type = typename get_vector_type<T, 4>::type;
-            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+            auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec;
-                vec.x = variance;
-                vec.y = variance;
-                vec.z = variance;
-                vec.w = variance;
-                outputPtr_v4[i] = vec;
+                for (int j = 0; j < 4; j++)
+                    vec.data[j] = variance;
+                v_store(output_vPtr[i], vec);
             }
         }
 
@@ -99,14 +97,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void prior_box_set_variance4(span<T> output, array<float, 4> variance) {
             using vector_type = typename get_vector_type<T, 4>::type;
-            vector_type* outputPtr_v4 = reinterpret_cast<vector_type*>(output.data().get());
+            auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec;
-                vec.x = variance[0];
-                vec.y = variance[1];
-                vec.z = variance[2];
-                vec.w = variance[3];
-                outputPtr_v4[i] = vec;
+                for(int j = 0; j < 4; j++)
+                    vec.data[j] = variance[j];
+                v_store(output_vPtr[i], vec);
             }
         }
     }

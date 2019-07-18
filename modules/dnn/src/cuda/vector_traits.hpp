@@ -11,165 +11,74 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "../cuda4dnn/csl/pointer.hpp"
+
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
 
-    struct __half4 {
-        __device__ __half4() : data{ 0.0, 0.0 } { }
-        union {
-            float2 data;
-            struct {
-                __half x, y, z, w;
-            };
+    namespace detail {
+        template <std::size_t N> struct raw_type_ { };
+        template <> struct raw_type_<256> { typedef ulonglong4 type; };
+        template <> struct raw_type_<128> { typedef uint4 type; };
+        template <> struct raw_type_<64> { typedef uint2 type; };
+        template <> struct raw_type_<32> { typedef uint1 type; };
+        template <> struct raw_type_<16> { typedef uchar2 type; };
+        template <> struct raw_type_<8> { typedef uchar1 type; };
+
+        template <std::size_t N> struct raw_type {
+            using type = typename raw_type_<N>::type;
+            static_assert(sizeof(type) * 8 == N, "");
         };
-    };
+    }
 
-    /* HOW TO ADD A NEW VECTOR TYPE?
-     * - specialize `get_vector_type`
-     * - specialize `detail::get_element_type`
-     */
-
-    /** returns a vector type in the 'type' field for a given scalar type and vector size
-     *
-     * if a vector type does not exist for the given combination, the `type` member will not exist
-     */
     template <class T, std::size_t N>
-    struct get_vector_type {};
+    union vector_type {
+        using value_type = T;
+        using raw_type = typename detail::raw_type<N * sizeof(T) * 8>::type;
 
-    template <> struct get_vector_type<__half, 1> { typedef __half type; };
-    template <> struct get_vector_type<__half, 2> { typedef __half2 type; };
-    template <> struct get_vector_type<__half, 4> { typedef __half4 type; };
+        __device__ vector_type() { }
 
-    template <> struct get_vector_type<float, 1> { typedef float type; };
-    template <> struct get_vector_type<float, 2> { typedef float2 type; };
-    template <> struct get_vector_type<float, 4> { typedef float4 type; };
+        __device__ static constexpr auto size() { return N; }
 
-    template <> struct get_vector_type<double, 1> { typedef double type; };
-    template <> struct get_vector_type<double, 2> { typedef double2 type; };
-    template <> struct get_vector_type<double, 4> { typedef double4 type; };
+        raw_type raw;
+        T data[N];
 
-    namespace detail {
-        template <class V, class = void /* SFINAE helper parameter */>
-        struct get_element_type { };
+        template <class U> static __device__
+        typename std::enable_if<std::is_const<U>::value, const vector_type*>
+        ::type get_pointer(DevicePtr<U> ptr) {
+            return reinterpret_cast<const vector_type*>(ptr.get());
+        }
 
-        /* only non-const specializations are required; const qualifications are automatically handled */
-        template <class X> struct get_element_type<__half, X> { typedef __half type; };
-        template <class X> struct get_element_type<__half2, X> { typedef __half type; };
-        template <class X> struct get_element_type<__half4, X> { typedef __half type; };
-
-        template <class X> struct get_element_type<float, X> { typedef float type; };
-        template <class X> struct get_element_type<float2, X> { typedef float type; };
-        template <class X> struct get_element_type<float4, X> { typedef float type; };
-
-        template <class X> struct get_element_type<double, X> { typedef double type; };
-        template <class X> struct get_element_type<double2, X> { typedef double type; };
-        template <class X> struct get_element_type<double4, X> { typedef double type; };
-
-        /* handle const qualified types */
-        template <class V>
-        struct get_element_type<V, typename std::enable_if<std::is_const<V>::value, void>::type>{
-            typedef
-                typename std::add_const<
-                    typename get_element_type<
-                        typename std::remove_const<V>::type
-                    >::type
-                >::type
-            type;
-        };
-    }
-
-    namespace detail {
-        template <class V> __host__ __device__
-        constexpr std::size_t size() { return sizeof(V) / sizeof(typename get_element_type<V>::type); }
-    }
-
-    /** returns a struct with information about a given vector or scalar type
-     *
-     * - `element_type` gives the scalar type corresponding to the type
-     * - `vector_type` gives the type
-     * - `size()` returns the number of elements of `element_type` that can exist in the type
-     */
-    template <class V>
-    struct vector_traits {
-        typedef typename detail::get_element_type<V>::type element_type;
-        typedef V vector_type;
-
-        __host__ __device__
-        static constexpr std::size_t size() { return detail::size<V>(); }
+        template <class U> static __device__
+        typename std::enable_if<!std::is_const<U>::value, vector_type*>
+        ::type get_pointer(DevicePtr<U> ptr) {
+            return reinterpret_cast<vector_type*>(ptr.get());
+        }
     };
 
-    namespace detail {
-        template <class V, std::size_t>
-        struct accessor { };
-
-        template <class V>
-        struct accessor<V, 1> {
-            __host__ __device__
-            static constexpr typename vector_traits<V>::element_type get(V& v, std::size_t i) { return v; }
-
-            __host__ __device__
-            static constexpr void set(V& v, std::size_t i, vector_traits<V>::element_type value) { v = value; }
-        };
-
-        template <class V>
-        struct accessor<V, 2> {
-            __host__ __device__
-            static constexpr typename vector_traits<V>::element_type get(V& v, std::size_t i) {
-                switch (i) {
-                case 0: return v.x;
-                case 1: return v.y;
-                }
-                /* should never end up here */
-                return v.x;
-            }
-
-            __host__ __device__
-            static constexpr void set(V& v, std::size_t i, vector_traits<V>::element_type value) {
-                switch (i) {
-                case 0: v.x = value;
-                case 1: v.y = value;
-                }
-                /* should never end up here */
-            }
-        };
-
-        template <class V>
-        struct accessor<V, 4> {
-            __host__ __device__
-            static constexpr typename vector_traits<V>::element_type get(V& v, std::size_t i) {
-                switch (i) {
-                case 0: return v.w;
-                case 1: return v.x;
-                case 2: return v.y;
-                case 3: return v.z;
-                }
-                /* should never end up here */
-                return v.x;
-            }
-
-            __host__ __device__
-            static constexpr void set(V& v, std::size_t i, vector_traits<V>::element_type value) {
-                switch (i) {
-                case 0: v.w = value;
-                case 1: v.x = value;
-                case 2: v.y = value;
-                case 3: v.z = value;
-                }
-                /* should never end up here */
-            }
-        };
+    template <class V>
+    __device__ void v_load(V& dest, const V& src) {
+        dest.raw = src.raw;
     }
 
-    /** get a value from a vector type using an index */
-    template <class V> __host__ __device__
-    constexpr typename vector_traits<V>::element_type get(V& v, std::size_t i) {
-        return detail::accessor<V, vector_traits<V>::size()>::get(v, i);
+    template <class V>
+    __device__ void v_load(V& dest, const V* src) {
+        dest.raw = src->raw;
     }
 
-    /** set a value in a vector type using an index */
-    template <class V> __host__ __device__
-    constexpr void set(V& v, std::size_t i, typename vector_traits<V>::element_type value) {
-        return detail::accessor<V, vector_traits<V>::size()>::set(v, i, value);
+    template <class V>
+    __device__ void v_store(V* dest, const V& src) {
+        dest->raw = src.raw;
     }
+
+    template <class V>
+    __device__ void v_store(V& dest, const V& src) {
+        dest.raw = src.raw;
+    }
+
+    template <class T, std::size_t N>
+    struct get_vector_type {
+        typedef vector_type<T, N> type;
+    };
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
 

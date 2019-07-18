@@ -24,71 +24,33 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
     namespace raw {
         /* Reference: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/concat_layer.cu */
-        template <class T>
-        __global__ void concat_vec4(
+        template <class T, std::size_t N>
+        __global__ void concat_vec(
             span<T> output, size_type output_axis_size, index_type output_axis_offset,
             view<T> input, size_type input_axis_size, size_type concat_size)
         {
-            using vector_type = typename get_vector_type<T, 4>::type;
+            using vector_type = typename get_vector_type<T, N>::type;
 
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
 
-            const auto total_concat_size = concat_size * input_axis_size;
-
-            for (auto in_idx : grid_stride_range(input.size() / 4)) {
-                const index_type idx = in_idx * 4;
-                const index_type concat_num = idx / total_concat_size;
-                const index_type concat_index = idx % total_concat_size;
-                const index_type top_index = concat_index +
-                    (concat_num * output_axis_size + output_axis_offset) * concat_size;
-
-                const auto out_idx = top_index / 4;
-                dstPtr[out_idx] = srcPtr[in_idx];
-            }
-        }
-
-        template <class T>
-        __global__ void concat_vec2(
-            span<T> output, size_type output_axis_size, index_type output_axis_offset,
-            view<T> input, size_type input_axis_size, size_type concat_size)
-        {
-            using vector_type = typename get_vector_type<T, 2>::type;
-
-            vector_type* dstPtr = reinterpret_cast<vector_type*>(output.data().get());
-            const vector_type* srcPtr = reinterpret_cast<const vector_type*>(input.data().get());
-
-            const auto total_concat_size = concat_size * input_axis_size;
-
-            for (auto in_idx : grid_stride_range(input.size() / 2)) {
-                const index_type idx = in_idx * 2;
-                const index_type concat_num = idx / total_concat_size;
-                const index_type concat_index = idx % total_concat_size;
-                const index_type top_index = concat_index +
-                    (concat_num * output_axis_size + output_axis_offset) * concat_size;
-
-                const auto out_idx = top_index / 2;
-                dstPtr[out_idx] = srcPtr[in_idx];
-            }
-        }
-
-        template <class T>
-        __global__ void concat(
-            span<T> output, size_type output_axis_size, index_type output_axis_offset,
-            view<T> input, size_type input_axis_size, size_type concat_size)
-        {
             /* we need to copy all the elements of input to some location in the output
              * we copy blocks of size `total_concat_size` to some location in the output
              */
             const auto total_concat_size = concat_size * input_axis_size;
 
-            for (auto idx : grid_stride_range(input.size())) {
+            for (auto in_idx : grid_stride_range(input.size() / vector_type::size())) {
+                const index_type idx = in_idx * vector_type::size();
                 const index_type concat_num = idx / total_concat_size;
                 const index_type concat_index = idx % total_concat_size;
                 const index_type top_index = concat_index +
                     (concat_num * output_axis_size + output_axis_offset) * concat_size;
 
-                output[top_index] = input[idx];
+                const auto out_idx = top_index / vector_type::size();
+
+                vector_type vec;
+                v_load(vec, input_vPtr[in_idx]);
+                v_store(output_vPtr[out_idx], vec);
             }
         }
 
@@ -113,6 +75,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 output[oidx] = input[i];
             }
         }
+    }
+
+    template <class T, std::size_t N>
+    void launch_vectorized_concat(const Stream& stream,
+        span<T> output, size_type output_axis_size, index_type output_axis_offset,
+        view<T> input, size_type input_axis_size, size_type concat_size)
+    {
+        auto kernel = raw::concat_vec<T, N>;
+        auto policy = make_policy(kernel, input.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, output_axis_size, output_axis_offset, input, input_axis_size, concat_size);
     }
 
     template <class T>
@@ -151,23 +123,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         bool is_aligned_2 = copy_block_size % 2 == 0 && copy_block_stride % 2 == 0 && starting_offset % 2 == 0;
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && is_aligned_4) {
-            auto kernel = raw::concat_vec4<T>;
-            auto policy = make_policy(kernel, input.size() / 4, 0, stream);
-            launch_kernel(kernel, policy,
-                output, output_axis_size, output_axis_offset,
-                input, input_axis_size, concat_size);
+            launch_vectorized_concat<T, 4>(stream, output, output_axis_size, output_axis_offset, input, input_axis_size, concat_size);
         } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2) && is_aligned_2) {
-            auto kernel = raw::concat_vec2<T>;
-            auto policy = make_policy(kernel, input.size() / 2, 0, stream);
-            launch_kernel(kernel, policy,
-                output, output_axis_size, output_axis_offset,
-                input, input_axis_size, concat_size);
+            launch_vectorized_concat<T, 2>(stream, output, output_axis_size, output_axis_offset, input, input_axis_size, concat_size);
         } else {
-            auto kernel = raw::concat<T>;
-            auto policy = make_policy(kernel, input.size(), 0, stream);
-            launch_kernel(kernel, policy,
-                output, output_axis_size, output_axis_offset,
-                input, input_axis_size, concat_size);
+            launch_vectorized_concat<T, 1>(stream, output, output_axis_size, output_axis_offset, input, input_axis_size, concat_size);
         }
     }
 
