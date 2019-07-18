@@ -121,8 +121,6 @@ struct BackendOutputAllocationTest : TestWithParamBase<>
         cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(15));
     }
 };
-// FIXME: move all tests from this fixture to the base class once all issues are resolved
-struct BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest : BackendOutputAllocationTest {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

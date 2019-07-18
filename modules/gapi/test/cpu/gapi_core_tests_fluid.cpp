@@ -260,13 +260,6 @@ INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestFluid, BackendOutputAllocatio
                                 Values(-1),
                                 Values(CORE_FLUID)));
 
-INSTANTIATE_TEST_CASE_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTestFluid,
-                        BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest,
-                        Combine(Values(CV_8UC3, CV_16SC2, CV_32FC1),
-                                Values(cv::Size(50, 50)),
-                                Values(-1),
-                                Values(CORE_FLUID)));
-
 //----------------------------------------------------------------------
 // FIXME: Clean-up test configurations which are enabled already
 #if 0

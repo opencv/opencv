@@ -1418,8 +1418,7 @@ TEST_P(BackendOutputAllocationTest, LargerPreallocatedSize)
     EXPECT_NE(out_mat_gapi_ref.data, out_mat_gapi.data);
 }
 
-TEST_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest,
-    LargerPreallocatedSizeWithCorrectSubmatrix)
+TEST_P(BackendOutputAllocationTest, LargerPreallocatedSizeWithCorrectSubmatrix)
 {
     out_mat_gapi = cv::Mat(sz * 2, type);
     auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted

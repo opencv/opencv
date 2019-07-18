@@ -74,6 +74,11 @@ namespace cv { namespace gapi { namespace own {
             //! pointer to the data
             uchar* data = nullptr;
             size_t step = 0;
+
+            //! helper fields propagated to cv::Mat (used for locateROI, adjustROI)
+            const uchar* datastart = nullptr;
+            const uchar* dataend = nullptr;
+            const uchar* datalimit = nullptr;
         };
     }
     //concise version of cv::Mat suitable for GAPI needs (used when no dependence on OpenCV is required)

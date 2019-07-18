@@ -384,4 +384,26 @@ TEST(OwnMat, ROIView)
     << to_ocv(roi_view) << std::endl
     << expected_cv_mat  << std::endl;
 }
+
+TEST(OwnMat, ROIViewWithUMat)
+{
+    auto sz = cv::Size(50, 50);
+    cv::Mat mat = cv::Mat(sz * 2, CV_8UC3);
+
+    cv::Mat roi_view = mat(cv::Rect({5, 8}, sz));
+    const auto roi_view_ref = roi_view;
+
+    // access Mat through UMat
+    {
+    EXPECT_EQ(roi_view_ref.data, roi_view.getUMat(ACCESS_RW).getMat(ACCESS_RW).data);
+    EXPECT_EQ(roi_view_ref.datastart, roi_view.getUMat(ACCESS_RW).getMat(ACCESS_RW).datastart);
+    }
+
+    // access Mat through UMat but wrap Mat with gapi::own::Mat
+    {
+    auto own_roi_view = to_own(roi_view);
+    EXPECT_EQ(roi_view_ref.data, to_ocv(own_roi_view).getUMat(ACCESS_RW).getMat(ACCESS_RW).data);
+    EXPECT_EQ(roi_view_ref.datastart, to_ocv(own_roi_view).getUMat(ACCESS_RW).getMat(ACCESS_RW).datastart);
+    }
+}
 } // namespace opencv_test
