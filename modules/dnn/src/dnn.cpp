@@ -2903,6 +2903,13 @@ String parseLayerParams(const String& name, const LayerParams& lp) {
 String Net::dump()
 {
     CV_Assert(!empty());
+
+    if (impl->netInputLayer->inputsData.empty())
+        CV_Error(Error::StsError, "Requested set input");
+
+    if (!impl->netWasAllocated)
+        impl->setUpNet();
+
     std::ostringstream out;
     std::map<int, LayerData>& map = impl->layers;
     int prefBackend = impl->preferableBackend;
