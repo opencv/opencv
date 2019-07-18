@@ -387,7 +387,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @brief Dump net to String
          *  @returns String with structure, hyperparameters, backend, target and fusion
-         *  To see correct backend, target and fusion run after forward().
+         *  Call method after setInput(). To see correct backend, target and fusion run after forward().
          */
         CV_WRAP String dump();
         /** @brief Dump net structure, hyperparameters, backend, target and fusion to dot file
