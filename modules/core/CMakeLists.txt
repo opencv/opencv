@@ -23,7 +23,7 @@ ocv_add_module(core
 
 set(extra_libs "")
 
-if(WINRT AND CMAKE_SYSTEM_NAME MATCHES WindowsStore AND CMAKE_SYSTEM_VERSION MATCHES "8.0")
+if(WINRT AND WINDOWS_STORE AND CMAKE_SYSTEM_VERSION MATCHES "8.0")
   list(APPEND extra_libs ole32.lib)
 endif()
 
