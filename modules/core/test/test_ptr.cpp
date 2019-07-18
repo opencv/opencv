@@ -43,10 +43,6 @@
 
 namespace opencv_test { namespace {
 
-#if defined __clang__ && defined __APPLE__
-#pragma clang diagnostic ignored "-Wself-assign-overloaded"  // explicitly assigning value of variable of type '...' to itself (p1 = p1)
-#endif
-
 #ifdef GTEST_CAN_COMPARE_NULL
 #  define EXPECT_NULL(ptr) EXPECT_EQ(NULL, ptr)
 #else
@@ -161,7 +157,7 @@ TEST(Core_Ptr, assignment)
 
     {
         Ptr<Reporter> p1(new Reporter(&deleted1));
-        p1 = p1;
+        p1 = *&p1;
         EXPECT_FALSE(deleted1);
     }
 
