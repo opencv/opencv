@@ -126,6 +126,36 @@ public:
         }
     }
 
+    void getMinSize(const LayerParams &params)
+    {
+        DictValue minSizeParameter;
+        bool minSizeRetieved = getParameterDict(params, "min_size", minSizeParameter);
+        if (!minSizeRetieved) {
+            _minSize.push_back(0);
+            return;
+        }
+
+        for (int i = 0; i < minSizeParameter.size(); ++i)
+        {
+            float min = minSizeParameter.get<float>(i);
+            _minSize.push_back(min);
+        }
+    }
+
+    void getMaxSize(const LayerParams &params)
+    {
+        DictValue maxSizeParameter;
+        bool maxSizeRetieved = getParameterDict(params, "max_size", maxSizeParameter);
+        if (!maxSizeRetieved)
+            return;
+
+        for (int i = 0; i < maxSizeParameter.size(); ++i)
+        {
+            float maxSize = maxSizeParameter.get<float>(i);
+            _maxSize.push_back(maxSize);
+        }
+    }
+
     static void getParams(const std::string& name, const LayerParams &params,
                           std::vector<float>* values)
     {
@@ -180,21 +210,25 @@ public:
     PriorBoxLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        _minSize = getParameter<float>(params, "min_size", 0, false, 0);
         _flip = getParameter<bool>(params, "flip", 0, false, true);
         _clip = getParameter<bool>(params, "clip", 0, false, true);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
 
         _aspectRatios.clear();
 
+        _minSize.clear();
+        getMinSize(params);
+
         getAspectRatios(params);
         getVariance(params);
 
-        _maxSize = -1;
         if (params.has("max_size"))
         {
-            _maxSize = params.get("max_size").get<float>(0);
-            CV_Assert(_maxSize > _minSize);
+            _maxSize.clear();
+            getMaxSize(params);
+            CV_Assert(_minSize.size() == _maxSize.size());
+            for (int i = 0; i < _maxSize.size(); i++)
+                CV_Assert(_minSize[i] < _maxSize[i]);
         }
 
         std::vector<float> widths, heights;
@@ -213,26 +247,28 @@ public:
         }
         else
         {
-            CV_Assert(_minSize > 0);
-            _boxWidths.resize(1 + (_maxSize > 0 ? 1 : 0) + _aspectRatios.size());
-            _boxHeights.resize(_boxWidths.size());
-            _boxWidths[0] = _boxHeights[0] = _minSize;
-
-            int i = 1;
-            if (_maxSize > 0)
+            for (int i = 0; i < _minSize.size(); ++i)
             {
-                // second prior: aspect_ratio = 1, size = sqrt(min_size * max_size)
-                _boxWidths[i] = _boxHeights[i] = sqrt(_minSize * _maxSize);
-                i += 1;
-            }
+                float minSize = _minSize[i];
+                _boxWidths.push_back(minSize);
+                _boxHeights.push_back(minSize);
 
-            // rest of priors
-            for (size_t r = 0; r < _aspectRatios.size(); ++r)
-            {
-                float arSqrt = sqrt(_aspectRatios[r]);
-                _boxWidths[i + r] = _minSize * arSqrt;
-                _boxHeights[i + r] = _minSize / arSqrt;
+                if (_maxSize.size() > 0)
+                {
+                    float size = sqrt(minSize * _maxSize[i]);
+                    _boxWidths.push_back(size);
+                    _boxHeights.push_back(size);
+                }
+
+                // rest of priors
+                for (size_t r = 0; r < _aspectRatios.size(); ++r)
+                {
+                    float arSqrt = sqrt(_aspectRatios[r]);
+                    _boxWidths.push_back(minSize * arSqrt);
+                    _boxHeights.push_back(minSize / arSqrt);
+                }
             }
+            CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty());
         }
         CV_Assert(_boxWidths.size() == _boxHeights.size());
         _numPriors = _boxWidths.size();
@@ -271,7 +307,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+                _minSize.size() == 1 && _maxSize.size() <= 1);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -509,9 +546,10 @@ public:
 
             CV_Assert(!_explicitSizes);
 
-            ieLayer.setMinSize(_minSize);
-            if (_maxSize > 0)
-                ieLayer.setMaxSize(_maxSize);
+            CV_Assert_N(_minSize.size() == 1, _maxSize.size() <= 1);
+            ieLayer.setMinSize(_minSize[0]);
+            if (_maxSize.size() == 1)
+                ieLayer.setMaxSize(_maxSize[0]);
 
             CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
             ieLayer.setOffset(_offsetsX[0]);
@@ -558,8 +596,8 @@ public:
     }
 
 private:
-    float _minSize;
-    float _maxSize;
+    std::vector<float> _minSize;
+    std::vector<float> _maxSize;
 
     float _stepX, _stepY;
 
