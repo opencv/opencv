@@ -11,21 +11,6 @@
 namespace cv
 {
 
-static void getElemSize( const String& fmt, size_t& elemSize, size_t& cn )
-{
-    const char* dt = fmt.c_str();
-    cn = 1;
-    if( cv_isdigit(dt[0]) )
-    {
-        cn = dt[0] - '0';
-        dt++;
-    }
-    char c = dt[0];
-    elemSize = cn*(c == 'u' || c == 'c' ? sizeof(uchar) : c == 'w' || c == 's' ? sizeof(ushort) :
-        c == 'i' ? sizeof(int) : c == 'f' ? sizeof(float) : c == 'd' ? sizeof(double) :
-        c == 'r' ? sizeof(void*) : (size_t)0);
-}
-
 FileStorage::FileStorage()
 {
     state = UNDEFINED;
@@ -164,8 +149,8 @@ void FileStorage::writeRaw( const String& fmt, const uchar* vec, size_t len )
 {
     if( !isOpened() )
         return;
-    size_t elemSize, cn;
-    getElemSize( fmt, elemSize, cn );
+    CV_Assert(!fmt.empty());
+    size_t elemSize = ::icvCalcStructSize(fmt.c_str(), 0);
     CV_Assert( len % elemSize == 0 );
     cvWriteRawData( fs, vec, (int)(len/elemSize), fmt.c_str());
 }
@@ -412,19 +397,30 @@ FileNodeIterator& FileNodeIterator::operator -= (int ofs)
 }
 
 
-FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, uchar* vec, size_t maxCount )
+FileNodeIterator& FileNodeIterator::readRaw(const String& fmt, uchar* vec, size_t len)
 {
-    if( fs && container && remaining > 0 )
+    CV_Assert(!fmt.empty());
+    if( fs && container && remaining > 0 && len > 0)
     {
-        size_t elem_size, cn;
-        getElemSize( fmt, elem_size, cn );
-        CV_Assert( elem_size > 0 );
-        size_t count = std::min(remaining, maxCount);
-
-        if( reader.seq )
+        if (reader.seq)
         {
-            cvReadRawDataSlice( fs, (CvSeqReader*)&reader, (int)count, vec, fmt.c_str() );
-            remaining -= count*cn;
+            size_t step = ::icvCalcStructSize(fmt.c_str(), 0);
+            if (len % step && len != (size_t)INT_MAX)  // TODO remove compatibility hack
+            {
+                CV_PARSE_ERROR("readRaw: total byte size not match elememt size");
+            }
+            size_t maxCount = len / step;
+            int fmt_pairs[CV_FS_MAX_FMT_PAIRS*2] = {};
+            int fmt_pair_count = icvDecodeFormat(fmt.c_str(), fmt_pairs, CV_FS_MAX_FMT_PAIRS);
+            int vecElems = 0;
+            for (int k = 0; k < fmt_pair_count; k++)
+            {
+                vecElems += fmt_pairs[k*2];
+            }
+            CV_Assert(vecElems > 0);
+            size_t count = std::min((size_t)remaining, (size_t)maxCount * vecElems);
+            cvReadRawDataSlice(fs, (CvSeqReader*)&reader, (int)count, vec, fmt.c_str());
+            remaining -= count;
         }
         else
         {
