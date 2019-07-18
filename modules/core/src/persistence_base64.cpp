@@ -5,6 +5,8 @@
 
 #include "precomp.hpp"
 #include "persistence.hpp"
+#include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 namespace base64 {
 
@@ -555,7 +557,7 @@ public:
         CV_Assert(len > 0);
 
         /* calc step and to_binary_funcs */
-        make_to_binary_funcs(dt);
+        step_packed = make_to_binary_funcs(dt);
 
         end = beg;
         cur = beg;
@@ -570,10 +572,10 @@ public:
 
         for (size_t i = 0U, n = to_binary_funcs.size(); i < n; i++) {
             elem_to_binary_t & pack = to_binary_funcs[i];
-            pack.func(cur + pack.offset, dst + pack.offset);
+            pack.func(cur + pack.offset, dst + pack.offset_packed);
         }
         cur += step;
-        dst += step;
+        dst += step_packed;
 
         return *this;
     }
@@ -588,14 +590,16 @@ private:
     struct elem_to_binary_t
     {
         size_t      offset;
+        size_t      offset_packed;
         to_binary_t func;
     };
 
 private:
-    void make_to_binary_funcs(const std::string &dt)
+    size_t make_to_binary_funcs(const std::string &dt)
     {
         size_t cnt = 0;
         size_t offset = 0;
+        size_t offset_packed = 0;
         char type = '\0';
 
         std::istringstream iss(dt);
@@ -646,11 +650,15 @@ private:
                 pack.offset = offset;
                 offset += size;
 
+                pack.offset_packed = offset_packed;
+                offset_packed += size;
+
                 to_binary_funcs.push_back(pack);
             }
         }
 
         CV_Assert(iss.eof());
+        return offset_packed;
     }
 
 private:
@@ -659,27 +667,26 @@ private:
     const uchar * end;
 
     size_t step;
+    size_t step_packed;
     std::vector<elem_to_binary_t> to_binary_funcs;
 };
 
 class BinaryToCvSeqConvertor
 {
 public:
-    BinaryToCvSeqConvertor(const void* src, int len, const char* dt)
-        : cur(reinterpret_cast<const uchar *>(src))
-        , beg(reinterpret_cast<const uchar *>(src))
-        , end(reinterpret_cast<const uchar *>(src))
+    BinaryToCvSeqConvertor(CvFileStorage* fs, const uchar* src, size_t total_byte_size, const char* dt)
+        : cur(src)
+        , end(src + total_byte_size)
     {
         CV_Assert(src);
         CV_Assert(dt);
-        CV_Assert(len >= 0);
+        CV_Assert(total_byte_size > 0);
 
-        /* calc binary_to_funcs */
-        make_funcs(dt);
+        step = make_funcs(dt);  // calc binary_to_funcs
         functor_iter = binary_to_funcs.begin();
 
-        step = ::icvCalcStructSize(dt, 0);
-        end = beg + step * static_cast<size_t>(len);
+        if (total_byte_size % step != 0)
+            CV_PARSE_ERROR("Total byte size not match elememt size");
     }
 
     inline BinaryToCvSeqConvertor & operator >> (CvFileNode & dst)
@@ -699,7 +706,7 @@ public:
             double d;
         } buffer; /* for GCC -Wstrict-aliasing */
         std::memset(buffer.mem, 0, sizeof(buffer));
-        functor_iter->func(cur + functor_iter->offset, buffer.mem);
+        functor_iter->func(cur + functor_iter->offset_packed, buffer.mem);
 
         /* set node::data */
         switch (functor_iter->cv_type)
@@ -746,16 +753,17 @@ private:
     struct binary_to_filenode_t
     {
         size_t      cv_type;
-        size_t      offset;
+        size_t      offset_packed;
         binary_to_t func;
     };
 
 private:
-    void make_funcs(const char* dt)
+    size_t make_funcs(const char* dt)
     {
         size_t cnt = 0;
         char type = '\0';
         size_t offset = 0;
+        size_t offset_packed = 0;
 
         std::istringstream iss(dt);
         while (!iss.eof()) {
@@ -803,8 +811,27 @@ private:
                 }; // need a better way for outputting error.
 
                 offset = static_cast<size_t>(cvAlign(static_cast<int>(offset), static_cast<int>(size)));
-                pack.offset = offset;
+                if (offset != offset_packed)
+                {
+                    static bool skip_message = cv::utils::getConfigurationParameterBool("OPENCV_PERSISTENCE_SKIP_PACKED_STRUCT_WARNING",
+#ifdef _DEBUG
+                            false
+#else
+                            true
+#endif
+                    );
+                    if (!skip_message)
+                    {
+                        CV_LOG_WARNING(NULL, "Binary converter: struct storage layout has been changed in OpenCV 3.4.7. Alignment gaps has been removed from the storage containers. "
+                                "Details: https://github.com/opencv/opencv/pull/15050"
+                        );
+                        skip_message = true;
+                    }
+                }
                 offset += size;
+
+                pack.offset_packed = offset_packed;
+                offset_packed += size;
 
                 /* set type */
                 switch (type)
@@ -827,12 +854,13 @@ private:
 
         CV_Assert(iss.eof());
         CV_Assert(binary_to_funcs.size());
+
+        return offset_packed;
     }
 
 private:
 
     const uchar * cur;
-    const uchar * beg;
     const uchar * end;
 
     size_t step;
@@ -889,11 +917,13 @@ void Base64Writer::check_dt(const char* dt)
 }
 
 
-void make_seq(void * binary, int elem_cnt, const char * dt, ::CvSeq & seq)
+void make_seq(CvFileStorage* fs, const uchar* binary, size_t total_byte_size, const char * dt, ::CvSeq & seq)
 {
+    if (total_byte_size == 0)
+        return;
     ::CvFileNode node;
     node.info = 0;
-    BinaryToCvSeqConvertor convertor(binary, elem_cnt, dt);
+    BinaryToCvSeqConvertor convertor(fs, binary, total_byte_size, dt);
     while (convertor) {
         convertor >> node;
         cvSeqPush(&seq, &node);

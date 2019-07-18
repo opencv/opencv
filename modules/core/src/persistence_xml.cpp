@@ -167,17 +167,11 @@ static char* icvXMLParseBase64(CvFileStorage* fs, char* ptr, CvFileNode * node)
         parser.flush();
     }
 
-    /* save as CvSeq */
-    int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
-    if (total_byte_size % elem_size != 0)
-        CV_PARSE_ERROR("data size not matches elememt size");
-    int elem_cnt = total_byte_size / elem_size;
-
     node->tag = CV_NODE_NONE;
     int struct_flags = CV_NODE_SEQ;
     /* after icvFSCreateCollection, node->tag == struct_flags */
     icvFSCreateCollection(fs, struct_flags, node);
-    base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
+    base64::make_seq(fs, binary_buffer.data(), total_byte_size, dt.c_str(), *node->data.seq);
 
     if (fs->dummy_eof) {
         /* end of file */
