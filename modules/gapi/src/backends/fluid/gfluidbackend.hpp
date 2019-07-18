@@ -118,6 +118,8 @@ FluidGraphInputData fluidExtractInputDataFromGraph(const ade::Graph &m_g, const 
 
 class GFluidExecutable final: public GIslandExecutable
 {
+    GFluidExecutable(const GFluidExecutable&) = delete;  // due std::unique_ptr in members list
+
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
 
@@ -161,7 +163,9 @@ public:
 
 
 class GParallelFluidExecutable final: public GIslandExecutable {
-    std::vector<GFluidExecutable> tiles;
+    GParallelFluidExecutable(const GParallelFluidExecutable&) = delete;  // due std::unique_ptr in members list
+
+    std::vector<std::unique_ptr<GFluidExecutable>> tiles;
 public:
     GParallelFluidExecutable(const ade::Graph                       &g,
                              const FluidGraphInputData              &graph_data,
