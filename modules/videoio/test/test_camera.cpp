@@ -105,4 +105,121 @@ TEST(DISABLED_videoio_camera, v4l_read_framesize)
     capture.release();
 }
 
+typedef tuple<int, int, int> Size_TIME;
+typedef testing::TestWithParam< Size_TIME > DISABLED_videoio_timeout;
+
+TEST_P(DISABLED_videoio_timeout, v4l_poll_timeout)
+{
+   //Two identical cameras
+   VideoCapture cap1(0);
+   VideoCapture cap2(2);
+
+   int FPS1 = get<0>(GetParam());
+   int FPS2 = get<1>(GetParam());
+
+   ASSERT_TRUE(cap1.isOpened());
+   ASSERT_TRUE(cap2.isOpened());
+
+   EXPECT_TRUE(cap1.set(CAP_PROP_FPS, FPS1));
+   EXPECT_TRUE(cap2.set(CAP_PROP_FPS, FPS2));
+
+   std::cout << FPS1 << std::endl;
+   std::cout << FPS2 << std::endl;
+
+   std::vector<VideoCapture> VCM;
+
+   VCM.push_back(cap1);
+   VCM.push_back(cap2);
+
+   Mat frame1;
+
+   //false start
+   cap1>>frame1;
+   cap2>>frame1;
+
+   std::vector<int> state;
+
+   int ITERATION_COUNT = 50;
+   int TIMEOUT = get<2>(GetParam());
+
+   std::cout << TIMEOUT << std::endl;
+
+   TickMeter tm;
+   for(int i = 0; i < ITERATION_COUNT; ++i)
+   {
+       tm.start();
+       VideoCapture::waitAny(VCM, state, TIMEOUT);
+       tm.stop();
+   }
+   float time = tm.getTimeMilli() / ITERATION_COUNT;
+   std::cout << time;
+   EXPECT_TRUE( (time - TIMEOUT) < 4 );
+}
+
+INSTANTIATE_TEST_CASE_P(, DISABLED_videoio_timeout, testing::Combine(testing::Values(30, 15),
+                                                                            testing::Values(15, 5),
+                                                                                testing::Values(10, 20, 50)));
+
+typedef tuple<int, int> Size_FPS;
+typedef testing::TestWithParam< Size_FPS > DISABLED_videoio_fps;
+
+TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
+{
+    //Two identical cameras
+    VideoCapture cap1(0);
+    VideoCapture cap2(2);
+
+    ASSERT_TRUE(cap1.isOpened());
+    ASSERT_TRUE(cap2.isOpened());
+
+    int FPS1 = get<0>(GetParam());
+    int FPS2 = get<1>(GetParam());
+
+    EXPECT_TRUE(cap1.set(CAP_PROP_FPS, FPS1));
+    EXPECT_TRUE(cap2.set(CAP_PROP_FPS, FPS2));
+
+    std::cout << FPS1 << std::endl;
+    std::cout << FPS2 << std::endl;
+
+
+    std::vector<VideoCapture> VCM;
+
+    VCM.push_back(cap1);
+    VCM.push_back(cap2);
+
+    std::vector<int> state;
+
+    std::vector<int> countOfStates1000t0(2, 0);
+
+    int ITERATION_COUNT = 500;
+    int TIMEOUT = 10; // milliseconds
+
+    Mat frame1;
+
+    //false start
+    cap1>>frame1;
+    cap2>>frame1;
+
+    for(int i = 0; i < ITERATION_COUNT; ++i)
+    {
+        VideoCapture::waitAny(VCM, state, TIMEOUT);
+
+        EXPECT_EQ(VCM.size(), state.size());
+
+        for(unsigned int j = 0; j < VCM.size(); ++j)
+        {
+            Mat frame;
+            if(state[j] == CAP_CAM_READY)
+            {
+                 EXPECT_TRUE(VCM[j].retrieve(frame1));
+                 ++countOfStates1000t0[j];
+            }
+        }
+    }
+
+    EXPECT_TRUE( fabs(((float)FPS1 / (float)FPS2 - (float)countOfStates1000t0[0] / (float)countOfStates1000t0[1])) < 0.5 );
+}
+
+INSTANTIATE_TEST_CASE_P(, DISABLED_videoio_fps, testing::Combine(testing::Values(30, 15), testing::Values(5, 15)));
+
 }} // namespace

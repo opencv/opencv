@@ -580,6 +580,13 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 //! @} videoio_flags_others
 
 
+enum statecam
+    {
+       CAP_CAM_ERROR                = -1,
+       CAP_CAM_NOT_READY            =  0,
+       CAP_CAM_READY                =  1,
+    };
+
 class IVideoCapture;
 
 /** @brief Class for video capturing from video files, image sequences or cameras.
@@ -701,6 +708,14 @@ public:
     @ref tutorial_kinect_openni
      */
     CV_WRAP virtual bool grab();
+
+
+
+    CV_WRAP virtual bool waitAnyInterior(std::vector<VideoCapture>&, std::vector<int>&, const int &);
+
+    CV_WRAP static bool waitAny(std::vector<VideoCapture>&, std::vector<int>&, const int &);
+
+
 
     /** @brief Decodes and returns the grabbed video frame.
 

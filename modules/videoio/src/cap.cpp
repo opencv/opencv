@@ -236,6 +236,61 @@ bool VideoCapture::grab()
     return ret;
 }
 
+bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<int>& State, const int & timeout_nanosec)
+{
+    if(!v_captures.empty())
+    {
+        int bcknd = v_captures[0].icap->getCaptureDomain();
+
+        for (unsigned int bcknd_num = 0; bcknd_num < v_captures.size(); ++bcknd_num)
+        {
+            if(!(bcknd == v_captures[bcknd_num].icap->getCaptureDomain()))
+            {
+                CV_Error(Error::StsError, "Backend equality expected");
+            }
+        }
+
+        State.resize(v_captures.size());
+
+        if(v_captures[0].waitAnyInterior(v_captures, State, timeout_nanosec))
+            return true;
+    }
+    else
+        CV_Error(Error::StsError, "Vector is empty");
+    return false;
+}
+
+bool VideoCapture::waitAnyInterior(std::vector<VideoCapture>& v_captures, std::vector<int>& state,  const int & timeout)
+{
+    std::vector<IVideoCapture* > ipointers;
+
+    for (unsigned int cupture_num = 0; cupture_num < v_captures.size(); ++cupture_num)
+    {
+        ipointers.push_back(v_captures[cupture_num].icap);
+    }
+
+    if(!v_captures[0].icap->camerasPoll(ipointers, state, timeout))
+        return false;
+
+    for (unsigned int cupture_num = 0; cupture_num < state.size(); ++cupture_num)
+    {
+        if(state[cupture_num] == CAP_CAM_READY)
+        {
+            v_captures[cupture_num].icap->grabFrame();
+        }
+        if(state[cupture_num] == CAP_CAM_ERROR)
+        {
+            //printf("error cam no. %d \n", cupture_num);
+            //perror("VIDIOC_QBUF");
+        }
+        if(state[cupture_num] == CAP_CAM_NOT_READY)
+        {
+            //printf("Timeout\n");
+        }
+    }
+    return true;
+}
+
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     CV_INSTRUMENT_REGION();

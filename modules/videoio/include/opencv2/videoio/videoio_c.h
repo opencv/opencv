@@ -83,6 +83,8 @@ CVAPI(CvCapture*) cvCreateCameraCapture( int index );
 */
 CVAPI(int) cvGrabFrame( CvCapture* capture );
 
+CVAPI(bool) cvCamerasPoll( const std::vector<CvCapture * >& pointers, std::vector<int>& state, const int64_t & timeout );
+
 /** @brief get the frame grabbed with cvGrabFrame(..)
 
   This function may apply some frame processing like

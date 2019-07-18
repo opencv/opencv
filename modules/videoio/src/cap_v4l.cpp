@@ -228,6 +228,8 @@ make & enjoy!
 #include <sys/ioctl.h>
 #include <limits>
 
+#include <poll.h>
+
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
 #include <linux/videodev2.h>
@@ -343,6 +345,11 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+
+    virtual bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, const int64_t &) CV_OVERRIDE;
+    virtual int getDeviceHandle() CV_OVERRIDE;
+    virtual bool camerasPoll(const std::vector<CvCapture*>&, std::vector<int>&, const int64_t &)  CV_OVERRIDE;
+    virtual bool setFirstCapture() CV_OVERRIDE;
 
     CvCaptureCAM_V4L();
     virtual ~CvCaptureCAM_V4L();
@@ -879,6 +886,108 @@ bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter) const
             perror("select");
     }
     return true;
+}
+
+int CvCaptureCAM_V4L::getDeviceHandle()
+{
+    return deviceHandle;
+}
+
+bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, std::vector<int>& state, const int64_t & timeout)
+{
+     if(!deviceHandles.empty())
+     {
+        const auto poll_flags = POLLIN | POLLRDNORM | POLLERR;
+
+        std::vector<pollfd> fds;
+
+        for (unsigned int dhand_num = 0; dhand_num < deviceHandles.size(); ++dhand_num)
+        {
+            if(deviceHandles[dhand_num])
+            {
+                fds.push_back(pollfd{deviceHandles[dhand_num], poll_flags, 0});
+            }
+            else
+                return false;
+        }
+        int ret = poll(fds.data(), fds.size(), timeout);
+        if(ret == -1)
+            return false;
+
+        for (unsigned int struct_num = 0; struct_num < fds.size(); ++struct_num)
+        {
+            if (ret != 0)
+            {
+                if((fds[struct_num].revents & (POLLIN | POLLRDNORM)) != 0)
+                {
+                    state[struct_num] = CAP_CAM_READY;
+                }
+                if((fds[struct_num].revents & POLLERR) != 0)
+                {
+                    state[struct_num] = CAP_CAM_ERROR;
+                }
+            }
+            else
+                state[struct_num] = CAP_CAM_NOT_READY;
+        }
+     }
+
+    return true;
+}
+
+bool CvCaptureCAM_V4L::camerasPoll(const std::vector<CvCapture*>& pointers, std::vector<int>& state, const int64_t & timeout)
+{
+    if(!pointers.empty())
+    {
+        std::vector<int> deviceHandles;
+
+        for (unsigned int ptr_num = 0; ptr_num < pointers.size(); ++ptr_num)
+        {
+            if(pointers[ptr_num])
+            {
+                deviceHandles.push_back(pointers[ptr_num]->getDeviceHandle());
+                pointers[ptr_num]->setFirstCapture();
+            }
+            else
+                return false;
+        }
+        if(pointers[0]->deviceHandlePoll(deviceHandles, state, timeout))
+                return true;
+    }
+    return false;
+}
+
+bool CvCaptureCAM_V4L::setFirstCapture()
+{
+    if (FirstCapture)
+    {
+        bufferIndex = -1;
+        for (__u32 index = 0; index < req.count; ++index)
+        {
+            v4l2_buffer buf = v4l2_buffer();
+
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_MMAP;
+            buf.index = index;
+
+            if (!tryIoctl(VIDIOC_QBUF, &buf))
+            {
+                perror("VIDIOC_QBUF");
+                return false;
+            }
+        }
+
+        if(!streaming(true))
+        {
+            /* error enabling the stream */
+            perror("VIDIOC_STREAMON");
+            return false;
+        }
+        /* preparation is ok */
+        FirstCapture = false;
+        return true;
+    }
+    return false;
 }
 
 bool CvCaptureCAM_V4L::grabFrame()
