@@ -1,0 +1,18 @@
+reduce_mean:
+;
+inputoutput"
+ReduceMean*
+axes@@ *
+keepdims reduce_meanZ
+input
+
+
+
+
+b 
+output
+
+
+
+
+B
