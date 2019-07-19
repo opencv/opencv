@@ -274,8 +274,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
-               (_explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)));
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -487,64 +486,23 @@ public:
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-        if (_explicitSizes)
-        {
-            InferenceEngine::Builder::PriorBoxClusteredLayer ieLayer(name);
-            ieLayer.setSteps({_stepY, _stepX});
+        InferenceEngine::Builder::PriorBoxClusteredLayer ieLayer(name);
+        ieLayer.setSteps({_stepY, _stepX});
 
-            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
-            ieLayer.setOffset(_offsetsX[0]);
+        CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
+        ieLayer.setOffset(_offsetsX[0]);
 
-            ieLayer.setClip(_clip);
-            ieLayer.setFlip(false);  // We already flipped aspect ratios.
+        ieLayer.setClip(_clip);
+        ieLayer.setFlip(false);  // We already flipped aspect ratios.
 
-            InferenceEngine::Builder::Layer l = ieLayer;
+        InferenceEngine::Builder::Layer l = ieLayer;
 
-            CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty(), !_variance.empty());
-            CV_Assert(_boxWidths.size() == _boxHeights.size());
-            l.getParameters()["width"] = _boxWidths;
-            l.getParameters()["height"] = _boxHeights;
-            l.getParameters()["variance"] = _variance;
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else
-        {
-            InferenceEngine::Builder::PriorBoxLayer ieLayer(name);
-
-            CV_Assert(!_explicitSizes);
-
-            CV_Assert_N(_minSize.size() == 1, _maxSize.size() <= 1);
-            ieLayer.setMinSize(_minSize[0]);
-            if (_maxSize.size() == 1)
-                ieLayer.setMaxSize(_maxSize[0]);
-
-            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
-            ieLayer.setOffset(_offsetsX[0]);
-
-            ieLayer.setClip(_clip);
-            ieLayer.setFlip(false);  // We already flipped aspect ratios.
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            if (_stepX == _stepY)
-            {
-                l.getParameters()["step"] = _stepX;
-                l.getParameters()["step_h"] = 0.0f;
-                l.getParameters()["step_w"] = 0.0f;
-            }
-            else
-            {
-                l.getParameters()["step"] = 0.0f;
-                l.getParameters()["step_h"] = _stepY;
-                l.getParameters()["step_w"] = _stepX;
-            }
-            if (!_aspectRatios.empty())
-            {
-                l.getParameters()["aspect_ratio"] = _aspectRatios;
-            }
-            CV_Assert(!_variance.empty());
-            l.getParameters()["variance"] = _variance;
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
+        CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty(), !_variance.empty());
+        CV_Assert(_boxWidths.size() == _boxHeights.size());
+        l.getParameters()["width"] = _boxWidths;
+        l.getParameters()["height"] = _boxHeights;
+        l.getParameters()["variance"] = _variance;
+        return Ptr<BackendNode>(new InfEngineBackendNode(l));
     }
 #endif  // HAVE_INF_ENGINE
 
