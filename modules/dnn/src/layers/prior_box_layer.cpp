@@ -126,36 +126,6 @@ public:
         }
     }
 
-    void getMinSize(const LayerParams &params)
-    {
-        DictValue minSizeParameter;
-        bool minSizeRetieved = getParameterDict(params, "min_size", minSizeParameter);
-        if (!minSizeRetieved) {
-            _minSize.push_back(0);
-            return;
-        }
-
-        for (int i = 0; i < minSizeParameter.size(); ++i)
-        {
-            float min = minSizeParameter.get<float>(i);
-            _minSize.push_back(min);
-        }
-    }
-
-    void getMaxSize(const LayerParams &params)
-    {
-        DictValue maxSizeParameter;
-        bool maxSizeRetieved = getParameterDict(params, "max_size", maxSizeParameter);
-        if (!maxSizeRetieved)
-            return;
-
-        for (int i = 0; i < maxSizeParameter.size(); ++i)
-        {
-            float maxSize = maxSizeParameter.get<float>(i);
-            _maxSize.push_back(maxSize);
-        }
-    }
-
     static void getParams(const std::string& name, const LayerParams &params,
                           std::vector<float>* values)
     {
@@ -217,7 +187,7 @@ public:
         _aspectRatios.clear();
 
         _minSize.clear();
-        getMinSize(params);
+        getParams("min_size", params, &_minSize);
 
         getAspectRatios(params);
         getVariance(params);
@@ -225,7 +195,7 @@ public:
         if (params.has("max_size"))
         {
             _maxSize.clear();
-            getMaxSize(params);
+            getParams("max_size", params, &_maxSize);
             CV_Assert(_minSize.size() == _maxSize.size());
             for (int i = 0; i < _maxSize.size(); i++)
                 CV_Assert(_minSize[i] < _maxSize[i]);
@@ -247,6 +217,7 @@ public:
         }
         else
         {
+            CV_Assert(!_minSize.empty());
             for (int i = 0; i < _minSize.size(); ++i)
             {
                 float minSize = _minSize[i];
@@ -308,7 +279,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
-                _minSize.size() == 1 && _maxSize.size() <= 1);
+               (_explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
