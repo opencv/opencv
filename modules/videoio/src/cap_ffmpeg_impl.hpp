@@ -891,7 +891,14 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
-    int err = avformat_open_input(&ic, _filename, NULL, &dict);
+    AVInputFormat* input_format = NULL;
+    AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
+    if (entry != 0)
+    {
+      input_format = av_find_input_format(entry->value);
+    }
+
+    int err = avformat_open_input(&ic, _filename, input_format, &dict);
 #else
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
 #endif
