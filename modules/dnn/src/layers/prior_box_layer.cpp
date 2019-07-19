@@ -184,11 +184,7 @@ public:
         _clip = getParameter<bool>(params, "clip", 0, false, true);
         _bboxesNormalized = getParameter<bool>(params, "normalized_bbox", 0, false, true);
 
-        _aspectRatios.clear();
-
-        _minSize.clear();
         getParams("min_size", params, &_minSize);
-
         getAspectRatios(params);
         getVariance(params);
 
@@ -221,6 +217,7 @@ public:
             for (int i = 0; i < _minSize.size(); ++i)
             {
                 float minSize = _minSize[i];
+                CV_Assert(minSize > 0);
                 _boxWidths.push_back(minSize);
                 _boxHeights.push_back(minSize);
 
@@ -239,7 +236,6 @@ public:
                     _boxHeights.push_back(minSize / arSqrt);
                 }
             }
-            CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty());
         }
         CV_Assert(_boxWidths.size() == _boxHeights.size());
         _numPriors = _boxWidths.size();
