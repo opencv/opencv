@@ -131,6 +131,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
         TensorSpan<T> output, TensorView<T> input,
         const std::vector<std::pair<std::size_t, std::size_t>>& ranges);
 
+    template <class T>
+    void sigmoid_strided(const Stream& stream, span<T> output, view<T> input, std::size_t n, std::size_t stride, std::size_t offset);
+
+    template <class T>
+    void softmax_strided(const Stream& stream, span<T> output, view<T> input, std::size_t n, std::size_t stride, std::size_t offset);
+
+    template <class T>
+    void region_finalize(const Stream& stream, span<T> output, view<T> input, view<T> bias,
+        T object_prob_cutoff, T class_prob_cutoff,
+        std::size_t height_norm, std::size_t width_norm,
+        std::size_t rows, std::size_t cols,
+        std::size_t boxes_per_cell,
+        std::size_t box_size,
+        std::size_t classes);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */

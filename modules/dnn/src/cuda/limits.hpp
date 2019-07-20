@@ -1,0 +1,37 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+#ifndef OPENCV_DNN_SRC_CUDA_LIMITS_HPP
+#define OPENCV_DNN_SRC_CUDA_LIMITS_HPP
+
+#include <cuda_runtime.h>
+#include <cuda_fp16.h>
+
+#include <cfloat>
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
+
+    namespace gpu {
+        template <class T>
+        struct numeric_limits;
+
+        template <>
+        struct numeric_limits<__half> {
+            __device__ static __half min() { return 0.0000610; }
+        };
+
+        template <>
+        struct numeric_limits<float> {
+            __device__ static float min() { return FLT_MIN; }
+        };
+
+        template <>
+        struct numeric_limits<double> {
+            __device__ static double min() { return DBL_MIN; }
+        };
+    }
+
+}}}} /*  cv::dnn::cuda4dnn::csl */
+
+#endif /* OPENCV_DNN_SRC_CUDA_LIMITS_HPP */

@@ -49,6 +49,12 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/region.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -85,6 +91,12 @@ public:
         CV_Assert(useLogistic || useSoftmax);
         if (params.get<bool>("softmax_tree", false))
             CV_Error(cv::Error::StsNotImplemented, "Yolo9000 is not implemented");
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+            (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -331,6 +343,72 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        cudaNode->forward(inputs, outputs, workspace);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        if (coords != 4)
+            CV_Error(Error::StsNotImplemented, "Only upright rectangular boxes are supported in RegionLayer.");
+
+        std::size_t height_norm, width_norm;
+        if (inputs.size() == 1)
+        {
+            auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+            auto input_shape = input_wrapper->getShape();
+            height_norm = input_shape[1];
+            width_norm = input_shape[2];
+        }
+        else
+        {
+            auto input_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+            auto input_shape = input_wrapper->getShape();
+            CV_Assert(input_shape.size() == 4);
+            height_norm = input_shape[2];
+            width_norm = input_shape[3];
+        }
+
+        cuda4dnn::squash_method squash;
+        if(useLogistic)
+            squash = cuda4dnn::squash_method::sigmoid;
+        else if (useSoftmax)
+            squash = cuda4dnn::squash_method::softmax;
+
+        /* exactly one must be true */
+        CV_Assert((useLogistic || useSoftmax) && !(useLogistic && useSoftmax));
+
+        cuda4dnn::RegionConfiguration<float> config;
+        config.squash = squash;
+        config.classes = classes;
+        config.boxes_per_cell = anchors;
+
+        config.height_norm = height_norm;
+        config.width_norm = width_norm;
+
+        config.object_prob_cutoff = (classfix == -1) ? 0.5 : 0.0;
+        config.class_prob_cutoff = thresh;
+
+        config.nms_iou_threshold = nmsThreshold;
+
+        cudaNode = make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(stream), blobs[0], config);
+    }
+
+    std::unique_ptr<CUDABackendNode> cudaNode;
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
