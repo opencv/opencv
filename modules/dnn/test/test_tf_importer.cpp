@@ -350,11 +350,6 @@ TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
     runTensorFlowNet("l2_normalize_3d");
 }
 
-TEST_P(Test_TensorFlow_layers, Split)
-{
-    runTensorFlowNet("split");
-}
-
 class Test_TensorFlow_nets : public DNNTestLayer {};
 
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
@@ -682,6 +677,9 @@ TEST_P(Test_TensorFlow_layers, lstm)
 
 TEST_P(Test_TensorFlow_layers, split)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2);
+    runTensorFlowNet("split");
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     runTensorFlowNet("split_equals");
