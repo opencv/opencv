@@ -141,14 +141,14 @@ public:
     inline operator T* () CV_NOEXCEPT { return ptr; }
     inline operator /*const*/ T* () const CV_NOEXCEPT { return (T*)ptr; }  // there is no const correctness in Gst C API
 
-    inline T* get() CV_NOEXCEPT { return ptr; }
-    inline /*const*/ T* get() const CV_NOEXCEPT { CV_Assert(ptr); return (T*)ptr; }  // there is no const correctness in Gst C API
+    T* get() { CV_Assert(ptr); return ptr; }
+    /*const*/ T* get() const { CV_Assert(ptr); return (T*)ptr; }  // there is no const correctness in Gst C API
 
-    inline const T* operator -> () const { CV_Assert(ptr); return ptr; }
+    const T* operator -> () const { CV_Assert(ptr); return ptr; }
     inline operator bool () const CV_NOEXCEPT { return ptr != NULL; }
     inline bool operator ! () const CV_NOEXCEPT { return ptr == NULL; }
 
-    inline T** getRef() { CV_Assert(ptr == NULL); return &ptr; }
+    T** getRef() { CV_Assert(ptr == NULL); return &ptr; }
 
     inline GSafePtr& reset(T* p) CV_NOEXCEPT // pass result of functions with "transfer floating" ownership
     {
@@ -1221,7 +1221,21 @@ public:
           num_frames(0), framerate(0)
     {
     }
-    virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE { close(); }
+    virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE
+    {
+        try
+        {
+            close();
+        }
+        catch (const std::exception& e)
+        {
+            CV_WARN("C++ exception in writer destructor: " << e.what());
+        }
+        catch (...)
+        {
+            CV_WARN("Unknown exception in writer destructor. Ignore");
+        }
+    }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
@@ -1253,7 +1267,11 @@ void CvVideoWriter_GStreamer::close_()
     {
         handleMessage(pipeline);
 
-        if (gst_app_src_end_of_stream(GST_APP_SRC(source.get())) != GST_FLOW_OK)
+        if (!(bool)source)
+        {
+            CV_WARN("No source in GStreamer pipeline. Ignore");
+        }
+        else if (gst_app_src_end_of_stream(GST_APP_SRC(source.get())) != GST_FLOW_OK)
         {
             CV_WARN("Cannot send EOS to GStreamer pipeline");
         }
