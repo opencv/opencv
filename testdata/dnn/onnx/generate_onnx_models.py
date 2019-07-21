@@ -49,7 +49,28 @@ def save_data_and_model(name, input, model):
     with open(models_files, 'wb') as file:
         file.write(model_def.SerializeToString())
 
+def save_onnx_data_and_model(input, output, name, operation, *args, **kwargs):
+    print(name + " input has sizes",  input.shape)
+    input_files = os.path.join("data", "input_" + name)
+    input = input.astype(np.float32)
+    np.save(input_files, input.data)
+
+    print(name + " output has sizes", output.shape)
+    print()
+    output_files =  os.path.join("data", "output_" + name)
+    output = output.astype(np.float32)
+    np.save(output_files, np.ascontiguousarray(output.data))
+
+    models_files = os.path.join("models", name + ".onnx")
+    X = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, input.shape)
+    Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, output.shape)
+    node = onnx.helper.make_node(operation, inputs=['input'], outputs=['output'], *args, **kwargs)
+    graph = onnx.helper.make_graph([node], name, [X], [Y])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, models_files)
+
 torch.manual_seed(0)
+np.random.seed(0)
 
 input = Variable(torch.randn(1, 3, 10, 9))
 max_pool = nn.MaxPool2d(kernel_size=(5,3), stride=3, padding=1, dilation=1)
@@ -396,3 +417,11 @@ save_data_and_model("deconv3d_pad", input, deconv)
 input = Variable(torch.randn(1, 3, 4, 5, 3))
 deconv = nn.ConvTranspose3d(3, 5, kernel_size=(2, 3, 1), stride=(2, 2, 2), padding=(1, 2, 1), output_padding=1, bias=True)
 save_data_and_model("deconv3d_adjpad", input, deconv)
+
+input = np.random.rand(1, 3, 4, 2)
+output = np.mean(input, axis=(2, 3), keepdims=True)
+save_onnx_data_and_model(input, output, 'reduce_mean', 'ReduceMean', axes=(2, 3), keepdims=True)
+
+input = np.random.rand(1, 3, 4, 2, 3)
+output = np.mean(input, axis=(3, 4), keepdims=True)
+save_onnx_data_and_model(input, output, 'reduce_mean3d', 'ReduceMean', axes=(3, 4), keepdims=True)
