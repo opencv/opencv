@@ -82,7 +82,7 @@ namespace cv { namespace gapi { namespace own {
             //! dimensions (ND-case)
             std::vector<int> dims;
         };
-    }
+    } // namespace detail
     //concise version of cv::Mat suitable for GAPI needs (used when no dependence on OpenCV is required)
     class Mat : public detail::MatHeader{
     public:
@@ -111,6 +111,9 @@ namespace cv { namespace gapi { namespace own {
         : MatHeader (_dims, _type, _data)
         {}
 
+        Mat(std::vector<int> &&_dims, int _type, void* _data)
+        : MatHeader (std::move(_dims), _type, _data)
+        {}
 
         Mat(Mat const& src, const Rect& roi )
         : Mat(src)

@@ -4,13 +4,11 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-
 #ifndef OPENCV_GAPI_GIEBACKEND_HPP
 #define OPENCV_GAPI_GIEBACKEND_HPP
 
-#include <map>                // map
-#include <unordered_map>      // unordered_map
-#include <tuple>              // tuple
+#ifdef HAVE_INF_ENGINE
+
 #include <ade/util/algorithm.hpp> // type_list_index
 #include <inference_engine.hpp>
 
@@ -66,4 +64,5 @@ public:
 
 }}}
 
+#endif // HAVE_INF_ENGINE
 #endif // OPENCV_GAPI_GIEBACKEND_HPP

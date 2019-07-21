@@ -253,8 +253,8 @@ public:
                         public detail::G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
-#define GAPI_OPERATION G_TYPED_KERNEL
-#define GAPI_OPERATION_M G_TYPED_KERNEL_M
+#define G_API_OP   G_TYPED_KERNEL
+#define G_API_OP_M G_TYPED_KERNEL_M
 
 namespace cv
 {

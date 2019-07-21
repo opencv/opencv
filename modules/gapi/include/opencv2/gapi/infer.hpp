@@ -103,7 +103,7 @@ struct GInferList final
 } // namespace cv
 
 // FIXME: Probably the <API> signature makes a function/tuple/function round-trip
-#define GAPI_NETWORK(Class, API, Tag)                                   \
+#define G_API_NET(Class, API, Tag)                                      \
     struct Class final: public cv::GNetworkType<Class, std::function API> { \
         static constexpr const char * tag() { return Tag; }             \
     }

@@ -4,9 +4,10 @@
 //
 // Copyright (C) 2019 Intel Corporation
 
-
 #ifndef OPENCV_GAPI_INFER_IE_HPP
 #define OPENCV_GAPI_INFER_IE_HPP
+
+#ifdef HAVE_INF_ENGINE
 
 #include <unordered_map>
 #include <string>
@@ -14,7 +15,7 @@
 #include <tuple> // tuple, tuple_size
 
 #include <opencv2/gapi/opencv_includes.hpp>
-#include <opencv2/gapi/infer.hpp>  // [needed at all?]
+#include <opencv2/gapi/util/any.hpp>
 
 namespace cv {
 namespace gapi {
@@ -87,9 +88,9 @@ public:
     }
 
     // BEGIN(G-API's network parametrization API)
-    GBackend    backend() const { return cv::gapi::ie::backend();  }
-    std::string tag()     const { return Net::tag(); }
-    util::any   params()  const { return { desc }; }
+    GBackend      backend() const { return cv::gapi::ie::backend();  }
+    std::string   tag()     const { return Net::tag(); }
+    cv::util::any params()  const { return { desc }; }
     // END(G-API's network parametrization API)
 
 protected:
@@ -99,5 +100,7 @@ protected:
 } // namespace ie
 } // namespace gapi
 } // namespace cv
+
+#endif // HAVE_INF_ENGINE
 
 #endif // OPENCV_GAPI_INFER_HPP

@@ -15,6 +15,7 @@ if (NOT HAVE_CXX11 OR NOT TARGET ade)
 endif()
 
 set(the_description "OpenCV G-API Core Module")
+
 ocv_add_module(gapi opencv_imgproc)
 
 file(GLOB gapi_ext_hdrs
@@ -106,8 +107,7 @@ ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 # Note `ade` is not a module name but link dependency for ${the_module}
 # (which is opencv_gapi)
 ocv_create_module(ade ${INF_ENGINE_TARGET})
-
-ocv_add_accuracy_tests()
+ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)
