@@ -188,7 +188,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         void channelwise_relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, TensorView<T> slope) {
             CV_Assert(is_shape_same(dest, src));
             CV_Assert(src.get_axis_size(1) == slope.size());
-            std::size_t inner_size = src.size() / src.get_axis_size(0);
+            std::size_t inner_size = src.size_range(2, src.rank());
             kernels::axiswise_relu<T>(stream, dest, src, slope, inner_size);
         }
 

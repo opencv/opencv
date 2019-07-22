@@ -85,6 +85,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         ChannelwiseReLUOp(csl::Stream stream_, const Mat& slope)
             : stream(std::move(stream_))
         {
+            CV_Assert(!slope.empty());
             slopeTensor = csl::makeTensorHeader<T>(slope);
             csl::copyMatToTensor<T>(slopeTensor, slope, stream);
         }

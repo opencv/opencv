@@ -103,8 +103,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void axiswise_relu(span<T> output, view<T> input, size_type inner_size, view<T> slope) {
             for (auto i : grid_stride_range(output.size())) {
-                const index_type c = (i % inner_size) / static_cast<size_type>(slope.size());
-                output[i] = input[i] < T(0) ? input[i] * slope[c] : input[i];
+                const index_type c = (i / inner_size) % static_cast<size_type>(slope.size());
+                output[i] = input[i] > T(0) ? input[i] : input[i] * slope[c];
             }
         }
 
