@@ -561,7 +561,7 @@ TEST(Test_Caffe, shared_weights)
 typedef testing::TestWithParam<tuple<std::string, Target> > opencv_face_detector;
 TEST_P(opencv_face_detector, Accuracy)
 {
-    std::string proto = findDataFile("dnn/opencv_face_detector.prototxt", false);
+    std::string proto = findDataFile("dnn/opencv_face_detector.prototxt");
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
@@ -583,6 +583,29 @@ TEST_P(opencv_face_detector, Accuracy)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
+}
+
+// False positives bug for large faces: https://github.com/opencv/opencv/issues/15106
+TEST_P(opencv_face_detector, issue_15106)
+{
+    std::string proto = findDataFile("dnn/opencv_face_detector.prototxt");
+    std::string model = findDataFile(get<0>(GetParam()), false);
+    dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
+
+    Net net = readNetFromCaffe(proto, model);
+    Mat img = imread(findDataFile("cv/shared/lena.png"));
+    img = img.rowRange(img.rows / 4, 3 * img.rows / 4).colRange(img.cols / 4, 3 * img.cols / 4);
+    Mat blob = blobFromImage(img, 1.0, Size(300, 300), Scalar(104.0, 177.0, 123.0), false, false);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    net.setInput(blob);
+    // Output has shape 1x1xNx7 where N - number of detections.
+    // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
+    Mat out = net.forward();
+    Mat ref = (Mat_<float>(1, 7) << 0, 1, 0.9149431, 0.30424616, 0.26964942, 0.88733053, 0.99815309);
+    normAssertDetections(ref, out, "", 0.2, 6e-5, 1e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
