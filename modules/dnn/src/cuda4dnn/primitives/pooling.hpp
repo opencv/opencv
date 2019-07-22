@@ -191,7 +191,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             else
             {
                 /* the pooling operation will be seeing the transformed input */
-                auto transformed_input_shape = transformedInput.shape();
+                auto transformed_input_shape = transformedInput.shape_as_vector();
                 params.input_shape.assign(std::begin(transformed_input_shape), std::end(transformed_input_shape));
             }
 

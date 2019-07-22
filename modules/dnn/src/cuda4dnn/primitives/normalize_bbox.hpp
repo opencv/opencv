@@ -90,22 +90,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
-            auto input_shape = input_wrapper->getShape();
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            std::size_t outer_size = 1;
-            for (int i = 0; i < axis_start; i++)
-                outer_size *= input_shape[i];
-
-            std::size_t mid_size = 1;
-            for (int i = axis_start; i < axis_end; i++)
-                mid_size *= input_shape[i];
-
-            std::size_t inner_size = 1;
-            for (int i = axis_end; i < input_shape.size(); i++)
-                inner_size *= input_shape[i];
+            std::size_t outer_size = input.size_range(0, axis_start);
+            std::size_t mid_size = input.size_range(axis_start, axis_end);
+            std::size_t inner_size = input.size_range(axis_end, input.rank());
 
             auto scratch_ptr = reinterpret_cast<T*>(csl::WorkspaceAccessor::get(workspace).get());
             auto scratch = csl::span<T>(csl::DevicePtr<T>(scratch_ptr), workspace.size());

@@ -54,9 +54,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                std::size_t batch_size = 1;
-                for (int j = 0; j < axis; j++)
-                    batch_size *= input.get_axis_size(j);
+                std::size_t batch_size = input.size_range(0, axis);
 
                 auto input_size = input.size() / batch_size;
                 CV_Assert(input_size == weightsTensor.get_axis_size(-1));

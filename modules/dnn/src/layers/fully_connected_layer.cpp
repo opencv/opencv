@@ -442,11 +442,7 @@ public:
     {
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        auto flatten_start_axis = [&] {
-            auto actual_dims = input_wrapper->getShape().size();
-            auto extra_dims = input_wrapper->getRank() - actual_dims;
-            return clamp(axis, actual_dims) + extra_dims;
-        }();
+        auto flatten_start_axis = clamp(axis, input_wrapper->getRank());
 
         auto biasMat_ = bias ? biasMat : Mat();
         cudaNode = make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(stream), std::move(cublas_handle), flatten_start_axis, weightsMat, biasMat_);

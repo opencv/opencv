@@ -55,7 +55,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         void permute(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, const std::vector<int>& order_) {
             std::vector<std::size_t> order;
             for (const auto& sz : order_)
-                order.push_back(clamp_axis(sz, src.rank));
+                order.push_back(clamp_axis(sz, src.rank()));
             csl::kernels::permute(stream, dest, src, order);
         }
 
@@ -146,19 +146,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         void softmax(const cudnn::Handle& handle, TensorSpan<T> output, TensorView<T> input, int channel_axis, bool log) {
             CV_Assert(is_shape_same(output, input));
 
-            channel_axis = clamp_axis(channel_axis, input.rank);
+            channel_axis = clamp_axis(channel_axis, input.rank());
 
-            std::size_t outer_size = 1;
-            for (int j = 0; j < channel_axis; j++)
-                outer_size *= input.get_axis_size(j);
-
+            std::size_t outer_size = input.size_range(0, channel_axis);
             auto channel_size = input.get_axis_size(channel_axis);
+            std::size_t inner_size = input.size_range(channel_axis + 1, input.rank());
 
-            std::size_t inner_size = 1;
-            for (int j = channel_axis + 1; j < input.rank; j++)
-                inner_size *= input.get_axis_size(j);
-
-            std::array<std::size_t, 4> shape = { outer_size, channel_size, 1 , inner_size };
+            std::array<std::size_t, 4> shape = { outer_size, channel_size, 1, inner_size };
 
             using cudnn::TensorDescriptor;
             auto inputDesc = TensorDescriptor<T>(shape);
@@ -429,8 +423,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             cudnn::LRNForward<T>(
                 cudnnHandle,
                 lrnDesc,
-                TensorDescriptor(input.shape()), input.get(),
-                1.0, 0.0, TensorDescriptor(output.shape()), output.get()
+                TensorDescriptor(input.shape_as_vector()), input.get(),
+                1.0, 0.0, TensorDescriptor(output.shape_as_vector()), output.get()
             );
         }
 
@@ -462,8 +456,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             cudnn::transform<T>(
                 cudnnHandle,
                 transDesc,
-                TensorDescriptor(input.shape()), input.get(),
-                TensorDescriptor(output.shape()), output.get()
+                TensorDescriptor(input.shape_as_vector()), input.get(),
+                TensorDescriptor(output.shape_as_vector()), output.get()
             );
         }
 

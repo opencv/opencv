@@ -78,17 +78,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         TensorSpan<T> output, TensorView<T> input,
         const std::vector<std::size_t>& order)
     {
-        CV_Assert(output.rank == input.rank);
+        CV_Assert(output.rank() == input.rank());
+        CV_Assert(input.rank() >= order.size());
         CV_Assert(input.size() == output.size());
         CV_Assert(order.size() >= 3 && order.size() <= 5);
-        CV_Assert(input.rank >= order.size());
-        CV_Assert(output.rank >= order.size());
         CV_Assert(get_effective_rank(input) <= order.size());
         CV_Assert(get_effective_rank(output) <= order.size());
 
-        int rank = output.rank;
-        auto inShape = input.shape();
-        auto outShape = output.shape();
+        int rank = output.rank();
+        auto inShape = input.shape_as_vector();
+        auto outShape = output.shape_as_vector();
 
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;
@@ -99,8 +98,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::copy(std::begin(outShape) + 1, std::end(outShape), std::begin(outStride));
         /* dim[0], dim[1], ..., dim[-1], 1 */
 
-        std::partial_sum(inStride.rbegin(), inStride.rend(), inStride.rbegin(), std::multiplies<int>());
-        std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<int>());
+        std::partial_sum(inStride.rbegin(), inStride.rend(), inStride.rbegin(), std::multiplies<std::size_t>());
+        std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<std::size_t>());
         /* stride[0], stride[1], ..., stride[-2], 1 */
 
         if (order.size() != rank) {

@@ -313,12 +313,7 @@ public:
     {
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        auto channel_axis = [&] {
-            auto actual_dims = input_wrapper->getShape().size();
-            auto extra_dims = input_wrapper->getRank() - actual_dims;
-            return clamp(axisRaw, actual_dims) + extra_dims;
-        }();
-
+        auto channel_axis = clamp(axisRaw, input_wrapper->getRank());
         cudaNode = make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(cudnn_handle), channel_axis, logSoftMax);
     }
 

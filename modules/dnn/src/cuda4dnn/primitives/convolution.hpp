@@ -174,7 +174,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             else
             {
                 /* the convolution operation will be seeing the transformed input */
-                auto transformed_input_shape = transformedInput.shape();
+                auto transformed_input_shape = transformedInput.shape_as_vector();
                 params.input_shape.assign(std::begin(transformed_input_shape), std::end(transformed_input_shape));
             }
 
@@ -216,7 +216,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             convoluter.convolve(output, input, filtersTensor, workspace);
             if (!biasTensor.empty())
             {
-                std::size_t inner_size = total(output_wrapper->getShape(), 2, -1);
+                std::size_t inner_size = output.size_range(2, output.rank());
                 csl::kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
             }
         }

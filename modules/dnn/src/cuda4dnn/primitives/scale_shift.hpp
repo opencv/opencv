@@ -77,25 +77,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_CheckEQ(weights.size(), bias.size(), "weights and bias size are not equal");
             }
 
-            auto input_shape = input_wrapper->getShape();
-
             /* the weights/bias might require broadcasting to scale/shift */
             const int end_axis = [&] {
-                for (int endAxis = axis + 1; endAxis <= input_shape.size(); ++endAxis)
+                for (int endAxis = axis + 1; endAxis <= input.rank(); endAxis++)
                 {
-                    std::size_t size = 1;
-                    for (int i = axis; i < endAxis; i++)
-                        size *= input_shape[i];
-
+                    std::size_t size = input.size_range(axis, endAxis);
                     if (size == numParams)
                         return endAxis;
                 }
                 CV_Assert(0 /* invalid weights matrix */);
             }();
 
-            std::size_t inner_size = 1;
-            for (int i = end_axis; i < input_shape.size(); i++)
-                inner_size *= input_shape[i];
+            std::size_t inner_size = input.size_range(end_axis, input.rank());
 
             if (!weights.empty() && !bias.empty())
                 csl::kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weights, bias);

@@ -43,9 +43,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            std::size_t inner_size = 1;
-            for (int i = 2; i < input.rank; i++)
-                inner_size *= input.get_axis_size(i);
+            std::size_t inner_size = input.size_range(2, input.rank());
 
             csl::kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weightsTensor, biasTensor);
         }

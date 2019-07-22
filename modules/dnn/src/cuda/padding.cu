@@ -97,13 +97,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         TensorSpan<T> output, TensorView<T> input,
         const std::vector<std::pair<std::size_t, std::size_t>>& ranges)
     {
-        CV_Assert(output.rank == input.rank);
-        CV_Assert(output.rank >= 3 && output.rank <= 5);
+        CV_Assert(output.rank() == input.rank());
+        CV_Assert(output.rank() >= 3 && output.rank() <= 5);
         CV_Assert(ranges.size() > 0 && ranges.size() < 5);
 
-        int rank = output.rank;
-        auto inShape = input.shape();
-        auto outShape = output.shape();
+        auto rank = output.rank();
+        auto inShape = input.shape_as_vector();
+        auto outShape = output.shape_as_vector();
 
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;

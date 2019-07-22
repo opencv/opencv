@@ -305,12 +305,7 @@ public:
     {
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        auto concat_axis = [&] {
-            auto actual_dims = input_wrapper->getShape().size();
-            auto extra_dims = input_wrapper->getRank() - actual_dims;
-            return clamp(axis, actual_dims) + extra_dims;
-        }();
-
+        auto concat_axis = clamp(axis, input_wrapper->getRank());
         cudaNode = make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(stream), concat_axis, padding);
     }
 

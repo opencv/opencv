@@ -8,6 +8,7 @@
 #ifdef HAVE_CUDA
 #include "cuda4dnn/csl/stream.hpp"
 #include "cuda4dnn/csl/tensor.hpp"
+#include "cuda4dnn/csl/memory.hpp"
 #include "cuda4dnn/cxx_utils/make_unique.hpp"
 #endif
 
@@ -214,7 +215,6 @@ namespace cv {
         class GenericCUDABackendWrapper final : public CUDABackendWrapper {
         public:
             using value_type = T;
-            using tensor_type       = cuda4dnn::csl::Tensor<value_type>;
             using tensor_span_type  = cuda4dnn::csl::TensorSpan<value_type>;
             using tensor_view_type  = cuda4dnn::csl::TensorView<value_type>;
 
@@ -229,23 +229,23 @@ namespace cv {
             GenericCUDABackendWrapper(Mat& m)
                 : CUDABackendWrapper(targetId)
             {
-                CV_Assert(m.isContinuous());
-                CV_Assert(m.size.dims() <= tensor_type::rank);
-
                 shape = cv::dnn::shape(m);
 
                 shared_block = std::make_shared<shared_block_type>();
                 shared_block->host_dirty = true;
                 shared_block->device_dirty = false;
+
                 shared_block->host = m;
                 shared_block->memGuard = cuda4dnn::csl::MemoryLockGuard(m.data, m.total() * m.elemSize());
-                shared_block->parent = cuda4dnn::csl::makeTensorHeader<T>(m);
+
+                shared_block->device = cuda4dnn::csl::ManagedPtr<T>(m.total());
             }
 
             GenericCUDABackendWrapper(const Ptr<BackendWrapper>& base_, const MatShape& shape_)
                 : CUDABackendWrapper(targetId)
             {
                 const Ptr<GenericCUDABackendWrapper> base = base_.dynamicCast<GenericCUDABackendWrapper>();
+                CV_Assert(base);
 
                 shape = shape_;
                 shared_block = base->shared_block;
@@ -272,7 +272,7 @@ namespace cv {
                      *
                      * We use a view to ensure that only the required region of memory is copied.
                      */
-                    auto view = tensor_view_type(shared_block->parent, 0, std::begin(shape), std::end(shape));
+                    auto view = tensor_view_type(shared_block->device.get(), std::begin(shape), std::end(shape));
                     cuda4dnn::csl::copyTensorToMat<T>(shared_block->host, view, shared_block->stream);
 
                     shared_block->stream.synchronize();
@@ -289,7 +289,7 @@ namespace cv {
                     shared_block->host_dirty = false;
                     shared_block->device_dirty = false;
 
-                    auto span = tensor_span_type(shared_block->parent, 0, std::begin(shape), std::end(shape));
+                    auto span = tensor_span_type(shared_block->device.get(), std::begin(shape), std::end(shape));
                     cuda4dnn::csl::copyMatToTensor<T>(span, shared_block->host, shared_block->stream);
                 }
             }
@@ -303,7 +303,7 @@ namespace cv {
             MatShape getShape() const noexcept override { return shape; }
 
             /** @brief returns the rank of the csl::Tensor */
-            std::size_t getRank() const noexcept override { return shared_block->parent.rank; }
+            std::size_t getRank() const noexcept override { return shape.size(); }
 
             /** @note setting the stream updates the stream for all wrappers which use the same buffer */
             void setStream(cuda4dnn::csl::Stream stream) noexcept override {
@@ -322,12 +322,12 @@ namespace cv {
              */
             tensor_span_type getSpan() noexcept {
                 setDeviceDirty();
-                return tensor_span_type(shared_block->parent, 0, std::begin(shape), std::end(shape));
+                return tensor_span_type(shared_block->device.get(), std::begin(shape), std::end(shape));
             }
 
             tensor_view_type getView() noexcept {
                 copyToDevice();
-                return tensor_view_type(shared_block->parent, 0, std::begin(shape), std::end(shape));
+                return tensor_view_type(shared_block->device.get(), std::begin(shape), std::end(shape));
             }
 
         private:
@@ -349,7 +349,7 @@ namespace cv {
                 cv::Mat host;
                 cuda4dnn::csl::MemoryLockGuard memGuard; /* keeps host memory page-locked */
 
-                tensor_type parent;
+                cuda4dnn::csl::ManagedPtr<T> device;
                 cuda4dnn::csl::Stream stream;
             };
 

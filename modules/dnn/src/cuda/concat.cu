@@ -100,13 +100,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
          *    we move all the channels from the input (which together for a single batch item is contiguous)
          *    of a batch item to its corresponding contiguous place in the output
          *
-         * for a valid vector operation, the size of each copy block must be aligned
-         * input must be aligned
-         * all the destination locations in the output must be aligned
+         * for a valid vector operation:
+         * - the size of each copy block must be aligned
+         * - input must be aligned
+         * - all the destination locations in the output must be aligned
          */
-        std::size_t concat_size = 1;
-        for (int i = axis + 1; i < output.rank; i++)
-            concat_size *= output.get_axis_size(i);
+        std::size_t concat_size = output.size_range(axis + 1, output.rank());
 
         std::size_t input_axis_size = input.get_axis_size(axis);
         std::size_t output_axis_size = output.get_axis_size(axis);
@@ -163,12 +162,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         TensorSpan<T> output, TensorView<T> input,
         const std::vector<std::size_t>& offsets)
     {
-        CV_Assert(output.rank == input.rank);
-        CV_Assert(output.rank >= 3 && output.rank <= 5);
+        CV_Assert(output.rank() == input.rank());
+        CV_Assert(output.rank() >= 3 && output.rank() <= 5);
 
-        int rank = output.rank;
-        auto inShape = input.shape();
-        auto outShape = output.shape();
+        auto rank = output.rank();
+        auto inShape = input.shape_as_vector();
+        auto outShape = output.shape_as_vector();
 
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;

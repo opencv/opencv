@@ -92,16 +92,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
-            auto input_shape = input_wrapper->getShape();
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
             csl::memcpy<T>(output.get(), input.get(), output.size(), stream);
 
-            auto batch_size = input_shape[0];
-            auto rows = input_shape[1];
-            auto cols = input_shape[2];
+            auto rows = input.get_axis_size(1);
+            auto cols = input.get_axis_size(2);
 
             auto cell_box_size = classes + 4 + 1;
 
