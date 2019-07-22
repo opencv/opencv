@@ -53,7 +53,7 @@ public:
     GIEExecutable(const ade::Graph                   &graph,
                   const std::vector<ade::NodeHandle> &nodes);
 
-    virtual inline bool canReshape() const override { return true; }
+    virtual inline bool canReshape() const override { return false; }
     virtual inline void reshape(ade::Graph&, const GCompileArgs&) override {
         GAPI_Assert(false); // Not implemented yet
     }

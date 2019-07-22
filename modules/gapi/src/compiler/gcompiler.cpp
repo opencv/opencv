@@ -97,7 +97,7 @@ namespace
     template<typename C>
     cv::gapi::GKernelPackage auxKernelsFrom(const C& c) {
         cv::gapi::GKernelPackage result;
-        for (auto b : c) {
+        for (const auto &b : c) {
             result = cv::gapi::combine(result, b.priv().auxiliaryKernels());
         }
         return result;

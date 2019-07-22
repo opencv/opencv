@@ -60,7 +60,7 @@ inline std::vector<int> toCV(const IE::SizeVector &vsz) {
     std::vector<int> result;
     result.reserve(vsz.size());
     for (auto sz : vsz) {
-        result.push_back(ade::util::checked_cast<std::size_t>(sz));
+        result.push_back(ade::util::checked_cast<int>(sz));
     }
     return result;
 }
@@ -129,12 +129,12 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat) {
 }
 
 template<class MatType>
-inline void copyIE(const IE::Blob::Ptr &blob, MatType &mat) {
+inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     switch (blob->getTensorDesc().getPrecision()) {
-#define HANDLE(E,T) \
+#define HANDLE(E,T)                                                 \
         case IE::Precision::E: std::copy_n(blob->buffer().as<T*>(), \
-                                             mat.total(),             \
-                                             reinterpret_cast<T*>(mat.data)); \
+                                           mat.total(),             \
+                                           reinterpret_cast<T*>(mat.data)); \
             break;
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
@@ -188,7 +188,8 @@ struct IEUnit {
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
         auto this_plugin = IE::PluginDispatcher().getPluginByDevice(params.device_id);
-        auto this_network = this_plugin.LoadNetwork(net, {});
+        auto this_network = this_plugin.LoadNetwork(net, {}); // FIXME: 2nd parameter to be
+                                                              // configurable via the API
         auto this_request = this_network.CreateInferRequest();
 
         // Bind const data to infer request
@@ -213,20 +214,20 @@ struct IECallContext
 
     // Generic accessor API
     template<typename T>
-    const T& inArg(int input) { return args.at(input).get<T>(); }
+    const T& inArg(std::size_t input) { return args.at(input).get<T>(); }
 
     // Syntax sugar
-    const cv::gapi::own::Mat&   inMat(int input) {
+    const cv::gapi::own::Mat&   inMat(std::size_t input) {
         return inArg<cv::gapi::own::Mat>(input);
     }
-    cv::gapi::own::Mat&         outMatR(int output) {
+    cv::gapi::own::Mat&         outMatR(std::size_t output) {
         return *cv::util::get<cv::gapi::own::Mat*>(results.at(output));
     }
 
-    template<typename T> std::vector<T>& outVecR(int output) { // FIXME: the same issue
+    template<typename T> std::vector<T>& outVecR(std::size_t output) { // FIXME: the same issue
         return outVecRef(output).wref<T>();
     }
-    cv::detail::VectorRef& outVecRef(int output) {
+    cv::detail::VectorRef& outVecRef(std::size_t output) {
         return cv::util::get<cv::detail::VectorRef>(results.at(output));
     }
 };
@@ -291,7 +292,7 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
         case NodeType::DATA: {
             m_dataNodes.push_back(nh);
             const auto &desc = m_gm.metadata(nh).get<Data>();
-            if (desc.storage == Data::Storage::CONST) {
+            if (desc.storage == Data::Storage::CONST_VAL) {
                 util::throw_error(std::logic_error("No const data please!"));
             }
             if (desc.storage == Data::Storage::INTERNAL) {
@@ -455,7 +456,7 @@ struct Infer: public cv::detail::KernelTag {
 
             cv::gapi::own::Mat& out_mat = ctx.outMatR(i);
             IE::Blob::Ptr this_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
-            copyIE(this_blob, out_mat);
+            copyFromIE(this_blob, out_mat);
         }
     }
 };
@@ -467,14 +468,39 @@ struct InferList: public cv::detail::KernelTag {
 
     static cv::GMetaArgs outMeta(const ade::Graph      &gr,
                                  const ade::NodeHandle &nh,
-                                 const cv::GMetaArgs   &/*in_metas*/,
+                                 const cv::GMetaArgs   &in_metas,
                                  const cv::GArgs       &/*in_args*/) {
+        // Specify the input information to the IE from the framework
+        // NB: Have no clue if network's input [dimensions] may ever define
+        // its output dimensions. It seems possible with OpenCV DNN APIs
+
+        GConstGIEModel gm(gr);
+        const auto &uu = gm.metadata(nh).get<IEUnit>();
+
+        // Initialize input information
+        // Note our input layers list order matches the API order and so
+        // meta order.
+        GAPI_Assert(uu.params.input_names.size() == (in_metas.size() - 1u)
+                    && "Known input layers count doesn't match input meta count");
+
+        std::size_t idx = 1u;
+        for (auto &&input_name : uu.params.input_names) {
+            auto       &&ii = uu.inputs.at(input_name);
+            const auto & mm = in_metas[idx++];
+
+            GAPI_Assert(util::holds_alternative<cv::GMatDesc>(mm)
+                        && "Non-GMat inputs are not supported");
+
+            const auto &meta = util::get<cv::GMatDesc>(mm);
+            ii->setPrecision(toIE(meta.depth));
+            ii->setLayout(meta.isND() ? IE::Layout::NCHW : IE::Layout::NHWC);
+            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        }
+
         // roi-list version is much easier at the moment.
         // All our outputs are vectors which don't have
         // metadata at the moment - so just create a vector of
         // "empty" array metadatas of the required size.
-        GConstGIEModel gm(gr);
-        const auto &uu = gm.metadata(nh).get<IEUnit>();
         return cv::GMetaArgs(uu.params.output_names.size(),
                              cv::GMetaArg{cv::empty_array_desc()});
     }
@@ -483,7 +509,7 @@ struct InferList: public cv::detail::KernelTag {
         // non-generic version for now:
         // - assumes zero input is always ROI list
         // - assumes all inputs/outputs are always Mats
-        CV_Assert(uu.params.num_in == 1); // roi list is not counted in net's inputs
+        GAPI_Assert(uu.params.num_in == 1); // roi list is not counted in net's inputs
 
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         const cv::Mat this_mat = to_ocv(ctx.inMat(1u));
@@ -513,7 +539,7 @@ struct InferList: public cv::detail::KernelTag {
                 IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
 
                 cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-                copyIE(out_blob, out_mat);  // FIXME: Avoid data copy. Not sure if it is possible though
+                copyFromIE(out_blob, out_mat);  // FIXME: Avoid data copy. Not sure if it is possible though
                 out_vec.push_back(std::move(out_mat));
             }
         }
@@ -567,6 +593,10 @@ cv::Mat cv::gapi::ie::util::to_ocv(InferenceEngine::Blob::Ptr blob) {
     return cv::Mat(toCV(tdesc.getDims()),
                    toCV(tdesc.getPrecision()),
                    blob->buffer().as<uint8_t*>());
+}
+
+std::vector<int> cv::gapi::ie::util::to_ocv(const InferenceEngine::SizeVector &dims) {
+    return toCV(dims);
 }
 
 InferenceEngine::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {

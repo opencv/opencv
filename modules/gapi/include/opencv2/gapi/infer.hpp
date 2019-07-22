@@ -8,6 +8,9 @@
 #ifndef OPENCV_GAPI_INFER_HPP
 #define OPENCV_GAPI_INFER_HPP
 
+// FIXME: Inference API is currently only available in full mode
+#if !defined(GAPI_STANDALONE)
+
 #include <functional>
 #include <string>  // string
 #include <utility> // tuple
@@ -21,6 +24,9 @@
 namespace cv {
 
 namespace detail {
+    // This tiny class eliminates the semantic difference between
+    // GKernelType and GKernelTypeM.
+    // FIXME: Something similar can be reused for regular kernels
     template<typename, typename>
     struct KernelTypeMedium;
 
@@ -36,6 +42,8 @@ namespace detail {
 
 template<typename, typename> class GNetworkType;
 
+// TODO: maybe tuple_wrap_helper from util.hpp may help with this.
+// Multiple-return-value network definition (specialized base class)
 template<typename K, typename... R, typename... Args>
 class GNetworkType<K, std::function<std::tuple<R...>(Args...)> >
 {
@@ -50,6 +58,7 @@ public:
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
 };
 
+// Single-return-value network definition (specialized base class)
 template<typename K, typename R, typename... Args>
 class GNetworkType<K, std::function<R(Args...)> >
 {
@@ -64,6 +73,13 @@ public:
     using APIList = std::function<ResultL(cv::GArray<cv::Rect>, Args...)>;
 };
 
+// Base "Infer" kernel. Note - for whatever network, kernel ID
+// is always the same. Different inference calls are distinguished by
+// network _tag_ (an extra field in GCall)
+//
+// getOutMeta is a stub callback collected by G-API kernel subsystem
+// automatically. This is a rare case when this callback is defined by
+// a particular backend, not by a network itself.
 struct GInferBase {
     static constexpr const char * id() {
         return "org.opencv.dnn.infer";     // Universal stub
@@ -72,6 +88,10 @@ struct GInferBase {
         return GMetaArgs{};                // One more universal stub
     }
 };
+
+
+// Base "Infer list" kernel.
+// All notes from "Infer" kernel apply here as well.
 struct GInferListBase {
     static constexpr const char * id() {
         return "org.opencv.dnn.infer-roi"; // Universal stub
@@ -81,6 +101,9 @@ struct GInferListBase {
     }
 };
 
+// A generic inference kernel. API (::on()) is fully defined by the Net
+// template parameter.
+// Acts as a regular kernel in graph (via KernelTypeMedium).
 template<typename Net>
 struct GInfer final
     : public GInferBase
@@ -90,6 +113,9 @@ struct GInfer final
 
     static constexpr const char* tag() { return Net::tag(); }
 };
+
+// A generic roi-list inference kernel. API (::on()) is derived from
+// the Net template parameter (see more in infer<> overload).
 template<typename Net>
 struct GInferList final
     : public GInferListBase
@@ -110,24 +136,68 @@ struct GInferList final
 
 namespace cv {
 namespace gapi {
-// FIXME: (all) how to dictate infer API by its Net?
 
+
+/** @brief Calculates responses for the specified network (template
+ *     parameter) for every region in the source image.
+ *
+ * @tparam A network type defined with G_API_NET() macro.
+ * @param roi a list of rectangles describing regions of interest
+ *   in the source image. Usually an output of object detector or tracker.
+ * @param args network's input parameters as specified in G_API_NET() macro.
+ *   NOTE: verified to work reliably with 1-input topologies only.
+ * @return a list of objects of return type as defined in G_API_NET().
+ *   If a network has multiple return values (defined with a tuple), a tuple of
+ *   GArray<> objects is returned with the appropriate types inside.
+ * @sa  G_API_NET()
+ */
 template<typename Net, typename... Args>
 typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
     return GInferList<Net>::on(roi, std::forward<Args>(args)...);
 }
 
+/**
+ * @brief Calculates response for the specified network (template
+ *     parameter) given the input data.
+ *
+ * @tparam A network type defined with G_API_NET() macro.
+ * @param args network's input parameters as specified in G_API_NET() macro.
+ * @return an object of return type as defined in G_API_NET().
+ *   If a network has multiple return values (defined with a tuple), a tuple of
+ *   objects of apprpriate type is returned.
+ * @sa  G_API_NET()
+ */
 template<typename Net, typename... Args>
 typename Net::Result infer(Args&&... args) {
     return GInfer<Net>::on(std::forward<Args>(args)...);
 }
 
+
+} // namespace gapi
+} // namespace cv
+
+#endif // GAPI_STANDALONE
+
+namespace cv {
+namespace gapi {
+
+// Note: the below code _is_ part of STANDALONE build,
+// just to make our compiler code compileable.
+
+// A type-erased form of network parameters.
+// Similar to how a type-erased GKernel is represented and used.
 struct GAPI_EXPORTS GNetParam {
     std::string tag;     // FIXME: const?
     GBackend backend;    // Specifies the execution model
     util::any params;    // Backend-interpreted parameter structure
 };
 
+/**
+ * @brief A container class for network configurations. Similar to
+ * GKernelPackage.Use cv::gapi::networks() to construct this object.
+ *
+ * @sa cv::gapi::networks
+ */
 struct GAPI_EXPORTS GNetPackage {
     explicit GNetPackage(std::initializer_list<GNetParam> &&ii = {});
     std::vector<GBackend> backends() const;

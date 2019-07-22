@@ -72,12 +72,12 @@ cv::GMatDesc cv::descr_of(const cv::UMat &mat)
     return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
 }
 
-cv::GMetaArgs cv::descr_of(const std::vector<cv::Mat> &vec)
+cv::GMetaArgs cv::descrs_of(const std::vector<cv::Mat> &vec)
 {
     return vec_descr_of(vec);
 }
 
-cv::GMetaArgs cv::descr_of(const std::vector<cv::UMat> &vec)
+cv::GMetaArgs cv::descrs_of(const std::vector<cv::UMat> &vec)
 {
     return vec_descr_of(vec);
 }
@@ -90,7 +90,7 @@ cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)
         : GMatDesc{mat.depth(), mat.dims};
 }
 
-cv::GMetaArgs cv::gapi::own::descr_of(const std::vector<cv::gapi::own::Mat> &vec)
+cv::GMetaArgs cv::gapi::own::descrs_of(const std::vector<cv::gapi::own::Mat> &vec)
 {
     return vec_descr_of(vec);
 }

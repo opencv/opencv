@@ -87,7 +87,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
         {
             m_dataNodes.push_back(nh);
             const auto &desc = m_gm.metadata(nh).get<Data>();
-            if (desc.storage == Data::Storage::CONST)
+            if (desc.storage == Data::Storage::CONST_VAL)
             {
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);

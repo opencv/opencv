@@ -78,7 +78,8 @@ struct Data
         INTERNAL,   // data object is not listed in GComputation protocol
         INPUT,      // data object is listed in GComputation protocol as Input
         OUTPUT,     // data object is listed in GComputation protocol as Output
-        CONST,      // data object is constant
+        CONST_VAL,  // data object is constant.
+                    // Note: CONST is sometimes defined in Win sys headers
     };
     Storage storage;
 };

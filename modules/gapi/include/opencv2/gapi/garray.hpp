@@ -255,10 +255,16 @@ namespace detail
     // stripping G types to their host types
     // like cv::GArray<GMat> would still map to std::vector<cv::Mat>
     // but not to std::vector<cv::GMat>
+#if defined(GAPI_STANDALONE)
+#  define FLATTEN_NS cv::gapi::own
+#else
+#  define FLATTEN_NS cv
+#endif
     template<class T> struct flatten_g;
-    template<> struct flatten_g<cv::GMat>    { using type = cv::Mat; };
-    template<> struct flatten_g<cv::GScalar> { using type = cv::Scalar; };
+    template<> struct flatten_g<cv::GMat>    { using type = FLATTEN_NS::Mat; };
+    template<> struct flatten_g<cv::GScalar> { using type = FLATTEN_NS::Scalar; };
     template<class T> struct flatten_g       { using type = T; };
+#undef FLATTEN_NS
     // FIXME: the above mainly duplicates "ProtoToParam" thing from gtyped.hpp
     // but I decided not to include gtyped here - probably worth moving that stuff
     // to some common place? (DM)

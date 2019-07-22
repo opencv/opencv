@@ -28,7 +28,7 @@ namespace cv {
 // Forward declarations - internal
 namespace gapi {
     class GKernelPackage;
-    class GNetPackage;
+    struct GNetPackage;
 }  // namespace gapi
 
 namespace gimpl { namespace passes {

@@ -101,8 +101,8 @@ namespace
     }
 } // anonymous namespace
 
-// This pass, given the kernel package, selects a kernel implementation
-// for every operation in the graph
+// This pass, given the network package, associates every infer[list] node
+// with particular inference backend and its parameters.
 void cv::gimpl::passes::bindNetParams(ade::passes::PassContext &ctx,
                                       const gapi::GNetPackage  &pkg)
 {

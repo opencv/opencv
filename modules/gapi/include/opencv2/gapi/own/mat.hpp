@@ -135,9 +135,6 @@ namespace cv { namespace gapi { namespace own {
         Mat& operator = (const Scalar& s)
         {
             constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
-            const auto channels = static_cast<unsigned int>(this->channels());
-            GAPI_Assert(channels <= max_channels);
-
             using func_p_t = void (*)(void*, int, Scalar const&);
             using detail::assign_row;
             #define TABLE_ENTRY(type)  {assign_row<type, 1>, assign_row<type, 2>, assign_row<type, 3>, assign_row<type, 4>}
@@ -160,10 +157,22 @@ namespace cv { namespace gapi { namespace own {
             const auto depth = static_cast<unsigned int>(this->depth());
             GAPI_Assert(depth < sizeof(func_tbl)/sizeof(func_tbl[0]));
 
-            for (int r = 0; r < rows; ++r)
+            if (dims.empty())
             {
-                auto* f = func_tbl[depth][channels -1];
-                (*f)(static_cast<void *>(ptr(r)), cols, s );
+                const auto channels = static_cast<unsigned int>(this->channels());
+                GAPI_Assert(channels <= max_channels);
+
+                auto* f = func_tbl[depth][channels - 1];
+                for (int r = 0; r < rows; ++r)
+                {
+                    (*f)(static_cast<void *>(ptr(r)), cols, s );
+                }
+            }
+            else
+            {
+                auto* f = func_tbl[depth][0];
+                // FIXME: better to refactor assign_row to use std::size_t by default
+                (*f)(static_cast<void *>(data), static_cast<int>(total()), s);
             }
             return *this;
         }
@@ -202,8 +211,9 @@ namespace cv { namespace gapi { namespace own {
         /** @brief Returns the number of matrix channels.
 
         The method returns the number of matrix channels.
+        If matrix is N-dimensional, -1 is returned.
          */
-        int channels() const        {return CV_MAT_CN(flags);}
+        int channels() const        {return dims.empty() ? CV_MAT_CN(flags) : -1;}
 
         /**
         @param _rows New number of rows.
@@ -229,7 +239,9 @@ namespace cv { namespace gapi { namespace own {
                 *this = std::move(tmp);
             }
         }
-        void create(const std::vector<int> &_dims, int _type) {
+
+        void create(const std::vector<int> &_dims, int _type)
+        {
             // FIXME: make a proper reallocation-on-demands
             // WARNING: no tensor views, so no strides
             Mat tmp{_dims, _type, nullptr};
@@ -252,10 +264,18 @@ namespace cv { namespace gapi { namespace own {
          */
         void copyTo(Mat& dst) const
         {
-            dst.create(rows, cols, type());
-            for (int r = 0; r < rows; ++r)
+            if (dims.empty())
             {
-                std::copy_n(ptr(r), detail::default_step(type(),cols), dst.ptr(r));
+                dst.create(rows, cols, type());
+                for (int r = 0; r < rows; ++r)
+                {
+                    std::copy_n(ptr(r), detail::default_step(type(),cols), dst.ptr(r));
+                }
+            }
+            else
+            {
+                dst.create(dims, depth());
+                std::copy_n(data, total()*elemSize(), data);
             }
         }
 
@@ -273,10 +293,10 @@ namespace cv { namespace gapi { namespace own {
          */
         size_t total() const
         {
-            if (!dims.empty())
-                return std::accumulate(dims.begin(), dims.end(), 1u, std::multiplies<std::size_t>());
-
-            return static_cast<size_t>(rows * cols);
+            return static_cast<std::size_t>
+                (dims.empty()
+                 ? (rows * cols)
+                 : std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>()));
         }
 
         /** @overload

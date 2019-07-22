@@ -84,7 +84,11 @@ struct GAPI_EXPORTS GMatDesc
 
     inline bool operator== (const GMatDesc &rhs) const
     {
-        return depth == rhs.depth && chan == rhs.chan && size == rhs.size && planar == rhs.planar;
+        return    depth  == rhs.depth
+               && chan   == rhs.chan
+               && size   == rhs.size
+               && planar == rhs.planar
+               && dims   == rhs.dims;
     }
 
     inline bool operator!= (const GMatDesc &rhs) const
