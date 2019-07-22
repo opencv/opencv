@@ -49,6 +49,12 @@
 #include "opencl_kernels_dnn.hpp"
 #endif
 
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/reorg.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -135,7 +141,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE;
     }
 
 #ifdef HAVE_OPENCL
@@ -177,6 +185,30 @@ public:
         outputs[0] = outputs[0].reshape(1, permuteOutShape);
         permute->forward(inputs, outputs, internals_arr);
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        cudaNode->forward(inputs, outputs, workspace);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        cudaNode = make_cuda_node<cuda4dnn::ReorgOp>(preferableTarget, std::move(stream), reorgStride);
+    }
+
+    std::unique_ptr<CUDABackendNode> cudaNode;
+#endif
 
 #ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
