@@ -224,11 +224,6 @@ models = [
         filename='colorization_release_v2.caffemodel'),
     Model(
         name='Face_detector',
-        url='https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt',
-        sha='006baf926232df6f6332defb9c24f94bb9f3764e',
-        filename='opencv_face_detector.prototxt'),
-    Model(
-        name='Face_detector',
         url='https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel',
         sha='15aa726b4d46d9f023526d85537db81cbc8dd566',
         filename='opencv_face_detector.caffemodel'),
