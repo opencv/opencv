@@ -108,7 +108,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - tensor must be non-empty
          */
         size_type size() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_type>());
         }
 
@@ -118,7 +118,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - tensor must be non-empty
          */
         size_type rank() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return shape.size();
         }
 
@@ -157,7 +157,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * returns one if the two `axis_start` and `axis_end` are equal
          */
         size_type size_range(size_type axis_start, size_type axis_end) const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             CV_Assert(axis_start <= axis_end);
             CV_Assert(axis_end <= rank());
             auto start = std::begin(shape) + axis_start;
@@ -173,7 +173,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         std::vector<size_type> shape_as_vector() const {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::vector<size_type>(std::begin(shape), std::end(shape));
         }
 
@@ -335,6 +335,59 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             reshape(std::begin(new_sizes), std::end(new_sizes));
         }
 
+        /** @brief squeezes the tensor
+         *
+         * removes all axes of unit size
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze() {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            auto itr = std::remove(std::begin(shape), std::end(shape), 1);
+            shape.resize(itr - std::begin(shape));
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes the specified axis if the axis length is one; otherwise, ignores the request
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze(int axis) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief unsqueezes the tensor
+         *
+         * adds a axis of unit size at the requested before the specified axis
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be less than the maximum supported rank (CSL_MAX_TENSOR_RANK)
+         *
+         * Exception Guarantee: Strong
+         */
+        void unsqueeze(int axis = 0) {
+            CV_Assert(!empty());
+            CV_Assert(rank() < CSL_MAX_TENSOR_RANK);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.insert(std::begin(shape) + axis, 1);
+        }
+
         operator span<T>() noexcept { return span<T>(data.get(), size()); }
         operator view<T>() const noexcept { return view<T>(data.get(), size()); }
 
@@ -403,7 +456,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - span must be non-empty
          */
         size_type size() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_type>());
         }
 
@@ -413,7 +466,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - span must be non-empty
          */
         size_type rank() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return shape.size();
         }
 
@@ -452,7 +505,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * returns one if the two `axis_start` and `axis_end` are equal
          */
         size_type size_range(size_type axis_start, size_type axis_end) const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             CV_Assert(axis_start <= axis_end);
             CV_Assert(axis_end <= rank());
             auto start = std::begin(shape) + axis_start;
@@ -468,7 +521,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         std::vector<size_type> shape_as_vector() const {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::vector<size_type>(std::begin(shape), std::end(shape));
         }
 
@@ -576,6 +629,59 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             for (int i = 0; i < new_sizes.size(); i++)
                 new_sizes[i] = tensor.get_axis_size(i);
             reshape(std::begin(new_sizes), std::end(new_sizes));
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes all axes of unit size
+         *
+         * Pre-conditions:
+         * - the span must be non-empty
+         * - the span's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze() {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            auto itr = std::remove(std::begin(shape), std::end(shape), 1);
+            shape.resize(itr - std::begin(shape));
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes the specified axis if the axis length is one; otherwise, ignores the request
+         *
+         * Pre-conditions:
+         * - the span must be non-empty
+         * - the span's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze(int axis) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief unsqueezes the tensor
+         *
+         * adds a axis of unit size at the requested before the specified axis
+         *
+         * Pre-conditions:
+         * - the span must be non-empty
+         * - the span's rank must be less than the maximum supported rank (CSL_MAX_TENSOR_RANK)
+         *
+         * Exception Guarantee: Strong
+         */
+        void unsqueeze(int axis = 0) {
+            CV_Assert(!empty());
+            CV_Assert(rank() < CSL_MAX_TENSOR_RANK);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.insert(std::begin(shape) + axis, 1);
         }
 
         /** @brief obtains a subspan of the span
@@ -708,7 +814,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - view must be non-empty
          */
         size_type size() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<size_type>());
         }
 
@@ -718,7 +824,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - view must be non-empty
          */
         size_type rank() const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return shape.size();
         }
 
@@ -757,7 +863,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * returns one if the two `axis_start` and `axis_end` are equal
          */
         size_type size_range(size_type axis_start, size_type axis_end) const noexcept {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             CV_Assert(axis_start <= axis_end);
             CV_Assert(axis_end <= rank());
             auto start = std::begin(shape) + axis_start;
@@ -773,7 +879,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Exception Guarantee: Strong
          */
         std::vector<size_type> shape_as_vector() const {
-            CV_Assert(shape.size() != 0);
+            CV_Assert(!empty());
             return std::vector<size_type>(std::begin(shape), std::end(shape));
         }
 
@@ -868,6 +974,59 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             for (int i = 0; i < new_sizes.size(); i++)
                 new_sizes[i] = tensor.get_axis_size(i);
             reshape(std::begin(new_sizes), std::end(new_sizes));
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes all axes of unit size
+         *
+         * Pre-conditions:
+         * - the view must be non-empty
+         * - the view's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze() {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            auto itr = std::remove(std::begin(shape), std::end(shape), 1);
+            shape.resize(itr - std::begin(shape));
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes the specified axis if the axis length is one; otherwise, ignores the request
+         *
+         * Pre-conditions:
+         * - the view must be non-empty
+         * - the view's rank must be at least two
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze(int axis) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= 2);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief unsqueezes the tensor
+         *
+         * adds a axis of unit size at the requested before the specified axis
+         *
+         * Pre-conditions:
+         * - the view must be non-empty
+         * - the view's rank must be less than the maximum supported rank (CSL_MAX_TENSOR_RANK)
+         *
+         * Exception Guarantee: Strong
+         */
+        void unsqueeze(int axis = 0) {
+            CV_Assert(!empty());
+            CV_Assert(rank() < CSL_MAX_TENSOR_RANK);
+            axis = clamp_axis(axis, rank());
+            CV_Assert(axis >= 0 && axis < rank());
+            shape.insert(std::begin(shape) + axis, 1);
         }
 
         /** @brief obtains a subview of the view

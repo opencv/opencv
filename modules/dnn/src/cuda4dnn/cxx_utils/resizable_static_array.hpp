@@ -77,6 +77,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
             return arr[pos];
         }
 
+        iterator insert(iterator pos, const T& value) {
+            resize(size() + 1);
+            std::move(pos, end() - 1, pos + 1);
+            *pos = value;
+            return pos;
+        }
+
+        iterator insert(iterator pos, T&& value) {
+            resize(size() + 1);
+            std::move(pos, end() - 1, pos + 1);
+            *pos = std::move(value);
+            return pos;
+        }
+
+        iterator erase(iterator pos) {
+            std::move(pos + 1, end(), pos);
+            resize(size() - 1);
+            return pos;
+        }
+
         pointer data() noexcept { return arr.data(); }
         const_pointer data() const noexcept { return arr.data(); }
 
