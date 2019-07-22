@@ -788,7 +788,12 @@ bool CvCaptureCAM_V4L::open(int _index)
         name = cv::format("/dev/video%d", _index);
     }
 
-    return open(name.c_str());
+    bool res = open(name.c_str());
+    if (!res)
+    {
+        CV_LOG_WARNING(NULL, cv::format("VIDEOIO ERROR: V4L: can't open camera by index %d", _index));
+    }
+    return res;
 }
 
 bool CvCaptureCAM_V4L::open(const char* _deviceName)
