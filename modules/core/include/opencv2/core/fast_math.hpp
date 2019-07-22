@@ -92,6 +92,19 @@
     #define ARM_ROUND_FLT(value) ARM_ROUND(value, "vcvtr.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]")
 #endif
 
+#if defined __PPC64__ && !defined OPENCV_USE_FASTMATH_GCC_BUILTINS
+    /* Let GCC inline C math functions when available. Dedicated hardware is available to
+       round and covert FP values. */
+    #define OPENCV_USE_FASTMATH_GCC_BUILTINS
+#endif
+
+/* Enable GCC builtin math functions if possible, desired, and available.
+   Note, not all math functions inline equally. E.g lrint will not inline
+   without the -fno-math-errno option. */
+#if defined OPENCV_USE_FASTMATH_GCC_BUILTINS && defined __GNUC__ && !defined __clang__ && !defined (__CUDACC__)
+    #define _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+#endif
+
 /** @brief Rounds floating-point number to the nearest integer
 
  @param value floating-point number. If the value is outside of INT_MIN ... INT_MAX range, the
@@ -138,8 +151,12 @@ cvRound( double value )
  */
 CV_INLINE int cvFloor( double value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_floor(value);
+#else
     int i = (int)value;
     return i - (i > value);
+#endif
 }
 
 /** @brief Rounds floating-point number to the nearest integer not smaller than the original.
@@ -151,8 +168,12 @@ CV_INLINE int cvFloor( double value )
  */
 CV_INLINE int cvCeil( double value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_ceil(value);
+#else
     int i = (int)value;
     return i + (i < value);
+#endif
 }
 
 /** @brief Determines if the argument is Not A Number.
@@ -225,8 +246,12 @@ CV_INLINE int cvRound( int value )
 /** @overload */
 CV_INLINE int cvFloor( float value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_floorf(value);
+#else
     int i = (int)value;
     return i - (i > value);
+#endif
 }
 
 /** @overload */
@@ -238,8 +263,12 @@ CV_INLINE int cvFloor( int value )
 /** @overload */
 CV_INLINE int cvCeil( float value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_ceilf(value);
+#else
     int i = (int)value;
     return i + (i < value);
+#endif
 }
 
 /** @overload */
