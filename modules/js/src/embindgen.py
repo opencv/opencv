@@ -164,14 +164,14 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
                              'getColorAdaptation', 'setColorAdaptation']
         }
 
-aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'estimatePoseCharucoBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
         'aruco_Dictionary': ['get', 'drawMarker'],
         'aruco_Board': ['create'],
         'aruco_GridBoard': ['create', 'draw'],
         'aruco_CharucoBoard': ['create', 'draw'],
         }
 
-calib3d = {'': ['findHomography']}
+calib3d = {'': ['findHomography','calibrateCameraExtended', 'drawFrameAxes', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap']}
 
 def makeWhiteList(module_list):
     wl = {}
