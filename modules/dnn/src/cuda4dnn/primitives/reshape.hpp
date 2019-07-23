@@ -37,6 +37,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                 if (input.get() != output.get())
                 {
+                    while (input.rank() < output.rank())
+                        input.unsqueeze();
+
+                    while (output.rank() < input.rank())
+                        output.unsqueeze();
+
                     input.reshape_as(output);
                     csl::tensor_ops::copy(stream, output, input);
                 }
