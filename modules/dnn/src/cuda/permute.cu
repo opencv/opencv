@@ -76,16 +76,47 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     void permute(
         const Stream& stream,
         TensorSpan<T> output, TensorView<T> input,
-        const std::vector<std::size_t>& order)
+        std::vector<std::size_t> order)
     {
         CV_Assert(output.rank() == input.rank());
-        CV_Assert(input.rank() >= order.size());
+        CV_Assert(input.rank() == order.size());
         CV_Assert(input.size() == output.size());
-        CV_Assert(order.size() >= 3 && order.size() <= 5);
-        CV_Assert(get_effective_rank(input) <= order.size());
-        CV_Assert(get_effective_rank(output) <= order.size());
 
-        int rank = output.rank();
+        /* if there are axes in the begining that can be squeezed out and are not permuted,
+         * we can eliminate those axes
+         *
+         * Reasoning:
+         * ----------
+         * Suppose an item's indices in the input tensor be [i1, i2, ...]. The indices in the
+         * output tensor will be some permutation of the input tensor indices. Let the output
+         * tensor indices be [o1, o2, ...]. The permutation operation essentially copies items
+         * from the input tensor to new locations in the output tensor as dictated by the indices.
+         *
+         * If the size of the first axis of the input and output tensor is one and these axes are
+         * not involved in any permutation, i.e. order[0] = 0, the input and output indicies for
+         * all the elements will be of the form be [0, i2, ...] and [0, o2, ...] respectively.
+         * The first index does not contribute to the element's address calculation and hence does
+         * nothing other than consuming few cycles.
+         */
+        while (order[0] == 0 && input.get_axis_size(0) == 1 && output.get_axis_size(0) == 1) {
+            /* remove the axes */
+            input.squeeze(0);
+            output.squeeze(0);
+
+            /* when we remove axis zero, the axis index will be one less than the previous index
+             * for all the remaining axes
+             */
+            order.erase(order.begin());
+            for (auto& axis : order)
+                axis--;
+
+            /* optimizations should not break the invariants for the permutation operation */
+            CV_Assert(output.rank() == input.rank());
+            CV_Assert(input.rank() == order.size());
+            CV_Assert(input.size() == output.size());
+        }
+
+        auto rank = output.rank();
         auto inShape = input.shape_as_vector();
         auto outShape = output.shape_as_vector();
 
@@ -102,23 +133,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<std::size_t>());
         /* stride[0], stride[1], ..., stride[-2], 1 */
 
-        if (order.size() != rank) {
-            auto diff = rank - order.size();
-            outStride.erase(outStride.begin(), outStride.begin() + diff);
-            inStride.erase(inStride.begin(), inStride.begin() + diff);
-        }
-
+        CV_Assert(rank >= 2 && rank <= 5);
         if (rank == 5) {
             launch_permute_kernel<T, 5>(stream, order, output, outStride, input, inStride);
         } else if (rank == 4) {
             launch_permute_kernel<T, 4>(stream, order, output, outStride, input, inStride);
         } else if (rank == 3) {
             launch_permute_kernel<T, 3>(stream, order, output, outStride, input, inStride);
+        } else if (rank == 2) {
+            launch_permute_kernel<T, 2>(stream, order, output, outStride, input, inStride);
         }
     }
 
-    template void permute(const Stream&, TensorSpan<__half>, TensorView<__half>, const std::vector<std::size_t>&);
-    template void permute(const Stream&, TensorSpan<float>, TensorView<float>, const std::vector<std::size_t>&);
-    template void permute(const Stream&, TensorSpan<double>, TensorView<double>, const std::vector<std::size_t>&);
+    template void permute(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<double>, TensorView<double>, std::vector<std::size_t>);
 
 }}}}} /*  cv::dnn::cuda4dnn::csl::kernels */

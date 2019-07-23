@@ -91,7 +91,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
     void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y);
 
     template <class T>
-    void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, const std::vector<std::size_t>& order);
+    void permute(const Stream& stream, TensorSpan<T> output, TensorView<T> input, std::vector<std::size_t> order);
 
     template <class T>
     void normalize(
