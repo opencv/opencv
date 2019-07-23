@@ -59,5 +59,4 @@ For headless WEC2013, this configuration may not be limited to but is known to w
 
 ## Building
 You are required to build using Unicode:
-`cmake --build . -j xx -- /p:CharacterSet=Unicode`
-where `xx`  is number of cores
+`cmake --build . -- /p:CharacterSet=Unicode`

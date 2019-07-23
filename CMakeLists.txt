@@ -111,10 +111,6 @@ if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsSt
   set(WINRT TRUE)
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES WindowsCE)
-  set(WINCE TRUE)
-endif()
-
 if(WINRT OR WINCE)
   add_definitions(-DNO_GETENV)
 endif()
