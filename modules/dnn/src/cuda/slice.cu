@@ -24,10 +24,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     using index_type = gpu::index_type;
     using size_type = gpu::size_type;
 
-    namespace raw {
-        template <class T, unsigned N>
-        using array = utils::array<T, N>;
+    template <class T, unsigned N>
+    using array = utils::array<T, N>;
 
+    namespace raw {
         template <class T, unsigned N>
         __global__ void slice(
             span<T> output, array<size_type, N> out_strides,
@@ -58,11 +58,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(inStride.size() == N);
         CV_Assert(inOffset.size() == N);
 
-        utils::array<size_type, N> outStride_k, inStride_k;
+        array<size_type, N> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 
-        utils::array<index_type, N> inOffset_k;
+        array<index_type, N> inOffset_k;
         inOffset_k.assign(std::begin(inOffset), std::end(inOffset));
 
         auto kernel = raw::slice<T, N>;
@@ -76,10 +76,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const std::vector<std::size_t>& offsets)
     {
         CV_Assert(output.rank() == input.rank());
-        CV_Assert(output.rank() >= 3 && output.rank() <= 5);
-        CV_Assert(output.size() % 2 == 0);
+        CV_Assert(output.rank() == offsets.size());
 
-        int rank = output.rank();
+        auto rank = output.rank();
         auto inShape = input.shape_as_vector();
         auto outShape = output.shape_as_vector();
 
@@ -96,18 +95,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<int>());
         /* stride[0], stride[1], ..., stride[-2], 1 */
 
-        if (offsets.size() != rank) {
-            auto diff = rank - offsets.size();
-            outStride.erase(outStride.begin(), outStride.begin() + diff);
-            inStride.erase(inStride.begin(), inStride.begin() + diff);
-        }
-
+        CV_Assert(rank <= 5);
         if (rank == 5) {
             launch_slice_kernel<T, 5>(stream, output, outStride, input, inStride, offsets);
         } else if (rank == 4) {
             launch_slice_kernel<T, 4>(stream, output, outStride, input, inStride, offsets);
         } else if (rank == 3) {
             launch_slice_kernel<T, 3>(stream, output, outStride, input, inStride, offsets);
+        } else if (rank == 2) {
+            launch_slice_kernel<T, 2>(stream, output, outStride, input, inStride, offsets);
+        } else if (rank == 1) {
+            launch_slice_kernel<T, 1>(stream, output, outStride, input, inStride, offsets);
         }
     }
 
