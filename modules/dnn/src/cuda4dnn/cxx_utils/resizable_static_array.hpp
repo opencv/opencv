@@ -79,14 +79,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
 
         iterator insert(iterator pos, const T& value) {
             resize(size() + 1);
-            std::move(pos, end() - 1, pos + 1);
+            std::move_backward(pos, end() - 1, end());
             *pos = value;
             return pos;
         }
 
         iterator insert(iterator pos, T&& value) {
             resize(size() + 1);
-            std::move(pos, end() - 1, pos + 1);
+            std::move_backward(pos, end() - 1, end());
             *pos = std::move(value);
             return pos;
         }
