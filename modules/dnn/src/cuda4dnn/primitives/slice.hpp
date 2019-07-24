@@ -34,7 +34,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 1);
+            /* sometimes the output shape is passed in the form of a second input tensor
+             * it's only required for initialization and not here
+             */
+            CV_Assert(inputs.size() == 1 || inputs.size() == 2);
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();

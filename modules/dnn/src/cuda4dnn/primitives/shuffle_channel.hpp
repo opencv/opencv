@@ -22,7 +22,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        ShuffleChannelOp(csl::Stream stream_, std::size_t group)
+        ShuffleChannelOp(csl::Stream stream_, std::size_t group_)
             : stream(std::move(stream_)), group{ group_ } { }
 
         void forward(
