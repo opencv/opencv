@@ -55,6 +55,12 @@ namespace detail
     class VectorRef;
     using ConstructVec = std::function<void(VectorRef&)>;
 
+    // This is the base struct for GArrayU type holder
+    struct TypeHintBase{virtual ~TypeHintBase() = default;};
+
+    // This class holds type of initial GArray to be checked from GArrayU
+    template <typename T>
+    struct TypeHint final : public TypeHintBase{};
 
     // This class strips type information from GArray<T> and makes it usable
     // in the G-API graph compiler (expression unrolling, graph generation, etc).
@@ -63,6 +69,9 @@ namespace detail
     {
     public:
         GArrayU(const GNode &n, std::size_t out); // Operation result constructor
+
+        template <typename T>
+        bool holds() const;                       // Check if was created from GArray<T>
 
         GOrigin& priv();                          // Internal use only
         const GOrigin& priv() const;              // Internal use only
@@ -73,7 +82,23 @@ namespace detail
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
 
+        template <typename T>
+        void specifyType();                       // Store type of initial GArray<T>
+
         std::shared_ptr<GOrigin> m_priv;
+        std::shared_ptr<TypeHintBase> m_hint;
+    };
+
+    template <typename T>
+    bool GArrayU::holds() const{
+        GAPI_Assert(m_hint != nullptr);
+        using U = typename std::decay<T>::type;
+        return dynamic_cast<TypeHint<U>*>(m_hint.get()) != nullptr;
+    };
+
+    template <typename T>
+    void GArrayU::specifyType(){
+        m_hint.reset(new TypeHint<typename std::decay<T>::type>);
     };
 
     // This class represents a typed STL vector reference.
@@ -239,7 +264,10 @@ public:
 
 private:
     static void VCTor(detail::VectorRef& vref) { vref.reset<T>(); }
-    void putDetails() {m_ref.setConstructFcn(&VCTor); }
+    void putDetails() {
+        m_ref.setConstructFcn(&VCTor);
+        m_ref.specifyType<T>();
+    }
 
     detail::GArrayU m_ref;
 };
