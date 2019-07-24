@@ -27,7 +27,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            for (int i = 0; i < inputs.size(); i++)
+            /* sometimes the output shape is passed as extra inputs; hence, >= instead of == */
+            CV_Assert(inputs.size() >= outputs.size());
+
+            for (int i = 0; i < outputs.size(); i++)
             {
                 auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
                 auto input = input_wrapper->getView();
