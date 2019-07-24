@@ -1226,8 +1226,8 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
--   **CALIB_CB_EXHAUSTIVE ** Run an exhaustive search to improve detection rate.
--   **CALIB_CB_ACCURACY ** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
+-   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
 This should be used if an accurate camera calibration is required.
 
 The function is analog to findchessboardCorners but uses a localized radon

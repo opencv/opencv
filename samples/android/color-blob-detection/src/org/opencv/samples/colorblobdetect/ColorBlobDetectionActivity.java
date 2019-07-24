@@ -1,8 +1,10 @@
 package org.opencv.samples.colorblobdetect;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
@@ -27,7 +29,7 @@ import android.view.WindowManager;
 import android.view.View.OnTouchListener;
 import android.view.SurfaceView;
 
-public class ColorBlobDetectionActivity extends Activity implements OnTouchListener, CvCameraViewListener2 {
+public class ColorBlobDetectionActivity extends CameraActivity implements OnTouchListener, CvCameraViewListener2 {
     private static final String  TAG              = "OCVSample::Activity";
 
     private boolean              mIsColorSelected = false;
@@ -97,6 +99,11 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
+    }
+
+    @Override
+    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
+        return Collections.singletonList(mOpenCvCameraView);
     }
 
     public void onDestroy() {

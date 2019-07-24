@@ -162,6 +162,18 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
+TEST_P(Test_ONNX_layers, ReduceMean)
+{
+    testONNXModels("reduce_mean");
+}
+
+TEST_P(Test_ONNX_layers, ReduceMean3D)
+{
+    if (target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+    testONNXModels("reduce_mean3d");
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 {
     testONNXModels("maxpooling_sigmoid");
@@ -605,7 +617,7 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
 
-    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx");
+    String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
     Mat image0 = imread(findDataFile("dnn/dog416.png"));
     Mat image1 = imread(findDataFile("dnn/street.png"));
 
