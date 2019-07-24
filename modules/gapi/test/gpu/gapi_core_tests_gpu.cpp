@@ -393,6 +393,14 @@ INSTANTIATE_TEST_CASE_P(DISABLED_BackendOutputAllocationLargeSizeWithCorrectSubm
                                 Values(-1),
                                 Values(CORE_GPU)));
 
+INSTANTIATE_TEST_CASE_P(ReInitOutTestGPU, ReInitOutTest,
+                        Combine(Values(CV_8UC3, CV_16SC4, CV_32FC1),
+                                Values(cv::Size(640, 480)),
+                                Values(-1),
+                                Values(CORE_GPU),
+                                Values(cv::Size(640, 400),
+                                       cv::Size(10, 480))));
+
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
 #if 0
 INSTANTIATE_TEST_CASE_P(ConcatVertVecTestGPU, ConcatVertVecTest,
