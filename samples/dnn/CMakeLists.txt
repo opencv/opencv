@@ -16,6 +16,11 @@ endif()
 project(dnn_samples)
 ocv_include_modules_recurse(${OPENCV_DNN_SAMPLES_REQUIRED_DEPS})
 file(GLOB_RECURSE dnn_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+
+if (NOT WITH_INF_ENGINE)
+    list(REMOVE_ITEM dnn_samples "facial_landmarks_ie.cpp")
+endif()
+
 foreach(sample_filename ${dnn_samples})
   ocv_define_sample(tgt ${sample_filename} dnn)
   ocv_target_link_libraries(${tgt} LINK_PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_DNN_SAMPLES_REQUIRED_DEPS})
