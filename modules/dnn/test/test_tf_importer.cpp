@@ -678,6 +678,9 @@ TEST_P(Test_TensorFlow_layers, lstm)
 TEST_P(Test_TensorFlow_layers, split)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2);
+    runTensorFlowNet("split");
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     runTensorFlowNet("split_equals");
 }

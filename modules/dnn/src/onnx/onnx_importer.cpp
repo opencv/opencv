@@ -397,11 +397,33 @@ void ONNXImporter::populateNet(Net dstNet)
             layerParams.set("ceil_mode", layerParams.has("pad_mode"));
             layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
         }
-        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool")
+        else if (layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool" || layer_type == "ReduceMean")
         {
+            CV_Assert(node_proto.input_size() == 1);
             layerParams.type = "Pooling";
-            layerParams.set("pool", layer_type == "GlobalAveragePool" ? "AVE" : "MAX");
-            layerParams.set("global_pooling", true);
+            layerParams.set("pool", layer_type == "GlobalMaxPool"? "MAX" : "AVE");
+            layerParams.set("global_pooling", layer_type == "GlobalAveragePool" || layer_type == "GlobalMaxPool");
+
+            if (layer_type == "ReduceMean")
+            {
+                if (layerParams.get<int>("keepdims") == 0 || !layerParams.has("axes"))
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of ReduceMean operation.");
+
+                MatShape inpShape = outShapes[node_proto.input(0)];
+                if (inpShape.size() != 4 && inpShape.size() != 5)
+                    CV_Error(Error::StsNotImplemented, "Unsupported input shape of reduce_mean operation.");
+
+                DictValue axes = layerParams.get("axes");
+                CV_Assert(axes.size() <= inpShape.size() - 2);
+                std::vector<int> kernel_size(inpShape.size() - 2, 1);
+                for (int i = 0; i < axes.size(); i++) {
+                    int axis = axes.get<int>(i);
+                    CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
+                    kernel_size[axis - 2] = inpShape[axis];
+                }
+
+                layerParams.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
+            }
         }
         else if (layer_type == "Slice")
         {
@@ -747,11 +769,13 @@ void ONNXImporter::populateNet(Net dstNet)
             if (axes.size() != 1)
                 CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
 
-            int dims[] = {1, -1};
+            MatShape inpShape = outShapes[node_proto.input(0)];
+            int axis = axes.getIntValue(0);
+            CV_Assert(0 <= axis && axis <= inpShape.size());
+            std::vector<int> outShape = inpShape;
+            outShape.insert(outShape.begin() + axis, 1);
             layerParams.type = "Reshape";
-            layerParams.set("axis", axes.getIntValue(0));
-            layerParams.set("num_axes", 1);
-            layerParams.set("dim", DictValue::arrayInt(&dims[0], 2));
+            layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
         }
         else if (layer_type == "Reshape")
         {

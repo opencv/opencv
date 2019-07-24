@@ -1328,7 +1328,7 @@ cv::gimpl::GParallelFluidExecutable::GParallelFluidExecutable(const ade::Graph  
                                                               const std::vector<GFluidOutputRois>   &parallelOutputRois)
 {
     for (auto&& rois : parallelOutputRois){
-        tiles.emplace_back(g, graph_data, rois.rois);
+        tiles.emplace_back(new GFluidExecutable(g, graph_data, rois.rois));
     }
 }
 
@@ -1343,7 +1343,8 @@ void cv::gimpl::GParallelFluidExecutable::run(std::vector<InObj>  &&input_objs,
                                               std::vector<OutObj> &&output_objs)
 {
     for (auto& tile : tiles ){
-        tile.run(input_objs, output_objs);
+        GAPI_Assert((bool)tile);
+        tile->run(input_objs, output_objs);
     }
 }
 

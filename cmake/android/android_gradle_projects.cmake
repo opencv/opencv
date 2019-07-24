@@ -105,17 +105,29 @@ macro(add_android_project target path)
 include ':${__dir}'
 ")
 
-  # build apk
-  set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
-  ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
-  add_custom_command(
-      OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
-      COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
-      COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
-      WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
-      DEPENDS ${depends} opencv_java_android
-      COMMENT "Building OpenCV Android sample project: ${__dir}"
-  )
+  if (BUILD_ANDROID_EXAMPLES)
+    # build apk
+    set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
+    ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
+    add_custom_command(
+        OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
+        COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
+        DEPENDS ${depends} opencv_java_android
+        COMMENT "Building OpenCV Android sample project: ${__dir}"
+    )
+  else()  # install only
+    # copy samples
+    add_custom_command(
+        OUTPUT "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
+        DEPENDS ${depends} opencv_java_android
+        COMMENT "Copying OpenCV Android sample project: ${__dir}"
+    )
+  endif()
+
   file(REMOVE "${OPENCV_DEPHELPER}/android_sample_${__dir}")  # force rebuild after CMake run
 
   add_custom_target(android_sample_${__dir} ALL DEPENDS "${OPENCV_DEPHELPER}/android_sample_${__dir}" SOURCES "${ANDROID_SAMPLE_MANIFEST_PATH}")
