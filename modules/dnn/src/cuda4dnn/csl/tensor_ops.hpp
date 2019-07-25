@@ -11,6 +11,7 @@
 #include "pointer.hpp"
 #include "cublas.hpp"
 #include "cudnn.hpp"
+#include "workspace.hpp"
 
 #include "cudnn/convolution.hpp"
 #include "cudnn/pooling.hpp"
@@ -260,7 +261,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return algo.get_workspace_size();
         }
 
-        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, const Workspace& scratchpad) {
+        void convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, WorkspaceInstance scratchpad) {
             cudnn::convolve<T>(
                 cudnnHandle,
                 convDesc, algo, scratchpad,
@@ -331,7 +332,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             return algo.get_workspace_size();
         }
 
-        void transpose_convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, const Workspace& scratchpad) {
+        void transpose_convolve(TensorSpan<T> output, TensorView<T> input, TensorView<T> filters, WorkspaceInstance scratchpad) {
             cudnn::transpose_convolve<T>(
                 cudnnHandle,
                 convDesc, algo, scratchpad,

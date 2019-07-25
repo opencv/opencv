@@ -158,24 +158,22 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 /* csl::Convolution supports symmetric padding only; hence, we deal with asymmetric padding by
                  * copying the input to a bigger tensor and padding the ends manually
                  */
-                auto transformed_input_shape = input_shape;
+                transformed_shape = input_shape;
                 for (int i = 0; i < rank; i++)
-                    transformed_input_shape[i] += padding_left[i] + padding_right[i];
+                    transformed_shape[i] += padding_left[i] + padding_right[i];
 
-                transformedInput.resize(std::begin(transformed_input_shape), std::end(transformed_input_shape));
                 inputTransformer = csl::TensorTransform<T>(cudnnHandle, padding_left, padding_right);
             }
 
             csl::Convolution<T>::params_type params;
-            if (transformedInput.empty())
+            if (transformed_shape.empty())
             {
                 params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
             }
             else
             {
                 /* the convolution operation will be seeing the transformed input */
-                auto transformed_input_shape = transformedInput.shape_as_vector();
-                params.input_shape.assign(std::begin(transformed_input_shape), std::end(transformed_input_shape));
+                params.input_shape.assign(std::begin(transformed_shape), std::end(transformed_shape));
             }
 
             auto& fshape = params.filter_shape;
@@ -191,7 +189,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             params.groups = config.groups;
 
             convoluter = csl::Convolution<T>(cudnnHandle, params);
-            scratch_mem_in_bytes = convoluter.get_workspace_size();
+
+            csl::WorkspaceBuilder builder;
+            if (!transformed_shape.empty()) {
+                auto& shape = transformed_shape;
+                auto sz = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<std::size_t>());
+                builder.require<T>(sz);
+            }
+            builder.require(convoluter.get_workspace_size());
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
         void forward(
@@ -201,19 +207,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         {
             CV_Assert(inputs.size() == 1 && outputs.size() == 1);
 
+            csl::WorkspaceAllocator allocator(workspace);
+
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
 
-            if (!transformedInput.empty())
+            if (!transformed_shape.empty())
             {
-                inputTransformer.transform(input, transformedInput);
-                input = csl::TensorView<T>(transformedInput);
+                auto& shape = transformed_shape;
+                auto transformed_input = allocator.get_tensor_span<T>(std::begin(shape), std::end(shape));
+                inputTransformer.transform(input, transformed_input);
+                input = transformed_input;
             }
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            convoluter.convolve(output, input, filtersTensor, workspace);
+            convoluter.convolve(output, input, filtersTensor, allocator.get_instance());
             if (!biasTensor.empty())
             {
                 std::size_t inner_size = output.size_range(2, output.rank());
@@ -229,7 +239,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Tensor<T> filtersTensor, biasTensor;
         csl::Convolution<T> convoluter;
 
-        csl::Tensor<T> transformedInput;
+        std::vector<std::size_t> transformed_shape;
         csl::TensorTransform<T> inputTransformer;
 
         std::size_t scratch_mem_in_bytes;

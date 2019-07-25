@@ -185,7 +185,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             params.groups = config.groups;
 
             convoluter = csl::TransposeConvolution<T>(cudnnHandle, params);
-            scratch_mem_in_bytes = convoluter.get_workspace_size();
+
+            csl::WorkspaceBuilder builder;
+            builder.require(convoluter.get_workspace_size());
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
         void forward(
@@ -201,7 +204,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            convoluter.transpose_convolve(output, input, filtersTensor, workspace);
+            csl::WorkspaceAllocator allocator(workspace);
+            convoluter.transpose_convolve(output, input, filtersTensor, allocator.get_instance());
             if (!biasTensor.empty())
             {
                 std::size_t inner_size = total(output_wrapper->getShape(), 2, -1);

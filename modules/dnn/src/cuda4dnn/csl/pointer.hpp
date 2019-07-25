@@ -32,6 +32,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      * A `const DevicePtr<const T>` represents an immutable pointer to an immutable memory.
      *
      * A `DevicePtr<T>` can implicitly convert to `DevicePtr<const T>`.
+     *
+     * Specalizations:
+     * - DevicePtr<void>/DevicePtr<const void> do not support pointer arithmetic (but relational operators are provided)
+     * - any device pointer pointing to mutable memory is implicitly convertible to DevicePtr<void>
+     * - any device pointer is implicitly convertible to DevicePtr<const void>
+     * - DevicePtr<void> can be explicitly converted to any device pointer
+     * - DevicePtr<const void> can be explicitly converted to any device pointer pointing to immutable memory
      */
     template <class T>
     class DevicePtr {
@@ -49,13 +56,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         CUDA4DNN_HOST_DEVICE DevicePtr operator=(pointer ptr_) noexcept { ptr = ptr_; return *this; }
 
         CUDA4DNN_HOST_DEVICE pointer get() const noexcept { return ptr; };
+
         CUDA4DNN_DEVICE reference operator[](difference_type idx) const noexcept { return get()[idx]; }
         CUDA4DNN_DEVICE reference operator*() const noexcept { return *get(); }
         CUDA4DNN_DEVICE pointer operator->() const noexcept { return get(); }
 
         template<class U = T, class V = typename std::add_const<U>::type,
             typename std::enable_if<!std::is_const<U>::value, bool>::type = true>
-            CUDA4DNN_HOST_DEVICE operator DevicePtr<V>() const noexcept { return DevicePtr<V>{ptr}; }
+        CUDA4DNN_HOST_DEVICE operator DevicePtr<V>() const noexcept { return DevicePtr<V>{ptr}; }
 
         CUDA4DNN_HOST_DEVICE explicit operator bool() const noexcept { return ptr; }
 
@@ -111,6 +119,112 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         CUDA4DNN_HOST_DEVICE friend bool operator>=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(lhs < rhs); }
 
         CUDA4DNN_HOST_DEVICE explicit operator pointer() const noexcept { return ptr; }
+
+        CUDA4DNN_HOST friend void swap(DevicePtr& lhs, DevicePtr& rhs) noexcept {
+            using std::swap;
+            swap(lhs.ptr, rhs.ptr);
+        }
+
+        template <class U, class V>
+        CUDA4DNN_HOST friend std::basic_ostream<U, V>& operator<<(std::basic_ostream<U, V>& os, DevicePtr other) {
+            os << other.get() << " (device)";
+            return os;
+        }
+
+    private:
+        pointer ptr;
+    };
+
+    template <>
+    class DevicePtr<const void> {
+    public:
+        using element_type = const void;
+        using pointer = typename std::add_pointer<element_type>::type;
+
+        DevicePtr() = default;
+
+        /* host const void pointer to const void device pointer */
+        CUDA4DNN_HOST_DEVICE explicit DevicePtr(pointer ptr_) noexcept : ptr{ ptr_ } { }
+
+        /* allow any device pointer to be implicitly convereted to void device pointer */
+        template <class T>
+        CUDA4DNN_HOST_DEVICE DevicePtr(DevicePtr<T> ptr_) noexcept : ptr{ ptr_.get() } { }
+
+        CUDA4DNN_HOST_DEVICE DevicePtr operator=(pointer ptr_) noexcept { ptr = ptr_; return *this; }
+
+        CUDA4DNN_HOST_DEVICE pointer get() const noexcept { return ptr; };
+
+        CUDA4DNN_HOST_DEVICE explicit operator bool() const noexcept { return ptr; }
+
+        CUDA4DNN_HOST_DEVICE friend bool operator==(DevicePtr lhs, DevicePtr rhs) noexcept { return lhs.ptr == rhs.ptr; }
+        CUDA4DNN_HOST_DEVICE friend bool operator!=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(lhs == rhs); }
+        CUDA4DNN_HOST_DEVICE friend bool operator<(DevicePtr lhs, DevicePtr rhs) noexcept { return lhs.ptr < rhs.ptr; }
+        CUDA4DNN_HOST_DEVICE friend bool operator>(DevicePtr lhs, DevicePtr rhs) noexcept { return rhs < lhs; }
+        CUDA4DNN_HOST_DEVICE friend bool operator<=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(rhs < lhs); }
+        CUDA4DNN_HOST_DEVICE friend bool operator>=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(lhs < rhs); }
+
+        /* explicit conversion into host void pointer */
+        CUDA4DNN_HOST_DEVICE explicit operator pointer() const noexcept { return ptr; }
+
+        /* const void device pointer can be explicitly casted into any const device pointer type */
+        template <class T, typename std::enable_if<std::is_const<T>::value, bool>::type = true>
+        CUDA4DNN_HOST_DEVICE explicit operator DevicePtr<T>() const noexcept {
+            return static_cast<T*>(ptr);
+        }
+
+        CUDA4DNN_HOST friend void swap(DevicePtr& lhs, DevicePtr& rhs) noexcept {
+            using std::swap;
+            swap(lhs.ptr, rhs.ptr);
+        }
+
+        template <class U, class V>
+        CUDA4DNN_HOST friend std::basic_ostream<U, V>& operator<<(std::basic_ostream<U, V>& os, DevicePtr other) {
+            os << other.get() << " (device)";
+            return os;
+        }
+
+    private:
+        pointer ptr;
+    };
+
+    template <>
+    class DevicePtr<void> {
+    public:
+        using element_type = void;
+        using pointer = typename std::add_pointer<element_type>::type;
+
+        DevicePtr() = default;
+
+        /* host pointer to device pointer */
+        CUDA4DNN_HOST_DEVICE explicit DevicePtr(pointer ptr_) noexcept : ptr{ ptr_ } { }
+
+        /* allow any device pointer to mutable memory to be implicitly convereted to void device pointer */
+        template <class T, typename std::enable_if<!std::is_const<T>::value, bool>::type = false>
+        CUDA4DNN_HOST_DEVICE DevicePtr(DevicePtr<T> ptr_) noexcept : ptr { ptr_.get() } { }
+
+        CUDA4DNN_HOST_DEVICE DevicePtr operator=(pointer ptr_) noexcept { ptr = ptr_; return *this; }
+
+        CUDA4DNN_HOST_DEVICE pointer get() const noexcept { return ptr; };
+
+        CUDA4DNN_HOST_DEVICE operator DevicePtr<const void>() const noexcept { return DevicePtr<const void>{ptr}; }
+
+        CUDA4DNN_HOST_DEVICE explicit operator bool() const noexcept { return ptr; }
+
+        CUDA4DNN_HOST_DEVICE friend bool operator==(DevicePtr lhs, DevicePtr rhs) noexcept { return lhs.ptr == rhs.ptr; }
+        CUDA4DNN_HOST_DEVICE friend bool operator!=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(lhs == rhs); }
+        CUDA4DNN_HOST_DEVICE friend bool operator<(DevicePtr lhs, DevicePtr rhs) noexcept { return lhs.ptr < rhs.ptr; }
+        CUDA4DNN_HOST_DEVICE friend bool operator>(DevicePtr lhs, DevicePtr rhs) noexcept { return rhs < lhs; }
+        CUDA4DNN_HOST_DEVICE friend bool operator<=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(rhs < lhs); }
+        CUDA4DNN_HOST_DEVICE friend bool operator>=(DevicePtr lhs, DevicePtr rhs) noexcept { return !(lhs < rhs); }
+
+        /* explicit conversion into host void pointer */
+        CUDA4DNN_HOST_DEVICE explicit operator pointer() const noexcept { return ptr; }
+
+        /* void device pointer can be explicitly casted into any device pointer type */
+        template <class T>
+        CUDA4DNN_HOST_DEVICE explicit operator DevicePtr<T>() const noexcept {
+            return DevicePtr<T>(static_cast<T*>(ptr));
+        }
 
         CUDA4DNN_HOST friend void swap(DevicePtr& lhs, DevicePtr& rhs) noexcept {
             using std::swap;

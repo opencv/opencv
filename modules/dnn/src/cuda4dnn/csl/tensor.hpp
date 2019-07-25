@@ -10,7 +10,6 @@
 #include "cublas.hpp"
 #include "cudnn.hpp"
 #include "span.hpp"
-#include "workspace.hpp"
 
 #include "../cxx_utils/resizable_static_array.hpp"
 #include "../cxx_utils/is_iterator.hpp"

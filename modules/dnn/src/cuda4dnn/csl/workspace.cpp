@@ -26,8 +26,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     std::size_t Workspace::size() const noexcept { return impl->ptr.size(); }
 
-    DevicePtr<unsigned char> WorkspaceAccessor::get(const Workspace& workspace) {
-        return DevicePtr<unsigned char>(workspace.impl->ptr.get());
+    DevicePtr<void> WorkspaceAccessor::get(const Workspace& workspace) {
+        return workspace.impl->ptr.get();
     }
 
 }}}} /* cv::dnn::cuda4dnn::csl */

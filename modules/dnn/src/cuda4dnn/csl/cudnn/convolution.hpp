@@ -281,7 +281,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const Handle& handle,
         const ConvolutionDescriptor<T>& convDesc,
         const ConvolutionAlgorithm<T>& convAlgo,
-        const Workspace& workspace,
+        WorkspaceInstance workspace,
         const FilterDescriptor<T>& filterDesc,
         DevicePtr<const T> filterPtr,
         const TensorDescriptor<T>& inputDesc,
@@ -296,7 +296,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &alpha, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
                 convDesc.get(), convAlgo.get(),
-                WorkspaceAccessor::get(workspace).get(), workspace.size(),
+                static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
                 &beta, outputDesc.get(), outputPtr.get()
             )
         );
@@ -307,7 +307,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         const Handle& handle,
         const ConvolutionDescriptor<half>& convDesc,
         const ConvolutionAlgorithm<half>& convAlgo,
-        const Workspace& workspace,
+        WorkspaceInstance workspace,
         const FilterDescriptor<half>& filterDesc,
         DevicePtr<const half> filterPtr,
         const TensorDescriptor<half>& inputDesc,
@@ -324,7 +324,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &alpha_, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
                 convDesc.get(), convAlgo.get(),
-                WorkspaceAccessor::get(workspace).get(), workspace.size(),
+                static_cast<void*>(workspace.get()), workspace.size_in_bytes(),
                 &beta_, outputDesc.get(), outputPtr.get()
             )
         );

@@ -11,6 +11,7 @@
 #include "../csl/span.hpp"
 #include "../csl/tensor.hpp"
 #include "../csl/kernels.hpp"
+#include "../csl/workspace.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -78,7 +79,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             for (int i = axis_end; i < config.input_shape.size(); i++)
                 inner_size *= config.input_shape[i];
 
-            scratch_mem_in_bytes = outer_size * inner_size * sizeof(T);
+            csl::WorkspaceBuilder builder;
+            builder.require<T>(outer_size * inner_size);
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
         void forward(
@@ -98,8 +101,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             std::size_t mid_size = input.size_range(axis_start, axis_end);
             std::size_t inner_size = input.size_range(axis_end, input.rank());
 
-            auto scratch_ptr = reinterpret_cast<T*>(csl::WorkspaceAccessor::get(workspace).get());
-            auto scratch = csl::span<T>(csl::DevicePtr<T>(scratch_ptr), workspace.size());
+            auto ws_allocator = csl::WorkspaceAllocator(workspace);
+            auto scratch = ws_allocator.get_span<T>();
             csl::kernels::normalize<T>(stream, output, input, outer_size, mid_size, inner_size, norm_order, epsilon, scratch);
 
             /* there might be a single weight in which case `weight` will be not equal to 1.0
@@ -118,7 +121,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             }
         }
 
-        std::size_t get_workspace_memory_in_bytes() { return scratch_mem_in_bytes; }
+        std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }
 
     private:
         csl::Stream stream;
