@@ -2529,7 +2529,7 @@ double dotProd_32f(const float* src1, const float* src2, int len)
                               vx_load(src2 + j + (cWidth * 3)), v_sum3);
         }
 
-        r += v_reduce_sum(v_sum1) + v_reduce_sum(v_sum2) + v_reduce_sum(v_sum3);
+        v_sum += v_sum1 + v_sum2 + v_sum3;
 #endif
 
         for (; j <= blockSize - cWidth; j += cWidth)
