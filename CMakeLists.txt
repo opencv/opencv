@@ -53,35 +53,6 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
   endif()
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  set(WINRT TRUE)
-endif()
-
-if(WINRT)
-  add_definitions(-DWINRT -DNO_GETENV)
-
-  # Making definitions available to other configurations and
-  # to filter dependency restrictions at compile time.
-  if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone)
-    set(WINRT_PHONE TRUE)
-    add_definitions(-DWINRT_PHONE)
-  elseif(CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-    set(WINRT_STORE TRUE)
-    add_definitions(-DWINRT_STORE)
-  endif()
-
-  if(CMAKE_SYSTEM_VERSION MATCHES 10)
-    set(WINRT_10 TRUE)
-    add_definitions(-DWINRT_10)
-  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.1)
-    set(WINRT_8_1 TRUE)
-    add_definitions(-DWINRT_8_1)
-  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.0)
-    set(WINRT_8_0 TRUE)
-    add_definitions(-DWINRT_8_0)
-  endif()
-endif()
-
 if(POLICY CMP0026)
   cmake_policy(SET CMP0026 NEW)
 endif()
@@ -135,6 +106,39 @@ endif()
 enable_testing()
 
 project(OpenCV CXX C)
+
+if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+  set(WINRT TRUE)
+endif()
+
+if(WINRT OR WINCE)
+  add_definitions(-DNO_GETENV)
+endif()
+
+if(WINRT)
+  add_definitions(-DWINRT)
+
+  # Making definitions available to other configurations and
+  # to filter dependency restrictions at compile time.
+  if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone)
+    set(WINRT_PHONE TRUE)
+    add_definitions(-DWINRT_PHONE)
+  elseif(CMAKE_SYSTEM_NAME MATCHES WindowsStore)
+    set(WINRT_STORE TRUE)
+    add_definitions(-DWINRT_STORE)
+  endif()
+
+  if(CMAKE_SYSTEM_VERSION MATCHES 10)
+    set(WINRT_10 TRUE)
+    add_definitions(-DWINRT_10)
+  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.1)
+    set(WINRT_8_1 TRUE)
+    add_definitions(-DWINRT_8_1)
+  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.0)
+    set(WINRT_8_0 TRUE)
+    add_definitions(-DWINRT_8_0)
+  endif()
+endif()
 
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
