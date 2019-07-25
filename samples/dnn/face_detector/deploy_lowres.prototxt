@@ -1,3 +1,4 @@
+# This file is based on deploy.prototxt but might be used for input resolution less than 300x300
 input: "data"
 input_shape {
   dim: 1
@@ -910,72 +911,72 @@ layer {
   bottom: "conv8_2_h"
   top: "conv8_2_h"
 }
-layer {
-  name: "conv9_1_h"
-  type: "Convolution"
-  bottom: "conv8_2_h"
-  top: "conv9_1_h"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 64
-    pad: 0
-    kernel_size: 1
-    stride: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "conv9_1_relu"
-  type: "ReLU"
-  bottom: "conv9_1_h"
-  top: "conv9_1_h"
-}
-layer {
-  name: "conv9_2_h"
-  type: "Convolution"
-  bottom: "conv9_1_h"
-  top: "conv9_2_h"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 128
-    pad: 0
-    kernel_size: 3
-    stride: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "conv9_2_relu"
-  type: "ReLU"
-  bottom: "conv9_2_h"
-  top: "conv9_2_h"
-}
+# layer {
+#   name: "conv9_1_h"
+#   type: "Convolution"
+#   bottom: "conv8_2_h"
+#   top: "conv9_1_h"
+#   param {
+#     lr_mult: 1
+#     decay_mult: 1
+#   }
+#   param {
+#     lr_mult: 2
+#     decay_mult: 0
+#   }
+#   convolution_param {
+#     num_output: 64
+#     pad: 0
+#     kernel_size: 1
+#     stride: 1
+#     weight_filler {
+#       type: "xavier"
+#     }
+#     bias_filler {
+#       type: "constant"
+#       value: 0
+#     }
+#   }
+# }
+# layer {
+#   name: "conv9_1_relu"
+#   type: "ReLU"
+#   bottom: "conv9_1_h"
+#   top: "conv9_1_h"
+# }
+# layer {
+#   name: "conv9_2_h"
+#   type: "Convolution"
+#   bottom: "conv9_1_h"
+#   top: "conv9_2_h"
+#   param {
+#     lr_mult: 1
+#     decay_mult: 1
+#   }
+#   param {
+#     lr_mult: 2
+#     decay_mult: 0
+#   }
+#   convolution_param {
+#     num_output: 128
+#     pad: 0
+#     kernel_size: 3
+#     stride: 1
+#     weight_filler {
+#       type: "xavier"
+#     }
+#     bias_filler {
+#       type: "constant"
+#       value: 0
+#     }
+#   }
+# }
+# layer {
+#   name: "conv9_2_relu"
+#   type: "ReLU"
+#   bottom: "conv9_2_h"
+#   top: "conv9_2_h"
+# }
 layer {
   name: "conv4_3_norm"
   type: "Normalize"
@@ -1573,122 +1574,122 @@ layer {
     offset: 0.5
   }
 }
-layer {
-  name: "conv9_2_mbox_loc"
-  type: "Convolution"
-  bottom: "conv9_2_h"
-  top: "conv9_2_mbox_loc"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 16
-    pad: 1
-    kernel_size: 3
-    stride: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "conv9_2_mbox_loc_perm"
-  type: "Permute"
-  bottom: "conv9_2_mbox_loc"
-  top: "conv9_2_mbox_loc_perm"
-  permute_param {
-    order: 0
-    order: 2
-    order: 3
-    order: 1
-  }
-}
-layer {
-  name: "conv9_2_mbox_loc_flat"
-  type: "Flatten"
-  bottom: "conv9_2_mbox_loc_perm"
-  top: "conv9_2_mbox_loc_flat"
-  flatten_param {
-    axis: 1
-  }
-}
-layer {
-  name: "conv9_2_mbox_conf"
-  type: "Convolution"
-  bottom: "conv9_2_h"
-  top: "conv9_2_mbox_conf"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 8 # 84
-    pad: 1
-    kernel_size: 3
-    stride: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "conv9_2_mbox_conf_perm"
-  type: "Permute"
-  bottom: "conv9_2_mbox_conf"
-  top: "conv9_2_mbox_conf_perm"
-  permute_param {
-    order: 0
-    order: 2
-    order: 3
-    order: 1
-  }
-}
-layer {
-  name: "conv9_2_mbox_conf_flat"
-  type: "Flatten"
-  bottom: "conv9_2_mbox_conf_perm"
-  top: "conv9_2_mbox_conf_flat"
-  flatten_param {
-    axis: 1
-  }
-}
-layer {
-  name: "conv9_2_mbox_priorbox"
-  type: "PriorBox"
-  bottom: "conv9_2_h"
-  bottom: "data"
-  top: "conv9_2_mbox_priorbox"
-  prior_box_param {
-    min_size: 264.0
-    max_size: 315.0
-    aspect_ratio: 2
-    flip: true
-    clip: false
-    variance: 0.1
-    variance: 0.1
-    variance: 0.2
-    variance: 0.2
-    step: 300
-    offset: 0.5
-  }
-}
+# layer {
+#   name: "conv9_2_mbox_loc"
+#   type: "Convolution"
+#   bottom: "conv9_2_h"
+#   top: "conv9_2_mbox_loc"
+#   param {
+#     lr_mult: 1
+#     decay_mult: 1
+#   }
+#   param {
+#     lr_mult: 2
+#     decay_mult: 0
+#   }
+#   convolution_param {
+#     num_output: 16
+#     pad: 1
+#     kernel_size: 3
+#     stride: 1
+#     weight_filler {
+#       type: "xavier"
+#     }
+#     bias_filler {
+#       type: "constant"
+#       value: 0
+#     }
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_loc_perm"
+#   type: "Permute"
+#   bottom: "conv9_2_mbox_loc"
+#   top: "conv9_2_mbox_loc_perm"
+#   permute_param {
+#     order: 0
+#     order: 2
+#     order: 3
+#     order: 1
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_loc_flat"
+#   type: "Flatten"
+#   bottom: "conv9_2_mbox_loc_perm"
+#   top: "conv9_2_mbox_loc_flat"
+#   flatten_param {
+#     axis: 1
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_conf"
+#   type: "Convolution"
+#   bottom: "conv9_2_h"
+#   top: "conv9_2_mbox_conf"
+#   param {
+#     lr_mult: 1
+#     decay_mult: 1
+#   }
+#   param {
+#     lr_mult: 2
+#     decay_mult: 0
+#   }
+#   convolution_param {
+#     num_output: 8 # 84
+#     pad: 1
+#     kernel_size: 3
+#     stride: 1
+#     weight_filler {
+#       type: "xavier"
+#     }
+#     bias_filler {
+#       type: "constant"
+#       value: 0
+#     }
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_conf_perm"
+#   type: "Permute"
+#   bottom: "conv9_2_mbox_conf"
+#   top: "conv9_2_mbox_conf_perm"
+#   permute_param {
+#     order: 0
+#     order: 2
+#     order: 3
+#     order: 1
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_conf_flat"
+#   type: "Flatten"
+#   bottom: "conv9_2_mbox_conf_perm"
+#   top: "conv9_2_mbox_conf_flat"
+#   flatten_param {
+#     axis: 1
+#   }
+# }
+# layer {
+#   name: "conv9_2_mbox_priorbox"
+#   type: "PriorBox"
+#   bottom: "conv9_2_h"
+#   bottom: "data"
+#   top: "conv9_2_mbox_priorbox"
+#   prior_box_param {
+#     min_size: 264.0
+#     max_size: 315.0
+#     aspect_ratio: 2
+#     flip: true
+#     clip: false
+#     variance: 0.1
+#     variance: 0.1
+#     variance: 0.2
+#     variance: 0.2
+#     step: 300
+#     offset: 0.5
+#   }
+# }
 layer {
   name: "mbox_loc"
   type: "Concat"
@@ -1697,7 +1698,7 @@ layer {
   bottom: "conv6_2_mbox_loc_flat"
   bottom: "conv7_2_mbox_loc_flat"
   bottom: "conv8_2_mbox_loc_flat"
-  bottom: "conv9_2_mbox_loc_flat"
+  # bottom: "conv9_2_mbox_loc_flat"
   top: "mbox_loc"
   concat_param {
     axis: 1
@@ -1711,7 +1712,7 @@ layer {
   bottom: "conv6_2_mbox_conf_flat"
   bottom: "conv7_2_mbox_conf_flat"
   bottom: "conv8_2_mbox_conf_flat"
-  bottom: "conv9_2_mbox_conf_flat"
+  # bottom: "conv9_2_mbox_conf_flat"
   top: "mbox_conf"
   concat_param {
     axis: 1
@@ -1725,7 +1726,7 @@ layer {
   bottom: "conv6_2_mbox_priorbox"
   bottom: "conv7_2_mbox_priorbox"
   bottom: "conv8_2_mbox_priorbox"
-  bottom: "conv9_2_mbox_priorbox"
+  # bottom: "conv9_2_mbox_priorbox"
   top: "mbox_priorbox"
   concat_param {
     axis: 2
