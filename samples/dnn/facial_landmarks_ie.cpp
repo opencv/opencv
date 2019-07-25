@@ -108,7 +108,7 @@ int main(int argc, char** argv)
                 return 1;
             }
 
-    Mat img;    
+    Mat img;
     while (waitKey(1) < 0)
     {
         cap >> img;
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
             //Face rectangle prediction processing
             float confidence = faceData[i + 2];
             if (confidence > faceConfThreshold)
-            {               
+            {
                 int left = int(faceData[i + 3] * img.cols);
                 left = std::max(left, 0);
                 int top = int(faceData[i + 4] * img.rows);
