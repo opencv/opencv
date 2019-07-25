@@ -420,12 +420,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         LRN& operator=(const LRN&) = delete;
         LRN& operator=(LRN&&) = default;
 
-        void normalize(TensorView<T> input, TensorSpan<T> output) {
+        void normalize(TensorView<T> input, TensorSpan<T> output, WorkspaceInstance workspace) {
             cudnn::LRNForward<T>(
                 cudnnHandle,
                 lrnDesc,
                 TensorDescriptor(input.shape_as_vector()), input.get(),
-                1.0, 0.0, TensorDescriptor(output.shape_as_vector()), output.get()
+                1.0, 0.0, TensorDescriptor(output.shape_as_vector()), output.get(),
+                workspace
             );
         }
 

@@ -63,7 +63,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             if (count * sizeof(T) > size_in_bytes_)
                 CV_Error(Error::StsNoMem, "memory not sufficient");
 
-            return span<T>(ptr, count);
+            return span<T>(static_cast<DevicePtr<T>>(ptr), count);
         }
 
         template <class T, class ForwardItr>
@@ -72,7 +72,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             auto required_size = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
             if (required_size * sizeof(T) > size_in_bytes_)
                 CV_Error(Error::StsNoMem, "memory not sufficient");
-            return TensorSpan<T>(ptr, shape_begin, shape_end);
+            return TensorSpan<T>(static_cast<DevicePtr<T>>(ptr), shape_begin, shape_end);
         }
 
     private:

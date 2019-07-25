@@ -16,7 +16,8 @@
 namespace cv { namespace dnn { namespace cuda4dnn {
 
     enum class lrn_type {
-        across_channels
+        across_channels,
+        within_channel
     };
 
     template <class T>
@@ -24,10 +25,24 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        LRNOp(csl::cudnn::Handle handle, lrn_type type, std::size_t local_size, T alpha, T beta, T bias)
+        LRNOp(csl::cudnn::Handle handle, lrn_type type_, std::size_t local_size, T alpha, T beta, T bias, std::size_t largestInputSize)
+            : scratch_mem_in_bytes { 0 }
         {
-            if(type == lrn_type::across_channels)
-                lrn = csl::LRN<T>(std::move(handle), local_size, alpha, beta, bias, csl::LRN<T>::lrn_type::ACROSS_CHANNELS);
+            csl::LRN<T>::lrn_type type;
+            switch (type_) {
+            case lrn_type::across_channels: type = csl::LRN<T>::lrn_type::across_channels; break;
+            case lrn_type::within_channel: type = csl::LRN<T>::lrn_type::within_channel; break;
+            }
+            lrn = csl::LRN<T>(std::move(handle), local_size, alpha, beta, bias, type);
+
+            csl::WorkspaceBuilder builder;
+            if (type_ == lrn_type::within_channel) {
+                /* this is not a bug; we require two of these */
+                builder.require<T>(largestInputSize);
+                builder.require<T>(largestInputSize);
+            }
+
+            scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
         void forward(
@@ -43,12 +58,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                lrn.normalize(input, output);
+                csl::WorkspaceAllocator allocator(workspace);
+                lrn.normalize(input, output, allocator.get_instance());
             }
         }
 
+        std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }
+
     private:
         csl::LRN<T> lrn;
+        std::size_t scratch_mem_in_bytes;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

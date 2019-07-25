@@ -7,6 +7,7 @@
 
 #include "cudnn.h"
 #include "../pointer.hpp"
+#include "../workspace.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -19,19 +20,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     class LRNDescriptor {
     public:
         enum class lrn_type {
-            ACROSS_CHANNELS
+            across_channels,
+            within_channel
         };
 
         LRNDescriptor() noexcept : descriptor{ nullptr } { }
         LRNDescriptor(const LRNDescriptor&) = delete;
         LRNDescriptor(LRNDescriptor&& other) noexcept
-            : descriptor{ other.descriptor } {
+            : descriptor{ other.descriptor }, type{ other.type } {
             other.descriptor = nullptr;
         }
 
-        LRNDescriptor(std::size_t local_size, double alpha, double beta, double k, lrn_type type)
+        LRNDescriptor(std::size_t local_size, double alpha, double beta, double k, lrn_type type_)
         {
-            constructor(local_size, alpha, beta, k, type);
+            constructor(local_size, alpha, beta, k, type_);
         }
 
         ~LRNDescriptor() noexcept {
@@ -44,22 +46,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         LRNDescriptor& operator=(const LRNDescriptor&) = delete;
         LRNDescriptor& operator=(LRNDescriptor&& other) noexcept {
             descriptor = other.descriptor;
+            type = other.type;
             other.descriptor = nullptr;
             return *this;
         };
 
         cudnnLRNDescriptor_t get() const noexcept { return descriptor; }
+        lrn_type get_type() const noexcept { return type; }
 
     private:
-        void constructor(std::size_t local_size, double alpha, double beta, double k, lrn_type type) {
-            auto get_lrn_type = [] (lrn_type type) {
-                switch (type) {
-                case lrn_type::ACROSS_CHANNELS:
-                    return CUDNN_LRN_CROSS_CHANNEL_DIM1;
-                }
-                CV_Error(Error::StsBadArg, "unknown LRN type");
-            };
-            mode = get_lrn_type(type);
+        void constructor(std::size_t local_size, double alpha, double beta, double k, lrn_type type_) {
+            type = type_;
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreateLRNDescriptor(&descriptor));
             try {
@@ -80,7 +77,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
 
         cudnnLRNDescriptor_t descriptor;
-        cudnnLRNMode_t mode;
+        lrn_type type;
     };
 
     template <class T>
@@ -91,16 +88,36 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         DevicePtr<const T> inputPtr,
         T alpha, T beta,
         const TensorDescriptor<T>& outputDesc,
-        DevicePtr<T> outputPtr)
+        DevicePtr<T> outputPtr,
+        WorkspaceInstance workspace)
     {
-        CUDA4DNN_CHECK_CUDNN(
-            cudnnLRNCrossChannelForward(
-                HandleAccessor::get(handle),
-                lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                &alpha, inputDesc.get(), inputPtr.get(),
-                &beta, outputDesc.get(), outputPtr.get()
-            )
-        );
+        if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
+            CUDA4DNN_CHECK_CUDNN(
+                cudnnLRNCrossChannelForward(
+                    HandleAccessor::get(handle),
+                    lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                    &alpha, inputDesc.get(), inputPtr.get(),
+                    &beta, outputDesc.get(), outputPtr.get()
+                )
+            );
+        } else if (lrnDesc.get_type() == LRNDescriptor::lrn_type::within_channel) {
+            std::size_t size;
+            CUDA4DNN_CHECK_CUDNN(cudnnGetTensorSizeInBytes(inputDesc.get(), &size));
+
+            DevicePtr<void> temp1 = workspace.get_span<half>(size).data();
+            DevicePtr<void> temp2 = workspace.get_span<half>(size).data();
+
+            CUDA4DNN_CHECK_CUDNN(
+                cudnnDivisiveNormalizationForward(
+                    HandleAccessor::get(handle),
+                    lrnDesc.get(), CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+                    &alpha, inputDesc.get(), inputPtr.get(),
+                    NULL,
+                    static_cast<void*>(temp1), static_cast<void*>(temp2),
+                    &beta, outputDesc.get(), outputPtr.get()
+                )
+            );
+        }
     }
 
     template <> inline
@@ -109,20 +126,40 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
        const LRNDescriptor& lrnDesc,
        const TensorDescriptor<half>& inputDesc,
        DevicePtr<const half> inputPtr,
-        half alpha, half beta,
+       half alpha, half beta,
        const TensorDescriptor<half>& outputDesc,
-       DevicePtr<half> outputPtr)
+       DevicePtr<half> outputPtr,
+        WorkspaceInstance workspace)
     {
         /* we specalize for fp16 as the scaling factors must be provided as `float` */
         float alpha_ = alpha, beta_ = beta;
-        CUDA4DNN_CHECK_CUDNN(
-            cudnnLRNCrossChannelForward(
-                HandleAccessor::get(handle),
-                lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
-                &alpha_, inputDesc.get(), inputPtr.get(),
-                &beta_, outputDesc.get(), outputPtr.get()
-            )
-        );
+        if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
+            CUDA4DNN_CHECK_CUDNN(
+                cudnnLRNCrossChannelForward(
+                    HandleAccessor::get(handle),
+                    lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
+                    &alpha_, inputDesc.get(), inputPtr.get(),
+                    &beta_, outputDesc.get(), outputPtr.get()
+                )
+            );
+        } else if (lrnDesc.get_type() == LRNDescriptor::lrn_type::within_channel) {
+            std::size_t size;
+            CUDA4DNN_CHECK_CUDNN(cudnnGetTensorSizeInBytes(inputDesc.get(), &size));
+
+            DevicePtr<void> temp1 = workspace.get_span<half>(size).data();
+            DevicePtr<void> temp2 = workspace.get_span<half>(size).data();
+
+            CUDA4DNN_CHECK_CUDNN(
+                cudnnDivisiveNormalizationForward(
+                    HandleAccessor::get(handle),
+                    lrnDesc.get(), CUDNN_DIVNORM_PRECOMPUTED_MEANS,
+                    &alpha_, inputDesc.get(), inputPtr.get(),
+                    NULL,
+                    static_cast<void*>(temp1), static_cast<void*>(temp2),
+                    &beta_, outputDesc.get(), outputPtr.get()
+                )
+            );
+        }
     }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */

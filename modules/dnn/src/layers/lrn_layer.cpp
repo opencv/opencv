@@ -334,12 +334,36 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        if (type != CHANNEL_NRM)
-            CV_Error(CV_StsNotImplemented, "Only LRN across channels is supported by the CUDA backend");
+        cuda4dnn::lrn_type type_;
+        if (type == CHANNEL_NRM)
+            type_ = cuda4dnn::lrn_type::across_channels;
+        else if (type == SPATIAL_NRM)
+            type_ = cuda4dnn::lrn_type::within_channel;
+        else
+            CV_Error(Error::StsNotImplemented, "Unknown normalization region");
 
-        float alphaSize = normBySize ? alpha : alpha * size;
+        float alphaSize = alpha;
+        if (!normBySize) {
+            switch (type) {
+            case CHANNEL_NRM: alphaSize = alpha * size; break;
+            case SPATIAL_NRM: alphaSize = alpha * size * size; break;
+            }
+        }
+
+        std::size_t largestInputSize = 0;
+        for(auto& wrapper : inputs) {
+            auto input_wrapper = wrapper.dynamicCast<CUDABackendWrapper>();
+            auto shape = input_wrapper->getShape();
+            largestInputSize = std::max<std::size_t>(
+                largestInputSize,
+                std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int>())
+            );
+        }
+
         cudaNode = make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
-            std::move(cudnn_handle), lrn_type::across_channels, size, alphaSize, beta, bias);
+            std::move(cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
+
+        scratch_mem_in_bytes = cudaNode->get_workspace_memory_in_bytes();
     }
 
     std::unique_ptr<CUDABackendNode> cudaNode;
