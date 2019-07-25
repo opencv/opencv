@@ -296,6 +296,8 @@ public:
 
         while ( is_eof == false && is_completed == false )
         {
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
             switch ( *ptr )
             {
                 /* comment */
@@ -381,6 +383,7 @@ public:
         if ( is_eof || !is_completed )
         {
             ptr = fs->bufferStart();
+            CV_Assert(ptr);
             *ptr = '\0';
             fs->setEof();
             if( !is_completed )
@@ -392,6 +395,9 @@ public:
 
     char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must start with \'\"\'" );
 
@@ -430,6 +436,9 @@ public:
 
     char* parseValue( char* ptr, FileNode& node )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid value input");
+
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
             CV_PARSE_ERROR_CPP( "Unexpected End-Of-File" );
@@ -817,6 +826,9 @@ public:
 
     bool parse( char* ptr )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         ptr = skipSpaces( ptr );
         if ( !ptr || !*ptr )
             return false;
