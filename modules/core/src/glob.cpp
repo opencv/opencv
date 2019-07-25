@@ -57,7 +57,7 @@ namespace
 
     struct DIR
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         WIN32_FIND_DATAW data;
 #else
         WIN32_FIND_DATAA data;
@@ -78,7 +78,7 @@ namespace
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         cv::String full_path = cv::String(path) + "\\*";
         wchar_t wfull_path[MAX_PATH];
         size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
@@ -100,7 +100,7 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         if (dir->ent.d_name != 0)
         {
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)

@@ -46,6 +46,13 @@ foreach(sample_filename ${cpp_samples})
   if(HAVE_OPENGL AND sample_filename MATCHES "detect_mser")
     target_compile_definitions(${tgt} PRIVATE HAVE_OPENGL)
   endif()
+  if(sample_filename MATCHES "simd_")
+    # disabled intentionally - demonstation purposes only
+    #target_include_directories(${tgt} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+    #target_compile_definitions(${tgt} PRIVATE OPENCV_SIMD_CONFIG_HEADER=opencv_simd_config_custom.hpp)
+    #target_compile_definitions(${tgt} PRIVATE OPENCV_SIMD_CONFIG_INCLUDE_DIR=1)
+    #target_compile_options(${tgt} PRIVATE -mavx2)
+  endif()
 endforeach()
 
 include("tutorial_code/calib3d/real_time_pose_estimation/CMakeLists.txt" OPTIONAL)
