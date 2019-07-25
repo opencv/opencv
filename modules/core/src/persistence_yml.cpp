@@ -330,6 +330,9 @@ public:
 
     char* skipSpaces( char* ptr, int min_indent, int max_comment_indent )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         for(;;)
         {
             while( *ptr == ' ' )
@@ -374,6 +377,9 @@ public:
 
     bool getBase64Row(char* ptr, int indent, char* &beg, char* &end)
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         beg = end = ptr = skipSpaces(ptr, 0, INT_MAX);
         if (!ptr || !*ptr)
             return false; // end of file
@@ -394,6 +400,9 @@ public:
 
     char* parseKey( char* ptr, FileNode& map_node, FileNode& value_placeholder )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         char c;
         char *endptr = ptr - 1, *saveptr;
 
@@ -422,6 +431,9 @@ public:
 
     char* parseValue( char* ptr, FileNode& node, int min_indent, bool is_parent_flow )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         char* endptr = 0;
         char c = ptr[0], d = ptr[1];
         int value_type = FileNode::NONE;
@@ -508,6 +520,8 @@ public:
 
             *endptr = d;
             ptr = skipSpaces( endptr, min_indent, INT_MAX );
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
 
             c = *ptr;
 
@@ -634,6 +648,8 @@ public:
                 FileNode elem;
 
                 ptr = skipSpaces( ptr, new_min_indent, INT_MAX );
+                if (!ptr)
+                    CV_PARSE_ERROR_CPP("Invalid input");
                 if( *ptr == '}' || *ptr == ']' )
                 {
                     if( *ptr != d )
@@ -647,6 +663,8 @@ public:
                     if( *ptr != ',' )
                         CV_PARSE_ERROR_CPP( "Missing , between the elements" );
                     ptr = skipSpaces( ptr + 1, new_min_indent, INT_MAX );
+                    if (!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid input");
                 }
 
                 if( struct_type == FileNode::MAP )
@@ -746,6 +764,9 @@ public:
 
     bool parse( char* ptr )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         bool first = true;
         bool ok = true;
         FileNode root_collection(fs->getFS(), 0, 0);
