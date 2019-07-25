@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include <iostream>
 #include <ostream>
+#include <unistd.h>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
