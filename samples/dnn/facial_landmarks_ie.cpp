@@ -5,12 +5,12 @@
 // Copyright (C) 2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
-//  This sample demonstrates the use of pretrained face- and facial landmarks detection OpenVINO networks with opencv's dnn module.
+//  This sample demonstrates the use of pretrained face and facial landmarks detection OpenVINO networks with opencv's dnn module.
 //
 //  The sample uses two pretrained OpenVINO networks so the OpenVINO package has to be preinstalled.
 //  Please install topologies described below using downloader.py (.../openvino/deployment_tools/tools/model_downloader) to run this sample.
 //  Face detection model - face-detection-adas-0001: https://github.com/opencv/open_model_zoo/tree/master/intel_models/face-detection-adas-0001
-//  Facial landmarks detection model - facial-landmarks-35-adas-0002: url=https://github.com/opencv/open_model_zoo/tree/master/intel_models/facial-landmarks-35-adas-0002
+//  Facial landmarks detection model - facial-landmarks-35-adas-0002: https://github.com/opencv/open_model_zoo/tree/master/intel_models/facial-landmarks-35-adas-0002
 //
 
 #include <opencv2/dnn.hpp>
@@ -20,10 +20,14 @@ using namespace cv;
 using namespace cv::dnn;
 
 #include <iostream>
-//#include "common.hpp"
 
 int main(int argc, char** argv)
 {
+    const std::string win1 = "FaceLandmarkDetector";
+    const Scalar green(0, 255, 0);
+    const Scalar yellow(0, 255, 255);
+    const Scalar black(0,0,0);
+
     CommandLineParser parser(argc, argv,
      "{ help  h              | |     Print the help message. }"
      "{ facestruct           | |     Full path to a Face detection model structure file (for example, .xml file).}"
@@ -31,21 +35,6 @@ int main(int argc, char** argv)
      "{ landmstruct          | |     Full path to a facial Landmarks detection model structure file (for example, .xml file).}"
      "{ landmweights         | |     Full path to a facial Landmarks detection model weights file (for example, .bin file).}"
      "{ input                | |     Full path to an input image or a video file. Skip this argument to capture frames from a camera.}"
-     "{ b                    | |     The color to draw face rectangle and landmarks in format \"(b, g, r)\".}"
-     "{ g                    | |     The color to draw face rectangle and landmarks in format \"(b, g, r)\".}"
-     "{ r                    | |     The color to draw face rectangle and landmarks in format \"(b, g, r)\".}"
-     "{ faceframework        | |     Optional name of an origin framework of the facedetector. Detect it automatically if it does not set. }"
-     "{ landmframework       | |     Optional name of an origin framework of the landmarkdetector. Detect it automatically if it does not set. }"
-     "{ facebackend          | 0 |   Choose one of computation backends for facedetector: "
-                                         "0: automatically (by default), "
-                                         "1: Halide language (http://halide-lang.org/), "
-                                         "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                                         "3: OpenCV implementation }"
-     "{ landmbackend         | 0 |   Choose one of computation backends for facedetector: "
-                                         "0: automatically (by default), "
-                                         "1: Halide language (http://halide-lang.org/), "
-                                         "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                                         "3: OpenCV implementation }"
      "{ facetarget           | 0 |   Choose one of target computation devices for facedetector: "
                                          "0: CPU target (by default), "
                                          "1: OpenCL, "
@@ -58,7 +47,7 @@ int main(int argc, char** argv)
                                          "3: VPU }"
         );
 
-    parser.about("Use this script to run classification deep learning networks using OpenCV.");
+    parser.about("Use this script to run the face and facial landmarks detection deep learning IE networks using dnn API.");
     if (argc == 1 || parser.has("help"))
     {
         parser.printMessage();
@@ -69,19 +58,14 @@ int main(int argc, char** argv)
     const std::string facexmlPath = parser.get<std::string>("facestruct");
     const std::string facebinPath = parser.get<std::string>("faceweights");
     const Target faceTarget = parser.get<Target>("facetarget");
-    const Backend faceBackend = parser.get<Backend>("facebackend");
 
     const std::string landmxmlPath = parser.get<std::string>("landmstruct");
     const std::string landmbinPath = parser.get<std::string>("landmweights");
     const Target landmTarget = parser.get<Target>("landmtarget");
-    const Backend landmBackend = parser.get<Backend>("landmbackend");
-
-    const Scalar color = Scalar(parser.get<int>("b"), parser.get<int>("g"), parser.get<int>("r"));
 
     //Models' definition & initialization
     Net faceNet = readNet(facexmlPath, facebinPath);
     faceNet.setPreferableTarget(faceTarget);
-    faceNet.setPreferableBackend(faceBackend);
     const unsigned int faceObjectSize = 7;
     const float faceConfThreshold = 0.7f;
     const unsigned int facecols = 672;
@@ -89,14 +73,9 @@ int main(int argc, char** argv)
 
     Net landmNet = readNet(landmxmlPath, landmbinPath);
     landmNet.setPreferableTarget(landmTarget);
-    landmNet.setPreferableBackend(landmBackend);
     const unsigned int landmcols = 60;
     const unsigned int landmrows = 60;
     const float bb_enlarge_coefficient = 1.0f;
-
-    const std::string win1 = "FaceLandmarkDetector";
-    //TODO: rewrite color
-    const Scalar black(0,0,0);
 
     //Input
     VideoCapture cap;
@@ -147,7 +126,7 @@ int main(int argc, char** argv)
                 int width  = right - left + 1;
                 int height = bottom - top + 1;
 
-                rectangle(shwimg, Rect(left, top, width, height), color, 3);
+                rectangle(shwimg, Rect(left, top, width, height), green, 1);
 
                 //Postprocessing for landmarks
                 int max_of_sizes = std::max(width, height);
@@ -172,18 +151,18 @@ int main(int argc, char** argv)
                 {
                     Point p (int(landmData[ j ] * cropped.cols + left-add_width/2),
                              int(landmData[j+1] * cropped.rows + top-add_height/2));
-                    line(shwimg, p, p, color, 3);
+                    line(shwimg, p, p, yellow, 3);
                 }
 
-                Point ptsmas[1][17];
+                Point ptsmas[17];
                 for(; j < outLandms.total(); j+=2)
                 {
-                    ptsmas[0][(j-18*2)/2].x = int(landmData[j]* cropped.cols + left-add_width/2);
-                    ptsmas[0][(j-18*2)/2].y = int(landmData[j+1] * cropped.rows + top-add_height/2 );
+                    ptsmas[(j-18*2)/2] = Point(int(landmData[j] * cropped.cols + left-add_width/2),
+                                                  int(landmData[j+1] * cropped.rows + top-add_height/2));
                 }
-                const Point* ppt[1] = {ptsmas[0]};
+                const Point* ppt[1] = {ptsmas};
                 int npt[] = {17};
-                polylines(shwimg, ppt, npt, 1, false, color, 3);
+                polylines(shwimg, ppt, npt, 1, false, yellow, 1);
             }
             else
             {
