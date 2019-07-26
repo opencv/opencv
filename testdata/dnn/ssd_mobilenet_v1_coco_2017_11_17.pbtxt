@@ -46,6 +46,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_0/weights/read/_104__cf__107"
   input: "^FeatureExtractor/Assert/Assert"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -79,6 +85,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_0/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_1_depthwise/depthwise_weights/read/_101__cf__104"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -120,6 +132,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_1_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_1_pointwise/weights/read/_98__cf__101"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -153,6 +171,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_1_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_2_depthwise/depthwise_weights/read/_95__cf__98"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -194,6 +218,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_2_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_2_pointwise/weights/read/_92__cf__95"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -227,6 +257,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_2_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_3_depthwise/depthwise_weights/read/_89__cf__92"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -268,6 +304,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_3_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_3_pointwise/weights/read/_86__cf__89"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -301,6 +343,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_3_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_4_depthwise/depthwise_weights/read/_83__cf__86"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -342,6 +390,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_4_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_4_pointwise/weights/read/_80__cf__83"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -375,6 +429,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_4_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_5_depthwise/depthwise_weights/read/_77__cf__80"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -416,6 +476,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_5_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_5_pointwise/weights/read/_74__cf__77"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -449,6 +515,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_5_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_6_depthwise/depthwise_weights/read/_71__cf__74"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -490,6 +562,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_6_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_6_pointwise/weights/read/_68__cf__71"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -523,6 +601,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_6_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_7_depthwise/depthwise_weights/read/_65__cf__68"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -564,6 +648,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_7_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_7_pointwise/weights/read/_62__cf__65"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -597,6 +687,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_7_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_8_depthwise/depthwise_weights/read/_59__cf__62"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -638,6 +734,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_8_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_8_pointwise/weights/read/_56__cf__59"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -671,6 +773,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_8_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_9_depthwise/depthwise_weights/read/_53__cf__56"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -712,6 +820,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_9_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_9_pointwise/weights/read/_50__cf__53"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -745,6 +859,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_9_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_10_depthwise/depthwise_weights/read/_47__cf__50"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -786,6 +906,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_10_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_10_pointwise/weights/read/_44__cf__47"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -819,6 +945,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_10_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_11_depthwise/depthwise_weights/read/_41__cf__44"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -860,6 +992,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_11_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_11_pointwise/weights/read/_38__cf__41"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -894,6 +1032,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Relu6"
   input: "BoxPredictor_0/ClassPredictor/weights/read/_178__cf__181"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -916,12 +1060,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_0/ClassPredictor/Conv2D"
   input: "BoxPredictor_0/ClassPredictor/biases/read/_177__cf__180"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_0/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Relu6"
   input: "BoxPredictor_0/BoxEncodingPredictor/weights/read/_116__cf__119"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -951,12 +1107,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_0/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_0/BoxEncodingPredictor/biases/read/_115__cf__118"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_12_depthwise/depthwise"
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_11_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_12_depthwise/depthwise_weights/read/_35__cf__38"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -998,6 +1166,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_12_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_12_pointwise/weights/read/_32__cf__35"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1031,6 +1205,12 @@ node {
   op: "DepthwiseConv2dNative"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_12_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_depthwise/depthwise_weights/read/_29__cf__32"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -1072,6 +1252,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_13_depthwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise/weights/read/_26__cf__29"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1106,6 +1292,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Relu6"
   input: "BoxPredictor_1/ClassPredictor/weights/read/_176__cf__179"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1128,12 +1320,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_1/ClassPredictor/Conv2D"
   input: "BoxPredictor_1/ClassPredictor/biases/read/_175__cf__178"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_1/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Relu6"
   input: "BoxPredictor_1/BoxEncodingPredictor/weights/read/_114__cf__117"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -1163,12 +1367,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_1/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_1/BoxEncodingPredictor/biases/read/_113__cf__116"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_2_1x1_256/BatchNorm/batchnorm/mul_1"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/MobilenetV1/Conv2d_13_pointwise/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_2_1x1_256/weights/read/_23__cf__26"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -1204,6 +1420,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_2_1x1_256/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_2_3x3_s2_512/weights/read/_20__cf__23"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1238,6 +1460,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_2_3x3_s2_512/Relu6"
   input: "BoxPredictor_2/ClassPredictor/weights/read/_174__cf__177"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1260,12 +1488,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_2/ClassPredictor/Conv2D"
   input: "BoxPredictor_2/ClassPredictor/biases/read/_173__cf__176"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_2/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_2_3x3_s2_512/Relu6"
   input: "BoxPredictor_2/BoxEncodingPredictor/weights/read/_112__cf__115"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -1295,12 +1535,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_2/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_2/BoxEncodingPredictor/biases/read/_111__cf__114"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_3_1x1_128/BatchNorm/batchnorm/mul_1"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_2_3x3_s2_512/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_3_1x1_128/weights/read/_17__cf__20"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -1336,6 +1588,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_3_1x1_128/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_3_3x3_s2_256/weights/read/_14__cf__17"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1370,6 +1628,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_3_3x3_s2_256/Relu6"
   input: "BoxPredictor_3/ClassPredictor/weights/read/_172__cf__175"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1392,12 +1656,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_3/ClassPredictor/Conv2D"
   input: "BoxPredictor_3/ClassPredictor/biases/read/_171__cf__174"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_3/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_3_3x3_s2_256/Relu6"
   input: "BoxPredictor_3/BoxEncodingPredictor/weights/read/_110__cf__113"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -1427,12 +1703,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_3/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_3/BoxEncodingPredictor/biases/read/_109__cf__112"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_4_1x1_128/BatchNorm/batchnorm/mul_1"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_3_3x3_s2_256/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_4_1x1_128/weights/read/_11__cf__14"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -1468,6 +1756,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_4_1x1_128/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_4_3x3_s2_256/weights/read/_8__cf__11"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1502,6 +1796,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_4_3x3_s2_256/Relu6"
   input: "BoxPredictor_4/ClassPredictor/weights/read/_170__cf__173"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1524,12 +1824,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_4/ClassPredictor/Conv2D"
   input: "BoxPredictor_4/ClassPredictor/biases/read/_169__cf__172"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_4/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_4_3x3_s2_256/Relu6"
   input: "BoxPredictor_4/BoxEncodingPredictor/weights/read/_108__cf__111"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -1559,12 +1871,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_4/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_4/BoxEncodingPredictor/biases/read/_107__cf__110"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_5_1x1_64/BatchNorm/batchnorm/mul_1"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_4_3x3_s2_256/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_5_1x1_64/weights/read/_5__cf__8"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "padding"
     value {
@@ -1600,6 +1924,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_1_Conv2d_5_1x1_64/Relu6"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_5_3x3_s2_128/weights/read/_2__cf__5"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1634,6 +1964,12 @@ node {
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_5_3x3_s2_128/Relu6"
   input: "BoxPredictor_5/ClassPredictor/weights/read/_168__cf__171"
   attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
+  attr {
     key: "padding"
     value {
       s: "SAME"
@@ -1656,12 +1992,24 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_5/ClassPredictor/Conv2D"
   input: "BoxPredictor_5/ClassPredictor/biases/read/_167__cf__170"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "BoxPredictor_5/BoxEncodingPredictor/Conv2D"
   op: "Conv2D"
   input: "FeatureExtractor/MobilenetV1/Conv2d_13_pointwise_2_Conv2d_5_3x3_s2_128/Relu6"
   input: "BoxPredictor_5/BoxEncodingPredictor/weights/read/_106__cf__109"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
   attr {
     key: "loc_pred_transposed"
     value {
@@ -1691,6 +2039,12 @@ node {
   op: "BiasAdd"
   input: "BoxPredictor_5/BoxEncodingPredictor/Conv2D"
   input: "BoxPredictor_5/BoxEncodingPredictor/biases/read/_105__cf__108"
+  attr {
+    key: "data_format"
+    value {
+      s: "NHWC"
+    }
+  }
 }
 node {
   name: "concat/axis_flatten"
@@ -1700,12 +2054,12 @@ node {
     value {
       tensor {
         dtype: DT_INT32
+        int_val: -1
         tensor_shape {
           dim {
             size: 1
           }
         }
-        int_val: -1
       }
     }
   }
@@ -1814,14 +2168,14 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 30.0
+        float_val: 42.4264068712
+        float_val: 84.8528137424
         tensor_shape {
           dim {
             size: 3
           }
         }
-        float_val: 30.0
-        float_val: 42.4264068604
-        float_val: 84.8528137207
       }
     }
   }
@@ -1830,15 +2184,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -1847,14 +2201,14 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 30.0
+        float_val: 84.8528137424
+        float_val: 42.4264068712
         tensor_shape {
           dim {
             size: 3
           }
         }
-        float_val: 30.0
-        float_val: 84.8528137207
-        float_val: 42.4264068604
       }
     }
   }
@@ -1881,17 +2235,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 105.0
+        float_val: 74.2462120246
+        float_val: 148.492424049
+        float_val: 60.6217782649
+        float_val: 181.874428744
+        float_val: 125.49900398
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 105.0
-        float_val: 74.2462158203
-        float_val: 148.492431641
-        float_val: 60.6217765808
-        float_val: 181.956329346
-        float_val: 125.499000549
       }
     }
   }
@@ -1900,15 +2254,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -1917,17 +2271,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 105.0
+        float_val: 148.492424049
+        float_val: 74.2462120246
+        float_val: 181.865334795
+        float_val: 60.6187471002
+        float_val: 125.49900398
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 105.0
-        float_val: 148.492431641
-        float_val: 74.2462158203
-        float_val: 181.865341187
-        float_val: 60.5914611816
-        float_val: 125.499000549
       }
     }
   }
@@ -1954,17 +2308,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 150.0
+        float_val: 106.066017178
+        float_val: 212.132034356
+        float_val: 86.6025403784
+        float_val: 259.820612491
+        float_val: 171.026313765
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 150.0
-        float_val: 106.066017151
-        float_val: 212.132034302
-        float_val: 86.6025390625
-        float_val: 259.93762207
-        float_val: 171.026306152
       }
     }
   }
@@ -1973,15 +2327,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -1990,17 +2344,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 150.0
+        float_val: 212.132034356
+        float_val: 106.066017178
+        float_val: 259.807621135
+        float_val: 86.5982101432
+        float_val: 171.026313765
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 150.0
-        float_val: 212.132034302
-        float_val: 106.066017151
-        float_val: 259.807617188
-        float_val: 86.5592269897
-        float_val: 171.026306152
       }
     }
   }
@@ -2027,17 +2381,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 195.0
+        float_val: 137.885822331
+        float_val: 275.771644663
+        float_val: 112.583302492
+        float_val: 337.766796238
+        float_val: 216.333076528
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 195.0
-        float_val: 137.885818481
-        float_val: 275.771636963
-        float_val: 112.583305359
-        float_val: 337.918914795
-        float_val: 216.333084106
       }
     }
   }
@@ -2046,15 +2400,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -2063,17 +2417,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 195.0
+        float_val: 275.771644663
+        float_val: 137.885822331
+        float_val: 337.749907476
+        float_val: 112.577673186
+        float_val: 216.333076528
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 195.0
-        float_val: 275.771636963
-        float_val: 137.885818481
-        float_val: 337.749908447
-        float_val: 112.527000427
-        float_val: 216.333084106
       }
     }
   }
@@ -2100,17 +2454,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 240.0
+        float_val: 169.705627485
+        float_val: 339.41125497
+        float_val: 138.564064606
+        float_val: 415.712979985
+        float_val: 261.533936612
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 240.0
-        float_val: 169.705627441
-        float_val: 339.411254883
-        float_val: 138.564071655
-        float_val: 415.90020752
-        float_val: 261.533935547
       }
     }
   }
@@ -2119,15 +2473,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -2136,17 +2490,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 240.0
+        float_val: 339.41125497
+        float_val: 169.705627485
+        float_val: 415.692193817
+        float_val: 138.557136229
+        float_val: 261.533936612
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 240.0
-        float_val: 339.411254883
-        float_val: 169.705627441
-        float_val: 415.692199707
-        float_val: 138.494766235
-        float_val: 261.533935547
       }
     }
   }
@@ -2173,17 +2527,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 285.0
+        float_val: 201.525432638
+        float_val: 403.050865276
+        float_val: 164.544826719
+        float_val: 493.659163732
+        float_val: 292.403830344
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 285.0
-        float_val: 201.525436401
-        float_val: 403.050872803
-        float_val: 164.544830322
-        float_val: 493.881469727
-        float_val: 292.403839111
       }
     }
   }
@@ -2192,15 +2546,15 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 0.1
+        float_val: 0.1
+        float_val: 0.2
+        float_val: 0.2
         tensor_shape {
           dim {
             size: 4
           }
         }
-        float_val: 0.10000000149
-        float_val: 0.10000000149
-        float_val: 0.20000000298
-        float_val: 0.20000000298
       }
     }
   }
@@ -2209,17 +2563,17 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
+        float_val: 285.0
+        float_val: 403.050865276
+        float_val: 201.525432638
+        float_val: 493.634480157
+        float_val: 164.536599272
+        float_val: 292.403830344
         tensor_shape {
           dim {
             size: 6
           }
         }
-        float_val: 285.0
-        float_val: 403.050872803
-        float_val: 201.525436401
-        float_val: 493.634490967
-        float_val: 164.462539673
-        float_val: 292.403839111
       }
     }
   }
@@ -2236,15 +2590,46 @@ node {
   input: "concat/axis_flatten"
 }
 node {
+  name: "ClassPredictor/concat/reshape/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        int_val: 0
+        int_val: -1
+        int_val: 91
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+      }
+    }
+  }
+}
+node {
+  name: "ClassPredictor/concat/reshape"
+  op: "Reshape"
+  input: "ClassPredictor/concat"
+  input: "ClassPredictor/concat/reshape/shape"
+}
+node {
   name: "ClassPredictor/concat/sigmoid"
   op: "Sigmoid"
-  input: "ClassPredictor/concat"
+  input: "ClassPredictor/concat/reshape"
+}
+node {
+  name: "ClassPredictor/concat/sigmoid/flatten"
+  op: "Flatten"
+  input: "ClassPredictor/concat/sigmoid"
 }
 node {
   name: "detection_out"
   op: "DetectionOutput"
   input: "BoxEncodingPredictor/concat"
-  input: "ClassPredictor/concat/sigmoid"
+  input: "ClassPredictor/concat/sigmoid/flatten"
   input: "PriorBox/concat"
   attr {
     key: "background_label_id"
@@ -2261,7 +2646,7 @@ node {
   attr {
     key: "confidence_threshold"
     value {
-      f: 0.00999999977648
+      f: 0.01
     }
   }
   attr {
@@ -2273,7 +2658,7 @@ node {
   attr {
     key: "nms_threshold"
     value {
-      f: 0.600000023842
+      f: 0.6
     }
   }
   attr {
@@ -2294,6 +2679,4 @@ node {
       i: 100
     }
   }
-}
-library {
 }

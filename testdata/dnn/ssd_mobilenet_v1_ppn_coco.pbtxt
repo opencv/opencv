@@ -2750,12 +2750,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 45.000001788
-        float_val: 31.8198064177
-        float_val: 63.6396128354
-        float_val: 25.9807631458
-        float_val: 77.946187491
-        float_val: 64.6915774925
+        float_val: 45.0
+        float_val: 31.8198051534
+        float_val: 63.6396103068
+        float_val: 25.9807621135
+        float_val: 77.9461837472
+        float_val: 64.6915759585
         tensor_shape {
           dim {
             size: 6
@@ -2786,12 +2786,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 45.000001788
-        float_val: 63.6396128354
-        float_val: 31.8198064177
-        float_val: 77.9422894375
-        float_val: 25.9794638596
-        float_val: 64.6915774925
+        float_val: 45.0
+        float_val: 63.6396103068
+        float_val: 31.8198051534
+        float_val: 77.9422863406
+        float_val: 25.9794630429
+        float_val: 64.6915759585
         tensor_shape {
           dim {
             size: 6
@@ -2823,12 +2823,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 93.0000007151
-        float_val: 65.760931156
-        float_val: 131.521862312
-        float_val: 53.6935754475
-        float_val: 161.08878232
-        float_val: 114.512008399
+        float_val: 93.0
+        float_val: 65.7609306503
+        float_val: 131.521861301
+        float_val: 53.6935750346
+        float_val: 161.088779744
+        float_val: 114.512008104
         tensor_shape {
           dim {
             size: 6
@@ -2859,12 +2859,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 93.0000007151
-        float_val: 131.521862312
-        float_val: 65.760931156
-        float_val: 161.080726343
-        float_val: 53.6908902561
-        float_val: 114.512008399
+        float_val: 93.0
+        float_val: 131.521861301
+        float_val: 65.7609306503
+        float_val: 161.080725104
+        float_val: 53.6908902888
+        float_val: 114.512008104
         tensor_shape {
           dim {
             size: 6
@@ -2896,12 +2896,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 140.999999642
-        float_val: 99.7020558944
-        float_val: 199.404111789
-        float_val: 81.4063877492
-        float_val: 244.231377148
-        float_val: 163.2452135
+        float_val: 141.0
+        float_val: 99.7020561473
+        float_val: 199.404112295
+        float_val: 81.4063879557
+        float_val: 244.231375741
+        float_val: 163.245214325
         tensor_shape {
           dim {
             size: 6
@@ -2932,12 +2932,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 140.999999642
-        float_val: 199.404111789
-        float_val: 99.7020558944
-        float_val: 244.219163248
-        float_val: 81.4023166526
-        float_val: 163.2452135
+        float_val: 141.0
+        float_val: 199.404112295
+        float_val: 99.7020561473
+        float_val: 244.219163867
+        float_val: 81.4023175346
+        float_val: 163.245214325
         tensor_shape {
           dim {
             size: 6
@@ -2969,12 +2969,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 188.999998569
-        float_val: 133.643180633
-        float_val: 267.286361265
-        float_val: 109.119200051
-        float_val: 327.373971977
-        float_val: 211.643566375
+        float_val: 189.0
+        float_val: 133.643181644
+        float_val: 267.286363289
+        float_val: 109.119200877
+        float_val: 327.373971738
+        float_val: 211.643568293
         tensor_shape {
           dim {
             size: 6
@@ -3005,12 +3005,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 188.999998569
-        float_val: 267.286361265
-        float_val: 133.643180633
-        float_val: 327.357600153
-        float_val: 109.113743049
-        float_val: 211.643566375
+        float_val: 189.0
+        float_val: 267.286363289
+        float_val: 133.643181644
+        float_val: 327.357602631
+        float_val: 109.11374478
+        float_val: 211.643568293
         tensor_shape {
           dim {
             size: 6
@@ -3042,12 +3042,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 236.999997497
-        float_val: 167.584305371
-        float_val: 335.168610742
-        float_val: 136.832012353
-        float_val: 410.516566805
-        float_val: 259.894206243
+        float_val: 237.0
+        float_val: 167.584307141
+        float_val: 335.168614282
+        float_val: 136.832013798
+        float_val: 410.516567735
+        float_val: 259.894209247
         tensor_shape {
           dim {
             size: 6
@@ -3078,12 +3078,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 236.999997497
-        float_val: 335.168610742
-        float_val: 167.584305371
-        float_val: 410.496037058
-        float_val: 136.825169446
-        float_val: 259.894206243
+        float_val: 237.0
+        float_val: 335.168614282
+        float_val: 167.584307141
+        float_val: 410.496041394
+        float_val: 136.825172026
+        float_val: 259.894209247
         tensor_shape {
           dim {
             size: 6
@@ -3115,12 +3115,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 284.999996424
-        float_val: 201.525430109
-        float_val: 403.050860219
-        float_val: 164.544824654
-        float_val: 493.659161634
-        float_val: 292.40382851
+        float_val: 285.0
+        float_val: 201.525432638
+        float_val: 403.050865276
+        float_val: 164.544826719
+        float_val: 493.659163732
+        float_val: 292.403830344
         tensor_shape {
           dim {
             size: 6
@@ -3151,12 +3151,12 @@ node {
     value {
       tensor {
         dtype: DT_FLOAT
-        float_val: 284.999996424
-        float_val: 403.050860219
-        float_val: 201.525430109
-        float_val: 493.634473963
-        float_val: 164.536595842
-        float_val: 292.40382851
+        float_val: 285.0
+        float_val: 403.050865276
+        float_val: 201.525432638
+        float_val: 493.634480157
+        float_val: 164.536599272
+        float_val: 292.403830344
         tensor_shape {
           dim {
             size: 6
@@ -3178,15 +3178,46 @@ node {
   input: "concat/axis_flatten"
 }
 node {
+  name: "ClassPredictor/concat3d/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        int_val: 0
+        int_val: -1
+        int_val: 91
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+      }
+    }
+  }
+}
+node {
+  name: "ClassPredictor/concat3d"
+  op: "Reshape"
+  input: "ClassPredictor/concat"
+  input: "ClassPredictor/concat3d/shape"
+}
+node {
   name: "ClassPredictor/concat/sigmoid"
   op: "Sigmoid"
-  input: "ClassPredictor/concat"
+  input: "ClassPredictor/concat3d"
+}
+node {
+  name: "ClassPredictor/concat/sigmoid/Flatten"
+  op: "Flatten"
+  input: "ClassPredictor/concat/sigmoid"
 }
 node {
   name: "detection_out"
   op: "DetectionOutput"
   input: "BoxPredictor/concat"
-  input: "ClassPredictor/concat/sigmoid"
+  input: "ClassPredictor/concat/sigmoid/Flatten"
   input: "PriorBox/concat"
   attr {
     key: "background_label_id"
