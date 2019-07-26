@@ -12,8 +12,13 @@
 #include "../csl/tensor_ops.hpp"
 #include "../csl/kernels.hpp"
 
+#include "nms.inl.hpp"
+
+#include <opencv2/core.hpp>
+
 #include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
@@ -113,7 +118,48 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 height_norm, width_norm, rows, cols, boxes_per_cell, cell_box_size, classes);
 
             if (nms_iou_threshold > 0) {
-                /* TODO nms on gpu */
+                auto output_mat = output_wrapper->getMutableHostMat();
+                CV_Assert(output_mat.type() == CV_32F);
+                for (int i = 0; i < input.get_axis_size(0); i++) {
+                    auto sample_size = rows * cols * boxes_per_cell * cell_box_size;
+                    do_nms_sort(&output_mat.at<float>() + i * sample_size, rows * cols * boxes_per_cell, class_prob_cutoff, nms_iou_threshold);
+                }
+            }
+        }
+
+    private:
+        void do_nms_sort(float *detections, int total, float score_thresh, float nms_thresh)
+        {
+            std::vector<Rect2d> boxes(total);
+            std::vector<float> scores(total);
+
+            for (int i = 0; i < total; ++i)
+            {
+                Rect2d &b = boxes[i];
+                int box_index = i * (classes + 4 + 1);
+                b.width = detections[box_index + 2];
+                b.height = detections[box_index + 3];
+                b.x = detections[box_index + 0] - b.width / 2;
+                b.y = detections[box_index + 1] - b.height / 2;
+            }
+
+            std::vector<int> indices;
+            for (int k = 0; k < classes; ++k)
+            {
+                for (int i = 0; i < total; ++i)
+                {
+                    int box_index = i * (classes + 4 + 1);
+                    int class_index = box_index + 5;
+                    scores[i] = detections[class_index + k];
+                    detections[class_index + k] = 0;
+                }
+                NMSBoxes(boxes, scores, score_thresh, nms_thresh, indices);
+                for (int i = 0, n = indices.size(); i < n; ++i)
+                {
+                    int box_index = indices[i] * (classes + 4 + 1);
+                    int class_index = box_index + 5;
+                    detections[class_index + k] = scores[indices[i]];
+                }
             }
         }
 

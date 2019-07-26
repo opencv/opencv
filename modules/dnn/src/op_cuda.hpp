@@ -330,6 +330,17 @@ namespace cv {
                 return tensor_view_type(shared_block->device.get(), std::begin(shape), std::end(shape));
             }
 
+            cv::Mat getMutableHostMat() noexcept {
+                copyToHost();
+                setHostDirty();
+                return shared_block->host;
+            }
+
+            const cv::Mat getImmutableHostMat() const noexcept {
+                copyToHost();
+                return shared_block->host;
+            }
+
         private:
             /* The same device memory can be reused by different layers whenever possible.
              * Hence, it is possible for different backend warppers to point to the same device memory.
