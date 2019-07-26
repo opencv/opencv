@@ -1722,7 +1722,7 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
 static cl_device_id selectOpenCLDevice()
 {
     return NULL;

@@ -55,7 +55,7 @@ size_t base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with
 size_t base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero = true);
 std::string make_base64_header(const char * dt);
 bool read_base64_header(std::vector<char> const & header, std::string & dt);
-void make_seq(void * binary_data, int elem_cnt, const char * dt, CvSeq & seq);
+void make_seq(::CvFileStorage* fs, const uchar* binary_data, size_t elem_cnt, const char * dt, CvSeq & seq);
 void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
 
 class Base64ContextEmitter;
@@ -262,7 +262,7 @@ void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection )
 char* icvFSResizeWriteBuffer( CvFileStorage* fs, char* ptr, int len );
 int icvCalcStructSize( const char* dt, int initial_size );
 int icvCalcElemSize( const char* dt, int initial_size );
-void CV_NORETURN icvParseError( CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line );
+void CV_NORETURN icvParseError(const CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line);
 char* icvEncodeFormat( int elem_type, char* dt );
 int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len );
 int icvDecodeSimpleFormat( const char* dt );
