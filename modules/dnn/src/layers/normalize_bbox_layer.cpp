@@ -261,7 +261,12 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        if (input->dims.size() == 4)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+    std::vector<size_t> dims = input->dims;
+#else
+    std::vector<size_t> dims = input->getTensorDesc().getDims();
+#endif
+        if (dims.size() == 4)
         {
             InferenceEngine::Builder::NormalizeLayer ieLayer(name);
 
@@ -270,13 +275,22 @@ public:
             ieLayer.setEpsilon(epsilon);
 
             InferenceEngine::Builder::Layer l = ieLayer;
-            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+            const int numChannels = dims[2];  // NOTE: input->dims are reversed (whcn)
+#else
+            const int numChannels = dims[1];
+#endif
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
                 weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
                                                                    InferenceEngine::Layout::C,
                                                                    {(size_t)numChannels});
+#else
+                InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {(size_t)numChannels},  InferenceEngine::Layout::C);
+                weights = InferenceEngine::make_shared_blob<float>(td);
+#endif
                 weights->allocate();
 
                 Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);

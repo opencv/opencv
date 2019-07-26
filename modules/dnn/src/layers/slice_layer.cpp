@@ -301,14 +301,20 @@ public:
         {
             std::vector<size_t> outShape(numDims);
             for (int i = 0; i < numDims; ++i)
-                outShape[numDims - 1 - i] = sliceRanges[0][i].size();
+                outShape[i] = sliceRanges[0][i].size();
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
             // Fake blob which will be moved to inputs (as weights).
-            auto shapeSource = InferenceEngine::make_shared_blob<float>(
-                                   InferenceEngine::Precision::FP32,
-                                   InferenceEngine::Layout::ANY, outShape);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+            std::reverse(outShape.begin(), outShape.end());
+            InferenceEngine::TBlob<float>::Ptr shapeSource = InferenceEngine::make_shared_blob<float>(
+                               InferenceEngine::Precision::FP32,
+                               InferenceEngine::Layout::ANY, outShape);
+#else
+            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, outShape,  InferenceEngine::Layout::ANY);
+            auto shapeSource = InferenceEngine::make_shared_blob<float>(td);
+#endif
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);
         }

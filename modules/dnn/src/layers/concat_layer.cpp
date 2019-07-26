@@ -304,7 +304,11 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::ConcatLayer ieLayer(name);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
         ieLayer.setAxis(clamp(axis, input->dims.size()));
+#else
+        ieLayer.setAxis(clamp(axis, input->getTensorDesc().getDims().size()));
+#endif
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
