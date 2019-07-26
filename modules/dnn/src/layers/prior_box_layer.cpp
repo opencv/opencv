@@ -190,7 +190,6 @@ public:
 
         if (params.has("max_size"))
         {
-            _maxSize.clear();
             getParams("max_size", params, &_maxSize);
             CV_Assert(_minSize.size() == _maxSize.size());
             for (int i = 0; i < _maxSize.size(); i++)
@@ -274,7 +273,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() &&
+               ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -511,9 +511,8 @@ public:
             InferenceEngine::Builder::PriorBoxLayer ieLayer(name);
 
             CV_Assert(!_explicitSizes);
-            CV_Assert_N(_minSize.size() == 1, _maxSize.size() <= 1);
             ieLayer.setMinSize(_minSize[0]);
-            if (_maxSize.size() == 1)
+            if (!_maxSize.empty())
                 ieLayer.setMaxSize(_maxSize[0]);
 
             CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
