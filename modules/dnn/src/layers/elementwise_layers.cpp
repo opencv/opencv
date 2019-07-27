@@ -744,7 +744,7 @@ struct AbsValFunctor
 #ifdef HAVE_INF_ENGINE
     InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
     {
-        return InferenceEngine::Builder::ReLULayer("").setNegativeSlope(-1);
+        return InferenceEngine::Builder::ReLULayer("").setNegativeSlope(-0.999999f);
     }
 #endif  // HAVE_INF_ENGINE
 

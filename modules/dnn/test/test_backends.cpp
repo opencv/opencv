@@ -387,7 +387,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     float l1 = 0.0, lInf = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
-        l1 = 9e-3; lInf = 5e-2;
+        l1 = 2e-2; lInf = 9e-2;
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
