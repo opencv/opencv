@@ -19,16 +19,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         template <>
         struct numeric_limits<__half> {
             __device__ static __half min() { return 0.0000610; }
+            __device__ static __half lowest() { return -0.0000610; }
         };
 
         template <>
         struct numeric_limits<float> {
             __device__ static float min() { return FLT_MIN; }
+            __device__ static float lowest() { return -FLT_MAX; }
         };
 
         template <>
         struct numeric_limits<double> {
             __device__ static double min() { return DBL_MIN; }
+            __device__ static double lowest() { return -DBL_MAX; }
         };
     }
 

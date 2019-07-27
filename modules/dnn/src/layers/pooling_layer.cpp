@@ -60,6 +60,7 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/pooling.hpp"
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -310,11 +311,40 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        if (computeMaxIdx)
-            CV_Error(Error::StsNotImplemented, "Pooling layer does not support caching max indices");
-
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
+
+        /* storing max indices is a special case and we deal with it separately */
+        if (computeMaxIdx) {
+            CV_Assert(type == MAX);
+
+            cuda4dnn::MaxPoolingConfiguration config;
+            config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
+            config.strides.assign(std::begin(strides), std::end(strides));
+
+            if (padMode.empty())
+            {
+                config.padMode = MaxPoolingConfiguration::padding_mode::manual;
+                config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            }
+            else if (padMode == "VALID")
+            {
+                config.padMode = MaxPoolingConfiguration::padding_mode::valid;
+            }
+            else if (padMode == "SAME")
+            {
+                config.padMode = MaxPoolingConfiguration::padding_mode::same;
+            }
+            else
+            {
+                CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
+            }
+
+            config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+
+            cudaNode = make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(stream), config);
+            return;
+        }
 
         PoolingConfiguration config;
         if (type == MAX)
@@ -353,7 +383,7 @@ public:
         }
         else
         {
-            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by ConvolutionLayer");
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
         }
 
         if (ceilMode)
