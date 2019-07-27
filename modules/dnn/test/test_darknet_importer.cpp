@@ -360,7 +360,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
                                     1, 2,  0.989633f, 0.450719f, 0.463353f, 0.496305f, 0.522258f,  // a car
                                     1, 2,  0.997412f, 0.647584f, 0.459939f, 0.821038f, 0.663947f); // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0047 : 8e-5;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
 
     std::string config_file = "yolov3.cfg";
