@@ -14,7 +14,11 @@ Implementation of Batch Normalization layer.
 #include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-#include <iostream>
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -35,6 +39,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -123,6 +128,46 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    void forwardCUDA(
+        std::vector<cv::Ptr<BackendWrapper>>& inputs,
+        std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        csl::Workspace& workspace
+    ) override
+    {
+        cudaNode->forward(inputs, outputs, workspace);
+    }
+
+    void initCUDA(
+        csl::Stream stream,
+        csl::cublas::Handle cublas_handle,
+        csl::cudnn::Handle cudnn_handle,
+        std::size_t& scratch_mem_in_bytes,
+        const std::vector<Ptr<BackendWrapper>>& inputs
+    ) override
+    {
+        cuda4dnn::MaxUnpoolingConfiguration config;
+        auto& window_size = config.window_size;
+        window_size.resize(2);
+        window_size[0] = poolKernel.height;
+        window_size[1] = poolKernel.width;
+
+        auto& strides = config.strides;
+        strides.resize(2);
+        strides[0] = poolStride.height;
+        strides[1] = poolStride.width;
+
+        auto& pads_begin = config.pads_begin;
+        pads_begin.resize(2);
+        pads_begin[0] = poolPad.height;
+        pads_begin[1] = poolPad.width;
+
+        cudaNode = make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(stream), config);
+    }
+
+    std::unique_ptr<CUDABackendNode> cudaNode;
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {

@@ -117,6 +117,61 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         std::vector<std::size_t> window_size, strides, padding_left;
     };
 
+    struct MaxUnpoolingConfiguration {
+        /* the size of the following vectors must be equal to the unpooling order */
+        std::vector<std::size_t> window_size;
+        std::vector<std::size_t> strides;
+        std::vector<std::size_t> pads_begin;
+    };
+
+    template <class T>
+    class MaxUnpoolingOp final : public CUDABackendNode {
+    public:
+        using wrapper_type = GetCUDABackendWrapperType<T>;
+
+        MaxUnpoolingOp(csl::Stream stream_, const MaxUnpoolingConfiguration& config)
+            : stream(std::move(stream_))
+        {
+            window_size = config.window_size;
+
+            const auto pooling_order = window_size.size();
+            CV_Assert(pooling_order >= 1);
+
+            strides = config.strides;
+            padding_left = config.pads_begin;
+            CV_Assert(strides.size() == pooling_order);
+            CV_Assert(padding_left.size() == pooling_order);
+
+            if (pooling_order != 2 && pooling_order != 3)
+                CV_Error(Error::StsNotImplemented, "Only 2D/3D max-unpooling are supported.");
+        }
+
+        void forward(
+            std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_Assert(inputs.size() == 2 && outputs.size() == 1);
+
+            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
+            auto input_data = input_wrapper->getView();
+
+            auto indices_wrapper = inputs[1].dynamicCast<wrapper_type>();
+            auto input_indices = indices_wrapper->getView();
+
+            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
+            auto output_data = output_wrapper->getSpan();
+
+            csl::kernels::fill<T>(stream, output_data, 0.0);
+            csl::kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
+        }
+
+    private:
+        csl::Stream stream;
+
+        std::vector<std::size_t> window_size, strides, padding_left;
+    };
+
 }}} /* namespace cv::dnn::cuda4dnn */
 
 #endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP */

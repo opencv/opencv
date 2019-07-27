@@ -153,6 +153,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace ke
         const std::vector<std::size_t>& kernel_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left);
 
+    template <class T>
+    void max_unpooling(
+        const Stream& stream,
+        TensorSpan<T> output, TensorView<T> input, TensorView<T> indices,
+        const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
+        const std::vector<std::size_t>& padding_left);
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::kernels */
 
 #endif /* OPENCV_DNN_CUDA4DNN_KERNELS_HPP */
