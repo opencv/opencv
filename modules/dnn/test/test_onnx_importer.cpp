@@ -348,6 +348,13 @@ TEST_P(Test_ONNX_layers, Softmax)
     testONNXModels("log_softmax", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, Split_EltwiseMax)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    testONNXModels("split_max");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
