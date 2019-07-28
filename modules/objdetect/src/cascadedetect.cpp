@@ -558,7 +558,7 @@ bool HaarEvaluator::Feature::read(const FileNode& node, const Size& origWinSize)
     for(ri = 0; it != it_end; ++it, ri++)
     {
         FileNodeIterator it2 = (*it).begin();
-        Feature::RectWeigth& rw = rect[ri];
+        Feature::RectWeight& rw = rect[ri];
         it2 >> rw.r.x >> rw.r.y >> rw.r.width >> rw.r.height >> rw.weight;
         // input validation
         {
