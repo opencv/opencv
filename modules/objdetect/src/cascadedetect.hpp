@@ -322,7 +322,7 @@ public:
         bool tilted;
 
         enum { RECT_NUM = 3 };
-        struct RectWeigth
+        struct RectWeight
         {
             Rect r;
             float weight;
