@@ -105,3 +105,16 @@ QUnit.test('Background Segmentation', function(assert) {
         mog2.delete();
     }
 });
+
+/*
+example(function(){
+    return example1(function(){
+        return example2(function(){
+            return example3(function(){
+                done()
+            })
+        })
+    })
+})
+
+*/
