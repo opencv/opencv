@@ -67,7 +67,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
                'Sub', 'ResizeNearestNeighbor', 'Pad']
 
     # Node with which prefixes should be removed
-    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
+    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
 
     # Load a config file.
     config = readTextMessage(configPath)
