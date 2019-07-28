@@ -1,24 +1,18 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/videoio.hpp"
 #include <iostream>
 
 using namespace cv;
-
-static void help( void )
-{
-    printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
-            "Usage :\n"
-            "./polar_transforms [[camera number -- Default 0],[path_to_filename]]\n\n");
-}
 
 int main( int argc, char** argv )
 {
     VideoCapture capture;
     Mat log_polar_img, lin_polar_img, recovered_log_polar, recovered_lin_polar_img;
 
-    help();
-
-    CommandLineParser parser(argc, argv, "{@input|0|}");
+    CommandLineParser parser(argc, argv, "{@input|0| camera device number or video file path}");
+    parser.about("\nThis program illustrates usage of Linear-Polar and Log-Polar image transforms\n");
+    parser.printMessage();
     std::string arg = parser.get<std::string>("@input");
 
     if( arg.size() == 1 && isdigit(arg[0]) )
@@ -28,9 +22,7 @@ int main( int argc, char** argv )
 
     if( !capture.isOpened() )
     {
-        const char* name = argv[0];
         fprintf(stderr,"Could not initialize capturing...\n");
-        fprintf(stderr,"Usage: %s <CAMERA_NUMBER>    , or \n       %s <VIDEO_FILE>\n", name, name);
         return -1;
     }
 
@@ -101,15 +93,6 @@ int main( int argc, char** argv )
         //! [InverseCoordinate]
         drawMarker(src, Point(x, y), Scalar(0, 255, 0));
         drawMarker(dst, Point(rho, phi), Scalar(0, 255, 0));
-
-
-#if 0  //C version
-        CvMat src = frame;
-        CvMat dst = lin_polar_img;
-        CvMat inverse = recovered_lin_polar_img;
-        cvLinearPolar(&src, &dst, center, maxRadius, flags);
-        cvLinearPolar(&dst, &inverse, center, maxRadius,flags + WARP_INVERSE_MAP);
-#endif
 
         imshow("Src frame", src);
         imshow("Log-Polar", log_polar_img);
