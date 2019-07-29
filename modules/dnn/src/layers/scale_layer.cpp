@@ -207,20 +207,11 @@ public:
         }
         else
         {
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    {numChannels});
-            weights->allocate();
-
-            std::vector<float> ones(numChannels, 1);
-            weights->set(ones);
-#else
             InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {(size_t)numChannels}, InferenceEngine::Layout::C);
             auto weights = InferenceEngine::make_shared_blob<float>(td);
             weights->allocate();
             float* buf = weights->buffer().as<float*>();
             std::fill(buf, buf + numChannels, 1);
-#endif
             addConstantData("weights", weights, l);
         }
         if (hasBias)

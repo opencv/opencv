@@ -465,15 +465,9 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-        std::vector<size_t> dims = input->dims;
-        CV_Assert(dims.size() == 4 || dims.size() == 5);
-        const int inpCn = dims[dims.size() - 2];  // NOTE: input->dims are reversed (WHIO or WHDIO)
-#else
         std::vector<size_t> dims = input->getTensorDesc().getDims();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
         const int inpCn = dims[1];
-#endif
         const int outCn = blobs[0].size[0];
         const int inpGroupCn = blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
@@ -490,14 +484,9 @@ public:
             }
             else
             {
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-                ieWeights = InferenceEngine::make_shared_blob<float>(
-                                    InferenceEngine::Precision::FP32, layout,
-                                    ieWeights->dims());
-#else
-                InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, ieWeights->getTensorDesc().getDims(), layout);
+                InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32,
+                                               ieWeights->getTensorDesc().getDims(), layout);
                 ieWeights = InferenceEngine::make_shared_blob<float>(td);
-#endif
                 ieWeights->allocate();
 
                 Mat newWeights = infEngineBlobToMat(ieWeights).reshape(1, outCn);
@@ -1887,15 +1876,9 @@ public:
         auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
         if (fusedWeights)
         {
-
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-            ieWeights = InferenceEngine::make_shared_blob<float>(
-                                InferenceEngine::Precision::FP32, layout,
-                                ieWeights->dims());
-#else
-            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, ieWeights->getTensorDesc().getDims(), layout);
+            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32,
+                                           ieWeights->getTensorDesc().getDims(), layout);
             ieWeights = InferenceEngine::make_shared_blob<float>(td);
-#endif
             ieWeights->allocate();
 
             int inpCn = blobs[0].size[0];

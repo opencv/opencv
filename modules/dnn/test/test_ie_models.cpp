@@ -114,21 +114,11 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
 
 static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019020000)
-    std::vector<int> reversedDims(dims.begin(), dims.end());
-    std::reverse(reversedDims.begin(), reversedDims.end());
-
-    m.create(reversedDims, CV_32F);
-    randu(m, -1, 1);
-
-    dataPtr = make_shared_blob<float>(Precision::FP32, dims, (float*)m.data);
-#else
     m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
     InferenceEngine::TensorDesc td(Precision::FP32, dims, Layout::ANY);
     dataPtr = make_shared_blob<float>(td, (float*)m.data);
-#endif
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -245,11 +235,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
         genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
-#else
-        genData(it.second->getDims(), inputsMap[it.first], inputBlobs[it.first]);
-#endif
     }
     infRequest.SetInput(inputBlobs);
 
@@ -258,11 +244,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
         genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
-#else
-        genData(it.second->dims, outputsMap[it.first], outputBlobs[it.first]);
-#endif
     }
     infRequest.SetOutput(outputBlobs);
 

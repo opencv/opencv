@@ -111,12 +111,9 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-    CV_Assert(!input->dims.empty());
-#else
-    std::vector<size_t> dims = input->getTensorDesc().getDims();
-    CV_Assert(!dims.empty());
-#endif
+        std::vector<size_t> dims = input->getTensorDesc().getDims();
+        CV_Assert(!dims.empty());
+
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         if (preferableTarget == DNN_TARGET_MYRIAD)
@@ -126,19 +123,10 @@ public:
         else
         {
             ieLayer.setType("Split");
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-            ieLayer.getParameters()["axis"] = input->dims.size() - 1;
-            ieLayer.getParameters()["out_sizes"] = input->dims[0];
-        }
-        std::vector<size_t> shape(input->dims);
-        std::reverse(shape.begin(), shape.end());
-        ieLayer.setInputPorts({InferenceEngine::Port(shape)});
-#else
             ieLayer.getParameters()["axis"] = dims.size() - 1;
             ieLayer.getParameters()["out_sizes"] = dims[0];
         }
         ieLayer.setInputPorts({InferenceEngine::Port(dims)});
-#endif
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }

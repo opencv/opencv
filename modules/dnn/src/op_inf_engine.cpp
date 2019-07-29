@@ -74,22 +74,13 @@ void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& input
     for (size_t i = 0; i < inpWrappers.size(); ++i)
     {
         const auto& inp = inpWrappers[i];
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-        const std::string& inpName = inp->dataPtr->name;
-#else
         const std::string& inpName = inp->dataPtr->getName();
-#endif
         int inpId;
         it = layers.find(inpName);
         if (it == layers.end())
         {
             InferenceEngine::Builder::InputLayer inpLayer(!inpName.empty() ? inpName : kDefaultInpLayerName);
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-            std::vector<size_t> shape(inp->blob->dims());
-            std::reverse(shape.begin(), shape.end());
-#else
             std::vector<size_t> shape(inp->blob->getTensorDesc().getDims());
-#endif
             inpLayer.setPort(InferenceEngine::Port(shape));
             inpId = netBuilder.addLayer(inpLayer);
 
@@ -180,22 +171,14 @@ void InfEngineBackendNet::init(int targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-        it.second->setPrecision(blobIt->second->precision());
-#else
         it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());
-#endif
     }
     for (const auto& it : cnn.getOutputsInfo())
     {
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-        it.second->setPrecision(blobIt->second->precision());  // Should be always FP32
-#else
         it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());  // Should be always FP32
-#endif
     }
 
     initPlugin(cnn);
@@ -271,17 +254,6 @@ static InferenceEngine::Layout estimateLayout(const Mat& m)
 static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    std::reverse(reversedShape.begin(), reversedShape.end());
-    if (m.type() == CV_32F)
-        return InferenceEngine::DataPtr(
-            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::FP32, estimateLayout(m))
-        );
-    else if (m.type() == CV_8U)
-        return InferenceEngine::DataPtr(
-            new InferenceEngine::Data(name, reversedShape, InferenceEngine::Precision::U8, estimateLayout(m))
-        );
-#else
     if (m.type() == CV_32F) {
         InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, reversedShape, estimateLayout(m));
         return InferenceEngine::DataPtr(new InferenceEngine::Data(name, td));
@@ -290,8 +262,6 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
         InferenceEngine::TensorDesc td(InferenceEngine::Precision::U8, reversedShape, estimateLayout(m));
         return InferenceEngine::DataPtr(new InferenceEngine::Data(name, td));
     }
-#endif
-
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
@@ -299,14 +269,6 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
                                                InferenceEngine::Layout layout)
 {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    if (m.type() == CV_32F)
-        return InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                        layout, shape, (float*)m.data);
-    else if (m.type() == CV_8U)
-        return InferenceEngine::make_shared_blob<uint8_t>(InferenceEngine::Precision::U8,
-                                                          layout, shape, (uint8_t*)m.data);
-#else
     if (m.type() == CV_32F) {
         InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, shape, layout);
         return InferenceEngine::make_shared_blob<float>(td, (float*)m.data);
@@ -315,7 +277,6 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
         InferenceEngine::TensorDesc td(InferenceEngine::Precision::U8, shape, layout);
         return InferenceEngine::make_shared_blob<uint8_t>(td, (uint8_t*)m.data);
     }
-#endif
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
@@ -323,26 +284,12 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout)
 {
     std::vector<size_t> shape(&m.size[0], &m.size[0] + m.dims);
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    std::reverse(shape.begin(), shape.end());
-#endif
     return wrapToInfEngineBlob(m, shape, layout);
 }
 
 InferenceEngine::Blob::Ptr cloneBlob(const InferenceEngine::Blob::Ptr& blob)
 {
     InferenceEngine::Blob::Ptr copy;
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    InferenceEngine::Precision precision = blob->precision();
-    if (precision == InferenceEngine::Precision::FP32)
-    {
-        copy = InferenceEngine::make_shared_blob<float>(precision, blob->layout(), blob->dims());
-    }
-    else if (precision == InferenceEngine::Precision::U8)
-    {
-        copy = InferenceEngine::make_shared_blob<uint8_t>(precision, blob->layout(), blob->dims());
-    }
-#else
     auto description = blob->getTensorDesc();
     InferenceEngine::Precision precision = description.getPrecision();
     if (precision == InferenceEngine::Precision::FP32)
@@ -353,7 +300,6 @@ InferenceEngine::Blob::Ptr cloneBlob(const InferenceEngine::Blob::Ptr& blob)
     {
         copy = InferenceEngine::make_shared_blob<uint8_t>(description);
     }
-#endif
     else
         CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
     copy->allocate();
@@ -382,14 +328,7 @@ InfEngineBackendWrapper::InfEngineBackendWrapper(Ptr<BackendWrapper> wrapper)
     CV_Assert(!ieWrapper.empty());
     InferenceEngine::DataPtr srcData = ieWrapper->dataPtr;
 
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    dataPtr = InferenceEngine::DataPtr(
-        new InferenceEngine::Data(srcData->name, srcData->dims, srcData->precision,
-                                  srcData->layout)
-    );
-#else
     dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(srcData->getName(), srcData->getTensorDesc()));
-#endif
     blob = ieWrapper->blob;
 }
 
@@ -487,10 +426,8 @@ static bool detectMyriadX_()
 
 void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     CV_Assert(!isInitialized());
 
-#endif
     try
     {
         AutoLock lock(getInitializationMutex());
@@ -617,11 +554,7 @@ void InfEngineBackendNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& 
     auto wrappers = infEngineWrappers(ptrs);
     for (const auto& wrapper : wrappers)
     {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-        std::string name = wrapper->dataPtr->name;
-#else
         std::string name = wrapper->dataPtr->getName();
-#endif
         name = name.empty() ? kDefaultInpLayerName : name;
         allBlobs.insert({name, wrapper->blob});
     }
@@ -636,11 +569,7 @@ void InfEngineBackendNet::InfEngineReqWrapper::makePromises(const std::vector<Pt
     for (int i = 0; i < outs.size(); ++i)
     {
         outs[i]->futureMat = outProms[i].getArrayResult();
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-        outsNames[i] = outs[i]->dataPtr->name;
-#else
         outsNames[i] = outs[i]->dataPtr->getName();
-#endif
     }
 }
 
@@ -764,15 +693,9 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 {
     // NOTE: Inference Engine sizes are reversed.
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    std::vector<size_t> dims = blob->dims();
-    std::vector<int> size(dims.rbegin(), dims.rend());
-    auto precision = blob->precision();
-#else
     std::vector<size_t> dims = blob->getTensorDesc().getDims();
     std::vector<int> size(dims.begin(), dims.end());
     auto precision = blob->getTensorDesc().getPrecision();
-#endif
 
     int type = -1;
     switch (precision)
@@ -829,12 +752,8 @@ void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArra
 
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
 {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    auto halfs = InferenceEngine::make_shared_blob<int16_t>(InferenceEngine::Precision::FP16, blob->layout(), blob->dims());
-#else
     InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP16, blob->getTensorDesc().getDims(), blob->getTensorDesc().getLayout());
     auto halfs = InferenceEngine::make_shared_blob<int16_t>(td);
-#endif
     halfs->allocate();
     Mat floatsData(1, blob->size(), CV_32F, blob->buffer());
     Mat halfsData(1, blob->size(), CV_16SC1, halfs->buffer());

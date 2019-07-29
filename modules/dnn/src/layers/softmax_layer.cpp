@@ -315,12 +315,8 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-        ieLayer.setAxis(clamp(axisRaw, input->dims.size()));
-#else
-        std::vector<size_t> dims = input->getTensorDesc().getDims();
-        ieLayer.setAxis(clamp(axisRaw, dims.size()));
-#endif
+        ieLayer.setAxis(clamp(axisRaw, input->getTensorDesc().getDims().size()));
+
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE

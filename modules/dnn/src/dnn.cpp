@@ -712,26 +712,9 @@ struct DataLayer : public Layer
         const size_t numChannels = inputsData[0].size[1];
         CV_Assert(numChannels <= 4);
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
         // Scale
-        auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                {numChannels});
-        weights->allocate();
-        weights->set(std::vector<float>(numChannels, scaleFactors[0]));
-
-        // Mean subtraction
-        auto biases = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                               {numChannels});
-       biases->allocate();
-       std::vector<float> biasesVec(numChannels);
-       for (int i = 0; i < numChannels; ++i)
-       {
-           biasesVec[i] = -means[0][i] * scaleFactors[0];
-       }
-       biases->set(biasesVec);
-#else
-        // Scale
-        InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {numChannels}, InferenceEngine::Layout::ANY);
+        InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {numChannels},
+                                       InferenceEngine::Layout::C);
         auto weights = InferenceEngine::make_shared_blob<float>(td);
         weights->allocate();
 
@@ -747,7 +730,6 @@ struct DataLayer : public Layer
         {
             bias_buf[i] = -means[0][i] * scaleFactors[0];
         }
-#endif
 
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         addConstantData("weights", weights, ieLayer);

@@ -305,16 +305,8 @@ public:
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
-            // Fake blob which will be moved to inputs (as weights).
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-            std::reverse(outShape.begin(), outShape.end());
-            InferenceEngine::TBlob<float>::Ptr shapeSource = InferenceEngine::make_shared_blob<float>(
-                               InferenceEngine::Precision::FP32,
-                               InferenceEngine::Layout::ANY, outShape);
-#else
             InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, outShape, InferenceEngine::Layout::ANY);
             auto shapeSource = InferenceEngine::make_shared_blob<float>(td);
-#endif
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);
         }
