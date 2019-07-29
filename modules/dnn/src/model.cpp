@@ -181,18 +181,18 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
                 if (width * height <= 1)
                 {
-                    left   = data[j + 3] * (frameWidth - 1);
-                    top    = data[j + 4] * (frameHeight - 1);
-                    right  = data[j + 5] * (frameWidth - 1);
-                    bottom = data[j + 6] * (frameHeight - 1);
+                    left   = data[j + 3] * frameWidth;
+                    top    = data[j + 4] * frameHeight;
+                    right  = data[j + 5] * frameWidth;
+                    bottom = data[j + 6] * frameHeight;
                     width  = right  - left + 1;
                     height = bottom - top + 1;
                 }
 
                 left   = std::max(0, std::min(left, frameWidth - 1));
                 top    = std::max(0, std::min(top, frameHeight - 1));
-                width  = std::max(0, std::min(width, frameWidth - left));
-                height = std::max(0, std::min(height, frameHeight - top));
+                width  = std::max(1, std::min(width, frameWidth - left));
+                height = std::max(1, std::min(height, frameHeight - top));
                 predBoxes.emplace_back(left, top, width, height);
 
                 predClassIds.push_back(static_cast<int>(data[j + 1]));
@@ -226,8 +226,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
                 int left = std::max(0, std::min(centerX - width / 2, frameWidth - 1));
                 int top  = std::max(0, std::min(centerY - height / 2, frameHeight - 1));
-                width    = std::max(0, std::min(width, frameWidth - left));
-                height   = std::max(0, std::min(height, frameHeight - top));
+                width    = std::max(1, std::min(width, frameWidth - left));
+                height   = std::max(1, std::min(height, frameHeight - top));
 
                 predClassIds.push_back(classIdPoint.x);
                 predConf.push_back(static_cast<float>(conf));

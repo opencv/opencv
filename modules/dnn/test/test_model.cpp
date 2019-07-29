@@ -175,10 +175,10 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     {
         refClassIds.emplace_back(ref.at<float>(i, 1));
         refConfidences.emplace_back(ref.at<float>(i, 2));
-        int left   = ref.at<float>(i, 3) * (frameWidth - 1);
-        int top    = ref.at<float>(i, 4) * (frameHeight - 1);
-        int right  = ref.at<float>(i, 5) * (frameWidth - 1);
-        int bottom = ref.at<float>(i, 6) * (frameHeight - 1);
+        int left   = ref.at<float>(i, 3) * frameWidth;
+        int top    = ref.at<float>(i, 4) * frameHeight;
+        int right  = ref.at<float>(i, 5) * frameWidth;
+        int bottom = ref.at<float>(i, 6) * frameHeight;
         int width  = right  - left + 1;
         int height = bottom - top + 1;
         refBoxes.emplace_back(left, top, width, height);
@@ -192,8 +192,8 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.7e-2 : 1e-5;
-    double iouDiff = (target == DNN_TARGET_MYRIAD &&
-                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X) ? 6.6e-2 : 1e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || (target == DNN_TARGET_MYRIAD &&
+                      getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)) ? 6.91e-2 : 1e-5;
 
     float confThreshold = FLT_MIN;
     double nmsThreshold = 0.0;
