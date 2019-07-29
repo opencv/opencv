@@ -140,10 +140,10 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 
     CNNNetwork net = reader.getNetwork();
 
-    ExecutableNetwork netExec;
-    InferRequest infRequest;
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
     Core ie;
+    ExecutableNetwork netExec;
+    InferRequest infRequest;
     std::string device_name;
     try
     {
@@ -168,6 +168,8 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 #else
     InferenceEnginePluginPtr enginePtr;
     InferencePlugin plugin;
+    ExecutableNetwork netExec;
+    InferRequest infRequest;
 
     try
     {
