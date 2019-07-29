@@ -417,7 +417,7 @@ PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
 
     TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<Size, CvtMode2> Size_CvtMode2_t;
