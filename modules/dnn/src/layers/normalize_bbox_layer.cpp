@@ -275,7 +275,7 @@ public:
             ieLayer.setEpsilon(epsilon);
 
             InferenceEngine::Builder::Layer l = ieLayer;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
             const int numChannels = dims[2];  // NOTE: input->dims are reversed (whcn)
 #else
             const int numChannels = dims[1];
@@ -283,7 +283,7 @@ public:
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
                 weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
                                                                    InferenceEngine::Layout::C,
                                                                    {(size_t)numChannels});

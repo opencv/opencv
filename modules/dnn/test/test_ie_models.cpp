@@ -114,6 +114,7 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
 
 static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019020000)
     std::vector<int> reversedDims(dims.begin(), dims.end());
     std::reverse(reversedDims.begin(), reversedDims.end());
 
@@ -121,6 +122,13 @@ static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& d
     randu(m, -1, 1);
 
     dataPtr = make_shared_blob<float>(Precision::FP32, dims, (float*)m.data);
+#else
+    m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
+    randu(m, -1, 1);
+
+    InferenceEngine::TensorDesc td(Precision::FP32, dims, Layout::ANY);
+    dataPtr = make_shared_blob<float>(td, (float*)m.data);
+#endif
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -132,10 +140,35 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 
     CNNNetwork net = reader.getNetwork();
 
-    InferenceEnginePluginPtr enginePtr;
-    InferencePlugin plugin;
     ExecutableNetwork netExec;
     InferRequest infRequest;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+    Core ie;
+    std::string device_name;
+    try
+    {
+        switch (target)
+        {
+            case DNN_TARGET_CPU:
+                device_name = "CPU";
+                break;
+            case DNN_TARGET_OPENCL:
+            case DNN_TARGET_OPENCL_FP16:
+                device_name = "GPU";
+                break;
+            case DNN_TARGET_MYRIAD:
+                device_name = "MYRIAD";
+                break;
+            case DNN_TARGET_FPGA:
+                device_name = "FPGA";
+                break;
+            default:
+                CV_Error(Error::StsNotImplemented, "Unknown target");
+        };
+#else
+    InferenceEnginePluginPtr enginePtr;
+    InferencePlugin plugin;
+
     try
     {
         auto dispatcher = InferenceEngine::PluginDispatcher({""});
@@ -158,6 +191,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
                 CV_Error(Error::StsNotImplemented, "Unknown target");
         };
 
+#endif
         if (target == DNN_TARGET_CPU || target == DNN_TARGET_FPGA)
         {
             std::string suffixes[] = {"_avx2", "_sse4", ""};
@@ -180,16 +214,23 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
                 try
                 {
                     IExtensionPtr extension = make_so_pointer<IExtension>(libName);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+                    ie.AddExtension(extension, device_name);
+#else
                     enginePtr->AddExtension(extension, 0);
+#endif
                     break;
                 }
                 catch(...) {}
             }
             // Some of networks can work without a library of extra layers.
         }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+        netExec = ie.LoadNetwork(net, device_name);
+#else
         plugin = InferencePlugin(enginePtr);
-
         netExec = plugin.LoadNetwork(net, {});
+#endif
         infRequest = netExec.CreateInferRequest();
     }
     catch (const std::exception& ex)
@@ -202,7 +243,11 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+        genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
+#else
         genData(it.second->getDims(), inputsMap[it.first], inputBlobs[it.first]);
+#endif
     }
     infRequest.SetInput(inputBlobs);
 
@@ -211,7 +256,11 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+        genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
+#else
         genData(it.second->dims, outputsMap[it.first], outputBlobs[it.first]);
+#endif
     }
     infRequest.SetOutput(outputBlobs);
 
@@ -273,9 +322,11 @@ TEST_P(DNNTestOpenVINO, models)
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
     // Single Myriad device cannot be shared across multiple processes.
     if (target == DNN_TARGET_MYRIAD)
         resetMyriadDevice();
+#endif
     runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
 

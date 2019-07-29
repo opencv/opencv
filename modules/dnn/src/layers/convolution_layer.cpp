@@ -465,7 +465,7 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
         std::vector<size_t> dims = input->dims;
         CV_Assert(dims.size() == 4 || dims.size() == 5);
         const int inpCn = dims[dims.size() - 2];  // NOTE: input->dims are reversed (WHIO or WHDIO)
@@ -490,7 +490,7 @@ public:
             }
             else
             {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
                 ieWeights = InferenceEngine::make_shared_blob<float>(
                                     InferenceEngine::Precision::FP32, layout,
                                     ieWeights->dims());
@@ -1888,7 +1888,7 @@ public:
         if (fusedWeights)
         {
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
             ieWeights = InferenceEngine::make_shared_blob<float>(
                                 InferenceEngine::Precision::FP32, layout,
                                 ieWeights->dims());

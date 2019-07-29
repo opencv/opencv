@@ -21,6 +21,7 @@
 
 #define INF_ENGINE_RELEASE_2018R5 2018050000
 #define INF_ENGINE_RELEASE_2019R1 2019010000
+#define INF_ENGINE_RELEASE_2019R2 2019020000
 
 #ifndef INF_ENGINE_RELEASE
 #warning("IE version have not been provided via command-line. Using 2019R1 by default")
@@ -98,11 +99,17 @@ public:
 private:
     InferenceEngine::Builder::Network netBuilder;
 
-    InferenceEngine::InferenceEnginePluginPtr enginePtr;
-    InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
     InferenceEngine::TargetDevice targetDevice;
+#else
+    std::string device_name;
+    InferenceEngine::Core core;
+    bool isInit = false;
+#endif
 
     struct InfEngineReqWrapper
     {

@@ -111,7 +111,7 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
     CV_Assert(!input->dims.empty());
 #else
     std::vector<size_t> dims = input->getTensorDesc().getDims();
@@ -126,7 +126,7 @@ public:
         else
         {
             ieLayer.setType("Split");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
             ieLayer.getParameters()["axis"] = input->dims.size() - 1;
             ieLayer.getParameters()["out_sizes"] = input->dims[0];
         }
