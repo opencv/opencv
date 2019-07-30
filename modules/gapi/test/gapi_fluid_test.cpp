@@ -752,7 +752,7 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
                               ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
                               ));
 
-TEST(Fluid, UnusedNodeCompileTest) {
+TEST(Fluid, UnusedNodeOutputCompileTest) {
     cv::GMat in;
     cv::GMat a, b, c, d;
     std::tie(a, b, c, d) = cv::gapi::split4(in);
@@ -767,7 +767,7 @@ TEST(Fluid, UnusedNodeCompileTest) {
         cv::compile_args(cv::gapi::core::fluid::kernels())));
 }
 
-TEST(Fluid, UnusedNodeReshapeTest) {
+TEST(Fluid, UnusedNodeOutputReshapeTest) {
     const auto test_size = cv::Size(8, 8);
     const auto get_compile_args =
         [] () { return cv::compile_args(cv::gapi::core::fluid::kernels()); };
