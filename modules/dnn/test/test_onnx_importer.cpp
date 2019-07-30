@@ -426,14 +426,6 @@ TEST_P(Test_ONNX_nets, RCNN_ILSVRC13)
     testONNXModels("rcnn_ilsvrc13", pb, 0.0045);
 }
 
-TEST_P(Test_ONNX_nets, VGG16)
-{
-    applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
-
-    // output range: [-69; 72], after Softmax [0; 0.96]
-    testONNXModels("vgg16", pb, default_l1, default_lInf, true);
-}
-
 TEST_P(Test_ONNX_nets, VGG16_bn)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);  // > 2.3Gb
