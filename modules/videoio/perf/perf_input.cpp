@@ -40,7 +40,7 @@ PERF_TEST(, GetReadFrame)
 #else
     char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
 #endif
-
+    ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -62,7 +62,8 @@ PERF_TEST(, GetReadFrame)
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
-        //false start
+        EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
+        //launch cameras
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
     TEST_CYCLE() {
@@ -92,7 +93,7 @@ PERF_TEST(, GetWaitAnySyncFrame)
 #else
     char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
 #endif
-
+     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -116,7 +117,8 @@ PERF_TEST(, GetWaitAnySyncFrame)
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
-        //false start
+        EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
+        //launch cameras
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
 
@@ -154,7 +156,7 @@ PERF_TEST(, GetWaitAnyAsyncFrame)
 #else
     char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
 #endif
-
+    ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -177,7 +179,8 @@ PERF_TEST(, GetWaitAnyAsyncFrame)
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
-        //false start
+        EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
+        //launch cameras
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
     std::vector<int> state(VCM.size());
@@ -233,7 +236,7 @@ PERF_TEST(, GetWaitAnyMultiThFrame)
 #else
     char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
 #endif
-
+    ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -258,7 +261,8 @@ PERF_TEST(, GetWaitAnyMultiThFrame)
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
-        //false start
+        EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
+        //launch cameras
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
 
@@ -357,7 +361,7 @@ PERF_TEST_P(MultiThreadFrame, GetWaitAnyMultiThreadFrame, testing::Combine(
 #else
     char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
 #endif
-
+    ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -388,13 +392,11 @@ PERF_TEST_P(MultiThreadFrame, GetWaitAnyMultiThreadFrame, testing::Combine(
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
-        //false start
-        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
+        EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
+        //launch cameras
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));        
     }
 
-    //EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
-    //EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
-    //EXPECT_TRUE(cap3.set(CAP_PROP_FPS, 30));
 
     TEST_CYCLE() {
        int COUNTER = 0;

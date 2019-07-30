@@ -124,7 +124,7 @@ TEST(DISABLED_videoio_camera, v4l_poll_timeout)
 
    Mat frame1;
 
-   //false start
+   //launch cameras
    EXPECT_TRUE(cap1.read(frame1));
    EXPECT_TRUE(cap2.read(frame1));
 
@@ -203,7 +203,7 @@ TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
 
     Mat frame1;
 
-    //false start
+    //launch cameras
     EXPECT_TRUE(cap1.read(frame1));
     EXPECT_TRUE(cap2.read(frame1));
 
