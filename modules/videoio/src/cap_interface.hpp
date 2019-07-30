@@ -19,7 +19,7 @@ struct CvCapture
     virtual ~CvCapture() {}
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }    
+    virtual bool grabFrame() { return true; }
     virtual bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, const int64_t &){ return false; }
     virtual bool setFirstCapture() {return false;}
     virtual bool camerasPoll(const std::vector<CvCapture* >&, std::vector<int>&, const int64_t &) {return false;}

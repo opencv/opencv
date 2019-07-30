@@ -75,8 +75,7 @@ PERF_TEST(, DISABLED_GetReadFrame)
         {
             EXPECT_TRUE(VCM[0].read(frame1));
             std::thread th1(func);
-
-            EXPECT_TRUE(VCM[1].read(frame2));           
+            EXPECT_TRUE(VCM[1].read(frame2));
             cv::Canny(frame2, processed2, 400, 1000, 5);
             th1.join();
         }
@@ -345,7 +344,6 @@ PERF_TEST(, DISABLED_GetWaitAnyMultiThFrame)
     SANITY_CHECK_NOTHING();
 }
 
-
 typedef tuple<int, int> Threads_Number;
 typedef perf::TestBaseWithParam<Threads_Number> MultiThreadFrame;
 
@@ -394,10 +392,8 @@ PERF_TEST_P(MultiThreadFrame, DISABLED_GetWaitAnyMultiThreadFrame, testing::Comb
         ASSERT_TRUE(VCM[vc].isOpened());
         EXPECT_TRUE(VCM[vc].set(CAP_PROP_FPS, 30));
         //launch cameras
-        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));        
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
-
-
     TEST_CYCLE() {
        int COUNTER = 0;
        vector<int> nums(VCM.size(), -1);
