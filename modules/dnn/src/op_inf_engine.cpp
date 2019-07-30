@@ -45,21 +45,13 @@ infEngineWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
 InfEngineBackendNet::InfEngineBackendNet() : netBuilder("")
 {
     hasNetOwner = false;
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    targetDevice = InferenceEngine::TargetDevice::eCPU;
-#else
     device_name = "CPU";
-#endif
 }
 
 InfEngineBackendNet::InfEngineBackendNet(InferenceEngine::CNNNetwork& net) : netBuilder(""), cnn(net)
 {
     hasNetOwner = true;
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    targetDevice = InferenceEngine::TargetDevice::eCPU;
-#else
     device_name = "CPU";
-#endif
 }
 
 void InfEngineBackendNet::connect(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -122,25 +114,6 @@ void InfEngineBackendNet::init(int targetId)
         cnn = InferenceEngine::CNNNetwork(InferenceEngine::Builder::convertToICNNNetwork(netBuilder.build()));
     }
 
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    switch (targetId)
-    {
-        case DNN_TARGET_CPU:
-            targetDevice = InferenceEngine::TargetDevice::eCPU;
-            break;
-        case DNN_TARGET_OPENCL: case DNN_TARGET_OPENCL_FP16:
-            targetDevice = InferenceEngine::TargetDevice::eGPU;
-            break;
-        case DNN_TARGET_MYRIAD:
-            targetDevice = InferenceEngine::TargetDevice::eMYRIAD;
-            break;
-        case DNN_TARGET_FPGA:
-            targetDevice = InferenceEngine::TargetDevice::eFPGA;
-            break;
-        default:
-            CV_Error(Error::StsError, format("Unknown target identifier: %d", targetId));
-    };
-#else
     switch (targetId)
     {
         case DNN_TARGET_CPU:
@@ -159,7 +132,6 @@ void InfEngineBackendNet::init(int targetId)
         default:
             CV_Error(Error::StsNotImplemented, "Unknown target");
     };
-#endif
 
     for (const auto& name : requestedOutputs)
     {
@@ -253,13 +225,13 @@ static InferenceEngine::Layout estimateLayout(const Mat& m)
 
 static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
 {
-    std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
+    std::vector<size_t> shape(&m.size[0], &m.size[0] + m.dims);
     if (m.type() == CV_32F)
         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-               {InferenceEngine::Precision::FP32, reversedShape, estimateLayout(m)}));
+               {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
     else if (m.type() == CV_8U)
         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-               {InferenceEngine::Precision::U8, reversedShape, estimateLayout(m)}));
+               {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
@@ -349,9 +321,9 @@ void InfEngineBackendWrapper::setHostDirty()
 }
 
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
+static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
 {
-    static std::map<InferenceEngine::TargetDevice, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
+    static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
     return sharedPlugins;
 }
 #endif
@@ -388,18 +360,17 @@ static bool detectMyriadX_()
                                       InferenceEngine::Builder::convertToICNNNetwork(builder.build()));
 
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-    InferenceEngine::TargetDevice device = InferenceEngine::TargetDevice::eMYRIAD;
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     {
         AutoLock lock(getInitializationMutex());
         auto& sharedPlugins = getSharedPlugins();
-        auto pluginIt = sharedPlugins.find(device);
+        auto pluginIt = sharedPlugins.find("MYRIAD");
         if (pluginIt != sharedPlugins.end()) {
             enginePtr = pluginIt->second;
         } else {
             auto dispatcher = InferenceEngine::PluginDispatcher({""});
-            enginePtr = dispatcher.getSuitablePlugin(device);
-            sharedPlugins[device] = enginePtr;
+            enginePtr = dispatcher.getPluginByDevice("MYRIAD");
+            sharedPlugins["MYRIAD"] = enginePtr;
         }
     }
     auto plugin = InferenceEngine::InferencePlugin(enginePtr);
@@ -429,7 +400,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         AutoLock lock(getInitializationMutex());
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
         auto& sharedPlugins = getSharedPlugins();
-        auto pluginIt = sharedPlugins.find(targetDevice);
+        auto pluginIt = sharedPlugins.find(device_name);
         if (pluginIt != sharedPlugins.end())
         {
             enginePtr = pluginIt->second;
@@ -439,29 +410,22 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         {
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
             auto dispatcher = InferenceEngine::PluginDispatcher({""});
-            if (targetDevice == InferenceEngine::TargetDevice::eFPGA)
+            if (device_name == "FPGA")
                 enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
             else
-                enginePtr = dispatcher.getSuitablePlugin(targetDevice);
-            sharedPlugins[targetDevice] = enginePtr;
-
+                enginePtr = dispatcher.getPluginByDevice(device_name);
+            sharedPlugins[device_name] = enginePtr;
 #else
             isInit = true;
 #endif
             std::vector<std::string> candidates;
-
             std::string param_pluginPath = utils::getConfigurationParameterString("OPENCV_DNN_IE_EXTRA_PLUGIN_PATH", "");
             if (!param_pluginPath.empty())
             {
                 candidates.push_back(param_pluginPath);
             }
 
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-            if (targetDevice == InferenceEngine::TargetDevice::eCPU ||
-                targetDevice == InferenceEngine::TargetDevice::eFPGA)
-#else
             if (device_name == "CPU" || device_name == "FPGA")
-#endif
             {
                 std::string suffixes[] = {"_avx2", "_sse4", ""};
                 bool haveFeature[] = {
@@ -749,8 +713,8 @@ void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArra
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
 {
     auto halfs = InferenceEngine::make_shared_blob<int16_t>({
-                 InferenceEngine::Precision::FP16, blob->getTensorDesc().getDims(),
-                 blob->getTensorDesc().getLayout()
+                     InferenceEngine::Precision::FP16, blob->getTensorDesc().getDims(),
+                     blob->getTensorDesc().getLayout()
                  });
     halfs->allocate();
     Mat floatsData(1, blob->size(), CV_32F, blob->buffer());
@@ -799,7 +763,7 @@ void resetMyriadDevice()
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     AutoLock lock(getInitializationMutex());
-    getSharedPlugins().erase(InferenceEngine::TargetDevice::eMYRIAD);
+    getSharedPlugins().erase("MYRIAD");
 #endif
 #endif  // HAVE_INF_ENGINE
 }

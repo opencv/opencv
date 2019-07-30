@@ -465,7 +465,7 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getTensorDesc().getDims();
+        std::vector<size_t> dims = input->getDims();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
         const int inpCn = dims[1];
         const int outCn = blobs[0].size[0];
@@ -485,8 +485,8 @@ public:
             else
             {
                 ieWeights = InferenceEngine::make_shared_blob<float>({
-                            InferenceEngine::Precision::FP32,
-                            ieWeights->getTensorDesc().getDims(), layout
+                                InferenceEngine::Precision::FP32,
+                                ieWeights->getTensorDesc().getDims(), layout
                             });
                 ieWeights->allocate();
 
@@ -1878,8 +1878,8 @@ public:
         if (fusedWeights)
         {
             ieWeights = InferenceEngine::make_shared_blob<float>({
-                        InferenceEngine::Precision::FP32,
-                        ieWeights->getTensorDesc().getDims(), layout
+                            InferenceEngine::Precision::FP32,
+                            ieWeights->getTensorDesc().getDims(), layout
                         });
             ieWeights->allocate();
 

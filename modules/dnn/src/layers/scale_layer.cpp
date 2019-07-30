@@ -208,8 +208,8 @@ public:
         else
         {
             auto weights = InferenceEngine::make_shared_blob<float>({
-                           InferenceEngine::Precision::FP32, {(size_t)numChannels},
-                           InferenceEngine::Layout::C
+                               InferenceEngine::Precision::FP32, {(size_t)numChannels},
+                               InferenceEngine::Layout::C
                            });
             weights->allocate();
             float* buf = weights->buffer().as<float*>();

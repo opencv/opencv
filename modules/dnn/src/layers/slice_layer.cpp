@@ -306,8 +306,8 @@ public:
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
             auto shapeSource = InferenceEngine::make_shared_blob<float>({
-                               InferenceEngine::Precision::FP32, outShape,
-                               InferenceEngine::Layout::ANY
+                                   InferenceEngine::Precision::FP32, outShape,
+                                   InferenceEngine::Layout::ANY
                                });
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);

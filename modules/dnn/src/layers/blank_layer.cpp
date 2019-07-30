@@ -111,7 +111,7 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getTensorDesc().getDims();
+        std::vector<size_t> dims = input->getDims();
         CV_Assert(!dims.empty());
 
         InferenceEngine::Builder::Layer ieLayer(name);

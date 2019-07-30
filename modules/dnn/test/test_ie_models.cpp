@@ -129,11 +129,17 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 
     CNNNetwork net = reader.getNetwork();
 
+    std::string device_name;
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
     Core ie;
+#else
+    InferenceEnginePluginPtr enginePtr;
+    InferencePlugin plugin;
+#endif
     ExecutableNetwork netExec;
     InferRequest infRequest;
-    std::string device_name;
+
     try
     {
         switch (target)
@@ -154,34 +160,10 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
             default:
                 CV_Error(Error::StsNotImplemented, "Unknown target");
         };
-#else
-    InferenceEnginePluginPtr enginePtr;
-    InferencePlugin plugin;
-    ExecutableNetwork netExec;
-    InferRequest infRequest;
 
-    try
-    {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
         auto dispatcher = InferenceEngine::PluginDispatcher({""});
-        switch (target)
-        {
-            case DNN_TARGET_CPU:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eCPU);
-                break;
-            case DNN_TARGET_OPENCL:
-            case DNN_TARGET_OPENCL_FP16:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eGPU);
-                break;
-            case DNN_TARGET_MYRIAD:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eMYRIAD);
-                break;
-            case DNN_TARGET_FPGA:
-                enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
-                break;
-            default:
-                CV_Error(Error::StsNotImplemented, "Unknown target");
-        };
-
+        enginePtr = dispatcher.getPluginByDevice(device_name);
 #endif
         if (target == DNN_TARGET_CPU || target == DNN_TARGET_FPGA)
         {

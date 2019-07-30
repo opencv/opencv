@@ -261,7 +261,7 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getTensorDesc().getDims();
+        std::vector<size_t> dims = input->getDims();
         if (dims.size() == 4)
         {
             InferenceEngine::Builder::NormalizeLayer ieLayer(name);
@@ -276,8 +276,8 @@ public:
             if (blobs.empty())
             {
                 weights = InferenceEngine::make_shared_blob<float>({
-                          InferenceEngine::Precision::FP32,
-                          {(size_t)numChannels}, InferenceEngine::Layout::C
+                              InferenceEngine::Precision::FP32,
+                              {(size_t)numChannels}, InferenceEngine::Layout::C
                           });
                 weights->allocate();
 

@@ -101,12 +101,11 @@ private:
 
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
+    std::string device_name;
 #if INF_ENGINE_VER_MAJOR_LE(2019010000)
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     InferenceEngine::InferencePlugin plugin;
-    InferenceEngine::TargetDevice targetDevice;
 #else
-    std::string device_name;
     InferenceEngine::Core core;
     bool isInit = false;
 #endif
