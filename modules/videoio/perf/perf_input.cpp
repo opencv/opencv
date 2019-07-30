@@ -34,20 +34,36 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 
 PERF_TEST(, GetReadFrame)
 {
-    VideoCapture cap1(0, CAP_V4L);
-    VideoCapture cap2(2, CAP_V4L);
-
-    ASSERT_TRUE(cap1.isOpened());
-    ASSERT_TRUE(cap2.isOpened());
-
     int ITERATION_COUNT = 50; //number of expected frames from all cameras
+#ifndef WINRT
+    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
+#else
+    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
+#endif
 
+    std::vector<VideoCapture> VCM;
+    int step = 0; string path;
+    while(true)
+    {
+        if(datapath_dir[step] == ':' || datapath_dir[step] == '\0')
+        {
+            VCM.push_back(VideoCapture(path, CAP_V4L));
+            path.clear();
+            if(datapath_dir[step] != '\0')
+                ++step;
+        }
+        if(datapath_dir[step] == '\0')
+            break;
+        path += datapath_dir[step];
+        ++step;
+    }
     Mat frame1, frame2,  processed1, processed2;
-
-    //false start
-    EXPECT_TRUE(cap1.read(frame1));
-    EXPECT_TRUE(cap2.read(frame2));
-
+    for(size_t vc = 0; vc < VCM.size(); ++vc)
+    {
+        ASSERT_TRUE(VCM[vc].isOpened());
+        //false start
+        EXPECT_TRUE(VCM[vc].read(frame1));
+    }
     TEST_CYCLE() {
         auto func = [&]()
         {
@@ -58,10 +74,10 @@ PERF_TEST(, GetReadFrame)
         };
         for(int j = 0; j < ITERATION_COUNT; ++j)
         {
-            EXPECT_TRUE(cap1.read(frame1));
+            EXPECT_TRUE(VCM[0].read(frame1));
             std::thread th1(func);
 
-            EXPECT_TRUE(cap2.read(frame2));
+            EXPECT_TRUE(VCM[1].read(frame2));
             for(int i = 0; i < 50; ++i)//50-load
             {
                 cv::Canny(frame2, processed2, 400, 1000, 5);
@@ -74,28 +90,42 @@ PERF_TEST(, GetReadFrame)
 
 PERF_TEST(, GetWaitAnySyncFrame)
 {
-    VideoCapture cap1(0, CAP_V4L);
-    VideoCapture cap2(2, CAP_V4L);
-
-    ASSERT_TRUE(cap1.isOpened());
-    ASSERT_TRUE(cap2.isOpened());
+    int TIMEOUT = -1,
+        FRAME_COUNT = 50;//number of expected frames from all cameras
+#ifndef WINRT
+    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
+#else
+    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
+#endif
 
     std::vector<VideoCapture> VCM;
-
-    VCM.push_back(cap1);
-    VCM.push_back(cap2);
-
-    std::vector<int> state(VCM.size());
-
+    int step = 0; string path;
+    while(true)
+    {
+        if(datapath_dir[step] == ':' || datapath_dir[step] == '\0')
+        {
+            VCM.push_back(VideoCapture(path, CAP_V4L));
+            path.clear();
+            if(datapath_dir[step] != '\0')
+                ++step;
+        }
+        if(datapath_dir[step] == '\0')
+            break;
+        path += datapath_dir[step];
+        ++step;
+    }
     Mat frame1, frame2, processed1, processed2;
     std::vector<Mat> forMAt = {frame1, frame2};
     std::vector<Mat> forProc = {processed1, processed2};
-    int TIMEOUT = -1;
-    int FRAME_COUNT = 500;//number of expected frames from all cameras
 
-    //false start
-    EXPECT_TRUE(cap1.read(frame1));
-    EXPECT_TRUE(cap2.read(frame2));
+    for(size_t vc = 0; vc < VCM.size(); ++vc)
+    {
+        ASSERT_TRUE(VCM[vc].isOpened());
+        //false start
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
+    }
+
+    std::vector<int> state(VCM.size());
 
     TEST_CYCLE() {
         int COUNTER = 0;
@@ -108,10 +138,9 @@ PERF_TEST(, GetWaitAnySyncFrame)
                 if(state[i] == CAP_CAM_READY)
                 {
                   EXPECT_TRUE(VCM[i].retrieve(forMAt[i]));
-                  for(int e = 0; e < 50; ++e)//50-load
-                  {
-                      cv::Canny(forMAt[i], forProc[i], 400, 1000, 5);
-                  }
+
+                  cv::Canny(forMAt[i], forProc[i], 400, 1000, 5);
+
                   ++COUNTER;
                 }
             }
@@ -123,28 +152,40 @@ PERF_TEST(, GetWaitAnySyncFrame)
 
 PERF_TEST(, GetWaitAnyAsyncFrame)
 {
-    VideoCapture cap1(0, CAP_V4L);
-    VideoCapture cap2(2, CAP_V4L);
-
-    ASSERT_TRUE(cap1.isOpened());
-    ASSERT_TRUE(cap2.isOpened());
+    int TIMEOUT = -1,
+        FRAME_COUNT = 50;
+#ifndef WINRT
+    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
+#else
+    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
+#endif
 
     std::vector<VideoCapture> VCM;
-
-    VCM.push_back(cap1);
-    VCM.push_back(cap2);
-
-    std::vector<int> state;
-
+    int step = 0; string path;
+    while(true)
+    {
+        if(datapath_dir[step] == ':' || datapath_dir[step] == '\0')
+        {
+            VCM.push_back(VideoCapture(path, CAP_V4L));
+            path.clear();
+            if(datapath_dir[step] != '\0')
+                ++step;
+        }
+        if(datapath_dir[step] == '\0')
+            break;
+        path += datapath_dir[step];
+        ++step;
+    }
     Mat frame1, frame2, processed1, processed2;
     std::vector<Mat> forMAt = {frame1, frame2};
     std::vector<Mat> forProc = {processed1, processed2};
-    int TIMEOUT = -1;
-    int FRAME_COUNT = 500;
-
-    //false start
-    cap1>>frame1;
-    cap2>>frame2;
+    for(size_t vc = 0; vc < VCM.size(); ++vc)
+    {
+        ASSERT_TRUE(VCM[vc].isOpened());
+        //false start
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
+    }
+    std::vector<int> state(VCM.size());
 
     TEST_CYCLE() {
         int COUNTER = 0, numCam = 2;
@@ -190,37 +231,47 @@ PERF_TEST(, GetWaitAnyAsyncFrame)
 
 PERF_TEST(, GetWaitAnyMultiThFrame)
 {
-    VideoCapture cap1(0, CAP_V4L);
-    VideoCapture cap2(2, CAP_V4L);
-    VideoCapture cap3(4, CAP_V4L);
-
-    ASSERT_TRUE(cap1.isOpened());
-    ASSERT_TRUE(cap2.isOpened());
-    ASSERT_TRUE(cap3.isOpened());
-
-    EXPECT_TRUE(cap1.set(CAP_PROP_FPS, 30));
-    EXPECT_TRUE(cap2.set(CAP_PROP_FPS, 30));
-    EXPECT_TRUE(cap3.set(CAP_PROP_FPS, 30));
+    int TIMEOUT = -1,
+        FRAME_COUNT = 50;//number of expected frames from all cameras
+#ifndef WINRT
+    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
+#else
+    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
+#endif
 
     std::vector<VideoCapture> VCM;
-
-    VCM.push_back(cap1);
-    VCM.push_back(cap2);
-    VCM.push_back(cap3);
-
-    std::vector<int> state(VCM.size());
+    int step = 0; string path;
+    while(true)
+    {
+        if(datapath_dir[step] == ':' || datapath_dir[step] == '\0')
+        {
+            VCM.push_back(VideoCapture(path, CAP_V4L));
+            path.clear();
+            if(datapath_dir[step] != '\0')
+                ++step;
+        }
+        if(datapath_dir[step] == '\0')
+            break;
+        path += datapath_dir[step];
+        ++step;
+    }
 
     Mat frame1, frame2, frame3, processed1, processed2, processed3;
     std::vector<Mat> forMAt = {frame1, frame2, frame3};
     std::vector<Mat> forProc = {processed1, processed2, processed3};
 
-    int TIMEOUT = -1;
-    int FRAME_COUNT = 50;//number of expected frames from all cameras
+    for(size_t vc = 0; vc < VCM.size(); ++vc)
+    {
+        ASSERT_TRUE(VCM[vc].isOpened());
+        //false start
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
+    }
 
-    //false start
-    EXPECT_TRUE(cap1.read(frame1));
-    EXPECT_TRUE(cap2.read(frame2));
-    EXPECT_TRUE(cap3.read(frame3));
+    EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
+    EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
+    //EXPECT_TRUE(VCM[2].set(CAP_PROP_FPS, 30));
+
+    std::vector<int> state(VCM.size());
 
     TEST_CYCLE() {
         int COUNTER = 0, NUM_THREAD = 3;
@@ -262,7 +313,7 @@ PERF_TEST(, GetWaitAnyMultiThFrame)
                          if(!threadState[nt])
                          {
                              threads[nt] = std::thread(func, nums[nc], nt);
-                             printf("th %d  ncam %d\n", nt+1, nc+1);
+                             //printf("th %d  ncam %d\n", nt+1, nc+1);
                              threadState[nt] = 1;
                              break;
                          }
