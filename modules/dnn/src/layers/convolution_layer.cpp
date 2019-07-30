@@ -484,9 +484,10 @@ public:
             }
             else
             {
-                InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32,
-                                               ieWeights->getTensorDesc().getDims(), layout);
-                ieWeights = InferenceEngine::make_shared_blob<float>(td);
+                ieWeights = InferenceEngine::make_shared_blob<float>({
+                            InferenceEngine::Precision::FP32,
+                            ieWeights->getTensorDesc().getDims(), layout
+                            });
                 ieWeights->allocate();
 
                 Mat newWeights = infEngineBlobToMat(ieWeights).reshape(1, outCn);
@@ -1876,9 +1877,10 @@ public:
         auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
         if (fusedWeights)
         {
-            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32,
-                                           ieWeights->getTensorDesc().getDims(), layout);
-            ieWeights = InferenceEngine::make_shared_blob<float>(td);
+            ieWeights = InferenceEngine::make_shared_blob<float>({
+                        InferenceEngine::Precision::FP32,
+                        ieWeights->getTensorDesc().getDims(), layout
+                        });
             ieWeights->allocate();
 
             int inpCn = blobs[0].size[0];

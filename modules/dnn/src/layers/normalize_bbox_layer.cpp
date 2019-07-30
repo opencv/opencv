@@ -275,9 +275,10 @@ public:
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32,
-                                               {(size_t)numChannels}, InferenceEngine::Layout::C);
-                weights = InferenceEngine::make_shared_blob<float>(td);
+                weights = InferenceEngine::make_shared_blob<float>({
+                          InferenceEngine::Precision::FP32,
+                          {(size_t)numChannels}, InferenceEngine::Layout::C
+                          });
                 weights->allocate();
 
                 Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);

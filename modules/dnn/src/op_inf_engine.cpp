@@ -254,14 +254,12 @@ static InferenceEngine::Layout estimateLayout(const Mat& m)
 static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
 {
     std::vector<size_t> reversedShape(&m.size[0], &m.size[0] + m.dims);
-    if (m.type() == CV_32F) {
-        InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, reversedShape, estimateLayout(m));
-        return InferenceEngine::DataPtr(new InferenceEngine::Data(name, td));
-    }
-    else if (m.type() == CV_8U) {
-        InferenceEngine::TensorDesc td(InferenceEngine::Precision::U8, reversedShape, estimateLayout(m));
-        return InferenceEngine::DataPtr(new InferenceEngine::Data(name, td));
-    }
+    if (m.type() == CV_32F)
+        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {InferenceEngine::Precision::FP32, reversedShape, estimateLayout(m)}));
+    else if (m.type() == CV_8U)
+        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {InferenceEngine::Precision::U8, reversedShape, estimateLayout(m)}));
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
@@ -269,14 +267,12 @@ static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std:
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<size_t>& shape,
                                                InferenceEngine::Layout layout)
 {
-    if (m.type() == CV_32F) {
-        InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, shape, layout);
-        return InferenceEngine::make_shared_blob<float>(td, (float*)m.data);
-    }
-    else if (m.type() == CV_8U) {
-        InferenceEngine::TensorDesc td(InferenceEngine::Precision::U8, shape, layout);
-        return InferenceEngine::make_shared_blob<uint8_t>(td, (uint8_t*)m.data);
-    }
+    if (m.type() == CV_32F)
+        return InferenceEngine::make_shared_blob<float>(
+               {InferenceEngine::Precision::FP32, shape, layout}, (float*)m.data);
+    else if (m.type() == CV_8U)
+        return InferenceEngine::make_shared_blob<uint8_t>(
+               {InferenceEngine::Precision::U8, shape, layout}, (uint8_t*)m.data);
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %d", m.type()));
 }
@@ -752,8 +748,10 @@ void InfEngineBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArra
 
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob)
 {
-    InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP16, blob->getTensorDesc().getDims(), blob->getTensorDesc().getLayout());
-    auto halfs = InferenceEngine::make_shared_blob<int16_t>(td);
+    auto halfs = InferenceEngine::make_shared_blob<int16_t>({
+                 InferenceEngine::Precision::FP16, blob->getTensorDesc().getDims(),
+                 blob->getTensorDesc().getLayout()
+                 });
     halfs->allocate();
     Mat floatsData(1, blob->size(), CV_32F, blob->buffer());
     Mat halfsData(1, blob->size(), CV_16SC1, halfs->buffer());

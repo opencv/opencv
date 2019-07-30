@@ -117,8 +117,7 @@ static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& d
     m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
-    InferenceEngine::TensorDesc td(Precision::FP32, dims, Layout::ANY);
-    dataPtr = make_shared_blob<float>(td, (float*)m.data);
+    dataPtr = make_shared_blob<float>({Precision::FP32, dims, Layout::ANY}, (float*)m.data);
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,

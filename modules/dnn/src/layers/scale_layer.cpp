@@ -207,8 +207,10 @@ public:
         }
         else
         {
-            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, {(size_t)numChannels}, InferenceEngine::Layout::C);
-            auto weights = InferenceEngine::make_shared_blob<float>(td);
+            auto weights = InferenceEngine::make_shared_blob<float>({
+                           InferenceEngine::Precision::FP32, {(size_t)numChannels},
+                           InferenceEngine::Layout::C
+                           });
             weights->allocate();
             float* buf = weights->buffer().as<float*>();
             std::fill(buf, buf + numChannels, 1);

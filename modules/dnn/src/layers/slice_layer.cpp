@@ -305,8 +305,10 @@ public:
 
             ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
-            InferenceEngine::TensorDesc td(InferenceEngine::Precision::FP32, outShape, InferenceEngine::Layout::ANY);
-            auto shapeSource = InferenceEngine::make_shared_blob<float>(td);
+            auto shapeSource = InferenceEngine::make_shared_blob<float>({
+                               InferenceEngine::Precision::FP32, outShape,
+                               InferenceEngine::Layout::ANY
+                               });
             shapeSource->allocate();
             addConstantData("weights", shapeSource, ieLayer);
         }
