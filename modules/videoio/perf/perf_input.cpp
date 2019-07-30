@@ -58,30 +58,25 @@ PERF_TEST(, GetReadFrame)
         ++step;
     }
     Mat frame1, frame2,  processed1, processed2;
+    std::vector<Mat> forMAt = {frame1, frame2};
     for(size_t vc = 0; vc < VCM.size(); ++vc)
     {
         ASSERT_TRUE(VCM[vc].isOpened());
         //false start
-        EXPECT_TRUE(VCM[vc].read(frame1));
+        EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
     TEST_CYCLE() {
         auto func = [&]()
         {
-            for(int i = 0; i < 50; ++i)//50-load
-            {
-                cv::Canny(frame1, processed1, 400, 1000, 5);
-            }
+            cv::Canny(frame1, processed1, 400, 1000, 5);
         };
         for(int j = 0; j < ITERATION_COUNT; ++j)
         {
             EXPECT_TRUE(VCM[0].read(frame1));
             std::thread th1(func);
 
-            EXPECT_TRUE(VCM[1].read(frame2));
-            for(int i = 0; i < 50; ++i)//50-load
-            {
-                cv::Canny(frame2, processed2, 400, 1000, 5);
-            }
+            EXPECT_TRUE(VCM[1].read(frame2));           
+            cv::Canny(frame2, processed2, 400, 1000, 5);
             th1.join();
         }
     };
@@ -267,8 +262,8 @@ PERF_TEST(, GetWaitAnyMultiThFrame)
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
 
-    EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
-    EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
+    //EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
+    //EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
     //EXPECT_TRUE(VCM[2].set(CAP_PROP_FPS, 30));
 
     std::vector<int> state(VCM.size());
@@ -397,8 +392,8 @@ PERF_TEST_P(MultiThreadFrame, GetWaitAnyMultiThreadFrame, testing::Combine(
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
 
-    EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
-    EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
+    //EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
+    //EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
     //EXPECT_TRUE(cap3.set(CAP_PROP_FPS, 30));
 
     TEST_CYCLE() {
