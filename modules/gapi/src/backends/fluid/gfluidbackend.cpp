@@ -1145,7 +1145,16 @@ void cv::gimpl::GFluidExecutable::makeReshape(const std::vector<gapi::own::Rect>
         // Introduce Storage::INTERNAL_GRAPH and Storage::INTERNAL_ISLAND?
         if (fd.internal == true)
         {
-            m_buffers[id].priv().allocate(fd.border, fd.border_size, fd.max_consumption, fd.skew);
+            // FIXME: do max_consumption calculation properly (e.g. in initLineConsumption)
+            int max_consumption = 0;
+            if (nh->outNodes().empty()) {
+                // nh is always a DATA node, so it is safe to get inNodes().front() since there's
+                // always a single writer (OP node)
+                max_consumption = fg.metadata(nh->inNodes().front()).get<FluidUnit>().k.m_lpi;
+            } else {
+                max_consumption = fd.max_consumption;
+            }
+            m_buffers[id].priv().allocate(fd.border, fd.border_size, max_consumption, fd.skew);
             std::stringstream stream;
             m_buffers[id].debug(stream);
             GAPI_LOG_INFO(NULL, stream.str());
