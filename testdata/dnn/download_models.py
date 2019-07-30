@@ -438,29 +438,6 @@ models = [
         sha='a74974096088954ca4e4e89bec212c1ac2ab0745',
         filename='onnx/data/output_zfnet512.pb'),
     Model(
-        name='VGG16 (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16/vgg16.tar.gz',
-        sha='39bc0f689388a32227d804e97ea9f562467ed863',
-        filename='vgg16.tar.gz'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/vgg16.onnx',
-        sha='effed6f2bbe6c3a2f7705da4c0002ec6250827dd',
-        filename='onnx/models/vgg16.onnx'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/test_data_set_0/input_0.pb',
-        sha='55c285cfbc4d61e3c026302a3af9e7d220b82d0a',
-        filename='onnx/data/input_vgg16.pb'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/test_data_set_0/output_0.pb',
-        sha='dcd5945025906ff4ea2270963b795c8fa29d4cd8',
-        filename='onnx/data/output_vgg16.pb'),
-    Model(
         name='VGG16_bn (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16-bn/vgg16-bn.tar.gz',
         sha='60f4685aed632d2ce3b137017cf44ae1a5c55459',
