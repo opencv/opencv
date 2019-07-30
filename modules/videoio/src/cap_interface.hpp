@@ -19,9 +19,7 @@ struct CvCapture
     virtual ~CvCapture() {}
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }
-
-    virtual int getDeviceHandle() { return 0; }
+    virtual bool grabFrame() { return true; }    
     virtual bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, const int64_t &){ return false; }
     virtual bool setFirstCapture() {return false;}
     virtual bool camerasPoll(const std::vector<CvCapture* >&, std::vector<int>&, const int64_t &) {return false;}
@@ -101,7 +99,7 @@ public:
    {
        std::vector< CvCapture * > capPtrs;
 
-       for (unsigned int capnum = 0; capnum < deviceHandles.size(); ++capnum)
+       for (size_t capnum = 0; capnum < deviceHandles.size(); ++capnum)
        {
            CV_Assert(dynamic_cast< LegacyCapture * >(deviceHandles[capnum]) != nullptr);
            LegacyCapture *ptr = static_cast<LegacyCapture * >(deviceHandles[capnum]);

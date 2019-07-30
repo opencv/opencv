@@ -105,26 +105,17 @@ TEST(DISABLED_videoio_camera, v4l_read_framesize)
     capture.release();
 }
 
-typedef tuple<int, int, int> Size_TIME;
-typedef testing::TestWithParam< Size_TIME > DISABLED_videoio_timeout;
-
-TEST_P(DISABLED_videoio_timeout, v4l_poll_timeout)
+TEST(DISABLED_videoio_camera, v4l_poll_timeout)
 {
    //Two identical cameras
-   VideoCapture cap1(0);
-   VideoCapture cap2(2);
-
-   int FPS1 = get<0>(GetParam());
-   int FPS2 = get<1>(GetParam());
+   VideoCapture cap1(0, CAP_V4L);
+   VideoCapture cap2(2, CAP_V4L);
 
    ASSERT_TRUE(cap1.isOpened());
    ASSERT_TRUE(cap2.isOpened());
 
-   EXPECT_TRUE(cap1.set(CAP_PROP_FPS, FPS1));
-   EXPECT_TRUE(cap2.set(CAP_PROP_FPS, FPS2));
-
-   std::cout << FPS1 << std::endl;
-   std::cout << FPS2 << std::endl;
+   EXPECT_TRUE(cap1.set(CAP_PROP_FPS, 30));
+   EXPECT_TRUE(cap2.set(CAP_PROP_FPS, 15));
 
    std::vector<VideoCapture> VCM;
 
@@ -134,31 +125,47 @@ TEST_P(DISABLED_videoio_timeout, v4l_poll_timeout)
    Mat frame1;
 
    //false start
-   cap1>>frame1;
-   cap2>>frame1;
+   EXPECT_TRUE(cap1.read(frame1));
+   EXPECT_TRUE(cap2.read(frame1));
 
-   std::vector<int> state;
+   std::vector<int> state(VCM.size());
 
-   int ITERATION_COUNT = 50;
-   int TIMEOUT = get<2>(GetParam());
+   float EPSILON = 1;
 
-   std::cout << TIMEOUT << std::endl;
-
-   TickMeter tm;
-   for(int i = 0; i < ITERATION_COUNT; ++i)
+   for(int i = 0; i < 60; ++i)
    {
+       int TIMEOUT = 10;
+       TickMeter tm;
+
        tm.start();
        VideoCapture::waitAny(VCM, state, TIMEOUT);
        tm.stop();
-   }
-   float time = tm.getTimeMilli() / ITERATION_COUNT;
-   std::cout << time;
-   EXPECT_TRUE( (time - TIMEOUT) < 4 );
-}
 
-INSTANTIATE_TEST_CASE_P(, DISABLED_videoio_timeout, testing::Combine(testing::Values(30, 15),
-                                                                            testing::Values(15, 5),
-                                                                                testing::Values(10, 20, 50)));
+       EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
+       state.clear();
+
+       TIMEOUT = 23;
+
+       tm.reset();
+       tm.start();
+       VideoCapture::waitAny(VCM, state, TIMEOUT);
+       tm.stop();
+
+       EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
+       state.clear();
+
+       TIMEOUT = 30;
+
+       tm.reset();
+       tm.start();
+       VideoCapture::waitAny(VCM, state, TIMEOUT);
+       tm.stop();
+
+       EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
+       state.clear();
+   }
+
+}
 
 typedef tuple<int, int> Size_FPS;
 typedef testing::TestWithParam< Size_FPS > DISABLED_videoio_fps;
@@ -166,8 +173,8 @@ typedef testing::TestWithParam< Size_FPS > DISABLED_videoio_fps;
 TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
 {
     //Two identical cameras
-    VideoCapture cap1(0);
-    VideoCapture cap2(2);
+    VideoCapture cap1(0, CAP_V4L);
+    VideoCapture cap2(2, CAP_V4L);
 
     ASSERT_TRUE(cap1.isOpened());
     ASSERT_TRUE(cap2.isOpened());
@@ -187,18 +194,18 @@ TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
     VCM.push_back(cap1);
     VCM.push_back(cap2);
 
-    std::vector<int> state;
+    std::vector<int> state(VCM.size());
 
     std::vector<int> countOfStates1000t0(2, 0);
 
-    int ITERATION_COUNT = 500;
+    int ITERATION_COUNT = 500; //number of expected frames from all cameras
     int TIMEOUT = 10; // milliseconds
 
     Mat frame1;
 
     //false start
-    cap1>>frame1;
-    cap2>>frame1;
+    EXPECT_TRUE(cap1.read(frame1));
+    EXPECT_TRUE(cap2.read(frame1));
 
     for(int i = 0; i < ITERATION_COUNT; ++i)
     {
