@@ -752,7 +752,8 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
                               ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
                               ));
 
-TEST(Fluid, UnusedNodeTest) {
+TEST(Fluid, UnusedNodeTest)
+{
     cv::GMat in;
     cv::GMat a, b, c, d;
     std::tie(a, b, c, d) = cv::gapi::split4(in);
@@ -765,6 +766,38 @@ TEST(Fluid, UnusedNodeTest) {
 
     ASSERT_NO_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
         cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
+TEST(Fluid, InvalidROIs)
+{
+    cv::GMat in;
+    cv::GMat out = cv::gapi::add(in, in);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC3);
+    cv::Mat out_mat = in_mat.clone();
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    std::vector<cv::Rect> invalid_rois =
+    {
+        cv::Rect(0, 0, 1, 0),
+        cv::Rect(0, 0, 0, 1),
+        cv::Rect(1, 0, 0, 0),
+        cv::Rect(0, 1, 0, 0),
+        cv::Rect(0, out_mat.rows, out_mat.cols, out_mat.rows),
+        cv::Rect(out_mat.cols, 0, out_mat.cols, out_mat.rows),
+        cv::Rect(0, 0, out_mat.cols, 0),
+    };
+
+    const auto compile_args = [] (cv::Rect roi) {
+        return cv::compile_args(cv::gapi::core::fluid::kernels(), GFluidOutputRois{{to_own(roi)}});
+    };
+
+    for (const auto& roi : invalid_rois)
+    {
+        cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+        EXPECT_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat), compile_args(roi)),
+            std::exception);
+    }
 }
 
 } // namespace opencv_test
