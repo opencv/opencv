@@ -752,7 +752,7 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12RoiTest,
                               ,std::make_pair(cv::Size{1920, 1080}, cv::Rect{0, 710, 1920, 270})
                               ));
 
-TEST(Fluid, UnusedNodeTest) {
+TEST(Fluid, UnusedNodeOutputCompileTest) {
     cv::GMat in;
     cv::GMat a, b, c, d;
     std::tie(a, b, c, d) = cv::gapi::split4(in);
@@ -765,6 +765,30 @@ TEST(Fluid, UnusedNodeTest) {
 
     ASSERT_NO_THROW(comp.apply(cv::gin(in_mat), cv::gout(out_mat),
         cv::compile_args(cv::gapi::core::fluid::kernels())));
+}
+
+TEST(Fluid, UnusedNodeOutputReshapeTest) {
+    const auto test_size = cv::Size(8, 8);
+    const auto get_compile_args =
+        [] () { return cv::compile_args(cv::gapi::core::fluid::kernels()); };
+
+    cv::GMat in;
+    cv::GMat a, b, c, d;
+    std::tie(a, b, c, d) = cv::gapi::split4(in);
+    cv::GMat out = cv::gapi::resize(cv::gapi::merge3(a, b, c), test_size, 0.0, 0.0,
+        cv::INTER_LINEAR);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    cv::Mat in_mat(test_size, CV_8UC4);
+    cv::Mat out_mat(test_size, CV_8UC3);
+
+    cv::GCompiled compiled;
+    ASSERT_NO_THROW(compiled = comp.compile(descr_of(in_mat), get_compile_args()));
+
+    in_mat = cv::Mat(test_size * 2, CV_8UC4);
+    ASSERT_TRUE(compiled.canReshape());
+    ASSERT_NO_THROW(compiled.reshape(descr_of(gin(in_mat)), get_compile_args()));
+    ASSERT_NO_THROW(compiled(in_mat, out_mat));
 }
 
 } // namespace opencv_test
