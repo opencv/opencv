@@ -32,7 +32,7 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
   SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(, GetReadFrame)
+PERF_TEST(, DISABLED_GetReadFrame)
 {
     int ITERATION_COUNT = 50; //number of expected frames from all cameras
 #ifndef WINRT
@@ -84,7 +84,7 @@ PERF_TEST(, GetReadFrame)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(, GetWaitAnySyncFrame)
+PERF_TEST(, DISABLED_GetWaitAnySyncFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;//number of expected frames from all cameras
@@ -147,7 +147,7 @@ PERF_TEST(, GetWaitAnySyncFrame)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(, GetWaitAnyAsyncFrame)
+PERF_TEST(, DISABLED_GetWaitAnyAsyncFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;
@@ -227,7 +227,7 @@ PERF_TEST(, GetWaitAnyAsyncFrame)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(, GetWaitAnyMultiThFrame)
+PERF_TEST(, DISABLED_GetWaitAnyMultiThFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;//number of expected frames from all cameras
@@ -349,7 +349,7 @@ PERF_TEST(, GetWaitAnyMultiThFrame)
 typedef tuple<int, int> Threads_Number;
 typedef perf::TestBaseWithParam<Threads_Number> MultiThreadFrame;
 
-PERF_TEST_P(MultiThreadFrame, GetWaitAnyMultiThreadFrame, testing::Combine(
+PERF_TEST_P(MultiThreadFrame, DISABLED_GetWaitAnyMultiThreadFrame, testing::Combine(
                             testing::Values(2, 4, 6, 8, 10), testing::Values(1)))
 {
     int NUM_THREAD = get<0>(GetParam()),
