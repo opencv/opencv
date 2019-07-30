@@ -9,9 +9,31 @@
 #ifdef HAVE_INF_ENGINE
 #include <opencv2/core/utils/filesystem.hpp>
 
+
+//
+// Synchronize headers include statements with src/op_inf_engine.hpp
+//
+//#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
+//there is no way to suppress warnigns from IE only at this moment, so we are forced to suppress warnings globally
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+
+#if defined(__GNUC__)
+#pragma GCC visibility push(default)
+#endif
+
 #include <inference_engine.hpp>
 #include <ie_icnn_network.hpp>
 #include <ie_extension.h>
+
+#if defined(__GNUC__)
+#pragma GCC visibility pop
+#endif
+
 
 namespace opencv_test { namespace {
 

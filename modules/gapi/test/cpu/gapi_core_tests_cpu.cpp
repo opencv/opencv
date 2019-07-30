@@ -448,4 +448,12 @@ INSTANTIATE_TEST_CASE_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest
                                 Values(cv::Size(50, 50)),
                                 Values(-1),
                                 Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(ReInitOutTestCPU, ReInitOutTest,
+                        Combine(Values(CV_8UC3, CV_16SC4, CV_32FC1),
+                                Values(cv::Size(640, 480)),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(cv::Size(640, 400),
+                                       cv::Size(10, 480))));
 }
