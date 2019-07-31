@@ -804,13 +804,14 @@ TEST(Fluid, InvalidROIs)
 
     std::vector<cv::Rect> invalid_rois =
     {
-        cv::Rect(0, 0, 1, 0),
-        cv::Rect(0, 0, 0, 1),
         cv::Rect(1, 0, 0, 0),
         cv::Rect(0, 1, 0, 0),
+        cv::Rect(0, 0, 1, 0),
+        cv::Rect(0, 0, 0, 1),
+        cv::Rect(0, 0, out_mat.cols, 0),
+        cv::Rect(0, 0, 0, out_mat.rows),
         cv::Rect(0, out_mat.rows, out_mat.cols, out_mat.rows),
         cv::Rect(out_mat.cols, 0, out_mat.cols, out_mat.rows),
-        cv::Rect(0, 0, out_mat.cols, 0),
     };
 
     const auto compile_args = [] (cv::Rect roi) {
