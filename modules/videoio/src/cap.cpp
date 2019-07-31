@@ -282,7 +282,6 @@ bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<in
     }
     else
         CV_Error(Error::StsError, "Capture list is empty");
-    return false;
 }
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
