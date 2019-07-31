@@ -110,8 +110,8 @@ models = [
         sha='c8a5a000ee8d8dd75886f152a50a9c5b53d726a5',
         filename='tensorflow_inception_graph.pb'),
     Model(
-        name='Enet',
-        url='https://www.dropbox.com/sh/dywzk3gyb12hpe5/AABoUwqQGWvClUu27Z1EWeu9a/model-best.net?dl=1',
+        name='Enet',  # https://github.com/e-lab/ENet-training
+        url='https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1',
         sha='b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315',
         filename='Enet-model-best.net'),
     Model(
