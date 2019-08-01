@@ -691,7 +691,9 @@ public:
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
      */
-    CV_WRAP bool detect(InputArray img, OutputArray points) const;
+     CV_WRAP bool detect(InputArray img, std::vector<Mat>& points, cv::Mat &barcode);
+     bool detect(InputArray img, OutputArray points) ;
+
 
     /** @brief Decodes QR code in image once it's found by the detect() method.
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
@@ -700,7 +702,8 @@ public:
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+     CV_WRAP std::vector<std::string> decode(InputArray img, std::vector<Mat> points, std::vector<Mat>& straight_qrcode);
+    cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code
 
@@ -708,8 +711,10 @@ public:
      @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
-                                        OutputArray straight_qrcode = noArray());
+     CV_WRAP std::vector<std::string> detectAndDecode(InputArray img, std::vector<Mat>& points,
+                                                                             std::vector<Mat>& straight_qrcode, cv::Mat &barcode);
+    cv::String detectAndDecode(InputArray img, OutputArray points_,
+                                       OutputArray straight_qrcode=noArray() );
 protected:
     struct Impl;
     Ptr<Impl> p;
