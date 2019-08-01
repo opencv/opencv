@@ -565,16 +565,20 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
             auto id = m_id_map.at(d.rc);
             readStarts[id] = 0;
 
-            if (out_rois[idx] == gapi::own::Rect{})
+            const auto& out_roi = out_rois[idx];
+            if (out_roi == gapi::own::Rect{})
             {
                 rois[id] = gapi::own::Rect{ 0, 0, desc.size.width, desc.size.height };
             }
             else
             {
+                GAPI_Assert(out_roi.height > 0);
+                GAPI_Assert(out_roi.y + out_roi.height <= desc.size.height);
+
                 // Only slices are supported at the moment
-                GAPI_Assert(out_rois[idx].x == 0);
-                GAPI_Assert(out_rois[idx].width == desc.size.width);
-                rois[id] = out_rois[idx];
+                GAPI_Assert(out_roi.x == 0);
+                GAPI_Assert(out_roi.width == desc.size.width);
+                rois[id] = out_roi;
             }
 
             nodesToVisit.push(nh);
