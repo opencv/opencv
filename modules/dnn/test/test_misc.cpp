@@ -463,6 +463,39 @@ TEST_P(Async, set_and_forward_all)
     }
 }
 
+typedef testing::TestWithParam<tuple<int, Target> > Async;
+TEST_P(Async, forward_two_nets)
+{
+    const int dtype = get<0>(GetParam());
+    const int target = get<1>(GetParam());
+
+    const std::string suffix = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "_fp16" : "";
+    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+
+    Net net0 = readNet(model, proto);
+    net0.setPreferableTarget(target);
+
+    Net net1 = readNet(model, proto);
+    net1.setPreferableTarget(target);
+
+    // Generate inputs.
+    int blobSize[] = {2, 6, 75, 113};
+    Mat input(4, &blobSize[0], dtype);
+    randu(input, 0, 255);
+
+    net0.setInput(input);
+    Mat ref0 = net0.forward().clone();
+
+    net1.setInput(input);
+    Mat ref1 = net1.forward();
+
+    net0.setInput(input);
+    Mat ref2 = net0.forward();
+
+    normAssert(ref0, ref2, 0, 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
   Values(CV_32F, CV_8U),
   testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
