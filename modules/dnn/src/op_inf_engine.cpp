@@ -326,6 +326,12 @@ static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getShar
     static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr> sharedPlugins;
     return sharedPlugins;
 }
+#else
+static InferenceEngine::Core& getCore()
+{
+    static InferenceEngine::Core core;
+    return core;
+}
 #endif
 
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
@@ -391,7 +397,7 @@ static bool detectMyriadX_()
 }
 #endif  // !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 
-void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
+void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
 {
     CV_Assert(!isInitialized());
 
@@ -459,7 +465,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                     enginePtr->AddExtension(extension, 0);
 #else
-                    core.AddExtension(extension, device_name);
+                    getCore().AddExtension(extension, device_name);
 #endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
                     found = true;
@@ -480,7 +486,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
             }}, 0);
 #else
             if (device_name == "CPU")
-                core.SetConfig({{
+                getCore().SetConfig({{
                     InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
                 }}, device_name);
 #endif
@@ -490,8 +496,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::ICNNNetwork& net)
         plugin = InferenceEngine::InferencePlugin(enginePtr);
         netExec = plugin.LoadNetwork(net, {});
 #else
-        std::shared_ptr<InferenceEngine::ICNNNetwork> cnn_net(&net, [] (InferenceEngine::ICNNNetwork*) {});
-        netExec = core.LoadNetwork(InferenceEngine::CNNNetwork(cnn_net), device_name);
+        netExec = getCore().LoadNetwork(net, device_name);
 #endif
     }
     catch (const std::exception& ex)
@@ -761,9 +766,11 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 void resetMyriadDevice()
 {
 #ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     AutoLock lock(getInitializationMutex());
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
     getSharedPlugins().erase("MYRIAD");
+#else
+    getCore().UnregisterPlugin("MYRIAD");
 #endif
 #endif  // HAVE_INF_ENGINE
 }

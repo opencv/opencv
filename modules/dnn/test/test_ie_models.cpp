@@ -287,11 +287,9 @@ TEST_P(DNNTestOpenVINO, models)
 
     std::map<std::string, cv::Mat> inputsMap;
     std::map<std::string, cv::Mat> ieOutputsMap, cvOutputsMap;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
     // Single Myriad device cannot be shared across multiple processes.
     if (target == DNN_TARGET_MYRIAD)
         resetMyriadDevice();
-#endif
     runIE(target, xmlPath, binPath, inputsMap, ieOutputsMap);
     runCV(target, xmlPath, binPath, inputsMap, cvOutputsMap);
 

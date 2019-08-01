@@ -92,7 +92,7 @@ public:
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                  bool isAsync);
 
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
+    void initPlugin(InferenceEngine::CNNNetwork& net);
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
@@ -106,7 +106,6 @@ private:
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     InferenceEngine::InferencePlugin plugin;
 #else
-    InferenceEngine::Core core;
     bool isInit = false;
 #endif
 
