@@ -564,6 +564,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP std::vector<String> getUnconnectedOutLayersNames() const;
 
+        /** @brief Returns shapes for input layer
+         *  @param inputShapes output parameter for input shapes.
+         * order is the same as in layersIds
+         */
+        CV_WRAP void getInputShapes(CV_OUT std::vector<MatShape>& inputShapes);
+
         /** @brief Returns input and output shapes for all layers in loaded model;
          *  preliminary inferencing isn't necessary.
          *  @param netInputShapes shapes for all input blobs in net input layer.

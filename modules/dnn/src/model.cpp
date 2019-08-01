@@ -26,7 +26,12 @@ struct Model::Impl
     void predict(Net& net, const Mat& frame, OutputArrayOfArrays outs)
     {
         if (size.empty())
-            CV_Error(Error::StsBadSize, "Input size not specified");
+        {
+            std::vector<MatShape> shapes;
+            net.getInputShapes(shapes);
+            CV_Assert_N(!shapes.empty(), shapes[0].size() == 4);
+            size = Size(shapes[0][3], shapes[0][2]);
+        }
 
         blob = blobFromImage(frame, scale, size, mean, swapRB, crop);
         net.setInput(blob);

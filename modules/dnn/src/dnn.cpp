@@ -2595,13 +2595,21 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     InferenceEngine::CNNNetwork ieNet = reader.getNetwork();
 
     std::vector<String> inputsNames;
+    std::vector<MatShape> inp_shapes;
     for (auto& it : ieNet.getInputsInfo())
     {
         inputsNames.push_back(it.first);
+        std::vector<size_t> dims = it.second->getTensorDesc().getDims();
+        inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
     }
 
     Net cvNet;
     cvNet.setInputsNames(inputsNames);
+
+    for (int inp_id = 0; inp_id < inputsNames.size(); ++inp_id)
+    {
+        cvNet.setInput(Mat(inp_shapes[inp_id], CV_32F), inputsNames[inp_id]);
+    }
 
     Ptr<InfEngineBackendNode> backendNode(new InfEngineBackendNode(InferenceEngine::Builder::Layer("")));
     backendNode->net = Ptr<InfEngineBackendNet>(new InfEngineBackendNet(ieNet));
@@ -3197,6 +3205,22 @@ Ptr<Layer> Net::getLayer(LayerId layerId)
 {
     LayerData &ld = impl->getLayerData(layerId);
     return ld.getLayerInstance();
+}
+
+void Net::getInputShapes(std::vector<MatShape>& inputShapes)
+{
+    if (impl->layers.empty())
+        CV_Error(Error::StsError, format("Net empty"));
+
+    if (impl->layers[0].outputBlobs.empty())
+        CV_Error(Error::StsNullPtr, format("Input shape not specified"));
+
+    for(int i = 0; i < impl->layers[0].outputBlobs.size(); i++)
+    {
+        Mat& inp = impl->layers[0].outputBlobs[i];
+        CV_Assert(inp.total());
+        inputShapes.push_back(shape(inp));
+    }
 }
 
 std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)
