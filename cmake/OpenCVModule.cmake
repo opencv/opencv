@@ -1175,7 +1175,7 @@ function(ocv_add_perf_tests)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests performance")
       endif()
 
-      if(WINRT AND BUILD_TESTS)
+      if(WINRT)
         # removing APPCONTAINER from tests to run from console
         # look for detailed description inside of ocv_create_module macro above
         add_custom_command(TARGET "opencv_perf_${name}"
