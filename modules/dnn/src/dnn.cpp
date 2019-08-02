@@ -2455,6 +2455,19 @@ struct Net::Impl
     {
         std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
 
+        if (inOutShapes[0].in[0].empty())
+        {
+            CV_Assert(!layers[0].outputBlobs.empty());
+            ShapesVec shapes;
+            for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+            {
+                Mat& inp = layers[0].outputBlobs[i];
+                CV_Assert(inp.total());
+                shapes.push_back(shape(inp));
+            }
+            inOutShapes[0].in = shapes;
+         }
+
         if (inOutShapes[id].in.empty())
         {
             for(int i = 0; i < inputLayerIds.size(); i++)
@@ -3205,22 +3218,6 @@ Ptr<Layer> Net::getLayer(LayerId layerId)
 {
     LayerData &ld = impl->getLayerData(layerId);
     return ld.getLayerInstance();
-}
-
-void Net::getInputShapes(std::vector<MatShape>& inputShapes)
-{
-    if (impl->layers.empty())
-        CV_Error(Error::StsError, format("Net empty"));
-
-    if (impl->layers[0].outputBlobs.empty())
-        CV_Error(Error::StsNullPtr, format("Input shape not specified"));
-
-    for(int i = 0; i < impl->layers[0].outputBlobs.size(); i++)
-    {
-        Mat& inp = impl->layers[0].outputBlobs[i];
-        CV_Assert(inp.total());
-        inputShapes.push_back(shape(inp));
-    }
 }
 
 std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)

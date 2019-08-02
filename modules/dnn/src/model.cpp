@@ -27,10 +27,11 @@ struct Model::Impl
     {
         if (size.empty())
         {
-            std::vector<MatShape> shapes;
-            net.getInputShapes(shapes);
-            CV_Assert_N(!shapes.empty(), shapes[0].size() == 4);
-            size = Size(shapes[0][3], shapes[0][2]);
+            std::vector<MatShape> inLayerShapes;
+            std::vector<MatShape> outLayerShapes;
+            net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+            CV_Assert_N(!inLayerShapes.empty(), inLayerShapes[0].size() == 4);
+            size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
         }
 
         blob = blobFromImage(frame, scale, size, mean, swapRB, crop);
