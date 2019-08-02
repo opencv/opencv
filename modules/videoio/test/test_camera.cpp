@@ -246,7 +246,7 @@ TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
                  ++countOfStates1000t0[j];
             }
         }
-    }   
+    }
     EXPECT_TRUE( fabs(((float)FPS1 / (float)FPS2 - (float)countOfStates1000t0[0] / (float)countOfStates1000t0[1])) < 1 );
 }
 

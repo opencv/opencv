@@ -90,8 +90,7 @@ PERF_TEST(, DISABLED_GetReadFrame)
 
 PERF_TEST(, DISABLED_GetWaitAnySyncFrame)
 {
-    int TIMEOUT = -1,
-        FRAME_COUNT = 50;//number of expected frames from all cameras   
+    int TIMEOUT = -1, FRAME_COUNT = 50;//number of expected frames from all cameras
     char* datapath_dir = set_environment_variable();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;

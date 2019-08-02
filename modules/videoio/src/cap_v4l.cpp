@@ -344,7 +344,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;    
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
     virtual bool camerasPoll(const std::vector<CvCapture*>&, std::vector<int>&, int64_t)  CV_OVERRIDE;
     bool setFirstCapture();
 
