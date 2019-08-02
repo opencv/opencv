@@ -955,7 +955,7 @@ bool CvCaptureCAM_V4L::camerasPoll(const std::vector<CvCapture*>& pointers, std:
         CvCaptureCAM_V4L *ptr = static_cast<CvCaptureCAM_V4L * >(pointers[0]);
         if(ptr->deviceHandlePoll(deviceHandles, state, timeout))
                 return true;
-    }   
+    }
     return false;
 }
 
