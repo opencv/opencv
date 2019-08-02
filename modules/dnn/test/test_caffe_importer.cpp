@@ -496,7 +496,11 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     float l1 = default_l1, lInf = default_lInf;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
+        l1 = 0.04; lInf = 0.21;
+#else
         l1 = 0.017; lInf = 0.0795;
+#endif
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
