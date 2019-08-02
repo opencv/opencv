@@ -440,8 +440,8 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
 
             v_int32x4 mask0 = _hidx >> 31;
             v_int32x4 it0 = mask0 & _nbins;
-            mask0 = (_hidx < _nbins);
-            v_int32x4 it1 = ~mask0 & _nbins;
+            mask0 = (_hidx >= _nbins);
+            v_int32x4 it1 = mask0 & _nbins;
             _hidx += (it0 - it1);
 
             it0 = v_reinterpret_as_s32(v_pack(v_pack(_hidx, izero), v_reinterpret_as_s16(izero)));
