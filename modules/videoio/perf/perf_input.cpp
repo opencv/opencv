@@ -21,6 +21,15 @@ const string bunny_files[] = {
     "highgui/video/big_buck_bunny.wmv"
 };
 
+static char* set_environment_variable()
+{
+#ifndef WINRT
+    return getenv("OPENCV_TEST_CAMERA_LIST");
+#else
+    return OPENCV_TEST_CAMERA_LIST;
+#endif
+}
+
 PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 {
   string filename = getDataPath(GetParam());
@@ -35,11 +44,7 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 PERF_TEST(, DISABLED_GetReadFrame)
 {
     int ITERATION_COUNT = 50; //number of expected frames from all cameras
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
-#else
-    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
-#endif
+    char* datapath_dir = set_environment_variable();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -86,13 +91,9 @@ PERF_TEST(, DISABLED_GetReadFrame)
 PERF_TEST(, DISABLED_GetWaitAnySyncFrame)
 {
     int TIMEOUT = -1,
-        FRAME_COUNT = 50;//number of expected frames from all cameras
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
-#else
-    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
-#endif
-     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
+        FRAME_COUNT = 50;//number of expected frames from all cameras   
+    char* datapath_dir = set_environment_variable();
+    ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
     while(true)
@@ -150,11 +151,7 @@ PERF_TEST(, DISABLED_GetWaitAnyAsyncFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
-#else
-    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
-#endif
+    char* datapath_dir = set_environment_variable();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -230,11 +227,7 @@ PERF_TEST(, DISABLED_GetWaitAnyMultiThFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;//number of expected frames from all cameras
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
-#else
-    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
-#endif
+    char* datapath_dir = set_environment_variable();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -264,10 +257,6 @@ PERF_TEST(, DISABLED_GetWaitAnyMultiThFrame)
         //launch cameras
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
-
-    //EXPECT_TRUE(VCM[0].set(CAP_PROP_FPS, 30));
-    //EXPECT_TRUE(VCM[1].set(CAP_PROP_FPS, 30));
-    //EXPECT_TRUE(VCM[2].set(CAP_PROP_FPS, 30));
 
     std::vector<int> state(VCM.size());
 
@@ -353,12 +342,7 @@ PERF_TEST_P(MultiThreadFrame, DISABLED_GetWaitAnyMultiThreadFrame, testing::Comb
     int NUM_THREAD = get<0>(GetParam()),
             TIMEOUT = -1,
             FRAME_COUNT = 50; //number of expected frames from all cameras
-
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_CAMERA_LIST");
-#else
-    char* datapath_dir = OPENCV_TEST_CAMERA_LIST;
-#endif
+    char* datapath_dir = set_environment_variable();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -395,63 +379,63 @@ PERF_TEST_P(MultiThreadFrame, DISABLED_GetWaitAnyMultiThreadFrame, testing::Comb
         EXPECT_TRUE(VCM[vc].read(forMAt[vc]));
     }
     TEST_CYCLE() {
-       int COUNTER = 0;
-       vector<int> nums(VCM.size(), -1);
-       vector<std::thread> threads(NUM_THREAD);
-       vector<int> threadState(NUM_THREAD, 0);
+        int COUNTER = 0;
+        vector<int> nums(VCM.size(), -1);
+        vector<std::thread> threads(NUM_THREAD);
+        vector<int> threadState(NUM_THREAD, 0);
 
-       auto func = [&](int _st, int th_s)
-       {
-           for(int i = 0; i < 50; ++i)//50-load
-           {
-               cv::Canny(forMAt[_st], forProc[_st], 400, 1000, 5);
-           }
-           threadState[th_s] = 2;
-           ++COUNTER;
-       };
-       VideoCapture::waitAny(VCM, state, TIMEOUT);
-       do
-       {
+        auto func = [&](int _st, int th_s)
+        {
+            for(int i = 0; i < 50; ++i)//50-load
+            {
+                cv::Canny(forMAt[_st], forProc[_st], 400, 1000, 5);
+            }
+            threadState[th_s] = 2;
+            ++COUNTER;
+        };
+        VideoCapture::waitAny(VCM, state, TIMEOUT);
+        do
+        {
 
-           for(unsigned int i = 0; i < VCM.size(); ++i)
-           {
-              if(state[i] == CAP_CAM_READY)
-              {
-                  for(int nt = 0; nt < NUM_THREAD; ++nt)
-                  {
-                      if(!threadState[nt])
-                      {
-                           EXPECT_TRUE(VCM[i].retrieve(forMAt[nt]));
-                           threads[nt] = std::thread(func, nt, nt);
-                           threadState[nt] = 1;
-
-                      }
-                  }
-              }
-           }
-
-           VideoCapture::waitAny(VCM, state, TIMEOUT);
-
-           for(int nt = 0; nt < NUM_THREAD; ++nt)
-           {
-              if(threadState[nt] == 2)
-              {
-                   threads[nt].join();
-                   threadState[nt] = 0;
-              }
-           }
-           if(COUNTER >= FRAME_COUNT)
-           {
-               for(int nt = 0; nt < NUM_THREAD; ++nt)
+            for(unsigned int i = 0; i < VCM.size(); ++i)
+            {
+               if(state[i] == CAP_CAM_READY)
                {
-                   if(threadState[nt])
+                   for(int nt = 0; nt < NUM_THREAD; ++nt)
                    {
-                       threads[nt].join();
+                       if(!threadState[nt])
+                       {
+                            EXPECT_TRUE(VCM[i].retrieve(forMAt[nt]));
+                            threads[nt] = std::thread(func, nt, nt);
+                            threadState[nt] = 1;
+
+                       }
                    }
                }
-           }
-       }
-       while(COUNTER <= FRAME_COUNT);
+            }
+
+            VideoCapture::waitAny(VCM, state, TIMEOUT);
+
+            for(int nt = 0; nt < NUM_THREAD; ++nt)
+            {
+               if(threadState[nt] == 2)
+               {
+                    threads[nt].join();
+                    threadState[nt] = 0;
+               }
+            }
+            if(COUNTER >= FRAME_COUNT)
+            {
+                for(int nt = 0; nt < NUM_THREAD; ++nt)
+                {
+                    if(threadState[nt])
+                    {
+                        threads[nt].join();
+                    }
+                }
+            }
+        }
+        while(COUNTER <= FRAME_COUNT);
     };
     SANITY_CHECK_NOTHING();
 }

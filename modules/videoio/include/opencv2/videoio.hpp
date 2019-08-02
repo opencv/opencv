@@ -710,7 +710,7 @@ public:
     CV_WRAP virtual bool grab();
 
 
-    CV_WRAP static bool waitAny(std::vector<VideoCapture>&, std::vector<int>&, const int &);
+    CV_WRAP static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout);
 
 
 

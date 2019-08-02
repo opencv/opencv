@@ -344,11 +344,9 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
-
-    virtual bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, const int64_t &) CV_OVERRIDE;
-    virtual bool camerasPoll(const std::vector<CvCapture*>&, std::vector<int>&, const int64_t &)  CV_OVERRIDE;
-    virtual bool setFirstCapture() CV_OVERRIDE;
+    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;    
+    virtual bool camerasPoll(const std::vector<CvCapture*>&, std::vector<int>&, int64_t)  CV_OVERRIDE;
+    bool setFirstCapture();
 
     CvCaptureCAM_V4L();
     virtual ~CvCaptureCAM_V4L();
@@ -359,6 +357,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool initCapture();
     bool streaming(bool startStream);
     bool setFps(int value);
+    bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, int64_t);
     bool tryIoctl(unsigned long ioctlCode, void *parameter) const;
     bool controlInfo(int property_id, __u32 &v4l2id, cv::Range &range) const;
     bool icvControl(__u32 v4l2id, int &value, bool isSet) const;
@@ -887,7 +886,7 @@ bool CvCaptureCAM_V4L::tryIoctl(unsigned long ioctlCode, void *parameter) const
     return true;
 }
 
-bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, std::vector<int>& state, const int64_t & timeout)
+bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, std::vector<int>& state, int64_t timeout)
 {
      if(!deviceHandles.empty())
      {
@@ -895,11 +894,11 @@ bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, s
 
         std::vector<pollfd> fds;
 
-        for (size_t dhand_num = 0; dhand_num < deviceHandles.size(); ++dhand_num)
+        for(const auto& dhand_num : deviceHandles)
         {
-            if(deviceHandles[dhand_num])
+            if(dhand_num)
             {
-                fds.push_back(pollfd{deviceHandles[dhand_num], poll_flags, 0});
+                fds.push_back(pollfd{dhand_num, poll_flags, 0});
             }
             else
                 return false;
@@ -932,26 +931,26 @@ bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, s
      return true;
 }
 
-bool CvCaptureCAM_V4L::camerasPoll(const std::vector<CvCapture*>& pointers, std::vector<int>& state, const int64_t & timeout)
+bool CvCaptureCAM_V4L::camerasPoll(const std::vector<CvCapture*>& pointers, std::vector<int>& state, int64_t timeout)
 {
     if(!pointers.empty())
     {
         std::vector<int> deviceHandles;
-
-        for (size_t ptr_num = 0; ptr_num < pointers.size(); ++ptr_num)
+        for(const auto& ptr_num : pointers)
         {
-            if(pointers[ptr_num])
+            if(ptr_num)
             {
-                CV_Assert(dynamic_cast< CvCaptureCAM_V4L * >(pointers[ptr_num]) != nullptr);
-                CvCaptureCAM_V4L *ptr = static_cast<CvCaptureCAM_V4L * >(pointers[ptr_num]);
-
+                CV_DbgAssert(dynamic_cast< CvCaptureCAM_V4L * >(ptr_num) != nullptr);
+                CvCaptureCAM_V4L *ptr = static_cast<CvCaptureCAM_V4L * >(ptr_num);
                 deviceHandles.push_back(ptr->deviceHandle);
-                pointers[ptr_num]->setFirstCapture();
+                ptr->setFirstCapture();
             }
             else
                 return false;
         }
-        if(pointers[0]->deviceHandlePoll(deviceHandles, state, timeout))
+        CV_DbgAssert(dynamic_cast< CvCaptureCAM_V4L * >(pointers[0]) != nullptr);
+        CvCaptureCAM_V4L *ptr = static_cast<CvCaptureCAM_V4L * >(pointers[0]);
+        if(ptr->deviceHandlePoll(deviceHandles, state, timeout))
                 return true;
     }
     return false;

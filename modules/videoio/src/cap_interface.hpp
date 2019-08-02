@@ -20,10 +20,7 @@ struct CvCapture
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return 0; }
     virtual bool grabFrame() { return true; }
-    virtual bool deviceHandlePoll(const std::vector<int>&, std::vector<int>&, const int64_t &){ return false; }
-    virtual bool setFirstCapture() {return false;}
-    virtual bool camerasPoll(const std::vector<CvCapture* >&, std::vector<int>&, const int64_t &) {return false;}
-
+    virtual bool camerasPoll(const std::vector<CvCapture* >&, std::vector<int>&, int64_t) {return false;}
     virtual IplImage* retrieveFrame(int) { return 0; }
     virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
 };
@@ -101,7 +98,7 @@ public:
 
        for (size_t capnum = 0; capnum < deviceHandles.size(); ++capnum)
        {
-           CV_Assert(dynamic_cast< LegacyCapture * >(deviceHandles[capnum]) != nullptr);
+           CV_DbgAssert(dynamic_cast< LegacyCapture * >(deviceHandles[capnum]) != nullptr);
            LegacyCapture *ptr = static_cast<LegacyCapture * >(deviceHandles[capnum]);
            capPtrs.push_back(ptr->cap);
        }
