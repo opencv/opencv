@@ -110,9 +110,9 @@ Building OpenCV.js from Source
 Building OpenCV.js with Docker
 ---------------------------------------
 
-Alternatively, the same build can be can be accomplished using [docker](https://www.docker.com/) containers which is often easier and more reliable, particularly in non linux systems. You only need to install [docker](https://www.docker.com/) on your system and we will use a popular container that provides a clean well tested environment with latest versions of all the necessary tools
+Alternatively, the same build can be can be accomplished using [docker](https://www.docker.com/) containers which is often easier and more reliable, particularly in non linux systems. You only need to install [docker](https://www.docker.com/) on your system and use a popular container that provides a clean well tested environment for emscripten builds like this, that already has latest versions of all the necessary tools installed.
 
-As said, make sure [docker](https://www.docker.com/) is installed in your system and is up and running. The rest rest of the process is almost identical with the difference that here we use docker to call the commands. The following shell script should work in linux and MacOS:
+So, make sure [docker](https://www.docker.com/) is installed in your system and running. The following shell script should work in linux and MacOS:
 
 @code{.bash}
 git clone https://github.com/opencv/opencv.git
@@ -120,11 +120,11 @@ cd opencv
 docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
 @endcode
 
-For Windows the `docker` command is sightly different (PowerShell): 
+For Windows use the following PowerSHel command `docker`;
 
 @code{.bash}
 docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
 @endcode
 
 @note
-The example use latest version of  [trzeci/emscripten docker container](https://hub.docker.com/r/trzeci/emscripten). A known working version (latest now) is `trzeci/emscripten:sdk-tag-1.38.32-64bit` 
+The example uses latest version of [trzeci/emscripten](https://hub.docker.com/r/trzeci/emscripten) docker container. At this time, the latest version works fine and is `trzeci/emscripten:sdk-tag-1.38.32-64bit` 
