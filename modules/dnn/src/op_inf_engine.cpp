@@ -384,10 +384,9 @@ static bool detectMyriadX_()
     {
         auto netExec = plugin.LoadNetwork(cnn, {{"VPU_PLATFORM", "VPU_2480"}});
 #else
-    InferenceEngine::Core ie;
     try
     {
-        auto netExec = ie.LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
+        auto netExec = getCore().LoadNetwork(cnn, "MYRIAD", {{"VPU_PLATFORM", "VPU_2480"}});
 #endif
         auto infRequest = netExec.CreateInferRequest();
     } catch(...) {
