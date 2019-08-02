@@ -250,11 +250,7 @@ bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<in
             }
         }
         if(state.size() != v_captures.size())
-        {
-            perror("vector's size is not correct");
             return false;
-        }
-
         std::vector<IVideoCapture* > ipointers;
 
         for(const auto& cupture_num : v_captures)

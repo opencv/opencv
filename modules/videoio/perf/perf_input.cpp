@@ -21,7 +21,7 @@ const string bunny_files[] = {
     "highgui/video/big_buck_bunny.wmv"
 };
 
-static char* set_environment_variable()
+static char* get_cameras_list()
 {
 #ifndef WINRT
     return getenv("OPENCV_TEST_CAMERA_LIST");
@@ -44,7 +44,7 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 PERF_TEST(, DISABLED_GetReadFrame)
 {
     int ITERATION_COUNT = 50; //number of expected frames from all cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -91,7 +91,7 @@ PERF_TEST(, DISABLED_GetReadFrame)
 PERF_TEST(, DISABLED_GetWaitAnySyncFrame)
 {
     int TIMEOUT = -1, FRAME_COUNT = 50;//number of expected frames from all cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -150,7 +150,7 @@ PERF_TEST(, DISABLED_GetWaitAnyAsyncFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -226,7 +226,7 @@ PERF_TEST(, DISABLED_GetWaitAnyMultiThFrame)
 {
     int TIMEOUT = -1,
         FRAME_COUNT = 50;//number of expected frames from all cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -341,7 +341,7 @@ PERF_TEST_P(MultiThreadFrame, DISABLED_GetWaitAnyMultiThreadFrame, testing::Comb
     int NUM_THREAD = get<0>(GetParam()),
             TIMEOUT = -1,
             FRAME_COUNT = 50; //number of expected frames from all cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;

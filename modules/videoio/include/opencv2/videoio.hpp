@@ -709,10 +709,7 @@ public:
      */
     CV_WRAP virtual bool grab();
 
-
-    CV_WRAP static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout);
-
-
+    static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout);
 
     /** @brief Decodes and returns the grabbed video frame.
 

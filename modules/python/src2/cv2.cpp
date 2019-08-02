@@ -148,8 +148,6 @@ typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
 typedef std::vector<Scalar> vector_Scalar;
-typedef std::vector<VideoCapture> vector_VideoCapture;
-
 typedef std::vector<std::vector<char> > vector_vector_char;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
@@ -427,22 +425,6 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 }
 
 template<>
-bool pyopencv_to(PyObject *, VideoCapture& , const char *)
-{
-   //CV_UNUSED(name);
-   //if(!obj)
-        return true;
-    return false;//PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;
-}
-
-//template<>
-//PyObject* pyopencv_from(const VideoCapture& src)
-//{
-//    return nullptr;//Py_BuildValue("((ff)(ff)f)", src.center.x, src.center.y, src.size.width, src.size.height, src.angle);
-//}
-
-
-template<>
 bool pyopencv_to(PyObject* o, Mat& m, const char* name)
 {
     return pyopencv_to(o, m, ArgInfo(name, 0));
@@ -504,24 +486,6 @@ struct PyOpenCV_Converter< cv::Ptr<T> >
             return true;
         p = makePtr<T>();
         return pyopencv_to(o, *p, name);
-    }
-};
-
-template<>
-struct PyOpenCV_Converter< VideoCapture >
-{
-    static PyObject* from(const VideoCapture& )
-    {
-       // if (!p)
-       //     Py_RETURN_NONE;
-        return nullptr;//pyopencv_from(*p);
-    }
-    static bool to(PyObject *, VideoCapture& , const char *)
-    {
-       //if (!o || o == Py_None)
-       //    return true;
-       //p = makePtr<T>();
-        return false;
     }
 };
 
@@ -1332,19 +1296,6 @@ template<> struct pyopencvVecConverter<Mat>
     }
 
     static PyObject* from(const std::vector<Mat>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<VideoCapture>
-{
-    static bool to(PyObject* obj, std::vector<VideoCapture>& value, const ArgInfo info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<VideoCapture>& value)
     {
         return pyopencv_from_generic_vec(value);
     }
