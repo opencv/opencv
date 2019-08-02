@@ -901,12 +901,18 @@ bool CvCaptureCAM_V4L::deviceHandlePoll(const std::vector<int>& deviceHandles, s
                 fds.push_back(pollfd{dhand_num, poll_flags, 0});
             }
             else
+            {
+                perror("deviceHandle is empty");
                 return false;
+            }
         }
         int ret = poll(fds.data(), fds.size(), timeout);
 
         if(ret == -1)
+        {
+            perror("poll error");
             return false;
+        }
 
         for (size_t struct_num = 0; struct_num < fds.size(); ++struct_num)
         {
@@ -946,13 +952,17 @@ bool CvCaptureCAM_V4L::camerasPoll(const std::vector<CvCapture*>& pointers, std:
                 ptr->setFirstCapture();
             }
             else
+            {
+                perror("CvCapture pointer is null");
                 return false;
+            }
         }
         CV_DbgAssert(dynamic_cast< CvCaptureCAM_V4L * >(pointers[0]) != nullptr);
         CvCaptureCAM_V4L *ptr = static_cast<CvCaptureCAM_V4L * >(pointers[0]);
         if(ptr->deviceHandlePoll(deviceHandles, state, timeout))
                 return true;
     }
+    perror("capture vector is empty");
     return false;
 }
 

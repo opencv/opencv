@@ -250,7 +250,10 @@ bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<in
             }
         }
         if(state.size() != v_captures.size())
+        {
+            perror("vector's size is not correct");
             return false;
+        }
 
         std::vector<IVideoCapture* > ipointers;
 
@@ -260,20 +263,12 @@ bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<in
         }
         if(!v_captures[0].icap->camerasPoll(ipointers, state, timeout))
             return false;
+
         for (size_t cupture_num = 0; cupture_num < state.size(); ++cupture_num)
         {
             if(state[cupture_num] == CAP_CAM_READY)
             {
                 v_captures[cupture_num].icap->grabFrame();
-            }
-            if(state[cupture_num] == CAP_CAM_ERROR)
-            {
-                //printf("error cam no. %d \n", cupture_num);
-                //perror("VIDIOC_QBUF");
-            }
-            if(state[cupture_num] == CAP_CAM_NOT_READY)
-            {
-                //printf("Timeout\n");
             }
         }
         return true;

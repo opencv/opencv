@@ -29,7 +29,7 @@ static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, 
     if (lastFrame) *lastFrame = frame.clone();
 }
 
-static char* set_environment_variable()
+static char* get_cameras_list()
 {
 #ifndef WINRT
     return getenv("OPENCV_TEST_CAMERA_LIST");
@@ -118,7 +118,7 @@ TEST(DISABLED_videoio_camera, v4l_poll_timeout)
 {
     //Two identical cameras
     //Test only >= two cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
@@ -160,7 +160,6 @@ TEST(DISABLED_videoio_camera, v4l_poll_timeout)
         tm.stop();
 
         EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
-        state.clear();
 
         TIMEOUT = 23;
 
@@ -170,7 +169,6 @@ TEST(DISABLED_videoio_camera, v4l_poll_timeout)
         tm.stop();
 
         EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
-        state.clear();
 
         TIMEOUT = 30;
 
@@ -180,7 +178,6 @@ TEST(DISABLED_videoio_camera, v4l_poll_timeout)
         tm.stop();
 
         EXPECT_LE(tm.getTimeMilli(), TIMEOUT + EPSILON);
-        state.clear();
     }
 }
 
@@ -191,7 +188,7 @@ TEST_P(DISABLED_videoio_fps, v4l_poll_fps)
 {
     //Two identical cameras
     //Test only >= two cameras
-    char* datapath_dir = set_environment_variable();
+    char* datapath_dir = get_cameras_list();
     ASSERT_FALSE(datapath_dir == nullptr || datapath_dir[0] == '\0');
     std::vector<VideoCapture> VCM;
     int step = 0; string path;
