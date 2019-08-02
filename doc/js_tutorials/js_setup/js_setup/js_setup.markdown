@@ -7,6 +7,9 @@ Installing Emscripten
 
 [Emscripten](https://github.com/kripken/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV.js.
 
+@note
+While this describes installation of required tools from scratch, there's a section below also describing an alternative procedure to perform the same build using docker containers which is often easier.
+
 To Install Emscripten, follow instructions of [Emscripten SDK](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
 
 For example:
@@ -103,3 +106,25 @@ Building OpenCV.js from Source
 
     @note
     It requires `node` installed in your development environment.
+
+Building OpenCV.js with Docker
+---------------------------------------
+
+Alternatively, the same build can be can be accomplished using [docker](https://www.docker.com/) containers which is often easier and more reliable, particularly in non linux systems. You only need to install [docker](https://www.docker.com/) on your system and we will use a popular container that provides a clean well tested environment with latest versions of all the necessary tools
+
+As said, make sure [docker](https://www.docker.com/) is installed in your system and is up and running. The rest rest of the process is almost identical with the difference that here we use docker to call the commands. The following shell script should work in linux and MacOS:
+
+@code{.bash}
+git clone https://github.com/opencv/opencv.git
+cd opencv
+docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+@endcode
+
+For Windows the `docker` command is sightly different (PowerShell): 
+
+@code{.bash}
+docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
+@endcode
+
+@note
+The example use latest version of  [trzeci/emscripten docker container](https://hub.docker.com/r/trzeci/emscripten). A known working version (latest now) is `trzeci/emscripten:sdk-tag-1.38.32-64bit` 
