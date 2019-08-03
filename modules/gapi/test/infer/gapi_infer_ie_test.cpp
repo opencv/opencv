@@ -10,7 +10,27 @@
 
 #include <stdexcept>
 
+////////////////////////////////////////////////////////////////////////////////
+// FIXME: Suppress deprecation warnings for OpenVINO 2019R2+
+// BEGIN {{{
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+
+#if defined(__GNUC__)
+#pragma GCC visibility push(default)
+#endif
+
 #include <inference_engine.hpp>
+
+#if defined(__GNUC__)
+#pragma GCC visibility pop
+#endif
+// END }}}
+////////////////////////////////////////////////////////////////////////////////
 
 #include <ade/util/iota_range.hpp>
 
@@ -63,8 +83,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     initDLDTDataPath();
 
     const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml");
-    const auto weights_path  = findDataFile(path + ".bin");
+    const auto topology_path = findDataFile(path + ".xml", false);
+    const auto weights_path  = findDataFile(path + ".bin", false);
 
     // Load IE network, initialize input data using that.
     namespace IE = InferenceEngine;
@@ -119,8 +139,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     initDLDTDataPath();
 
     const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml");
-    const auto weights_path  = findDataFile(path + ".bin");
+    const auto topology_path = findDataFile(path + ".xml", false);
+    const auto weights_path  = findDataFile(path + ".bin", false);
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
@@ -177,8 +197,8 @@ TEST(TestAgeGenderIE, InferROIList)
     initDLDTDataPath();
 
     const std::string path = "Retail/object_attributes/age_gender/dldt/age-gender-recognition-retail-0013";
-    const auto topology_path = findDataFile(path + ".xml");
-    const auto weights_path  = findDataFile(path + ".bin");
+    const auto topology_path = findDataFile(path + ".xml", false);
+    const auto weights_path  = findDataFile(path + ".bin", false);
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));

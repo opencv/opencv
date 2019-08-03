@@ -22,8 +22,6 @@
 #include <ade/util/chain_range.hpp>
 #include <ade/typed_graph.hpp>
 
-#include <inference_engine.hpp>
-
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/garray.hpp>
 #include <opencv2/gapi/util/any.hpp>

@@ -10,7 +10,28 @@
 #ifdef HAVE_INF_ENGINE
 
 #include <ade/util/algorithm.hpp> // type_list_index
+
+////////////////////////////////////////////////////////////////////////////////
+// FIXME: Suppress deprecation warnings for OpenVINO 2019R2+
+// BEGIN {{{
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+
+#if defined(__GNUC__)
+#pragma GCC visibility push(default)
+#endif
+
 #include <inference_engine.hpp>
+
+#if defined(__GNUC__)
+#pragma GCC visibility pop
+#endif
+// END }}}
+////////////////////////////////////////////////////////////////////////////////
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gproto.hpp>
