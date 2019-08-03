@@ -389,7 +389,7 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
     cv::util::suppress_unused_warning(v_op);
     for (; w < width; w++)
     {
-        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), std::roundf);
+        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), roundf);
     }
 }
 
@@ -1954,7 +1954,7 @@ GAPI_FLUID_KERNEL(GFluidCartToPolar, cv::gapi::core::GCartToPolar, false)
         {
             float x = in1[l];
             float y = in2[l];
-            float magnitude = std::hypot(y, x);
+            float magnitude = hypot(y, x);
             float angle_rad = std::atan2(y, x);
             float angle = angleInDegrees?
                           angle_rad * static_cast<float>(180 / CV_PI):

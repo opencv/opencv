@@ -81,8 +81,8 @@ static inline DST saturate(SRC x, R round)
 // explicit suffix 'd' for double type
 inline double  ceild(double x) { return std::ceil(x); }
 inline double floord(double x) { return std::floor(x); }
-inline double roundd(double x) { return std::round(x); }
-inline double  rintd(double x) { return std::rint(x); }
+inline double roundd(double x) { return round(x); }
+inline double  rintd(double x) { return rint(x); }
 
 } //namespace own
 } //namespace gapi
