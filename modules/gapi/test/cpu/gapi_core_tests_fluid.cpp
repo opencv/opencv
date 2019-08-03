@@ -518,6 +518,8 @@ INSTANTIATE_TEST_CASE_P(LUTTestCustomCPU, LUTTest,
                                        cv::Size(128, 128)),
 /*init output matrices or not*/ Values(true)));
 
+// PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
+
 INSTANTIATE_TEST_CASE_P(ConvertToCPU, ConvertToTest,
                         Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_32FC1),
                                 Values(CV_8U, CV_16U, CV_32F),

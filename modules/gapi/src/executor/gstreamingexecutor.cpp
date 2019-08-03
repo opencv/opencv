@@ -642,6 +642,8 @@ void cv::gimpl::GStreamingExecutor::stop()
     m_threads.clear();
     // FIXME: Auto-stop on object destruction?
     // There still must be a graceful shutdown!!!
+
+    state = State::STOPPED;
 }
 
 bool cv::gimpl::GStreamingExecutor::running() const

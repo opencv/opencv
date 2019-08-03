@@ -128,6 +128,8 @@ GAPI_TEST_FIXTURE(PhaseTest, initMatsRandU, FIXTURE_API(bool), 1, angle_in_degre
 GAPI_TEST_FIXTURE(SqrtTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(NormalizeTest, initNothing, FIXTURE_API(CompareMats,double,double,int,MatType2), 5,
     cmpF, a, b, norm_type, ddepth)
+GAPI_TEST_FIXTURE(CopyTest, initMatrixRandU, <>, 0)
+//GAPI_TEST_FIXTURE(CopyTest, initMatrixRandU, <>, 0)
 struct BackendOutputAllocationTest : TestWithParamBase<>
 {
     BackendOutputAllocationTest()
