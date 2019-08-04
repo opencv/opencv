@@ -1238,6 +1238,7 @@ void cv::gimpl::GFluidExecutable::reshape(ade::Graph &g, const GCompileArgs &arg
 // FIXME: Document what it does
 void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const GRunArg &arg)
 {
+    using T = GRunArg;
     switch (rc.shape)
     {
     case GShape::GMAT:
@@ -1249,11 +1250,11 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
         // by default instead.
         auto &bref = m_buffers[m_id_map.at(rc.id)].priv();
         switch (arg.index()) {
-        case arg.index_of<cv::gapi::own::Mat>():
+        case T::index_of<cv::gapi::own::Mat>():
             bref.bindTo(util::get<cv::gapi::own::Mat>(arg), true);
             break;
 #if !defined(GAPI_STANDALONE)
-        case arg.index_of<cv::Mat>():
+        case T::index_of<cv::Mat>():
             bref.bindTo(cv::to_own(util::get<cv::Mat>(arg)), true);
             break;
 #endif // GAPI_STANDALONE
@@ -1266,11 +1267,11 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
         // FIXME: See above.
         auto &sref = m_res.slot<cv::gapi::own::Scalar>()[rc.id];
         switch (arg.index()) {
-        case arg.index_of<cv::gapi::own::Scalar>():
+        case T::index_of<cv::gapi::own::Scalar>():
             sref = util::get<cv::gapi::own::Scalar>(arg);
             break;
 #if !defined(GAPI_STANDALONE)
-        case arg.index_of<cv::Scalar>():
+        case T::index_of<cv::Scalar>():
             sref = cv::to_own(util::get<cv::Scalar>(arg));
             break;
 #endif // GAPI_STANDALONE
@@ -1289,6 +1290,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
 void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const GRunArgP &arg)
 {
     // Only GMat is supported as return type
+    using T = GRunArgP;
     switch (rc.shape)
     {
     case GShape::GMAT:
@@ -1298,14 +1300,14 @@ void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const 
 
             switch (arg.index()) {
             // FIXME: See the bindInArg comment on Streaming-related changes
-            case arg.index_of<cv::gapi::own::Mat*>(): {
+            case T::index_of<cv::gapi::own::Mat*>(): {
                 auto &outMat = *util::get<cv::gapi::own::Mat*>(arg);
                 GAPI_Assert(outMat.data != nullptr);
                 GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");
                 bref.bindTo(outMat, false);
             } break;
 #if !defined(GAPI_STANDALONE)
-            case arg.index_of<cv::Mat*>(): {
+            case T::index_of<cv::Mat*>(): {
                 auto &outMat = *util::get<cv::Mat*>(arg);
                 GAPI_Assert(outMat.data != nullptr);
                 GAPI_Assert(descr_of(outMat) == desc && "Output argument was not preallocated as it should be ?");

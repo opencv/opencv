@@ -44,19 +44,20 @@ cv::gapi::GKernelPackage OCV_KERNELS()
     return pkg;
 }
 
-cv::gapi::GKernelPackage OCL_KERNELS()
-{
-    static cv::gapi::GKernelPackage pkg =
-        cv::gapi::combine(cv::gapi::core::ocl::kernels(),
-                          cv::gapi::imgproc::ocl::kernels());
-    return pkg;
-}
-
 cv::gapi::GKernelPackage OCV_FLUID_KERNELS()
 {
     static cv::gapi::GKernelPackage pkg =
         cv::gapi::combine(OCV_KERNELS(),
                           cv::gapi::core::fluid::kernels());
+    return pkg;
+}
+
+#if 0
+cv::gapi::GKernelPackage OCL_KERNELS()
+{
+    static cv::gapi::GKernelPackage pkg =
+        cv::gapi::combine(cv::gapi::core::ocl::kernels(),
+                          cv::gapi::imgproc::ocl::kernels());
     return pkg;
 }
 
@@ -67,6 +68,7 @@ cv::gapi::GKernelPackage OCL_FLUID_KERNELS()
                           cv::gapi::core::fluid::kernels());
     return pkg;
 }
+#endif // 0
 
 struct GAPI_Streaming: public ::testing::TestWithParam<cv::gapi::GKernelPackage> {
     GAPI_Streaming() { initTestDataPath(); }

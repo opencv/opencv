@@ -7,6 +7,11 @@
 #ifndef OPENCV_GAPI_GSTREAMING_EXECUTOR_HPP
 #define OPENCV_GAPI_GSTREAMING_EXECUTOR_HPP
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4503)  // "decorated name length exceeded"
+                                // on concurrent_bounded_queue
+#endif
+
 #include <memory> // unique_ptr, shared_ptr
 #include <thread> // thread
 

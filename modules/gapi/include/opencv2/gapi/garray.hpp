@@ -118,7 +118,7 @@ namespace detail
         virtual void mov(BasicVectorRef &ref) = 0;
     };
 
-    template<typename T> class VectorRefT: public BasicVectorRef
+    template<typename T> class VectorRefT final: public BasicVectorRef
     {
         using empty_t  = util::monostate;
         using ro_ext_t = const std::vector<T> *;
@@ -203,7 +203,7 @@ namespace detail
             util::throw_error(std::logic_error("Impossible happened"));
         }
 
-        virtual void mov(BasicVectorRef &v) {
+        virtual void mov(BasicVectorRef &v) override {
             VectorRefT<T> *tv = dynamic_cast<VectorRefT<T>*>(&v);
             GAPI_Assert(tv != nullptr);
             wref() = std::move(tv->wref());

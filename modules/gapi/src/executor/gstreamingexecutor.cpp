@@ -8,7 +8,6 @@
 
 #include "precomp.hpp"
 
-
 #include <iostream>
 
 #include <ade/util/zip_range.hpp>
@@ -113,31 +112,28 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
         auto &res_obj = std::get<1>(it);
 
         // FIXME: this conversion should be unified
+        using T = cv::GRunArgP;
         switch (out_obj.index())
         {
 #if !defined(GAPI_STANDALONE)
-        case out_obj.index_of<cv::Mat*>():
+        case T::index_of<cv::Mat*>():
             *cv::util::get<cv::Mat*>(out_obj) = std::move(cv::util::get<cv::Mat>(res_obj));
             break;
-        case out_obj.index_of<cv::Scalar*>():
+        case T::index_of<cv::Scalar*>():
             *cv::util::get<cv::Scalar*>(out_obj) = std::move(cv::util::get<cv::Scalar>(res_obj));
             break;
 #endif // GAPI_STANDALONE
-        case out_obj.index_of<own::Mat*>():
+        case T::index_of<own::Mat*>():
             *cv::util::get<own::Mat*>(out_obj) = std::move(cv::util::get<own::Mat>(res_obj));
             break;
-        case out_obj.index_of<own::Scalar*>():
+        case T::index_of<own::Scalar*>():
             *cv::util::get<own::Scalar*>(out_obj) = std::move(cv::util::get<own::Scalar>(res_obj));
             break;
-        case out_obj.index_of<cv::detail::VectorRef>():
+        case T::index_of<cv::detail::VectorRef>():
             cv::util::get<cv::detail::VectorRef>(out_obj).mov(cv::util::get<cv::detail::VectorRef>(res_obj));
             break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"
-#if defined(GAPI_STANDALONE)
-                                 " (probably because of STANDALONE mode"
-#endif // GAPI_STANDALONE
-                        );
+            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
     }
@@ -476,11 +472,12 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         auto& emit_arg = std::get<1>(it);
         auto& emitter  = m_gim.metadata(emit_nh).get<Emitter>().object;
 
+        using T = GRunArg;
         switch (emit_arg.index())
         {
         // Create a streaming emitter.
         // Produces the next video frame when pulled.
-        case emit_arg.index_of<cv::gapi::GVideoCapture>():
+        case T::index_of<cv::gapi::GVideoCapture>():
             if (has_video)
                 util::throw_error(std::logic_error("Only one video source is"
                                                    " currently supported!"));
