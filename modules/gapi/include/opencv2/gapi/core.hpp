@@ -8,6 +8,8 @@
 #ifndef OPENCV_GAPI_CORE_HPP
 #define OPENCV_GAPI_CORE_HPP
 
+#include <math.h>
+
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
@@ -392,8 +394,8 @@ namespace core {
             {
                 GAPI_Assert(fx != 0. && fy != 0.);
                 return in.withSize
-                    (Size(static_cast<int>(std::round(in.size.width  * fx)),
-                          static_cast<int>(std::round(in.size.height * fy))));
+                    (Size(static_cast<int>(round(in.size.width  * fx)),
+                          static_cast<int>(round(in.size.height * fy))));
             }
         }
     };
