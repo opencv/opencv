@@ -14,7 +14,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
     /** @brief computes softmax (or log softmax)
      *
-     * @tparam          T           matrix element type (must be `half` or `float` or `double`)
+     * @tparam          T           matrix element type (must be `half` or `float`)
      *
      * @param           handle      valid cuDNN handle
      * @param           outputDesc  tensor descriptor for A

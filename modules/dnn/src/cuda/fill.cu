@@ -33,6 +33,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void fill(const Stream&, span<__half>, __half);
     template void fill(const Stream&, span<float>, float);
-    template void fill(const Stream&, span<double>, double);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

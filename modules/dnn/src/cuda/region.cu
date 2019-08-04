@@ -158,7 +158,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void sigmoid_strided(const Stream&, span<__half>, view<__half>, std::size_t, std::size_t, std::size_t);
     template void sigmoid_strided(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t);
-    template void sigmoid_strided(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t);
 
     template <class T>
     void softmax_strided(const Stream& stream, span<T> output, view<T> input, std::size_t n, std::size_t stride, std::size_t offset) {
@@ -171,7 +170,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void softmax_strided(const Stream&, span<__half>, view<__half>, std::size_t, std::size_t, std::size_t);
     template void softmax_strided(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t);
-    template void softmax_strided(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t);
 
     template <class T>
     void region_finalize(const Stream& stream, span<T> output, view<T> input, view<T> bias,
@@ -197,8 +195,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void region_finalize(const Stream&, span<float>, view<float>, view<float>,
         float, float, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t);
-
-    template void region_finalize(const Stream&, span<double>, view<double>, view<double>,
-        double, double, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

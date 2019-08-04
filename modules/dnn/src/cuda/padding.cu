@@ -195,6 +195,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void copy_with_reflection101(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::pair<std::size_t, std::size_t>> ranges);
     template void copy_with_reflection101(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::pair<std::size_t, std::size_t>> ranges);
-    template void copy_with_reflection101(const Stream&, TensorSpan<double>, TensorView<double>, std::vector<std::pair<std::size_t, std::size_t>> ranges);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

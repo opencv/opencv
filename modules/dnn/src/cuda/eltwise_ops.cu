@@ -59,7 +59,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void eltwise_max_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_max_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
-    template void eltwise_max_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
     template <class T>
     void eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
@@ -73,7 +72,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void eltwise_sum_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_sum_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
-    template void eltwise_sum_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
     template <class T>
     void eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
@@ -92,7 +90,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void eltwise_sum_coeff_2(const Stream&, span<__half>, __half, view<__half>, __half, view<__half>);
     template void eltwise_sum_coeff_2(const Stream&, span<float>, float, view<float>, float, view<float>);
-    template void eltwise_sum_coeff_2(const Stream&, span<double>, double, view<double>, double, view<double>);
 
     template <class T>
     void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
@@ -106,6 +103,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void eltwise_prod_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_prod_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
-    template void eltwise_prod_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

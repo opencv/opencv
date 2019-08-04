@@ -118,6 +118,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void normalize(const Stream&, span<__half>, view<__half>, std::size_t, std::size_t, std::size_t, std::size_t, __half, span<__half>);
     template void normalize(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, span<float>);
-    template void normalize(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, std::size_t, double, span<double>);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

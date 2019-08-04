@@ -29,13 +29,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
         __device__ static float lowest() { return -FLT_MAX; }
     };
 
-    template <>
-    struct numeric_limits<double> {
-        __device__ static double min() { return DBL_MIN; }
-        __device__ static double max() { return DBL_MAX; }
-        __device__ static double lowest() { return -DBL_MAX; }
-    };
-
 }}}}} /*  cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_LIMITS_HPP */

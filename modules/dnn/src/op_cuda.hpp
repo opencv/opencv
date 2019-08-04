@@ -25,8 +25,7 @@ namespace cv {
     namespace dnn {
         constexpr bool IS_DNN_CUDA_TARGET(int id) {
             return id == DNN_TARGET_CUDA_FP16 ||
-                   id == DNN_TARGET_CUDA_FP32 ||
-                   id == DNN_TARGET_CUDA_FP64;
+                   id == DNN_TARGET_CUDA_FP32;
         }
 
         constexpr bool haveCUDA() {
@@ -87,20 +86,6 @@ namespace cv {
                 memcpy<float>(tensor.get(), reinterpret_cast<float*>(source.data), tensor.size(), stream);
             }
 
-            template <> inline
-            void copyMatToTensor(const TensorSpan<double> tensor, const Mat& mat, const Stream& stream)
-            {
-                /* should perhaps convert cv::Mat of different type to the required type and copy */
-                CV_Assert(mat.type() == CV_32F);
-                CV_Assert(mat.total() >= tensor.size());
-
-                Mat source;
-                mat.convertTo(source, CV_64F);
-                CV_Assert(source.isContinuous());
-
-                memcpy<double>(tensor.get(), reinterpret_cast<double*>(source.data), tensor.size(), stream);
-            }
-
             /** @brief copies data from a TensorType to a cv::Mat
              *
              * Pre-conditions:
@@ -139,20 +124,6 @@ namespace cv {
                 if (source.data != mat.data)
                     source.copyTo(mat);
             }
-
-            template <> inline
-            void copyTensorToMat(Mat& mat, TensorView<double> tensor, const Stream& stream)
-            {
-                CV_Assert(mat.type() == CV_32F);
-                CV_Assert(mat.total() >= tensor.size());
-
-                Mat source(shape(mat), CV_64F);
-                CV_Assert(source.isContinuous());
-
-                memcpy<double>(reinterpret_cast<double*>(source.data), tensor.get(), tensor.size(), stream);
-
-                source.convertTo(mat, CV_32F);
-            }
         }} /* cuda4dnn::csl */
 
         /* base class for all CUDA backend/target node */
@@ -179,8 +150,6 @@ namespace cv {
                 return cuda4dnn::cxx_utils::make_unique<NodeType<half>>(std::forward<Args>(args)...);
             case DNN_TARGET_CUDA_FP32:
                 return cuda4dnn::cxx_utils::make_unique<NodeType<float>>(std::forward<Args>(args)...);
-            case DNN_TARGET_CUDA_FP64:
-                return cuda4dnn::cxx_utils::make_unique<NodeType<double>>(std::forward<Args>(args)...);
             default:
                 CV_Assert(IS_DNN_CUDA_TARGET(targetId));
             }
@@ -365,12 +334,10 @@ namespace cv {
 
         using CUDABackendWrapperFP16 = GenericCUDABackendWrapper<half, DNN_TARGET_CUDA_FP32>;
         using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, DNN_TARGET_CUDA_FP32>;
-        using CUDABackendWrapperFP64 = GenericCUDABackendWrapper<double, DNN_TARGET_CUDA_FP64>;
 
         template <class T> struct GetCUDABackendWrapperType_ { };
         template <> struct GetCUDABackendWrapperType_<half> { typedef CUDABackendWrapperFP16 type; };
         template <> struct GetCUDABackendWrapperType_<float> { typedef CUDABackendWrapperFP32 type; };
-        template <> struct GetCUDABackendWrapperType_<double> { typedef CUDABackendWrapperFP64 type; };
 
         template <class T>
         using GetCUDABackendWrapperType = typename GetCUDABackendWrapperType_<T>::type;

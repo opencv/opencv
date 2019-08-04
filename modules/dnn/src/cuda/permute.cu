@@ -139,6 +139,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void permute(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
     template void permute(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
-    template void permute(const Stream&, TensorSpan<double>, TensorView<double>, std::vector<std::size_t>);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

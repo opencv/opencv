@@ -113,7 +113,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void resize_nn<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>);
     template void resize_nn<float>(const Stream&, TensorSpan<float>, TensorView<float>);
-    template void resize_nn<double>(const Stream&, TensorSpan<double>, TensorView<double>);
 
     template <class T>
     void resize_bilinear(const Stream& stream, TensorSpan<T> output, TensorView<T> input, float scale_y, float scale_x) {
@@ -130,6 +129,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void resize_bilinear<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, float, float);
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
-    template void resize_bilinear<double>(const Stream&, TensorSpan<double>, TensorView<double>, float, float);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

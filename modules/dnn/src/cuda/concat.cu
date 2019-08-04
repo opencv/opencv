@@ -134,7 +134,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void concat<__half>(const Stream&, TensorSpan<__half>, std::size_t, TensorView<__half>, std::size_t);
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
-    template void concat<double>(const Stream&, TensorSpan<double>, std::size_t, TensorView<double>, std::size_t);
 
     template <class T, std::size_t Rank> static
     void launch_concat_with_offsets(
@@ -258,6 +257,5 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
     template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
-    template void concat_with_offsets(const Stream&, TensorSpan<double>, TensorView<double>, std::vector<std::size_t>);
 
 }}}} /* cv::dnn::cuda4dnn::kernels */

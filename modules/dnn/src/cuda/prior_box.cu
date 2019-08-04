@@ -171,7 +171,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void generate_prior_boxes(const Stream&, span<float>, view<float>, view<float>, view<float>, view<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
-    template void generate_prior_boxes(const Stream&, span<double>, view<float>, view<float>, view<float>, view<float>, float, float,
-        std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
-
 }}}} /* cv::dnn::cuda4dnn::kernels */

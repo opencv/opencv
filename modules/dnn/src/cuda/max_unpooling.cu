@@ -228,11 +228,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 
-    template void max_pooling_with_indices(const Stream&,
-        TensorSpan<double>, TensorSpan<double>, TensorView<double>,
-        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
-        const std::vector<std::size_t>&);
-
     template <class T, std::size_t Order> static
     void launch_max_unpooling_kernel(
         const Stream& stream,
@@ -306,11 +301,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void max_unpooling(const Stream&,
         TensorSpan<float>, TensorView<float>, TensorView<float>,
-        const std::vector<std::size_t>&, const std::vector<std::size_t>&,
-        const std::vector<std::size_t>&);
-
-    template void max_unpooling(const Stream&,
-        TensorSpan<double>, TensorView<double>, TensorView<double>,
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 

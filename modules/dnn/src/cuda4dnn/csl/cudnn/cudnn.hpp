@@ -36,7 +36,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         template <class> auto get_data_type()->decltype(CUDNN_DATA_FLOAT);
         template <> inline auto get_data_type<half>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_HALF; }
         template <> inline auto get_data_type<float>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_FLOAT; }
-        template <> inline auto get_data_type<double>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_DOUBLE; }
     }
 
     /** used to access the raw cuDNN handle held by Handle */
@@ -171,7 +170,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      *
      * \f$ C = \alpha A + \beta C \f$
      *
-     * @tparam          T           matrix element type (must be `float` or `double`)
+     * @tparam          T           matrix element type (must be `half` or `float`)
      *
      * @param           handle      valid cuDNN handle
      * @param           alpha       scale factor for A
@@ -184,7 +183,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
      * Exception Guarantee: Basic
      */
     template <class T>
-    typename std::enable_if<std::is_same<T, float>::value || std::is_same<T, double>::value, void>
+    typename std::enable_if<std::is_same<T, half>::value || std::is_same<T, float>::value, void>
     ::type add(const Handle& handle,
         T alpha, const TensorDescriptor<T>& aDesc, DevicePtr<const T> A,
         T beta, const TensorDescriptor<T>& cDesc, DevicePtr<T> C)
