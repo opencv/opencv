@@ -23,8 +23,9 @@
 #include "gfluidbackend.hpp"
 #include "gfluidutils.hpp"
 
+#include <math.h>
+
 #include <cassert>
-#include <cmath>
 #include <cstdlib>
 
 namespace cv {
@@ -389,7 +390,7 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
     cv::util::suppress_unused_warning(v_op);
     for (; w < width; w++)
     {
-        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), std::roundf);
+        out[w] = saturate<uchar>(s_op(in[w], scalar[0]), roundf);
     }
 }
 
@@ -1920,8 +1921,8 @@ GAPI_FLUID_KERNEL(GFluidPolarToCart, cv::gapi::core::GPolarToCart, false)
                           in2[l] * static_cast<float>(CV_PI / 180):
                           in2[l];
             float magnitude = in1[l];
-            float x = magnitude * std::cos(angle);
-            float y = magnitude * std::sin(angle);
+            float x = magnitude * cosf(angle);
+            float y = magnitude * sinf(angle);
             out1[l] = x;
             out2[l] = y;
         }
@@ -1954,8 +1955,8 @@ GAPI_FLUID_KERNEL(GFluidCartToPolar, cv::gapi::core::GCartToPolar, false)
         {
             float x = in1[l];
             float y = in2[l];
-            float magnitude = std::hypot(y, x);
-            float angle_rad = std::atan2(y, x);
+            float magnitude = hypotf(y, x);
+            float angle_rad = atan2f(y, x);
             float angle = angleInDegrees?
                           angle_rad * static_cast<float>(180 / CV_PI):
                           angle_rad;
