@@ -336,6 +336,11 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual void unsetAttached();
 
+        /**
+         * num() and channels() are 1. 
+         * Since the number of bboxes to be kept is unknown before nms, we manually set it to maximal number of detections, [keep_top_k] parameter multiplied by batch size.
+         * Each row is a 7 dimension std::vector, which stores, [image_id, label, confidence, xmin, ymin, xmax, ymax]
+         */
         virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                      const int requiredOutputs,
                                      std::vector<MatShape> &outputs,
