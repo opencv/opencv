@@ -10,7 +10,13 @@
 #include <memory> // unique_ptr, shared_ptr
 #include <thread> // thread
 
-#include <tbb/concurrent_queue.h> // FIXME: drop it from here!
+#if defined(HAVE_TBB)
+#  include <tbb/concurrent_queue.h> // FIXME: drop it from here!
+template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
+#else
+#  include "executor/conc_queue.hpp"
+template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
+#endif // TBB
 
 #include <ade/graph.hpp>
 
@@ -29,7 +35,7 @@ using Cmd = cv::util::variant
     , cv::GRunArg  // Workers data payload to process.
     , cv::GRunArgs // Full results vector
     >;
-using Q = tbb::concurrent_bounded_queue<Cmd>;
+using Q = QueueClass<Cmd>;
 } // namespace stream
 
 // FIXME: Currently all GExecutor comments apply also
