@@ -43,6 +43,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -58,7 +59,6 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;

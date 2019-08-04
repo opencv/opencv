@@ -41,6 +41,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include "../nms.inl.hpp"
@@ -50,7 +51,6 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/region.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif

@@ -7,6 +7,7 @@
 
 #include "../precomp.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_cuda.hpp"
 #include "layers_common.hpp"
 
 #ifdef HAVE_OPENCL
@@ -14,7 +15,6 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/const.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif

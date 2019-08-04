@@ -41,10 +41,10 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "layers_common.hpp"
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/split.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif

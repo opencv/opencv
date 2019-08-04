@@ -5,9 +5,9 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/shuffle_channel.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif

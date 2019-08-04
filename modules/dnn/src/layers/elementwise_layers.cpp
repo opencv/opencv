@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_vkcom.hpp"
@@ -53,7 +54,6 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/activation.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif

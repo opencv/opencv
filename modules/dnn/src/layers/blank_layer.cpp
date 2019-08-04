@@ -40,10 +40,10 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_CUDA
-#include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/reshape.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
