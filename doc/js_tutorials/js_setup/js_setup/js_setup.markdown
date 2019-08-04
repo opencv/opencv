@@ -120,7 +120,7 @@ cd opencv
 docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
 @endcode
 
-For Windows use the following PowerSHel command `docker`;
+For Windows use the following `docker` command in PowerShell;
 
 @code{.bash}
 docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build_js
