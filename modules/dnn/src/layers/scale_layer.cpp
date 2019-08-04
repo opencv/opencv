@@ -298,7 +298,7 @@ Ptr<Layer> ShiftLayer::create(const LayerParams& params)
     scaleParams.type = "Scale";
     scaleParams.blobs = params.blobs;
     scaleParams.set("bias_term", true);
-    scaleParams.set("axis", 1);
+    scaleParams.set("axis", 0);
     return Ptr<ScaleLayer>(new ScaleLayerImpl(scaleParams));
 }
 

@@ -7,7 +7,7 @@
 
 #include "math.hpp"
 #include "types.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
@@ -16,12 +16,12 @@
 
 #include <cuda_runtime.h>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        using index_type = gpu::index_type;
-        using size_type = gpu::size_type;
-
         template <class T>
         __global__ void resize_nn(
             span<T> output, size_type out_height, size_type out_width,
@@ -77,7 +77,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 auto in_x0 = static_cast<index_type>(in_x);
                 auto in_y0 = static_cast<index_type>(in_y);
 
-                using utils::min;
+                using device::min;
                 auto in_x1 = min<index_type>(in_x0 + 1, in_width - 1);
                 auto in_y1 = min<index_type>(in_y0 + 1, in_height - 1);
 
@@ -132,4 +132,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float);
     template void resize_bilinear<double>(const Stream&, TensorSpan<double>, TensorView<double>, float, float);
 
-}}}}} /* cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

@@ -9,21 +9,25 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "atomics.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
-#include "../cuda4dnn/csl/kernels.hpp"
+
+#include "../cuda4dnn/kernels/fill.hpp"
+#include "../cuda4dnn/kernels/scale_shift.hpp"
+
+#include <opencv2/core.hpp>
 
 #include <cstddef>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        using index_type = gpu::index_type;
-        using size_type = gpu::size_type;
-
         template <class T>
         __global__ void reduce_sum_abs(span<T> output, view<T> input, size_type outer_stride, size_type mid_stride) {
             for (auto idx : grid_stride_range(input.size())) {
@@ -31,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 const index_type inner_idx = idx % mid_stride;
 
                 const index_type sum_idx = outer_idx * mid_stride + inner_idx;
-                atomicAdd(&output[sum_idx], utils::abs(input[idx]));
+                atomicAdd(&output[sum_idx], device::abs(input[idx]));
             }
         }
 
@@ -54,8 +58,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T>
         __global__ void rsqrt(span<T> output, T epsilon) {
-            for (auto idx : grid_stride_range(output.size()))
-                output[idx] = utils::rsqrt(output[idx] + epsilon);
+            for (auto idx : grid_stride_range(output.size())) {
+                using device::sqrt;
+                output[idx] = T(1) / sqrt(output[idx] + epsilon);
+            }
         }
 
         template <class T>
@@ -78,6 +84,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         view<T> input, std::size_t outer_size, std::size_t mid_size, std::size_t inner_size, std::size_t norm, T epsilon,
         span<T> workspace)
     {
+        CV_Assert(output.size() == input.size());
+        CV_Assert(output.size() == outer_size * mid_size * inner_size);
         CV_Assert(norm == 1 || norm == 2);
         CV_Assert(workspace.size() >= outer_size * inner_size);
 
@@ -112,4 +120,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void normalize(const Stream&, span<float>, view<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, span<float>);
     template void normalize(const Stream&, span<double>, view<double>, std::size_t, std::size_t, std::size_t, std::size_t, double, span<double>);
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP
 
 #include "../../op_cuda.hpp"
 
@@ -11,7 +11,7 @@
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
-#include "../csl/kernels.hpp"
+#include "../kernels/scale_shift.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -165,7 +165,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 inputTransformer = csl::TensorTransform<T>(cudnnHandle, padding_left, padding_right);
             }
 
-            csl::Convolution<T>::params_type params;
+            typename csl::Convolution<T>::params_type params;
             if (transformed_shape.empty())
             {
                 params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
@@ -227,7 +227,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (!biasTensor.empty())
             {
                 std::size_t inner_size = output.size_range(2, output.rank());
-                csl::kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
+                kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
             }
         }
 
@@ -247,4 +247,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_CONVOLUTION_HPP */

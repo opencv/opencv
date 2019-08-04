@@ -9,29 +9,29 @@
 #include "array.hpp"
 #include "limits.hpp"
 #include "types.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
+#include "../cuda4dnn/kernels/fill.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>
 #include <vector>
+#include <type_traits>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
 
-    using index_type = gpu::index_type;
-    using size_type = gpu::size_type;
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-
-        template <class T, std::size_t N>
-        using array = utils::array<T, N>;
-
-        template <class T, std::size_t Order>
+        template <class T, std::size_t Order,
+           typename std::enable_if<Order == 2 || Order == 3, bool>::type = true> /* Order has been hardcoded; see code */
         __global__ void max_pooling_with_indices(
             span<T> output, span<T> indices, view<T> input, size_type channels,
             array<size_type, Order> out_spatial_dims, array<size_type, Order> in_spatial_dims,
@@ -55,16 +55,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
                 array<index_type, Order> end;
                 for (int i = 0; i < Order; i++) {
-                    using utils::min;
+                    using device::min;
                     end[i] = min<index_type>(start[i] + window_size[i], in_spatial_dims[i]);
                 }
 
                 for (int i = 0; i < Order; i++) {
-                    using utils::max;
+                    using device::max;
                     start[i] = max(start[i], 0);
                 }
 
-                T max_value = gpu::numeric_limits<T>::lowest();
+                T max_value = numeric_limits<T>::lowest();
                 index_type max_idx = -1;
 
                 size_type in_spatial_size = 1;
@@ -139,8 +139,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
                 array<index_type, Order> start;
                 for (int i = 0; i < Order; i++) {
-                    using utils::min;
-                    using utils::max;
+                    using device::min;
+                    using device::max;
                     start[i] = max(0, min(window_idx[i] * strides[i] - padding_left[i], out_spatial_dims[i] - 1));
                 }
 
@@ -162,18 +162,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
     {
+        CV_Assert(indices.size() == output.size());
         CV_Assert(out_spatial_dims.size() == Order);
         CV_Assert(in_spatial_dims.size() == Order);
         CV_Assert(window_size.size() == Order);
         CV_Assert(strides.size() == Order);
         CV_Assert(padding_left.size() == Order);
-        CV_Assert(indices.size() == output.size());
 
-        utils::array<size_type, Order> out_spatial_dims_k, in_spatial_dims_k;
+        array<size_type, Order> out_spatial_dims_k, in_spatial_dims_k;
         out_spatial_dims_k.assign(std::begin(out_spatial_dims), std::end(out_spatial_dims));
         in_spatial_dims_k.assign(std::begin(in_spatial_dims), std::end(in_spatial_dims));
 
-        utils::array<size_type, Order> window_size_k, strides_k, padding_left_k;
+        array<size_type, Order> window_size_k, strides_k, padding_left_k;
         window_size_k.assign(std::begin(window_size), std::end(window_size));
         strides_k.assign(std::begin(strides), std::end(strides));
         padding_left_k.assign(std::begin(padding_left), std::end(padding_left));
@@ -191,16 +191,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left)
     {
+        CV_Assert(is_shape_same(output, indices));
+        CV_Assert(input.get_axis_size(1) == output.get_axis_size(1));
+
         auto order = window_size.size();
         CV_Assert(strides.size() == order);
         CV_Assert(padding_left.size() == order);
-        CV_Assert(2 <= order && order <= 3);
-
-        CV_Assert(is_shape_same(output, indices));
         CV_Assert(output.rank() == order + 2);
         CV_Assert(input.rank() == order + 2);
-
-        CV_Assert(input.get_axis_size(1) == output.get_axis_size(1));
 
         std::vector<std::size_t> out_spatial_dims(order), in_spatial_dims(order);
         for (int i = 0; i < order; i++) {
@@ -208,6 +206,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             out_spatial_dims[i] = output.get_axis_size(2 + i);
         }
 
+        /* only max_pooling2d and max_pooling3d are supported */
+        CV_Assert(2 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
             launch_max_pooling_kernel<T, 3>(stream, output, indices, input, channels,
@@ -248,11 +248,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         CV_Assert(padding_left.size() == Order);
         CV_Assert(indices.size() == input.size());
 
-        utils::array<size_type, Order> out_spatial_dims_k, in_spatial_dims_k;
+        array<size_type, Order> out_spatial_dims_k, in_spatial_dims_k;
         out_spatial_dims_k.assign(std::begin(out_spatial_dims), std::end(out_spatial_dims));
         in_spatial_dims_k.assign(std::begin(in_spatial_dims), std::end(in_spatial_dims));
 
-        utils::array<size_type, Order> window_size_k, strides_k, padding_left_k;
+        array<size_type, Order> window_size_k, strides_k, padding_left_k;
         window_size_k.assign(std::begin(window_size), std::end(window_size));
         strides_k.assign(std::begin(strides), std::end(strides));
         padding_left_k.assign(std::begin(padding_left), std::end(padding_left));
@@ -270,16 +270,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left)
     {
+        CV_Assert(is_shape_same(input, indices));
+        CV_Assert(input.get_axis_size(1) == output.get_axis_size(1));
+
         auto order = window_size.size();
         CV_Assert(strides.size() == order);
         CV_Assert(padding_left.size() == order);
-        CV_Assert(2 <= order && order <= 3);
-
-        CV_Assert(is_shape_same(input, indices));
         CV_Assert(output.rank() == order + 2);
         CV_Assert(input.rank() == order + 2);
-
-        CV_Assert(input.get_axis_size(1) == output.get_axis_size(1));
 
         std::vector<std::size_t> out_spatial_dims(order), in_spatial_dims(order);
         for (int i = 0; i < order; i++) {
@@ -287,6 +285,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             out_spatial_dims[i] = output.get_axis_size(2 + i);
         }
 
+        kernels::fill<T>(stream, output, 0.0);
+
+        /* only max_unpooling2d and max_unpooling3d are supported */
+        CV_Assert(2 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
             launch_max_unpooling_kernel<T, 3>(stream, output, input, indices, channels,
@@ -312,5 +314,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         const std::vector<std::size_t>&, const std::vector<std::size_t>&,
         const std::vector<std::size_t>&);
 
-
-}}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

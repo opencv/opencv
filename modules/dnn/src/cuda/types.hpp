@@ -2,18 +2,18 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_SRC_CUDA_TYPE_HPP
-#define OPENCV_DNN_SRC_CUDA_TYPE_HPP
+#ifndef OPENCV_DNN_SRC_CUDA_TYPES_HPP
+#define OPENCV_DNN_SRC_CUDA_TYPES_HPP
 
 #include <cstdint>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
+namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace device {
 
     /* For indices, we can use 32bit variables or 64bit variables. The GPU registers are 32 bits in size.
-     * Hence, a 64bit variable requires two registers and is slightly slower than the 32bit versions for some
-     * operations.
+     * Hence, a 64bit variable requires two registers and is significantly slower than the 32bit versions.
+     *
+     * If we do not need to handle huge tensors, we can use 32-bit indices and gain performance.
      */
-    namespace gpu {
 #ifdef __CUDACC__
     using size_type = int;
     using index_type = int;
@@ -21,8 +21,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     using size_type = std::int32_t;
     using index_type = std::int32_t;
 #endif
-    }
 
-}}}} /*  cv::dnn::cuda4dnn::csl */
+}}}}} /*  cv::dnn::cuda4dnn::csl::device */
 
-#endif /* OPENCV_DNN_SRC_CUDA_TYPE_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA_TYPES_HPP */

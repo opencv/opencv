@@ -2,15 +2,16 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_ELTWISE_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_ELTWISE_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ELTWISE_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ELTWISE_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/eltwise_ops.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -61,13 +62,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                 switch (op)
                 {
-                case eltwise_op::max: csl::kernels::eltwise_max_2<T>(stream, output, input_x, input_y); break;
-                case eltwise_op::product: csl::kernels::eltwise_prod_2<T>(stream, output, input_x, input_y); break;
+                case eltwise_op::max: kernels::eltwise_max_2<T>(stream, output, input_x, input_y); break;
+                case eltwise_op::product: kernels::eltwise_prod_2<T>(stream, output, input_x, input_y); break;
                 case eltwise_op::sum:
                     if (coeffs.empty() || (coeffs[0] == 1 && coeffs[1] == 1))
-                        csl::kernels::eltwise_sum_2<T>(stream, output, input_x, input_y);
+                        kernels::eltwise_sum_2<T>(stream, output, input_x, input_y);
                     else
-                        csl::kernels::eltwise_sum_coeff_2<T>(stream, output, coeffs[0], input_x, coeffs[1], input_y);
+                        kernels::eltwise_sum_coeff_2<T>(stream, output, coeffs[0], input_x, coeffs[1], input_y);
                     break;
                 }
             }
@@ -86,16 +87,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                     switch (op)
                     {
-                    case eltwise_op::max: csl::kernels::eltwise_max_2<T>(stream, output, output, input); break;
-                    case eltwise_op::product: csl::kernels::eltwise_prod_2<T>(stream, output, output, input); break;
+                    case eltwise_op::max: kernels::eltwise_max_2<T>(stream, output, output, input); break;
+                    case eltwise_op::product: kernels::eltwise_prod_2<T>(stream, output, output, input); break;
                     case eltwise_op::sum:
                         if (coeffs.empty() || coeffs[i] == 1)
-                            csl::kernels::eltwise_sum_2<T>(stream, output, output, input);
+                            kernels::eltwise_sum_2<T>(stream, output, output, input);
                         else
                         {
                             /* if this is the first op, we must scale output too */
                             auto coeff_x = (i == 1) ? coeffs[0] : 1.0;
-                            csl::kernels::eltwise_sum_coeff_2<T>(stream, output, coeff_x, output, coeffs[i], input);
+                            kernels::eltwise_sum_coeff_2<T>(stream, output, coeff_x, output, coeffs[i], input);
                         }
                         break;
                     }
@@ -111,4 +112,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_ELTWISE_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ELTWISE_HPP */

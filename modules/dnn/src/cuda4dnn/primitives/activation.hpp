@@ -2,14 +2,15 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/tensor_ops.hpp"
+
+#include "../kernels/activations.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -38,7 +39,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::relu<T>(stream, output, input, slope);
+                kernels::relu<T>(stream, output, input, slope);
             }
         }
 
@@ -68,7 +69,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::clipped_relu<T>(stream, output, input, min, max);
+                kernels::clipped_relu<T>(stream, output, input, min, max);
             }
         }
 
@@ -103,7 +104,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::channelwise_relu<T>(stream, output, input, slopeTensor);
+                CV_Assert(input.get_axis_size(1) == slopeTensor.size());
+                std::size_t inner_size = input.size_range(2, input.rank());
+                kernels::axiswise_relu<T>(stream, output, input, inner_size, slopeTensor);
             }
         }
 
@@ -132,7 +135,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::tanh<T>(stream, output, input);
+                kernels::tanh<T>(stream, output, input);
             }
         }
 
@@ -160,7 +163,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::sigmoid<T>(stream, output, input);
+                kernels::sigmoid<T>(stream, output, input);
             }
         }
 
@@ -188,7 +191,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::elu<T>(stream, output, input);
+                kernels::elu<T>(stream, output, input);
             }
         }
 
@@ -216,7 +219,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::abs<T>(stream, output, input);
+                kernels::abs<T>(stream, output, input);
             }
         }
 
@@ -244,7 +247,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::bnll<T>(stream, output, input);
+                kernels::bnll<T>(stream, output, input);
             }
         }
 
@@ -273,7 +276,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::tensor_ops::power<T>(stream, output, input, exp, scale, shift);
+                kernels::power<T>(stream, output, input, exp, scale, shift);
             }
         }
 
@@ -284,4 +287,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_ACTIVATION_HPP */

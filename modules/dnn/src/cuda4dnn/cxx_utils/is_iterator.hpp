@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP
-#define OPENCV_DNN_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP
 
 #include <iterator>
 #include <type_traits>
@@ -28,4 +28,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
 
 }}}} /* cv::dnn::cuda4dnn::csl::cxx_utils */
 
-#endif /* OPENCV_DNN_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_CXX_UTILS_IS_ITERATOR_HPP */

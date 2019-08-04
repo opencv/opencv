@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_CSL_EVENT_HPP
-#define OPENCV_DNN_CUDA4DNN_CSL_EVENT_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_CSL_EVENT_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_CSL_EVENT_HPP
 
 #include "error.hpp"
 #include "stream.hpp"
@@ -99,4 +99,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
 }}}} /* cv::dnn::cuda4dnn::csl */
 
-#endif /* OPENCV_DNN_CUDA4DNN_CSL_EVENT_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_EVENT_HPP */

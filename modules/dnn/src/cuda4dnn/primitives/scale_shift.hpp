@@ -2,14 +2,15 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/scale_shift.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -91,11 +92,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             std::size_t inner_size = input.size_range(end_axis, input.rank());
 
             if (!weights.empty() && !bias.empty())
-                csl::kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weights, bias);
+                kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weights, bias);
             else if (!weights.empty())
-                csl::kernels::scaleN<T>(stream, output, input, inner_size, weights);
+                kernels::scaleN<T>(stream, output, input, inner_size, weights);
             else
-                csl::kernels::biasN<T>(stream, output, input, inner_size, bias);
+                kernels::biasN<T>(stream, output, input, inner_size, bias);
         }
 
     private:
@@ -106,4 +107,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SCALE_SHIFT_HPP */

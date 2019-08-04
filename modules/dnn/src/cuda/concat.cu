@@ -8,28 +8,29 @@
 #include "array.hpp"
 #include "types.hpp"
 #include "vector_traits.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
+#include "kernel_dispatcher.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
 #include <cstddef>
+#include <vector>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
 
-    using index_type = gpu::index_type;
-    using size_type = gpu::size_type;
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        /* Reference: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/concat_layer.cu */
         template <class T, std::size_t N>
         __global__ void concat_vec(
             span<T> output, size_type output_axis_size, index_type output_axis_offset,
             view<T> input, size_type input_axis_size, size_type concat_size)
         {
-            using vector_type = typename get_vector_type<T, N>::type;
+            using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
             auto input_vPtr = vector_type::get_pointer(input.data());
@@ -54,19 +55,16 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             }
         }
 
-        template <class T, std::size_t N>
-        using array = utils::array<T, N>;
-
-        template <class T, std::size_t N>
+        template <class T, std::size_t Rank>
         __global__ void concat_with_offsets(
-            span<T> output, array<size_type, N> out_strides, array<index_type, N> out_offset,
-            view<T> input, array<size_type, N> in_strides)
+            span<T> output, array<size_type, Rank> out_strides, array<index_type, Rank> out_offset,
+            view<T> input, array<size_type, Rank> in_strides)
         {
             for (auto i : grid_stride_range(input.size())) {
                 index_type in_index = i / in_strides[0];
                 index_type out_index = out_offset[0] + in_index;
                 index_type oidx = out_index * out_strides[0];
-                for (int j = 1; j < N; j++) {
+                for (int j = 1; j < Rank; j++) {
                     in_index = (i % in_strides[j - 1]) / in_strides[j];
                     out_index = out_offset[j] + in_index;
                     oidx += out_index * out_strides[j];
@@ -77,11 +75,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         }
     }
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_vectorized_concat(const Stream& stream,
         span<T> output, size_type output_axis_size, index_type output_axis_offset,
         view<T> input, size_type input_axis_size, size_type concat_size)
     {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+        /* more assertions are required to fully check for vectorization possiblity; check concat() */
+
         auto kernel = raw::concat_vec<T, N>;
         auto policy = make_policy(kernel, input.size() / N, 0, stream);
         launch_kernel(kernel, policy, output, output_axis_size, output_axis_offset, input, input_axis_size, concat_size);
@@ -97,7 +99,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
          * even though it can be any axis
          *
          * for each batch item:
-         *    we move all the channels from the input (which together for a single batch item is contiguous)
+         *    we move all the channels from the input (which together, for a single batch item, is contiguous)
          *    of a batch item to its corresponding contiguous place in the output
          *
          * for a valid vector operation:
@@ -134,40 +136,108 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
     template void concat<double>(const Stream&, TensorSpan<double>, std::size_t, TensorView<double>, std::size_t);
 
-    template <class T, std::size_t N> static
-    void launch_concat_with_offsets_kernel(
+    template <class T, std::size_t Rank> static
+    void launch_concat_with_offsets(
         const Stream& stream,
         span<T> output, const std::vector<std::size_t>& outStride, const std::vector<std::size_t>& outOffset,
         view<T> input, const std::vector<std::size_t>& inStride)
     {
-        CV_Assert(outStride.size() == N);
-        CV_Assert(outOffset.size() == N);
-        CV_Assert(inStride.size() == N);
+        CV_Assert(outStride.size() == Rank);
+        CV_Assert(outOffset.size() == Rank);
+        CV_Assert(inStride.size() == Rank);
 
-        utils::array<size_type, N> outStride_k, inStride_k;
+        array<size_type, Rank> outStride_k, inStride_k;
         outStride_k.assign(std::begin(outStride), std::end(outStride));
         inStride_k.assign(std::begin(inStride), std::end(inStride));
 
-        utils::array<index_type, N> outOffset_k;
+        array<index_type, Rank> outOffset_k;
         outOffset_k.assign(std::begin(outOffset), std::end(outOffset));
 
-        auto kernel = raw::concat_with_offsets<T, N>;
+        auto kernel = raw::concat_with_offsets<T, Rank>;
         auto policy = make_policy(kernel, input.size(), 0, stream);
         launch_kernel(kernel, policy, output, outStride_k, outOffset_k, input, inStride_k);
     }
+
+    GENERATE_KERNEL_DISPATCHER(concat_with_offsets_dispatcher, launch_concat_with_offsets);
 
     template <class T>
     void concat_with_offsets(
         const Stream& stream,
         TensorSpan<T> output, TensorView<T> input,
-        const std::vector<std::size_t>& offsets)
+        std::vector<std::size_t> offsets)
     {
         CV_Assert(output.rank() == input.rank());
-        CV_Assert(output.rank() >= 3 && output.rank() <= 5);
+        CV_Assert(output.rank() == offsets.size());
 
-        auto rank = output.rank();
+        /* squeezable axes at the begining of both tensors can be eliminated
+         *
+         * Reasoning:
+         * ----------
+         * Suppose an item's indices in the input tensor is [i1, i2, ...]. The indices in the output
+         * tensor will be [i1 + off1, i2 + off2, ...]. The concat operation essentially copies items
+         * from the input tensor to new locations in the output tensor.
+         *
+         * If the size of the first axis of the input and output tensor is unity, the input and output
+         * indices for all the elements will be of the form be [0, i2, ...] and [0, i2 + off2, ...]
+         * respectively. The first index does not contribute to the element's address calculation and
+         * hence does nothing apart from eating up few cycles.
+         *
+         * TODO: further optimize by combining contiguous axes if their offsets are zero
+         */
+        while (input.get_axis_size(0) == 1 && output.get_axis_size(0) == 1) {
+            CV_Assert(offsets[0] == 0);
+
+            input.squeeze(0);
+            output.squeeze(0);
+            offsets.erase(std::begin(offsets));
+
+            CV_Assert(output.rank() == input.rank());
+            CV_Assert(output.rank() == offsets.size());
+        }
+
         auto inShape = input.shape_as_vector();
         auto outShape = output.shape_as_vector();
+
+        /* contiguous axes that undergo full copy can be combined into one axis
+         *
+         * Reasoning:
+         * ----------
+         * Suppose an item's indices in the input tensor is [i1, i2, i3, ...]. Let the first two axes not undergo any
+         * concatenation. The indices in the output tensor will be [i1, i2, i3 + off3, ...].
+         *
+         * Each axis in the contiguous axes sequence will add an offset of iN * strideN. In the above example,
+         * the two axes add a total offset of `i1 * stride1 + i2 * stride2`. We can merge the two axes into one axis with
+         * a size of `size1 * size2`. The new offset added will be i12 * stride2` as the kernel iterates through `i12`.
+         * Note that `i12` is actually `(i1 * size2 + i2)` in the original tensor.
+         */
+        for (int i = 0; i < inShape.size(); i++) {
+            /* check if axis `i` requires any slicing */
+            if (offsets[i] == 0 && inShape[i] == outShape[i]) {
+                /* loop invariant: `i` is the first axis in the contiguous unsliced axis sequence */
+
+                int j = i + 1; /* `j` is the axis which we will attempt to merge */
+                while (j < inShape.size() && offsets[j] == 0 && inShape[j] == outShape[j]) {
+                    /* `j` axis is also copied fully; merge `i` and `j` */
+                    auto new_size = inShape[i] * inShape[j];
+                    inShape[i] = new_size;
+                    outShape[i] = new_size;
+                    offsets[i] = 0; /* redundant */
+
+                    /* delete axis `j` */
+                    inShape.erase(std::begin(inShape) + j);
+                    outShape.erase(std::begin(outShape) + j);
+                    offsets.erase(std::begin(offsets) + j);
+
+                    /* optimizations should not break the invariants */
+                    CV_Assert(inShape.size() == outShape.size());
+                    CV_Assert(inShape.size() == offsets.size());
+                    CV_Assert(inShape[i] == outShape[i]);
+                    CV_Assert(offsets[i] == 0);
+                }
+            }
+        }
+
+        auto rank = inShape.size();
 
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;
@@ -182,23 +252,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         std::partial_sum(outStride.rbegin(), outStride.rend(), outStride.rbegin(), std::multiplies<int>());
         /* stride[0], stride[1], ..., stride[-2], 1 */
 
-        if (offsets.size() != rank) {
-            auto diff = rank - offsets.size();
-            outStride.erase(outStride.begin(), outStride.begin() + diff);
-            inStride.erase(inStride.begin(), inStride.begin() + diff);
-        }
-
-        if (rank == 5) {
-            launch_concat_with_offsets_kernel<T, 5>(stream, output, outStride, offsets, input, inStride);
-        } else if (rank == 4) {
-            launch_concat_with_offsets_kernel<T, 4>(stream, output, outStride, offsets, input, inStride);
-        } else if (rank == 3) {
-            launch_concat_with_offsets_kernel<T, 3>(stream, output, outStride, offsets, input, inStride);
-        }
+        CV_Assert(1 <= rank && rank <= CSL_MAX_TENSOR_RANK);
+        concat_with_offsets_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, offsets, input, inStride);
     }
 
-    template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, const std::vector<std::size_t>&);
-    template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, const std::vector<std::size_t>&);
-    template void concat_with_offsets(const Stream&, TensorSpan<double>, TensorView<double>, const std::vector<std::size_t>&);
+    template void concat_with_offsets(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void concat_with_offsets(const Stream&, TensorSpan<double>, TensorView<double>, std::vector<std::size_t>);
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

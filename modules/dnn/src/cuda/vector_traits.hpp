@@ -2,21 +2,39 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_SRC_CUDA_VECTOR_TYPE_TRAITS_HPP
-#define OPENCV_DNN_SRC_CUDA_VECTOR_TYPE_TRAITS_HPP
+#ifndef OPENCV_DNN_SRC_CUDA_VECTOR_TRAITS_HPP
+#define OPENCV_DNN_SRC_CUDA_VECTOR_TRAITS_HPP
 
 #include <cuda_runtime.h>
-#include <cuda_fp16.hpp>
 
-#include <cstddef>
-#include <type_traits>
+#include "types.hpp"
 
 #include "../cuda4dnn/csl/pointer.hpp"
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+#include <type_traits>
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace device {
+
+    /** \file vector_traits.hpp
+     *  \brief utility classes and functions for vectorized memory loads/stores
+     *
+     * Example:
+     * using vector_type = get_vector_type_t<float, 4>;
+     *
+     * auto input_vPtr = type::get_pointer(iptr); // iptr is of type DevicePtr<const float>
+     * auto output_vPtr = type::get_pointer(optr);  // optr is of type DevicePtr<float>
+     *
+     * vector_type vec;
+     * v_load(vec, input_vPtr);
+     *
+     * for(int i = 0; i < vector_type::size(); i++)
+     *      vec[i] = do_something(vec[i]);
+     *
+     * v_store(output_vPtr, vec);
+     */
 
     namespace detail {
-        template <std::size_t N> struct raw_type_ { };
+        template <size_type N> struct raw_type_ { };
         template <> struct raw_type_<256> { typedef ulonglong4 type; };
         template <> struct raw_type_<128> { typedef uint4 type; };
         template <> struct raw_type_<64> { typedef uint2 type; };
@@ -24,33 +42,36 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <> struct raw_type_<16> { typedef uchar2 type; };
         template <> struct raw_type_<8> { typedef uchar1 type; };
 
-        template <std::size_t N> struct raw_type {
+        template <size_type N> struct raw_type {
             using type = typename raw_type_<N>::type;
             static_assert(sizeof(type) * 8 == N, "");
         };
     }
 
-    template <class T, std::size_t N>
+    /* \tparam T    type of element in the vector
+     * \tparam N    "number of elements" of type T in the vector
+     */
+    template <class T, size_type N>
     union vector_type {
         using value_type = T;
         using raw_type = typename detail::raw_type<N * sizeof(T) * 8>::type;
 
         __device__ vector_type() { }
 
-        __device__ static constexpr auto size() { return N; }
+        __device__ static constexpr size_type size() { return N; }
 
         raw_type raw;
         T data[N];
 
         template <class U> static __device__
         typename std::enable_if<std::is_const<U>::value, const vector_type*>
-        ::type get_pointer(DevicePtr<U> ptr) {
+        ::type get_pointer(csl::DevicePtr<U> ptr) {
             return reinterpret_cast<const vector_type*>(ptr.get());
         }
 
         template <class U> static __device__
         typename std::enable_if<!std::is_const<U>::value, vector_type*>
-        ::type get_pointer(DevicePtr<U> ptr) {
+        ::type get_pointer(csl::DevicePtr<U> ptr) {
             return reinterpret_cast<vector_type*>(ptr.get());
         }
     };
@@ -75,11 +96,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         dest.raw = src.raw;
     }
 
-    template <class T, std::size_t N>
+    template <class T, size_type N>
     struct get_vector_type {
         typedef vector_type<T, N> type;
     };
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
+    template <class T, size_type N>
+    using get_vector_type_t = typename get_vector_type<T, N>::type;
 
-#endif /* OPENCV_DNN_SRC_CUDA_VECTOR_TYPE_TRAITS_HPP */
+}}}}} /*  cv::dnn::cuda4dnn::csl::device */
+
+#endif /* OPENCV_DNN_SRC_CUDA_VECTOR_TRAITS_HPP */

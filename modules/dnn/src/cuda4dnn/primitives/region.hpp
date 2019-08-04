@@ -2,15 +2,16 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_REGION_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_REGION_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REGION_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REGION_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/cudnn.hpp"
 #include "../csl/tensor_ops.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/region.hpp"
 
 #include "nms.inl.hpp"
 
@@ -110,11 +111,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             /* we squash class scores into probabilities using softmax or sigmoid */
             if (squash_type == squash_method::softmax)
-                csl::kernels::softmax_strided<T>(stream, output, input, classes, cell_box_size, 5);
+                kernels::softmax_strided<T>(stream, output, input, classes, cell_box_size, 5);
             else if (squash_type == squash_method::sigmoid)
-                csl::kernels::sigmoid_strided<T>(stream, output, input, classes, cell_box_size, 5);
+                kernels::sigmoid_strided<T>(stream, output, input, classes, cell_box_size, 5);
 
-            csl::kernels::region_finalize<T>(stream, output, input, biasTensor, object_prob_cutoff, class_prob_cutoff,
+            kernels::region_finalize<T>(stream, output, input, biasTensor, object_prob_cutoff, class_prob_cutoff,
                 height_norm, width_norm, rows, cols, boxes_per_cell, cell_box_size, classes);
 
             if (nms_iou_threshold > 0) {
@@ -177,4 +178,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_REGION_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REGION_HPP */

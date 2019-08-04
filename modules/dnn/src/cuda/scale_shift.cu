@@ -7,7 +7,7 @@
 
 #include "types.hpp"
 #include "vector_traits.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
@@ -18,12 +18,12 @@
 
 #include <cstddef>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        using index_type = gpu::index_type;
-        using size_type = gpu::size_type;
-
         template <class T>
         __global__ void bias1(span<T> output, view<T> input, T beta) {
             for (auto i : grid_stride_range(output.size()))
@@ -32,14 +32,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
 
         template <class T, std::size_t N>
         __global__ void biasN_vec(span<T> output, view<T> input, size_type inner_size, view<T> bias) {
-            using vector_type = typename get_vector_type<T, N>::type;
+            using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
             auto input_vPtr = vector_type::get_pointer(input.data());
 
-            inner_size /= N;
-            for (auto i : grid_stride_range(output.size() / N)) {
-                const index_type bias_idx = (i / inner_size) % bias.size();
+            inner_size /= vector_type::size();
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                const index_type bias_idx = (i / inner_size) % static_cast<size_type>(bias.size());
 
                 vector_type vec;
                 v_load<vector_type>(vec, input_vPtr[i]);
@@ -59,14 +59,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T, std::size_t N>
         __global__ void scaleN_vec(span<T> output, view<T> input, size_type inner_size, view<T> weights)
         {
-            using vector_type = typename get_vector_type<T, N>::type;
+            using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
             auto input_vPtr = vector_type::get_pointer(input.data());
 
-            inner_size /= N;
-            for (auto i : grid_stride_range(output.size() / N)) {
-                const index_type scale_idx = (i / inner_size) % weights.size();
+            inner_size /= vector_type::size();
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
 
                 vector_type vec;
                 v_load<vector_type>(vec, input_vPtr[i]);
@@ -79,12 +79,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T, std::size_t N>
         __global__ void scale1_with_bias1_vec(span<T> output, view<T> input, T alpha, T beta)
         {
-            using vector_type = typename get_vector_type<T, N>::type;
+            using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
             auto input_vPtr = vector_type::get_pointer(input.data());
 
-            for (auto i : grid_stride_range(output.size() / N)) {
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
                 vector_type vec;
                 v_load<vector_type>(vec, input_vPtr[i]);
                 for (int j = 0; j < vec.size(); j++)
@@ -96,14 +96,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T, std::size_t N>
         __global__ void scaleN_with_biasN_vec(span<T> output, view<T> input, size_type inner_size, view<T> weights, view<T> bias)
         {
-            using vector_type = typename get_vector_type<T, N>::type;
+            using vector_type = get_vector_type_t<T, N>;
 
             auto output_vPtr = vector_type::get_pointer(output.data());
             auto input_vPtr = vector_type::get_pointer(input.data());
 
-            inner_size /= N;
-            for (auto i : grid_stride_range(output.size() / N)) {
-                const index_type scale_idx = (i / inner_size) % weights.size();
+            inner_size /= vector_type::size();
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
 
                 vector_type vec;
                 v_load<vector_type>(vec, input_vPtr[i]);
@@ -127,7 +127,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
     template void bias1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> bias) {
         auto kernel = raw::biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -169,7 +169,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void scale1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
     template void scale1<double>(const Stream&, TensorSpan<double>, TensorView<double>, double);
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_scaleN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights) {
         auto kernel = raw::scaleN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -198,7 +198,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void scaleN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
     template void scaleN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>);
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_scale1_with_bias1_vec_kernel(const Stream& stream, span<T> output, view<T> input, T alpha, T beta) {
         auto kernel = raw::scale1_with_bias1_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -222,7 +222,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void scale1_with_bias1<float>(const Stream&, span<float>, view<float>, float, float);
     template void scale1_with_bias1<double>(const Stream&, span<double>, view<double>, double, double);
 
-    template <class T, std::size_t N>
+    template <class T, std::size_t N> static
     void launch_scaleN_with_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias) {
         auto kernel = raw::scaleN_with_biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -252,4 +252,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void scaleN_with_biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>, TensorView<float>);
     template void scaleN_with_biasN<double>(const Stream&, TensorSpan<double>, TensorView<double>, std::size_t, TensorView<double>, TensorView<double>);
 
-}}}}} /* cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

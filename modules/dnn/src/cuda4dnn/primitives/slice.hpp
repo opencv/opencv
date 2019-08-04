@@ -2,13 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_SLICE_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_SLICE_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SLICE_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SLICE_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/slice.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -47,7 +48,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
                 auto output = output_wrapper->getSpan();
 
-                csl::kernels::slice<T>(stream, output, input, offsets[i]);
+                kernels::slice<T>(stream, output, input, offsets[i]);
             }
         }
 
@@ -58,4 +59,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_SLICE_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_SLICE_HPP */

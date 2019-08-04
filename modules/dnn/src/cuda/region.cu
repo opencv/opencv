@@ -6,7 +6,7 @@
 #include <cuda_fp16.h>
 
 #include "math.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 #include "limits.hpp"
 #include "vector_traits.hpp"
@@ -18,12 +18,12 @@
 
 #include <cstddef>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        using index_type = gpu::index_type;
-        using size_type = gpu::size_type;
-
         template <class T>
         __global__ void sigmoid_strided(span<T> output, view<T> input, size_type n, size_type stride, size_type offset) {
             /* - the input is divided into equal blocks strided by `stride`
@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 auto block_idx = i / n;
                 auto index = block_idx * stride + offset + (i % n);
 
-                using utils::sigmoid;
+                using device::sigmoid;
                 output[index] = sigmoid(input[index]);
             }
         }
@@ -43,15 +43,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             for (auto idx : grid_stride_range(output.size() / stride)) {
                 index_type offset = idx * stride + offset_;
 
-                auto largest = gpu::numeric_limits<T>::min();
+                auto largest = numeric_limits<T>::lowest();
                 for (int i = 0; i < n; i++) {
-                    using utils::max;
+                    using device::max;
                     largest = max(largest, output[offset + i]);
                 }
 
                 auto sum = T(0);
                 for (int i = 0; i < n; i++) {
-                    using utils::exp;
+                    using device::exp;
                     auto temp = exp(output[offset + i] - largest);
                     sum += temp;
                     output[offset + i] = temp;
@@ -83,15 +83,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 auto y = (box_index % batch_inner_size) / row_inner_size;
                 auto x = (box_index % row_inner_size) / col_inner_size;
 
-                using utils::sigmoid;
-                using utils::exp;
+                using device::sigmoid;
+                using device::exp;
                 output[box_offset + 0] = (T(x) + sigmoid(input[box_offset + 0])) / T(cols);
                 output[box_offset + 1] = (T(y) + sigmoid(input[box_offset + 1])) / T(rows);
                 output[box_offset + 2] = exp(input[box_offset + 2]) * bias[2 * box_of_the_cell + 0] / T(width_norm);
                 output[box_offset + 3] = exp(input[box_offset + 3]) * bias[2 * box_of_the_cell + 1] / T(height_norm);
 
                 /* squash objectness score into a probability */
-                using utils::sigmoid;
+                using device::sigmoid;
                 T objectness_prob = sigmoid(output[box_offset + 4]);
                 output[box_offset + 4] = objectness_prob;
 
@@ -109,7 +109,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
                 const index_type class_end = class_begin + classes;
                 index_type offset = class_begin;
 
-                using vector_type = typename get_vector_type<T, 4>::type;
+                using vector_type = get_vector_type_t<T, 4>;
 
                 /* process each class independently until the offset is aligned to an n-element boundary */
                 while (offset % vector_type::size() != 0 && offset < class_end) {
@@ -201,4 +201,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void region_finalize(const Stream&, span<double>, view<double>, view<double>,
         double, double, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t);
 
-}}}}} /* cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

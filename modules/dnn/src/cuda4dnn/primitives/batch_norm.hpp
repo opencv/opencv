@@ -2,14 +2,15 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/tensor_ops.hpp"
+
+#include "../kernels/scale_shift.hpp"
 
 #include <utility>
 
@@ -44,8 +45,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output = output_wrapper->getSpan();
 
             std::size_t inner_size = input.size_range(2, input.rank());
-
-            csl::kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weightsTensor, biasTensor);
+            kernels::scaleN_with_biasN<T>(stream, output, input, inner_size, weightsTensor, biasTensor);
         }
 
     private:
@@ -55,4 +55,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_BATCH_NORM_HPP */

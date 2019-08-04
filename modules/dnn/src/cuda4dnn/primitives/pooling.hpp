@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_POOLING_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_POOLING_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_POOLING_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_POOLING_HPP
 
 #include "../../op_cuda.hpp"
 
@@ -182,7 +182,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 }
             }
 
-            csl::Pooling<T>::params_type params;
+            typename csl::Pooling<T>::params_type params;
             if (transformedInput.empty())
             {
                 /* no transform => use original input shape */
@@ -255,4 +255,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_POOLING_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_POOLING_HPP */

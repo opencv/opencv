@@ -2,14 +2,17 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_PADDING_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_PADDING_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PADDING_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PADDING_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/fill.hpp"
+#include "../kernels/concat.hpp"
+#include "../kernels/padding.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -69,7 +72,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             if (type == padding_type::constant)
             {
-                csl::kernels::fill<T>(stream, output, value);
+                kernels::fill<T>(stream, output, value);
 
                 std::vector<std::size_t> offsets(effective_rank, 0);
                 for (int i = 0; i < dstRanges.size(); i++)
@@ -79,7 +82,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                         offsets[delta + i] = dstRanges[i].start;
                 }
 
-                csl::kernels::concat_with_offsets<T>(stream, output, input, offsets);
+                kernels::concat_with_offsets<T>(stream, output, input, offsets);
             }
             else if (type == padding_type::reflection101)
             {
@@ -92,7 +95,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     else
                         ranges[i] = { dstRanges[i].start, dstRanges[i].end };
                 }
-                csl::kernels::copy_with_reflection101<T>(stream, output, input, ranges);
+
+                kernels::copy_with_reflection101<T>(stream, output, input, ranges);
             }
         }
 
@@ -106,4 +110,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_PADDING_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PADDING_HPP */

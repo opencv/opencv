@@ -2,13 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_RESIZE_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_RESIZE_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_RESIZE_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_RESIZE_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/resize.hpp"
 
 #include <utility>
 
@@ -43,9 +44,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output = output_wrapper->getSpan();
 
             if (type == interpolation_type::nearest_neighbour)
-                csl::kernels::resize_nn<T>(stream, output, input);
+                kernels::resize_nn<T>(stream, output, input);
             else if (type == interpolation_type::bilinear)
-                csl::kernels::resize_bilinear<T>(stream, output, input, scaleHeight, scaleWidth);
+                kernels::resize_bilinear<T>(stream, output, input, scaleHeight, scaleWidth);
         }
 
     private:
@@ -56,4 +57,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_RESIZE_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_RESIZE_HPP */

@@ -2,16 +2,18 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/span.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/kernels.hpp"
 #include "../csl/workspace.hpp"
+
+#include "../kernels/scale_shift.hpp"
+#include "../kernels/normalize.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -103,7 +105,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto ws_allocator = csl::WorkspaceAllocator(workspace);
             auto scratch = ws_allocator.get_span<T>();
-            csl::kernels::normalize<T>(stream, output, input, outer_size, mid_size, inner_size, norm_order, epsilon, scratch);
+            kernels::normalize<T>(stream, output, input, outer_size, mid_size, inner_size, norm_order, epsilon, scratch);
 
             /* there might be a single weight in which case `weight` will be not equal to 1.0
              * or there might be several weights
@@ -111,13 +113,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              */
             if (weight != 1.0)
             {
-                csl::kernels::scale1<T>(stream, output, input, weight);
+                kernels::scale1<T>(stream, output, input, weight);
             }
             else if (!weightsTensor.empty())
             {
                 CV_Assert(weightsTensor.size() != 1); /* constructor should have set up to use `weight` */
                 CV_Assert(weightsTensor.size() == mid_size);
-                csl::kernels::scaleN<T>(stream, output, input, inner_size, weightsTensor);
+                kernels::scaleN<T>(stream, output, input, inner_size, weightsTensor);
             }
         }
 
@@ -137,4 +139,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_NORMALIZE_BBOX_HPP */

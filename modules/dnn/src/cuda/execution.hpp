@@ -2,11 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_SRC_CUDA_EXECUTION_HPP
-#define OPENCV_DNN_CUDA4DNN_SRC_CUDA_EXECUTION_HPP
+#ifndef OPENCV_DNN_SRC_CUDA_EXECUTION_HPP
+#define OPENCV_DNN_SRC_CUDA_EXECUTION_HPP
 
 #include "../cuda4dnn/csl/error.hpp"
 #include "../cuda4dnn/csl/stream.hpp"
+
+#include <opencv2/core.hpp>
 
 #include <cuda_runtime.h>
 
@@ -33,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         cudaStream_t stream;
     };
 
-    /* this overload shouldn't be necessary; we should always try to provide a bound on the number of threads */
+    /* this overload shouldn't be necessary; we should always provide a bound on the number of threads */
     /*
     template <class Kernel> inline
     execution_policy make_policy(Kernel kernel, std::size_t sharedMem = 0, const Stream& stream = 0) {
@@ -76,4 +78,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
 }}}} /* cv::dnn::cuda4dnn::csl */
 
-#endif /* OPENCV_DNN_CUDA4DNN_SRC_CUDA_EXECUTION_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA_EXECUTION_HPP */

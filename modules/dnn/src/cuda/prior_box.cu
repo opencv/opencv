@@ -9,7 +9,7 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "vector_traits.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
@@ -17,12 +17,12 @@
 
 #include <cstddef>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        using index_type = gpu::index_type;
-        using size_type = gpu::size_type;
-
         template <class T, bool Normalize>
         __global__ void prior_box(
             span<T> output,
@@ -34,7 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             /* since the entire output consists (first channel at least) of these boxes,
              * we are garunteeed that the output is aligned to a boundary of 4 values
              */
-            using vector_type = typename get_vector_type<T, 4>::type;
+            using vector_type = get_vector_type_t<T, 4>;
             auto output_vPtr = vector_type::get_pointer(output.data());
 
             /* num_points contains the number of points in the feature map of interest
@@ -74,14 +74,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
         template <class T>
         __global__ void prior_box_clip(span<T> output) {
             for (auto i : grid_stride_range(output.size())) {
-                using utils::clamp;
+                using device::clamp;
                 output[i] = clamp<T>(output[i], 0.0, 1.0);
             }
         }
 
         template <class T>
         __global__ void prior_box_set_variance1(span<T> output, float variance) {
-            using vector_type = typename get_vector_type<T, 4>::type;
+            using vector_type = get_vector_type_t<T, 4>;
             auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec;
@@ -91,12 +91,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             }
         }
 
-        template <class T, std::size_t N>
-        using array = utils::array<T, N>;
-
         template <class T>
         __global__ void prior_box_set_variance4(span<T> output, array<float, 4> variance) {
-            using vector_type = typename get_vector_type<T, 4>::type;
+            using vector_type = get_vector_type_t<T, 4>;
             auto output_vPtr = vector_type::get_pointer(output.data());
             for (auto i : grid_stride_range(output.size() / 4)) {
                 vector_type vec;
@@ -160,7 +157,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
             auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
             launch_kernel(kernel, policy, output_span_c2, variance[0]);
         } else {
-            utils::array<float, 4> variance_k;
+            array<float, 4> variance_k;
             variance_k.assign(std::begin(variance), std::end(variance));
             auto kernel = raw::prior_box_set_variance4<T>;
             auto policy = make_policy(kernel, output_span_c2.size() / 4, 0, stream);
@@ -177,4 +174,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void generate_prior_boxes(const Stream&, span<double>, view<float>, view<float>, view<float>, view<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
 
-}}}}} /*  cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */

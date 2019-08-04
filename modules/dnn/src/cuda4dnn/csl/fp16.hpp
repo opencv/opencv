@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_CSL_FP16_HPP
-#define OPENCV_DNN_CUDA4DNN_CSL_FP16_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_CSL_FP16_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_CSL_FP16_HPP
 
 #include "nvcc_defs.hpp"
 
@@ -81,4 +81,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
 
-#endif /* OPENCV_DNN_CUDA4DNN_CSL_FP16_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_FP16_HPP */

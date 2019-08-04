@@ -24,13 +24,9 @@
 namespace cv {
     namespace dnn {
         constexpr bool IS_DNN_CUDA_TARGET(int id) {
-            switch (id) {
-            case DNN_TARGET_CUDA_FP16: /* [[fallthrough]] */
-            case DNN_TARGET_CUDA_FP32: /* [[fallthrough]] */
-            case DNN_TARGET_CUDA_FP64:
-                return true;
-            }
-            return false;
+            return id == DNN_TARGET_CUDA_FP16 ||
+                   id == DNN_TARGET_CUDA_FP32 ||
+                   id == DNN_TARGET_CUDA_FP64;
         }
 
         constexpr bool haveCUDA() {
@@ -47,7 +43,7 @@ namespace cv {
              *
              * \tparam T    element type for the tensor
              */
-            template <class T, class TensorT = typename Tensor<T>>
+            template <class T, class TensorT = Tensor<T>>
             TensorT makeTensorHeader(const Mat& mat)
             {
                 auto sizes = shape(mat);

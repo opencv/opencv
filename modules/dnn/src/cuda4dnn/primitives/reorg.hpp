@@ -2,13 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_REORG_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_REORG_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REORG_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REORG_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
-#include "../csl/tensor_ops.hpp"
+#include "../kernels/permute.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -46,7 +46,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                stride
             };
 
-            constexpr int order[] = { 0, 2, 4, 1, 3 };
+            constexpr std::size_t order[] = { 0, 2, 4, 1, 3 };
 
             const std::size_t permute_output_shape[] = {
                 permute_input_shape[order[0]],
@@ -62,7 +62,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             output.unsqueeze();
             output.reshape(std::begin(permute_output_shape), std::end(permute_output_shape));
 
-            csl::tensor_ops::permute(stream, output, input, { std::begin(order), std::end(order) });
+            kernels::permute(stream, output, input, { std::begin(order), std::end(order) });
         }
 
     private:
@@ -72,4 +72,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_REORG_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_REORG_HPP */

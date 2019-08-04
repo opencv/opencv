@@ -2,12 +2,11 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_CSL_TENSOR_OPS_HPP
-#define OPENCV_DNN_CUDA4DNN_CSL_TENSOR_OPS_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_CSL_TENSOR_OPS_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_CSL_TENSOR_OPS_HPP
 
 #include "stream.hpp"
 #include "tensor.hpp"
-#include "kernels.hpp"
 #include "pointer.hpp"
 #include "cublas.hpp"
 #include "cudnn.hpp"
@@ -159,62 +158,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             auto inputDesc = TensorDescriptor<T>(shape);
             auto outputDesc = TensorDescriptor<T>(shape);
             cudnn::softmax(handle, outputDesc, output.get(), inputDesc, input.get(), log);
-        }
-
-        template <class T> inline
-        void abs(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::abs<T>(stream, dest, src);
-        }
-
-        template <class T> inline
-        void bnll(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::bnll<T>(stream, dest, src);
-        }
-
-        template <class T> inline
-        void relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T slope = 0) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::relu<T>(stream, dest, src, slope);
-        }
-
-        template <class T> inline
-        void clipped_relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T min, T max) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::clipped_relu<T>(stream, dest, src, min, max);
-        }
-
-        template <class T> inline
-        void channelwise_relu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, TensorView<T> slope) {
-            CV_Assert(is_shape_same(dest, src));
-            CV_Assert(src.get_axis_size(1) == slope.size());
-            std::size_t inner_size = src.size_range(2, src.rank());
-            kernels::axiswise_relu<T>(stream, dest, src, slope, inner_size);
-        }
-
-        template <class T> inline
-        void elu(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::elu<T>(stream, dest, src);
-        }
-
-        template <class T> inline
-        void power(const Stream& stream, TensorSpan<T> dest, TensorView<T> src, T exp = 1, T scale = 1, T shift = 0) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::power<T>(stream, dest, src, exp, scale, shift);
-        }
-
-        template <class T> inline
-        void sigmoid(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::sigmoid<T>(stream, dest, src);
-        }
-
-        template <class T> inline
-        void tanh(const Stream& stream, TensorSpan<T> dest, TensorView<T> src) {
-            CV_Assert(is_shape_same(dest, src));
-            kernels::tanh<T>(stream, dest, src);
         }
     }
 
@@ -470,4 +413,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
 
-#endif /* OPENCV_DNN_CUDA4DNN_CSL_TENSOR_OPS_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_TENSOR_OPS_HPP */

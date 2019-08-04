@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP
 
 #include "../../op_cuda.hpp"
 
@@ -11,7 +11,8 @@
 #include "../csl/stream.hpp"
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/scale_shift.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -168,7 +169,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_Error(Error::StsNotImplemented, "Padding configuration requires asymmetric padding and hence is not supported.");
             }
 
-            csl::TransposeConvolution<T>::params_type params;
+            typename csl::TransposeConvolution<T>::params_type params;
             params.input_shape.assign(std::begin(input_shape), std::end(input_shape));
             params.output_shape.assign(std::begin(output_shape), std::end(output_shape));
 
@@ -209,7 +210,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (!biasTensor.empty())
             {
                 std::size_t inner_size = total(output_wrapper->getShape(), 2, -1);
-                csl::kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
+                kernels::biasN<T>(stream, output, output, inner_size, biasTensor);
             }
         }
 
@@ -226,4 +227,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_TRANSPOSE_CONVOLUTION_HPP */

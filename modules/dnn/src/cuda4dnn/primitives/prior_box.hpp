@@ -2,15 +2,16 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/span.hpp"
 #include "../csl/tensor.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/prior_box.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -108,7 +109,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto offsetsX   = csl::view<float>(paramsTensor.get() + 2 * box_size, offset_size);
             auto offsetsY   = csl::view<float>(paramsTensor.get() + 2 * box_size + offset_size, offset_size);
 
-            csl::kernels::generate_prior_boxes<T>(stream, output,
+            kernels::generate_prior_boxes<T>(stream, output,
                 boxWidths, boxHeights, offsetsX, offsetsY, stepX, stepY,
                 variance, num_priors, feature_map_width, feature_map_height, image_width, image_height, normalize, clip);
         }
@@ -132,4 +133,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PRIOR_BOX_HPP */

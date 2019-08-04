@@ -2,16 +2,19 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_PERMUTE_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_PERMUTE_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PERMUTE_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PERMUTE_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
 #include "../csl/tensor_ops.hpp"
 
+#include "../kernels/permute.hpp"
+
 #include <opencv2/core.hpp>
 
+#include <cstddef>
 #include <vector>
 #include <utility>
 
@@ -22,7 +25,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        PermuteOp(csl::Stream stream_, std::vector<int> order_)
+        PermuteOp(csl::Stream stream_, std::vector<std::size_t> order_)
             : stream(std::move(stream_)), order(std::move(order_)) { }
 
         void forward(
@@ -47,7 +50,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
                 if (needsPermute)
                 {
-                    csl::tensor_ops::permute(stream, output, input, order);
+                    kernels::permute(stream, output, input, order);
                 }
                 else
                 {
@@ -59,9 +62,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     private:
         csl::Stream stream;
-        std::vector<int> order;
+        std::vector<std::size_t> order;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_PERMUTE_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_PERMUTE_HPP */

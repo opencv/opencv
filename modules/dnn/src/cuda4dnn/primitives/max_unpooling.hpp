@@ -2,13 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_DNN_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP
-#define OPENCV_DNN_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP
+#ifndef OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP
+#define OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP
 
 #include "../../op_cuda.hpp"
 
 #include "../csl/stream.hpp"
-#include "../csl/kernels.hpp"
+
+#include "../kernels/max_unpooling.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -106,7 +107,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto indices_wrapper = outputs[1].dynamicCast<wrapper_type>();
             auto output_indices = indices_wrapper->getSpan();
 
-            csl::kernels::max_pooling_with_indices<T>(
+            kernels::max_pooling_with_indices<T>(
                 stream, output_data, output_indices, input_data, window_size, strides, padding_left
             );
         }
@@ -162,8 +163,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output_data = output_wrapper->getSpan();
 
-            csl::kernels::fill<T>(stream, output_data, 0.0);
-            csl::kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
+            kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
         }
 
     private:
@@ -174,4 +174,4 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 }}} /* namespace cv::dnn::cuda4dnn */
 
-#endif /* OPENCV_DNN_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP */
+#endif /* OPENCV_DNN_SRC_CUDA4DNN_PRIMITIVES_MAX_UNPOOLING_HPP */

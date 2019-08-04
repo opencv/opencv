@@ -4,10 +4,9 @@
 
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
-#include "../cuda4dnn/csl/fp16.hpp"
 
 #include "math.hpp"
-#include "grid_stride_loop.hpp"
+#include "grid_stride_range.hpp"
 #include "execution.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
@@ -15,13 +14,16 @@
 
 #include <opencv2/core.hpp>
 
-namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace kernels {
+using namespace cv::dnn::cuda4dnn::csl;
+using namespace cv::dnn::cuda4dnn::csl::device;
+
+namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
         template <class T>
         __global__ void eltwise_max_2(span<T> output, view<T> x, view<T> y) {
             for (auto i : grid_stride_range(output.size())) {
-                using utils::max;
+                using device::max;
                 output[i] = max(x[i], y[i]);
             }
         }
@@ -48,7 +50,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T>
     void eltwise_max_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
         CV_Assert(x.size() == y.size());
-        CV_Assert(output.size() == x.size());
+        CV_Assert(x.size() == output.size());
 
         auto kernel = raw::eltwise_max_2<T>;
         auto policy = make_policy(kernel, output.size(), 0, stream);
@@ -62,7 +64,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T>
     void eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
         CV_Assert(x.size() == y.size());
-        CV_Assert(output.size() == x.size());
+        CV_Assert(x.size() == output.size());
 
         auto kernel = raw::eltwise_sum_2<T>;
         auto policy = make_policy(kernel, output.size(), 0, stream);
@@ -76,9 +78,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T>
     void eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
         CV_Assert(x.size() == y.size());
-        CV_Assert(output.size() == x.size());
+        CV_Assert(x.size() == output.size());
 
-        if (coeff_x == 1.0 && coeff_y == 1.0) {
+        if (static_cast<float>(coeff_x) == 1.0f && static_cast<float>(coeff_y) == 1.0f) {
             eltwise_sum_2(stream, output, x, y);
             return;
         }
@@ -95,7 +97,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template <class T>
     void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
         CV_Assert(x.size() == y.size());
-        CV_Assert(output.size() == x.size());
+        CV_Assert(x.size() == output.size());
 
         auto kernel = raw::eltwise_prod_2<T>;
         auto policy = make_policy(kernel, output.size(), 0, stream);
@@ -106,4 +108,4 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl  { namespace k
     template void eltwise_prod_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
     template void eltwise_prod_2(const Stream& stream, span<double> output, view<double> x, view<double> y);
 
-}}}}} /* cv::dnn::cuda4dnn::csl::kernels */
+}}}} /* cv::dnn::cuda4dnn::kernels */
