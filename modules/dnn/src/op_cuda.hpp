@@ -25,7 +25,7 @@ namespace cv {
     namespace dnn {
         constexpr bool IS_DNN_CUDA_TARGET(int id) {
             return id == DNN_TARGET_CUDA_FP16 ||
-                   id == DNN_TARGET_CUDA_FP32;
+                   id == DNN_TARGET_CUDA;
         }
 
         constexpr bool haveCUDA() {
@@ -148,7 +148,7 @@ namespace cv {
             {
             case DNN_TARGET_CUDA_FP16:
                 return cuda4dnn::cxx_utils::make_unique<NodeType<half>>(std::forward<Args>(args)...);
-            case DNN_TARGET_CUDA_FP32:
+            case DNN_TARGET_CUDA:
                 return cuda4dnn::cxx_utils::make_unique<NodeType<float>>(std::forward<Args>(args)...);
             default:
                 CV_Assert(IS_DNN_CUDA_TARGET(targetId));
@@ -332,8 +332,8 @@ namespace cv {
             std::shared_ptr<shared_block_type> shared_block;
         };
 
-        using CUDABackendWrapperFP16 = GenericCUDABackendWrapper<half, DNN_TARGET_CUDA_FP32>;
-        using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, DNN_TARGET_CUDA_FP32>;
+        using CUDABackendWrapperFP16 = GenericCUDABackendWrapper<half, DNN_TARGET_CUDA_FP16>;
+        using CUDABackendWrapperFP32 = GenericCUDABackendWrapper<float, DNN_TARGET_CUDA>;
 
         template <class T> struct GetCUDABackendWrapperType_ { };
         template <> struct GetCUDABackendWrapperType_<half> { typedef CUDABackendWrapperFP16 type; };

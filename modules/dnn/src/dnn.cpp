@@ -152,7 +152,7 @@ private:
 #ifdef HAVE_CUDA
         if (haveCUDA()) {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
-            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP32));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
         }
 #endif
     }
@@ -1033,7 +1033,7 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         {
         case DNN_TARGET_CUDA_FP16:
             return CUDABackendWrapperFP16::create(m);
-        case DNN_TARGET_CUDA_FP32:
+        case DNN_TARGET_CUDA:
             return CUDABackendWrapperFP32::create(m);
         default:
             CV_Assert(IS_DNN_CUDA_TARGET(targetId));
@@ -1147,7 +1147,7 @@ struct Net::Impl
                 {
                 case DNN_TARGET_CUDA_FP16:
                     return CUDABackendWrapperFP16::create(baseBuffer, shape);
-                case DNN_TARGET_CUDA_FP32:
+                case DNN_TARGET_CUDA:
                     return CUDABackendWrapperFP32::create(baseBuffer, shape);
                 default:
                     CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
