@@ -95,7 +95,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                         else
                         {
                             /* if this is the first op, we must scale output too */
-                            auto coeff_x = (i == 1) ? coeffs[0] : 1.0;
+                            auto coeff_x = (i == 1) ? coeffs[0] : static_cast<T>(1.0);
                             kernels::eltwise_sum_coeff_2<T>(stream, output, coeff_x, output, coeffs[i], input);
                         }
                         break;

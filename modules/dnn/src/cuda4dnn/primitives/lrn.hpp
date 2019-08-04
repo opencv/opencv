@@ -28,7 +28,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         LRNOp(csl::cudnn::Handle handle, lrn_type type_, std::size_t local_size, T alpha, T beta, T bias, std::size_t largestInputSize)
             : scratch_mem_in_bytes { 0 }
         {
-            csl::LRN<T>::lrn_type type;
+            typename csl::LRN<T>::lrn_type type;
             switch (type_) {
             case lrn_type::across_channels: type = csl::LRN<T>::lrn_type::across_channels; break;
             case lrn_type::within_channel: type = csl::LRN<T>::lrn_type::within_channel; break;

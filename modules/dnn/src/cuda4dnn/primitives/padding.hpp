@@ -35,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         /* `ranges` is indexed by axis and contains the range in the output where the input is copied to */
         PaddingOp(csl::Stream stream_, padding_type type_, T value_, std::vector<cv::Range> ranges)
-            : stream(std::move(stream_)), dstRanges(std::move(ranges)), type{ type_ }, value{ value_ }
+            : stream(std::move(stream_)),  type{ type_ }, value{ value_ }, dstRanges(std::move(ranges))
         {
         }
 

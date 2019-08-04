@@ -123,7 +123,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_Assert(output_mat.type() == CV_32F);
                 for (int i = 0; i < input.get_axis_size(0); i++) {
                     auto sample_size = rows * cols * boxes_per_cell * cell_box_size;
-                    do_nms_sort(&output_mat.at<float>() + i * sample_size, rows * cols * boxes_per_cell, class_prob_cutoff, nms_iou_threshold);
+                    do_nms_sort(reinterpret_cast<float*>(output_mat.data) + i * sample_size, rows * cols * boxes_per_cell, class_prob_cutoff, nms_iou_threshold);
                 }
             }
         }

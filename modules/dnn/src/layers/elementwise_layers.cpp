@@ -245,7 +245,7 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        cudaNode = func.initCUDA(preferableTarget, stream);
+        cudaNode = func.initCUDA(Layer::preferableTarget, stream);
     }
 
     std::unique_ptr<CUDABackendNode> cudaNode;

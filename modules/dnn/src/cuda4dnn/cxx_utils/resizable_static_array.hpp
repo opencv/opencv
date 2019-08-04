@@ -52,20 +52,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace cxx_utils {
         iterator begin() noexcept { return std::begin(arr); }
         iterator end() noexcept { return std::begin(arr) + size(); }
 
-        const_iterator begin() const noexcept { return std::cbegin(arr); }
-        const_iterator end() const noexcept { return std::cbegin(arr) + size(); }
+        const_iterator begin() const noexcept { return arr.cbegin(); }
+        const_iterator end() const noexcept { return arr.cbegin() + size(); }
 
-        const_iterator cbegin() const noexcept { return std::cbegin(arr); }
-        const_iterator cend() const noexcept { return std::cbegin(arr) + size(); }
+        const_iterator cbegin() const noexcept { return arr.cbegin(); }
+        const_iterator cend() const noexcept { return arr.cbegin() + size(); }
 
         reverse_iterator rbegin() noexcept { return std::begin(arr) + size(); }
         reverse_iterator rend() noexcept { return std::begin(arr); }
 
-        const_reverse_iterator rbegin() const noexcept { return std::cbegin(arr) + size(); }
-        const_reverse_iterator rend() const noexcept { return std::cbegin(arr); }
+        const_reverse_iterator rbegin() const noexcept { return arr.cbegin()+ size(); }
+        const_reverse_iterator rend() const noexcept { return arr.cbegin(); }
 
-        const_reverse_iterator crbegin() const noexcept { return std::cbegin(arr) + size(); }
-        const_reverse_iterator crend() const noexcept { return std::cbegin(arr); }
+        const_reverse_iterator crbegin() const noexcept { return arr.cbegin() + size(); }
+        const_reverse_iterator crend() const noexcept { return arr.cbegin(); }
 
         reference operator[](size_type pos) {
             assert(pos < size());

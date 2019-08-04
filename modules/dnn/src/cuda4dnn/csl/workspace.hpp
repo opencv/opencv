@@ -69,7 +69,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         template <class T, class ForwardItr>
         TensorSpan<T> get_tensor_span(ForwardItr shape_begin, ForwardItr shape_end) const {
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
-            auto required_size = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
+            auto required_size = std::accumulate(shape_begin, shape_end, 1, std::multiplies<ItrValueType>());
             if (required_size * sizeof(T) > size_in_bytes_)
                 CV_Error(Error::StsNoMem, "memory not sufficient");
             return TensorSpan<T>(static_cast<DevicePtr<T>>(ptr), shape_begin, shape_end);
