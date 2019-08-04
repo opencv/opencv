@@ -100,7 +100,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
             return bias == (int)bias;
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA() && type == CHANNEL_NRM) ||
+               (backendId == DNN_BACKEND_CUDA && haveCUDA()) ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
     }

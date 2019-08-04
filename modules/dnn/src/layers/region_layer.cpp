@@ -96,7 +96,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-            (backendId == DNN_BACKEND_CUDA && haveCUDA());
+              (backendId == DNN_BACKEND_CUDA && haveCUDA());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

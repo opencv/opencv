@@ -79,7 +79,7 @@ public:
             return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
         }
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && haveCUDA() && (pnorm == 1.0 || pnorm == 2.0));
+               (backendId == DNN_BACKEND_CUDA && haveCUDA() && (pnorm == 1 || pnorm == 2));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

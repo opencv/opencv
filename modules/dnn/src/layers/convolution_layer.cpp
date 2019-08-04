@@ -262,7 +262,16 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
-            return true;
+        {
+            if (!haveCUDA())
+                return false;
+
+            /* only convolution 2d and 3d supported */
+            if(kernel_size.size() == 2 || kernel_size.size() == 3)
+                return true;
+
+            return false;
+        }
 
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
@@ -1421,6 +1430,18 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            if (!haveCUDA())
+                return false;
+
+            /* only deconvolution 2d and 3d supported */
+            if (kernel_size.size() == 2 || kernel_size.size() == 3)
+                return true;
+
+            return false;
+        }
+
 #ifdef HAVE_INF_ENGINE
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or IODHW layout
         const int group = numOutput / outGroupCn;
