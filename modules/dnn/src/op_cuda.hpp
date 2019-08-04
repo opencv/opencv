@@ -9,6 +9,7 @@
 #include "cuda4dnn/csl/stream.hpp"
 #include "cuda4dnn/csl/tensor.hpp"
 #include "cuda4dnn/csl/memory.hpp"
+#include "cuda4dnn/csl/fp16.hpp"
 #include "cuda4dnn/cxx_utils/make_unique.hpp"
 #endif
 
@@ -18,8 +19,6 @@
 #include <cstddef>
 #include <memory>
 #include <iterator>
-
-#include "cuda4dnn/csl/fp16.hpp"
 
 namespace cv {
     namespace dnn {
