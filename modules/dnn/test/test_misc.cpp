@@ -463,11 +463,15 @@ TEST_P(Async, set_and_forward_all)
     }
 }
 
-typedef testing::TestWithParam<tuple<int, Target> > Async;
-TEST_P(Async, forward_two_nets)
+INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
+  Values(CV_32F, CV_8U),
+  testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
+));
+
+typedef testing::TestWithParam<Target>  Test_Model_Optimizer;
+TEST_P(Test_Model_Optimizer, forward_two_nets)
 {
-    const int dtype = get<0>(GetParam());
-    const int target = get<1>(GetParam());
+    const int target = GetParam();
 
     const std::string suffix = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? "_fp16" : "";
     const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
@@ -481,7 +485,7 @@ TEST_P(Async, forward_two_nets)
 
     // Generate inputs.
     int blobSize[] = {2, 6, 75, 113};
-    Mat input(4, &blobSize[0], dtype);
+    Mat input(4, &blobSize[0], CV_32F);
     randu(input, 0, 255);
 
     net0.setInput(input);
@@ -495,11 +499,10 @@ TEST_P(Async, forward_two_nets)
 
     normAssert(ref0, ref2, 0, 0);
 }
-
-INSTANTIATE_TEST_CASE_P(/**/, Async, Combine(
-  Values(CV_32F, CV_8U),
+INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
   testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
-));
+);
+
 #endif  // HAVE_INF_ENGINE
 
 }} // namespace
