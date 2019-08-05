@@ -425,3 +425,17 @@ save_onnx_data_and_model(input, output, 'reduce_mean', 'ReduceMean', axes=(2, 3)
 input = np.random.rand(1, 3, 4, 2, 3)
 output = np.mean(input, axis=(3, 4), keepdims=True)
 save_onnx_data_and_model(input, output, 'reduce_mean3d', 'ReduceMean', axes=(3, 4), keepdims=True)
+
+class SplitMax(nn.Module):
+
+    def __init__(self):
+        super(SplitMax, self).__init__()
+
+    def forward(self, x):
+        first, second = torch.split(x, (2, 4), dim=1)
+        second, third = torch.split(second, (2, 2), dim=1)
+        return torch.max(first, torch.max(second, third))
+
+model = SplitMax()
+input = Variable(torch.randn(1, 6, 2, 3))
+save_data_and_model("split_max", input, model)

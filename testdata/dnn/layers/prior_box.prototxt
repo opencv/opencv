@@ -1,0 +1,37 @@
+name: "prior_box"
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 10
+  dim: 10
+}
+
+input: "shape"
+input_shape {
+  dim: 1
+  dim: 2
+  dim: 3
+  dim: 4
+}
+
+layer {
+  name: "priorbox"
+  type: "PriorBox"
+  bottom: "shape"
+  bottom: "data"
+  top: "priorbox"
+  prior_box_param {
+    min_size: 2.0
+    min_size: 3.0
+    max_size: 6.0
+    max_size: 7.0
+    aspect_ratio: 2
+    flip: true
+    clip: false
+    variance: 0.1
+    variance: 0.1
+    variance: 0.2
+    variance: 0.2
+  }
+}

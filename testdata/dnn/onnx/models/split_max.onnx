@@ -1,0 +1,27 @@
+pytorch1.1:â
+9
+tensor.11tensor"Split*
+axis *
+split@@ 
+2
+tensor34"Split*
+axis *
+split@@ 
+
+3
+45"Max
+
+1
+56"Maxtorch-jit-exportZ"
+tensor.1
+
+
+
+
+b
+6
+
+
+
+
+B	
