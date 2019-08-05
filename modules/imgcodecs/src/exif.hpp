@@ -199,7 +199,7 @@ private:
     bool checkTagMark() const;
 
     size_t getFieldSize ();
-    size_t getNumDirEntry() const;
+    size_t getNumDirEntry( const size_t offsetNumDir ) const;
     uint32_t getStartOffset() const;
     uint16_t getExifTag( const size_t offset ) const;
     uint16_t getU16( const size_t offset ) const;
@@ -224,9 +224,6 @@ private:
 
 private:
     static const uint16_t tagMarkRequired = 0x2A;
-
-    //offset to the _number-of-directory-entry_ field
-    static const size_t offsetNumDir = 8;
 
     //max size of data in tag.
     //'DDDDDDDD' contains the value of that Tag. If its size is over 4bytes,
