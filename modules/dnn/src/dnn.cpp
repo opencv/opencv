@@ -2455,9 +2455,8 @@ struct Net::Impl
     {
         std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
 
-        if (inOutShapes[0].in[0].empty())
+        if (inOutShapes[0].in[0].empty() && !layers[0].outputBlobs.empty())
         {
-            CV_Assert(!layers[0].outputBlobs.empty());
             ShapesVec shapes;
             for (int i = 0; i < layers[0].outputBlobs.size(); i++)
             {
@@ -2619,6 +2618,7 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     Net cvNet;
     cvNet.setInputsNames(inputsNames);
 
+    // set empty input to determine input shapes
     for (int inp_id = 0; inp_id < inputsNames.size(); ++inp_id)
     {
         cvNet.setInput(Mat(inp_shapes[inp_id], CV_32F), inputsNames[inp_id]);

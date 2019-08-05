@@ -25,15 +25,6 @@ struct Model::Impl
 
     void predict(Net& net, const Mat& frame, OutputArrayOfArrays outs)
     {
-        if (size.empty())
-        {
-            std::vector<MatShape> inLayerShapes;
-            std::vector<MatShape> outLayerShapes;
-            net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
-            CV_Assert_N(!inLayerShapes.empty(), inLayerShapes[0].size() == 4);
-            size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
-        }
-
         blob = blobFromImage(frame, scale, size, mean, swapRB, crop);
         net.setInput(blob);
 
