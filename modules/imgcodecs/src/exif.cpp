@@ -229,7 +229,7 @@ void ExifReader::parseExif()
 
     uint32_t offset = getStartOffset();
 
-    size_t numEntry = getNumDirEntry();
+    size_t numEntry = getU16( offset );
 
     offset += 2; //go to start of tag fields
 
@@ -296,16 +296,6 @@ bool ExifReader::checkTagMark() const
 uint32_t ExifReader::getStartOffset() const
 {
     return getU32( 4 );
-}
-
-/**
- * @brief Get the number of Directory Entries in Jpeg file
- *
- * @return The number of directory entries
- */
-size_t ExifReader::getNumDirEntry() const
-{
-    return getU16( offsetNumDir );
 }
 
 /**
