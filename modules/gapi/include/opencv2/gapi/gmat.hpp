@@ -69,21 +69,34 @@ struct GAPI_EXPORTS GMatDesc
     int chan;
     cv::gapi::own::Size size; // NB.: no multi-dimensional cases covered yet
     bool planar;
+    std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
 
     GMatDesc(int d, int c, cv::gapi::own::Size s, bool p = false)
         : depth(d), chan(c), size(s), planar(p) {}
+
+    GMatDesc(int d, const std::vector<int> &dd)
+        : depth(d), chan(-1), size{-1,-1}, planar(false), dims(dd) {}
+
+    GMatDesc(int d, std::vector<int> &&dd)
+        : depth(d), chan(-1), size{-1,-1}, planar(false), dims(std::move(dd)) {}
 
     GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {
-        return depth == rhs.depth && chan == rhs.chan && size == rhs.size && planar == rhs.planar;
+        return    depth  == rhs.depth
+               && chan   == rhs.chan
+               && size   == rhs.size
+               && planar == rhs.planar
+               && dims   == rhs.dims;
     }
 
     inline bool operator!= (const GMatDesc &rhs) const
     {
         return !(*this == rhs);
     }
+
+    bool isND() const { return !dims.empty(); }
 
     // Checks if the passed mat can be described by this descriptor
     // (it handles the case when

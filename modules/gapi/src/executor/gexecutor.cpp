@@ -88,7 +88,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
     const Data &d = m_gm.metadata(orig_nh).get<Data>();
 
     if (   d.storage != Data::Storage::INTERNAL
-        && d.storage != Data::Storage::CONST)
+        && d.storage != Data::Storage::CONST_VAL)
         return;
 
     // INTERNALS+CONST only! no need to allocate/reset output objects
@@ -105,7 +105,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle &orig_nh)
         break;
 
     case GShape::GSCALAR:
-        if (d.storage == Data::Storage::CONST)
+        if (d.storage == Data::Storage::CONST_VAL)
         {
             auto rc = RcDesc{d.rc, d.shape, d.ctor};
             magazine::bindInArg(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
