@@ -127,4 +127,4 @@ docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:la
 @endcode
 
 @note
-The example uses latest version of [trzeci/emscripten](https://hub.docker.com/r/trzeci/emscripten) docker container. At this time, the latest version works fine and is `trzeci/emscripten:sdk-tag-1.38.32-64bit` 
+The example uses latest version of [trzeci/emscripten](https://hub.docker.com/r/trzeci/emscripten) docker container. At this time, the latest version works fine and is `trzeci/emscripten:sdk-tag-1.38.32-64bit`
