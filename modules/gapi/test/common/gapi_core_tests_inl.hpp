@@ -1002,6 +1002,32 @@ TEST_P(CropTest, AccuracyTest)
     }
 }
 
+TEST_P(CopyTest, AccuracyTest)
+{
+    cv::Size sz_out = sz;
+    if (dtype != -1)
+    {
+        out_mat_gapi = cv::Mat(sz_out, dtype);
+        out_mat_ocv = cv::Mat(sz_out, dtype);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::copy(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::Mat(in_mat1).copyTo(out_mat_ocv);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_EQ(0, cv::countNonZero(out_mat_ocv != out_mat_gapi));
+        EXPECT_EQ(out_mat_gapi.size(), sz_out);
+    }
+}
+
 TEST_P(ConcatHorTest, AccuracyTest)
 {
     cv::Size sz_out = sz;

@@ -323,6 +323,11 @@ GMat crop(const GMat& src, const Rect& rect)
     return core::GCrop::on(src, rect);
 }
 
+GMat copy(const GMat& src)
+{
+    return core::GCopy::on(src);
+}
+
 GMat concatHor(const GMat& src1, const GMat& src2)
 {
     return core::GConcatHor::on(src1, src2);
