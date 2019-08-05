@@ -139,7 +139,7 @@ const char dir_separators[] = "/";
 
 static bool isDir(const cv::String& path, DIR* dir)
 {
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined _WIN32_WCE
     DWORD attributes;
     BOOL status = TRUE;
     if (dir)
@@ -147,7 +147,7 @@ static bool isDir(const cv::String& path, DIR* dir)
     else
     {
         WIN32_FILE_ATTRIBUTE_DATA all_attrs;
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
         wchar_t wpath[MAX_PATH];
         size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));

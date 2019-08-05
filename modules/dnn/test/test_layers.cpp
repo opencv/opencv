@@ -233,9 +233,14 @@ TEST_P(Test_Caffe_layers, Dropout)
 
 TEST_P(Test_Caffe_layers, Concat)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+#if defined(INF_ENGINE_RELEASE)
+#if INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2019020000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_2019R1, CV_TEST_TAG_DNN_SKIP_IE_2019R1_1);
+#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_2019R2);
+#endif
 #endif
     testLayerUsingCaffeModels("layer_concat");
     testLayerUsingCaffeModels("layer_concat_optim", true, false);
@@ -740,6 +745,22 @@ TEST_P(Test_Caffe_layers, Average_pooling_kernel_area)
     net.setPreferableTarget(target);
     Mat out = net.forward();
     normAssert(out, blobFromImage(ref));
+}
+
+TEST_P(Test_Caffe_layers, PriorBox_repeated)
+{
+    Net net = readNet(_tf("prior_box.prototxt"));
+    int inp_size[] = {1, 3, 10, 10};
+    int shape_size[] = {1, 2, 3, 4};
+    Mat inp(4, inp_size, CV_32F);
+    randu(inp, -1.0f, 1.0f);
+    Mat shape(4, shape_size, CV_32F);
+    randu(shape, -1.0f, 1.0f);
+    net.setInput(inp, "data");
+    net.setInput(shape, "shape");
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(_tf("priorbox_output.npy"));
+    normAssert(out, ref, "");
 }
 
 // Test PriorBoxLayer in case of no aspect ratios (just squared proposals).
