@@ -56,3 +56,11 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
     *Author:* Dmitry Kurtaev
 
     How to define custom layers to import networks.
+
+-   @subpage tutorial_dnn_high_level_api
+
+    *Compatibility:* \> OpenCV 4.1.1
+
+    *Author:* Diego Velazquez
+
+    How you can use the new High Level API for the DNN module, plus some general advice.

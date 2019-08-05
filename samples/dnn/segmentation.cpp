@@ -1,5 +1,7 @@
 #include <fstream>
 #include <sstream>
+#include <iostream>
+
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -13,8 +15,8 @@ std::string keys =
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ device      |  0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes. }"
+    "{ num_classes | | number of classes with which the model was trained. If a classes file is provided this parameter will be infered.}"
     "{ colors      | | Optional path to a text file with colors for an every class. "
                       "An every color is represented with three values from 0 to 255 in BGR channels order. }"
     "{ backend     | 0 | Choose one of computation backends: "
@@ -36,7 +38,7 @@ std::vector<Vec3b> colors;
 
 void showLegend();
 
-void colorizeSegmentation(const Mat &score, Mat &segm);
+void colorizeSegmentation(const Mat &score, Mat &segm, int num_classes);
 
 int main(int argc, char** argv)
 {
@@ -62,10 +64,10 @@ int main(int argc, char** argv)
     int inpHeight = parser.get<int>("height");
     String model = findFile(parser.get<String>("model"));
     String config = findFile(parser.get<String>("config"));
-    String framework = parser.get<String>("framework");
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
 
+    int num_classes;
     // Open file with classes names.
     if (parser.has("classes"))
     {
@@ -78,6 +80,14 @@ int main(int argc, char** argv)
         {
             classes.push_back(line);
         }
+        num_classes = classes.size();
+    }
+    // If no classes file was given num_classes must be provided
+    else
+    {
+        CV_Assert(parser.has("num_classes"));
+        num_classes = parser.get<int>("num_classes");
+
     }
 
     // Open file with colors.
@@ -106,8 +116,11 @@ int main(int argc, char** argv)
     }
 
     CV_Assert(!model.empty());
+
     //! [Read and initialize network]
-    Net net = readNet(model, config, framework);
+    // FCN-8 Trained on Pascal
+    // http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel
+    SegmentationModel net(config, model);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]
@@ -124,8 +137,12 @@ int main(int argc, char** argv)
         cap.open(parser.get<int>("device"));
     //! [Open a video file or an image file or a camera stream]
 
+    //! [Set Input Parameters]
+    net.setInputParams(scale, Size(inpWidth, inpHeight), mean, swapRB, false);
+    //! [Set Input Parameters]
+
     // Process frames.
-    Mat frame, blob;
+    Mat frame;
     while (waitKey(1) < 0)
     {
         cap >> frame;
@@ -135,19 +152,13 @@ int main(int argc, char** argv)
             break;
         }
 
-        //! [Create a 4D blob from a frame]
-        blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
-        //! [Create a 4D blob from a frame]
-
-        //! [Set input blob]
-        net.setInput(blob);
-        //! [Set input blob]
-        //! [Make forward pass]
-        Mat score = net.forward();
-        //! [Make forward pass]
+        //! [Network Forward pass]
+        Mat mask;
+        net.segment(frame, mask);
+        //! [Network Forward pass]
 
         Mat segm;
-        colorizeSegmentation(score, segm);
+        colorizeSegmentation(mask, segm, num_classes);
 
         resize(segm, segm, frame.size(), 0, 0, INTER_NEAREST);
         addWeighted(frame, 0.1, segm, 0.9, 0.0, frame);
@@ -166,17 +177,16 @@ int main(int argc, char** argv)
     return 0;
 }
 
-void colorizeSegmentation(const Mat &score, Mat &segm)
+void colorizeSegmentation(const Mat &mask, Mat &segm, int num_classes)
 {
-    const int rows = score.size[2];
-    const int cols = score.size[3];
-    const int chns = score.size[1];
+    const int rows = mask.size[0];
+    const int cols = mask.size[1];
 
     if (colors.empty())
     {
         // Generate colors.
         colors.push_back(Vec3b());
-        for (int i = 1; i < chns; ++i)
+        for (int i = 1; i < num_classes; ++i)
         {
             Vec3b color;
             for (int j = 0; j < 3; ++j)
@@ -184,36 +194,16 @@ void colorizeSegmentation(const Mat &score, Mat &segm)
             colors.push_back(color);
         }
     }
-    else if (chns != (int)colors.size())
+    else if (num_classes != (int)colors.size())
     {
         CV_Error(Error::StsError, format("Number of output classes does not match "
-                                         "number of colors (%d != %zu)", chns, colors.size()));
-    }
-
-    Mat maxCl = Mat::zeros(rows, cols, CV_8UC1);
-    Mat maxVal(rows, cols, CV_32FC1, score.data);
-    for (int ch = 1; ch < chns; ch++)
-    {
-        for (int row = 0; row < rows; row++)
-        {
-            const float *ptrScore = score.ptr<float>(0, ch, row);
-            uint8_t *ptrMaxCl = maxCl.ptr<uint8_t>(row);
-            float *ptrMaxVal = maxVal.ptr<float>(row);
-            for (int col = 0; col < cols; col++)
-            {
-                if (ptrScore[col] > ptrMaxVal[col])
-                {
-                    ptrMaxVal[col] = ptrScore[col];
-                    ptrMaxCl[col] = (uchar)ch;
-                }
-            }
-        }
+                                         "number of colors (%d != %zu)", num_classes, colors.size()));
     }
 
     segm.create(rows, cols, CV_8UC3);
     for (int row = 0; row < rows; row++)
     {
-        const uchar *ptrMaxCl = maxCl.ptr<uchar>(row);
+        const uchar *ptrMaxCl = mask.ptr<uchar>(row);
         Vec3b *ptrSegm = segm.ptr<Vec3b>(row);
         for (int col = 0; col < cols; col++)
         {

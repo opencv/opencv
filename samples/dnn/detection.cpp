@@ -13,6 +13,8 @@ std::string keys =
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ classes     | | Optional path to a text file with names of classes. }"
+    "{ confidence  | 0.5 | Optional threshold to discard low confidence boxes.}"
+    "{ nms_thr     | 0.0 | Optional IOU threshold to discard highly overlapping boxes.}"
     "{ backend     | 0 | Choose one of computation backends: "
                         "0: automatically (by default), "
                         "1: Halide language (http://halide-lang.org/), "
@@ -55,6 +57,8 @@ int main(int argc, char** argv)
     String config = findFile(parser.get<String>("config"));
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
+    float confThreshold = parser.get<float>("confidence");
+    float nmsThreshold = parser.get<float>("nms_thr");
 
     // Open file with classes names.
     if (parser.has("classes"))
@@ -78,9 +82,9 @@ int main(int argc, char** argv)
     CV_Assert(!model.empty());
 
     //! [Read and initialize network]
-    // Alexnet
-    // https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_alexnet.tar.gz
-    ClassificationModel net(model, config); // create our model
+    // YOLOv3
+    // https://pjreddie.com/media/files/yolov3.weights
+    DetectionModel net(model, config);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]
@@ -113,13 +117,26 @@ int main(int argc, char** argv)
         }
 
         //! [Network Forward pass]
-        std::pair<int, float> prediction = net.classify(frame);
+        std::vector<Rect> boxes;
+        std::vector<int> classIds;
+        std::vector<float> confidences;
+        net.detect(frame, classIds, confidences, boxes, confThreshold, nmsThreshold);
         //! [Network Forward pass]
 
+        //! [Iterate over every predicted box and draw them on the image with the predicted class and confidence on top]
+        std::vector<Rect2d> boxesDouble(boxes.size());
+        std::stringstream ss;
 
-        int classId;
-        float confidence;
-        std::tie(classId, confidence) = prediction;
+        for (uint i = 0; i < boxes.size(); i++) {
+            ss << classIds[i];
+            ss << ": ";
+            ss << confidences[i];
+            boxesDouble[i] = boxes[i];
+            rectangle(frame, boxesDouble[i], Scalar(0, 0, 255), 1, 8, 0);
+            putText(frame, ss.str(), Point(boxes[i].x, boxes[i].y), FONT_HERSHEY_DUPLEX, 0.5, Scalar(0,0,0), 2);
+            ss.str("");
+        }
+        //! [Iterate over every predicted box and draw them on the image with the predicted class and confidence on top]
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -128,13 +145,8 @@ int main(int argc, char** argv)
         std::string label = format("Inference time: %.2f ms", t);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
-        // Print predicted class.
-        label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
-                                                      classes[classId].c_str()),
-                                   confidence);
-        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-
         imshow(kWinName, frame);
     }
+
     return 0;
 }
