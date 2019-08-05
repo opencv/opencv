@@ -23,6 +23,15 @@
 
 namespace cv { namespace gimpl {
 
+namespace {
+bool dumpDotRequired()
+{
+    // FIXME: should we also check cv::graph_dump_path in compile args?
+    static const bool dump_required = (std::getenv("GRAPH_DUMP_PATH") != nullptr);
+    return dump_required;
+}
+}  // anonymous namespace
+
 ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::vector<GArg> &args, const std::string &island)
 {
     ade::NodeHandle op_h = g.createNode();
@@ -145,6 +154,8 @@ void GModel::init(Graph& g)
 
 void GModel::log(Graph &g, ade::NodeHandle nh, std::string &&msg, ade::NodeHandle updater)
 {
+    if (!dumpDotRequired()) return;  // no need to log in this case: no one will access the Journal
+
     std::string s = std::move(msg);
     if (updater != nullptr)
     {
@@ -167,6 +178,8 @@ void GModel::log(Graph &g, ade::NodeHandle nh, std::string &&msg, ade::NodeHandl
 // Unify with GModel::log(.. ade::NodeHandle ..)
 void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandle updater)
 {
+    if (!dumpDotRequired()) return;  // no need to log in this case: no one will access the Journal
+
     std::string s = std::move(msg);
     if (updater != nullptr)
     {
@@ -184,6 +197,18 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
         g.metadata(eh).set(Journal{{s}});
     }
 }
+
+void GModel::log_clear(Graph &g, ade::NodeHandle node)
+{
+    if (!dumpDotRequired()) return;  // nothing to do in this case
+
+    if (g.metadata(node).contains<Journal>())
+    {
+        // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)
+        g.metadata(node).get<Journal>().messages.clear();
+    }
+}
+
 
 ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {

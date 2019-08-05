@@ -826,4 +826,52 @@ TEST(Fluid, InvalidROIs)
     }
 }
 
+
+// FIXME: is there a better way?
+namespace
+{
+#if defined(__linux__)
+#include <sys/time.h>
+#include <sys/resource.h>
+uint64_t currMemoryConsumption()
+{
+    rusage info{};
+    CV_Assert(getrusage(RUSAGE_SELF, &info) == 0);  // 0 - success
+    CV_Assert(info.ru_maxrss != 0);  // 0 - unmaintained?
+    return static_cast<uint64_t>(info.ru_maxrss);
+}
+#else
+uint64_t currMemoryConsumption() { return static_cast<uint64_t>(0); }
+#endif
+}  // anonymous namespace
+
+TEST(Fluid, MemoryConsumptionWithReshapeDoesNotIncrease)
+{
+    cv::GMat in;
+    cv::GMat a, b, c;
+    std::tie(a, b, c) = cv::gapi::split3(in);
+    cv::GMat merged = cv::gapi::merge4(a, b, c, a);
+    cv::GMat d, e, f, g;
+    std::tie(d, e, f, g) = cv::gapi::split4(merged);
+    cv::GMat out = cv::gapi::merge3(d, e, f);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::Mat out_mat;
+
+    const auto compile_args = [] () {
+        return cv::compile_args(cv::gapi::core::fluid::kernels());
+    };
+
+    cv::GCompiled compiled = cv::GComputation(cv::GIn(in), cv::GOut(out)).compile(
+        cv::descr_of(in_mat), compile_args());
+    ASSERT_TRUE(compiled.canReshape());
+
+    constexpr const int iters = 1000;  // should be large enough to see the increasing mem usage
+    auto mem_before = currMemoryConsumption();  // NB: memory in Kb for POSIX
+    for (int _ = 0; _ < iters; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
+
+    ASSERT_EQ(mem_before, currMemoryConsumption());
+}
+
 } // namespace opencv_test
