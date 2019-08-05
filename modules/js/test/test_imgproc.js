@@ -941,4 +941,18 @@ QUnit.test('test_filter', function(assert) {
         inv3.delete();
         inv4.delete();
     }
+    //Rotate
+    {
+        let dst = new cv.Mat();
+        let src = cv.matFromArray(5, 2, cv.CV_8U, [1,2,3,4,5,6,7,8,9,0]);
+
+        cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
+
+        size = dst.size();
+        assert.equal(size.height, 2, "ROTATE_HEIGHT");
+        assert.equal(size.width, 5, "ROTATE_WIGTH");
+
+        dst.delete();
+        src.delete();
+    }
 });
