@@ -248,8 +248,7 @@ void HOGDescriptor::computeGradient(const Mat& img, Mat& grad, Mat& qangle,
     Mat_<float> _lut(1, 256);
     const float* const lut = &_lut(0,0);
 #if CV_SIMD128
-    const float indices[] = { 0.0, 1.0, 2.0, 3.0 };
-    v_float32x4 idx = v_load((float *)indices);
+    v_float32x4 idx(0.0f, 1.0f, 2.0f, 3.0f);
     v_float32x4 ifour = v_setall_f32(4.0);
 
     float* const _data = &_lut(0, 0);
@@ -592,8 +591,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
         i = 0;
     #if CV_SIMD128
-        const float a[] = { 0.0, 1.0, 2.0, 3.0 };
-        v_float32x4 idx = v_load((float *)a);
+        v_float32x4 idx(0.0f, 1.0f, 2.0f, 3.0f);
         v_float32x4 _bw = v_setall_f32(bw), _bh = v_setall_f32(bh);
         v_float32x4 ifour = v_setall_f32(4.0);
 
@@ -613,7 +611,7 @@ void HOGCache::init(const HOGDescriptor* _descriptor,
 
         j = 0;
     #if CV_SIMD128
-        idx = v_load((float *)a);
+        idx = v_float32x4(0.0f, 1.0f, 2.0f, 3.0f);
 
         for (; j <= blockSize.height - 4; j += 4)
         {
