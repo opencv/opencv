@@ -464,7 +464,7 @@ void InfEngineBackendNet::initPlugin(InferenceEngine::CNNNetwork& net)
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
                     enginePtr->AddExtension(extension, 0);
 #else
-                    getCore().AddExtension(extension, device_name);
+                    getCore().AddExtension(extension, "CPU");
 #endif
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
                     found = true;
