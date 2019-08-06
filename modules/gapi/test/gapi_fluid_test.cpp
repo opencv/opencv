@@ -827,12 +827,12 @@ TEST(Fluid, InvalidROIs)
 }
 
 
-// FIXME: is there a better way?
 namespace
 {
 #if defined(__linux__)
 #include <sys/time.h>
 #include <sys/resource.h>
+// FIXME: need a better way to check memory consumption - is this trust-worthy enough?
 uint64_t currMemoryConsumption()
 {
     rusage info{};
@@ -845,7 +845,7 @@ uint64_t currMemoryConsumption() { return static_cast<uint64_t>(0); }
 #endif
 }  // anonymous namespace
 
-TEST(Fluid, MemoryConsumptionWithReshapeDoesNotIncrease)
+TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
 {
     cv::GMat in;
     cv::GMat a, b, c;
@@ -871,7 +871,9 @@ TEST(Fluid, MemoryConsumptionWithReshapeDoesNotIncrease)
     auto mem_before = currMemoryConsumption();  // NB: memory in Kb for POSIX
     for (int _ = 0; _ < iters; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
 
-    ASSERT_EQ(mem_before, currMemoryConsumption());
+    // in theory, something might get deallocated after multiple reshapes (currently not). so
+    // checking that initial memory usage >= memory usage after reshapes
+    ASSERT_GE(mem_before, currMemoryConsumption());
 }
 
 } // namespace opencv_test
