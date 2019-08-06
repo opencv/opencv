@@ -26,43 +26,93 @@ using namespace cv::dnn::cuda4dnn::csl::device;
 namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
 
     namespace raw {
-        template <class T>
-        __global__ void abs(span<T> output, view<T> input) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::abs;
-                output[i] = abs(input[i]);
+        template <class T, std::size_t N>
+        __global__ void abs_vec(span<T> output, view<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::abs;
+                    vec.data[j] = abs(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
             }
         }
 
-        template <class T>
-        __global__ void tanh(span<T> output, view<T> input) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::tanh;
-                output[i] = tanh(input[i]);
+        template <class T, std::size_t N>
+        __global__ void tanh_vec(span<T> output, view<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::tanh;
+                    vec.data[j] = tanh(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
             }
         }
 
-        template <class T>
-        __global__ void sigmoid(span<T> output, view<T> input) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::sigmoid;
-                output[i] = sigmoid(input[i]);
+        template <class T, std::size_t N>
+        __global__ void sigmoid_vec(span<T> output, view<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::sigmoid;
+                    vec.data[j] = sigmoid(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
             }
         }
 
-        template <class T>
-        __global__ void bnll(span<T> output, view<T> input) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::log1pexp;
-                output[i] = input[i] > T(0) ? input[i] + log1pexp(-input[i]) : log1pexp(input[i]);
+        template <class T, std::size_t N>
+        __global__ void bnll_vec(span<T> output, view<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::log1pexp;
+                    vec.data[j] = vec.data[j] > T(0) ? vec.data[j] + log1pexp(-vec.data[j]) : log1pexp(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
             }
         }
 
-        template <class T>
-        __global__ void elu(span<T> output, view<T> input) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::exp;
-                output[i] = input[i] >= T(0) ? input[i] : expm1(input[i]);
+        template <class T, std::size_t N>
+        __global__ void elu_vec(span<T> output, view<T> input) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::expm1;
+                    vec.data[j] = vec.data[j] >= T(0) ? vec.data[j] : expm1(vec.data[j]);
+                }
+                v_store(output_vPtr[i], vec);
             }
         }
 
@@ -138,61 +188,131 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
         }
     }
 
+    template <class T, std::size_t N>
+    void launch_vectorized_abs(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::abs_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
     template <class T>
     void abs(const Stream& stream, span<T> output, view<T> input) {
         CV_Assert(input.size() == output.size());
 
-        auto kernel = raw::abs<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_abs<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_abs<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_abs<T, 1>(stream, output, input);
+        }
     }
 
     template void abs<__half>(const Stream& stream, span<__half> output, view<__half> input);
     template void abs<float>(const Stream& stream, span<float> output, view<float> input);
 
+    template <class T, std::size_t N>
+    void launch_vectorized_tanh(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::tanh_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
     template <class T>
     void tanh(const Stream& stream, span<T> output, view<T> input) {
         CV_Assert(input.size() == output.size());
 
-        auto kernel = raw::tanh<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_tanh<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_tanh<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_tanh<T, 1>(stream, output, input);
+        }
     }
 
     template void tanh<__half>(const Stream&, span<__half>, view<__half>);
     template void tanh<float>(const Stream&, span<float>, view<float>);
 
+    template <class T, std::size_t N>
+    void launch_vectorized_sigmoid(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::sigmoid_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
     template <class T>
     void sigmoid(const Stream& stream, span<T> output, view<T> input) {
         CV_Assert(input.size() == output.size());
 
-        auto kernel = raw::sigmoid<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_sigmoid<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_sigmoid<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_sigmoid<T, 1>(stream, output, input);
+        }
     }
 
     template void sigmoid<__half>(const Stream&, span<__half>, view<__half>);
     template void sigmoid<float>(const Stream&, span<float>, view<float>);
 
+    template <class T, std::size_t N>
+    void launch_vectorized_bnll(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::bnll_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
     template <class T>
     void bnll(const Stream& stream, span<T> output, view<T> input) {
         CV_Assert(input.size() == output.size());
 
-        auto kernel = raw::bnll<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_bnll<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_bnll<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_bnll<T, 1>(stream, output, input);
+        }
     }
 
     template void bnll<__half>(const Stream&, span<__half>, view<__half>);
     template void bnll<float>(const Stream&, span<float>, view<float>);
 
+    template <class T, std::size_t N>
+    void launch_vectorized_elu(const Stream& stream, span<T> output, view<T> input) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::elu_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input);
+    }
+
     template <class T>
     void elu(const Stream& stream, span<T> output, view<T> input) {
         CV_Assert(input.size() == output.size());
 
-        auto kernel = raw::elu<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_vectorized_elu<T, 4>(stream, output, input);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_vectorized_elu<T, 2>(stream, output, input);
+        } else {
+            launch_vectorized_elu<T, 1>(stream, output, input);
+        }
     }
 
     template void elu<__half>(const Stream&, span<__half>, view<__half>);
