@@ -47,6 +47,7 @@ if(WITH_EIGEN AND NOT HAVE_EIGEN)
     if(TARGET Eigen3::Eigen)
       # Use Eigen3 imported target if possible
       list(APPEND OPENCV_LINKER_LIBS Eigen3::Eigen)
+      get_target_property(EIGEN_INCLUDE_PATH Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
       set(HAVE_EIGEN 1)
     else()
       if(DEFINED EIGEN3_INCLUDE_DIRS)
