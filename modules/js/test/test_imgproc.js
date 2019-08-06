@@ -944,13 +944,17 @@ QUnit.test('test_filter', function(assert) {
     //Rotate
     {
         let dst = new cv.Mat();
-        let src = cv.matFromArray(5, 2, cv.CV_8U, [1,2,3,4,5,6,7,8,9,0]);
+        let src = cv.matFromArray(3, 2, cv.CV_8U, [1,2,3,4,5,6]);
 
         cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
 
         size = dst.size();
         assert.equal(size.height, 2, "ROTATE_HEIGHT");
-        assert.equal(size.width, 5, "ROTATE_WIGTH");
+        assert.equal(size.width, 3, "ROTATE_WIGTH");
+
+        let expected = new Uint8Array([5,3,1,6,4,2]);
+
+        assert.deepEqual(dst.data, expected);
 
         dst.delete();
         src.delete();
