@@ -868,7 +868,7 @@ TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
         cv::descr_of(in_mat), compile_args());
     ASSERT_TRUE(compiled.canReshape());
 
-    constexpr const int iters = 1000;  // should be large enough to see the increasing mem usage
+    constexpr const int iters = 3000;  // should be large enough to see the increasing mem usage
     auto mem_before = currMemoryConsumption();  // NB: memory in Kb for POSIX
     for (int _ = 0; _ < iters; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
 
