@@ -20,10 +20,10 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, detect)
     Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    std::vector< Point > corners;
+    std::vector<std::vector< Point >> corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.detect(src, corners));
-    SANITY_CHECK(corners);
+    SANITY_CHECK(corners[0]);
 }
 
 #ifdef HAVE_QUIRC
@@ -33,22 +33,23 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
     const std::string root = "cv/qrcode/";
 
     std::string image_path = findDataFile(root + name_current_image);
-    Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+    Mat src = imread(image_path, IMREAD_GRAYSCALE);
+    std::vector<Mat> straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    std::vector< Point > corners;
-    std::string decoded_info;
+    std::vector<std::vector< Point >> corners;
+    std::vector<std::string> decoded_info;
     QRCodeDetector qrcode;
     ASSERT_TRUE(qrcode.detect(src, corners));
     TEST_CYCLE()
     {
         decoded_info = qrcode.decode(src, corners, straight_barcode);
-        ASSERT_FALSE(decoded_info.empty());
+        ASSERT_FALSE(decoded_info[0].empty());
     }
 
-    std::vector<uint8_t> decoded_info_uint8_t(decoded_info.begin(), decoded_info.end());
+    std::vector<uint8_t> decoded_info_uint8_t(decoded_info[0].begin(), decoded_info[0].end());
     SANITY_CHECK(decoded_info_uint8_t);
-    SANITY_CHECK(straight_barcode);
+    SANITY_CHECK(straight_barcode[0]);
 
 }
 #endif
@@ -65,7 +66,7 @@ typedef ::perf::TestBaseWithParam< tuple< std::string, Size > > Perf_Objdetect_N
 
 PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
 {
-    std::vector<Point> corners;
+    std::vector<std::vector<Point>> corners;
     std::string type_gen = get<0>(GetParam());
     Size resolution = get<1>(GetParam());
     Mat not_qr_code(resolution, CV_8UC1, Scalar(0));
@@ -94,10 +95,12 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
 #ifdef HAVE_QUIRC
 PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
 {
-    Mat straight_barcode;
-    std::vector< Point > corners;
-    corners.push_back(Point( 0, 0)); corners.push_back(Point( 0,  5));
-    corners.push_back(Point(10, 0)); corners.push_back(Point(15, 15));
+    std::vector<Mat> straight_barcode;
+    std::vector<std::vector< Point >> corners;
+    std::vector<Point> tmp;
+    corners.push_back(tmp);
+    corners[0].push_back(Point( 0, 0)); corners[0].push_back(Point( 0,  5));
+    corners[0].push_back(Point(10, 0)); corners[0].push_back(Point(15, 15));
 
     std::string type_gen = get<0>(GetParam());
     Size resolution = get<1>(GetParam());

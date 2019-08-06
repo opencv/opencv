@@ -64,8 +64,8 @@ TEST_P(Objdetect_QRCode, regression)
     Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    std::vector<Point> corners;
-    std::string decoded_info;
+    std::vector<std::vector<Point>> corners;
+    std::vector<std::string> decoded_info;
     QRCodeDetector qrcode;
 #ifdef HAVE_QUIRC
     decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
@@ -93,13 +93,13 @@ TEST_P(Objdetect_QRCode, regression)
                 {
                     int x = config["x"][i];
                     int y = config["y"][i];
-                    EXPECT_NEAR(x, corners[i].x, pixels_error);
-                    EXPECT_NEAR(y, corners[i].y, pixels_error);
+                    EXPECT_NEAR(x, corners[0][i].x, pixels_error);
+                    EXPECT_NEAR(y, corners[0][i].y, pixels_error);
                 }
 
 #ifdef HAVE_QUIRC
                 std::string original_info = config["info"];
-                EXPECT_EQ(decoded_info, original_info);
+                EXPECT_EQ(decoded_info[0], original_info);
 #endif
 
                 return; // done
@@ -119,14 +119,14 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
-    std::vector<Point> corners;
-    Mat straight_barcode;
-    std::string decoded_info;
+    std::vector<std::vector<Point>> corners;
+    std::vector<Mat> straight_barcode;
+    std::vector<std::string> decoded_info;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
     QRCodeDetector qrcode;
     EXPECT_FALSE(qrcode.detect(zero_image, corners));
 #ifdef HAVE_QUIRC
-    corners = std::vector<Point>(4);
+    corners[0] =std::vector<Point>(4);
     EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
 #endif
 }
