@@ -23,8 +23,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         ReshapeOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             /* sometimes the output shape is passed as extra inputs; hence, >= instead of == */

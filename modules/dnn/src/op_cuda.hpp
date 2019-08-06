@@ -10,6 +10,7 @@
 #include "cuda4dnn/csl/tensor.hpp"
 #include "cuda4dnn/csl/memory.hpp"
 #include "cuda4dnn/csl/fp16.hpp"
+#include "cuda4dnn/csl/workspace.hpp"
 #include "cuda4dnn/cxx_utils/make_unique.hpp"
 #endif
 
@@ -132,8 +133,8 @@ namespace cv {
             virtual ~CUDABackendNode() { }
 
             virtual void forward(
-                std::vector<cv::Ptr<BackendWrapper>>& inputs,
-                std::vector<cv::Ptr<BackendWrapper>>& outputs,
+                const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+                const std::vector<cv::Ptr<BackendWrapper>>& outputs,
                 cuda4dnn::csl::Workspace& workspace) = 0;
 
             virtual std::size_t get_workspace_memory_in_bytes() const noexcept { return 0; }

@@ -49,7 +49,6 @@
 #include <opencv2/dnn/csl/stream.hpp>
 #include <opencv2/dnn/csl/cudnn.hpp>
 #include <opencv2/dnn/csl/cublas.hpp>
-#include <opencv2/dnn/csl/workspace.hpp>
 
 #include <set>
 #include <algorithm>
@@ -151,8 +150,8 @@ private:
 
 #ifdef HAVE_CUDA
         if (haveCUDA()) {
-            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
     }
@@ -1031,10 +1030,10 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #ifdef HAVE_CUDA
         switch (targetId)
         {
-        case DNN_TARGET_CUDA_FP16:
-            return CUDABackendWrapperFP16::create(m);
         case DNN_TARGET_CUDA:
             return CUDABackendWrapperFP32::create(m);
+        case DNN_TARGET_CUDA_FP16:
+            return CUDABackendWrapperFP16::create(m);
         default:
             CV_Assert(IS_DNN_CUDA_TARGET(targetId));
         }
@@ -1101,8 +1100,8 @@ struct Net::Impl
     cuda4dnn::csl::Stream stream;
     cuda4dnn::csl::cublas::Handle cublasHandle;
     cuda4dnn::csl::cudnn::Handle cudnnHandle;
-#endif
     cuda4dnn::csl::Workspace workspace;
+#endif
 
     Ptr<BackendWrapper> wrap(Mat& host)
     {
@@ -1145,10 +1144,10 @@ struct Net::Impl
 #ifdef HAVE_CUDA
                 switch (preferableTarget)
                 {
-                case DNN_TARGET_CUDA_FP16:
-                    return CUDABackendWrapperFP16::create(baseBuffer, shape);
                 case DNN_TARGET_CUDA:
                     return CUDABackendWrapperFP32::create(baseBuffer, shape);
+                case DNN_TARGET_CUDA_FP16:
+                    return CUDABackendWrapperFP16::create(baseBuffer, shape);
                 default:
                     CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
                 }
@@ -1299,7 +1298,11 @@ struct Net::Impl
 
             if (preferableBackend == DNN_BACKEND_CUDA && !haveCUDA())
             {
+#ifdef HAVE_CUDA
+                CV_LOG_WARNING(NULL, "unable to use CUDA backend; switching to CPU");
+#else
                 CV_LOG_WARNING(NULL, "DNN module was not built with CUDA backend; switching to CPU");
+#endif
                 preferableBackend = DNN_BACKEND_OPENCV;
                 preferableTarget = DNN_TARGET_CPU;
             }
@@ -1855,9 +1858,22 @@ struct Net::Impl
         for (auto& layer : layers)
         {
             auto& ld = layer.second;
-            std::size_t workspace_size_required = 0;
-            ld.layerInstance->initCUDA(stream, cublasHandle, cudnnHandle, workspace_size_required, ld.inputBlobsWrappers);
-            workspace.require(workspace_size_required);
+            auto& layerInstance = ld.layerInstance;
+
+            if (!layerInstance->supportBackend(DNN_BACKEND_CUDA))
+            {
+                std::ostringstream os;
+                os << "CUDA backend will fallback to the CPU implementation for the layer \"" << ld.name
+                   << "\" of type " << ld.type << '\n';
+                CV_LOG_INFO(NULL, os.str().c_str());
+                continue;
+            }
+
+            auto node = layerInstance->initCUDA(stream, cublasHandle, cudnnHandle, ld.inputBlobsWrappers);
+            ld.backendNodes[DNN_BACKEND_CUDA] = node;
+
+            auto cudaNode = node.dynamicCast<CUDABackendNode>();
+            workspace.require(cudaNode->get_workspace_memory_in_bytes());
         }
 #endif
     }
@@ -2380,8 +2396,7 @@ struct Net::Impl
         if( !ld.skip )
         {
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
-            if (preferableBackend == DNN_BACKEND_OPENCV ||
-                (preferableBackend != DNN_BACKEND_CUDA && (it == ld.backendNodes.end() || it->second.empty())))
+            if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
                 if (isAsync)
                     CV_Error(Error::StsNotImplemented, "Default implementation fallbacks in asynchronous mode");
@@ -2537,74 +2552,41 @@ struct Net::Impl
             }
             else
             {
+                Ptr<BackendNode> node = it->second;
+                CV_Assert(!node.empty());
                 if (preferableBackend == DNN_BACKEND_CUDA)
+                {
+                    CV_Assert(haveCUDA());
+
+                    Ptr<CUDABackendNode> cudaNode = node.dynamicCast<CUDABackendNode>();
+                    CV_Assert(!cudaNode.empty());
+
+                    cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, workspace);
+                }
+                else if (preferableBackend == DNN_BACKEND_HALIDE)
+                {
+                    forwardHalide(ld.outputBlobsWrappers, node);
+                }
+                else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+                {
+                    forwardInfEngine(ld.outputBlobsWrappers, node, isAsync);
+                }
+                else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
                     try
                     {
-                        CV_Assert(haveCUDA());
-#ifdef HAVE_CUDA
-                        layer->forwardCUDA(ld.inputBlobsWrappers, ld.outputBlobsWrappers, workspace);
-#endif
+                        forwardVkCom(ld.outputBlobsWrappers, node);
                     }
-                    catch (const cv::Exception& ex)
+                    catch (const cv::Exception& e)
                     {
-                        /* if the layer failed because of an error, rethrow */
-                        if (ex.code != Error::StsNotImplemented)
-                            throw;
-
-                        /* the layer does not have a CUDA implementation; use CPU for this layer */
-                        std::ostringstream os;
-                        os << ld.name << " [" << ld.type << "]" << " >> " << ex.what();
-                        if (ex.code == Error::StsNotImplemented)
-                            os << "Switching to CPU for this layer.\n";
-                        CV_LOG_WARNING(NULL, os.str().c_str());
-
-                        auto actual_target = preferableTarget;
-                        preferableBackend = DNN_BACKEND_OPENCV;
-                        preferableTarget = DNN_TARGET_CPU;
-                        try
-                        {
-                            forwardLayer(ld);
-                        }
-                        catch (...)
-                        {
-                            preferableTarget = actual_target;
-                            preferableBackend = DNN_BACKEND_CUDA;
-                            throw;
-                        }
-                        preferableTarget = actual_target;
-                        preferableBackend = DNN_BACKEND_CUDA;
+                        CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
+                        it->second = Ptr<BackendNode>();
+                        forwardLayer(ld);
                     }
                 }
                 else
                 {
-                    Ptr<BackendNode> node = it->second;
-                    CV_Assert(!node.empty());
-                    if (preferableBackend == DNN_BACKEND_HALIDE)
-                    {
-                        forwardHalide(ld.outputBlobsWrappers, node);
-                    }
-                    else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-                    {
-                        forwardInfEngine(ld.outputBlobsWrappers, node, isAsync);
-                    }
-                    else if (preferableBackend == DNN_BACKEND_VKCOM)
-                    {
-                        try
-                        {
-                            forwardVkCom(ld.outputBlobsWrappers, node);
-                        }
-                        catch (const cv::Exception& e)
-                        {
-                            CV_LOG_ERROR(NULL, "forwardVkCom failed, fallback to CPU implementation. " << e.what());
-                            it->second = Ptr<BackendNode>();
-                            forwardLayer(ld);
-                        }
-                    }
-                    else
-                    {
-                        CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
-                    }
+                    CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
                 }
             }
         }
@@ -3280,6 +3262,7 @@ String Net::dump()
         case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
         case DNN_BACKEND_INFERENCE_ENGINE: backend = "DLIE/"; break;
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
+        case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
     }
     out << "digraph G {" << '\n';
     // Add nodes
@@ -3376,6 +3359,8 @@ String Net::dump()
              case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16\\n"; colorId = 2; break;
              case DNN_TARGET_MYRIAD: out << "MYRIAD\\n"; colorId = 3; break;
              case DNN_TARGET_FPGA: out << "FPGA\\n"; colorId = 4; break;
+             case DNN_TARGET_CUDA: out << "CUDA\\n"; colorId = 5; break;
+             case DNN_TARGET_CUDA_FP16: out << "CUDA_FP16\\n"; colorId = 6; break;
          }
          out << ((skipId.size() == 1)? "\" " : " }\" ");
          out << "fillcolor=\"" << colors[colorId] << "\" ";
@@ -3781,35 +3766,15 @@ bool Layer::supportBackend(int backendId)
     return backendId == DNN_BACKEND_OPENCV;
 }
 
-void Layer::initCUDA(
+Ptr<BackendNode> Layer::initCUDA(
     cuda4dnn::csl::Stream stream,
     cuda4dnn::csl::cublas::Handle cublas_handle,
     cuda4dnn::csl::cudnn::Handle cudnn_handle,
-    std::size_t& scratch_mem_in_bytes,
     const std::vector<Ptr<BackendWrapper>>& inputs)
 {
-    /*
-    ** Implementing initCUDA is required iff the layer supports forward pass on CUDA devices.
-    ** Otherwise, the forward pass will fallback to CPU automatically.
-    **
-    ** Hence, if the derived class did not implement initCUDA, we do nothing here.
-    */
-}
-
-void Layer::forwardCUDA(
-    std::vector<cv::Ptr<BackendWrapper>>& inputs,
-    std::vector<cv::Ptr<BackendWrapper>>& outputs,
-    cuda4dnn::csl::Workspace& workspace)
-{
-    /*
-    ** Implementing forwardCUDA is required iff the layer supports forward pass on CUDA devices.
-    ** Otherwise, the forward pass will fallback to CPU automatically.
-    **
-    ** Hence, if the derived class did not implement forwardCUDA, we throw to let the network know that
-    ** the layer does not support forward pass on CUDA devices. This will inform the network to use the
-    ** CPU version.
-    */
-    CV_Error(Error::StsNotImplemented, "Layer does not have a CUDA implementation");
+    CV_Error(Error::StsNotImplemented, "CUDA pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
 }
 
 Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &)

@@ -13,7 +13,7 @@
 
 #include "../kernels/region.hpp"
 
-#include "nms.inl.hpp"
+#include "../../nms.inl.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -49,7 +49,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
          * actual class probability = conditional_class_prob * object_prob
          */
 
-        /* method for reducing "class" scores to probabilities */
+        /* method for reducing class scores to probabilities */
         squash_method squash;
 
         std::size_t classes, boxes_per_cell;
@@ -90,8 +90,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(outputs.size() == 1);

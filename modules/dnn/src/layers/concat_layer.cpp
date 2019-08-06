@@ -286,30 +286,17 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
-    {
-        cudaNode->forward(inputs, outputs, workspace);
-    }
-
-    void initCUDA(
+    Ptr<BackendNode> initCUDA(
         csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-
         auto concat_axis = clamp(axis, input_wrapper->getRank());
-        cudaNode = make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(stream), concat_axis, padding);
+        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(stream), concat_axis, padding);
     }
-
-    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE

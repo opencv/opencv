@@ -45,7 +45,6 @@
 #include <opencv2/dnn/csl/cublas.hpp>
 #include <opencv2/dnn/csl/cudnn.hpp>
 #include <opencv2/dnn/csl/stream.hpp>
-#include <opencv2/dnn/csl/workspace.hpp>
 
 #include <vector>
 #include <opencv2/core.hpp>
@@ -92,8 +91,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_MYRIAD,
         DNN_TARGET_VULKAN,
         DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
-        DNN_TARGET_CUDA_FP16,
-        DNN_TARGET_CUDA
+        DNN_TARGET_CUDA,
+        DNN_TARGET_CUDA_FP16
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -178,8 +177,6 @@ CV__DNN_INLINE_NS_BEGIN
      *
      * Each class, derived from Layer, must implement allocate() methods to declare own outputs and forward() to compute outputs.
      * Also before using the new layer into networks you must register your layer by using one of @ref dnnLayerFactory "LayerFactory" macros.
-     *
-     * If a layer intends to provide a CUDA implementation, it must implement initCUDA() and forwardCUDA() methods.
      */
     class CV_EXPORTS_W Layer : public Algorithm
     {
@@ -230,20 +227,6 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param[out] internals allocated internal blobs
          */
         void forward_fallback(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
-
-        /** @brief Forward the @p inputs through the layer.
-         *
-         *  @param[in]  inputs  input tensors
-         *  @param[out] outputs output tensors
-         *  @param[out] workspace scratchpad memory that can be used for anything
-         *
-         *  This method needs to be implemented iff the layer supports computation on a CUDA device. If not implemented,
-         *  the forward pass is computed using the CPU.
-         */
-        virtual void forwardCUDA(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
-            cuda4dnn::csl::Workspace& workspace);
 
         /** @brief
          * @overload
@@ -300,21 +283,17 @@ CV__DNN_INLINE_NS_BEGIN
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
 
         /**
-         * @brief Initializes the layer to perform forward pass on CUDA capable devices.
+         * @brief Returns a CUDA backend node
          *
          * @param[in]  stream                  stream to use for operations
          * @param[in]  cublas_handle           cuBLAS handle to use for cuBLAS operations
          * @param[in]  cudnn_handle            cuDNN handle to use for cuDNN operations
-         * @param[out] scratch_mem_in_bytes    request extra device memory in bytes for internals; defaults to zero
          * @param      inputs                  layer inputs
-         *
-         * This method needs to be implemented iff the layer supports forward pass compuatation on CUDA devices.
          */
-        virtual void initCUDA(
+        virtual Ptr<BackendNode> initCUDA(
             cuda4dnn::csl::Stream stream,
             cuda4dnn::csl::cublas::Handle cublas_handle,
             cuda4dnn::csl::cudnn::Handle cudnn_handle,
-            std::size_t& scratch_mem_in_bytes,
             const std::vector<Ptr<BackendWrapper>>& inputs
         );
 
@@ -566,8 +545,8 @@ CV__DNN_INLINE_NS_BEGIN
          * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |                   |
          * | DNN_TARGET_MYRIAD      |                    |                            + |                    |                   |
          * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
-         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
          * | DNN_TARGET_CUDA        |                    |                              |                    |                 + |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

@@ -423,20 +423,10 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
-    {
-        cudaNode->forward(inputs, outputs, workspace);
-    }
-
-    void initCUDA(
+    Ptr<BackendNode> initCUDA(
         csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
@@ -445,10 +435,8 @@ public:
         auto flatten_start_axis = clamp(axis, input_wrapper->getRank());
 
         auto biasMat_ = bias ? biasMat : Mat();
-        cudaNode = make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(stream), std::move(cublas_handle), flatten_start_axis, weightsMat, biasMat_);
+        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(stream), std::move(cublas_handle), flatten_start_axis, weightsMat, biasMat_);
     }
-
-    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

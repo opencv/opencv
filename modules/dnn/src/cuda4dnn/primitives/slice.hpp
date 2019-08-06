@@ -31,8 +31,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             /* sometimes the output shape is passed in the form of a second input tensor

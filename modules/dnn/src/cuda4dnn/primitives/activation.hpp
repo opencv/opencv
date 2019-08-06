@@ -27,8 +27,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_)), slope{ slope_ } { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -57,8 +57,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_)), min{ min_ }, max{ max_ } { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -92,8 +92,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -123,8 +123,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         TanHOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -151,8 +151,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         SigmoidOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -179,8 +179,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         ELUOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -207,8 +207,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         AbsValOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -235,8 +235,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         BNLLOp(csl::Stream stream_) : stream(std::move(stream_)) { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)
@@ -264,8 +264,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_)), exp{ exp_ }, scale{ scale_ }, shift{ shift_ } { }
 
         void forward(
-            std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             for (int i = 0; i < inputs.size(); i++)

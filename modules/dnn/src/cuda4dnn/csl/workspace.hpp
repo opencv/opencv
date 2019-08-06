@@ -9,18 +9,39 @@
 #include "span.hpp"
 #include "tensor.hpp"
 
-#include <opencv2/dnn/csl/workspace.hpp>
-
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
-    /** used to access the workspace pointer held by Workspace object */
-    class WorkspaceAccessor {
+    /** @brief maintains a single block of reusable device memory
+     *
+     * Each Workspace object is intended to be used by a single entity at a time but by
+     * different entities at different times. It maintains a single reusable block of memory which
+     * is sufficient for the largest consumer.
+     */
+    class Workspace {
     public:
-        static DevicePtr<void> get(const Workspace& workspace);
+
+        /** @brief reserve \p bytes of memory */
+        void require(std::size_t bytes) {
+            if (bytes > ptr.size())
+                ptr.reset(bytes);
+        }
+
+        /** @brief number of bytes reserved by the largest consumer */
+        std::size_t size() const noexcept {
+            return ptr.size();
+        }
+
+        /** @brief returns the pointer to the workspace memory */
+        DevicePtr<unsigned char> get() {
+            return ptr.get();
+        }
+
+    private:
+        ManagedPtr<unsigned char> ptr;
     };
 
     /** used to compute total workspace size from several workspace requests */
@@ -89,7 +110,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     public:
         WorkspaceAllocator() = default;
         WorkspaceAllocator(Workspace& workspace) noexcept
-            : current{ WorkspaceAccessor::get(workspace) }, bytes_remaining { workspace.size() }
+            : current{ workspace.get() }, bytes_remaining { workspace.size() }
         {
             CV_Assert(is_aligned<void>(current, 256));
             CV_Assert(bytes_remaining % 256 == 0);

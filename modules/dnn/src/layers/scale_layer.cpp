@@ -147,20 +147,10 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
-    {
-        cudaNode->forward(inputs, outputs, workspace);
-    }
-
-    void initCUDA(
+    Ptr<BackendNode> initCUDA(
         csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
@@ -173,10 +163,8 @@ public:
          */
         cv::Mat biasMat = hasBias ? blobs.back() : Mat();
 
-        cudaNode = make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(stream), axis, weightsMat, biasMat);
+        return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(stream), axis, weightsMat, biasMat);
     }
-
-    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE

@@ -32,8 +32,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            std::vector<Ptr<BackendWrapper>>& inputs,
-            std::vector<Ptr<BackendWrapper>>& outputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
+            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(inputs.size() == 1 && outputs.size() == 1);

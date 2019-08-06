@@ -267,20 +267,10 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
-    {
-        cudaNode->forward(inputs, outputs, workspace);
-    }
-
-    void initCUDA(
-        csl::Stream stream_,
+    Ptr<BackendNode> initCUDA(
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
@@ -298,12 +288,8 @@ public:
         config.eps = epsilon;
 
         const auto& weightsMat = blobs.empty() ? Mat() : blobs[0];
-        cudaNode = make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(stream_), weightsMat, config);
-
-        scratch_mem_in_bytes = cudaNode->get_workspace_memory_in_bytes();
+        return make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(stream), weightsMat, config);
     }
-
-    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
 #ifdef HAVE_INF_ENGINE

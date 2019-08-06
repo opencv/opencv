@@ -169,20 +169,10 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    void forwardCUDA(
-        std::vector<cv::Ptr<BackendWrapper>>& inputs,
-        std::vector<cv::Ptr<BackendWrapper>>& outputs,
-        csl::Workspace& workspace
-    ) override
-    {
-        cudaNode->forward(inputs, outputs, workspace);
-    }
-
-    void initCUDA(
-        csl::Stream stream_,
+    Ptr<BackendNode> initCUDA(
+        csl::Stream stream,
         csl::cublas::Handle cublas_handle,
         csl::cudnn::Handle cudnn_handle,
-        std::size_t& scratch_mem_in_bytes,
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
@@ -194,10 +184,8 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
 
-        cudaNode = make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(stream_), ptype, paddingValue, dstRanges);
+        return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(stream), ptype, paddingValue, dstRanges);
     }
-
-    std::unique_ptr<CUDABackendNode> cudaNode;
 #endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
