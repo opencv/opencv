@@ -57,6 +57,14 @@ For headless WEC2013, this configuration may not be limited to but is known to w
 -DWITH_TIFF=OFF `
 ```
 
+## Configuring to build as shared
+Building OpenCV as shared libraries is as easy as appending
+```
+-DBUILD_SHARED_LIBS=ON `
+-DBUILD_ZLIB=ON
+```
+to the build configuration.
+
 ## Building
 You are required to build using Unicode:
 `cmake --build . -- /p:CharacterSet=Unicode`
