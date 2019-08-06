@@ -92,18 +92,22 @@ public:
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                  bool isAsync);
 
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
+    void initPlugin(InferenceEngine::CNNNetwork& net);
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
 private:
     InferenceEngine::Builder::Network netBuilder;
 
-    InferenceEngine::InferenceEnginePluginPtr enginePtr;
-    InferenceEngine::InferencePlugin plugin;
     InferenceEngine::ExecutableNetwork netExec;
     InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::TargetDevice targetDevice;
+    std::string device_name;
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
+    InferenceEngine::InferenceEnginePluginPtr enginePtr;
+    InferenceEngine::InferencePlugin plugin;
+#else
+    bool isInit = false;
+#endif
 
     struct InfEngineReqWrapper
     {

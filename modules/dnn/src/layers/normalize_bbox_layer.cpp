@@ -261,7 +261,8 @@ public:
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        if (input->dims.size() == 4)
+        std::vector<size_t> dims = input->getDims();
+        if (dims.size() == 4)
         {
             InferenceEngine::Builder::NormalizeLayer ieLayer(name);
 
@@ -270,13 +271,14 @@ public:
             ieLayer.setEpsilon(epsilon);
 
             InferenceEngine::Builder::Layer l = ieLayer;
-            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+            const int numChannels = dims[1];
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                   InferenceEngine::Layout::C,
-                                                                   {(size_t)numChannels});
+                weights = InferenceEngine::make_shared_blob<float>({
+                              InferenceEngine::Precision::FP32,
+                              {(size_t)numChannels}, InferenceEngine::Layout::C
+                          });
                 weights->allocate();
 
                 Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
