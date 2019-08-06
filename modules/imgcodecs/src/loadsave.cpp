@@ -723,21 +723,25 @@ bool imwrite( const String& filename, InputArray _img,
 static bool
 imdecode_( const Mat& buf, int flags, Mat& mat )
 {
-    CV_Assert(!buf.empty() && buf.isContinuous());
+    CV_Assert(!buf.empty());
+    CV_Assert(buf.isContinuous());
+    CV_Assert(buf.checkVector(1, CV_8U) > 0);
+    Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
+
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf);
+    ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
         return 0;
 
-    if( !decoder->setSource(buf) )
+    if( !decoder->setSource(buf_row) )
     {
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
-        size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        if( fwrite( buf.ptr(), 1, bufSize, f ) != bufSize )
+        size_t bufSize = buf_row.total()*buf.elemSize();
+        if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
             fclose( f );
             CV_Error( Error::StsError, "failed to write image data to temporary file" );

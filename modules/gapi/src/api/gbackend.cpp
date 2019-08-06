@@ -103,7 +103,7 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
                 auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
                 mag_umat = to_ocv(util::get<cv::gapi::own::Mat>(arg)).getUMat(ACCESS_READ);
 #else
-                util::throw_error(std::logic_error("UMat is not supported in stadnalone build"));
+                util::throw_error(std::logic_error("UMat is not supported in standalone build"));
 #endif // !defined(GAPI_STANDALONE)
             }
             else

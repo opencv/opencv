@@ -185,9 +185,9 @@ g_api_ocv_pair_mat_mat opXor = {std::string{"operator^"},
 } // anonymous namespace
 
 GAPI_TEST_FIXTURE(MathOperatorMatScalarTest, initMatsRandU,
-    FIXTURE_API(compare_f, g_api_ocv_pair_mat_scalar), 2, cmpF, op)
+    FIXTURE_API(CompareMats, g_api_ocv_pair_mat_scalar), 2, cmpF, op)
 GAPI_TEST_FIXTURE(MathOperatorMatMatTest, initMatsRandU,
-    FIXTURE_API(compare_f, g_api_ocv_pair_mat_mat), 2, cmpF, op)
+    FIXTURE_API(CompareMats, g_api_ocv_pair_mat_mat), 2, cmpF, op)
 GAPI_TEST_FIXTURE(NotOperatorTest, initMatrixRandU, <>, 0)
 } // opencv_test
 

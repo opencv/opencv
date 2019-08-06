@@ -269,7 +269,7 @@ TEST_P(Polar2CartTest, AccuracyTest)
 {
     cv::Mat out_mat2;
     cv::Mat out_mat_ocv2;
-    if(createOutputMatrices)
+    if (dtype != -1)
     {
         out_mat2 = cv::Mat(sz, dtype);
         out_mat_ocv2 = cv::Mat(sz, dtype);
@@ -808,7 +808,8 @@ TEST_P(Split4Test, AccuracyTest)
     }
 }
 
-static void ResizeAccuracyTest(compare_f cmpF, int type, int interp, cv::Size sz_in, cv::Size sz_out, double fx, double fy, cv::GCompileArgs&& compile_args)
+static void ResizeAccuracyTest(const CompareMats& cmpF, int type, int interp, cv::Size sz_in,
+    cv::Size sz_out, double fx, double fy, cv::GCompileArgs&& compile_args)
 {
     cv::Mat in_mat1 (sz_in, type );
     cv::Scalar mean = cv::Scalar::all(127);
@@ -978,7 +979,7 @@ TEST_P(FlipTest, AccuracyTest)
 TEST_P(CropTest, AccuracyTest)
 {
     cv::Size sz_out = cv::Size(rect_to.width, rect_to.height);
-    if(createOutputMatrices)
+    if (dtype != -1)
     {
         out_mat_gapi = cv::Mat(sz_out, dtype);
         out_mat_ocv = cv::Mat(sz_out, dtype);
@@ -1247,7 +1248,7 @@ TEST_P(SqrtTest, AccuracyTest)
 
 TEST_P(NormalizeTest, Test)
 {
-    initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)), createOutputMatrices);
+    initMatrixRandN(type, sz, CV_MAKETYPE(ddepth, CV_MAT_CN(type)));
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -1265,6 +1266,249 @@ TEST_P(NormalizeTest, Test)
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
+}
+
+TEST_P(BackendOutputAllocationTest, EmptyOutput)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+
+    EXPECT_TRUE(out_mat_gapi.empty());
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+    EXPECT_FALSE(out_mat_gapi.empty());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: output is allocated to the needed size
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi.size());
+}
+
+TEST_P(BackendOutputAllocationTest, CorrectlyPreallocatedOutput)
+{
+    out_mat_gapi = cv::Mat(sz, type);
+    auto out_mat_gapi_ref = out_mat_gapi;  // shallow copy to ensure previous data is not deleted
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::add(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::add(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: output is not reallocated
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi.size());
+
+    EXPECT_EQ(out_mat_gapi_ref.data, out_mat_gapi.data);
+}
+
+TEST_P(BackendOutputAllocationTest, IncorrectOutputMeta)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::add(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+
+    const auto run_and_compare = [&c, this] ()
+    {
+        auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted
+
+        // G-API code //////////////////////////////////////////////////////////////
+        c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+        // OpenCV code /////////////////////////////////////////////////////////////
+        cv::add(in_mat1, in_mat2, out_mat_ocv, cv::noArray());
+
+        // Comparison //////////////////////////////////////////////////////////////
+        // Expected: size is changed, type is changed, output is reallocated
+        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_EQ(sz, out_mat_gapi.size());
+        EXPECT_EQ(type, out_mat_gapi.type());
+
+        EXPECT_NE(out_mat_gapi_ref.data, out_mat_gapi.data);
+    };
+
+    const auto chan = CV_MAT_CN(type);
+
+    out_mat_gapi = cv::Mat(sz, CV_MAKE_TYPE(CV_64F, chan));
+    run_and_compare();
+
+    out_mat_gapi = cv::Mat(sz, CV_MAKE_TYPE(CV_MAT_DEPTH(type), chan + 1));
+    run_and_compare();
+}
+
+TEST_P(BackendOutputAllocationTest, SmallerPreallocatedSize)
+{
+    out_mat_gapi = cv::Mat(sz / 2, type);
+    auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: size is changed, output is reallocated due to original size < curr size
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi.size());
+
+    EXPECT_NE(out_mat_gapi_ref.data, out_mat_gapi.data);
+}
+
+TEST_P(BackendOutputAllocationTest, SmallerPreallocatedSizeWithSubmatrix)
+{
+    out_mat_gapi = cv::Mat(sz / 2, type);
+
+    cv::Mat out_mat_gapi_submat = out_mat_gapi(cv::Rect({10, 0}, sz / 5));
+    EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+
+    auto out_mat_gapi_submat_ref = out_mat_gapi_submat; // shallow copy to ensure previous data is not deleted
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi_submat), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: submatrix is reallocated and is "detached", original matrix is unchanged
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi_submat != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi_submat.size());
+    EXPECT_EQ(sz / 2, out_mat_gapi.size());
+
+    EXPECT_NE(out_mat_gapi_submat_ref.data, out_mat_gapi_submat.data);
+    EXPECT_NE(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+}
+
+TEST_P(BackendOutputAllocationTest, LargerPreallocatedSize)
+{
+    out_mat_gapi = cv::Mat(sz * 2, type);
+    auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: size is changed, output is reallocated
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi.size());
+
+    EXPECT_NE(out_mat_gapi_ref.data, out_mat_gapi.data);
+}
+
+TEST_P(BackendOutputAllocationLargeSizeWithCorrectSubmatrixTest,
+    LargerPreallocatedSizeWithCorrectSubmatrix)
+{
+    out_mat_gapi = cv::Mat(sz * 2, type);
+    auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted
+
+    cv::Mat out_mat_gapi_submat = out_mat_gapi(cv::Rect({5, 8}, sz));
+    EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+
+    auto out_mat_gapi_submat_ref = out_mat_gapi_submat;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi_submat), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: submatrix is not reallocated, original matrix is not reallocated
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi_submat != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi_submat.size());
+    EXPECT_EQ(sz * 2, out_mat_gapi.size());
+
+    EXPECT_EQ(out_mat_gapi_ref.data, out_mat_gapi.data);
+    EXPECT_EQ(out_mat_gapi_submat_ref.data, out_mat_gapi_submat.data);
+    EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+}
+
+TEST_P(BackendOutputAllocationTest, LargerPreallocatedSizeWithSmallSubmatrix)
+{
+    out_mat_gapi = cv::Mat(sz * 2, type);
+    auto out_mat_gapi_ref = out_mat_gapi; // shallow copy to ensure previous data is not deleted
+
+    cv::Mat out_mat_gapi_submat = out_mat_gapi(cv::Rect({5, 8}, sz / 2));
+    EXPECT_EQ(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+
+    auto out_mat_gapi_submat_ref = out_mat_gapi_submat;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::mul(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+    c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi_submat), getCompileArgs());
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    // Expected: submatrix is reallocated and is "detached", original matrix is unchanged
+    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi_submat != out_mat_ocv));
+    EXPECT_EQ(sz, out_mat_gapi_submat.size());
+    EXPECT_EQ(sz * 2, out_mat_gapi.size());
+
+    EXPECT_EQ(out_mat_gapi_ref.data, out_mat_gapi.data);
+    EXPECT_NE(out_mat_gapi_submat_ref.data, out_mat_gapi_submat.data);
+    EXPECT_NE(out_mat_gapi.data, out_mat_gapi_submat.datastart);
+}
+
+TEST_P(ReInitOutTest, TestWithAdd)
+{
+    in_mat1 = cv::Mat(sz, type);
+    in_mat2 = cv::Mat(sz, type);
+    cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(100));
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in1, in2, out;
+    out = cv::gapi::add(in1, in2, dtype);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+
+    const auto run_and_compare = [&c, this] ()
+    {
+        // G-API code //////////////////////////////////////////////////////////////
+        c.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat_gapi), getCompileArgs());
+
+        // OpenCV code /////////////////////////////////////////////////////////////
+        cv::add(in_mat1, in_mat2, out_mat_ocv, cv::noArray());
+
+        // Comparison //////////////////////////////////////////////////////////////
+        EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    };
+
+    // run for uninitialized output
+    run_and_compare();
+
+    // run for initialized output (can be initialized with a different size)
+    initOutMats(out_sz, type);
+    run_and_compare();
 }
 
 } // opencv_test
