@@ -12,7 +12,9 @@ if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE AND NOT CMAKE_GENERATOR MATCH
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
-    message(STATUS "Looking for ccache - found (${CCACHE_PROGRAM})")
+    execute_process(COMMAND ${CCACHE_PROGRAM} -V RESULT_VARIABLE CCACHE_RESULT OUTPUT_VARIABLE CCACHE_OUTPUT)
+    string(REGEX REPLACE "ccache version ([0-9]+\\.[0-9]+\\.?[0-9]*).*" "\\1" CCACHE_VERSION ${CCACHE_OUTPUT})
+    message(STATUS "Looking for ccache - found (${CCACHE_PROGRAM} : ${CCACHE_VERSION})")
     get_property(__OLD_RULE_LAUNCH_COMPILE GLOBAL PROPERTY RULE_LAUNCH_COMPILE)
     if(__OLD_RULE_LAUNCH_COMPILE)
       message(STATUS "Can't replace CMake compiler launcher")
@@ -28,6 +30,12 @@ if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE AND NOT CMAKE_GENERATOR MATCH
         message(STATUS "Unable to compile program with enabled ccache, reverting...")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${__OLD_RULE_LAUNCH_COMPILE}")
       endif()
+    endif()
+    if(${CCACHE_VERSION} VERSION_LESS 3.4)
+      set(OPENCV_NVCC_LAUNCHER "")
+    else()
+      # nvcc support has been added to ccache 3.4
+      set(OPENCV_NVCC_LAUNCHER ${CCACHE_PROGRAM})
     endif()
   else()
     message(STATUS "Looking for ccache - not found")
