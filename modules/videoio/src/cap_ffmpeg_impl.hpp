@@ -496,7 +496,7 @@ struct CvCapture_FFMPEG
 
     double  r2d(AVRational r) const;
     int64_t dts_to_frame_number(int64_t dts);
-    double  dts_to_sec(int64_t dts);
+    double  dts_to_sec(int64_t dts) const;
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
@@ -1167,7 +1167,11 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     switch( property_id )
     {
     case CV_FFMPEG_CAP_PROP_POS_MSEC:
-        return 1000.0*(double)frame_number/get_fps();
+        if (picture_pts == AV_NOPTS_VALUE_)
+        {
+            return 0;
+        }
+        return (dts_to_sec(picture_pts) * 1000);
     case CV_FFMPEG_CAP_PROP_POS_FRAMES:
         return (double)frame_number;
     case CV_FFMPEG_CAP_PROP_POS_AVI_RATIO:
@@ -1277,7 +1281,7 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
     return (int64_t)(get_fps() * sec + 0.5);
 }
 
-double CvCapture_FFMPEG::dts_to_sec(int64_t dts)
+double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
     return (double)(dts - ic->streams[video_stream]->start_time) *
         r2d(ic->streams[video_stream]->time_base);
