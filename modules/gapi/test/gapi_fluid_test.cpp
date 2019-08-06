@@ -835,6 +835,7 @@ namespace
 // FIXME: need a better way to check memory consumption - is this trust-worthy enough?
 uint64_t currMemoryConsumption()
 {
+    std::cout << "Used" << std::endl;
     rusage info{};
     CV_Assert(getrusage(RUSAGE_SELF, &info) == 0);  // 0 - success
     CV_Assert(info.ru_maxrss != 0);  // 0 - unmaintained?
