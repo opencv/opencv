@@ -1372,12 +1372,20 @@ vector<std::string> QRCodeDetector::decode(InputArray in, InputArrayOfArrays poi
     }
 
     vector<vector<Point2f>> src_points ;
+    bool flag = true;
     for(int i = 0; i < points.size().width; i++)
     {
       src_points.push_back(points.getMat(i));
-      CV_Assert(src_points[i].size() == 4);
-      CV_CheckGT(contourArea(src_points[i]), 0.0, "Invalid QR code source points");
+      if(src_points[i].size() != 4)
+        {
+            flag = false;
+            src_points.erase(src_points.begin() + i);
+            i--;
+        }
+      if ((flag == true) && (contourArea(src_points[i]) == 0.0)){ src_points.erase(src_points.begin() + i); i--;}
+      flag = true;
     }
+    CV_Assert(src_points.size() > 0);
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
     bool ok = qrdec.fullDecodingProcess();
