@@ -138,10 +138,7 @@ class dnn_test(NewOpenCVTests):
         config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt")
         frame = cv.imread(img_path)
         model = cv.dnn_DetectionModel(weights, config)
-        size = (300, 300)
-        mean = (127.5, 127.5, 127.5)
-        scale = 1.0 / 127.5
-        model.setInputParams(size=size, mean=mean, scale=scale)
+        model.setInputParams(size=(300, 300), mean=(127.5, 127.5, 127.5), scale=1.0/127.5)
 
         iouDiff = 0.05
         confThreshold = 0.0001
@@ -162,6 +159,21 @@ class dnn_test(NewOpenCVTests):
             cv.rectangle(frame, np.array(box), (0, 255, 0))
             cv.rectangle(frame, tuple(box), (0, 255, 0))
             cv.rectangle(frame, list(box), (0, 255, 0))
+
+
+    def test_classification_model(self):
+        img_path = self.find_dnn_file("dnn/googlenet_0.png")
+        weights = self.find_dnn_file("dnn/squeezenet_v1.1.caffemodel")
+        config = self.find_dnn_file("dnn/squeezenet_v1.1.prototxt")
+        ref = np.load(self.find_dnn_file("dnn/squeezenet_v1.1_prob.npy"))
+
+        frame = cv.imread(img_path)
+        model = cv.dnn_ClassificationModel(config, weights)
+        model.setInputSize(227, 227)
+        model.setInputCrop(True)
+
+        out = model.predict(frame)
+        normAssert(self, out, ref)
 
 
     def test_face_detection(self):
