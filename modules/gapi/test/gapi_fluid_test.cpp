@@ -830,18 +830,26 @@ TEST(Fluid, InvalidROIs)
 namespace
 {
 #if defined(__linux__)
-#include <sys/time.h>
-#include <sys/resource.h>
-// FIXME: need a better way to check memory consumption - is this trust-worthy enough?
 uint64_t currMemoryConsumption()
 {
-    std::cout << "Used" << std::endl;
-    rusage info{};
-    CV_Assert(getrusage(RUSAGE_SELF, &info) == 0);  // 0 - success
-    CV_Assert(info.ru_maxrss != 0);  // 0 - unmaintained?
-    return static_cast<uint64_t>(info.ru_maxrss);
+    // check self-state via /proc information
+    constexpr const char stat_file_path[] = "/proc/self/statm";
+    std::ifstream proc_stat(stat_file_path);
+    if (!proc_stat.is_open() || !proc_stat.good())
+    {
+        CV_LOG_WARNING(NULL, "Failed to open stat file: " << stat_file_path);
+        return static_cast<uint64_t>(0);
+    }
+    std::string stat_line;
+    std::getline(proc_stat, stat_line);
+    uint64_t unused, rss;
+    // using resident set size
+    std::istringstream(stat_line) >> unused >> rss;
+    CV_Assert(rss != 0);
+    return static_cast<uint64_t>(rss);
 }
 #else
+// FIXME: implement this part (at least for Windows?), right now it's enough to check Linux only
 uint64_t currMemoryConsumption() { return static_cast<uint64_t>(0); }
 #endif
 }  // anonymous namespace
@@ -868,12 +876,10 @@ TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
         cv::descr_of(in_mat), compile_args());
     ASSERT_TRUE(compiled.canReshape());
 
-    constexpr const int iters = 3000;  // should be large enough to see the increasing mem usage
-    auto mem_before = currMemoryConsumption();  // NB: memory in Kb for POSIX
+    constexpr const int iters = 1000;  // should be large enough to see the increasing mem usage
+    auto mem_before = currMemoryConsumption();
     for (int _ = 0; _ < iters; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
 
-    // in theory, something might get deallocated after multiple reshapes (currently not). so
-    // checking that initial memory usage >= memory usage after reshapes
     ASSERT_GE(mem_before, currMemoryConsumption());
 }
 
