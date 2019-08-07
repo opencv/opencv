@@ -5,7 +5,7 @@
 
 namespace opencv_test { namespace {
 
-    TEST(Rect, rectUnionOperator) {        
+    TEST(Rect, rectUnionOperator) {
 
         Rect2f test = Rect();
 
@@ -14,7 +14,6 @@ namespace opencv_test { namespace {
         ASSERT_EQ(Rect(0, 0, 1, 1), Rect(0, 0, 1, 1) & Rect(0, 0, 1, 1));
         ASSERT_EQ(Rect(1, 1, 1, 1), Rect(0, 0, 2, 2) & Rect(1, 1, 1, 1));
         ASSERT_EQ(Rect(1, 1, 1, 1), Rect(0, 0, 2, 2) & Rect(1, 1, 2, 2));
-
 
         ASSERT_EQ(Rect(1, 0, 0, 1), Rect(0, 0, 1, 1) & Rect(1, 0, 1, 1));
         ASSERT_EQ(Rect(1, 1, 0, 0), Rect(0, 0, 1, 1) & Rect(1, 1, 1, 1));
