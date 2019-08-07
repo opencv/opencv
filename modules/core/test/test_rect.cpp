@@ -7,8 +7,6 @@ namespace opencv_test { namespace {
 
     TEST(Rect, rectUnionOperator) {
 
-        Rect2f test = Rect();
-
         ASSERT_EQ(Rect(0, 0, 0, 0), Rect(0, 0, 1, 1) & Rect(2, 2, 1, 1));
         ASSERT_EQ(Rect(0, 0, 0, 0), Rect(2, 2, 1, 1) & Rect(0, 0, 1, 1));
         ASSERT_EQ(Rect(0, 0, 1, 1), Rect(0, 0, 1, 1) & Rect(0, 0, 1, 1));
