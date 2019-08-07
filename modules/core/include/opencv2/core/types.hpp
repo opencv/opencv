@@ -1865,7 +1865,7 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
     a.height = std::min(a.y + a.height, b.y + b.height) - y1;
     a.x = x1;
     a.y = y1;
-    if( a.width <= 0 || a.height <= 0 )
+    if( a.width < 0 || a.height < 0 )
         a = Rect();
     return a;
 }
