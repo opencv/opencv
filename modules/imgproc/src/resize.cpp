@@ -1505,7 +1505,7 @@ struct HResizeLinear
         int dx0 = vecOp((const uchar**)src, (uchar**)dst, count,
             xofs, (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax );
 
-        for( k = 0; k <= count - 2; k++ )
+        for( k = 0; k <= count - 2; k+=2 )
         {
             const T *S0 = src[k], *S1 = src[k+1];
             WT *D0 = dst[k], *D1 = dst[k+1];
@@ -1529,7 +1529,7 @@ struct HResizeLinear
         {
             const T *S = src[k];
             WT *D = dst[k];
-            for( dx = 0; dx < xmax; dx++ )
+            for( dx = dx0; dx < xmax; dx++ )
             {
                 int sx = xofs[dx];
                 D[dx] = S[sx]*alpha[dx*2] + S[sx+cn]*alpha[dx*2+1];
