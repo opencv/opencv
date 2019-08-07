@@ -187,7 +187,6 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
 
 void GModel::log_clear(Graph &g, ade::NodeHandle node)
 {
-    return;  // FIXME: remove this prior to merge. This is here to see whether memory consumption test works
     if (g.metadata(node).contains<Journal>())
     {
         // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)

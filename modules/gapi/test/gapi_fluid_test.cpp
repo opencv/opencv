@@ -846,7 +846,7 @@ uint64_t currMemoryConsumption()
     // using resident set size
     std::istringstream(stat_line) >> unused >> rss;
     CV_Assert(rss != 0);
-    return static_cast<uint64_t>(rss);
+    return rss;
 }
 #else
 // FIXME: implement this part (at least for Windows?), right now it's enough to check Linux only
@@ -876,11 +876,11 @@ TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
         cv::descr_of(in_mat), compile_args());
     ASSERT_TRUE(compiled.canReshape());
 
-    constexpr const int iters = 1000;  // should be large enough to see the increasing mem usage
-    auto mem_before = currMemoryConsumption();
-    for (int _ = 0; _ < iters; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
+    const auto mem_before = currMemoryConsumption();
+    for (int _ = 0; _ < 1000; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
+    const auto mem_after = currMemoryConsumption();
 
-    ASSERT_GE(mem_before, currMemoryConsumption());
+    ASSERT_GE(mem_before, mem_after);
 }
 
 } // namespace opencv_test
