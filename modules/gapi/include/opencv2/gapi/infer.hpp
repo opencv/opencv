@@ -199,7 +199,8 @@ struct GAPI_EXPORTS GNetParam {
  * @sa cv::gapi::networks
  */
 struct GAPI_EXPORTS GNetPackage {
-    explicit GNetPackage(std::initializer_list<GNetParam> &&ii = {});
+    GNetPackage() : GNetPackage({}) {}
+    explicit GNetPackage(std::initializer_list<GNetParam> &&ii);
     std::vector<GBackend> backends() const;
     std::vector<GNetParam> networks;
 };
