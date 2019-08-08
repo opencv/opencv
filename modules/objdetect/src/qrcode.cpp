@@ -249,7 +249,7 @@ void QRDetect::fixationPoints(vector<vector<Point2f>>& local_point)
    	  {
 
            local_point.erase(local_point.begin() + c);
-           c--;
+           if(local_point.size() != (c + 1))c--;
      	     break;
 
   	  }
@@ -314,7 +314,13 @@ void QRDetect::fixationPoints(vector<vector<Point2f>>& local_point)
 
         }
        if (index_max == i_min_cos) { std::swap(local_point[c][0], local_point[c][index_max]); }
-       else {local_point[c].clear(); local_point.erase(local_point.begin()+c); c--;break; }
+       else {
+               local_point[c].clear();
+               local_point.erase(local_point.begin()+c);
+               if(local_point.size() != (c + 1))
+                  c--;
+               break;
+           }
 
 
        const Point2f rpt = local_point[c][0], bpt = local_point[c][1], gpt = local_point[c][2];
@@ -476,15 +482,15 @@ bool QRDetect::localization()
                   min_sum_area = cur_sum_area;
                   min_sum_per = cur_sum_per;
                   triangles = tmp_triangle;
+
               }
               fixationPoints(tmp_triangle);
-
-           if(tmp_triangle.size() == num_qr)
-           {
-                for(size_t i = 0; i < num_qr; i ++)
-                    localization_points.push_back(tmp_triangle[i]);
-                flag_for_out = false;
-           }
+              if(tmp_triangle.size() == num_qr)
+              {
+                  for(size_t i = 0; i < num_qr; i ++)
+                      localization_points.push_back(tmp_triangle[i]);
+                  flag_for_out = false;
+              }
 
          }
             cur_sum_area = 0;
@@ -525,7 +531,7 @@ bool QRDetect::localization()
                 if (norm(localization_points[k][i] - localization_points[k][j]) < 10)
                 {
                     localization_points.erase(localization_points.begin() + k);
-
+                    if(localization_points.size() != (k + 1)) k--;
                 }
             }
         }
@@ -542,7 +548,11 @@ bool QRDetect::computeTransformationPoints()
 
     for(size_t c = 0; c < localization_points.size(); c++)
     {
-      if (localization_points[c].size() != 3)    localization_points.erase(localization_points.begin()+c);
+      if (localization_points[c].size() != 3)
+      {
+         localization_points.erase(localization_points.begin()+c);
+         if(localization_points.size() != (c + 1)) c--;
+      }
 
       vector<Point> locations, non_zero_elem[3], newHull;
       vector<Point2f> new_non_zero_elem[3];
@@ -1380,9 +1390,10 @@ vector<std::string> QRCodeDetector::decode(InputArray in, InputArrayOfArrays poi
         {
             flag = false;
             src_points.erase(src_points.begin() + i);
-            i--;
+            if(points.size().width != (i + 1)) i--;
         }
-      if ((flag == true) && (contourArea(src_points[i]) == 0.0)){ src_points.erase(src_points.begin() + i); i--;}
+      if ((flag == true) && (contourArea(src_points[i]) == 0.0)){ src_points.erase(src_points.begin() + i);
+                                                                  if(points.size().width != (i + 1)) i--;}
       flag = true;
     }
     CV_Assert(src_points.size() > 0);

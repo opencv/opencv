@@ -59,7 +59,7 @@ void drawQRCodeContour(Mat &color_image, vector<Mat> transform)
             double show_radius = (color_image.rows  > color_image.cols)
                        ? (2.813 * color_image.rows) / color_image.cols
                        : (2.813 * color_image.cols) / color_image.rows;
-            double contour_radius = show_radius * 0.5;
+            double contour_radius = show_radius * 0.4;
 
             Mat contours;
             contours = transform[i];

@@ -13,8 +13,23 @@ std::string qrcode_images_name[] = {
   "version_4_down.jpg", "version_4_left.jpg", "version_4_right.jpg", "version_4_up.jpg", "version_4_top.jpg",
   "version_5_down.jpg", "version_5_left.jpg", "version_5_right.jpg", "version_5_up.jpg", "version_5_top.jpg",
   "russian.jpg", "kanji.jpg", "link_github_ocv.jpg", "link_ocv.jpg", "link_wiki_cv.jpg"
+
 };
 
+std::tuple<std::string, size_t> mult_qrcodes_image_name[] =
+{
+  make_tuple("2_close_qrcodes.jpg",  1, "https://en.wikipedia.org/wiki/Computer_vision"),
+  make_tuple("2_qrcodes.jpg", 2, "https://en.wikipedia.org/wiki/Computer_vision","I Love OpenCV"),
+  make_tuple("2_qrcodes.jpg", 2, "https://en.wikipedia.org/wiki/Computer_vision","I Love OpenCV"),
+  make_tuple("3_qrcodes.jpg", 3, "https://en.wikipedia.org/wiki/Computer_vision",
+                                 "I Love OpenCV",
+                                 "https://github.com/opencv/opencv/tree/3.4")
+};
+
+std::string origin_info[] =
+{
+  "https://en.wikipedia.org/wiki/Computer_vision","I Love OpenCV", "https://github.com/opencv/opencv/tree/3.4"
+};
 // #define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
 
@@ -124,19 +139,54 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
-   std::vector<Mat> corners;
+    std::vector<Mat> corners;
     std::vector<Mat> straight_barcode;
     std::vector<std::string> decoded_info;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
     QRCodeDetector qrcode;
     EXPECT_FALSE(qrcode.detect(zero_image, corners));
 #ifdef HAVE_QUIRC
-    //corners[0] =std::vector<Point>(4);
-    EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
+     std::vector<Point> t_vec(4);
+     Mat tmp_mat(t_vec);
+     corners.push_back(tmp_mat);
+     EXPECT_ANY_THROW(qrcode.decode(zero_image, corners, straight_barcode));
 #endif
 }
 
 
+typedef testing::TestWithParam< std::tuple < std::string, size_t, std > > Objdetect_Multiple_QRCode;
+TEST_P(Objdetect_Multiple_QRCode, multiple_qrcode_detect)
+{
+  const std::string name_current_image = get<0>(GetParam());
+  size_t num = get<1>(GetParam());
+  const std::string root = "qrcode/";
+
+  std::string image_path = findDataFile(root + name_current_image);
+  Mat src = imread(image_path, IMREAD_GRAYSCALE);
+  std::vector<Mat> straight_barcode;
+  ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
+  std::vector<Mat> corners;
+  std::vector<std::string> decoded_info;
+  QRCodeDetector qrcode;
+#ifdef HAVE_QUIRC
+  decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
+  ASSERT_TRUE(corners.size() == num);
+  ASSERT_TRUE(decoded_info.size() == num);
+  for(size_t i = 0; i < corners.size(); i++) ASSERT_FALSE(corners[i].empty());
+  for(size_t i = 0; i < decoded_info.size(); i++) ASSERT_FALSE(decoded_info[i].empty());
+
+  for(size_t i = 0; i < decoded_info.size(); i++)  EXPECT_EQ(decoded_info[i], origin_info[i]);
+#else
+  ASSERT_TRUE(qrcode.detect(src, corners));
+  ASSERT_TRUE(corners.size() == num);
+  for(size_t i = 0; i < corners.size(); i++) ASSERT_FALSE(corners[i].empty());
+#endif
+
+}
+
+
+INSTANTIATE_TEST_CASE_P(/**/,Objdetect_Multiple_QRCode, testing::ValuesIn(mult_qrcodes_image_name));
 
 #endif // UPDATE_QRCODE_TEST_DATA
 
