@@ -999,9 +999,14 @@ CV__DNN_INLINE_NS_BEGIN
       * Model creates net from file with trained weights and config,
       * sets preprocessing input and runs forward pass.
       */
-     class CV_EXPORTS_W Model : public Net
+     class CV_EXPORTS_W_SIMPLE Model : public Net
      {
      public:
+         /**
+          * @brief Default constructor.
+          */
+         Model();
+
          /**
           * @brief Create model from deep learning network represented in one of the supported formats.
           * An order of @p model and @p config arguments does not matter.
@@ -1020,7 +1025,7 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[in] size New input size.
           *  @note If shape of the new blob less than 0, then frame size not change.
          */
-         Model& setInputSize(const Size& size);
+         CV_WRAP Model& setInputSize(const Size& size);
 
          /** @brief Set input size for frame.
          *  @param[in] width New input width.
@@ -1028,27 +1033,27 @@ CV__DNN_INLINE_NS_BEGIN
          *  @note If shape of the new blob less than 0,
          *  then frame size not change.
          */
-         Model& setInputSize(int width, int height);
+         CV_WRAP Model& setInputSize(int width, int height);
 
          /** @brief Set mean value for frame.
           *  @param[in] mean Scalar with mean values which are subtracted from channels.
          */
-         Model& setInputMean(const Scalar& mean);
+         CV_WRAP Model& setInputMean(const Scalar& mean);
 
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         Model& setInputScale(double scale);
+         CV_WRAP Model& setInputScale(double scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
          */
-         Model& setInputCrop(bool crop);
+         CV_WRAP Model& setInputCrop(bool crop);
 
          /** @brief Set flag swapRB for frame.
           *  @param[in] swapRB Flag which indicates that swap first and last channels.
          */
-         Model& setInputSwapRB(bool swapRB);
+         CV_WRAP Model& setInputSwapRB(bool swapRB);
 
          /** @brief Set preprocessing parameters for frame.
          *  @param[in] size New input size.
@@ -1078,7 +1083,7 @@ CV__DNN_INLINE_NS_BEGIN
       * ClassificationModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return top-1 prediction.
       */
-     class CV_EXPORTS_W ClassificationModel : public Model
+     class CV_EXPORTS_W_SIMPLE ClassificationModel : public Model
      {
      public:
          /**
@@ -1111,7 +1116,7 @@ CV__DNN_INLINE_NS_BEGIN
       * sets preprocessing input, runs forward pass and return result detections.
       * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
       */
-     class CV_EXPORTS_W DetectionModel : public Model
+     class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
      {
      public:
          /**
