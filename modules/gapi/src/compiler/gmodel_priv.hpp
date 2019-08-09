@@ -46,6 +46,14 @@ template<typename T> inline ade::NodeHandle dataNodeOf(const ConstLayoutGraph& g
     return detail::dataNodeOf(g, cv::gimpl::proto::origin_of(GProtoArg{t}));
 }
 
+inline ade::NodeHandle producerOf(const cv::gimpl::GModel::Graph& gm, ade::NodeHandle dh)
+{
+    GAPI_Assert(gm.metadata(dh).get<NodeType>().t == NodeType::DATA);
+    auto ins = dh->inNodes();
+    return ins.empty() ? ade::NodeHandle{ } : *ins.begin();
+}
+
+
 }}}
 
 #endif // OPENCV_GAPI_GMODEL_PRIV_HPP
