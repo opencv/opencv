@@ -47,12 +47,22 @@ Model::Model(const String& model, const String& config)
     : Net(readNet(model, config)), impl(new Impl)
 {
     impl->outNames = getUnconnectedOutLayersNames();
-}
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
+        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
+};
 
 Model::Model(const Net& network) : Net(network), impl(new Impl)
 {
     impl->outNames = getUnconnectedOutLayersNames();
-}
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
+        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
+};
 
 Model& Model::setInputSize(const Size& size)
 {
