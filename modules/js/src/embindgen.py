@@ -98,7 +98,7 @@ core = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bit
              'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen', \
              'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', \
              'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', \
-             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'setIdentity', 'setRNGSeed', \
+             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed', \
              'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat'],
         'Algorithm': []}
 
@@ -145,7 +145,7 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
 
 photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
-              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard'],
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
         'CalibrateCRF': ['process'],
         'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
                       'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
