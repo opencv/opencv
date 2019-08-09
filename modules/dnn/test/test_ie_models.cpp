@@ -240,20 +240,6 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     infRequest.Infer();
 }
 
-std::vector<String> getOutputsNames(const Net& net)
-{
-    std::vector<String> names;
-    if (names.empty())
-    {
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        std::vector<String> layersNames = net.getLayerNames();
-        names.resize(outLayers.size());
-        for (size_t i = 0; i < outLayers.size(); ++i)
-            names[i] = layersNames[outLayers[i] - 1];
-    }
-    return names;
-}
-
 void runCV(Target target, const std::string& xmlPath, const std::string& binPath,
            const std::map<std::string, cv::Mat>& inputsMap,
            std::map<std::string, cv::Mat>& outputsMap)
@@ -263,7 +249,7 @@ void runCV(Target target, const std::string& xmlPath, const std::string& binPath
         net.setInput(it.second, it.first);
     net.setPreferableTarget(target);
 
-    std::vector<String> outNames = getOutputsNames(net);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
     net.forward(outs, outNames);
 
@@ -317,6 +303,47 @@ INSTANTIATE_TEST_CASE_P(/**/,
     Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
             testing::ValuesIn(getOpenVINOTestModelsList())
     )
+);
+
+typedef TestWithParam<Target> DNNTestHighLevelAPI;
+TEST_P(DNNTestHighLevelAPI, predict)
+{
+    initDLDTDataPath();
+
+    Target target = (dnn::Target)(int)GetParam();
+    bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
+
+    OpenVINOModelTestCaseInfo modelInfo = getOpenVINOTestModels().find("age-gender-recognition-retail-0013")->second;
+
+    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+
+    std::string xmlPath = findDataFile(modelPath + ".xml");
+    std::string binPath = findDataFile(modelPath + ".bin");
+
+    Model model(xmlPath, binPath);
+    Mat frame = imread(findDataFile("dnn/googlenet_1.png"));
+    std::vector<Mat> outs;
+    model.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    model.setPreferableTarget(target);
+    model.predict(frame, outs);
+
+    Net net = readNet(xmlPath, binPath);
+    Mat input = blobFromImage(frame, 1.0, Size(62, 62));
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setPreferableTarget(target);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> refs;
+    net.forward(refs, outNames);
+
+    CV_Assert(refs.size() == outs.size());
+    for (int i = 0; i < refs.size(); ++i)
+        normAssert(outs[i], refs[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    DNNTestHighLevelAPI, testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
 );
 
 }}
