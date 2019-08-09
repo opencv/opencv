@@ -14,7 +14,7 @@
 namespace opencv_test
 {
 
-TEST_P(MathOpTest, MatricesAccuracyTest )
+TEST_P(MathOpTest, MatricesAccuracyTest)
 {
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, in2, out;
