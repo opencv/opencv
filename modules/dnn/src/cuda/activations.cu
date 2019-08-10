@@ -385,7 +385,6 @@ namespace cv { namespace dnn { namespace cuda4dnn  { namespace kernels {
     template <class T>
     void axiswise_relu(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> slope) {
         CV_Assert(input.size() == output.size());
-        CV_Assert(slope.size() == input.size() / inner_size);
 
         if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && inner_size % 4 == 0) {
             launch_vectorized_axiswise_relu<T, 4>(stream, output, input, inner_size, slope);
