@@ -11,7 +11,6 @@
 #include "cuda4dnn/csl/memory.hpp"
 #include "cuda4dnn/csl/fp16.hpp"
 #include "cuda4dnn/csl/workspace.hpp"
-#include "cuda4dnn/cxx_utils/make_unique.hpp"
 #endif
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -142,18 +141,18 @@ namespace cv {
 
         /* utility function which creates a correct backend node based on `targetId` */
         template <template <class> class NodeType, class ...Args>
-        std::unique_ptr<CUDABackendNode> make_cuda_node(int targetId, Args&& ...args)
+        cv::Ptr<BackendNode> make_cuda_node(int targetId, Args&& ...args)
         {
             switch (targetId)
             {
             case DNN_TARGET_CUDA_FP16:
-                return cuda4dnn::cxx_utils::make_unique<NodeType<half>>(std::forward<Args>(args)...);
+                return Ptr<BackendNode>(new NodeType<half>(std::forward<Args>(args)...));
             case DNN_TARGET_CUDA:
-                return cuda4dnn::cxx_utils::make_unique<NodeType<float>>(std::forward<Args>(args)...);
+                return Ptr<BackendNode>(new NodeType<float>(std::forward<Args>(args)...));
             default:
                 CV_Assert(IS_DNN_CUDA_TARGET(targetId));
             }
-            return nullptr;
+            return Ptr<BackendNode>();
         }
 
         /* base class for all CUDA backend/target wrappers */
@@ -176,7 +175,7 @@ namespace cv {
         };
 
         /* the code for different wrappers barely change; hence, we use this template as a wrapper generator */
-        template <class T, int targetId>
+        template <class T, int TargetID>
         class GenericCUDABackendWrapper final : public CUDABackendWrapper {
         public:
             using value_type = T;
@@ -192,7 +191,7 @@ namespace cv {
              * - the host memory used by `m` is page-locked
              */
             GenericCUDABackendWrapper(Mat& m)
-                : CUDABackendWrapper(targetId)
+                : CUDABackendWrapper(TargetID)
             {
                 shape = cv::dnn::shape(m);
 
@@ -207,7 +206,7 @@ namespace cv {
             }
 
             GenericCUDABackendWrapper(const Ptr<BackendWrapper>& base_, const MatShape& shape_)
-                : CUDABackendWrapper(targetId)
+                : CUDABackendWrapper(TargetID)
             {
                 const Ptr<GenericCUDABackendWrapper> base = base_.dynamicCast<GenericCUDABackendWrapper>();
                 CV_Assert(base);

@@ -318,7 +318,7 @@ struct ReLUFunctor
     }
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);
     }
@@ -488,7 +488,7 @@ struct ReLU6Functor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
     }
@@ -577,7 +577,7 @@ struct TanHFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
     }
@@ -666,7 +666,7 @@ struct SigmoidFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
     }
@@ -757,7 +757,7 @@ struct ELUFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ELUOp>(target, stream);
     }
@@ -849,7 +849,7 @@ struct AbsValFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
     }
@@ -938,7 +938,7 @@ struct BNLLFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::BNLLOp>(target, stream);
     }
@@ -1055,7 +1055,7 @@ struct PowerFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
     }
@@ -1217,7 +1217,7 @@ struct ChannelsPReLUFunctor
 #endif
 
 #ifdef HAVE_CUDA
-    std::unique_ptr<CUDABackendNode> initCUDA(int target, csl::Stream stream)
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(target, stream, scale);
     }
