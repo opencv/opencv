@@ -152,18 +152,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 2 && outputs.size() == 1);
+            /* sometimes a third input is passed to provide the output shape; we won't need it */
+            CV_Assert(inputs.size() == 2 || inputs.size() == 3);
+            CV_Assert(outputs.size() >= 1);
 
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto input_data = input_wrapper->getView();
+            for(int i = 0;  i < outputs.size(); i++)
+            {
+                auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
+                auto input_data = input_wrapper->getView();
 
-            auto indices_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto input_indices = indices_wrapper->getView();
+                auto indices_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                auto input_indices = indices_wrapper->getView();
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output_data = output_wrapper->getSpan();
+                auto output_wrapper = outputs[i].dynamicCast<wrapper_type>();
+                auto output_data = output_wrapper->getSpan();
 
-            kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
+                kernels::max_unpooling<T>(stream, output_data, input_data, input_indices, window_size, strides, padding_left);
+            }
         }
 
     private:
