@@ -387,7 +387,7 @@ public:
         const std::vector<Ptr<BackendWrapper>>& inputs
     ) override
     {
-        return make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(stream), std::move(_order));
+        return make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(stream), _order);
     }
 #endif
 
