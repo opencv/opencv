@@ -86,6 +86,10 @@
 #include <io.h>
 #endif
 
+#ifndef L_tmpnam
+#define L_tmpnam 20
+#endif
+
 #include "jasper/jas_types.h"
 #include "jasper/jas_stream.h"
 #include "jasper/jas_malloc.h"
