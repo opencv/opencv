@@ -50,14 +50,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         Handle& Handle::operator=(Handle&&) noexcept = default;
         Handle::operator bool() const noexcept { return false; }
     }
-
-    class WorkspaceAccessor { };
-    class Workspace::Impl { };
-
-    Workspace::Workspace() { }
-    void Workspace::require(std::size_t bytes) { }
-    std::size_t Workspace::size() const noexcept { return 0; }
-
 #endif
 
 }}}} /* cv::dnn::cuda4dnn::csl */
