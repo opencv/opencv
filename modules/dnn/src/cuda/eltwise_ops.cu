@@ -8,6 +8,7 @@
 #include "math.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
+#include "vector_traits.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/span.hpp"
@@ -20,31 +21,98 @@ using namespace cv::dnn::cuda4dnn::csl::device;
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        template <class T>
-        __global__ void eltwise_max_2(span<T> output, view<T> x, view<T> y) {
-            for (auto i : grid_stride_range(output.size())) {
-                using device::max;
-                output[i] = max(x[i], y[i]);
+        template <class T, std::size_t N>
+        __global__ void eltwise_max_2_vec(span<T> output, view<T> x, view<T> y) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto x_vPtr = vector_type::get_pointer(x.data());
+            auto y_vPtr = vector_type::get_pointer(y.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec_x, vec_y;
+                v_load(vec_x, x_vPtr[i]);
+                v_load(vec_y, y_vPtr[i]);
+
+                for (int j = 0; j < vector_type::size(); j++) {
+                    using device::max;
+                    vec_x.data[j] = max(vec_x.data[j], vec_y.data[j]);
+                }
+
+                v_store(output_vPtr[i], vec_x);
             }
         }
 
-        template <class T>
-        __global__ void eltwise_sum_2(span<T> output, view<T> x, view<T> y) {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = x[i] + y[i];
+        template <class T, std::size_t N>
+        __global__ void eltwise_sum_2_vec(span<T> output, view<T> x, view<T> y) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto x_vPtr = vector_type::get_pointer(x.data());
+            auto y_vPtr = vector_type::get_pointer(y.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec_x, vec_y;
+                v_load(vec_x, x_vPtr[i]);
+                v_load(vec_y, y_vPtr[i]);
+
+                for (int j = 0; j < vector_type::size(); j++)
+                    vec_x.data[j] = vec_x.data[j] + vec_y.data[j];
+
+                v_store(output_vPtr[i], vec_x);
+            }
         }
 
-        template <class T>
-        __global__ void eltwise_sum_coeff_2(span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = coeff_x * x[i] + coeff_y * y[i];
+        template <class T, std::size_t N>
+        __global__ void eltwise_sum_coeff_2_vec(span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto x_vPtr = vector_type::get_pointer(x.data());
+            auto y_vPtr = vector_type::get_pointer(y.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec_x, vec_y;
+                v_load(vec_x, x_vPtr[i]);
+                v_load(vec_y, y_vPtr[i]);
+
+                for (int j = 0; j < vector_type::size(); j++)
+                    vec_x.data[j] = coeff_x * vec_x.data[j] + coeff_y * vec_y.data[j];
+
+                v_store(output_vPtr[i], vec_x);
+            }
         }
 
-        template <class T>
-        __global__ void eltwise_prod_2(span<T> output, view<T> x, view<T> y) {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = x[i] * y[i];
+        template <class T, std::size_t N>
+        __global__ void eltwise_prod_2_vec(span<T> output, view<T> x, view<T> y) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto x_vPtr = vector_type::get_pointer(x.data());
+            auto y_vPtr = vector_type::get_pointer(y.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec_x, vec_y;
+                v_load(vec_x, x_vPtr[i]);
+                v_load(vec_y, y_vPtr[i]);
+
+                for (int j = 0; j < vector_type::size(); j++)
+                    vec_x.data[j] = vec_x.data[j] * vec_y.data[j];
+
+                v_store(output_vPtr[i], vec_x);
+            }
         }
+    }
+
+    template <class T, std::size_t N>
+    void launch_vectorized_eltwise_max_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(x, N));
+        CV_Assert(is_fully_aligned<T>(y, N));
+
+        auto kernel = raw::eltwise_max_2_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, x, y);
     }
 
     template <class T>
@@ -52,26 +120,56 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
-        auto kernel = raw::eltwise_max_2<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, x, y);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(x, 4) && is_fully_aligned<T>(y, 4)) {
+            launch_vectorized_eltwise_max_2<T, 4>(stream, output, x, y);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(x, 2) && is_fully_aligned<T>(y, 2)) {
+            launch_vectorized_eltwise_max_2<T, 2>(stream, output, x, y);
+        } else {
+            launch_vectorized_eltwise_max_2<T, 1>(stream, output, x, y);
+        }
     }
 
     template void eltwise_max_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_max_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
+
+    template <class T, std::size_t N>
+    void launch_vectorized_eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(x, N));
+        CV_Assert(is_fully_aligned<T>(y, N));
+
+        auto kernel = raw::eltwise_sum_2_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, x, y);
+    }
 
     template <class T>
     void eltwise_sum_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
-        auto kernel = raw::eltwise_sum_2<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, x, y);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(x, 4) && is_fully_aligned<T>(y, 4)) {
+            launch_vectorized_eltwise_sum_2<T, 4>(stream, output, x, y);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(x, 2) && is_fully_aligned<T>(y, 2)) {
+            launch_vectorized_eltwise_sum_2<T, 2>(stream, output, x, y);
+        } else {
+            launch_vectorized_eltwise_sum_2<T, 1>(stream, output, x, y);
+        }
     }
 
     template void eltwise_sum_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
     template void eltwise_sum_2(const Stream& stream, span<float> output, view<float> x, view<float> y);
+
+    template <class T, std::size_t N>
+    void launch_vectorized_eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(x, N));
+        CV_Assert(is_fully_aligned<T>(y, N));
+
+        auto kernel = raw::eltwise_sum_coeff_2_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, coeff_x, x, coeff_y, y);
+    }
 
     template <class T>
     void eltwise_sum_coeff_2(const Stream& stream, span<T> output, T coeff_x, view<T> x, T coeff_y, view<T> y) {
@@ -83,22 +181,41 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             return;
         }
 
-        auto kernel = raw::eltwise_sum_coeff_2<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, coeff_x, x, coeff_y, y);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(x, 4) && is_fully_aligned<T>(y, 4)) {
+            launch_vectorized_eltwise_sum_coeff_2<T, 4>(stream, output, coeff_x, x, coeff_y, y);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(x, 2) && is_fully_aligned<T>(y, 2)) {
+            launch_vectorized_eltwise_sum_coeff_2<T, 2>(stream, output, coeff_x, x, coeff_y, y);
+        } else {
+            launch_vectorized_eltwise_sum_coeff_2<T, 1>(stream, output, coeff_x, x, coeff_y, y);
+        }
     }
 
     template void eltwise_sum_coeff_2(const Stream&, span<__half>, __half, view<__half>, __half, view<__half>);
     template void eltwise_sum_coeff_2(const Stream&, span<float>, float, view<float>, float, view<float>);
+
+    template <class T, std::size_t N>
+    void launch_vectorized_eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(x, N));
+        CV_Assert(is_fully_aligned<T>(y, N));
+
+        auto kernel = raw::eltwise_prod_2_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, x, y);
+    }
 
     template <class T>
     void eltwise_prod_2(const Stream& stream, span<T> output, view<T> x, view<T> y) {
         CV_Assert(x.size() == y.size());
         CV_Assert(x.size() == output.size());
 
-        auto kernel = raw::eltwise_prod_2<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, x, y);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(x, 4) && is_fully_aligned<T>(y, 4)) {
+            launch_vectorized_eltwise_prod_2<T, 4>(stream, output, x, y);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(x, 2) && is_fully_aligned<T>(y, 2)) {
+            launch_vectorized_eltwise_prod_2<T, 2>(stream, output, x, y);
+        } else {
+            launch_vectorized_eltwise_prod_2<T, 1>(stream, output, x, y);
+        }
     }
 
     template void eltwise_prod_2(const Stream& stream, span<__half> output, view<__half> x, view<__half> y);
