@@ -39,14 +39,14 @@ using GArg_Test_Types = ::testing::Types
    , Expected<cv::GArray<cv::Rect>,     cv::detail::ArgKind::GARRAY>
 
  // Built-in types
-   , Expected<int,                      cv::detail::ArgKind::OPAQUE>
-   , Expected<float,                    cv::detail::ArgKind::OPAQUE>
-   , Expected<int*,                     cv::detail::ArgKind::OPAQUE>
-   , Expected<cv::Point,                cv::detail::ArgKind::OPAQUE>
-   , Expected<std::string,              cv::detail::ArgKind::OPAQUE>
-   , Expected<cv::Mat,                  cv::detail::ArgKind::OPAQUE>
-   , Expected<std::vector<int>,         cv::detail::ArgKind::OPAQUE>
-   , Expected<std::vector<cv::Point>,   cv::detail::ArgKind::OPAQUE>
+   , Expected<int,                      cv::detail::ArgKind::GOPAQUE>
+   , Expected<float,                    cv::detail::ArgKind::GOPAQUE>
+   , Expected<int*,                     cv::detail::ArgKind::GOPAQUE>
+   , Expected<cv::Point,                cv::detail::ArgKind::GOPAQUE>
+   , Expected<std::string,              cv::detail::ArgKind::GOPAQUE>
+   , Expected<cv::Mat,                  cv::detail::ArgKind::GOPAQUE>
+   , Expected<std::vector<int>,         cv::detail::ArgKind::GOPAQUE>
+   , Expected<std::vector<cv::Point>,   cv::detail::ArgKind::GOPAQUE>
    >;
 
 TYPED_TEST_CASE(GArgKind, GArg_Test_Types);

@@ -26,7 +26,7 @@ namespace detail
     // a double dispatch
     enum class ArgKind: int
     {
-        OPAQUE,       // Unknown, generic, opaque-to-GAPI data type - STATIC
+        GOPAQUE,      // Unknown, generic, opaque-to-GAPI data type - STATIC
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
@@ -41,7 +41,7 @@ namespace detail
     template<typename T> struct GTypeTraits;
     template<typename T> struct GTypeTraits
     {
-        static constexpr const ArgKind kind = ArgKind::OPAQUE;
+        static constexpr const ArgKind kind = ArgKind::GOPAQUE;
     };
     template<>           struct GTypeTraits<cv::GMat>
     {
