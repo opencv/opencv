@@ -111,6 +111,6 @@ QUnit.test('test_photo', function(assert) {
         cv.inpaint(src, mask, dst, 3, cv.INPAINT_TELEA);
         assert.equal(dst.rows, 100);
         assert.equal(dst.cols, 100);
-        assert.equal(src.type(), dst.type());
+        assert.equal(dst.channels(), 3);
     }
 });
