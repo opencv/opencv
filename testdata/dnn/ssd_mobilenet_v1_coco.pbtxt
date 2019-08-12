@@ -2211,15 +2211,46 @@ node {
 }
 ################################################################################
 node {
+  name: "concat_1/concat3d/shape"
+  op: "Const"
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        int_val: 0
+        int_val: -1
+        int_val: 91
+        tensor_shape {
+          dim {
+            size: 3
+          }
+        }
+      }
+    }
+  }
+}
+node {
+  name: "concat_1/concat3d"
+  op: "Reshape"
+  input: "concat_1"
+  input: "concat_1/concat3d/shape"
+}
+node {
   name: "concat_1_sigmoid"
   op: "Sigmoid"
-  input: "concat_1"
+  input: "concat_1/concat3d"
+}
+node {
+  name: "concat_1_sigmoid/Flatten"
+  op: "Flatten"
+  input: "concat_1_sigmoid"
 }
 node {
   name: "detection_out"
   op: "DetectionOutput"
   input: "concat"
-  input: "concat_1_sigmoid"
+  input: "concat_1_sigmoid/Flatten"
   input: "concat_2"
   attr { key: "num_classes" value { i: 91 } }
   attr { key: "share_location" value { b: true } }
