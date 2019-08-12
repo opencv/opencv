@@ -1101,6 +1101,8 @@ struct Net::Impl
     cuda4dnn::csl::cublas::Handle cublasHandle;
     cuda4dnn::csl::cudnn::Handle cudnnHandle;
     cuda4dnn::csl::Workspace workspace;
+
+    cv::AsyncPromise cudaAsyncPromise;
 #endif
 
     Ptr<BackendWrapper> wrap(Mat& host)
@@ -2628,11 +2630,6 @@ struct Net::Impl
 
         //forward itself
         forwardLayer(ld);
-
-#ifdef HAVE_CUDA
-        if (preferableBackend == DNN_BACKEND_CUDA)
-            stream.synchronize();
-#endif
     }
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
@@ -2756,7 +2753,6 @@ struct Net::Impl
     AsyncArray getBlobAsync(const LayerPin& pin)
     {
         CV_TRACE_FUNCTION();
-#ifdef HAVE_INF_ENGINE
         if (!pin.valid())
             CV_Error(Error::StsObjectNotFound, "Requested blob not found");
 
@@ -2771,15 +2767,47 @@ struct Net::Impl
         {
             CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
             // Transfer data to CPU if it's require.
-            ld.outputBlobsWrappers[pin.oid]->copyToHost();
+            /* we perform the copy later for CUDA backend */
+            if(preferableBackend != DNN_BACKEND_CUDA)
+                ld.outputBlobsWrappers[pin.oid]->copyToHost();
         }
-        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE);
 
-        Ptr<InfEngineBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<InfEngineBackendWrapper>();
-        return std::move(wrapper->futureMat);
+        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE ||
+                  preferableBackend == DNN_BACKEND_CUDA);
+
+        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
+        {
+#ifdef HAVE_INF_ENGINE
+            Ptr<InfEngineBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<InfEngineBackendWrapper>();
+            return std::move(wrapper->futureMat);
 #else
-        CV_Error(Error::StsNotImplemented, "DNN_BACKEND_INFERENCE_ENGINE backend is required");
+            CV_Error(Error::StsNotImplemented, "DNN_BACKEND_INFERENCE_ENGINE backend is required");
 #endif
+        }
+        else if (preferableBackend == DNN_BACKEND_CUDA)
+        {
+#ifdef HAVE_CUDA
+            cudaAsyncPromise = AsyncPromise();
+            std::thread([this, pin] {
+                try
+                {
+                    auto blob = getBlob(pin); /* implicitly synchronizes due to copyToHost call */
+                    cudaAsyncPromise.setValue(std::move(blob));
+                }
+                catch (const cv::Exception& ex)
+                {
+                    cudaAsyncPromise.setException(ex);
+                }
+            }).detach();
+            return cudaAsyncPromise.getArrayResult();
+#else
+            CV_Error(Error::StsNotImplemented, "DNN_BACKEND_CUDA backend is not present");
+#endif
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "Backend does not support asynchronous mode");
+        }
     }
 
     AsyncArray getBlobAsync(String outputName)
@@ -2927,14 +2955,19 @@ AsyncArray Net::forwardAsync(const String& outputName)
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
 
-    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE)
-        CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
+    if (impl->preferableBackend == DNN_BACKEND_INFERENCE_ENGINE ||
+        impl->preferableBackend == DNN_BACKEND_CUDA)
+    {
+        impl->isAsync = true;
+        impl->forwardToLayer(impl->getLayerData(layerName));
+        impl->isAsync = false;
 
-    impl->isAsync = true;
-    impl->forwardToLayer(impl->getLayerData(layerName));
-    impl->isAsync = false;
-
-    return impl->getBlobAsync(layerName);
+        return impl->getBlobAsync(layerName);
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "Asynchronous forward is only supported in DNN_BACKEND_INFERENCE_ENGINE and DNN_BACKEND_CUDA");
+    }
 #else
     CV_Error(Error::StsNotImplemented, "Asynchronous forward without C++11");
 #endif  // CV_CXX11
