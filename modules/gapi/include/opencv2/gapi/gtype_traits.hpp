@@ -27,6 +27,9 @@ namespace detail
     enum class ArgKind: int
     {
         GOPAQUE,      // Unknown, generic, opaque-to-GAPI data type - STATIC
+#if !defined(OPAQUE) && !defined(CV_DOXYGEN)
+        OPAQUE = GOPAQUE,  // deprecated value used for compatibility only, use GOPAQUE instead
+#endif
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
         GMATP,        // a cv::GMatP
