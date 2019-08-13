@@ -69,6 +69,25 @@ public:
         EXPECT_EQ(prediction.first, ref.first);
         ASSERT_NEAR(prediction.second, ref.second, norm);
     }
+
+    void testSegmentationModel(const std::string& weights_file, const std::string& config_file,
+                               const std::string& inImgPath, const std::string& outImgPath,
+                               float norm, const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                               double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat frame = imread(inImgPath);
+        Mat mask;
+        Mat exp = imread(outImgPath, 0);
+
+        SegmentationModel model(weights_file, config_file);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.segment(frame, mask);
+        normAssert(mask, exp, "", norm, norm);
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -200,6 +219,22 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+}
+
+TEST_P(Test_Model, Segmentation)
+{
+    std::string inp = _tf("dog416.png");
+    std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
+    std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel");
+    std::string exp = _tf("segmentation_exp.png");
+
+    Size size{128, 128};
+    float norm = 0;
+    double scale = 1.0;
+    Scalar mean = Scalar();
+    bool swapRB = false;
+
+    testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());
