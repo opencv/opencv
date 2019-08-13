@@ -716,7 +716,7 @@ public:
             else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
                 fmt = FileStorage::FORMAT_XML;
             else if(strbufsize  == bufOffset)
-                CV_Error(CV_BADARG_ERR, "Input file is empty");
+                CV_Error(CV_BADARG_ERR, "Input file is invalid");
             else
                 CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 

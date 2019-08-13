@@ -338,7 +338,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
                     centers[j].push_back(curCenters[i]);
 
                     size_t k = centers[j].size() - 1;
-                    while( k > 0 && centers[j][k].radius < centers[j][k-1].radius )
+                    while( k > 0 && curCenters[i].radius < centers[j][k-1].radius )
                     {
                         centers[j][k] = centers[j][k-1];
                         k--;

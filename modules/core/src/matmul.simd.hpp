@@ -2511,6 +2511,27 @@ double dotProd_32f(const float* src1, const float* src2, int len)
 
         int j = 0;
         int cWidth = v_float32::nlanes;
+
+#if CV_ENABLE_UNROLLED
+        v_float32 v_sum1 = vx_setzero_f32();
+        v_float32 v_sum2 = vx_setzero_f32();
+        v_float32 v_sum3 = vx_setzero_f32();
+
+        for (; j <= blockSize - (cWidth * 4); j += (cWidth * 4))
+        {
+            v_sum  = v_muladd(vx_load(src1 + j),
+                              vx_load(src2 + j), v_sum);
+            v_sum1 = v_muladd(vx_load(src1 + j + cWidth),
+                              vx_load(src2 + j + cWidth), v_sum1);
+            v_sum2 = v_muladd(vx_load(src1 + j + (cWidth * 2)),
+                              vx_load(src2 + j + (cWidth * 2)), v_sum2);
+            v_sum3 = v_muladd(vx_load(src1 + j + (cWidth * 3)),
+                              vx_load(src2 + j + (cWidth * 3)), v_sum3);
+        }
+
+        v_sum += v_sum1 + v_sum2 + v_sum3;
+#endif
+
         for (; j <= blockSize - cWidth; j += cWidth)
             v_sum = v_muladd(vx_load(src1 + j), vx_load(src2 + j), v_sum);
 

@@ -1022,7 +1022,7 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
     return success;
 }
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 static bool ippFilter2D(int stype, int dtype, int kernel_type,
               uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
@@ -1160,9 +1160,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
             corrDepth = ddepth == CV_64F ? CV_64F : CV_32F;
             temp.create(Size(width, height), CV_MAKETYPE(corrDepth, dst_channels));
         }
-        crossCorr(src, kernel, temp, src.size(),
-                  CV_MAKETYPE(corrDepth, src_channels),
-                  anchor, 0, borderType);
+        crossCorr(src, kernel, temp, anchor, 0, borderType);
         add(temp, delta, temp);
         if (temp.data != dst_data) {
             temp.convertTo(dst, dst.type());
@@ -1172,9 +1170,7 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
             temp = Mat(Size(width, height), dtype, dst_data, dst_step);
         else
             temp.create(Size(width, height), dtype);
-        crossCorr(src, kernel, temp, src.size(),
-                  CV_MAKETYPE(ddepth, src_channels),
-                  anchor, delta, borderType);
+        crossCorr(src, kernel, temp, anchor, delta, borderType);
         if (temp.data != dst_data)
             temp.copyTo(dst);
     }
@@ -1290,7 +1286,7 @@ void filter2D(int stype, int dtype, int kernel_type,
     if (res)
         return;
 
-    CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
+    /*CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
                               src_data, src_step,
                               dst_data, dst_step,
                               width, height,
@@ -1299,7 +1295,7 @@ void filter2D(int stype, int dtype, int kernel_type,
                               kernel_data, kernel_step,
                               kernel_width, kernel_height,
                               anchor_x, anchor_y,
-                              delta, borderType, isSubmatrix))
+                              delta, borderType, isSubmatrix))*/
 
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,

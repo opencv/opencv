@@ -1153,14 +1153,14 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                     {
                         Rs += srow[-bstep*2-2] + srow[0];
                         Gs += brow0[N6-1];
-                        Bs += srow[-bstep+1]*2;
+                        Bs += srow[-bstep-1]*2;
                         ng++;
                     }
                     if( gradSE < T )
                     {
                         Rs += srow[bstep*2+2] + srow[0];
                         Gs += brow2[N6+1];
-                        Bs += srow[-bstep+1]*2;
+                        Bs += srow[bstep+1]*2;
                         ng++;
                     }
                     R = srow[0];
@@ -1394,8 +1394,8 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
                 // GRs += {brow2[N6+1]; (srow[1]+srow[bstep*2+1])} * (T>gradSE)
                 GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)), _mm_adds_epi16(x7,x10)), mask));
-                // Bs  += {srow[-bstep+1]*2; (srow[bstep+2]+srow[bstep])} * (T>gradSE)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1), _mm_adds_epi16(x8,x11)), mask));
+                // Bs  += {srow[bstep+1]*2; (srow[bstep+2]+srow[bstep])} * (T>gradSE)
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x9, 1), _mm_adds_epi16(x8,x11)), mask));
 
                 // gradS ***********************************************
                 mask = _mm_cmpgt_epi16(T, gradS);  // mask = T>gradS
@@ -1451,7 +1451,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 // GRs += {brow0[N6-1]; (srow[-bstep*2-1]+srow[-1])} * (T>gradNW)
                 GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)), _mm_adds_epi16(x2,x15)), mask));
                 // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1),_mm_adds_epi16(x3,x16)), mask));
+                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x1, 1),_mm_adds_epi16(x3,x16)), mask));
 
                 __m128 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
                 __m128 ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));

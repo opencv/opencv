@@ -43,12 +43,18 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(inputs.size() == 2 || inputs.size() == 3);
         CV_Assert(total(inputs[0]) == total(inputs[1]));
 
-        MatShape outShape = inputs[0];
-        outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
-        outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+        MatShape outShape;
+        if (inputs.size() == 2)
+        {
+            outShape = inputs[0];
+            outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
+            outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+        }
+        else
+            outShape = inputs[2];
 
         outputs.clear();
         outputs.push_back(outShape);
@@ -71,7 +77,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(inputs.size() == 2);
+        CV_Assert(inputs.size() == 2 || inputs.size() == 3);
         Mat& input = inputs[0];
         Mat& indices = inputs[1];
 
