@@ -136,13 +136,10 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
 
 static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
 {
-    std::vector<int> reversedDims(dims.begin(), dims.end());
-    std::reverse(reversedDims.begin(), reversedDims.end());
-
-    m.create(reversedDims, CV_32F);
+    m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
-    dataPtr = make_shared_blob<float>(Precision::FP32, dims, (float*)m.data);
+    dataPtr = make_shared_blob<float>({Precision::FP32, dims, Layout::ANY}, (float*)m.data);
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -154,32 +151,42 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 
     CNNNetwork net = reader.getNetwork();
 
+    std::string device_name;
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+    Core ie;
+#else
     InferenceEnginePluginPtr enginePtr;
     InferencePlugin plugin;
+#endif
     ExecutableNetwork netExec;
     InferRequest infRequest;
+
     try
     {
-        auto dispatcher = InferenceEngine::PluginDispatcher({""});
         switch (target)
         {
             case DNN_TARGET_CPU:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eCPU);
+                device_name = "CPU";
                 break;
             case DNN_TARGET_OPENCL:
             case DNN_TARGET_OPENCL_FP16:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eGPU);
+                device_name = "GPU";
                 break;
             case DNN_TARGET_MYRIAD:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eMYRIAD);
+                device_name = "MYRIAD";
                 break;
             case DNN_TARGET_FPGA:
-                enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
+                device_name = "FPGA";
                 break;
             default:
                 CV_Error(Error::StsNotImplemented, "Unknown target");
         };
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+        auto dispatcher = InferenceEngine::PluginDispatcher({""});
+        enginePtr = dispatcher.getPluginByDevice(device_name);
+#endif
         if (target == DNN_TARGET_CPU || target == DNN_TARGET_FPGA)
         {
             std::string suffixes[] = {"_avx2", "_sse4", ""};
@@ -202,16 +209,23 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
                 try
                 {
                     IExtensionPtr extension = make_so_pointer<IExtension>(libName);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+                    ie.AddExtension(extension, device_name);
+#else
                     enginePtr->AddExtension(extension, 0);
+#endif
                     break;
                 }
                 catch(...) {}
             }
             // Some of networks can work without a library of extra layers.
         }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+        netExec = ie.LoadNetwork(net, device_name);
+#else
         plugin = InferencePlugin(enginePtr);
-
         netExec = plugin.LoadNetwork(net, {});
+#endif
         infRequest = netExec.CreateInferRequest();
     }
     catch (const std::exception& ex)
@@ -224,7 +238,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
-        genData(it.second->getDims(), inputsMap[it.first], inputBlobs[it.first]);
+        genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
     }
     infRequest.SetInput(inputBlobs);
 
@@ -233,7 +247,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
-        genData(it.second->dims, outputsMap[it.first], outputBlobs[it.first]);
+        genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
     }
     infRequest.SetOutput(outputBlobs);
 
