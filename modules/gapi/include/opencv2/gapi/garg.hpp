@@ -76,7 +76,7 @@ public:
         return util::unsafe_any_cast<typename std::remove_reference<T>::type>(value);
     }
 
-    detail::ArgKind kind = detail::ArgKind::OPAQUE;
+    detail::ArgKind kind = detail::ArgKind::OPAQUE_VAL;
 
 protected:
     util::any value;
