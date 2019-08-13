@@ -37,7 +37,9 @@ else()
                                        -Wunused-parameter -Wsign-compare
   )
 endif()
-
+if(HAVE_CUDA)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+endif()
 if(NOT HAVE_CXX11)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-undef)  # LANG_CXX11 from protobuf files
 endif()

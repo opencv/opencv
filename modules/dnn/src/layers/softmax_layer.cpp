@@ -329,7 +329,8 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axisRaw, input->dims.size()));
+        ieLayer.setAxis(clamp(axisRaw, input->getDims().size()));
+
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
 #endif  // HAVE_INF_ENGINE

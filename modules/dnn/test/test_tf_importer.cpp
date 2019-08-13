@@ -357,11 +357,9 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
     {
-#if INF_ENGINE_VER_MAJOR_EQ(2019010000)
+#if INF_ENGINE_VER_MAJOR_GE(2019020000)
         if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#else
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
     }
 #endif
@@ -395,16 +393,10 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
 TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-#if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD)
-    {
-#if INF_ENGINE_VER_MAJOR_LE(2019010000)
-        if (getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
-#else
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-#endif
-    }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
     checkBackend();
@@ -456,12 +448,13 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.35 : 0.3;
 
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD
-            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
-    )
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_MYRIAD &&
+        getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+    {
         scoreDiff = 0.061;
         iouDiff = 0.12;
         detectionConfThresh = 0.36;
+    }
 #endif
     normAssertDetections(ref, out, "", detectionConfThresh, scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
