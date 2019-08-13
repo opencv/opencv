@@ -152,7 +152,7 @@ class Builder:
         return cmd
 
     def get_build_flags(self):
-        flags = "-s USE_PTHREADS=0 "
+        flags = ""
         if self.options.build_wasm:
             flags += "-s WASM=1 "
         elif self.options.disable_wasm:
