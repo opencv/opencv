@@ -44,8 +44,9 @@ public:
     virtual ~IVideoCapture() {}
     virtual double getProperty(int) const { return 0; }
     virtual bool setProperty(int, double) { return false; }
-    virtual bool grabFrame() = 0;
+    virtual bool grabFrame() = 0;    
     virtual bool retrieveFrame(int, OutputArray) = 0;
+    virtual bool retrieveEncodedFrame(cv::OutputArray frame) { return false; }
     virtual bool isOpened() const = 0;
     virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
 };

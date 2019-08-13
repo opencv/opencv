@@ -174,10 +174,43 @@ enum VideoCaptureProperties {
        CAP_PROP_CHANNEL       =43, //!< Video input or Channel Number (only for those cameras that support)
        CAP_PROP_AUTO_WB       =44, //!< enable/ disable auto white-balance
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
+       CAP_PROP_INT_CODEC     =46, //!< mapping of internal plugin to opencv recognized codec
+       CAP_PROP_INT_PX_FORMAT =47, //!< mapping of internal plugin to opencv recognized pixel format
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
      };
+
+/** @brief %VideoCapture raw codecs
+*/
+enum RawCodec
+{
+    VideoCodec_MPEG1,
+    VideoCodec_MPEG2,
+    VideoCodec_MPEG4,
+    VideoCodec_VC1,
+    VideoCodec_H264,
+    VideoCodec_JPEG,
+    VideoCodec_HEVC,
+    VideoCodec_VP8,
+    VideoCodec_VP9,
+    VideoCodec_NumCodecs,
+
+    // Uncompressed YUV
+    VideoCodec_YUV420 = (('I' << 24) | ('Y' << 16) | ('U' << 8) | ('V')),   // Y,U,V (4:2:0)
+    VideoCodec_YV12 = (('Y' << 24) | ('V' << 16) | ('1' << 8) | ('2')),   // Y,V,U (4:2:0)
+    VideoCodec_NV12 = (('N' << 24) | ('V' << 16) | ('1' << 8) | ('2')),   // Y,UV  (4:2:0)
+    VideoCodec_YUYV = (('Y' << 24) | ('U' << 16) | ('Y' << 8) | ('V')),   // YUYV/YUY2 (4:2:2)
+    VideoCodec_UYVY = (('U' << 24) | ('Y' << 16) | ('V' << 8) | ('Y'))    // UYVY (4:2:2)
+};
+
+enum RawPixelFormat
+{
+    VideoChromaFormat_Monochrome = 0,
+    VideoChromaFormat_YUV420,
+    VideoChromaFormat_YUV422,
+    VideoChromaFormat_YUV444
+};
 
 /** @brief %VideoWriter generic properties identifier.
  @sa VideoWriter::get(), VideoWriter::set()
@@ -720,6 +753,20 @@ public:
      */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 
+    /** @brief  Returns the encoded grabbed video frame.
+
+    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
+    @param flag it could be a frame index or a driver specific flag
+    @return `false` if no frames has been grabbed
+
+    The method returns the raw bitstream for the next video frame. If no frames is present
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa retrieveRaw()
+     */
+    CV_WRAP virtual bool retrieveRaw(OutputArray image);
+
     /** @brief Stream operator to read the next video frame.
     @sa read()
     */
@@ -745,6 +792,20 @@ public:
     cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool read(OutputArray image);
+
+    /** @brief Grabs and returns the next encoded video frame.
+
+    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
+    @param flag it could be a frame index or a driver specific flag
+    @return `false` if no frames has been grabbed
+
+    The method returns the raw bitstream for the next video frame. If no frames is present
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa readRaw()
+     */
+    CV_WRAP virtual bool readRaw(OutputArray image);
 
     /** @brief Sets a property in the VideoCapture.
 
@@ -795,6 +856,70 @@ protected:
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
 };
+
+///** @brief Class for capturing raw video streams from video files, image sequences or ip cameras.
+//
+//The class provides C++ API for capturing raw video streams from ip cameras or for reading video files and image sequences.
+//
+//Here is how the class can be used:
+//@include samples/cpp/videocapture_basic.cpp
+//
+//@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
+//@note
+//-   (C++) A basic sample on using the %VideoCapture interface can be found at
+//    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
+//-   (Python) A basic sample on using the %VideoCapture interface can be found at
+//    `OPENCV_SOURCE_CODE/samples/python/video.py`
+//-   (Python) A multi threaded video processing sample can be found at
+//    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
+//-   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
+//    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
+// */
+//class CV_EXPORTS_W RawVideoCapture : public VideoCapture // which methods does this need to implement, constructor
+//{
+//public:
+//    /** @brief Default constructor
+//    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
+//    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
+//    destructor.
+//     */
+//    CV_WRAP RawVideoCapture();
+//
+//    /** @overload
+//    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
+//
+//    @param filename it can be:
+//    - name of video file (eg. `video.avi`)
+//    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
+//    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+//      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
+//      documentation of source stream to know the right URL.
+//    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+//    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+//    @sa The list of supported API backends cv::VideoCaptureAPIs
+//    */
+//    CV_WRAP RawVideoCapture(const String& filename, int apiPreference = CAP_ANY);
+//
+//    /** @brief Default destructor
+//
+//    The method first calls VideoCapture::release to close the already opened file or camera.
+//    */
+//    virtual ~RawVideoCapture();
+//
+//    /** @brief Grabs and returns the next encoded video frame.
+//
+//    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
+//    @param flag it could be a frame index or a driver specific flag
+//    @return `false` if no frames has been grabbed
+//
+//    The method returns the raw bitstream for the next video frame. If no frames is present
+//    (camera has been disconnected, or there are no more frames in video file), the method returns false
+//    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+//
+//    @sa rawRead()
+//     */
+//    CV_WRAP virtual bool rawRead(unsigned char** data, int* size, bool* bEndOfFile);
+//};
 
 class IVideoWriter;
 

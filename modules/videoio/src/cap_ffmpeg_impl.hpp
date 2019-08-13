@@ -485,6 +485,7 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveEncodedFrame(unsigned char** data, int* size);
 
     void init();
 
@@ -1156,6 +1157,14 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
+bool CvCapture_FFMPEG::retrieveEncodedFrame(unsigned char** data, int* size)
+{
+    if (!video_st || !picture->data[0])
+        return false;
+    *data = packet.data;
+    *size = packet.size;
+    return true;
+}
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
@@ -1164,6 +1173,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     double codec_tag = 0;
     AVCodecID codec_id = AV_CODEC_ID_NONE;
     const char* codec_fourcc = NULL;
+    AVPixelFormat pix_fmt = AV_PIX_FMT_NONE;
 
     switch( property_id )
     {
@@ -1206,6 +1216,60 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
     case CAP_PROP_SAR_DEN:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).den;
+    case CAP_PROP_INT_CODEC:
+#if LIBAVFORMAT_BUILD > 4628
+        codec_id = video_st->codec->codec_id;
+        codec_tag = (double)video_st->codec->codec_tag;
+#else
+        codec_id = video_st->codec.codec_id;
+        codec_tag = (double)video_st->codec.codec_tag;
+#endif
+        if (codec_tag || codec_id == AV_CODEC_ID_NONE)
+        {
+            return codec_tag;
+        }
+
+        switch (codec_id)
+        {
+        case CV_CODEC(CODEC_ID_MPEG1VIDEO):
+            return VideoCodec_MPEG1;
+        case CV_CODEC(CODEC_ID_MPEG2VIDEO):
+            return VideoCodec_MPEG2;
+        case CV_CODEC(CODEC_ID_MPEG4):
+            return VideoCodec_MPEG4;
+        case CV_CODEC(CODEC_ID_VC1):
+            return VideoCodec_VC1;
+        case CV_CODEC(CODEC_ID_H264):
+            return VideoCodec_H264;
+        case CV_CODEC(CODEC_ID_HEVC):
+            return VideoCodec_HEVC;
+        case CV_CODEC(CODEC_ID_VP8):
+            return VideoCodec_VP8;
+        case CV_CODEC(CODEC_ID_VP9):
+            return VideoCodec_VP9;
+        case CV_CODEC(CODEC_ID_MJPEG):
+            return VideoCodec_JPEG;
+        default:
+            return VideoCodec_NumCodecs;
+        };
+    case CAP_PROP_INT_PX_FORMAT:
+#if LIBAVFORMAT_BUILD > 4628
+        pix_fmt = video_st->codec->pix_fmt;
+#else
+        pix_fmt = video_st->codec.pix_fmt;
+#endif
+        switch (pix_fmt)
+        {
+        case AV_PIX_FMT_YUV420P:
+        case AV_PIX_FMT_YUVJ420P:
+        case AV_PIX_FMT_YUVJ422P:   // jpeg decoder output is subsampled to NV12 for 422/444 so treat it as 420
+        case AV_PIX_FMT_YUVJ444P:   // jpeg decoder output is subsampled to NV12 for 422/444 so treat it as 420
+            return VideoChromaFormat_YUV420;
+        case AV_PIX_FMT_YUV422P:
+            return VideoChromaFormat_YUV422;
+        case AV_PIX_FMT_YUV444P:
+            return VideoChromaFormat_YUV444;
+        }
     default:
         break;
     }
@@ -2406,6 +2470,11 @@ int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
 int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
     return capture->retrieveFrame(0, data, step, width, height, cn);
+}
+
+bool cvRetrieveEncodedFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* size)
+{
+    return capture->retrieveEncodedFrame(data, size);
 }
 
 CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int fourcc, double fps,

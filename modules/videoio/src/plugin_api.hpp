@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 typedef CvResult (CV_API_CALL *cv_videoio_retrieve_cb_t)(int stream_idx, unsigned const char* data, int step, int width, int height, int cn, void* userdata);
+typedef CvResult (CV_API_CALL* cv_videoio_retrieve_raw_cb_t)(unsigned const char* data, int step, void* userdata);
 
 typedef struct CvPluginCapture_t* CvPluginCapture;
 typedef struct CvPluginWriter_t* CvPluginWriter;
@@ -142,6 +143,16 @@ typedef struct OpenCV_VideoIO_Plugin_API_preview
     @note API-CALL 12, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_write)(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn);
+
+    /** @brief Retrieve encoded frame
+
+    @param handle Capture handle
+    @param callback retrieve callback (synchronous)
+    @param userdata callback context data
+
+    @note API-CALL 13, API-Version == 0
+     */
+    CvResult(CV_API_CALL* Capture_retreive_raw)(CvPluginCapture handle, cv_videoio_retrieve_raw_cb_t callback, void* userdata);
 
 } OpenCV_VideoIO_Plugin_API_preview;
 

@@ -248,12 +248,33 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
     return ret;
 }
 
+bool VideoCapture::retrieveRaw(OutputArray image)
+{
+    CV_INSTRUMENT_REGION();
+
+    bool ret = false;
+    if (!icap.empty())
+        ret = icap->retrieveEncodedFrame(image);
+    return ret;
+}
+
 bool VideoCapture::read(OutputArray image)
 {
     CV_INSTRUMENT_REGION();
 
     if(grab())
         retrieve(image);
+    else
+        image.release();
+    return !image.empty();
+}
+
+bool VideoCapture::readRaw(OutputArray image)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (grab())
+        retrieveRaw(image);
     else
         image.release();
     return !image.empty();
