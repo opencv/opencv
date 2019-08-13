@@ -1219,15 +1219,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_INT_CODEC:
 #if LIBAVFORMAT_BUILD > 4628
         codec_id = video_st->codec->codec_id;
-        codec_tag = (double)video_st->codec->codec_tag;
 #else
         codec_id = video_st->codec.codec_id;
-        codec_tag = (double)video_st->codec.codec_tag;
 #endif
-        if (codec_tag || codec_id == AV_CODEC_ID_NONE)
-        {
-            return codec_tag;
-        }
 
         switch (codec_id)
         {
@@ -1258,17 +1252,23 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 #else
         pix_fmt = video_st->codec.pix_fmt;
 #endif
+
         switch (pix_fmt)
         {
         case AV_PIX_FMT_YUV420P:
-        case AV_PIX_FMT_YUVJ420P:
-        case AV_PIX_FMT_YUVJ422P:   // jpeg decoder output is subsampled to NV12 for 422/444 so treat it as 420
-        case AV_PIX_FMT_YUVJ444P:   // jpeg decoder output is subsampled to NV12 for 422/444 so treat it as 420
             return VideoChromaFormat_YUV420;
+        case AV_PIX_FMT_YUVJ420P:
+            return VideoChromaFormat_YUVJ420;
+        case AV_PIX_FMT_YUVJ422P:
+            return VideoChromaFormat_YUVJ422;
+        case AV_PIX_FMT_YUVJ444P:
+            return VideoChromaFormat_YUVJ444;
         case AV_PIX_FMT_YUV422P:
             return VideoChromaFormat_YUV422;
         case AV_PIX_FMT_YUV444P:
             return VideoChromaFormat_YUV444;
+        default:
+            return VideoChromaFormat_NumFormats;
         }
     default:
         break;

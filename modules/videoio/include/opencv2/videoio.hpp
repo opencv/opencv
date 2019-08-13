@@ -208,8 +208,12 @@ enum RawPixelFormat
 {
     VideoChromaFormat_Monochrome = 0,
     VideoChromaFormat_YUV420,
+    VideoChromaFormat_YUVJ420,
+    VideoChromaFormat_YUVJ422,
+    VideoChromaFormat_YUVJ444,
     VideoChromaFormat_YUV422,
-    VideoChromaFormat_YUV444
+    VideoChromaFormat_YUV444,
+    VideoChromaFormat_NumFormats
 };
 
 /** @brief %VideoWriter generic properties identifier.
