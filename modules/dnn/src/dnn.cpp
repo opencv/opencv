@@ -57,6 +57,7 @@
 #include <fstream>
 #include <iterator>
 #include <numeric>
+#include <thread>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 

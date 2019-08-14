@@ -161,8 +161,8 @@ namespace cv {
             CUDABackendWrapper(int targetId) : BackendWrapper(DNN_BACKEND_CUDA, targetId) { }
             virtual ~CUDABackendWrapper() { }
 
-            virtual void copyToHost() = 0;
-            virtual void setHostDirty() = 0;
+            void copyToHost() override = 0;
+            void setHostDirty() override = 0;
 
             virtual void copyToDevice() = 0;
             virtual void setDeviceDirty() = 0;

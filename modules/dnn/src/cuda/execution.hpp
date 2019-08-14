@@ -10,7 +10,7 @@
 
 #include <opencv2/core.hpp>
 
-#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 
 #include <cstddef>
 
@@ -48,7 +48,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     execution_policy make_policy(Kernel kernel, std::size_t max_threads, std::size_t sharedMem = 0, const Stream& stream = 0) {
         CV_Assert(max_threads > 0);
 
-        int grid_size, block_size;
+        int grid_size = 0, block_size = 0;
         CUDA4DNN_CHECK_CUDA(cudaOccupancyMaxPotentialBlockSize(&grid_size, &block_size, kernel, sharedMem));
         if (grid_size * block_size > max_threads) {
             grid_size = (max_threads + block_size - 1) / block_size;
