@@ -943,6 +943,8 @@ namespace
                 fd.skew            = 0;
                 fd.max_consumption = 0;
             }
+
+            GModel::log_clear(g, node);
         }
     }
 

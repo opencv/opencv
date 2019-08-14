@@ -826,4 +826,61 @@ TEST(Fluid, InvalidROIs)
     }
 }
 
+
+namespace
+{
+#if defined(__linux__)
+uint64_t currMemoryConsumption()
+{
+    // check self-state via /proc information
+    constexpr const char stat_file_path[] = "/proc/self/statm";
+    std::ifstream proc_stat(stat_file_path);
+    if (!proc_stat.is_open() || !proc_stat.good())
+    {
+        CV_LOG_WARNING(NULL, "Failed to open stat file: " << stat_file_path);
+        return static_cast<uint64_t>(0);
+    }
+    std::string stat_line;
+    std::getline(proc_stat, stat_line);
+    uint64_t unused, rss;
+    // using resident set size
+    std::istringstream(stat_line) >> unused >> rss;
+    CV_Assert(rss != 0);
+    return rss;
+}
+#else
+// FIXME: implement this part (at least for Windows?), right now it's enough to check Linux only
+uint64_t currMemoryConsumption() { return static_cast<uint64_t>(0); }
+#endif
+}  // anonymous namespace
+
+TEST(Fluid, MemoryConsumptionDoesNotGrowOnReshape)
+{
+    cv::GMat in;
+    cv::GMat a, b, c;
+    std::tie(a, b, c) = cv::gapi::split3(in);
+    cv::GMat merged = cv::gapi::merge4(a, b, c, a);
+    cv::GMat d, e, f, g;
+    std::tie(d, e, f, g) = cv::gapi::split4(merged);
+    cv::GMat out = cv::gapi::merge3(d, e, f);
+
+    cv::Mat in_mat(cv::Size(8, 8), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(100));
+    cv::Mat out_mat;
+
+    const auto compile_args = [] () {
+        return cv::compile_args(cv::gapi::core::fluid::kernels());
+    };
+
+    cv::GCompiled compiled = cv::GComputation(cv::GIn(in), cv::GOut(out)).compile(
+        cv::descr_of(in_mat), compile_args());
+    ASSERT_TRUE(compiled.canReshape());
+
+    const auto mem_before = currMemoryConsumption();
+    for (int _ = 0; _ < 1000; ++_) compiled.reshape(cv::descr_of(cv::gin(in_mat)), compile_args());
+    const auto mem_after = currMemoryConsumption();
+
+    ASSERT_GE(mem_before, mem_after);
+}
+
 } // namespace opencv_test
