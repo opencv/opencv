@@ -249,7 +249,7 @@ if(NOT ${found})
 
   # Export return values
   set(${found} "${_found}" CACHE INTERNAL "")
-  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpretor")
+  set(${executable} "${_executable}" CACHE FILEPATH "Path to Python interpreter")
   set(${version_string} "${_version_string}" CACHE INTERNAL "")
   set(${version_major} "${_version_major}" CACHE INTERNAL "")
   set(${version_minor} "${_version_minor}" CACHE INTERNAL "")
