@@ -154,6 +154,15 @@ template<> struct fluid_get_in<cv::GScalar>
     }
 #endif // !defined(GAPI_STANDALONE)
 };
+
+template<typename U> struct fluid_get_in<cv::GArray<U>>
+{
+    static const std::vector<cv::gapi::fluid::View>& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args[idx].unsafe_get<std::vector<cv::gapi::fluid::View>>();
+    }
+};
+
 template<class T> struct fluid_get_in
 {
     static const T& get(const cv::GArgs &in_args, int idx)

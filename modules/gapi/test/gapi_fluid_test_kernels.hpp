@@ -15,6 +15,7 @@ namespace cv
 namespace gapi_test_kernels
 {
 using cv::gapi::core::GMat3;
+using GMat2 = std::tuple<GMat, GMat>;
 
 G_TYPED_KERNEL(TAddSimple, <GMat(GMat, GMat)>, "test.fluid.add_simple") {
     static cv::GMatDesc outMeta(cv::GMatDesc a, cv::GMatDesc) {
@@ -109,6 +110,13 @@ G_TYPED_KERNEL_M(TSplit3_4lpi, <GMat3(GMat)>, "test.fluid.split3_4lpi") {
         const auto out_depth = in.depth;
         const auto out_desc  = in.withType(out_depth, 1);
         return std::make_tuple(out_desc, out_desc, out_desc);
+    }
+};
+
+G_TYPED_KERNEL(TSumArrayToMat, <GMat(GArray<int>)>, "test.fluid.sum_array_to_mat")
+{
+    static GMatDesc outMeta(const cv::GArrayDesc&) {
+        return {};
     }
 };
 

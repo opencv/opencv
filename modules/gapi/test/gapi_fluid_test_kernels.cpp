@@ -7,6 +7,7 @@
 #include "test_precomp.hpp"
 
 #include <iomanip>
+#include <vector>
 #include "gapi_fluid_test_kernels.hpp"
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/own/saturate.hpp>
@@ -448,6 +449,39 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
     }
 };
 
+GAPI_FLUID_KERNEL(FSumArrayToMat, TSumArrayToMat, false)
+{
+    static const int Window = 1;
+    static const int LPI    = 2;
+
+    static void run(const std::vector<cv::gapi::fluid::View> &arr,
+                          cv::gapi::fluid::Buffer            &out)
+    {
+        for (int l = 0, lpi = out.lpi(); l < lpi; l++)
+        {
+            const uint8_t **rows;
+            for(unsigned int i = 0; i < arr.size(); ++i)
+            {
+                rows[i] = arr[i].InLine<uint8_t>(l);
+            }
+            uint8_t* out_row = out.OutLine<uint8_t>(l);
+
+            std::cout << "l=" << l << ": ";
+
+            for (int i = 0, w = out.length(); i < w; i++)
+            {
+                out_row[i] = 0;
+                for(unsigned int j = 0; j < arr.size(); ++j)
+                {
+                    out_row[i] += static_cast<uint8_t>(rows[j][i]);
+                }
+                std::cout << std::setw(4) << int(out_row[i]);
+            }
+            std::cout << std::endl;
+        }
+    }
+};
+
 static const int ITUR_BT_601_CY = 1220542;
 static const int ITUR_BT_601_CUB = 2116026;
 static const int ITUR_BT_601_CUG = -409993;
@@ -569,6 +603,7 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FSum2MatsAndScalar
         ,FTestSplit3
         ,FTestSplit3_4lpi
+        ,FSumArrayToMat
         >();
 } // namespace gapi_test_kernels
 } // namespace cv
