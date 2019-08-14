@@ -239,7 +239,7 @@ void resetInternalData(Mag& mag, const Data &d)
         break;
 
     case GShape::GMAT:
-        // Do nothign here - FIXME unify with initInternalData?
+        // Do nothing here - FIXME unify with initInternalData?
         break;
 
     default:

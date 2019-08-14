@@ -1229,6 +1229,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     {
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
+    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>().at(rc.id) = util::get<cv::detail::VectorRef>(arg); break;
     default: util::throw_error(std::logic_error("Unsupported GShape type"));
     }
 }
