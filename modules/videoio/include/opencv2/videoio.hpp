@@ -760,7 +760,6 @@ public:
     /** @brief  Returns the encoded grabbed video frame.
 
     @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @param flag it could be a frame index or a driver specific flag
     @return `false` if no frames has been grabbed
 
     The method returns the raw bitstream for the next video frame. If no frames is present
@@ -800,7 +799,6 @@ public:
     /** @brief Grabs and returns the next encoded video frame.
 
     @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @param flag it could be a frame index or a driver specific flag
     @return `false` if no frames has been grabbed
 
     The method returns the raw bitstream for the next video frame. If no frames is present
