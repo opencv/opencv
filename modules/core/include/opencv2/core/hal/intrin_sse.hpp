@@ -52,6 +52,12 @@
 #define CV_SIMD128_64F 1
 #define CV_SIMD128_FP16 0  // no native operations with FP16 type.
 
+#if CV_SSSE3
+#define CV_SIMD128_PERMUTE 1
+#else
+#define CV_SIMD128_PERMUTE 0
+#endif
+
 namespace cv
 {
 
@@ -3425,6 +3431,13 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 }
 
 inline void v_cleanup() {}
+
+#if CV_SIMD128_PERMUTE
+inline v_uint8x16 v_permute(const v_uint8x16 &ctrl, const v_uint8x16 &in)
+{
+    return v_uint8x16(_mm_shuffle_epi8(in.val, ctrl.val));
+}
+#endif
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

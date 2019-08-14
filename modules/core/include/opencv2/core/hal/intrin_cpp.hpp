@@ -50,6 +50,8 @@
 #include <algorithm>
 #include "opencv2/core/saturate.hpp"
 
+#define CV_SIMD128_PERMUTE 2
+
 namespace cv
 {
 
@@ -219,6 +221,7 @@ Regular integers:
 |reverse            | x | x | x | x | x | x |
 |extract_n          | x | x | x | x | x | x |
 |broadcast_element  |   |   |   |   | x | x |
+|permute            | x |   |   |   |   |   |
 
 Big integers:
 
@@ -2543,6 +2546,59 @@ v_pack_store(float16_t* ptr, v_reg<float, V_TypeTraits<float>::nlanes128>& v)
     {
         ptr[i] = float16_t(v.s[i]);
     }
+}
+
+/** @brief Vector permute
+
+Shuffle, permute, or tabular lookup between two vectors from a control vector.
+
+Similar to v_permute(ctrl,a), however A and B are treated as a composite
+vector of 2 * a.nlanes, where A contains the lower lanes, and B the higher.
+
+A specific HAL implementation could extend this to select between 256 8 bit
+elements.
+
+Scheme:
+@code
+X = { A; B}
+{ X[[CTRL[0]], X[CTRL[1]], ... X[CTRL[15]] }
+where CTRL[x] < v_uint8 * 2
+@endcode
+
+@note this API is dependent on the compiler check CV_SIMD128_PERMUTE > 1
+      or CV_SIMD_PERMUTE > 1.
+*/
+inline v_uint8x16 v_permute(const v_uint8x16& ctrl, const v_uint8x16& a, const v_uint8x16& b)
+{
+    uint8_t p[ctrl.nlanes];
+    v_uint8x16 tbl[] = { a, b };
+    for( int i = 0; i < ctrl.nlanes; i++ )
+        p[i] = tbl[(ctrl.s[i] / (uint8_t)ctrl.nlanes) & 1].s[ctrl.s[i] % ctrl.nlanes];
+    return v_uint8x16(p);
+}
+
+/** @brief Vector permute
+
+Shuffle, permute, or tabular lookup within a vector from a control vector.
+
+This intrinsic allows arbitrary byte movement or duplication using the
+control vector CTRL to select any element from the source vector A.
+
+The compiler guard CV_SIMD128_PERMUTE, or more generally, CV_SIMD_PERMUTE represent
+the number of vectors which can be efficiently permuted from.
+
+Scheme:
+@code
+{ A[CTRL[0]], A[CTRL[1]], ... A[CTRL[15]] }
+where CTRL[x] < v_uint8
+@endcode
+
+@note this API is dependent on the compiler check CV_SIMD128_PERMUTE > 0
+      or CV_SIMD_PERMUTE > 0.
+*/
+inline v_uint8x16 v_permute(const v_uint8x16& ctrl, const v_uint8x16& a)
+{
+    return v_permute(ctrl, a, a);
 }
 
 inline void v_cleanup() {}

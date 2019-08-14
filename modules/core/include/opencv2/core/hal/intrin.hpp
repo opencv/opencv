@@ -274,6 +274,18 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD512_FP16 0
 #endif
 
+#ifndef CV_SIMD128_PERMUTE
+#define CV_SIMD128_PERMUTE 0
+#endif
+
+#ifndef CV_SIMD256_PERMUTE
+#define CV_SIMD256_PERMUTE 0
+#endif
+
+#ifndef CV_SIMD512_PERMUTE
+#define CV_SIMD512_PERMUTE 0
+#endif
+
 //==================================================================================================
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix, loadsfx) \
@@ -390,6 +402,7 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 1
     #define CV_SIMD_64F CV_SIMD512_64F
     #define CV_SIMD_FP16 CV_SIMD512_FP16
+    #define CV_SIMD_PERMUTE CV_SIMD512_PERMUTE
     #define CV_SIMD_WIDTH 64
     typedef v_uint8x64    v_uint8;
     typedef v_int8x64     v_int8;
@@ -414,6 +427,7 @@ namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 1
     #define CV_SIMD_64F CV_SIMD256_64F
     #define CV_SIMD_FP16 CV_SIMD256_FP16
+    #define CV_SIMD_PERMUTE CV_SIMD256_PERMUTE
     #define CV_SIMD_WIDTH 32
     typedef v_uint8x32   v_uint8;
     typedef v_int8x32    v_int8;
@@ -437,6 +451,7 @@ using namespace CV__SIMD_NAMESPACE;
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD CV_SIMD128
     #define CV_SIMD_64F CV_SIMD128_64F
+    #define CV_SIMD_PERMUTE CV_SIMD128_PERMUTE
     #define CV_SIMD_WIDTH 16
     typedef v_uint8x16  v_uint8;
     typedef v_int8x16   v_int8;
@@ -469,6 +484,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
 #endif
 
+#ifndef CV_SIMD_PERMUTE
+#define CV_SIMD_PERMUTE 0 //!< Defined to the number of vectors which can be byte permuted into a single vector
+#endif
 
 #ifndef CV_SIMD
 #define CV_SIMD 0

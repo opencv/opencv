@@ -16,6 +16,7 @@
 #define CV_SIMD512 1
 #define CV_SIMD512_64F 1
 #define CV_SIMD512_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
+#define CV_SIMD512_PERMUTE 1
 
 #define _v512_set_epu64(a7, a6, a5, a4, a3, a2, a1, a0) _mm512_set_epi64((int64)(a7),(int64)(a6),(int64)(a5),(int64)(a4),(int64)(a3),(int64)(a2),(int64)(a1),(int64)(a0))
 #define _v512_set_epu32(a15, a14, a13, a12, a11, a10,  a9,  a8,  a7,  a6,  a5,  a4,  a3,  a2,  a1,  a0) \
@@ -3039,6 +3040,26 @@ inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signma
 inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
+
+inline v_uint8x64 v_permute(const v_uint8x64 &ctrl, const v_uint8x64 &a)
+{
+    // TODO: Single instruction version of this is available with AVX512VBMI (aka CNL baseline)
+    // Though, we get the 16 bit version with AVX512BW.
+    __m512i ctrl_e = _mm512_srli_epi16(ctrl.val, 1);
+    __m512i ctrl_o = _mm512_srli_epi16(ctrl.val, 9);
+
+    __m512i lo16 = _mm512_permutexvar_epi16(ctrl_e, a.val);
+    __m512i lo16o = _mm512_alignr_epi8(lo16, lo16, 1);
+    __mmask32 mlo = _mm512_test_epi16_mask(ctrl.val, _mm512_set1_epi16(0x1));
+    lo16 = _mm512_mask_blend_epi16(mlo, lo16, lo16o);
+
+    __m512i hi16 = _mm512_permutexvar_epi16(ctrl_o, a.val);
+    __m512i hi16o = _mm512_alignr_epi8(hi16, hi16, 15);
+    __mmask32 mhi = _mm512_test_epi16_mask(ctrl.val, _mm512_set1_epi16(0x100));
+    hi16 = _mm512_mask_blend_epi16(mhi, hi16o, hi16);
+
+    return v_uint8x64(_mm512_mask_blend_epi8(0x5555555555555555ULL, hi16, lo16));
+}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

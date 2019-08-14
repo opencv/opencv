@@ -8,6 +8,7 @@
 #define CV_SIMD256 1
 #define CV_SIMD256_64F 1
 #define CV_SIMD256_FP16 0  // no native operations with FP16 type. Only load/store from float32x8 are available (if CV_FP16 == 1)
+#define CV_SIMD256_PERMUTE 1
 
 namespace cv
 {
@@ -3112,6 +3113,20 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
 {
     __m128i ah = _mm256_cvtps_ph(a.val, 0);
     _mm_storeu_si128((__m128i*)ptr, ah);
+}
+
+inline v_uint8x32 v_permute(const v_uint8x32 &ctrl, const v_uint8x32 &a)
+{
+    // AVX512VBMI does support this via permutexvar_epi8 in one insn. For now...
+    __m256i maybe_lo = _mm256_shuffle_epi8(a.val, ctrl.val);
+    __m256i maybe_hi = _mm256_shuffle_epi8(_mm256_permute2x128_si256(a.val, a.val, 1), ctrl.val);
+    v_uint8x32 blendm(0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70, 0x70,
+                      0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0);
+
+    // Exploit modulo addition to move bit 4 to bit 7 for high half, and invert and move bit 4 for low.
+    blendm = v_add_wrap(ctrl, blendm);
+
+    return v_uint8x32(_mm256_blendv_epi8(maybe_lo, maybe_hi, blendm.val));
 }
 
 inline void v256_cleanup() { _mm256_zeroall(); }

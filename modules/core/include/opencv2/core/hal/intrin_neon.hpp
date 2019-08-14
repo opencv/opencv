@@ -58,8 +58,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD128 1
 #if defined(__aarch64__)
 #define CV_SIMD128_64F 1
+#define CV_SIMD128_PERMUTE 1
 #else
 #define CV_SIMD128_64F 0
+#define CV_SIMD128_PERMUTE 0
 #endif
 
 // TODO
@@ -2320,6 +2322,13 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 #endif
 
 inline void v_cleanup() {}
+
+#if CV_SIMD128_PERMUTE
+inline v_uint8x16 v_permute(const v_uint8x16 &ctrl, const v_uint8x16 &in)
+{
+    return v_uint8x16(vqtbl1q_u8(in.val, ctrl.val));
+}
+#endif
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

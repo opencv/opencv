@@ -1278,6 +1278,109 @@ template<typename R> struct TheTest
         return *this;
     }
 
+// Expansion for all possible calls of v_permute
+#define _expand_1(val, wrap) wrap(val[0])
+#define _expand_2(val, wrap) _expand_1(val,wrap) , wrap(val[1])
+#define _expand_3(val, wrap) _expand_2(val,wrap) , wrap(val[2])
+#define _expand_4(val, wrap) _expand_3(val,wrap) , wrap(val[3])
+#define _expand_5(val, wrap) _expand_4(val,wrap) , wrap(val[4])
+#define _expand_6(val, wrap) _expand_5(val,wrap) , wrap(val[5])
+#define _expand_7(val, wrap) _expand_6(val,wrap) , wrap(val[6])
+#define _expand_8(val, wrap) _expand_7(val,wrap) , wrap(val[7])
+#define _expand_9(val, wrap) _expand_8(val,wrap) , wrap(val[8])
+#define _expand_10(val, wrap) _expand_9(val,wrap) , wrap(val[9])
+#define _expand_11(val, wrap) _expand_10(val,wrap) , wrap(val[10])
+#define _expand_12(val, wrap) _expand_11(val,wrap) , wrap(val[11])
+#define _expand_13(val, wrap) _expand_12(val,wrap) , wrap(val[12])
+#define _expand_14(val, wrap) _expand_13(val,wrap) , wrap(val[13])
+#define _expand_15(val, wrap) _expand_14(val,wrap) , wrap(val[14])
+#define _expand_16(val, wrap) _expand_15(val,wrap) , wrap(val[15])
+#define _expand(n, val, wrap) _expand_ ## n (val, wrap)
+
+// Expansion for all possible non-zero CV_SIMD_PERMUTE values
+#define _cexpand_1(f) f(1)
+#define _cexpand_2(f) _cexpand_1(f) f(2)
+#define _cexpand_3(f) _cexpand_2(f) f(3)
+#define _cexpand_4(f) _cexpand_3(f) f(4)
+#define _cexpand_5(f) _cexpand_4(f) f(5)
+#define _cexpand_6(f) _cexpand_5(f) f(6)
+#define _cexpand_7(f) _cexpand_6(f) f(7)
+#define _cexpand_8(f) _cexpand_7(f) f(8)
+#define _cexpand_9(f) _cexpand_8(f) f(9)
+#define _cexpand_10(f) _cexpand_9(f) f(10)
+#define _cexpand_11(f) _cexpand_10(f) f(11)
+#define _cexpand_12(f) _cexpand_11(f) f(12)
+#define _cexpand_13(f) _cexpand_12(f) f(13)
+#define _cexpand_14(f) _cexpand_13(f) f(14)
+#define _cexpand_15(f) _cexpand_14(f) f(15)
+#define _cexpand_16(f) _cexpand_15(f) f(16)
+#define _cexpand(n, f) _cexpand_ ## n (f)
+
+// Perform a reverse operation over the span on N vectors
+#define _TEST_PERMUTE_CASE_N(N) \
+    case N: \
+        for(int i = 0; i < N; i++) \
+            dataR[i] = v_permute(v_uint8(ctrl[i]), _expand(N, ctrl, v_uint8)); \
+        break;
+
+// Generate the N possible permute operations on this vector type
+#define _GEN_PERMUTE_CASES(N) \
+    _cexpand(N, _TEST_PERMUTE_CASE_N)
+
+    TheTest & test_permute()
+    {
+#if CV_SIMD_PERMUTE
+        // Test permutes from 1 to N vector lengths
+        // Use permute to reverse data
+        for(int p = 1; p <= CV_SIMD_PERMUTE; p++)
+        {
+            Data<R> ctrl[CV_SIMD_PERMUTE];
+            Data<R> dataR[CV_SIMD_PERMUTE];
+
+            // Use a crafted set of ctrl vectors, which when permuted makes the sequences 0,1...,N-1
+            for (int i = 0; i < p * v_uint8::nlanes; ++i)
+                ctrl[i / v_uint8::nlanes].d[i % v_uint8::nlanes] = (LaneType)(p * v_uint8::nlanes - 1 - i);
+
+            switch( p )
+            {
+                _GEN_PERMUTE_CASES(CV_SIMD_PERMUTE)
+            }
+
+            // Verify everything is in order
+            for (int i = 0; i < p * v_uint8::nlanes; ++i)
+            {
+                int actual = (int) dataR[i / v_uint8::nlanes][i % v_uint8::nlanes];
+
+                SCOPED_TRACE(cv::format("p=%d i=%d", p, i));
+                EXPECT_EQ(i, actual);
+            }
+        }
+
+
+        // AVX has a non-trivial implementation, one more test to verify it does what it is
+        // contracted to do. Interleave the swap to ensure lane-swapping is correct.
+        // Unpack 0, n - 1, 2, ..., n - 1, 1 into
+        // 0, 1, ..., n - 2, n - 1
+        Data<R> ctrl;
+        Data<R> dataR;
+
+        for(int i = 0; i < v_uint8::nlanes; i += 2)
+        {
+            ctrl[i] = (LaneType) i;
+            ctrl[i + 1] = (LaneType)(v_uint8::nlanes - 1 - i);
+        }
+        dataR = v_permute( ctrl, ctrl );
+        for (int i = 0; i < v_uint8::nlanes; ++i)
+        {
+            int actual = (int) dataR[i];
+
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(i, actual);
+        }
+#endif
+        return *this;
+    }
+
     TheTest & test_float_cvt64()
     {
 #if CV_SIMD_64F
@@ -1563,6 +1666,9 @@ void test_hal_intrin_uint8()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+#if CV_SIMD_PERMUTE > 0
+        .test_permute()
+#endif
 #if CV_SIMD_WIDTH == 32
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
         .test_pack_u<9>().test_pack_u<10>().test_pack_u<13>().test_pack_u<15>()

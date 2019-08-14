@@ -10,6 +10,7 @@
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
+#define CV_SIMD128_PERMUTE 2
 
 namespace cv
 {
@@ -1614,8 +1615,19 @@ inline v_float64x2 v_broadcast_element(v_float64x2 v)
     return v_float64x2(vec_perm(v.val, v.val, p));
 }
 
-CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
+/* Permute 32B into a 16B vector using a control vector. Any control byte value greater than the number of
+   bytes in the aggregrate vector results in undefined behavior (e.x PPC will ignore those bits)  */
+inline v_uint8x16 v_permute(const v_uint8x16 &ctrl, const v_uint8x16 &in_lo, const v_uint8x16 &in_hi)
+{
+    return v_uint8x16(vec_perm(in_lo.val, in_hi.val, ctrl.val));
+}
 
+inline v_uint8x16 v_permute(const v_uint8x16 &ctrl, const v_uint8x16 &in)
+{
+    return v_permute(ctrl, in, in);
+}
+
+CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 //! @endcond
 
 }
