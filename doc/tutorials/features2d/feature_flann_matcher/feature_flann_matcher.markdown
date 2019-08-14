@@ -29,8 +29,8 @@ This distance is equivalent to count the number of different elements for binary
 
 To filter the matches, Lowe proposed in @cite Lowe:2004:DIF:993451.996342 to use a distance ratio test to try to eliminate false matches.
 The distance ratio between the two nearest matches of a considered keypoint is computed and it is a good match when this value is below
-a thresold. Indeed, this ratio allows helping to discriminate between ambiguous matches (distance ratio between the two nearest neighbors is
-close to one) and well discriminated matches. The figure below from the SIFT paper illustrates the probability that a match is correct
+a threshold. Indeed, this ratio allows helping to discriminate between ambiguous matches (distance ratio between the two nearest neighbors
+is close to one) and well discriminated matches. The figure below from the SIFT paper illustrates the probability that a match is correct
 based on the nearest-neighbor distance ratio test.
 
 ![](images/Feature_FlannMatcher_Lowe_ratio_test.png)
