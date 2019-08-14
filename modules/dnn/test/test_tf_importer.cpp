@@ -279,7 +279,7 @@ TEST_P(Test_TensorFlow_layers, matmul)
     // Reference output values are in range [-5.688, 4.484]
     double l1 = target == DNN_TARGET_MYRIAD ? 6.1e-3 : default_l1;
     runTensorFlowNet("nhwc_reshape_matmul", false, l1);
-
+    runTensorFlowNet("matmul_layout");
 }
 
 TEST_P(Test_TensorFlow_layers, reshape)
