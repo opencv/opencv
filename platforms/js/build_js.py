@@ -139,7 +139,10 @@ class Builder:
                "-DBUILD_EXAMPLES=OFF",
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=OFF",
-               "-DBUILD_PERF_TESTS=OFF"]
+               "-DBUILD_PERF_TESTS=OFF",
+               
+               # including modules from opencv_contrib 
+               "-DOPENCV_EXTRA_MODULES_PATH=~/opencv_contrib/modules"]
         if self.options.build_doc:
             cmd.append("-DBUILD_DOCS=ON")
         else:
@@ -153,6 +156,10 @@ class Builder:
 
     def get_build_flags(self):
         flags = ""
+        
+        # For using the latest version of emsdk
+        flags += "-s USE_PTHREADS=0 "
+        
         if self.options.build_wasm:
             flags += "-s WASM=1 "
         elif self.options.disable_wasm:
