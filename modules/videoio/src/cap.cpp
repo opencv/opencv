@@ -236,7 +236,7 @@ bool VideoCapture::grab()
     return ret;
 }
 
-bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<int>& state, int timeout)
+bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<int>& state, int timeout_millisec)
 {
     if(!v_captures.empty())
     {
@@ -257,7 +257,7 @@ bool VideoCapture::waitAny(std::vector<VideoCapture>& v_captures, std::vector<in
         {
             ipointers.push_back(cupture_num.icap);
         }
-        if(!v_captures[0].icap->camerasPoll(ipointers, state, timeout))
+        if(!v_captures[0].icap->camerasPoll(ipointers, state, timeout_millisec))
             return false;
 
         for (size_t cupture_num = 0; cupture_num < state.size(); ++cupture_num)
