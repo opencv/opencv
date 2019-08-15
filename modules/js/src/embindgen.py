@@ -171,7 +171,17 @@ aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseS
         'aruco_CharucoBoard': ['create', 'draw'],
         }
 
-calib3d = {'': ['findHomography','calibrateCameraExtended', 'drawFrameAxes', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap']}
+# added solvePnP & projectPoints
+calib3d = {'': ['findHomography','calibrateCameraExtended', 'drawFrameAxes', 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap',
+               'solvePnP','projectPoints']}
+
+# added face module
+face = {'': ['createFacemarkLBF', 'createFacemarkAAM', 'createFacemarkKazemi', 'drawFacemarks'],
+        'Facemark': ['fit', 'loadModel'],
+        'FacemarkLBF': [],
+        'FacemarkAAM'': [],
+        'FacemarkKazemi': [],
+        }
 
 def makeWhiteList(module_list):
     wl = {}
@@ -183,7 +193,7 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d, face])
 
 # Features to be exported
 export_enums = False
