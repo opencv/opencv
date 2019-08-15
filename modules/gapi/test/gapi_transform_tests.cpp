@@ -166,50 +166,30 @@ TEST(KernelPackageTransform, gmat_gsc_garray_in_gmat2_out)
 
 namespace
 {
-    template<typename InType, typename OutType>
-    typename std::enable_if<(cv::detail::GTypeTraits<OutType>::kind == cv::detail::ArgKind::GARRAY), void>::type
-    array_check(const cv::GComputation::Priv &p)
+    template<typename ArgT>
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind == cv::detail::ArgKind::GARRAY), void>::type
+    arg_check(const cv::GProtoArg &arg)
     {
-        EXPECT_TRUE(ProtoContainsT<InType>(p.m_ins[0]));
+        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(arg));
+        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(arg).holds<ArrayT>());
+        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(arg).holds<WrongArrayT>());
+    }
 
-        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_outs[0]));
-        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_outs[0]).holds<ArrayT>());
-        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_outs[0]).holds<WrongArrayT>());
+    template<typename ArgT>
+    typename std::enable_if<(cv::detail::GTypeTraits<ArgT>::kind != cv::detail::ArgKind::GARRAY), void>::type
+    arg_check(const cv::GProtoArg &arg)
+    {
+        EXPECT_TRUE(ProtoContainsT<ArgT>(arg));
     }
 
     template<typename InType, typename OutType>
-    typename std::enable_if<(cv::detail::GTypeTraits<InType>::kind == cv::detail::ArgKind::GARRAY), void>::type
-    array_check(const cv::GComputation::Priv &p)
-    {
-        EXPECT_TRUE(ProtoContainsT<OutType>(p.m_outs[0]));
-
-        EXPECT_TRUE(ProtoContainsT<cv::detail::GArrayU>(p.m_ins[0]));
-        EXPECT_TRUE(cv::util::get<cv::detail::GArrayU>(p.m_ins[0]).holds<ArrayT>());
-        EXPECT_FALSE(cv::util::get<cv::detail::GArrayU>(p.m_ins[0]).holds<WrongArrayT>());
-    }
-
-    template<typename InType, typename OutType>
-    typename std::enable_if<(cv::detail::GTypeTraits<InType>::kind == cv::detail::ArgKind::GARRAY ||
-                             cv::detail::GTypeTraits<OutType>::kind == cv::detail::ArgKind::GARRAY), void>::type
-    args_check(const cv::GComputation &comp)
+    void args_check(const cv::GComputation &comp)
     {
         const auto &p = comp.priv();
         EXPECT_EQ(1u, p.m_ins.size());
         EXPECT_EQ(1u, p.m_outs.size());
-
-        array_check<InType, OutType>(p);
-    };
-
-    template<typename InType, typename OutType>
-    typename std::enable_if<(cv::detail::GTypeTraits<InType>::kind != cv::detail::ArgKind::GARRAY &&
-                             cv::detail::GTypeTraits<OutType>::kind != cv::detail::ArgKind::GARRAY), void>::type
-    args_check(const cv::GComputation &comp)
-    {
-        const auto &p = comp.priv();
-        EXPECT_EQ(1u, p.m_ins.size());
-        EXPECT_EQ(1u, p.m_outs.size());
-        EXPECT_TRUE(ProtoContainsT<InType>(p.m_ins[0]));
-        EXPECT_TRUE(ProtoContainsT<OutType>(p.m_outs[0]));
+        arg_check<InType>(p.m_ins[0]);
+        arg_check<OutType>(p.m_outs[0]);
     }
 } // anonymous namespace
 
