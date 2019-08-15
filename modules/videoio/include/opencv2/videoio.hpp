@@ -686,7 +686,19 @@ public:
 
     The C function also deallocates memory and clears \*capture pointer.
      */
-    CV_WRAP virtual void release();
+    CV_WRAP virtual void release();    
+
+    /** @brief Returns vector of camera states, grabbed video frame, if camera is ready.
+
+    @param video_captures - vector for VideoCapture object of each camera.
+    @param state - vector for camera states, size of vector is equal to the number of cameras, possible states are described in enum statecam.
+    @param timeout_millisec - the timeout argument specifies the number of milliseconds that function should block waiting for a frame to become ready.
+    @return `true` in the case of success.
+
+    The method fills the state vector, grabbed video frame, if camera is ready, returns `false` and returns an empty vector of states
+    in the case of error.
+    */
+    static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout_millisec = -1);
 
     /** @brief Grabs the next frame from video file or capturing device.
 
@@ -725,18 +737,6 @@ public:
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
     cvCloneImage and then do whatever you want with the copy.
      */
-    static bool waitAny(std::vector<VideoCapture>& video_captures, std::vector<int>& state, int timeout_millisec = -1);
-
-    /** @brief Returns vector of camera states, grabbed video frame, if camera is ready.
-
-    @param video_captures - vector for VideoCapture object of each camera.
-    @param state - vector for camera states, size of vector is equal to the number of cameras, possible states are described in enum statecam.
-    @param timeout_millisec - the timeout argument specifies the number of milliseconds that function should block waiting for a frame to become ready.
-    @return `true` in the case of success.
-
-    The method fills the state vector, grabbed video frame, if camera is ready, returns `false` and returns an empty vector of states
-    in the case of error.
-    */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 
     /** @brief Stream operator to read the next video frame.
