@@ -5,7 +5,7 @@
 #
 # Detect parameters:
 # 1. Native cmake IE package:
-#    - enironment variable InferenceEngine_DIR is set to location of cmake module
+#    - environment variable InferenceEngine_DIR is set to location of cmake module
 # 2. Custom location:
 #    - INF_ENGINE_INCLUDE_DIRS - headers search location
 #    - INF_ENGINE_LIB_DIRS     - library search location
