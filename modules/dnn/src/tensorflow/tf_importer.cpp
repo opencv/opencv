@@ -837,7 +837,7 @@ void TFImporter::populateNet(Net dstNet)
                 CV_Assert(paddings.type() == CV_32SC1);
                 if (paddings.total() == 8)
                 {
-                    // Perhabs, we have NHWC padding dimensions order.
+                    // Perhaps, we have NHWC padding dimensions order.
                     //  N    H    W    C
                     // 0 1  2 3  4 5  6 7
                     std::swap(paddings.at<int32_t>(2), paddings.at<int32_t>(6));

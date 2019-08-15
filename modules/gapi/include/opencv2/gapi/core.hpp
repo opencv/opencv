@@ -701,7 +701,7 @@ GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, 
 /** @brief Applies a mask to a matrix.
 
 The function mask set value from given matrix if the corresponding pixel value in mask matrix set to true,
-and set the matrix value to 0 overwise.
+and set the matrix value to 0 otherwise.
 
 Supported src matrix data types are @ref CV_8UC1, @ref CV_16SC1, @ref CV_16UC1. Supported mask data type is @ref CV_8UC1.
 
@@ -1293,7 +1293,7 @@ depths.
  */
 GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int depth);
 /** @overload
-This function appicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
 GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int depth);

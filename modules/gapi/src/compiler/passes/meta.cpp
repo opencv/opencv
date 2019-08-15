@@ -113,7 +113,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
     } // for(sorted)
 }
 
-// After all metadata in graph is infered, store a vector of inferred metas
+// After all metadata in graph is inferred, store a vector of inferred metas
 // for computation output values.
 void cv::gimpl::passes::storeResultingMeta(ade::passes::PassContext &ctx)
 {

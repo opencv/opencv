@@ -23,7 +23,7 @@ namespace wip {
     class GAsyncContext;
     //These functions asynchronously (i.e. probably on a separate thread of execution) call operator() member function of their first argument with copies of rest of arguments (except callback) passed in.
     //The difference between the function is the way to get the completion notification (via callback or a waiting on std::future object)
-    //If exception is occurred during execution of apply it is transfered to the callback (via function parameter) or passed to future (and will be thrown on call to std::future::get)
+    //If exception is occurred during execution of apply it is transferred to the callback (via function parameter) or passed to future (and will be thrown on call to std::future::get)
 
     //N.B. :
     //Input arguments are copied on call to async function (actually on call to cv::gin) and thus do not have to outlive the actual completion of asynchronous activity.

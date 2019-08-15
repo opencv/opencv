@@ -29,7 +29,7 @@ Using this approach OpenCV provides some basic low level functionality for exter
 
 typedef enum cvResult
 {
-    CV_ERROR_FAIL = -1,                          //!< Some error occured (TODO Require to fill exception information)
+    CV_ERROR_FAIL = -1,                          //!< Some error occurred (TODO Require to fill exception information)
     CV_ERROR_OK = 0                              //!< No error
 } CvResult;
 

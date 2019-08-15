@@ -81,7 +81,7 @@ namespace detail
 
     protected:
         GArrayU();                                // Default constructor
-        template<class> friend class cv::GArray;  //  (avialable to GArray<T> only)
+        template<class> friend class cv::GArray;  //  (available to GArray<T> only)
 
         void setConstructFcn(ConstructVec &&cv);  // Store T-aware constructor
 

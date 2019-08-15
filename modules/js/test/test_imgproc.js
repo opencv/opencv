@@ -69,7 +69,7 @@
 //
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -92,7 +92,7 @@ QUnit.test('test_imgProc', function(assert) {
         binView[0] = 10;
         cv.calcHist(source, channels, mask, hist, histSize, ranges, false);
 
-        // hist should contains a N X 1 arrary.
+        // hist should contains a N X 1 array.
         let size = hist.size();
         assert.equal(size.height, 256);
         assert.equal(size.width, 1);

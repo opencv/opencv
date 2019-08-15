@@ -297,7 +297,7 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:
-    // - An instance of GExecutor is created. Depening on the platform,
+    // - An instance of GExecutor is created. Depending on the platform,
     //   build configuration, etc, a GExecutor may be:
     //   - a naive single-thread graph interpreter;
     //   - a std::thread-based thing
