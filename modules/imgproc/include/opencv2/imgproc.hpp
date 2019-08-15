@@ -4380,9 +4380,9 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
-                             int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
-                             int line_type=8);
+//CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
+  //                           int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
+         //                    int line_type=8);
 
 /* ----------------------------------------------------------------------------------------- */
 /* END OF MARKER SECTION */
