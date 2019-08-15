@@ -686,7 +686,7 @@ public:
 
     The C function also deallocates memory and clears \*capture pointer.
      */
-    CV_WRAP virtual void release();    
+    CV_WRAP virtual void release();
 
     /** @brief Returns vector of camera states, grabbed video frame, if camera is ready.
 
