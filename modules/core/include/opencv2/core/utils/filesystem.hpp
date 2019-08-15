@@ -73,7 +73,7 @@ CV_EXPORTS bool createDirectories(const cv::String& path);
  * @param configuration_name optional name of configuration parameter name which overrides default behavior.
  * @return Path to cache directory. Returns empty string if cache directories support is not available. Returns "disabled" if cache disabled by user.
  */
-CV_EXPORTS cv::String getCacheDirectory(const char* sub_directory_name, const char* configuration_name = NULL);
+CV_EXPORTS_W cv::String getCacheDirectory(const char* sub_directory_name, const char* configuration_name = NULL);
 
 #endif
 
