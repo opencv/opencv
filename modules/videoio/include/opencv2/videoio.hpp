@@ -729,9 +729,9 @@ public:
 
     /** @brief Returns vector of camera states, grabbed video frame, if camera is ready.
 
-    @param vector for VideoCapture object of each camera.
-    @param vector for camera states, size of vector is equal to the number of cameras, possible states are described in enum statecam.
-    @param the timeout argument specifies the number of milliseconds that function should block waiting for a frame to become ready.
+    @param video_captures - vector for VideoCapture object of each camera.
+    @param state - vector for camera states, size of vector is equal to the number of cameras, possible states are described in enum statecam.
+    @param timeout_millisec - the timeout argument specifies the number of milliseconds that function should block waiting for a frame to become ready.
     @return `true` in the case of success.
 
     The method fills the state vector, grabbed video frame, if camera is ready, returns `false` and returns an empty vector of states
