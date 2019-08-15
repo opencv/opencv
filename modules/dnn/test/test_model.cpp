@@ -69,6 +69,25 @@ public:
         EXPECT_EQ(prediction.first, ref.first);
         ASSERT_NEAR(prediction.second, ref.second, norm);
     }
+
+    void testGenerativeModel(Net& network, const Mat& frame,
+                             const Mat& exp, float norm,
+                             const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                             double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat out;
+
+        GenerationModel model(network);
+        model.setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.generate(frame, out);
+
+        out.convertTo(out, exp.type());
+        normAssert(exp, out, "", norm, norm);
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -200,6 +219,36 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
+}
+
+TEST_P(Test_Model, Generative_Style)
+{
+    Mat inp = imread(_tf("dog416.png"));
+    Net network = readNetFromONNX(_tf("fast_style.onnx"));
+    Mat exp = imread(_tf("generative_exp.png"));
+
+    Size size{512, 512};
+    float norm = 1e-4;
+    double scale = 1.0;
+    Scalar mean = Scalar();
+    bool swapRB = true;
+
+    testGenerativeModel(network, inp, exp, norm, size, mean, scale, swapRB);
+}
+
+TEST_P(Test_Model, Generative_GAN)
+{
+    Mat inp = blobFromNPY(_tf("noisy.npy"));
+    Net network = readNetFromONNX(_tf("DnCnn.onnx"));
+    Mat exp = blobFromNPY(_tf("denoise.npy"));
+
+    Size size{256, 256};
+    float norm = 1e-4;
+    double scale = 1.0;
+    Scalar mean = Scalar();
+    bool swapRB = false;
+
+    testGenerativeModel(network, inp, exp, norm, size, mean, scale, swapRB);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());
