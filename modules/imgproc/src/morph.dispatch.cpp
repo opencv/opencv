@@ -269,7 +269,7 @@ static bool ippMorph(int op, int src_type, int dst_type,
         return false;
 
     // Multiple iterations on small mask is not effective in current integration
-    // Implace imitation for 3x3 kernel is not efficient
+    // Inplace imitation for 3x3 kernel is not efficient
     // Advanced morphology for small mask introduces degradations
     if((iterations > 1 || src_data == dst_data || (op != MORPH_ERODE && op != MORPH_DILATE)) && kernel_width*kernel_height < 25)
         return false;
