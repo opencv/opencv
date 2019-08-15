@@ -854,7 +854,7 @@ macro(__ocv_add_dispatched_file filename target_src_var src_directory dst_direct
 
       if(";${CPU_DISPATCH_FINAL};" MATCHES "${OPT}" OR __CPU_DISPATCH_INCLUDE_ALL)
         if(EXISTS "${src_directory}/${filename}.${OPT_LOWER}.cpp")
-          message(STATUS "Using overrided ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
+          message(STATUS "Using overridden ${OPT} source: ${src_directory}/${filename}.${OPT_LOWER}.cpp")
         else()
           list(APPEND ${target_src_var} "${__file}")
         endif()
