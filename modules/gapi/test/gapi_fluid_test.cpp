@@ -246,7 +246,7 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
 
 TEST(Fluid, Sum_Array_To_Mat)
 {
-    cv::GArray<int> arr;
+    cv::GArray<cv::Mat> arr;
 
     cv::GComputation c(cv::GIn(arr), cv::GOut(TSumArrayToMat::on(arr)));
     cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
@@ -259,6 +259,7 @@ TEST(Fluid, Sum_Array_To_Mat)
     auto cc = c.compile(cv::descr_of(in_vec), cv::compile_args(fluidTestPackage));
 
     cc(cv::gin(in_vec), cv::gout(out_mat));
+
     ref_mat = in_mat1 + in_mat2 + in_mat3;
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }

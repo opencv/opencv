@@ -961,9 +961,15 @@ namespace
             {
                 std::set<int> in_hs, out_ws, out_hs;
 
+                //DELETE ME
+                bool has_garray = false;
+
                 for (const auto& in : node->inNodes())
                 {
                     const auto& d = g.metadata(in).get<Data>();
+                    if(d.shape == cv::GShape::GARRAY){
+                        has_garray = true;
+                    }
                     if (d.shape == cv::GShape::GMAT)
                     {
                         const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
@@ -984,9 +990,10 @@ namespace
 
                 auto &fu = fg.metadata(node).get<FluidUnit>();
 
-                GAPI_Assert((out_ws.size() == 1 && out_hs.size() == 1) &&
+                GAPI_Assert(((out_ws.size() == 1 && out_hs.size() == 1) &&
                             ((in_hs.size() == 1) ||
-                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB)));
+                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB))) ||
+                            has_garray);
 
                 const auto &op = g.metadata(node).get<Op>();
                 fu.line_consumption.resize(op.args.size(), 0);
@@ -1229,7 +1236,7 @@ void cv::gimpl::GFluidExecutable::bindInArg(const cv::gimpl::RcDesc &rc, const G
     {
     case GShape::GMAT:    m_buffers[m_id_map.at(rc.id)].priv().bindTo(util::get<cv::gapi::own::Mat>(arg), true); break;
     case GShape::GSCALAR: m_res.slot<cv::gapi::own::Scalar>()[rc.id] = util::get<cv::gapi::own::Scalar>(arg); break;
-    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>().at(rc.id) = util::get<cv::detail::VectorRef>(arg); break;
+    case GShape::GARRAY:  m_res.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg); break;
     default: util::throw_error(std::logic_error("Unsupported GShape type"));
     }
 }
@@ -1255,7 +1262,8 @@ void cv::gimpl::GFluidExecutable::bindOutArg(const cv::gimpl::RcDesc &rc, const 
 void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_arg)
 {
     GAPI_Assert(op_arg.kind != cv::detail::ArgKind::GMAT
-           && op_arg.kind != cv::detail::ArgKind::GSCALAR);
+           && op_arg.kind != cv::detail::ArgKind::GSCALAR
+           && op_arg.kind != cv::detail::ArgKind::GARRAY);
 
     if (op_arg.kind == cv::detail::ArgKind::GOBJREF)
     {
@@ -1263,6 +1271,10 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         if (ref.shape == GShape::GSCALAR)
         {
             in_arg = GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
+        }
+        if (ref.shape == GShape::GARRAY)
+        {
+            in_arg = GArg(m_res.slot<cv::detail::VectorRef>()[ref.id]);
         }
     }
 }

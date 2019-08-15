@@ -454,16 +454,19 @@ GAPI_FLUID_KERNEL(FSumArrayToMat, TSumArrayToMat, false)
     static const int Window = 1;
     static const int LPI    = 2;
 
-    static void run(const std::vector<cv::gapi::fluid::View> &arr,
-                          cv::gapi::fluid::Buffer            &out)
+    static void run(const std::vector<cv::Mat>    &arr,
+                          cv::gapi::fluid::Buffer &out)
     {
+        std::vector<const uint8_t*> vec(arr.size());
+        for(unsigned int j = 0; j < arr.size(); ++j)
+        {
+            vec[j] = arr[j].ptr<uint8_t>();
+        }
+
+        static int row = 0;
+        static int width = arr[0].size().width;
         for (int l = 0, lpi = out.lpi(); l < lpi; l++)
         {
-            const uint8_t **rows;
-            for(unsigned int i = 0; i < arr.size(); ++i)
-            {
-                rows[i] = arr[i].InLine<uint8_t>(l);
-            }
             uint8_t* out_row = out.OutLine<uint8_t>(l);
 
             std::cout << "l=" << l << ": ";
@@ -473,11 +476,12 @@ GAPI_FLUID_KERNEL(FSumArrayToMat, TSumArrayToMat, false)
                 out_row[i] = 0;
                 for(unsigned int j = 0; j < arr.size(); ++j)
                 {
-                    out_row[i] += static_cast<uint8_t>(rows[j][i]);
+                    out_row[i] += static_cast<uint8_t>(vec[j][width * row + i]);
                 }
                 std::cout << std::setw(4) << int(out_row[i]);
             }
             std::cout << std::endl;
+            ++row;
         }
     }
 };
