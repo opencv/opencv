@@ -240,8 +240,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         float A11, A12, A22;
 
 #if CV_SSE2 || CV_VSX
-        v_int16x8 qw0(iw00, iw01, iw00, iw01, iw00, iw01, iw00, iw01);
-        v_int16x8 qw1(iw10, iw11, iw10, iw11, iw10, iw11, iw10, iw11);
+        v_int16x8 qw0((short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01));
+        v_int16x8 qw1((short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11));
         v_int32x4 qdelta_d = v_setall_s32(1 << (W_BITS1-1));
         v_int32x4 qdelta = v_setall_s32(1 << (W_BITS1-5-1));
         v_float32x4 qA11 = v_setzero_f32(), qA12 = v_setzero_f32(), qA22 = v_setzero_f32();
@@ -480,8 +480,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             acctype ib1 = 0, ib2 = 0;
             float b1, b2;
 #if CV_SSE2 || CV_VSX
-            qw0 = v_int16x8(iw00, iw01, iw00, iw01, iw00, iw01, iw00, iw01);
-            qw1 = v_int16x8(iw10, iw11, iw10, iw11, iw10, iw11, iw10, iw11);
+            qw0 = v_int16x8((short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01));
+            qw1 = v_int16x8((short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11));
             v_float32x4 qb0 = v_setzero_f32(), qb1 = v_setzero_f32();
 #endif
 
