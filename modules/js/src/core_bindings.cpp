@@ -79,9 +79,11 @@ using namespace cv;
 using namespace dnn;
 #endif
 
-#ifdef HAVE_OPENCV_ARUCO
+//#ifdef HAVE_OPENCV_ARUCO
 using namespace aruco;
-#endif
+//#endif
+
+using namespace face;
 
 namespace binding_utils
 {
