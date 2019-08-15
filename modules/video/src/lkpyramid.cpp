@@ -240,8 +240,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         float A11, A12, A22;
 
 #if CV_SSE2 || CV_VSX
-        v_int32x4 qw0 = v_setall_s32(iw00 + (iw01 << 16));
-        v_int32x4 qw1 = v_setall_s32(iw10 + (iw11 << 16));
+        v_int16x8 qw0(iw00, iw01, iw00, iw01, iw00, iw01, iw00, iw01);
+        v_int16x8 qw1(iw10, iw11, iw10, iw11, iw10, iw11, iw10, iw11);
         v_int32x4 qdelta_d = v_setall_s32(1 << (W_BITS1-1));
         v_int32x4 qdelta = v_setall_s32(1 << (W_BITS1-5-1));
         v_float32x4 qA11 = v_setzero_f32(), qA12 = v_setzero_f32(), qA22 = v_setzero_f32();
@@ -288,8 +288,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, v_reinterpret_as_s16(qw0), qdelta) +
-                     v_dotprod(t10, v_reinterpret_as_s16(qw1));
+                t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
                 t0 = t0 >> (W_BITS1-5);
                 v_store_low(Iptr + x, v_pack(t0, t0));
 
@@ -301,8 +300,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, v_reinterpret_as_s16(qw0), qdelta_d) +
-                     v_dotprod(t10, v_reinterpret_as_s16(qw1));
+                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
                 t1 = v_dotprod(t01, v_reinterpret_as_s16(qw0), qdelta_d) +
                      v_dotprod(t11, v_reinterpret_as_s16(qw1));
                 t0 = t0 >> W_BITS1;
@@ -310,8 +308,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr, v00);
 
-                t0 = v_reinterpret_as_s32(v00) >> 16; // Iy0 Iy1 Iy2 Iy3
-                t1 = v_reinterpret_as_s32(v_reinterpret_as_u32(v00) << 16) >> 16; // Ix0 Ix1 Ix2 Ix3
+                v00 = v_reinterpret_as_s16(v_interleave_pairs(v_reinterpret_as_s32(v_interleave_pairs(v00))));
+                v_expand(v00, t1, t0);
 
                 v_float32x4 fy = v_cvt_f32(t0);
                 v_float32x4 fx = v_cvt_f32(t1);
@@ -426,13 +424,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         }
 
 #if CV_SSE2 || CV_VSX
-        float CV_DECL_ALIGNED(16) A11buf[4], A12buf[4], A22buf[4];
-        v_store_aligned(A11buf, qA11);
-        v_store_aligned(A12buf, qA12);
-        v_store_aligned(A22buf, qA22);
-        iA11 += A11buf[0] + A11buf[1] + A11buf[2] + A11buf[3];
-        iA12 += A12buf[0] + A12buf[1] + A12buf[2] + A12buf[3];
-        iA22 += A22buf[0] + A22buf[1] + A22buf[2] + A22buf[3];
+        iA11 += v_reduce_sum(qA11);
+        iA12 += v_reduce_sum(qA12);
+        iA22 += v_reduce_sum(qA22);
 #endif
 
 #if CV_NEON
@@ -486,8 +480,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             acctype ib1 = 0, ib2 = 0;
             float b1, b2;
 #if CV_SSE2 || CV_VSX
-            qw0 = v_setall_s32(iw00 + (iw01 << 16));
-            qw1 = v_setall_s32(iw10 + (iw11 << 16));
+            qw0 = v_int16x8(iw00, iw01, iw00, iw01, iw00, iw01, iw00, iw01);
+            qw1 = v_int16x8(iw10, iw11, iw10, iw11, iw10, iw11, iw10, iw11);
             v_float32x4 qb0 = v_setzero_f32(), qb1 = v_setzero_f32();
 #endif
 
@@ -523,10 +517,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     v_zip(v00, v01, t00, t01);
                     v_zip(v10, v11, t10, t11);
 
-                    t0 = v_dotprod(t00, v_reinterpret_as_s16(qw0), qdelta) +
-                         v_dotprod(t10, v_reinterpret_as_s16(qw1));
-                    t1 = v_dotprod(t01, v_reinterpret_as_s16(qw0), qdelta) +
-                         v_dotprod(t11, v_reinterpret_as_s16(qw1));
+                    t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
+                    t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
                     t0 = t0 >> (W_BITS1-5);
                     t1 = t1 >> (W_BITS1-5);
                     diff0 = v_pack(t0, t1) - diff0;
@@ -623,10 +615,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             }
 
 #if CV_SSE2 || CV_VSX
-            float CV_DECL_ALIGNED(16) bbuf[4];
-            v_store_aligned(bbuf, qb0 + qb1);
-            ib1 += bbuf[0] + bbuf[2];
-            ib2 += bbuf[1] + bbuf[3];
+            v_float32x4 qf0, qf1;
+            v_recombine(v_interleave_pairs(qb0 + qb1), v_setzero_f32(), qf0, qf1);
+            ib1 += v_reduce_sum(qf0);
+            ib2 += v_reduce_sum(qf1);
 #endif
 
 #if CV_NEON
