@@ -610,7 +610,7 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
                             try {
                                 wrapper->outProms[processedOutputs].setException(std::current_exception());
                             } catch(...) {
-                                CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                                CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
                             }
                         }
                     }
@@ -623,7 +623,7 @@ void InfEngineBackendNet::forward(const std::vector<Ptr<BackendWrapper> >& outBl
                         try {
                             wrapper->outProms[processedOutputs].setException(e);
                         } catch(...) {
-                            CV_LOG_ERROR(NULL, "DNN: Exception occured during async inference exception propagation");
+                            CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
                         }
                     }
                 }

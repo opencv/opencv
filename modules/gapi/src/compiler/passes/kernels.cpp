@@ -32,7 +32,7 @@ namespace
         cv::GArgs       in_args;
     };
 
-    // Generaly the algorithm is following
+    // Generally the algorithm is following
     //
     // 1. Get GCompoundKernel implementation
     // 2. Create GCompoundContext

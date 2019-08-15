@@ -239,7 +239,7 @@ void resetInternalData(Mag& mag, const Data &d)
         break;
 
     case GShape::GMAT:
-        // Do nothign here - FIXME unify with initInternalData?
+        // Do nothing here - FIXME unify with initInternalData?
         break;
 
     default:
@@ -281,7 +281,7 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
             return GRunArgP(&mag.template slot<cv::gapi::own::Mat>()[rc.id]);
     case GShape::GSCALAR: return GRunArgP(&mag.template slot<cv::gapi::own::Scalar>()[rc.id]);
     // Note: .at() is intentional for GArray as object MUST be already there
-    //   (and constructer by either bindIn/Out or resetInternal)
+    //   (and constructor by either bindIn/Out or resetInternal)
     case GShape::GARRAY:
         // FIXME(DM): For some absolutely unknown to me reason, move
         // semantics is involved here without const_cast to const (and

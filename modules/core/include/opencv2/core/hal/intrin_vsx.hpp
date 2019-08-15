@@ -1272,7 +1272,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-// fixme: Is there any buitin op or intrinsic that cover "xvcvsphp"?
+// fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_ushort8 vf16;
     __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));

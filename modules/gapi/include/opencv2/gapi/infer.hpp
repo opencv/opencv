@@ -164,7 +164,7 @@ typename Net::ResultL infer(cv::GArray<cv::Rect> roi, Args&&... args) {
  * @param args network's input parameters as specified in G_API_NET() macro.
  * @return an object of return type as defined in G_API_NET().
  *   If a network has multiple return values (defined with a tuple), a tuple of
- *   objects of apprpriate type is returned.
+ *   objects of appropriate type is returned.
  * @sa  G_API_NET()
  */
 template<typename Net, typename... Args>
