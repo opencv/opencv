@@ -62,7 +62,7 @@ namespace cv {
 #define MAX_PAM_HEADER_IDENITFIER_LENGTH 8
 #define MAX_PAM_HEADER_VALUE_LENGTH 255
 
-/* PAM header fileds */
+/* PAM header fields */
 typedef enum {
     PAM_HEADER_NONE,
     PAM_HEADER_COMMENT,

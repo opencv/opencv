@@ -198,7 +198,7 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
-            //cause compilation error, by tring to bind rvalue references to lvalue references
+            //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
             postprocess_ocl(outs...);

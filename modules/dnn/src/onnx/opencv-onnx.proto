@@ -161,7 +161,7 @@ message NodeProto {
   repeated string output = 2;   // namespace Value
 
   // An optional identifier for this node in a graph.
-  // This field MAY be absent in ths version of the IR.
+  // This field MAY be absent in this version of the IR.
   optional string name = 3;     // namespace Node
 
   // The symbolic identifier of the Operator to execute.

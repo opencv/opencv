@@ -1196,7 +1196,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         NSError *error = nil;
 
 
-        // Make sure the file does not already exist. Necessary to overwirte??
+        // Make sure the file does not already exist. Necessary to overwrite??
         /*
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if ([fileManager fileExistsAtPath:path]){

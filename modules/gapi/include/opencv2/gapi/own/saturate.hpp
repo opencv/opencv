@@ -66,7 +66,7 @@ static inline DST saturate(SRC x, R round)
         GAPI_DbgAssert(std::is_integral<DST>::value &&
                  std::is_floating_point<SRC>::value);
 #ifdef _WIN32
-// Suppress warning about convering x to floating-point
+// Suppress warning about converting x to floating-point
 // Note that x is already floating-point at this point
 #pragma warning(disable: 4244)
 #endif

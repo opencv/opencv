@@ -204,7 +204,7 @@ struct IECallContext
     // Input parameters passed to an inference operation.
     std::vector<cv::GArg> args;
 
-    //FIXME: avoid conversion of arguments from internal representaion to OpenCV one on each call
+    //FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
     //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
     //once on enter for input and output arguments, and once before return for output arguments only
     //FIXME: check if the above applies to this backend (taken from CPU)

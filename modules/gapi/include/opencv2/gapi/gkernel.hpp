@@ -323,7 +323,7 @@ namespace gapi {
      * implementations in form of type list (variadic template) and
      * generates a kernel package atop of that.
      *
-     * Kernel packages can be also generated programatically, starting
+     * Kernel packages can be also generated programmatically, starting
      * with an empty package (created with the default constructor)
      * and then by populating it with kernels via call to
      * GKernelPackage::include(). Note this method is also a template
