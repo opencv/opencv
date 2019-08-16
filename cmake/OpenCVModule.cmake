@@ -1206,10 +1206,6 @@ endfunction()
 function(ocv_add_accuracy_tests)
   ocv_debug_message("ocv_add_accuracy_tests(" ${ARGN} ")")
 
-  if(WINRT)
-    set(OPENCV_DEBUG_POSTFIX "")
-  endif()
-
   set(test_path "${CMAKE_CURRENT_LIST_DIR}/test")
   if(BUILD_TESTS AND EXISTS "${test_path}")
     __ocv_parse_test_sources(TEST ${ARGN})
