@@ -14,7 +14,7 @@
 // Synchronize headers include statements with src/op_inf_engine.hpp
 //
 //#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
-//there is no way to suppress warnigns from IE only at this moment, so we are forced to suppress warnings globally
+//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif

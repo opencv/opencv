@@ -1193,7 +1193,7 @@ bool CvCapture_MSMF::grabFrame()
         {
             if (streamIndex != dwStreamIndex)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): Wrong stream readed. Abort capturing");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): Wrong stream read. Abort capturing");
                 close();
             }
             else if (flags & MF_SOURCE_READERF_ERROR)

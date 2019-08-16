@@ -1219,7 +1219,7 @@ cvShowImage( const char* name, const CvArr* arr )
                      dst_ptr, (size.cx * channels + 3) & -4 );
     cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
 
-    // ony resize window if needed
+    // only resize window if needed
     if (changed_size)
         icvUpdateWindowPos(window);
     InvalidateRect(window->hwnd, 0, 0);

@@ -53,7 +53,7 @@
                           which is incompatible with C
 
    It is OK to disable it because we only extend few plain structures with
-   C++ construrtors for simpler interoperability with C++ API of the library
+   C++ constructors for simpler interoperability with C++ API of the library
 */
 #    pragma warning(disable:4190)
 #  elif defined __clang__ && __clang_major__ >= 3
