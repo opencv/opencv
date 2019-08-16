@@ -895,7 +895,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
  * #pragma omp parallel
  * {
  *     ...
- *     icvGetBackgourndImage( cvbgdata, cvbgreader, img );
+ *     icvGetBackgroundImage( cvbgdata, cvbgreader, img );
  *     ...
  * }
  * ...
@@ -990,7 +990,7 @@ static int icvInitBackgroundReaders( const char* filename, Size winsize )
 /*
  * icvDestroyBackgroundReaders
  *
- * Finish backgournd reading process
+ * Finish background reading process
  */
 static
 void icvDestroyBackgroundReaders()

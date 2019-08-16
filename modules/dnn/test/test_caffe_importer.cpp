@@ -479,32 +479,35 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
     checkBackend();
     const string proto = findDataFile("dnn/DenseNet_121.prototxt", false);
-    const string model = findDataFile("dnn/DenseNet_121.caffemodel", false);
+    const string weights = findDataFile("dnn/DenseNet_121.caffemodel", false);
 
     Mat inp = imread(_tf("dog416.png"));
-    inp = blobFromImage(inp, 1.0 / 255, Size(224, 224), Scalar(), true, true);
+    Model model(proto, weights);
+    model.setInputScale(1.0 / 255).setInputSwapRB(true).setInputCrop(true);
+    std::vector<Mat> outs;
     Mat ref = blobFromNPY(_tf("densenet_121_output.npy"));
 
-    Net net = readNetFromCaffe(proto, model);
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    net.setInput(inp);
-    Mat out = net.forward();
+    model.setPreferableBackend(backend);
+    model.setPreferableTarget(target);
+    model.predict(inp, outs);
 
     // Reference is an array of 1000 values from a range [-6.16, 7.9]
     float l1 = default_l1, lInf = default_lInf;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2019020000)
+        l1 = 0.04; lInf = 0.21;
+#else
         l1 = 0.017; lInf = 0.0795;
+#endif
     }
     else if (target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.11; lInf = 0.5;
     }
-    normAssert(out, ref, "", l1, lInf);
+    normAssert(outs[0], ref, "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        expectNoFallbacksFromIE(net);
+        expectNoFallbacksFromIE(model);
 }
 
 TEST(Test_Caffe, multiple_inputs)

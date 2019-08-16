@@ -262,6 +262,10 @@ typedef uint32_t __u32;
 #define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
 #endif
 
+#ifndef V4L2_PIX_FMT_Y10
+#define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
+#endif
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
@@ -792,11 +796,10 @@ bool CvCaptureCAM_V4L::open(int _index)
         name = cv::format("/dev/video%d", _index);
     }
 
-    /* Print the CameraNumber at the end of the string with a width of one character */
     bool res = open(name.c_str());
     if (!res)
     {
-        fprintf(stderr, "VIDEOIO ERROR: V4L: can't open camera by index %d\n", _index);
+        CV_LOG_WARNING(NULL, cv::format("VIDEOIO ERROR: V4L: can't open camera by index %d", _index));
     }
     return res;
 }

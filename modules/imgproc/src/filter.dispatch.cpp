@@ -1022,7 +1022,7 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
     return success;
 }
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 static bool ippFilter2D(int stype, int dtype, int kernel_type,
               uchar * src_data, size_t src_step,
               uchar * dst_data, size_t dst_step,
@@ -1286,7 +1286,7 @@ void filter2D(int stype, int dtype, int kernel_type,
     if (res)
         return;
 
-    CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
+    /*CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
                               src_data, src_step,
                               dst_data, dst_step,
                               width, height,
@@ -1295,7 +1295,7 @@ void filter2D(int stype, int dtype, int kernel_type,
                               kernel_data, kernel_step,
                               kernel_width, kernel_height,
                               anchor_x, anchor_y,
-                              delta, borderType, isSubmatrix))
+                              delta, borderType, isSubmatrix))*/
 
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,

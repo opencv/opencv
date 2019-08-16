@@ -15,6 +15,7 @@ if (NOT HAVE_CXX11 OR NOT TARGET ade)
 endif()
 
 set(the_description "OpenCV G-API Core Module")
+
 ocv_add_module(gapi opencv_imgproc)
 
 file(GLOB gapi_ext_hdrs
@@ -45,6 +46,7 @@ set(gapi_srcs
     src/api/kernels_core.cpp
     src/api/kernels_imgproc.cpp
     src/api/render.cpp
+    src/api/ginfer.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
@@ -58,6 +60,7 @@ set(gapi_srcs
     src/compiler/passes/meta.cpp
     src/compiler/passes/kernels.cpp
     src/compiler/passes/exec.cpp
+    src/compiler/passes/pattern_matching.cpp
 
     # Executor
     src/executor/gexecutor.cpp
@@ -82,6 +85,10 @@ set(gapi_srcs
     src/backends/ocl/goclimgproc.cpp
     src/backends/ocl/goclcore.cpp
 
+    # IE Backend. FIXME: should be included by CMake
+    # if and only if IE support is enabled
+    src/backends/ie/giebackend.cpp
+
     # Compound
     src/backends/common/gcompoundbackend.cpp
     src/backends/common/gcompoundkernel.cpp
@@ -100,9 +107,8 @@ ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 
 # Note `ade` is not a module name but link dependency for ${the_module}
 # (which is opencv_gapi)
-ocv_create_module(ade)
-
-ocv_add_accuracy_tests()
+ocv_create_module(ade ${INF_ENGINE_TARGET})
+ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
 # FIXME: test binary is linked with ADE directly since ADE symbols
 # are not exported from libopencv_gapi.so in any form - thus
 # there're two copies of ADE code in memory when tests run (!)

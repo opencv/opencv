@@ -49,7 +49,7 @@ macro(android_get_compatible_target VAR)
     list(GET ANDROID_SDK_TARGETS 0 __lvl)
     string(REGEX MATCH "[0-9]+$" __lvl "${__lvl}")
 
-    #find minimal level mathing to all provided levels
+    #find minimal level matching to all provided levels
     foreach(lvl ${ARGN})
       string(REGEX MATCH "[0-9]+$" __level "${lvl}")
       if(__level GREATER __lvl)

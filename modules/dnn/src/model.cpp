@@ -23,7 +23,7 @@ struct Model::Impl
     Mat    blob;
     std::vector<String> outNames;
 
-    void predict(Net& net, const Mat& frame, std::vector<Mat>& outs)
+    void predict(Net& net, const Mat& frame, OutputArrayOfArrays outs)
     {
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
@@ -41,15 +41,27 @@ struct Model::Impl
     }
 };
 
+Model::Model() : impl(new Impl) {}
+
 Model::Model(const String& model, const String& config)
     : Net(readNet(model, config)), impl(new Impl)
 {
     impl->outNames = getUnconnectedOutLayersNames();
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
+        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
 };
 
 Model::Model(const Net& network) : Net(network), impl(new Impl)
 {
     impl->outNames = getUnconnectedOutLayersNames();
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
+        impl->size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
 };
 
 Model& Model::setInputSize(const Size& size)
@@ -100,9 +112,7 @@ void Model::setInputParams(double scale, const Size& size, const Scalar& mean,
 
 void Model::predict(InputArray frame, OutputArrayOfArrays outs)
 {
-    std::vector<Mat> outputs;
-    outs.getMatVector(outputs);
-    impl->predict(*this, frame.getMat(), outputs);
+    impl->predict(*this, frame.getMat(), outs);
 }
 
 ClassificationModel::ClassificationModel(const String& model, const String& config)
@@ -125,6 +135,47 @@ std::pair<int, float> ClassificationModel::classify(InputArray frame)
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 {
     std::tie(classId, conf) = classify(frame);
+}
+
+SegmentationModel::SegmentationModel(const String& model, const String& config)
+    : Model(model, config) {};
+
+SegmentationModel::SegmentationModel(const Net& network) : Model(network) {};
+
+void SegmentationModel::segment(InputArray frame, OutputArray mask)
+{
+
+    std::vector<Mat> outs;
+    impl->predict(*this, frame.getMat(), outs);
+    CV_Assert(outs.size() == 1);
+    Mat score = outs[0];
+
+    const int chns = score.size[1];
+    const int rows = score.size[2];
+    const int cols = score.size[3];
+
+    mask.create(rows, cols, CV_8U);
+    Mat classIds = mask.getMat();
+    classIds.setTo(0);
+    Mat maxVal(rows, cols, CV_32F, score.data);
+
+    for (int ch = 1; ch < chns; ch++)
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            const float *ptrScore = score.ptr<float>(0, ch, row);
+            uint8_t *ptrMaxCl = classIds.ptr<uint8_t>(row);
+            float *ptrMaxVal = maxVal.ptr<float>(row);
+            for (int col = 0; col < cols; col++)
+            {
+                if (ptrScore[col] > ptrMaxVal[col])
+                {
+                    ptrMaxVal[col] = ptrScore[col];
+                    ptrMaxCl[col] = ch;
+                }
+            }
+        }
+    }
 }
 
 DetectionModel::DetectionModel(const String& model, const String& config)

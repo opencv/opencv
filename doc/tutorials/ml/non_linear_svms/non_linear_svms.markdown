@@ -13,7 +13,7 @@ In this tutorial you will learn how to:
 Motivation
 ----------
 
-Why is it interesting to extend the SVM optimation problem in order to handle non-linearly separable
+Why is it interesting to extend the SVM optimization problem in order to handle non-linearly separable
 training data? Most of the applications in which SVMs are used in computer vision require a more
 powerful tool than a simple linear classifier. This stems from the fact that in these tasks __the
 training data can be rarely separated using an hyperplane__.

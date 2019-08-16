@@ -116,9 +116,9 @@ message PriorBoxParameter {
     CENTER_SIZE = 2;
   }
   // Minimum box size (in pixels). Required!
-  optional float min_size = 1;
+  repeated float min_size = 1;
   // Maximum box size (in pixels). Required!
-  optional float max_size = 2;
+  repeated float max_size = 2;
   // Various of aspect ratios. Duplicate ratios will be ignored.
   // If none is provided, we use default ratio 1.
   repeated float aspect_ratio = 3;

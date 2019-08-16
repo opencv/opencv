@@ -622,7 +622,7 @@ int main(int argc, char* argv[])
     vector<Size> sizes(num_images);
     vector<UMat> masks(num_images);
 
-    // Preapre images masks
+    // Prepare images masks
     for (int i = 0; i < num_images; ++i)
     {
         masks[i].create(images[i].size(), CV_8U);

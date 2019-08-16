@@ -721,7 +721,7 @@ class FuncInfo(object):
                     aname, argno = v.py_outlist[0]
                     code_ret = "return pyopencv_from(%s)" % (aname,)
             else:
-                # ther is more than 1 return parameter; form the tuple out of them
+                # there is more than 1 return parameter; form the tuple out of them
                 fmtspec = "N"*len(v.py_outlist)
                 backcvt_arg_list = []
                 for aname, argno in v.py_outlist:

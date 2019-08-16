@@ -80,7 +80,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
     std::unordered_set<GObjId> in_objs_p;
     for (const auto& in_obj : ins)
     {
-        // Objects are guarnateed to remain alive while this method
+        // Objects are guaranteed to remain alive while this method
         // is working, so it is safe to keep pointers here and below
         in_objs_p.insert(&proto::origin_of(in_obj));
     }
