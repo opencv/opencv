@@ -137,6 +137,64 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
     std::tie(classId, conf) = classify(frame);
 }
 
+KeypointsModel::KeypointsModel(const String& model, const String& config)
+    : Model(model, config) {};
+
+KeypointsModel::KeypointsModel(const Net& network) : Model(network) {};
+
+std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
+{
+
+    int frameHeight = frame.getMat().size[0];
+    int frameWidth = frame.getMat().size[1];
+    std::vector<Mat> outs;
+
+    impl->predict(*this, frame.getMat(), outs);
+    CV_Assert(outs.size() == 1);
+    Mat output = outs[0];
+
+    const int nPoints = output.size[1];
+    std::vector<Point2f> points;
+
+    // If output is a map, extract the keypoints
+    if (output.dims == 4)
+    {
+        int height = output.size[2];
+        int width = output.size[3];
+
+        // find the position of the keypoints (ignore the background)
+        for (int n=0; n < nPoints - 1; n++)
+        {
+            // Probability map of corresponding keypoint
+            Mat probMap(height, width, CV_32F, output.ptr(0, n));
+
+            Point2f p(-1, -1);
+            Point maxLoc;
+            double prob;
+            minMaxLoc(probMap, NULL, &prob, NULL, &maxLoc);
+            if (prob > thresh)
+            {
+                p = maxLoc;
+                p.x *= (float)frameWidth / width;
+                p.y *= (float)frameHeight / height;
+                points.push_back(p);
+            }
+        }
+    }
+    // Otherwise the output is a vector of keypoints and we can just return it
+    else
+    {
+        for (int n=0; n < nPoints; n++)
+        {
+            Point2f p;
+            p.x = *output.ptr<float>(0, n, 0);
+            p.y = *output.ptr<float>(0, n, 1);
+            points.push_back(p);
+        }
+    }
+    return points;
+}
+
 SegmentationModel::SegmentationModel(const String& model, const String& config)
     : Model(model, config) {};
 
