@@ -76,7 +76,7 @@ implemented as a structure based on a one SIMD register.
 - cv::v_uint32x4 and cv::v_int32x4: four 32-bit integer values (unsgined/signed) - int
 - cv::v_uint64x2 and cv::v_int64x2: two 64-bit integer values (unsigned/signed) - int64
 - cv::v_float32x4: four 32-bit floating point values (signed) - float
-- cv::v_float64x2: two 64-bit floating point valies (signed) - double
+- cv::v_float64x2: two 64-bit floating point values (signed) - double
 
 @note
 cv::v_float64x2 is not implemented in NEON variant, if you want to use this type, don't forget to

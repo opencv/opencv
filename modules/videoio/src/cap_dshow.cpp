@@ -481,7 +481,7 @@ class videoInput{
         bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
         //These two are only for capture cards
-        //USB and Firewire cameras souldn't specify connection
+        //USB and Firewire cameras shouldn't specify connection
         bool setupDevice(int deviceID, int connection);
         bool setupDevice(int deviceID, int w, int h, int connection);
 

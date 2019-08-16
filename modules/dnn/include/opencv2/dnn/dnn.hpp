@@ -424,7 +424,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param inpPin descriptor of the second layer input.
          *
          * Descriptors have the following template <DFN>&lt;layer_name&gt;[.input_number]</DFN>:
-         * - the first part of the template <DFN>layer_name</DFN> is sting name of the added layer.
+         * - the first part of the template <DFN>layer_name</DFN> is string name of the added layer.
          *   If this part is empty then the network input pseudo layer will be used;
          * - the second optional part of the template <DFN>input_number</DFN>
          *   is either number of the layer input, either label one.

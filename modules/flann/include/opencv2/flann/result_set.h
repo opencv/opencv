@@ -301,7 +301,7 @@ public:
         unsigned int index_;
     };
 
-    /** Default cosntructor */
+    /** Default constructor */
     UniqueResultSet() :
         is_full_(false), worst_distance_(std::numeric_limits<DistanceType>::max())
     {

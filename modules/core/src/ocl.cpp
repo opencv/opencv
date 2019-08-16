@@ -5756,7 +5756,7 @@ public:
 
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
-    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
     g_isOpenCVActivated = true;
     return g_allocator;
 }
