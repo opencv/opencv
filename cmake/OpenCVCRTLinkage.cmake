@@ -4,16 +4,6 @@ if(NOT MSVC)
   message(FATAL_ERROR "CRT options are available only for MSVC")
 endif()
 
-if (WINRT)
-  if (CMAKE_SYSTEM_VERSION MATCHES 10)
-    add_definitions(/DWINVER=_WIN32_WINNT_WIN10 /DNTDDI_VERSION=NTDDI_WIN10 /D_WIN32_WINNT=_WIN32_WINNT_WIN10)
-  elseif(CMAKE_SYSTEM_VERSION MATCHES 8.1)
-    add_definitions(/DWINVER=_WIN32_WINNT_WINBLUE /DNTDDI_VERSION=NTDDI_WINBLUE /D_WIN32_WINNT=_WIN32_WINNT_WINBLUE)
-  else()
-    add_definitions(/DWINVER=_WIN32_WINNT_WIN8 /DNTDDI_VERSION=NTDDI_WIN8 /D_WIN32_WINNT=_WIN32_WINNT_WIN8)
-  endif()
-endif()
-
 # Removing LNK4075 warnings for debug WinRT builds
 # "LNK4075: ignoring '/INCREMENTAL' due to '/OPT:ICF' specification"
 # "LNK4075: ignoring '/INCREMENTAL' due to '/OPT:REF' specification"

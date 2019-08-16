@@ -16,4 +16,4 @@ PERF_TEST(Undistort, InitUndistortMap)
     SANITY_CHECK_NOTHING();
 }
 
-}
+} // namespace
