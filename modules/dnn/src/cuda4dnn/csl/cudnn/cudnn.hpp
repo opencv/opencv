@@ -277,6 +277,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
+    template <> inline
+    void add(const Handle& handle,
+        half alpha_, const TensorDescriptor<half>& aDesc, DevicePtr<const half> A,
+        half beta_, const TensorDescriptor<half>& cDesc, DevicePtr<half> C)
+    {
+        float alpha = alpha_, beta = beta_;
+        CUDA4DNN_CHECK_CUDNN(
+            cudnnAddTensor(handle.get(),
+                &alpha, aDesc.get(), A.get(),
+                &beta, cDesc.get(), C.get()
+            )
+        );
+    }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 
 #endif /* OPENCV_DNN_CUDA4DNN_CSL_CUDNN_HPP */
