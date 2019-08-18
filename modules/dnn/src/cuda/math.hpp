@@ -38,21 +38,29 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ __half log1p(__half val) { return hlog(val) + __half(1); }
     template <> inline __device__ __half2 log1p(__half2 val) { return h2log(val) + __half2(1, 1); }
     template <> inline __device__ float log1p(float val) { return log1pf(val); }
-    template <> inline __device__ double log1p(double val) { return ::log1p(val); }
 
     template <class T> __device__ T log1pexp(T val);
-    template <> inline __device__ double log1pexp(double val) {
-        if (val <= -37)
-            return exp(val);
-        else if (-37 < val && val <= 18)
-            return log1p(exp(val));
-        else if (18 < val && val <= 33.3)
+    template <> inline __device__ float log1pexp(float val) {
+        if (val <= -20)
+            return expf(val);
+        else if (val <= 9.0)
+            return log1pf(expf(val));
+        else if (val <= 14.6)
             return val + exp(-val);
         else
             return val;
     }
-    template <> inline __device__ float log1pexp(float val) { return log1pexp<double>(val); }
-    template <> inline __device__ __half log1pexp(__half val) { return log1pexp<double>(val); }
+    template <> inline __device__ double log1pexp(double val) {
+        if (val <= -37)
+            return exp(val);
+        else if (val <= 18)
+            return log1p(exp(val));
+        else if (val <= 33.3)
+            return val + exp(-val);
+        else
+            return val;
+    }
+    template <> inline __device__ __half log1pexp(__half val) { return log1pexp<float>(val); }
 
     template <class T> __device__ T tanh(T val);
     template <> inline __device__ __half tanh(__half val) { return tanhf(val); }
