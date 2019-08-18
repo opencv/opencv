@@ -163,7 +163,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void launch_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> bias){
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
-        CV_Assert(inner_size % 4 == 0);
+        CV_Assert(inner_size % N == 0);
 
         auto kernel = raw::biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -221,7 +221,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void launch_scaleN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
-        CV_Assert(inner_size % 4 == 0);
+        CV_Assert(inner_size % N == 0);
 
         auto kernel = raw::scaleN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
@@ -279,7 +279,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void launch_scaleN_with_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias) {
         CV_Assert(is_fully_aligned<T>(output, N));
         CV_Assert(is_fully_aligned<T>(input, N));
-        CV_Assert(inner_size % 4 == 0);
+        CV_Assert(inner_size % N == 0);
 
         auto kernel = raw::scaleN_with_biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
