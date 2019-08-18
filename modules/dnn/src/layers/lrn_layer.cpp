@@ -318,12 +318,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         cuda4dnn::lrn_type type_;
         if (type == CHANNEL_NRM)
             type_ = cuda4dnn::lrn_type::across_channels;
@@ -351,7 +352,7 @@ public:
         }
 
         return make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
-            std::move(cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
+            std::move(context->cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
     }
 #endif
 

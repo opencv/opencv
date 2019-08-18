@@ -42,10 +42,6 @@
 #ifndef OPENCV_DNN_DNN_HPP
 #define OPENCV_DNN_DNN_HPP
 
-#include <opencv2/dnn/csl/cublas.hpp>
-#include <opencv2/dnn/csl/cudnn.hpp>
-#include <opencv2/dnn/csl/stream.hpp>
-
 #include <vector>
 #include <opencv2/core.hpp>
 #include "opencv2/core/async.hpp"
@@ -285,16 +281,13 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Returns a CUDA backend node
          *
-         * @param[in]  stream                  stream to use for operations
-         * @param[in]  cublas_handle           cuBLAS handle to use for cuBLAS operations
-         * @param[in]  cudnn_handle            cuDNN handle to use for cuDNN operations
-         * @param      inputs                  layer inputs
+         * @param      context  void pointer to CSLContext object
+         * @param      inputs   layer inputs
          */
         virtual Ptr<BackendNode> initCUDA(
-            cuda4dnn::csl::Stream stream,
-            cuda4dnn::csl::cublas::Handle cublas_handle,
-            cuda4dnn::csl::cudnn::Handle cudnn_handle,
-            const std::vector<Ptr<BackendWrapper>>& inputs
+            void *context,
+            const std::vector<Ptr<BackendWrapper>>& inputs,
+            const std::vector<Ptr<BackendWrapper>>& outputs
         );
 
        /**

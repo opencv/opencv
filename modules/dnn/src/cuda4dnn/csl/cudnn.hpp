@@ -5,8 +5,6 @@
 #ifndef OPENCV_DNN_SRC_CUDA4DNN_CSL_CUDNN_HPP
 #define OPENCV_DNN_SRC_CUDA4DNN_CSL_CUDNN_HPP
 
-#include <opencv2/dnn/csl/cudnn.hpp>
-
 #include "cudnn/cudnn.hpp"
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_CUDNN_HPP */

@@ -61,7 +61,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         /** mark a point in a stream */
         void record(const Stream& stream) {
-            CUDA4DNN_CHECK_CUDA(cudaEventRecord(event, StreamAccessor::get(stream)));
+            CUDA4DNN_CHECK_CUDA(cudaEventRecord(event, stream.get()));
         }
 
         /** blocks the caller thread until all operations before the event finish */
@@ -87,7 +87,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     /** makes a stream wait on an event */
     void StreamWaitOnEvent(const Stream& stream, const Event& event) {
-        CUDA4DNN_CHECK_CUDA(cudaStreamWaitEvent(StreamAccessor::get(stream), event.get(), 0));
+        CUDA4DNN_CHECK_CUDA(cudaStreamWaitEvent(stream.get(), event.get(), 0));
     }
 
     /** returns the time elapsed between two events in milliseconds */

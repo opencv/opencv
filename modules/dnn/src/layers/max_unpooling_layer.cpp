@@ -131,12 +131,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         cuda4dnn::MaxUnpoolingConfiguration config;
         auto& window_size = config.window_size;
         window_size.resize(2);
@@ -153,7 +154,7 @@ public:
         pads_begin[0] = poolPad.height;
         pads_begin[1] = poolPad.width;
 
-        return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(stream), config);
+        return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
 

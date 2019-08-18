@@ -5,7 +5,8 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_LRN_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_LRN_HPP
 
-#include "cudnn.h"
+#include "cudnn.hpp"
+
 #include "../pointer.hpp"
 #include "../workspace.hpp"
 
@@ -94,7 +95,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnLRNCrossChannelForward(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
                     &alpha, inputDesc.get(), inputPtr.get(),
                     &beta, outputDesc.get(), outputPtr.get()
@@ -109,7 +110,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(
                 cudnnDivisiveNormalizationForward(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     lrnDesc.get(), CUDNN_DIVNORM_PRECOMPUTED_MEANS,
                     &alpha, inputDesc.get(), inputPtr.get(),
                     NULL,
@@ -136,7 +137,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         if (lrnDesc.get_type() == LRNDescriptor::lrn_type::across_channels) {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnLRNCrossChannelForward(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     lrnDesc.get(), CUDNN_LRN_CROSS_CHANNEL_DIM1,
                     &alpha_, inputDesc.get(), inputPtr.get(),
                     &beta_, outputDesc.get(), outputPtr.get()
@@ -151,7 +152,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(
                 cudnnDivisiveNormalizationForward(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     lrnDesc.get(), CUDNN_DIVNORM_PRECOMPUTED_MEANS,
                     &alpha_, inputDesc.get(), inputPtr.get(),
                     NULL,

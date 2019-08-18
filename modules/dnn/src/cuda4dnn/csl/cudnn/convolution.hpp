@@ -5,7 +5,8 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CONVOLUTION_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CONVOLUTION_HPP
 
-#include "cudnn.h"
+#include "cudnn.hpp"
+
 #include "../pointer.hpp"
 #include "../workspace.hpp"
 
@@ -216,7 +217,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnGetConvolutionForwardAlgorithm(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     input.get(), filter.get(), conv.get(), output.get(),
                     CUDNN_CONVOLUTION_FWD_PREFER_FASTEST,
                     0, /* no memory limit */
@@ -226,7 +227,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(
                 cudnnGetConvolutionForwardWorkspaceSize(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     input.get(), filter.get(), conv.get(), output.get(),
                     algo, &workspace_size
                 )
@@ -292,7 +293,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     {
         CUDA4DNN_CHECK_CUDNN(
             cudnnConvolutionForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
                 convDesc.get(), convAlgo.get(),
@@ -320,7 +321,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         float alpha_ = alpha, beta_ = beta;
         CUDA4DNN_CHECK_CUDNN(
             cudnnConvolutionForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 &alpha_, inputDesc.get(), inputPtr.get(),
                 filterDesc.get(), filterPtr.get(),
                 convDesc.get(), convAlgo.get(),

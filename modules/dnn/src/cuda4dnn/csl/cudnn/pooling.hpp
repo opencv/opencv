@@ -5,7 +5,8 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_POOLING_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_POOLING_HPP
 
-#include "cudnn.h"
+#include "cudnn.hpp"
+
 #include "../pointer.hpp"
 
 #include <opencv2/core.hpp>
@@ -164,7 +165,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     {
         CUDA4DNN_CHECK_CUDNN(
             cudnnPoolingForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 poolingDesc.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 &beta, outputDesc.get(), outputPtr.get()
@@ -186,7 +187,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         float alpha_ = alpha, beta_ = beta;
         CUDA4DNN_CHECK_CUDNN(
             cudnnPoolingForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 poolingDesc.get(),
                 &alpha_, inputDesc.get(), inputPtr.get(),
                 &beta_, outputDesc.get(), outputPtr.get()

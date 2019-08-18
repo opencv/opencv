@@ -5,7 +5,7 @@
 #ifndef OPENCV_DNN_SRC_CUDA4DNN_CSL_ERROR_HPP
 #define OPENCV_DNN_SRC_CUDA4DNN_CSL_ERROR_HPP
 
-#include <opencv2/dnn/csl/error.hpp>
+#include <opencv2/core.hpp>
 
 #include <cuda_runtime_api.h>
 
@@ -13,6 +13,12 @@
     ::cv::dnn::cuda4dnn::csl::detail::check((call), CV_Func, __FILE__, __LINE__)
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
+    /** @brief exception class for errors thrown by the CUDA APIs */
+    class CUDAException : public cv::Exception {
+    public:
+        using cv::Exception::Exception;
+    };
+
     namespace detail {
         inline void check(cudaError_t err, const char* func, const char* file, int line) {
             if (err != cudaSuccess)

@@ -33,7 +33,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         {
             CUDA4DNN_CHECK_CUDNN(
                 cudnnGetConvolutionBackwardDataAlgorithm(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     filter.get(), input.get(), conv.get(), output.get(),
                     CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
                     0, /* no memory limit */
@@ -43,7 +43,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(
                 cudnnGetConvolutionBackwardDataWorkspaceSize(
-                    HandleAccessor::get(handle),
+                    handle.get(),
                     filter.get(), input.get(), conv.get(), output.get(),
                     dalgo, &workspace_size
                 )
@@ -78,7 +78,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     {
         CUDA4DNN_CHECK_CUDNN(
             cudnnConvolutionBackwardData(
-                HandleAccessor::get(handle),
+                handle.get(),
                 &alpha,
                 filterDesc.get(), filterPtr.get(),
                 inputDesc.get(), inputPtr.get(),
@@ -107,7 +107,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         float alpha_ = alpha, beta_ = beta;
         CUDA4DNN_CHECK_CUDNN(
             cudnnConvolutionBackwardData(
-                HandleAccessor::get(handle),
+                handle.get(),
                 &alpha_,
                 filterDesc.get(), filterPtr.get(),
                 inputDesc.get(), inputPtr.get(),

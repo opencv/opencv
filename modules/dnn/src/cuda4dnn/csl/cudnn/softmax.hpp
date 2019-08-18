@@ -5,7 +5,8 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_SOFTMAX_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_SOFTMAX_HPP
 
-#include "cudnn.h"
+#include "cudnn.hpp"
+
 #include "../pointer.hpp"
 
 #include <cudnn.h>
@@ -35,7 +36,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnSoftmaxAlgorithm_t algo = log ? CUDNN_SOFTMAX_LOG : CUDNN_SOFTMAX_ACCURATE;
         CUDA4DNN_CHECK_CUDNN(
             cudnnSoftmaxForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 algo, CUDNN_SOFTMAX_MODE_CHANNEL,
                 &alpha, inputDesc.get(), input.get(),
                 &beta, outputDesc.get(), output.get()
@@ -54,7 +55,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnSoftmaxAlgorithm_t algo = log ? CUDNN_SOFTMAX_LOG : CUDNN_SOFTMAX_ACCURATE;
         CUDA4DNN_CHECK_CUDNN(
             cudnnSoftmaxForward(
-                HandleAccessor::get(handle),
+                handle.get(),
                 algo, CUDNN_SOFTMAX_MODE_CHANNEL,
                 &alpha, inputDesc.get(), input.get(),
                 &beta, outputDesc.get(), output.get()

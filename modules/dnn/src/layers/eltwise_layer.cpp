@@ -383,12 +383,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         eltwise_op op_ = [this] {
             switch (op) {
             case MAX: return eltwise_op::max;
@@ -398,7 +399,7 @@ public:
             return eltwise_op::sum;
         }();
 
-        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(stream), op_, coeffs);
+        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);
     }
 #endif
 

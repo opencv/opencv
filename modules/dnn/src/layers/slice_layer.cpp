@@ -269,12 +269,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         std::vector<std::vector<std::size_t>> offsets;
         for (const auto& ranges : sliceRanges)
         {
@@ -284,7 +285,7 @@ public:
             offsets.push_back(std::move(offsets_i));
         }
 
-        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(stream), std::move(offsets));
+        return make_cuda_node<cuda4dnn::SliceOp>(preferableTarget, std::move(context->stream), std::move(offsets));
     }
 #endif
 

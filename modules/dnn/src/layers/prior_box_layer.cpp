@@ -494,12 +494,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto feature_map_shape = feature_map_wrapper->getShape();
 
@@ -525,7 +526,7 @@ public:
         config.clip = _clip;
         config.normalize = _bboxesNormalized;
 
-        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(stream), config);
+        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
 

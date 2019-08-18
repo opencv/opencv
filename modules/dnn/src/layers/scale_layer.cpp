@@ -148,12 +148,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         CV_Assert(!blobs.empty() || inputs.size() == 2);
 
         cv::Mat weightsMat = hasWeights ? blobs[0] : Mat();
@@ -163,7 +164,7 @@ public:
          */
         cv::Mat biasMat = hasBias ? blobs.back() : Mat();
 
-        return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(stream), axis, weightsMat, biasMat);
+        return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(context->stream), axis, weightsMat, biasMat);
     }
 #endif
 

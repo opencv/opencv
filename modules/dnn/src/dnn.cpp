@@ -46,10 +46,6 @@
 #include "op_cuda.hpp"
 #include "halide_scheduler.hpp"
 
-#include <opencv2/dnn/csl/stream.hpp>
-#include <opencv2/dnn/csl/cudnn.hpp>
-#include <opencv2/dnn/csl/cublas.hpp>
-
 #include <set>
 #include <algorithm>
 #include <iostream>
@@ -1872,7 +1868,12 @@ struct Net::Impl
                 continue;
             }
 
-            auto node = layerInstance->initCUDA(stream, cublasHandle, cudnnHandle, ld.inputBlobsWrappers);
+            cuda4dnn::csl::CSLContext context;
+            context.stream = stream;
+            context.cublas_handle = cublasHandle;
+            context.cudnn_handle = cudnnHandle;
+
+            auto node = layerInstance->initCUDA(&context, ld.inputBlobsWrappers, ld.outputBlobsWrappers);
             ld.backendNodes[DNN_BACKEND_CUDA] = node;
 
             auto cudaNode = node.dynamicCast<CUDABackendNode>();
@@ -3803,10 +3804,9 @@ bool Layer::supportBackend(int backendId)
 }
 
 Ptr<BackendNode> Layer::initCUDA(
-    cuda4dnn::csl::Stream stream,
-    cuda4dnn::csl::cublas::Handle cublas_handle,
-    cuda4dnn::csl::cudnn::Handle cudnn_handle,
-    const std::vector<Ptr<BackendWrapper>>& inputs)
+    void*,
+    const std::vector<Ptr<BackendWrapper>>&,
+    const std::vector<Ptr<BackendWrapper>>&)
 {
     CV_Error(Error::StsNotImplemented, "CUDA pipeline of " + type +
                                        " layers is not defined.");

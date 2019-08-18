@@ -92,7 +92,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         T alpha = 1.0, beta = 0.0;
         CUDA4DNN_CHECK_CUDNN(
             cudnnTransformTensorEx(
-                HandleAccessor::get(handle),
+                handle.get(),
                 transDesc.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 &beta, outputDesc.get(), outputPtr.get()
@@ -113,7 +113,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         float alpha = 1.0, beta = 0.0;
         CUDA4DNN_CHECK_CUDNN(
             cudnnTransformTensorEx(
-                HandleAccessor::get(handle),
+                handle.get(),
                 transDesc.get(),
                 &alpha, inputDesc.get(), inputPtr.get(),
                 &beta, outputDesc.get(), outputPtr.get()

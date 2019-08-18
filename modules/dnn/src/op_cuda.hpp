@@ -37,6 +37,12 @@ namespace cv {
 
 #ifdef HAVE_CUDA
         namespace cuda4dnn { namespace csl {
+            struct CSLContext {
+                csl::Stream stream;
+                csl::cublas::Handle cublas_handle;
+                csl::cudnn::Handle cudnn_handle;
+            };
+
             /** @brief creates Tensor object from cv::Mat (only the header is created, i.e. no data is copied)
              *
              * \tparam T    element type for the tensor

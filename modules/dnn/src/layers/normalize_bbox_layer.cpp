@@ -268,12 +268,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         if(pnorm != 1 && pnorm != 2)
             CV_Error(Error::StsNotImplemented, "Unsupported normalization mode");
 
@@ -288,7 +289,7 @@ public:
         config.eps = epsilon;
 
         const auto& weightsMat = blobs.empty() ? Mat() : blobs[0];
-        return make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(stream), weightsMat, config);
+        return make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(context->stream), weightsMat, config);
     }
 #endif
 

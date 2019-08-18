@@ -5,8 +5,6 @@
 #ifndef OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CUDNN_HPP
 #define OPENCV_DNN_CUDA4DNN_CSL_CUDNN_CUDNN_HPP
 
-#include <opencv2/dnn/csl/cudnn.hpp>
-
 #include "../fp16.hpp"
 #include "../pointer.hpp"
 
@@ -26,6 +24,12 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cudnn {
 
+    /** @brief exception class for errors thrown by the cuDNN API */
+    class cuDNNException : public CUDAException {
+    public:
+        using CUDAException::CUDAException;
+    };
+
     namespace detail {
         inline void check(cudnnStatus_t status, const char* func, const char* file, int line) {
             if (status != CUDNN_STATUS_SUCCESS)
@@ -34,14 +38,88 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         /** get_data_type<T> returns the equivalent cudnn enumeration constant for type T */
         template <class> auto get_data_type()->decltype(CUDNN_DATA_FLOAT);
-        template <> inline auto get_data_type<half>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_HALF; }
+        template <> inline auto get_data_type<half>()->decltype(CUDNN_DATA_HALF) { return CUDNN_DATA_HALF; }
         template <> inline auto get_data_type<float>()->decltype(CUDNN_DATA_FLOAT) { return CUDNN_DATA_FLOAT; }
     }
 
-    /** used to access the raw cuDNN handle held by Handle */
-    class HandleAccessor {
+    /** @brief noncopyable cuDNN smart handle
+     *
+     * UniqueHandle is a smart non-sharable wrapper for cuDNN handle which ensures that the handle
+     * is destroyed after use. The handle can be associated with a CUDA stream by specifying the
+     * stream during construction. By default, the handle is associated with the default stream.
+     */
+    class UniqueHandle {
     public:
-        static cudnnHandle_t get(const Handle& handle);
+        UniqueHandle() { CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle)); }
+        UniqueHandle(UniqueHandle&) = delete;
+        UniqueHandle(UniqueHandle&& other) noexcept
+            : stream(std::move(other.stream)), handle{ other.handle } {
+            other.handle = nullptr;
+        }
+
+        UniqueHandle(Stream strm) : stream(std::move(strm)) {
+            CUDA4DNN_CHECK_CUDNN(cudnnCreate(&handle));
+            try {
+                CUDA4DNN_CHECK_CUDNN(cudnnSetStream(handle, stream.get()));
+            } catch (...) {
+                /* cudnnDestroy won't throw if a valid handle is passed */
+                CUDA4DNN_CHECK_CUDNN(cudnnDestroy(handle));
+                throw;
+            }
+        }
+
+        ~UniqueHandle() noexcept {
+            if (handle != nullptr) {
+                /* cudnnDestroy won't throw if a valid handle is passed */
+                CUDA4DNN_CHECK_CUDNN(cudnnDestroy(handle));
+            }
+        }
+
+        UniqueHandle& operator=(const UniqueHandle&) = delete;
+        UniqueHandle& operator=(UniqueHandle&& other) noexcept {
+            stream = std::move(other.stream);
+            handle = other.handle;
+            other.handle = nullptr;
+            return *this;
+        }
+
+        /** returns the raw cuDNN handle */
+        cudnnHandle_t get() const noexcept { return handle; }
+
+    private:
+        Stream stream;
+        cudnnHandle_t handle;
+    };
+
+    /** @brief sharable cuDNN smart handle
+     *
+     * Handle is a smart sharable wrapper for cuDNN handle which ensures that the handle
+     * is destroyed after all references to the handle are destroyed. The handle can be
+     * associated with a CUDA stream by specifying the stream during construction. By default,
+     * the handle is associated with the default stream.
+     *
+     * @note Moving a Handle object to another invalidates the former
+     */
+    class Handle {
+    public:
+        Handle() : handle(std::make_shared<UniqueHandle>()) { }
+        Handle(const Handle&) = default;
+        Handle(Handle&&) = default;
+        Handle(Stream strm) : handle(std::make_shared<UniqueHandle>(std::move(strm))) { }
+
+        Handle& operator=(const Handle&) = default;
+        Handle& operator=(Handle&&) = default;
+
+        /** returns true if the handle is valid */
+        explicit operator bool() const noexcept { return static_cast<bool>(handle); }
+
+        cudnnHandle_t get() const noexcept {
+            CV_Assert(handle);
+            return handle->get();
+        }
+
+    private:
+        std::shared_ptr<UniqueHandle> handle;
     };
 
     /** creates a cuDNN tensor descriptor for a given shape */
@@ -99,6 +177,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             CUDA4DNN_CHECK_CUDNN(cudnnCreateTensorDescriptor(&descriptor));
             try {
+                /* cuDNN documentation suggests using the 4d tensor API whenever possible
+                 * hence, we create a 4d tensor descriptors for 3d tensor
+                 */
                 const auto rank = std::distance(start, end);
                 if (rank <= 4) {
                     std::array<int, 4> dims;
@@ -189,7 +270,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         T beta, const TensorDescriptor<T>& cDesc, DevicePtr<T> C)
     {
         CUDA4DNN_CHECK_CUDNN(
-            cudnnAddTensor(HandleAccessor::get(handle),
+            cudnnAddTensor(handle.get(),
                 &alpha, aDesc.get(), A.get(),
                 &beta, cDesc.get(), C.get()
             )

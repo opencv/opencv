@@ -346,12 +346,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         if (coords != 4)
             CV_Error(Error::StsNotImplemented, "Only upright rectangular boxes are supported in RegionLayer.");
 
@@ -394,7 +395,7 @@ public:
 
         config.nms_iou_threshold = nmsThreshold;
 
-        return make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(stream), blobs[0], config);
+        return make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(context->stream), blobs[0], config);
     }
 #endif
 

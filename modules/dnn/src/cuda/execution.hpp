@@ -24,10 +24,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             : grid{ grid_size }, block{ block_size }, sharedMem{ shared_mem }, stream{ nullptr } { }
 
         execution_policy(dim3 grid_size, dim3 block_size, const Stream& strm)
-            : grid{ grid_size }, block{ block_size }, sharedMem{ 0 }, stream{ StreamAccessor::get(strm) } { }
+            : grid{ grid_size }, block{ block_size }, sharedMem{ 0 }, stream{ strm.get() } { }
 
         execution_policy(dim3 grid_size, dim3 block_size, std::size_t shared_mem, const Stream& strm)
-            : grid{ grid_size }, block{ block_size }, sharedMem{ shared_mem }, stream{ StreamAccessor::get(strm) } { }
+            : grid{ grid_size }, block{ block_size }, sharedMem{ shared_mem }, stream{ strm.get() } { }
 
         dim3 grid;
         dim3 block;

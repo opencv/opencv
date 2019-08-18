@@ -175,12 +175,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         interpolation_type itype;
         if (interpolation == "nearest")
             itype = interpolation_type::nearest_neighbour;
@@ -189,7 +190,7 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
 
-        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(stream), itype, scaleHeight, scaleWidth);
+        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), itype, scaleHeight, scaleWidth);
     }
 #endif
 

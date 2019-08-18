@@ -299,12 +299,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
 
@@ -336,7 +337,7 @@ public:
 
             config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(stream), config);
+            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
         }
 
         PoolingConfiguration config;
@@ -386,7 +387,7 @@ public:
 
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(cudnn_handle), config);
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
     }
 #endif
 

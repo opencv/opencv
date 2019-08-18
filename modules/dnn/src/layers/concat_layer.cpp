@@ -287,15 +287,16 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
-        csl::Stream stream,
-        csl::cublas::Handle cublas_handle,
-        csl::cudnn::Handle cudnn_handle,
-        const std::vector<Ptr<BackendWrapper>>& inputs
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto concat_axis = clamp(axis, input_wrapper->getRank());
-        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(stream), concat_axis, padding);
+        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
     }
 #endif
 

@@ -341,7 +341,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Error(Error::StsBadArg, "number of elements to copy is zero or negtaive");
         }
 
-        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest, src.get(), n * sizeof(T), cudaMemcpyDefault, StreamAccessor::get(stream)));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest, src.get(), n * sizeof(T), cudaMemcpyDefault, stream.get()));
     }
 
     /** copies data from memory pointed by \p src to \p dest asynchronously
@@ -362,7 +362,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Error(Error::StsBadArg, "number of elements to copy is zero or negtaive");
         }
 
-        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest.get(), src, n * sizeof(T), cudaMemcpyDefault, StreamAccessor::get(stream)));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest.get(), src, n * sizeof(T), cudaMemcpyDefault, stream.get()));
     }
 
     /** copies \p n elements from \p src to \p dest asynchronously
@@ -382,7 +382,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Error(Error::StsBadArg, "number of elements to copy is zero or negtaive");
         }
 
-        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest.get(), src.get(), n * sizeof(T), cudaMemcpyDefault, StreamAccessor::get(stream)));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dest.get(), src.get(), n * sizeof(T), cudaMemcpyDefault, stream.get()));
     }
 
     /** sets \p n elements to \p ch in \p dest asynchronously
@@ -402,7 +402,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             CV_Error(Error::StsBadArg, "number of elements to copy is zero or negtaive");
         }
 
-        CUDA4DNN_CHECK_CUDA(cudaMemsetAsync(dest.get(), ch, n * sizeof(T), StreamAccessor::get(stream)));
+        CUDA4DNN_CHECK_CUDA(cudaMemsetAsync(dest.get(), ch, n * sizeof(T), stream.get()));
     }
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */
