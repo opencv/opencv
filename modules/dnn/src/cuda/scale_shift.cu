@@ -24,10 +24,20 @@ using namespace cv::dnn::cuda4dnn::csl::device;
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
-        template <class T>
-        __global__ void bias1(span<T> output, view<T> input, T beta) {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = input[i] + beta;
+        template <class T, std::size_t N>
+        __global__ void bias1_vec(span<T> output, view<T> input, T beta) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vec.size(); j++)
+                    vec.data[j] = vec.data[j] + beta;
+                v_store(output_vPtr[i], vec);
+            }
         }
 
         template <class T, std::size_t N>
@@ -42,18 +52,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const index_type bias_idx = (i / inner_size) % static_cast<size_type>(bias.size());
 
                 vector_type vec;
-                v_load<vector_type>(vec, input_vPtr[i]);
+                v_load(vec, input_vPtr[i]);
                 for(int j = 0; j < vec.size(); j++)
                     vec.data[j] = vec.data[j] + bias[bias_idx];
-                v_store<vector_type>(output_vPtr[i], vec);
+                v_store(output_vPtr[i], vec);
             }
         }
 
-        template <class T>
-        __global__ void scale1(span<T> output, view<T> input, T alpha)
-        {
-            for (auto i : grid_stride_range(output.size()))
-                output[i] = alpha * input[i];
+        template <class T, std::size_t N>
+        __global__ void scale1_vec(span<T> output, view<T> input, T alpha) {
+            using vector_type = get_vector_type_t<T, N>;
+
+            auto output_vPtr = vector_type::get_pointer(output.data());
+            auto input_vPtr = vector_type::get_pointer(input.data());
+
+            for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+                vector_type vec;
+                v_load(vec, input_vPtr[i]);
+                for (int j = 0; j < vec.size(); j++)
+                    vec.data[j] = vec.data[j] * alpha;
+                v_store(output_vPtr[i], vec);
+            }
         }
 
         template <class T, std::size_t N>
@@ -69,10 +88,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
 
                 vector_type vec;
-                v_load<vector_type>(vec, input_vPtr[i]);
+                v_load(vec, input_vPtr[i]);
                 for (int j = 0; j < vec.size(); j++)
                     vec.data[j] = vec.data[j] * weights[scale_idx];
-                v_store<vector_type>(output_vPtr[i], vec);
+                v_store(output_vPtr[i], vec);
             }
         }
 
@@ -86,10 +105,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
             for (auto i : grid_stride_range(output.size() / vector_type::size())) {
                 vector_type vec;
-                v_load<vector_type>(vec, input_vPtr[i]);
+                v_load(vec, input_vPtr[i]);
                 for (int j = 0; j < vec.size(); j++)
                     vec.data[j] = alpha * vec.data[j] + beta;
-                v_store<vector_type>(output_vPtr[i], vec);
+                v_store(output_vPtr[i], vec);
             }
         }
 
@@ -106,28 +125,46 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const index_type scale_idx = (i / inner_size) % static_cast<size_type>(weights.size());
 
                 vector_type vec;
-                v_load<vector_type>(vec, input_vPtr[i]);
+                v_load(vec, input_vPtr[i]);
                 for (int j = 0; j < vec.size(); j++)
                     vec.data[j] = vec.data[j] * weights[scale_idx] + bias[scale_idx];
-                v_store<vector_type>(output_vPtr[i], vec);
+                v_store(output_vPtr[i], vec);
             }
         }
+    }
+
+    template <class T, std::size_t N> static
+    void launch_bias1_vec_kernel(const Stream& stream, span<T> output, view<T> input, T beta) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::bias1_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input, beta);
     }
 
     template <class T>
     void bias1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T beta) {
         CV_Assert(is_shape_same(input, output));
 
-        auto kernel = raw::scale1<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input, beta);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_bias1_vec_kernel<T, 4>(stream, output, input, beta);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_bias1_vec_kernel<T, 2>(stream, output, input, beta);
+        } else {
+            launch_bias1_vec_kernel<T, 1>(stream, output, input, beta);
+        }
     }
 
     template void bias1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
     template void bias1<float>(const Stream&, TensorSpan<float>, TensorView<float>, float);
 
     template <class T, std::size_t N> static
-    void launch_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> bias) {
+    void launch_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> bias){
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+        CV_Assert(inner_size % 4 == 0);
+
         auto kernel = raw::biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, bias);
@@ -154,13 +191,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void biasN<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, std::size_t, TensorView<__half>);
     template void biasN<float>(const Stream&, TensorSpan<float>, TensorView<float>, std::size_t, TensorView<float>);
 
+    template <class T, std::size_t N> static
+    void launch_scale1_vec_kernel(const Stream& stream, span<T> output, view<T> input, T alpha) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
+        auto kernel = raw::scale1_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input, alpha);
+    }
+
     template <class T>
     void scale1(const Stream& stream, TensorSpan<T> output, TensorView<T> input, T alpha) {
         CV_Assert(is_shape_same(input, output));
 
-        auto kernel = raw::scale1<T>;
-        auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input, alpha);
+        if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4)) {
+            launch_scale1_vec_kernel<T, 4>(stream, output, input, alpha);
+        } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2)) {
+            launch_scale1_vec_kernel<T, 2>(stream, output, input, alpha);
+        } else {
+            launch_scale1_vec_kernel<T, 1>(stream, output, input, alpha);
+        }
     }
 
     template void scale1<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, __half);
@@ -168,6 +219,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T, std::size_t N> static
     void launch_scaleN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+        CV_Assert(inner_size % 4 == 0);
+
         auto kernel = raw::scaleN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, weights);
@@ -196,6 +251,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T, std::size_t N> static
     void launch_scale1_with_bias1_vec_kernel(const Stream& stream, span<T> output, view<T> input, T alpha, T beta) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+
         auto kernel = raw::scale1_with_bias1_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
         launch_kernel(kernel, policy, output, input, alpha, beta);
@@ -219,6 +277,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T, std::size_t N> static
     void launch_scaleN_with_biasN_vec_kernel(const Stream& stream, span<T> output, view<T> input, std::size_t inner_size, view<T> weights, view<T> bias) {
+        CV_Assert(is_fully_aligned<T>(output, N));
+        CV_Assert(is_fully_aligned<T>(input, N));
+        CV_Assert(inner_size % 4 == 0);
+
         auto kernel = raw::scaleN_with_biasN_vec<T, N>;
         auto policy = make_policy(kernel, output.size() / N, 0, stream);
         launch_kernel(kernel, policy, output, input, inner_size, weights, bias);
