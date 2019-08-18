@@ -209,15 +209,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             if (config.poolMode == PoolingConfiguration::pooling_mode::max)
             {
-                params.type = csl::Pooling<T>::pooling_type::MAX;
+                params.type = csl::Pooling<T>::pooling_type::max;
             }
             else if (config.poolMode == PoolingConfiguration::pooling_mode::average_included)
             {
-                params.type = csl::Pooling<T>::pooling_type::AVERAGE_INCLUDE_PADDING;
+                params.type = csl::Pooling<T>::pooling_type::average_include_padding;
             }
             else if (config.poolMode == PoolingConfiguration::pooling_mode::average_excluded)
             {
-                params.type = csl::Pooling<T>::pooling_type::AVERAGE_EXCLUDE_PADDING;
+                params.type = csl::Pooling<T>::pooling_type::average_exclude_padding;
             }
 
             pooler = csl::Pooling<T>(cudnnHandle, params);

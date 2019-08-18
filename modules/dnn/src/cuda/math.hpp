@@ -11,6 +11,11 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace device {
 
     template <class T> __device__ T abs(T val) { return (val < T(0) ? -val : val); }
+    template <> inline __device__ __half2 abs(__half2 val) {
+        val.x = abs(val.x);
+        val.y = abs(val.y);
+        return val;
+    }
     template <> inline __device__ float abs(float val) { return fabsf(val); }
     template <> inline __device__ double abs(double val) { return fabs(val); }
 
@@ -27,10 +32,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ double expm1(double val) { return ::expm1(val); }
 
     template <class T> __device__ T max(T x, T y) { return (x > y ? x : y); }
+    template <> inline __device__ __half2 max(__half2 a, __half2 b) {
+        a.x = max(a.x, a.x);
+        a.y = max(a.y, b.y);
+        return a;
+    }
     template <> inline __device__ float max(float x, float y) { return fmaxf(x, y); }
     template <> inline __device__ double max(double x, double y) { return fmax(x, y); }
 
     template <class T> __device__ T min(T x, T y) { return (x > y ? y : x); }
+    template <> inline __device__ __half2 min(__half2 a, __half2 b) {
+        a.x = min(a.x, a.x);
+        a.y = min(a.y, b.y);
+        return a;
+    }
     template <> inline __device__ float min(float x, float y) { return fminf(x, y); }
     template <> inline __device__ double min(double x, double y) { return fmin(x, y); }
 
@@ -64,11 +79,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
 
     template <class T> __device__ T tanh(T val);
     template <> inline __device__ __half tanh(__half val) { return tanhf(val); }
+    template <> inline __device__ __half2 tanh(__half2 val) { return __half2(tanh(val.x), tanh(val.y)); }
     template <> inline __device__ float tanh(float val) { return tanhf(val); }
     template <> inline __device__ double tanh(double val) { return ::tanh(val); }
 
     template <class T> __device__ T pow(T val, T exp);
     template <> inline __device__ __half pow(__half val, __half exp) { return powf(val, exp); }
+    template <> inline __device__ __half2 pow(__half2 val, __half2 exp) { return __half2(pow(val.x, exp.x), pow(val.y, exp.y)); }
     template <> inline __device__ float pow(float val, float exp) { return powf(val, exp); }
     template <> inline __device__ double pow(double val, double exp) { return ::pow(val, exp); }
 
@@ -85,6 +102,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ double rsqrt(double val) { return ::rsqrt(val); }
 
     template <class T> __device__ T sigmoid(T val) { return T(1) / (T(1) + exp(-val)); }
+    template <> inline __device__ __half2 sigmoid(__half2 val) { return __half2(1, 1) / (__half2(1, 1) + exp(__hneg2(val))); }
 
     template <class T> __device__ T clamp(T value, T lower, T upper) { return min(max(value, lower), upper); }
 

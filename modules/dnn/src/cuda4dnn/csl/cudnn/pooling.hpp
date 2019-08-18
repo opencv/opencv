@@ -25,10 +25,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     class PoolingDescriptor {
     public:
         enum class pooling_type {
-            MAX,
-            MAX_DETERMINISTIC,
-            AVERAGE_EXCLUDE_PADDING,
-            AVERAGE_INCLUDE_PADDING
+            max,
+            max_deterministic,
+            average_exclude_padding,
+            average_include_padding
         };
 
         PoolingDescriptor() noexcept : descriptor{ nullptr } { }
@@ -77,13 +77,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
             auto get_pooling_type = [] (pooling_type type) {
                 switch (type) {
-                case pooling_type::MAX:
+                case pooling_type::max:
                     return CUDNN_POOLING_MAX;
-                case pooling_type::MAX_DETERMINISTIC:
+                case pooling_type::max_deterministic:
                     return CUDNN_POOLING_MAX_DETERMINISTIC;
-                case pooling_type::AVERAGE_EXCLUDE_PADDING:
+                case pooling_type::average_exclude_padding:
                     return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-                case pooling_type::AVERAGE_INCLUDE_PADDING:
+                case pooling_type::average_include_padding:
                     return CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
                 }
                 CV_Error(Error::StsBadArg, "unknown pooling type");

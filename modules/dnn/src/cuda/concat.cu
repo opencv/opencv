@@ -180,8 +180,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
          * indices for all the elements will be of the form be [0, i2, ...] and [0, i2 + off2, ...]
          * respectively. The first index does not contribute to the element's address calculation and
          * hence does nothing apart from eating up few cycles.
-         *
-         * TODO: further optimize by combining contiguous axes if their offsets are zero
          */
         while (input.get_axis_size(0) == 1 && output.get_axis_size(0) == 1) {
             CV_Assert(offsets[0] == 0);

@@ -53,7 +53,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         if (grid_size * block_size > max_threads) {
             grid_size = (max_threads + block_size - 1) / block_size;
             if (block_size > max_threads)
-                block_size = std::max<std::size_t>(64, max_threads);
+                block_size = max_threads;
         }
 
         CV_Assert(grid_size >= 1 && block_size >= 1);

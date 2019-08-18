@@ -10,8 +10,9 @@
 
 /* The performance of many kernels are highly dependent on the tensor rank. Instead of having
  * one kernel which can work with the maximally ranked tensors, we make one kernel for each supported
- * tensor rank. This is to ensure that the requirements of the maximally ranked tensors do not unncessarily
- * take a toll on the performance when low ranked tensors are passed.
+ * tensor rank. This is to ensure that the requirements of the maximally ranked tensors do not take a
+ * toll on the performance of the operation for low ranked tensors. Hence, many kernels take the tensor
+ * rank as a template parameter.
  *
  * The kernel is a template and we have different instantiations for each rank. This causes the following pattern
  * to arise frequently:
@@ -24,7 +25,7 @@
  *     kernel<T, 1>();
  *
  * The rank is a runtime variable. To facilitate creation of such structures, we use GENERATE_KERNEL_DISPATCHER.
- * This macro creates a function which selects the correct kernel at runtime.
+ * This macro creates a function which selects the correct kernel instantiation at runtime.
  *
  * Example:
  *
@@ -53,7 +54,7 @@
  * end      ending rank (inclusive)
  *
  * Executes func<T, selector> based on runtime `selector` argument given `selector` lies
- * within the range [start, end]. If outside the range, no instantiation of func is executed.
+ * within the range [start, end]. If outside the range, no instantiation of `func` is executed.
  */
 #define GENERATE_KERNEL_DISPATCHER(name,func);                                          \
     template <class T, std::size_t start, std::size_t end, class... Args> static        \

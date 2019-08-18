@@ -1308,33 +1308,17 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(inputs.size() == 1);
-
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
 
         const auto output_feature_maps = blobs[0].size[0];
         const auto input_feature_maps = input_shape[1];
         const auto input_feature_maps_per_group = blobs[0].size[1];
         const auto groups = input_feature_maps / input_feature_maps_per_group;
-
-        auto output_shape = [&] {
-            std::vector<int> inShape, outShape;
-            inShape.assign(std::begin(input_shape) + 2, std::end(input_shape));
-            if (padMode.empty())
-            {
-                for (int i = 0; i < inShape.size(); i++)
-                    outShape.push_back((inShape[i] + pads_begin[i] + pads_end[i] - dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
-            }
-            else
-            {
-                getConvPoolOutParams(inShape, kernel_size, strides, padMode, dilations, outShape);
-            }
-
-            auto output_shape = input_shape;
-            output_shape[1] = output_feature_maps;
-            std::copy_backward(std::begin(outShape), std::end(outShape), std::end(output_shape));
-            return output_shape;
-        }();
 
         ConvolutionConfiguration config;
         config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
@@ -2014,39 +1998,16 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(inputs.size() == 1);
-
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
 
         const auto output_feature_maps = numOutput;
         const auto output_feature_maps_per_group = blobs[0].size[1];
         const auto groups = output_feature_maps / output_feature_maps_per_group;
-
-        auto output_shape = [&] {
-            auto output_shape = input_shape;
-            output_shape[1] = output_feature_maps;
-            if (padMode.empty())
-            {
-                for (int i = 0; i < kernel_size.size(); i++)
-                    output_shape[i + 2] =
-                    (strides[i] * (input_shape[2 + i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
-            }
-            else if (padMode == "VALID")
-            {
-                for (int i = 0; i < kernel_size.size(); i++)
-                    output_shape[i + 2] = (strides[i] * (input_shape[2 + i] - 1) + kernel_size[i] + adjust_pads[i]);
-            }
-            else if (padMode == "SAME")
-            {
-                for (int i = 0; i < kernel_size.size(); i++)
-                    output_shape[i + 2] = (strides[i] * (input_shape[2 + i] - 1) + 1 + adjust_pads[i]);
-            }
-            else
-            {
-                CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by DeconvolutionLayer");
-            }
-            return output_shape;
-        }();
 
         TransposeConvolutionConfiguration config;
         config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));

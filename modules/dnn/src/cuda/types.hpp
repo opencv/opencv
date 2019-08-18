@@ -12,7 +12,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     /* For indices, we can use 32bit variables or 64bit variables. The GPU registers are 32 bits in size.
      * Hence, a 64bit variable requires two registers and is significantly slower than the 32bit versions.
      *
-     * If we do not need to handle huge tensors, we can use 32-bit indices and gain performance.
+     * If we do not need to handle huge tensors, we can use 32-bit indices and get better performance.
      */
 #ifdef __CUDACC__
     using size_type = int;

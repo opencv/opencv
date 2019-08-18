@@ -340,7 +340,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         LRN() = default;
         LRN(const LRN&) = delete;
         LRN(LRN&&) = default;
-        LRN(cudnn::Handle handle, std::size_t local_size, double alpha, double beta, double k, lrn_type type) {
+        LRN(cudnn::Handle handle, std::size_t local_size, T alpha, T beta, T k, lrn_type type) {
             cudnnHandle = std::move(handle);
             lrnDesc = LRNDescriptor(local_size, alpha, beta, k, type);
         }
