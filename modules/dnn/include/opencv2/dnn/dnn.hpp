@@ -281,8 +281,9 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Returns a CUDA backend node
          *
-         * @param      context  void pointer to CSLContext object
-         * @param      inputs   layer inputs
+         * @param   context  void pointer to CSLContext object
+         * @param   inputs   layer inputs
+         * @param   outputs  layer outputs
          */
         virtual Ptr<BackendNode> initCUDA(
             void *context,
