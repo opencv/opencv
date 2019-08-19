@@ -259,8 +259,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * Pre-conditons:
          * - host memory should be unregistered
          */
-        MemoryLockGuard(void* ptr_, std::size_t size_in_bytes) : ptr{ ptr_ } {
+        MemoryLockGuard(void* ptr_, std::size_t size_in_bytes) {
             CUDA4DNN_CHECK_CUDA(cudaHostRegister(ptr_, size_in_bytes, cudaHostRegisterPortable));
+            ptr = ptr_;
         }
 
         MemoryLockGuard& operator=(const MemoryLockGuard&) = delete;

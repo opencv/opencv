@@ -180,7 +180,6 @@ namespace cv {
             virtual void setStream(cuda4dnn::csl::Stream stream) noexcept = 0;
         };
 
-        /* the code for different wrappers barely change; hence, we use this template as a wrapper generator */
         template <class T, int TargetID>
         class GenericCUDABackendWrapper final : public CUDABackendWrapper {
         public:
@@ -191,10 +190,9 @@ namespace cv {
             /* Pre-conditions:
              * - there must be no other instance of `GenericCUDABackendWrapper` which wraps the host memory used by `m`
              * - the host memory must remain allocated throughout the lifetime of this object
-             * - the host memory must be pageable memory
              *
              * Post-conditions:
-             * - the host memory used by `m` is page-locked
+             * - the host memory used by `m` "may" be page-locked
              */
             GenericCUDABackendWrapper(Mat& m)
                 : CUDABackendWrapper(TargetID)
@@ -206,7 +204,13 @@ namespace cv {
                 shared_block->device_dirty = false;
 
                 shared_block->host = m;
-                shared_block->memGuard = cuda4dnn::csl::MemoryLockGuard(m.data, m.total() * m.elemSize());
+
+                try {
+                    shared_block->memGuard = cuda4dnn::csl::MemoryLockGuard(m.data, m.total() * m.elemSize());
+                } catch(...) {
+                    /* a common reason for failure is that the host system does not support it */
+                    /* we ignore failures as this is just an optimization and not a requirement */
+                }
 
                 shared_block->device = cuda4dnn::csl::ManagedPtr<T>(m.total());
             }
@@ -328,7 +332,7 @@ namespace cv {
                 bool device_dirty;
 
                 cv::Mat host;
-                cuda4dnn::csl::MemoryLockGuard memGuard; /* keeps host memory page-locked */
+                cuda4dnn::csl::MemoryLockGuard memGuard; /* keeps host memory page-locked if possible */
 
                 cuda4dnn::csl::ManagedPtr<T> device;
                 cuda4dnn::csl::Stream stream;
