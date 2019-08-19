@@ -204,10 +204,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         tab[x] = (uchar)(x - OFS < -ftzero ? 0 : x - OFS > ftzero ? ftzero*2 : x - OFS + ftzero);
     uchar val0 = tab[0 + OFS];
 
-#if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-#endif
-
     for( y = 0; y < size.height-1; y += 2 )
     {
         const uchar* srow1 = src.ptr<uchar>(y);
@@ -221,7 +217,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         x = 1;
 
 #if CV_SIMD128
-        if( useSIMD )
         {
             v_int16x8 ftz = v_setall_s16((short) ftzero);
             v_int16x8 ftz2 = v_setall_s16((short)(ftzero*2));
@@ -268,7 +263,6 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         uchar* dptr = dst.ptr<uchar>(y);
         x = 0;
 #if CV_SIMD128
-        if( useSIMD )
         {
             v_uint8x16 val0_16 = v_setall_u8(val0);
             for(; x <= size.width-16; x+=16 )
@@ -540,12 +534,12 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                     v_expand(sad8, sad4_l, sad4_h);
                     mask4 = thresh4 > sad4_l;
                     mask4 = mask4 & ((d1 > d4) | (d4 > d2));
-                    if( v_signmask(mask4) )
+                    if( v_check_any(mask4) )
                         break;
                     d4 += dd_4;
                     mask4 = thresh4 > sad4_h;
                     mask4 = mask4 & ((d1 > d4) | (d4 > d2));
-                    if( v_signmask(mask4) )
+                    if( v_check_any(mask4) )
                         break;
                     d4 += dd_4;
                 }
@@ -594,8 +588,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     mType FILTERED = (mType)((mindisp - 1) << disp_shift);
 
 #if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-    if( useSIMD )
     {
         CV_Assert (ndisp % 8 == 0);
     }
@@ -637,7 +629,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int lval = lptr[0];
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint8x16 lv = v_setall_u8((uchar)lval);
 
@@ -706,7 +697,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             int lval = lptr[0];
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_uint8x16 lv = v_setall_u8((uchar)lval);
                 for( ; d <= ndisp - 16; d += 16 )
@@ -769,7 +759,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         {
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 for( d = 0; d <= ndisp-8; d += 8 )
                 {
@@ -799,7 +788,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
             d = 0;
 #if CV_SIMD128
-            if( useSIMD )
             {
                 v_int32x4 d0_4 = v_int32x4(0, 1, 2, 3);
                 v_int32x4 dd_4 = v_setall_s32(4);
@@ -1003,9 +991,6 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         validDisparityRect = _validDisparityRect;
         slidingSumBuf = &_slidingSumBuf;
         cost = &_cost;
-#if CV_SIMD128
-        useSIMD = hasSIMD128();
-#endif
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -1043,7 +1028,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         Mat cost_i = state->disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
 #if CV_SIMD128
-        if( useSIMD && useShorts )
+        if (useShorts)
         {
             if( disp_i.type() == CV_16S)
                 findStereoCorrespondenceBM_SIMD<short>( left_i, right_i, disp_i, cost_i, *state, ptr, row0, rows - row1 );
@@ -1083,7 +1068,6 @@ protected:
     size_t stripeBufSize;
     bool useShorts;
     Rect validDisparityRect;
-    bool useSIMD;
 };
 
 class StereoBMImpl CV_FINAL : public StereoBM

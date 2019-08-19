@@ -51,11 +51,13 @@ if(NOT HAVE_CUDA)
 endif()
 
 set(cv2_generated_files
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_enums.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_modules.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_modules_content.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types_content.h"
     "${OPENCV_PYTHON_SIGNATURES_FILE}"
 )
 

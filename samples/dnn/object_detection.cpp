@@ -6,6 +6,7 @@
 #include <opencv2/highgui.hpp>
 
 #ifdef CV_CXX11
+#include <mutex>
 #include <thread>
 #include <queue>
 #endif
@@ -185,7 +186,7 @@ int main(int argc, char** argv)
     QueueFPS<Mat> processedFramesQueue;
     QueueFPS<std::vector<Mat> > predictionsQueue;
     std::thread processingThread([&](){
-        std::queue<std::future<Mat> > futureOutputs;
+        std::queue<AsyncArray> futureOutputs;
         Mat blob;
         while (process)
         {
@@ -224,11 +225,13 @@ int main(int argc, char** argv)
             }
 
             while (!futureOutputs.empty() &&
-                   futureOutputs.front().wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                   futureOutputs.front().wait_for(std::chrono::seconds(0)))
             {
-                Mat out = futureOutputs.front().get();
-                predictionsQueue.push({out});
+                AsyncArray async_out = futureOutputs.front();
                 futureOutputs.pop();
+                Mat out;
+                async_out.get(out);
+                predictionsQueue.push({out});
             }
         }
     });

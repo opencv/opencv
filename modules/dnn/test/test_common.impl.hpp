@@ -279,6 +279,14 @@ static bool validateVPUType_()
             exit(1);
         }
     }
+    if (have_vpu_target)
+    {
+        std::string dnn_vpu_type = getInferenceEngineVPUType();
+        if (dnn_vpu_type == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_2)
+            registerGlobalSkipTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2);
+        if (dnn_vpu_type == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+            registerGlobalSkipTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+    }
     return true;
 }
 
@@ -288,5 +296,47 @@ bool validateVPUType()
     return result;
 }
 #endif // HAVE_INF_ENGINE
+
+
+void initDNNTests()
+{
+    const char* extraTestDataPath =
+#ifdef WINRT
+        NULL;
+#else
+        getenv("OPENCV_DNN_TEST_DATA_PATH");
+#endif
+    if (extraTestDataPath)
+        cvtest::addDataSearchPath(extraTestDataPath);
+
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_HALIDE,
+        CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
+    );
+#if defined(INF_ENGINE_RELEASE)
+    registerGlobalSkipTag(
+#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
+        CV_TEST_TAG_DNN_SKIP_IE_2018R5,
+#elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R1,
+# if INF_ENGINE_RELEASE == 2019010100
+        CV_TEST_TAG_DNN_SKIP_IE_2019R1_1,
+# endif
+#elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R2,
+#endif
+        CV_TEST_TAG_DNN_SKIP_IE
+    );
+#endif
+    registerGlobalSkipTag(
+        // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+        CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
+    );
+#ifdef HAVE_VULKAN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+}
 
 } // namespace

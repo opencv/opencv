@@ -262,6 +262,10 @@ typedef uint32_t __u32;
 #define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
 #endif
 
+#ifndef V4L2_PIX_FMT_Y10
+#define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
+#endif
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
@@ -500,7 +504,8 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_JPEG,
 #endif
             V4L2_PIX_FMT_Y16,
-            V4L2_PIX_FMT_GREY
+            V4L2_PIX_FMT_Y10,
+            V4L2_PIX_FMT_GREY,
     };
 
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
@@ -547,6 +552,7 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_SGBRG8:
     case V4L2_PIX_FMT_RGB24:
     case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Y10:
     case V4L2_PIX_FMT_GREY:
     case V4L2_PIX_FMT_BGR24:
         return true;
@@ -581,6 +587,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
+        case V4L2_PIX_FMT_Y10:
             depth = IPL_DEPTH_16U;
             /* fallthru */
         case V4L2_PIX_FMT_GREY:
@@ -789,11 +796,10 @@ bool CvCaptureCAM_V4L::open(int _index)
         name = cv::format("/dev/video%d", _index);
     }
 
-    /* Print the CameraNumber at the end of the string with a width of one character */
     bool res = open(name.c_str());
     if (!res)
     {
-        fprintf(stderr, "VIDEOIO ERROR: V4L: can't open camera by index %d\n", _index);
+        CV_LOG_WARNING(NULL, cv::format("VIDEOIO ERROR: V4L: can't open camera by index %d", _index));
     }
     return res;
 }
@@ -1452,6 +1458,13 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
         cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 256);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_Y10:
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 4);
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }

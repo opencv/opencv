@@ -118,10 +118,10 @@ __kernel void MVN(__global const Dtype* src,
         return;
 
     Dtype mean_val = mean[x];
-    Dtype dev_val = sqrt(dev[x]);
+    Dtype dev_val = dev[x];
     Dtype alpha;
 #ifdef NORM_VARIANCE
-    alpha = 1 / (eps + dev_val);
+    alpha = 1 / sqrt(eps + dev_val);
 #else
     alpha = 1;
 #endif
@@ -275,7 +275,7 @@ __kernel void MVN_FUSE(__global const Dtype * tmp,
     barrier(CLK_LOCAL_MEM_FENCE);
 
     Dtype4 mean_val = convert_float4(mean[row_gid]);
-    Dtype4 dev_val = sqrt(work[0] * alpha_val) + (Dtype4)eps;
+    Dtype4 dev_val = sqrt(work[0] * alpha_val + (Dtype4)eps);
     Dtype4 alpha = (Dtype4)1.f / dev_val;
 
     Dtype4 w = (Dtype4)1.f;

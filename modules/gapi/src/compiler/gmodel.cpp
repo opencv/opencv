@@ -14,7 +14,7 @@
 #include <ade/util/zip_range.hpp>   // util::indexed
 #include <ade/util/checked_cast.hpp>
 
-#include "opencv2/gapi/gproto.hpp"
+#include <opencv2/gapi/gproto.hpp>
 #include "api/gnode_priv.hpp"
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
@@ -47,7 +47,7 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
     {
         auto value = value_of(origin);
         meta       = descr_of(value);
-        storage    = Data::Storage::CONST;
+        storage    = Data::Storage::CONST_VAL;
         g.metadata(data_h).set(ConstValue{value});
     }
     g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
@@ -184,6 +184,16 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
         g.metadata(eh).set(Journal{{s}});
     }
 }
+
+void GModel::log_clear(Graph &g, ade::NodeHandle node)
+{
+    if (g.metadata(node).contains<Journal>())
+    {
+        // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)
+        g.metadata(node).get<Journal>().messages.clear();
+    }
+}
+
 
 ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {

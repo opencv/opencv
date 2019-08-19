@@ -8,7 +8,7 @@
 // FIXME: move out from Common
 
 #include "../test_precomp.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
+#include <opencv2/gapi/cpu/core.hpp>
 
 #include <ade/util/algorithm.hpp>
 

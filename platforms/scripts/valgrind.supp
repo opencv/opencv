@@ -219,10 +219,64 @@
 }
 
 {
+   OpenCV-gtk_init
+   Memcheck:Leak
+   ...
+   fun:gtk_init
+   fun:cvInitSystem
+}
+
+{
    OpenCV-FFmpeg-swsscale
    Memcheck:Addr16
    ...
    fun:sws_scale
    fun:_ZN20CvVideoWriter_FFMPEG10writeFrameEPKhiiiii
    fun:cvWriteFrame_FFMPEG
+}
+
+{
+   OpenCV-GStreamer-gst_init
+   Memcheck:Leak
+   ...
+   fun:gst_init
+}
+
+{
+   OpenCV-GStreamer-gst_deinit
+   Memcheck:Leak
+   ...
+   fun:gst_deinit
+}
+
+{
+   OpenCV-GStreamer-gst_init_check
+   Memcheck:Leak
+   ...
+   fun:gst_init_check
+}
+
+{
+   OpenCV-GStreamer-gst_parse_launch_full-reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:gst_parse_launch_full
+}
+
+{
+   OpenCV-OpenEXR-ThreadPool
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN16IlmThread_opencv10ThreadPoolC1Ej
+   fun:_ZN16IlmThread_opencv10ThreadPool16globalThreadPoolEv
+}
+
+{
+   OpenCV-test-gapi-thread-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
 }

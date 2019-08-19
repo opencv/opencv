@@ -437,6 +437,7 @@ Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int, double,
     {
         if( writer->open( filename.c_str() ))
             return makePtr<LegacyWriter>(writer);
+        delete writer;
     }
     catch (...)
     {

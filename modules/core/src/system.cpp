@@ -378,7 +378,7 @@ struct HWFeatures
 
     void initialize(void)
     {
-#ifndef WINRT
+#ifndef NO_GETENV
         if (getenv("OPENCV_DUMP_CONFIG"))
         {
             fprintf(stderr, "\nOpenCV build configuration is:\n%s\n",
@@ -554,7 +554,9 @@ struct HWFeatures
         have[CV_CPU_FP16] = true;
     #endif
     #endif
-
+    #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
+        have[CV_CPU_NEON] = true;
+    #endif
     // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
     have[CV_CPU_VSX] = (CV_VSX);
     // TODO: Check VSX3 availability in runtime for other platforms
@@ -614,10 +616,10 @@ struct HWFeatures
     {
         bool dump = true;
         const char* disabled_features =
-#ifndef WINRT
-                getenv("OPENCV_CPU_DISABLE");
-#else
+#ifdef NO_GETENV
                 NULL;
+#else
+                getenv("OPENCV_CPU_DISABLE");
 #endif
         if (disabled_features && disabled_features[0] != 0)
         {
@@ -889,7 +891,7 @@ String format( const char* fmt, ... )
 String tempfile( const char* suffix )
 {
     String fname;
-#ifndef WINRT
+#ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
@@ -910,6 +912,20 @@ String tempfile( const char* suffix )
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
     fname = String(aname);
     RoUninitialize();
+#elif defined(_WIN32_WCE)
+    const auto kMaxPathSize = MAX_PATH+1;
+    wchar_t temp_dir[kMaxPathSize] = {0};
+    wchar_t temp_file[kMaxPathSize] = {0};
+
+    ::GetTempPathW(kMaxPathSize, temp_dir);
+
+    if(0 != ::GetTempFileNameW(temp_dir, L"ocv", 0, temp_file)) {
+        DeleteFileW(temp_file);
+        char aname[MAX_PATH];
+        size_t copied = wcstombs(aname, temp_file, MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        fname = String(aname);
+    }
 #else
     char temp_dir2[MAX_PATH] = { 0 };
     char temp_file[MAX_PATH] = { 0 };

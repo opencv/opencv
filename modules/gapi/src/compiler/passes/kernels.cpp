@@ -11,7 +11,9 @@
 #include <ade/graph.hpp>
 #include <ade/passes/check_cycles.hpp>
 
-#include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
+#include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
+#include <opencv2/gapi/gkernel.hpp>         // GKernelPackage
+#include <opencv2/gapi/infer.hpp>           // GNetPackage
 
 #include "compiler/gmodel.hpp"
 #include "compiler/passes/passes.hpp"
@@ -30,12 +32,12 @@ namespace
         cv::GArgs       in_args;
     };
 
-    // Generaly the algorithm is following
+    // Generally the algorithm is following
     //
     // 1. Get GCompoundKernel implementation
     // 2. Create GCompoundContext
     // 3. Run GCompoundKernel with GCompoundContext
-    // 4. Build subgraph from imputs/outputs GCompoundKernel
+    // 4. Build subgraph from inputs/outputs GCompoundKernel
     // 5. Replace compound node to subgraph
 
     void expand(ade::Graph& g, ade::NodeHandle nh, const ImplInfo& impl_info)
@@ -97,7 +99,37 @@ namespace
             gr.erase(subgr_out_nh);
         }
     }
+} // anonymous namespace
+
+// This pass, given the network package, associates every infer[list] node
+// with particular inference backend and its parameters.
+void cv::gimpl::passes::bindNetParams(ade::passes::PassContext &ctx,
+                                      const gapi::GNetPackage  &pkg)
+{
+    GModel::Graph gr(ctx.graph);
+    ade::TypedGraph<NetworkParams> pgr(ctx.graph);
+
+    for (const auto &nh : gr.nodes())
+    {
+        if (gr.metadata(nh).get<NodeType>().t == NodeType::OP)
+        {
+            auto &op = gr.metadata(nh).get<Op>();
+            if (op.k.tag.empty())
+                continue;
+
+            // FIXME: What if there's more than one???
+            const auto it = ade::util::find_if(pkg.networks,
+                                               [&](const cv::gapi::GNetParam &p) {
+                                                   return p.tag == op.k.tag;
+                                               });
+            if (it == std::end(pkg.networks))
+                continue;
+
+            pgr.metadata(nh).set(NetworkParams{it->params});
+        }
+    }
 }
+
 // This pass, given the kernel package, selects a kernel implementation
 // for every operation in the graph
 void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,

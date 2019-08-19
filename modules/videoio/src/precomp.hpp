@@ -46,7 +46,9 @@
 #include "opencv2/videoio/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
+#ifdef __OPENCV_BUILD
 #include "opencv2/core/private.hpp"
+#endif
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>

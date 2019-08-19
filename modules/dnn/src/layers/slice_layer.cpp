@@ -54,13 +54,14 @@ namespace cv
 namespace dnn
 {
 
-class SliceLayerImpl CV_FINAL : public SliceLayer
+class SliceLayerImpl : public SliceLayer
 {
 public:
     SliceLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
+        num_split = params.get<int>("num_split", 0);
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
@@ -112,6 +113,9 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE &&
+#ifdef HAVE_INF_ENGINE
+                INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
+#endif
                 sliceRanges.size() == 1 && sliceRanges[0].size() == 4);
     }
 
@@ -138,9 +142,10 @@ public:
         else  // Divide input blob on equal parts by axis.
         {
             CV_Assert(0 <= axis && axis < inpShape.size());
-            CV_Assert(requiredOutputs > 0 && inpShape[axis] % requiredOutputs == 0);
-            inpShape[axis] /= requiredOutputs;
-            outputs.resize(requiredOutputs, inpShape);
+            int splits = num_split ? num_split : requiredOutputs;
+            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
+            inpShape[axis] /= splits;
+            outputs.resize(splits, inpShape);
         }
         return false;
     }
@@ -174,15 +179,15 @@ public:
         for (int i = 0; i < outputs.size(); ++i)
         {
             CV_Assert(sliceRanges[i].size() <= inpShape.dims());
-            // Clamp.
-            for (int j = 0; j < sliceRanges[i].size(); ++j)
-            {
-                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
-            }
             // Fill the rest of ranges.
             for (int j = sliceRanges[i].size(); j < inpShape.dims(); ++j)
             {
                 sliceRanges[i].push_back(Range::all());
+            }
+            // Clamp.
+            for (int j = 0; j < sliceRanges[i].size(); ++j)
+            {
+                sliceRanges[i][j] = clamp(sliceRanges[i][j], inpShape[j]);
             }
         }
     }
@@ -256,23 +261,24 @@ public:
     }
 
 #ifdef HAVE_INF_ENGINE
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-        CV_Assert(sliceRanges.size() == 1);
+        CV_Assert_N(sliceRanges.size() == 1, inputs.size() <= 2);
 
         std::vector<size_t> axes, offsets, dims;
         int from, to, step;
         int numDims = sliceRanges[0].size();
         if (preferableTarget == DNN_TARGET_MYRIAD)
         {
-            from = 1;
+            from = axis;
             to = numDims;
             step = 1;
         }
         else
         {
             from = numDims - 1;
-            to = -1;
+            to = axis - 1;
             step = -1;
         }
         for (int i = from; i != to; i += step)
@@ -282,11 +288,6 @@ public:
             dims.push_back(sliceRanges[0][i].size());
         }
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-        std::vector<size_t> outShape(numDims);
-        for (int i = 0; i < numDims; ++i)
-            outShape[numDims - 1 - i] = sliceRanges[0][i].size();
-
         InferenceEngine::Builder::Layer ieLayer(name);
         ieLayer.setName(name);
         ieLayer.setType("Crop");
@@ -295,35 +296,116 @@ public:
         ieLayer.getParameters()["offset"] = offsets;
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
         ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        ieLayer.getInputPorts()[1].setParameter("type", "weights");
 
-        // Fake blob which will be moved to inputs (as weights).
-        auto shapeSource = InferenceEngine::make_shared_blob<float>(
-                               InferenceEngine::Precision::FP32,
-                               InferenceEngine::Layout::ANY, outShape);
-        shapeSource->allocate();
-        addConstantData("weights", shapeSource, ieLayer);
+        if (inputs.size() != 2)
+        {
+            std::vector<size_t> outShape(numDims);
+            for (int i = 0; i < numDims; ++i)
+                outShape[i] = sliceRanges[0][i].size();
 
+            ieLayer.getInputPorts()[1].setParameter("type", "weights");
+
+            auto shapeSource = InferenceEngine::make_shared_blob<float>({
+                                   InferenceEngine::Precision::FP32, outShape,
+                                   InferenceEngine::Layout::ANY
+                               });
+            shapeSource->allocate();
+            addConstantData("weights", shapeSource, ieLayer);
+        }
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Crop";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CropLayer> ieLayer(new InferenceEngine::CropLayer(lp));
-        ieLayer->axis = axes;
-        ieLayer->offset = offsets;
-        ieLayer->dim = dims;
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // IE < R5
-        return Ptr<BackendNode>();
     }
 #endif
+#endif
+};
+
+class CropLayerImpl CV_FINAL : public SliceLayerImpl
+{
+public:
+    CropLayerImpl(const LayerParams& params) : SliceLayerImpl(LayerParams())
+    {
+        setParamsFrom(params);
+        axis = params.get<int>("axis", 2);
+        const DictValue *paramOffset = params.ptr("offset");
+
+        if (paramOffset)
+        {
+            for (int i = 0; i < paramOffset->size(); i++)
+                offset.push_back(paramOffset->get<int>(i));
+        }
+    }
+
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 2);
+
+        MatShape dstShape = inputs[0];
+        int start = clamp(axis, dstShape);
+        for (int i = start; i < dstShape.size(); i++)
+        {
+            dstShape[i] = inputs[1][i];
+        }
+        outputs.resize(1, dstShape);
+        return false;
+    }
+
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+        CV_Assert(2 == inputs.size());
+
+        const Mat &inpBlob = inputs[0];
+        const Mat &inpSzBlob = inputs[1];
+
+        int dims = inpBlob.dims;
+        int start_axis = clamp(axis, dims);
+
+        std::vector<int> offset_final(dims, 0);
+        if (offset.size() == 1)
+        {
+            for (int i = start_axis; i < dims; i++)
+                offset_final[i] = offset[0];
+        }
+        else if (offset.size() > 1)
+        {
+            if ((int)offset.size() != dims - start_axis)
+                CV_Error(Error::StsBadArg, "number of offset values specified must be "
+                                           "equal to the number of dimensions following axis.");
+
+            for (int i = start_axis; i < dims; i++)
+                offset_final[i] = offset[i - start_axis];
+        }
+
+        sliceRanges.resize(1);
+        sliceRanges[0].resize(dims);
+        for (int i = 0; i < start_axis; i++)
+        {
+            sliceRanges[0][i] = Range(0, inpBlob.size[i]);
+        }
+        for (int i = start_axis; i < dims; i++)
+        {
+            if (offset_final[i] < 0 || offset_final[i] + inpSzBlob.size[i] > inpBlob.size[i])
+                CV_Error(Error::StsBadArg, "invalid crop parameters or blob sizes");
+
+            sliceRanges[0][i] = Range(offset_final[i], offset_final[i] + inpSzBlob.size[i]);
+        }
+    }
+
+private:
+    std::vector<int> offset;
 };
 
 Ptr<SliceLayer> SliceLayer::create(const LayerParams& params)
 {
     return Ptr<SliceLayer>(new SliceLayerImpl(params));
+}
+
+Ptr<Layer> CropLayer::create(const LayerParams& params)
+{
+    return Ptr<Layer>(new CropLayerImpl(params));
 }
 
 }

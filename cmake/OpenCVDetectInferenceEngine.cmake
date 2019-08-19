@@ -5,7 +5,7 @@
 #
 # Detect parameters:
 # 1. Native cmake IE package:
-#    - enironment variable InferenceEngine_DIR is set to location of cmake module
+#    - environment variable InferenceEngine_DIR is set to location of cmake module
 # 2. Custom location:
 #    - INF_ENGINE_INCLUDE_DIRS - headers search location
 #    - INF_ENGINE_LIB_DIRS     - library search location
@@ -80,9 +80,9 @@ endif()
 
 if(INF_ENGINE_TARGET)
   if(NOT INF_ENGINE_RELEASE)
-    message(WARNING "InferenceEngine version have not been set, 2019R1 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    message(WARNING "InferenceEngine version have not been set, 2019R2 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
   endif()
-  set(INF_ENGINE_RELEASE "2019010000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2018R2.0.2 -> 2018020002)")
+  set(INF_ENGINE_RELEASE "2019020000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2018R2.0.2 -> 2018020002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )

@@ -845,36 +845,24 @@ inline v_uint64x2 v_popcount(const v_int64x2& a)
 /** Mask **/
 inline int v_signmask(const v_uint8x16& a)
 {
-    vec_uchar16 sv  = vec_sr(a.val, vec_uchar16_sp(7));
-    static const vec_uchar16 slm = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    sv = vec_sl(sv, slm);
-    vec_uint4 sv4 = vec_sum4s(sv, vec_uint4_z);
-    static const vec_uint4 slm4 = {0, 0, 8, 8};
-    sv4 = vec_sl(sv4, slm4);
-    return vec_extract(vec_sums((vec_int4) sv4, vec_int4_z), 3);
+    static const vec_uchar16 qperm = {120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_int8x16& a)
 { return v_signmask(v_reinterpret_as_u8(a)); }
 
 inline int v_signmask(const v_int16x8& a)
 {
-    static const vec_ushort8 slm = {0, 1, 2, 3, 4, 5, 6, 7};
-    vec_short8 sv = vec_sr(a.val, vec_ushort8_sp(15));
-    sv = vec_sl(sv, slm);
-    vec_int4 svi = vec_int4_z;
-    svi = vec_sums(vec_sum4s(sv, svi), svi);
-    return vec_extract(svi, 3);
+    static const vec_uchar16 qperm = {112, 96, 80, 64, 48, 32, 16, 0, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint16x8& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
 
 inline int v_signmask(const v_int32x4& a)
 {
-    static const vec_uint4 slm = {0, 1, 2, 3};
-    vec_int4 sv = vec_sr(a.val, vec_uint4_sp(31));
-    sv = vec_sl(sv, slm);
-    sv = vec_sums(sv, vec_int4_z);
-    return vec_extract(sv, 3);
+    static const vec_uchar16 qperm = {96, 64, 32, 0, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint32x4& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
@@ -890,6 +878,17 @@ inline int v_signmask(const v_uint64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
+
+inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(a)); }
 
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
@@ -1273,7 +1272,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-// fixme: Is there any buitin op or intrinsic that cover "xvcvsphp"?
+// fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
 #if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
     vec_ushort8 vf16;
     __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
@@ -1354,16 +1353,6 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
-
-//! @name Check SIMD support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD128()
-{
-    return (CV_CPU_HAS_SUPPORT_VSX) ? true : false;
-}
-
-//! @}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

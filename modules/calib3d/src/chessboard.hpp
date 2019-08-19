@@ -252,7 +252,7 @@ class Chessboard: public cv::Feature2D
                 /**
                  * \brief Estimates the search area for a specific point based on the given homography
                  *
-                 * \param[in] H homography descriping the transformation from ideal board to real one
+                 * \param[in] H homography describing the transformation from ideal board to real one
                  * \param[in] row Row of the point
                  * \param[in] col Col of the point
                  * \param[in] p Percentage [0..1]
@@ -562,8 +562,8 @@ class Chessboard: public cv::Feature2D
                 void flipHorizontal();
 
                 /**
-                 * \brief Flips and rotates the board so that the anlge of
-                 * either the black or white diagonale is bigger than the x
+                 * \brief Flips and rotates the board so that the angle of
+                 * either the black or white diagonal is bigger than the x
                  * and y axis of the board and from a right handed
                  * coordinate system
                  */
@@ -650,7 +650,7 @@ class Chessboard: public cv::Feature2D
                         bool right(bool check_empty=false);   // moves one corner to the right or returns false
                         bool bottom(bool check_empty=false);  // moves one corner to the bottom or returns false
                         bool top(bool check_empty=false);     // moves one corner to the top or returns false
-                        bool checkCorner()const;              // returns ture if the current corner belongs to at least one
+                        bool checkCorner()const;              // returns true if the current corner belongs to at least one
                                                               // none empty cell
                         bool isNaN()const;                    // returns true if the currnet corner is NaN
 

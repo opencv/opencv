@@ -215,7 +215,7 @@ size_t ExifReader::getFieldSize ()
  * @brief Filling m_exif member with exif directory elements
  *          This is internal function and is not exposed to client
  *
- *  @return The function doesn't return any value. In case of unsiccessful parsing
+ *  @return The function doesn't return any value. In case of unsuccessful parsing
  *      the m_exif member is not filled up
  */
 void ExifReader::parseExif()
@@ -229,7 +229,7 @@ void ExifReader::parseExif()
 
     uint32_t offset = getStartOffset();
 
-    size_t numEntry = getNumDirEntry();
+    size_t numEntry = getNumDirEntry( offset );
 
     offset += 2; //go to start of tag fields
 
@@ -303,7 +303,7 @@ uint32_t ExifReader::getStartOffset() const
  *
  * @return The number of directory entries
  */
-size_t ExifReader::getNumDirEntry() const
+size_t ExifReader::getNumDirEntry(const size_t offsetNumDir) const
 {
     return getU16( offsetNumDir );
 }

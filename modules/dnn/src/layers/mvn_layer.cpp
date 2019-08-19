@@ -118,11 +118,7 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
-            return !zeroDev && eps <= 1e-7f;
-#else
-            return !zeroDev && (preferableTarget == DNN_TARGET_CPU || eps <= 1e-7f);
-#endif
+            return !zeroDev && (preferableTarget != DNN_TARGET_MYRIAD || eps <= 1e-7f);
         else
 #endif  // HAVE_INF_ENGINE
             return backendId == DNN_BACKEND_OPENCV;
@@ -151,6 +147,7 @@ public:
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
             int newRows = total(shape(inpMat), 0, splitDim);
+            CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
             UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16S : CV_32F);
@@ -225,6 +222,7 @@ public:
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
             int newRows = total(shape(inpMat), 0, splitDim);
+            CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
             UMat oneMat = UMat::ones(s[1], 1, CV_32F);
@@ -351,7 +349,11 @@ public:
                     bias = i < shift.cols ? ((float*)shift.data)[i] : bias;
                 }
                 cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
-                double alpha = (normVariance) ? 1/(eps + dev[0]) : 1;
+                double alpha = 1;
+                if (normVariance)
+                {
+                    alpha = 1 / std::sqrt(eps + dev[0]*dev[0]);
+                }
                 double normalizationScale = 1.0;
                 double normalizationShift = 0.0;
                 if (fuse_batch_norm)
@@ -369,29 +371,16 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::MVNLayer ieLayer(name);
         ieLayer.setAcrossChannels(acrossChannels);
         ieLayer.setNormalize(normVariance);
         ieLayer.setEpsilon(eps);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "MVN";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::MVNLayer> ieLayer(new InferenceEngine::MVNLayer(lp));
-        ieLayer->params["across_channels"] = acrossChannels ? "1" : "0";
-        ieLayer->params["normalize_variance"] = normVariance ? "1" : "0";
-        ieLayer->params["eps"] = format("%f", eps);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

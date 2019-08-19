@@ -151,7 +151,7 @@ number of components (vectors/matrices) of the outer vector.
 
 In general, type support is limited to cv::Mat types. Other types are forbidden.
 But in some cases we need to support passing of custom non-general Mat types, like arrays of cv::KeyPoint, cv::DMatch, etc.
-This data is not intented to be interpreted as an image data, or processed somehow like regular cv::Mat.
+This data is not intended to be interpreted as an image data, or processed somehow like regular cv::Mat.
 To pass such custom type use rawIn() / rawOut() / rawInOut() wrappers.
 Custom type is wrapped as Mat-compatible `CV_8UC<N>` values (N = sizeof(T), N <= CV_CN_MAX).
  */
@@ -372,6 +372,9 @@ public:
 
     void assign(const std::vector<UMat>& v) const;
     void assign(const std::vector<Mat>& v) const;
+
+    void move(UMat& u) const;
+    void move(Mat& m) const;
 };
 
 
@@ -2377,7 +2380,7 @@ public:
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
     UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     UMat(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
-    //! constucts 2D matrix and fills it with the specified value _s.
+    //! constructs 2D matrix and fills it with the specified value _s.
     UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
@@ -2822,7 +2825,7 @@ public:
 
      `ref<_Tp>(i0,...[,hashval])` is equivalent to `*(_Tp*)ptr(i0,...,true[,hashval])`.
      The methods always return a valid reference.
-     If the element did not exist, it is created and initialiazed with 0.
+     If the element did not exist, it is created and initialized with 0.
     */
     //! returns reference to the specified element (1D case)
     template<typename _Tp> _Tp& ref(int i0, size_t* hashval=0);

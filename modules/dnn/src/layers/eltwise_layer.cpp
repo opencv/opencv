@@ -140,7 +140,7 @@ public:
                         const std::vector<float>& coeffs, EltwiseOp op,
                         const ActivationLayer* activ, int nstripes)
         {
-            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 4, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
+            CV_Check(dst.dims, 1 < dst.dims && dst.dims <= 5, ""); CV_CheckTypeEQ(dst.type(), CV_32FC1, ""); CV_Assert(dst.isContinuous());
             CV_Assert(coeffs.empty() || coeffs.size() == (size_t)nsrcs);
 
             for( int i = 0; i < nsrcs; i++ )
@@ -156,9 +156,9 @@ public:
             p.dst = &dst;
             p.op = op;
             p.nstripes = nstripes;
-            p.channels = (dst.dims == 4 ? dst.size[1] : 1);
-            p.planeSize = (dst.dims >= 3 ? dst.size[dst.dims - 1] * dst.size[dst.dims - 2] :
-                                           dst.size[dst.dims - 1]);
+            p.channels = (dst.dims >= 4 ? dst.size[1] : 1);
+
+            p.planeSize = dst.total(dst.dims >= 4 ? 2 : 1);
             CV_Assert(dst.total() == dst.size[0] * p.channels * p.planeSize);
 
             bool simpleCoeffs = true;
@@ -420,10 +420,9 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::EltwiseLayer ieLayer(name);
 
         ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
@@ -442,26 +441,8 @@ public:
             l.getParameters()["coeff"] = coeffs;
 
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Eltwise";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::EltwiseLayer> ieLayer(new InferenceEngine::EltwiseLayer(lp));
-        ieLayer->coeff = coeffs;
-        if (op == SUM)
-            ieLayer->_operation = InferenceEngine::EltwiseLayer::Sum;
-        else if (op == PROD)
-            ieLayer->_operation = InferenceEngine::EltwiseLayer::Prod;
-        else if (op == MAX)
-            ieLayer->_operation = InferenceEngine::EltwiseLayer::Max;
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

@@ -1806,7 +1806,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     else if( event->type == GDK_SCROLL )
     {
 #if defined(GTK_VERSION3_4)
-        // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separetely
+        // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separately
         double delta = (event->scroll.delta_x + event->scroll.delta_y);
         cv_event   = (event->scroll.delta_y!=0) ? CV_EVENT_MOUSEHWHEEL : CV_EVENT_MOUSEWHEEL;
 #else

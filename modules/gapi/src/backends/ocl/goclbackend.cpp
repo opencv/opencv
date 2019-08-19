@@ -7,9 +7,6 @@
 
 #include "precomp.hpp"
 
-#include <functional>
-#include <unordered_set>
-
 #include <ade/util/algorithm.hpp>
 
 #include <ade/util/range.hpp>
@@ -18,16 +15,14 @@
 
 #include <ade/typed_graph.hpp>
 
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/util/any.hpp"
-#include "opencv2/gapi/gtype_traits.hpp"
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/gtype_traits.hpp>
 
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
 #include "backends/ocl/goclbackend.hpp"
-#include "backends/ocl/goclimgproc.hpp"
-#include "backends/ocl/goclcore.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -92,7 +87,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
         {
             m_dataNodes.push_back(nh);
             const auto &desc = m_gm.metadata(nh).get<Data>();
-            if (desc.storage == Data::Storage::CONST)
+            if (desc.storage == Data::Storage::CONST_VAL)
             {
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);
@@ -149,6 +144,26 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
     // Update resources with run-time information - what this Island
     // has received from user (or from another Island, or mix...)
     // FIXME: Check input/output objects against GIsland protocol
+
+    // NB: We must clean-up m_res before this function returns because internally (bindInArg,
+    //     bindOutArg) we work with cv::UMats, not cv::Mats that were originally placed into the
+    //     input/output objects. If this is not done and cv::UMat "leaves" the local function scope,
+    //     certain problems may occur.
+    //
+    //     For example, if the original output (cv::Mat) is re-initialized by the user but we still
+    //     hold cv::UMat -> we get cv::UMat that has a parent that was already destroyed. Also,
+    //     since we don't own the data (the user does), there's no point holding it after we're done
+    const auto clean_up = [&input_objs, &output_objs] (cv::gimpl::Mag* p)
+    {
+        // Only clean-up UMat entries from current scope, we know that inputs and outputs are stored
+        // as UMats from the context below, so the following procedure is safe
+        auto& umats = p->slot<cv::UMat>();
+        // NB: avoid clearing the whole magazine, there's also pre-allocated internal data
+        for (auto& it : input_objs)  umats.erase(it.first.id);
+        for (auto& it : output_objs) umats.erase(it.first.id);
+    };
+    // RAII wrapper to clean-up m_res
+    std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
 
     for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second, true);
     for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second, true);

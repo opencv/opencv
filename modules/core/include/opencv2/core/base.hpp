@@ -301,8 +301,8 @@ CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _fu
 
 // In practice, some macro are not processed correctly (noreturn is not detected).
 // We need to use simplified definition for them.
-#define CV_Error(...) do { abort(); } while (0)
-#define CV_Error_( code, args ) do { cv::format args; abort(); } while (0)
+#define CV_Error(code, msg) do { (void)(code); (void)(msg); abort(); } while (0)
+#define CV_Error_(code, args) do { (void)(code); (void)(cv::format args); abort(); } while (0)
 #define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
 
 #else // CV_STATIC_ANALYSIS

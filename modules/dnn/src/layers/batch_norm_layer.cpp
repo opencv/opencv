@@ -33,6 +33,7 @@ public:
 
 
     BatchNormLayerImpl(const LayerParams& params)
+        : dims(-1)
     {
         setParamsFrom(params);
         CV_Assert(blobs.size() >= 2);
@@ -351,31 +352,16 @@ public:
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
         const size_t numChannels = weights_.total();
         addConstantData("weights", wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         addConstantData("biases", wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
-
-        const size_t numChannels = weights_.total();
-        ieLayer->_weights = wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C);
-        ieLayer->_biases = wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

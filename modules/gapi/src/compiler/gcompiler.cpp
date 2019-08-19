@@ -35,12 +35,12 @@
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
-#include "opencv2/gapi/cpu/core.hpp"    // Also directly refer to Core
-#include "opencv2/gapi/cpu/imgproc.hpp" // ...and Imgproc kernel implementations
+#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
+#include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
 
-#include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
+#include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 
 #include "logger.hpp"
 
@@ -72,6 +72,12 @@ namespace
         return combine(ocv_pkg, user_pkg_with_aux);
     }
 
+    cv::gapi::GNetPackage getNetworkPackage(cv::GCompileArgs &args)
+    {
+        return cv::gimpl::getCompileArg<cv::gapi::GNetPackage>(args)
+            .value_or(cv::gapi::GNetPackage{});
+    }
+
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
     {
         auto dump_info = cv::gimpl::getCompileArg<cv::graph_dump_path>(args);
@@ -87,6 +93,16 @@ namespace
             return cv::util::make_optional(dump_info.value().m_dump_path);
         }
     }
+
+    template<typename C>
+    cv::gapi::GKernelPackage auxKernelsFrom(const C& c) {
+        cv::gapi::GKernelPackage result;
+        for (const auto &b : c) {
+            result = cv::gapi::combine(result, b.priv().auxiliaryKernels());
+        }
+        return result;
+    }
+
 } // anonymous namespace
 
 
@@ -98,13 +114,28 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     : m_c(c), m_metas(std::move(metas)), m_args(std::move(args))
 {
     using namespace std::placeholders;
-    m_all_kernels       = getKernelPackage(m_args);
-    auto dump_path      = getGraphDumpDirectory(m_args);
+
+    auto kernels_to_use  = getKernelPackage(m_args);
+    auto networks_to_use = getNetworkPackage(m_args);
+    std::unordered_set<cv::gapi::GBackend> all_backends;
+    const auto take = [&](std::vector<cv::gapi::GBackend> &&v) {
+        all_backends.insert(v.begin(), v.end());
+    };
+    take(kernels_to_use.backends());
+    take(networks_to_use.backends());
+    m_all_kernels        = cv::gapi::combine(kernels_to_use,
+                                             auxKernelsFrom(all_backends));
+    // NB: The expectation in the line above is that
+    // NN backends (present here via network package) always add their
+    // inference kernels via auxiliary...()
+
+    auto dump_path       = getGraphDumpDirectory(m_args);
 
     m_e.addPassStage("init");
     m_e.addPass("init", "check_cycles",  ade::passes::CheckCycles());
-    m_e.addPass("init", "expand_kernels",  std::bind(passes::expandKernels, _1,
-                                                     m_all_kernels)); // NB: package is copied
+    m_e.addPass("init", "expand_kernels",
+                std::bind(passes::expandKernels, _1,
+                          m_all_kernels)); // NB: package is copied
     m_e.addPass("init", "topo_sort",     ade::passes::TopologicalSort());
     m_e.addPass("init", "init_islands",  passes::initIslands);
     m_e.addPass("init", "check_islands", passes::checkIslands);
@@ -117,8 +148,13 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
     m_all_kernels.remove(cv::gapi::compound::backend());
 
     m_e.addPassStage("kernels");
-    m_e.addPass("kernels", "resolve_kernels", std::bind(passes::resolveKernels, _1,
-                                              std::ref(m_all_kernels))); // NB: and not copied here
+    m_e.addPass("kernels", "bind_net_params",
+                std::bind(passes::bindNetParams, _1,
+                          networks_to_use));
+    m_e.addPass("kernels", "resolve_kernels",
+                std::bind(passes::resolveKernels, _1,
+                          std::ref(m_all_kernels)));  // NB: and not copied here
+                                                      // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
     m_e.addPassStage("meta");
@@ -142,7 +178,9 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                   dump_path.value()));
     }
 
-    // Process backends at the last moment (after all G-API passes are added).
+    // FIXME: This should be called for "ActiveBackends" only (see metadata).
+    // However, ActiveBackends are known only after passes are actually executed.
+    // At these stage, they are not executed yet.
     ade::ExecutionEngineSetupContext ectx(m_e);
     auto backends = m_all_kernels.backends();
     for (auto &b : backends)
@@ -259,7 +297,7 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g)
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:
-    // - An instance of GExecutor is created. Depening on the platform,
+    // - An instance of GExecutor is created. Depending on the platform,
     //   build configuration, etc, a GExecutor may be:
     //   - a naive single-thread graph interpreter;
     //   - a std::thread-based thing

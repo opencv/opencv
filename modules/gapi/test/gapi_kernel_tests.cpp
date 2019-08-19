@@ -6,11 +6,11 @@
 
 
 #include "test_precomp.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include "gapi_mock_kernels.hpp"
 
-#include "opencv2/gapi/cpu/gcpukernel.hpp"     // cpu::backend
-#include "opencv2/gapi/fluid/gfluidkernel.hpp" // fluid::backend
+#include <opencv2/gapi/cpu/gcpukernel.hpp>     // cpu::backend
+#include <opencv2/gapi/fluid/gfluidkernel.hpp> // fluid::backend
 
 namespace opencv_test
 {

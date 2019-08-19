@@ -119,7 +119,7 @@ cv::Mat findHomography1D(cv::InputArray _src,cv::InputArray _dst)
     cv::Mat b = cv::Mat::zeros(count,1,CV_64FC1);
 
     // fill A;b and perform singular value decomposition
-    // it is assumed that w is one for both cooridnates
+    // it is assumed that w is one for both coordinates
     // h22 is kept to 1
     switch(src_n.type())
     {

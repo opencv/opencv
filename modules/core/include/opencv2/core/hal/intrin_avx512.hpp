@@ -5,6 +5,12 @@
 #ifndef OPENCV_HAL_INTRIN_AVX512_HPP
 #define OPENCV_HAL_INTRIN_AVX512_HPP
 
+#if defined(_MSC_VER) && (_MSC_VER < 1920/*MSVS2019*/)
+# pragma warning(disable:4146)  // unary minus operator applied to unsigned type, result still unsigned
+# pragma warning(disable:4309)  // 'argument': truncation of constant value
+# pragma warning(disable:4310)  // cast truncates constant value
+#endif
+
 #define CVT_ROUND_MODES_IMPLEMENTED 0
 
 #define CV_SIMD512 1
@@ -893,37 +899,58 @@ OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_min, v_float64x8,  _mm512_min_pd)
 OPENCV_HAL_IMPL_AVX512_BIN_FUNC(v_max, v_float64x8,  _mm512_max_pd)
 
 /** Rotate **/
-template<int imm>
-inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
-{
-    if (imm == 0) return a;
-    if (imm == 64) return b;
-    if (imm >= 128) return v_int8x64();
-#if CV_AVX_512VBMI
-    return v_int8x64(_mm512_permutex2var_epi8(a.val,
-           _v512_set_epu8(0x3f + imm,0x3e + imm,0x3d + imm,0x3c + imm,0x3b + imm,0x3a + imm,0x39 + imm,0x38 + imm,
-                          0x37 + imm,0x36 + imm,0x35 + imm,0x34 + imm,0x33 + imm,0x32 + imm,0x31 + imm,0x30 + imm,
-                          0x2f + imm,0x2e + imm,0x2d + imm,0x2c + imm,0x2b + imm,0x2a + imm,0x29 + imm,0x28 + imm,
-                          0x27 + imm,0x26 + imm,0x25 + imm,0x24 + imm,0x23 + imm,0x22 + imm,0x21 + imm,0x20 + imm,
-                          0x1f + imm,0x1e + imm,0x1d + imm,0x1c + imm,0x1b + imm,0x1a + imm,0x19 + imm,0x18 + imm,
-                          0x17 + imm,0x16 + imm,0x15 + imm,0x14 + imm,0x13 + imm,0x12 + imm,0x11 + imm,0x10 + imm,
-                          0x0f + imm,0x0e + imm,0x0d + imm,0x0c + imm,0x0b + imm,0x0a + imm,0x09 + imm,0x08 + imm,
-                          0x07 + imm,0x06 + imm,0x05 + imm,0x04 + imm,0x03 + imm,0x02 + imm,0x01 + imm,0x00 + imm), b.val));
-#else
-    __m512i pre = _mm512_alignr_epi32(b.val, a.val, imm/4);
-    if (imm % 4)
+namespace {
+    template<bool prec, int imm4, bool part, int imm32>
+    struct _v_rotate_right { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64&) { return v_int8x64(); }};
+    template<int imm4, int imm32>
+    struct _v_rotate_right<true, imm4, false, imm32> { static inline v_int8x64 eval(const v_int8x64& a, const v_int8x64& b)
     {
-        __m512i post;
-        if (imm/4 < 15)
-            post = _mm512_alignr_epi32(b.val, a.val, imm/4 + 1);
-        else if (imm/4 == 15)
-            post = b.val;
-        else
-            post = _mm512_alignr_epi32(_mm512_setzero_si512(), b.val, imm/4 - 15);
-        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(pre, (imm % 4)*8), _mm512_slli_epi32(post, (4 - imm % 4)*8)));
-    }
-    else
-        return v_int8x64(pre);
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(_mm512_alignr_epi32(b.val, a.val, imm32    ),    imm4 *8),
+                                         _mm512_slli_epi32(_mm512_alignr_epi32(b.val, a.val, imm32 + 1), (4-imm4)*8)));
+    }};
+    template<int imm4>
+    struct _v_rotate_right<true, imm4, false, 15> { static inline v_int8x64 eval(const v_int8x64& a, const v_int8x64& b)
+    {
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(_mm512_alignr_epi32(b.val, a.val, 15),    imm4 *8),
+                                         _mm512_slli_epi32(                                b.val, (4-imm4)*8)));
+    }};
+    template<int imm4, int imm32>
+    struct _v_rotate_right<true, imm4, true, imm32> { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64& b)
+    {
+        return v_int8x64(_mm512_or_si512(_mm512_srli_epi32(_mm512_alignr_epi32(_mm512_setzero_si512(), b.val, imm32 - 16),    imm4 *8),
+                                         _mm512_slli_epi32(_mm512_alignr_epi32(_mm512_setzero_si512(), b.val, imm32 - 15), (4-imm4)*8)));
+    }};
+    template<int imm4>
+    struct _v_rotate_right<true, imm4, true, 31> { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64& b)
+    { return v_int8x64(_mm512_srli_epi32(_mm512_alignr_epi32(_mm512_setzero_si512(), b.val, 15), imm4*8)); }};
+    template<int imm32>
+    struct _v_rotate_right<false, 0, false, imm32> { static inline v_int8x64 eval(const v_int8x64& a, const v_int8x64& b)
+    { return v_int8x64(_mm512_alignr_epi32(b.val, a.val, imm32)); }};
+    template<>
+    struct _v_rotate_right<false, 0, false, 0> { static inline v_int8x64 eval(const v_int8x64& a, const v_int8x64&) { return a; }};
+    template<int imm32>
+    struct _v_rotate_right<false, 0, true, imm32> { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64& b)
+    { return v_int8x64(_mm512_alignr_epi32(_mm512_setzero_si512(), b.val, imm32 - 16)); }};
+    template<>
+    struct _v_rotate_right<false, 0, true, 16> { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64& b) { return b; }};
+    template<>
+    struct _v_rotate_right<false, 0, true, 32> { static inline v_int8x64 eval(const v_int8x64&, const v_int8x64&) { return v_int8x64(); }};
+}
+template<int imm> inline v_int8x64 v_rotate_right(const v_int8x64& a, const v_int8x64& b)
+{
+    return imm >= 128 ? v_int8x64() :
+#if CV_AVX_512VBMI
+    v_int8x64(_mm512_permutex2var_epi8(a.val,
+    _v512_set_epu8(0x3f + imm, 0x3e + imm, 0x3d + imm, 0x3c + imm, 0x3b + imm, 0x3a + imm, 0x39 + imm, 0x38 + imm,
+                   0x37 + imm, 0x36 + imm, 0x35 + imm, 0x34 + imm, 0x33 + imm, 0x32 + imm, 0x31 + imm, 0x30 + imm,
+                   0x2f + imm, 0x2e + imm, 0x2d + imm, 0x2c + imm, 0x2b + imm, 0x2a + imm, 0x29 + imm, 0x28 + imm,
+                   0x27 + imm, 0x26 + imm, 0x25 + imm, 0x24 + imm, 0x23 + imm, 0x22 + imm, 0x21 + imm, 0x20 + imm,
+                   0x1f + imm, 0x1e + imm, 0x1d + imm, 0x1c + imm, 0x1b + imm, 0x1a + imm, 0x19 + imm, 0x18 + imm,
+                   0x17 + imm, 0x16 + imm, 0x15 + imm, 0x14 + imm, 0x13 + imm, 0x12 + imm, 0x11 + imm, 0x10 + imm,
+                   0x0f + imm, 0x0e + imm, 0x0d + imm, 0x0c + imm, 0x0b + imm, 0x0a + imm, 0x09 + imm, 0x08 + imm,
+                   0x07 + imm, 0x06 + imm, 0x05 + imm, 0x04 + imm, 0x03 + imm, 0x02 + imm, 0x01 + imm, 0x00 + imm), b.val));
+#else
+    _v_rotate_right<imm%4!=0, imm%4, (imm/4 > 15), imm/4>::eval(a, b);
 #endif
 }
 template<int imm>
@@ -943,8 +970,7 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a, const v_int8x64& b)
                           0x4f - imm,0x4e - imm,0x4d - imm,0x4c - imm,0x4b - imm,0x4a - imm,0x49 - imm,0x48 - imm,
                           0x47 - imm,0x46 - imm,0x45 - imm,0x44 - imm,0x43 - imm,0x42 - imm,0x41 - imm,0x40 - imm), a.val));
 #else
-    if (imm < 64) return v_rotate_right<64 - imm>(b, a);
-    else return v_rotate_right<128 - imm>(v512_setzero_s8(), b);
+    return imm < 64 ? v_rotate_right<64 - imm>(b, a) : v_rotate_right<128 - imm>(v512_setzero_s8(), b);
 #endif
 }
 template<int imm>
@@ -986,54 +1012,50 @@ inline v_int8x64 v_rotate_left(const v_int8x64& a)
 #endif
 }
 
-#define OPENCV_HAL_IMPL_AVX512_ROTATE_PM(_Tpvec, suffix)                                                                                 \
-template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                          \
-{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }    \
-template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                         \
-{ return v_reinterpret_as_##suffix(v_rotate_right<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }   \
-template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                           \
-{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a))); }                            \
-template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                          \
+#define OPENCV_HAL_IMPL_AVX512_ROTATE_PM(_Tpvec, suffix)                                                                                   \
+template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                            \
+{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }      \
+template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                           \
+{ return v_reinterpret_as_##suffix(v_rotate_right<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a), v_reinterpret_as_s8(b))); }     \
+template<int imm> inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                             \
+{ return v_reinterpret_as_##suffix(v_rotate_left<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a))); }                              \
+template<int imm> inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                            \
 { return v_reinterpret_as_##suffix(v_rotate_right<imm * sizeof(_Tpvec::lane_type)>(v_reinterpret_as_s8(a))); }
 
-#define OPENCV_HAL_IMPL_AVX512_ROTATE_EC(_Tpvec, suffix)                                                                                 \
-template<int imm>                                                                                                                        \
-inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                                            \
-{                                                                                                                                        \
-    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
-    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
-    if (imm == 0) return a;                                                                                                              \
-    if (imm == _Tpvec::nlanes) return b;                                                                                                 \
-    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << SHIFT2)&MASK, b.val), (MASK << imm)&MASK, a.val)); \
-}                                                                                                                                        \
-template<int imm>                                                                                                                        \
-inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                           \
-{                                                                                                                                        \
-    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
-    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
-    if (imm == 0) return a;                                                                                                              \
-    if (imm == _Tpvec::nlanes) return b;                                                                                                 \
-    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                        \
-    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << imm)&MASK, a.val), (MASK << SHIFT2)&MASK, b.val)); \
-}                                                                                                                                        \
-template<int imm>                                                                                                                        \
-inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                             \
-{                                                                                                                                        \
-    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
-    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
-    if (imm == 0) return a;                                                                                                              \
-    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_expand_##suffix((MASK << imm)&MASK, a.val));                                                              \
-}                                                                                                                                        \
-template<int imm>                                                                                                                        \
-inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                            \
-{                                                                                                                                        \
-    enum { SHIFT2 = _Tpvec::nlanes - imm };                                                                                              \
-    enum { MASK = (1 << _Tpvec::nlanes) - 1 };                                                                                           \
-    if (imm == 0) return a;                                                                                                              \
-    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                          \
-    return _Tpvec(_mm512_maskz_compress_##suffix((MASK << imm)&MASK, a.val));                                                            \
+#define OPENCV_HAL_IMPL_AVX512_ROTATE_EC(_Tpvec, suffix)                                                                                   \
+template<int imm>                                                                                                                          \
+inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b)                                                                              \
+{                                                                                                                                          \
+    enum { SHIFT2 = (_Tpvec::nlanes - imm) };                                                                                              \
+    enum { MASK = ((1 << _Tpvec::nlanes) - 1) };                                                                                           \
+    if (imm == 0) return a;                                                                                                                \
+    if (imm == _Tpvec::nlanes) return b;                                                                                                   \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                          \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << SHIFT2)&MASK, b.val), (MASK << (imm))&MASK, a.val)); \
+}                                                                                                                                          \
+template<int imm>                                                                                                                          \
+inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b)                                                                             \
+{                                                                                                                                          \
+    enum { SHIFT2 = (_Tpvec::nlanes - imm) };                                                                                              \
+    enum { MASK = ((1 << _Tpvec::nlanes) - 1) };                                                                                           \
+    if (imm == 0) return a;                                                                                                                \
+    if (imm == _Tpvec::nlanes) return b;                                                                                                   \
+    if (imm >= 2*_Tpvec::nlanes) return _Tpvec();                                                                                          \
+    return _Tpvec(_mm512_mask_expand_##suffix(_mm512_maskz_compress_##suffix((MASK << (imm))&MASK, a.val), (MASK << SHIFT2)&MASK, b.val)); \
+}                                                                                                                                          \
+template<int imm>                                                                                                                          \
+inline _Tpvec v_rotate_left(const _Tpvec& a)                                                                                               \
+{                                                                                                                                          \
+    if (imm == 0) return a;                                                                                                                \
+    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                            \
+    return _Tpvec(_mm512_maskz_expand_##suffix((1 << _Tpvec::nlanes) - (1 << (imm)), a.val));                                              \
+}                                                                                                                                          \
+template<int imm>                                                                                                                          \
+inline _Tpvec v_rotate_right(const _Tpvec& a)                                                                                              \
+{                                                                                                                                          \
+    if (imm == 0) return a;                                                                                                                \
+    if (imm >= _Tpvec::nlanes) return _Tpvec();                                                                                            \
+    return _Tpvec(_mm512_maskz_compress_##suffix((1 << _Tpvec::nlanes) - (1 << (imm)), a.val));                                            \
 }
 
 OPENCV_HAL_IMPL_AVX512_ROTATE_PM(v_uint8x64,   u8)
@@ -1175,7 +1197,7 @@ inline unsigned v_reduce_sad(const v_uint8x64& a, const v_uint8x64& b)
 }
 inline unsigned v_reduce_sad(const v_int8x64& a, const v_int8x64& b)
 {
-    __m512i val = _mm512_set1_epi8(0x80);
+    __m512i val = _mm512_set1_epi8(-128);
     val = _mm512_sad_epu8(_mm512_add_epi8(a.val, val), _mm512_add_epi8(b.val, val));
     __m256i half = _mm256_add_epi32(_v512_extract_low(val), _v512_extract_high(val));
     __m128i quarter = _mm_add_epi32(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1));
@@ -1583,13 +1605,13 @@ inline v_float64x8 v_lut(const double* tab, const v_int32x16& idxvec)
 inline void v_lut_deinterleave(const float* tab, const v_int32x16& idxvec, v_float32x16& x, v_float32x16& y)
 {
     x.val = _mm512_i32gather_ps(idxvec.val, tab, 4);
-    y.val = _mm512_i32gather_ps(idxvec.val, tab + 1, 4);
+    y.val = _mm512_i32gather_ps(idxvec.val, &tab[1], 4);
 }
 
 inline void v_lut_deinterleave(const double* tab, const v_int32x16& idxvec, v_float64x8& x, v_float64x8& y)
 {
     x.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab, 8);
-    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), tab + 1, 8);
+    y.val = _mm512_i32gather_pd(_v512_extract_low(idxvec.val), &tab[1], 8);
 }
 
 inline v_int8x64 v_interleave_pairs(const v_int8x64& vec)
@@ -2028,7 +2050,7 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& a, v_uint64x8& b
     b = v_uint64x8(_mm512_permutex2var_epi64(ab0, mask1, ab1));
 }
 
-inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g, v_uint8x64& r )
+inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& a, v_uint8x64& b, v_uint8x64& c )
 {
     __m512i bgr0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
@@ -2046,22 +2068,22 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
                                     77,  74,  71,  68,  65, 127, 124, 121, 118, 115, 112, 109, 106, 103, 100, 97,
                                     94,  91,  88,  85,  82,  79,  76,  73,  70,  67,  64,  61,  58,  55,  52, 49,
                                     46,  43,  40,  37,  34,  31,  28,  25,  22,  19,  16,  13,  10,   7,   4,  1), bgr2);
-    b = v_uint8x64(_mm512_mask_compress_epi8(r12b2, 0xffffffffffe00000, r0b01));
-    g = v_uint8x64(_mm512_mask_compress_epi8(b1g12, 0x2492492492492492, bgr0));
-    r = v_uint8x64(_mm512_mask_expand_epi8(r0b01, 0xffffffffffe00000, r12b2));
+    a = v_uint8x64(_mm512_mask_compress_epi8(r12b2, 0xffffffffffe00000, r0b01));
+    b = v_uint8x64(_mm512_mask_compress_epi8(b1g12, 0x2492492492492492, bgr0));
+    c = v_uint8x64(_mm512_mask_expand_epi8(r0b01, 0xffffffffffe00000, r12b2));
 #elif CV_AVX_512VBMI
     __m512i b0g0b1 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr1, bgr0);
     __m512i g1r1g2 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr2, bgr1);
     __m512i r2b2r0 = _mm512_mask_blend_epi8(0xb6db6db6db6db6db, bgr0, bgr2);
-    b = v_uint8x64(_mm512_permutex2var_epi8(b0g0b1, _v512_set_epu8(125, 122, 119, 116, 113, 110, 107, 104, 101,  98,  95,  92,  89,  86,  83,  80,
+    a = v_uint8x64(_mm512_permutex2var_epi8(b0g0b1, _v512_set_epu8(125, 122, 119, 116, 113, 110, 107, 104, 101,  98,  95,  92,  89,  86,  83,  80,
                                                                     77,  74,  71,  68,  65,  63,  61,  60,  58,  57,  55,  54,  52,  51,  49,  48,
                                                                     46,  45,  43,  42,  40,  39,  37,  36,  34,  33,  31,  30,  28,  27,  25,  24,
                                                                     23,  21,  20,  18,  17,  15,  14,  12,  11,   9,   8,   6,   5,   3,   2,   0), bgr2));
-    g = v_uint8x64(_mm512_permutex2var_epi8(g1r1g2, _v512_set_epu8( 63,  61,  60,  58,  57,  55,  54,  52,  51,  49,  48,  46,  45,  43,  42,  40,
+    b = v_uint8x64(_mm512_permutex2var_epi8(g1r1g2, _v512_set_epu8( 63,  61,  60,  58,  57,  55,  54,  52,  51,  49,  48,  46,  45,  43,  42,  40,
                                                                     39,  37,  36,  34,  33,  31,  30,  28,  27,  25,  24,  23,  21,  20,  18,  17,
                                                                     15,  14,  12,  11,   9,   8,   6,   5,   3,   2,   0, 126, 123, 120, 117, 114,
                                                                    111, 108, 105, 102,  99,  96,  93,  90,  87,  84,  81,  78,  75,  72,  69,  66), bgr0));
-    r = v_uint8x64(_mm512_permutex2var_epi8(r2b2r0, _v512_set_epu8( 63,  60,  57,  54,  51,  48,  45,  42,  39,  36,  33,  30,  27,  24,  21,  18,
+    c = v_uint8x64(_mm512_permutex2var_epi8(r2b2r0, _v512_set_epu8( 63,  60,  57,  54,  51,  48,  45,  42,  39,  36,  33,  30,  27,  24,  21,  18,
                                                                     15,  12,   9,   6,   3,   0, 125, 122, 119, 116, 113, 110, 107, 104, 101,  98,
                                                                     95,  92,  89,  86,  83,  80,  77,  74,  71,  68,  65,  62,  59,  56,  53,  50,
                                                                     47,  44,  41,  38,  35,  32,  29,  26,  23,  20,  17,  14,  11,   8,   5,   2), bgr1));
@@ -2076,13 +2098,13 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i r0b1 = _mm512_permutex2var_epi16(bgr1, _v512_set_epu16(42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 29, 26, 23, 20, 17,
                                                                    14, 11,  8,  5,  2, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43), g20r0);
     __m512i g1r1 = _mm512_alignr_epi32(r12b2, g20r0, 11);
-    b = v_uint8x64(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, b0g0, r0b1));
-    r = v_uint8x64(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, r0b1, g1r1));
-    g = v_uint8x64(_mm512_shuffle_epi8(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, g1r1, b0g0), _mm512_set4_epi32(0x0e0f0c0d, 0x0a0b0809, 0x06070405, 0x02030001)));
+    a = v_uint8x64(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, b0g0, r0b1));
+    c = v_uint8x64(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, r0b1, g1r1));
+    b = v_uint8x64(_mm512_shuffle_epi8(_mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, g1r1, b0g0), _mm512_set4_epi32(0x0e0f0c0d, 0x0a0b0809, 0x06070405, 0x02030001)));
 #endif
 }
 
-inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32& g, v_uint16x32& r )
+inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& a, v_uint16x32& b, v_uint16x32& c )
 {
     __m512i bgr0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
@@ -2094,13 +2116,13 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32&
     __m512i r12b2 = _mm512_permutex2var_epi16(bgr1, mask0, bgr2);
     __m512i g20r0 = _mm512_permutex2var_epi16(bgr2, mask0, bgr0);
 
-    b = v_uint16x32(_mm512_mask_blend_epi32(0xf800, b01g1, r12b2));
-    g = v_uint16x32(_mm512_permutex2var_epi16(bgr1, _v512_set_epu16(42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 29, 26, 23, 20, 17,
+    a = v_uint16x32(_mm512_mask_blend_epi32(0xf800, b01g1, r12b2));
+    b = v_uint16x32(_mm512_permutex2var_epi16(bgr1, _v512_set_epu16(42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 29, 26, 23, 20, 17,
                                                                     14, 11,  8,  5,  2, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43), g20r0));
-    r = v_uint16x32(_mm512_alignr_epi32(r12b2, g20r0, 11));
+    c = v_uint16x32(_mm512_alignr_epi32(r12b2, g20r0, 11));
 }
 
-inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x16& g, v_uint32x16& r )
+inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& a, v_uint32x16& b, v_uint32x16& c )
 {
     __m512i bgr0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
@@ -2111,12 +2133,12 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x1
     __m512i g12b2 = _mm512_permutex2var_epi32(bgr1, mask0, bgr2);
     __m512i r20g0 = _mm512_permutex2var_epi32(bgr2, mask0, bgr0);
 
-    b = v_uint32x16(_mm512_mask_blend_epi32(0xf800, b01r1, g12b2));
-    g = v_uint32x16(_mm512_alignr_epi32(g12b2, r20g0, 11));
-    r = v_uint32x16(_mm512_permutex2var_epi32(bgr1, _v512_set_epu32(21, 20, 19, 18, 17, 16, 13, 10, 7, 4, 1, 26, 25, 24, 23, 22), r20g0));
+    a = v_uint32x16(_mm512_mask_blend_epi32(0xf800, b01r1, g12b2));
+    b = v_uint32x16(_mm512_alignr_epi32(g12b2, r20g0, 11));
+    c = v_uint32x16(_mm512_permutex2var_epi32(bgr1, _v512_set_epu32(21, 20, 19, 18, 17, 16, 13, 10, 7, 4, 1, 26, 25, 24, 23, 22), r20g0));
 }
 
-inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g, v_uint64x8& r )
+inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& a, v_uint64x8& b, v_uint64x8& c )
 {
     __m512i bgr0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgr1 = _mm512_loadu_si512((const __m512i*)(ptr + 8));
@@ -2127,12 +2149,12 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
     __m512i r12b2 = _mm512_permutex2var_epi64(bgr1, mask0, bgr2);
     __m512i g20r0 = _mm512_permutex2var_epi64(bgr2, mask0, bgr0);
 
-    b = v_uint64x8(_mm512_mask_blend_epi64(0xc0, b01g1, r12b2));
-    r = v_uint64x8(_mm512_alignr_epi64(r12b2, g20r0, 6));
-    g = v_uint64x8(_mm512_permutex2var_epi64(bgr1, _v512_set_epu64(10, 9, 8, 5, 2, 13, 12, 11), g20r0));
+    a = v_uint64x8(_mm512_mask_blend_epi64(0xc0, b01g1, r12b2));
+    c = v_uint64x8(_mm512_alignr_epi64(r12b2, g20r0, 6));
+    b = v_uint64x8(_mm512_permutex2var_epi64(bgr1, _v512_set_epu64(10, 9, 8, 5, 2, 13, 12, 11), g20r0));
 }
 
-inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g, v_uint8x64& r, v_uint8x64& a )
+inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& a, v_uint8x64& b, v_uint8x64& c, v_uint8x64& d )
 {
     __m512i bgra0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgra1 = _mm512_loadu_si512((const __m512i*)(ptr + 64));
@@ -2154,10 +2176,10 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i br23 = _mm512_permutex2var_epi8(bgra2, mask0, bgra3);
     __m512i ga23 = _mm512_permutex2var_epi8(bgra2, mask1, bgra3);
 
-    b = v_uint8x64(_mm512_permutex2var_epi8(br01, mask0, br23));
-    r = v_uint8x64(_mm512_permutex2var_epi8(br01, mask1, br23));
-    g = v_uint8x64(_mm512_permutex2var_epi8(ga01, mask0, ga23));
-    a = v_uint8x64(_mm512_permutex2var_epi8(ga01, mask1, ga23));
+    a = v_uint8x64(_mm512_permutex2var_epi8(br01, mask0, br23));
+    c = v_uint8x64(_mm512_permutex2var_epi8(br01, mask1, br23));
+    b = v_uint8x64(_mm512_permutex2var_epi8(ga01, mask0, ga23));
+    d = v_uint8x64(_mm512_permutex2var_epi8(ga01, mask1, ga23));
 #else
     __m512i mask = _mm512_set4_epi32(0x0f0b0703, 0x0e0a0602, 0x0d090501, 0x0c080400);
     __m512i b0g0r0a0 = _mm512_shuffle_epi8(bgra0, mask);
@@ -2173,14 +2195,14 @@ inline void v_load_deinterleave( const uchar* ptr, v_uint8x64& b, v_uint8x64& g,
     __m512i br23 = _mm512_permutex2var_epi32(b2g2r2a2, mask0, b3g3r3a3);
     __m512i ga23 = _mm512_permutex2var_epi32(b2g2r2a2, mask1, b3g3r3a3);
 
-    b = v_uint8x64(_mm512_permutex2var_epi32(br01, mask0, br23));
-    r = v_uint8x64(_mm512_permutex2var_epi32(br01, mask1, br23));
-    g = v_uint8x64(_mm512_permutex2var_epi32(ga01, mask0, ga23));
-    a = v_uint8x64(_mm512_permutex2var_epi32(ga01, mask1, ga23));
+    a = v_uint8x64(_mm512_permutex2var_epi32(br01, mask0, br23));
+    c = v_uint8x64(_mm512_permutex2var_epi32(br01, mask1, br23));
+    b = v_uint8x64(_mm512_permutex2var_epi32(ga01, mask0, ga23));
+    d = v_uint8x64(_mm512_permutex2var_epi32(ga01, mask1, ga23));
 #endif
 }
 
-inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32& g, v_uint16x32& r, v_uint16x32& a )
+inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& a, v_uint16x32& b, v_uint16x32& c, v_uint16x32& d )
 {
     __m512i bgra0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgra1 = _mm512_loadu_si512((const __m512i*)(ptr + 32));
@@ -2197,13 +2219,13 @@ inline void v_load_deinterleave( const ushort* ptr, v_uint16x32& b, v_uint16x32&
     __m512i br23 = _mm512_permutex2var_epi16(bgra2, mask0, bgra3);
     __m512i ga23 = _mm512_permutex2var_epi16(bgra2, mask1, bgra3);
 
-    b = v_uint16x32(_mm512_permutex2var_epi16(br01, mask0, br23));
-    r = v_uint16x32(_mm512_permutex2var_epi16(br01, mask1, br23));
-    g = v_uint16x32(_mm512_permutex2var_epi16(ga01, mask0, ga23));
-    a = v_uint16x32(_mm512_permutex2var_epi16(ga01, mask1, ga23));
+    a = v_uint16x32(_mm512_permutex2var_epi16(br01, mask0, br23));
+    c = v_uint16x32(_mm512_permutex2var_epi16(br01, mask1, br23));
+    b = v_uint16x32(_mm512_permutex2var_epi16(ga01, mask0, ga23));
+    d = v_uint16x32(_mm512_permutex2var_epi16(ga01, mask1, ga23));
 }
 
-inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x16& g, v_uint32x16& r, v_uint32x16& a )
+inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& a, v_uint32x16& b, v_uint32x16& c, v_uint32x16& d )
 {
     __m512i bgra0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgra1 = _mm512_loadu_si512((const __m512i*)(ptr + 16));
@@ -2218,13 +2240,13 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x16& b, v_uint32x1
     __m512i br23 = _mm512_permutex2var_epi32(bgra2, mask0, bgra3);
     __m512i ga23 = _mm512_permutex2var_epi32(bgra2, mask1, bgra3);
 
-    b = v_uint32x16(_mm512_permutex2var_epi32(br01, mask0, br23));
-    r = v_uint32x16(_mm512_permutex2var_epi32(br01, mask1, br23));
-    g = v_uint32x16(_mm512_permutex2var_epi32(ga01, mask0, ga23));
-    a = v_uint32x16(_mm512_permutex2var_epi32(ga01, mask1, ga23));
+    a = v_uint32x16(_mm512_permutex2var_epi32(br01, mask0, br23));
+    c = v_uint32x16(_mm512_permutex2var_epi32(br01, mask1, br23));
+    b = v_uint32x16(_mm512_permutex2var_epi32(ga01, mask0, ga23));
+    d = v_uint32x16(_mm512_permutex2var_epi32(ga01, mask1, ga23));
 }
 
-inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g, v_uint64x8& r, v_uint64x8& a )
+inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& a, v_uint64x8& b, v_uint64x8& c, v_uint64x8& d )
 {
     __m512i bgra0 = _mm512_loadu_si512((const __m512i*)ptr);
     __m512i bgra1 = _mm512_loadu_si512((const __m512i*)(ptr + 8));
@@ -2239,10 +2261,10 @@ inline void v_load_deinterleave( const uint64* ptr, v_uint64x8& b, v_uint64x8& g
     __m512i br23 = _mm512_permutex2var_epi64(bgra2, mask0, bgra3);
     __m512i ga23 = _mm512_permutex2var_epi64(bgra2, mask1, bgra3);
 
-    b = v_uint64x8(_mm512_permutex2var_epi64(br01, mask0, br23));
-    r = v_uint64x8(_mm512_permutex2var_epi64(br01, mask1, br23));
-    g = v_uint64x8(_mm512_permutex2var_epi64(ga01, mask0, ga23));
-    a = v_uint64x8(_mm512_permutex2var_epi64(ga01, mask1, ga23));
+    a = v_uint64x8(_mm512_permutex2var_epi64(br01, mask0, br23));
+    c = v_uint64x8(_mm512_permutex2var_epi64(br01, mask1, br23));
+    b = v_uint64x8(_mm512_permutex2var_epi64(ga01, mask0, ga23));
+    d = v_uint64x8(_mm512_permutex2var_epi64(ga01, mask1, ga23));
 }
 
 ///////////////////////////// store interleave /////////////////////////////////////
@@ -2335,7 +2357,7 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x8& x, const v_uint64
     }
 }
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x64& g, const v_uint8x64& r,
+inline void v_store_interleave( uchar* ptr, const v_uint8x64& a, const v_uint8x64& b, const v_uint8x64& c,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
 #if CV_AVX_512VBMI
@@ -2351,18 +2373,18 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
                                    122,  58, 100, 121,  57,  99, 120,  56,  98, 119,  55,  97, 118,  54,  96, 117,
                                     53,  95, 116,  52,  94, 115,  51,  93, 114,  50,  92, 113,  49,  91, 112,  48,
                                     90, 111,  47,  89, 110,  46,  88, 109,  45,  87, 108,  44,  86, 107,  43,  85);
-    __m512i r2g0r0 = _mm512_permutex2var_epi8(g.val, mask0, r.val);
-    __m512i b0r1b1 = _mm512_permutex2var_epi8(b.val, mask1, r.val);
-    __m512i g1b2g2 = _mm512_permutex2var_epi8(b.val, mask2, g.val);
+    __m512i r2g0r0 = _mm512_permutex2var_epi8(b.val, mask0, c.val);
+    __m512i b0r1b1 = _mm512_permutex2var_epi8(a.val, mask1, c.val);
+    __m512i g1b2g2 = _mm512_permutex2var_epi8(a.val, mask2, b.val);
 
     __m512i bgr0 = _mm512_mask_blend_epi8(0x9249249249249249, r2g0r0, b0r1b1);
     __m512i bgr1 = _mm512_mask_blend_epi8(0x9249249249249249, b0r1b1, g1b2g2);
     __m512i bgr2 = _mm512_mask_blend_epi8(0x9249249249249249, g1b2g2, r2g0r0);
 #else
-    __m512i g1g0 = _mm512_shuffle_epi8(g.val, _mm512_set4_epi32(0x0e0f0c0d, 0x0a0b0809, 0x06070405, 0x02030001));
-    __m512i b0g0 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, b.val, g1g0);
-    __m512i r0b1 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, r.val, b.val);
-    __m512i g1r1 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, g1g0, r.val);
+    __m512i g1g0 = _mm512_shuffle_epi8(b.val, _mm512_set4_epi32(0x0e0f0c0d, 0x0a0b0809, 0x06070405, 0x02030001));
+    __m512i b0g0 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, a.val, g1g0);
+    __m512i r0b1 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, c.val, a.val);
+    __m512i g1r1 = _mm512_mask_blend_epi8(0xAAAAAAAAAAAAAAAA, g1g0, c.val);
 
     __m512i mask0 = _v512_set_epu16(42, 10, 31, 41,  9, 30, 40,  8, 29, 39,  7, 28, 38,  6, 27, 37,
                                      5, 26, 36,  4, 25, 35,  3, 24, 34,  2, 23, 33,  1, 22, 32,  0);
@@ -2399,7 +2421,7 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
     }
 }
 
-inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint16x32& g, const v_uint16x32& r,
+inline void v_store_interleave( ushort* ptr, const v_uint16x32& a, const v_uint16x32& b, const v_uint16x32& c,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m512i mask0 = _v512_set_epu16(42, 10, 31, 41,  9, 30, 40,  8, 29, 39,  7, 28, 38,  6, 27, 37,
@@ -2408,9 +2430,9 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
                                     47, 36, 15, 46, 35, 14, 45, 34, 13, 44, 33, 12, 43, 32, 11, 42);
     __m512i mask2 = _v512_set_epu16(63, 31, 20, 62, 30, 19, 61, 29, 18, 60, 28, 17, 59, 27, 16, 58,
                                     26, 15, 57, 25, 14, 56, 24, 13, 55, 23, 12, 54, 22, 11, 53, 21);
-    __m512i b0g0b2 = _mm512_permutex2var_epi16(b.val, mask0, g.val);
-    __m512i r1b1r0 = _mm512_permutex2var_epi16(b.val, mask1, r.val);
-    __m512i g2r2g1 = _mm512_permutex2var_epi16(g.val, mask2, r.val);
+    __m512i b0g0b2 = _mm512_permutex2var_epi16(a.val, mask0, b.val);
+    __m512i r1b1r0 = _mm512_permutex2var_epi16(a.val, mask1, c.val);
+    __m512i g2r2g1 = _mm512_permutex2var_epi16(b.val, mask2, c.val);
 
     __m512i bgr0 = _mm512_mask_blend_epi16(0x24924924, b0g0b2, r1b1r0);
     __m512i bgr1 = _mm512_mask_blend_epi16(0x24924924, r1b1r0, g2r2g1);
@@ -2436,15 +2458,15 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
     }
 }
 
-inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uint32x16& g, const v_uint32x16& r,
+inline void v_store_interleave( unsigned* ptr, const v_uint32x16& a, const v_uint32x16& b, const v_uint32x16& c,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m512i mask0 = _v512_set_epu32(26, 31, 15, 25, 30, 14, 24, 29, 13, 23, 28, 12, 22, 27, 11, 21);
     __m512i mask1 = _v512_set_epu32(31, 10, 25, 30,  9, 24, 29,  8, 23, 28,  7, 22, 27,  6, 21, 26);
-    __m512i g1b2g2 = _mm512_permutex2var_epi32(b.val, mask0, g.val);
-    __m512i r2r1b1 = _mm512_permutex2var_epi32(b.val, mask1, r.val);
+    __m512i g1b2g2 = _mm512_permutex2var_epi32(a.val, mask0, b.val);
+    __m512i r2r1b1 = _mm512_permutex2var_epi32(a.val, mask1, c.val);
 
-    __m512i bgr0 = _mm512_mask_expand_epi32(_mm512_mask_expand_epi32(_mm512_maskz_expand_epi32(0x9249, b.val), 0x2492, g.val), 0x4924, r.val);
+    __m512i bgr0 = _mm512_mask_expand_epi32(_mm512_mask_expand_epi32(_mm512_maskz_expand_epi32(0x9249, a.val), 0x2492, b.val), 0x4924, c.val);
     __m512i bgr1 = _mm512_mask_blend_epi32(0x9249, r2r1b1, g1b2g2);
     __m512i bgr2 = _mm512_mask_blend_epi32(0x9249, g1b2g2, r2r1b1);
 
@@ -2468,15 +2490,15 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uin
     }
 }
 
-inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64x8& g, const v_uint64x8& r,
+inline void v_store_interleave( uint64* ptr, const v_uint64x8& a, const v_uint64x8& b, const v_uint64x8& c,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     __m512i mask0 = _v512_set_epu64( 5, 12,  7,  4, 11,  6,  3, 10);
     __m512i mask1 = _v512_set_epu64(15,  7,  4, 14,  6,  3, 13,  5);
-    __m512i r1b1b2 = _mm512_permutex2var_epi64(b.val, mask0, r.val);
-    __m512i g2r2g1 = _mm512_permutex2var_epi64(g.val, mask1, r.val);
+    __m512i r1b1b2 = _mm512_permutex2var_epi64(a.val, mask0, c.val);
+    __m512i g2r2g1 = _mm512_permutex2var_epi64(b.val, mask1, c.val);
 
-    __m512i bgr0 = _mm512_mask_expand_epi64(_mm512_mask_expand_epi64(_mm512_maskz_expand_epi64(0x49, b.val), 0x92, g.val), 0x24, r.val);
+    __m512i bgr0 = _mm512_mask_expand_epi64(_mm512_mask_expand_epi64(_mm512_maskz_expand_epi64(0x49, a.val), 0x92, b.val), 0x24, c.val);
     __m512i bgr1 = _mm512_mask_blend_epi64(0xdb, g2r2g1, r1b1b2);
     __m512i bgr2 = _mm512_mask_blend_epi64(0xdb, r1b1b2, g2r2g1);
 
@@ -2500,13 +2522,13 @@ inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64
     }
 }
 
-inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x64& g,
-                                const v_uint8x64& r, const v_uint8x64& a,
+inline void v_store_interleave( uchar* ptr, const v_uint8x64& a, const v_uint8x64& b,
+                                const v_uint8x64& c, const v_uint8x64& d,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     v_uint8x64 br01, br23, ga01, ga23;
-    v_zip(b, r, br01, br23);
-    v_zip(g, a, ga01, ga23);
+    v_zip(a, c, br01, br23);
+    v_zip(b, d, ga01, ga23);
     v_uint8x64 bgra0, bgra1, bgra2, bgra3;
     v_zip(br01, ga01, bgra0, bgra1);
     v_zip(br23, ga23, bgra2, bgra3);
@@ -2534,13 +2556,13 @@ inline void v_store_interleave( uchar* ptr, const v_uint8x64& b, const v_uint8x6
     }
 }
 
-inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint16x32& g,
-                                const v_uint16x32& r, const v_uint16x32& a,
+inline void v_store_interleave( ushort* ptr, const v_uint16x32& a, const v_uint16x32& b,
+                                const v_uint16x32& c, const v_uint16x32& d,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     v_uint16x32 br01, br23, ga01, ga23;
-    v_zip(b, r, br01, br23);
-    v_zip(g, a, ga01, ga23);
+    v_zip(a, c, br01, br23);
+    v_zip(b, d, ga01, ga23);
     v_uint16x32 bgra0, bgra1, bgra2, bgra3;
     v_zip(br01, ga01, bgra0, bgra1);
     v_zip(br23, ga23, bgra2, bgra3);
@@ -2568,13 +2590,13 @@ inline void v_store_interleave( ushort* ptr, const v_uint16x32& b, const v_uint1
     }
 }
 
-inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uint32x16& g,
-                                const v_uint32x16& r, const v_uint32x16& a,
+inline void v_store_interleave( unsigned* ptr, const v_uint32x16& a, const v_uint32x16& b,
+                                const v_uint32x16& c, const v_uint32x16& d,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     v_uint32x16 br01, br23, ga01, ga23;
-    v_zip(b, r, br01, br23);
-    v_zip(g, a, ga01, ga23);
+    v_zip(a, c, br01, br23);
+    v_zip(b, d, ga01, ga23);
     v_uint32x16 bgra0, bgra1, bgra2, bgra3;
     v_zip(br01, ga01, bgra0, bgra1);
     v_zip(br23, ga23, bgra2, bgra3);
@@ -2602,13 +2624,13 @@ inline void v_store_interleave( unsigned* ptr, const v_uint32x16& b, const v_uin
     }
 }
 
-inline void v_store_interleave( uint64* ptr, const v_uint64x8& b, const v_uint64x8& g,
-                                const v_uint64x8& r, const v_uint64x8& a,
+inline void v_store_interleave( uint64* ptr, const v_uint64x8& a, const v_uint64x8& b,
+                                const v_uint64x8& c, const v_uint64x8& d,
                                 hal::StoreMode mode=hal::STORE_UNALIGNED )
 {
     v_uint64x8 br01, br23, ga01, ga23;
-    v_zip(b, r, br01, br23);
-    v_zip(g, a, ga01, ga23);
+    v_zip(a, c, br01, br23);
+    v_zip(b, d, ga01, ga23);
     v_uint64x8 bgra0, bgra1, bgra2, bgra3;
     v_zip(br01, ga01, bgra0, bgra1);
     v_zip(br23, ga23, bgra2, bgra3);
@@ -2697,7 +2719,7 @@ OPENCV_HAL_IMPL_AVX512_LOADSTORE_INTERLEAVE(v_float64x8, double, f64, v_uint64x8
 ////////// Mask and checks /////////
 
 /** Mask **/
-inline int64 v_signmask(const v_int8x64& a) { return (int64)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline int64 v_signmask(const v_int8x64& a) { return (int64)_mm512_movepi8_mask(a.val); }
 inline int v_signmask(const v_int16x32& a) { return (int)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline int v_signmask(const v_int32x16& a) { return (int)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline int v_signmask(const v_int64x8& a) { return (int)_mm512_cmp_epi64_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
@@ -2711,7 +2733,7 @@ inline int v_signmask(const v_float64x8& a) { return v_signmask(v_reinterpret_as
 
 /** Checks **/
 inline bool v_check_all(const v_int8x64& a) { return !(bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
-inline bool v_check_any(const v_int8x64& a) { return (bool)_mm512_cmp_epi8_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
+inline bool v_check_any(const v_int8x64& a) { return (bool)_mm512_movepi8_mask(a.val); }
 inline bool v_check_all(const v_int16x32& a) { return !(bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
 inline bool v_check_any(const v_int16x32& a) { return (bool)_mm512_cmp_epi16_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_LT); }
 inline bool v_check_all(const v_int32x16& a) { return !(bool)_mm512_cmp_epi32_mask(a.val, _mm512_setzero_si512(), _MM_CMPINT_NLT); }
@@ -2731,6 +2753,22 @@ inline bool v_check_any(const v_uint8x64& a) { return v_check_any(v_reinterpret_
 inline bool v_check_any(const v_uint16x32& a) { return v_check_any(v_reinterpret_as_s16(a)); }
 inline bool v_check_any(const v_uint32x16& a) { return v_check_any(v_reinterpret_as_s32(a)); }
 inline bool v_check_any(const v_uint64x8& a) { return v_check_any(v_reinterpret_as_s64(a)); }
+
+inline int v_scan_forward(const v_int8x64& a)
+{
+    int64 mask = _mm512_movepi8_mask(a.val);
+    int mask32 = (int)mask;
+    return mask != 0 ? mask32 != 0 ? trailingZeros32(mask32) : 32 + trailingZeros32((int)(mask >> 32)) : 0;
+}
+inline int v_scan_forward(const v_uint8x64& a) { return v_scan_forward(v_reinterpret_as_s8(a)); }
+inline int v_scan_forward(const v_int16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_uint16x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))); }
+inline int v_scan_forward(const v_int32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_uint32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_float32x16& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 2; }
+inline int v_scan_forward(const v_int64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
+inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 

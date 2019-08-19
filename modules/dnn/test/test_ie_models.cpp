@@ -9,9 +9,31 @@
 #ifdef HAVE_INF_ENGINE
 #include <opencv2/core/utils/filesystem.hpp>
 
+
+//
+// Synchronize headers include statements with src/op_inf_engine.hpp
+//
+//#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
+//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+
+#if defined(__GNUC__)
+#pragma GCC visibility push(default)
+#endif
+
 #include <inference_engine.hpp>
 #include <ie_icnn_network.hpp>
 #include <ie_extension.h>
+
+#if defined(__GNUC__)
+#pragma GCC visibility pop
+#endif
+
 
 namespace opencv_test { namespace {
 
@@ -114,13 +136,10 @@ static const std::vector<std::string> getOpenVINOTestModelsList()
 
 static inline void genData(const std::vector<size_t>& dims, Mat& m, Blob::Ptr& dataPtr)
 {
-    std::vector<int> reversedDims(dims.begin(), dims.end());
-    std::reverse(reversedDims.begin(), reversedDims.end());
-
-    m.create(reversedDims, CV_32F);
+    m.create(std::vector<int>(dims.begin(), dims.end()), CV_32F);
     randu(m, -1, 1);
 
-    dataPtr = make_shared_blob<float>(Precision::FP32, dims, (float*)m.data);
+    dataPtr = make_shared_blob<float>({Precision::FP32, dims, Layout::ANY}, (float*)m.data);
 }
 
 void runIE(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -132,32 +151,42 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
 
     CNNNetwork net = reader.getNetwork();
 
+    std::string device_name;
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+    Core ie;
+#else
     InferenceEnginePluginPtr enginePtr;
     InferencePlugin plugin;
+#endif
     ExecutableNetwork netExec;
     InferRequest infRequest;
+
     try
     {
-        auto dispatcher = InferenceEngine::PluginDispatcher({""});
         switch (target)
         {
             case DNN_TARGET_CPU:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eCPU);
+                device_name = "CPU";
                 break;
             case DNN_TARGET_OPENCL:
             case DNN_TARGET_OPENCL_FP16:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eGPU);
+                device_name = "GPU";
                 break;
             case DNN_TARGET_MYRIAD:
-                enginePtr = dispatcher.getSuitablePlugin(TargetDevice::eMYRIAD);
+                device_name = "MYRIAD";
                 break;
             case DNN_TARGET_FPGA:
-                enginePtr = dispatcher.getPluginByDevice("HETERO:FPGA,CPU");
+                device_name = "FPGA";
                 break;
             default:
                 CV_Error(Error::StsNotImplemented, "Unknown target");
         };
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2019010000)
+        auto dispatcher = InferenceEngine::PluginDispatcher({""});
+        enginePtr = dispatcher.getPluginByDevice(device_name);
+#endif
         if (target == DNN_TARGET_CPU || target == DNN_TARGET_FPGA)
         {
             std::string suffixes[] = {"_avx2", "_sse4", ""};
@@ -180,16 +209,23 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
                 try
                 {
                     IExtensionPtr extension = make_so_pointer<IExtension>(libName);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+                    ie.AddExtension(extension, device_name);
+#else
                     enginePtr->AddExtension(extension, 0);
+#endif
                     break;
                 }
                 catch(...) {}
             }
             // Some of networks can work without a library of extra layers.
         }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GT(2019010000)
+        netExec = ie.LoadNetwork(net, device_name);
+#else
         plugin = InferencePlugin(enginePtr);
-
         netExec = plugin.LoadNetwork(net, {});
+#endif
         infRequest = netExec.CreateInferRequest();
     }
     catch (const std::exception& ex)
@@ -202,7 +238,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap inputBlobs;
     for (auto& it : net.getInputsInfo())
     {
-        genData(it.second->getDims(), inputsMap[it.first], inputBlobs[it.first]);
+        genData(it.second->getTensorDesc().getDims(), inputsMap[it.first], inputBlobs[it.first]);
     }
     infRequest.SetInput(inputBlobs);
 
@@ -211,25 +247,11 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
     BlobMap outputBlobs;
     for (auto& it : net.getOutputsInfo())
     {
-        genData(it.second->dims, outputsMap[it.first], outputBlobs[it.first]);
+        genData(it.second->getTensorDesc().getDims(), outputsMap[it.first], outputBlobs[it.first]);
     }
     infRequest.SetOutput(outputBlobs);
 
     infRequest.Infer();
-}
-
-std::vector<String> getOutputsNames(const Net& net)
-{
-    std::vector<String> names;
-    if (names.empty())
-    {
-        std::vector<int> outLayers = net.getUnconnectedOutLayers();
-        std::vector<String> layersNames = net.getLayerNames();
-        names.resize(outLayers.size());
-        for (size_t i = 0; i < outLayers.size(); ++i)
-            names[i] = layersNames[outLayers[i] - 1];
-    }
-    return names;
 }
 
 void runCV(Target target, const std::string& xmlPath, const std::string& binPath,
@@ -241,7 +263,7 @@ void runCV(Target target, const std::string& xmlPath, const std::string& binPath
         net.setInput(it.second, it.first);
     net.setPreferableTarget(target);
 
-    std::vector<String> outNames = getOutputsNames(net);
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outs;
     net.forward(outs, outNames);
 
@@ -295,6 +317,47 @@ INSTANTIATE_TEST_CASE_P(/**/,
     Combine(testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE)),
             testing::ValuesIn(getOpenVINOTestModelsList())
     )
+);
+
+typedef TestWithParam<Target> DNNTestHighLevelAPI;
+TEST_P(DNNTestHighLevelAPI, predict)
+{
+    initDLDTDataPath();
+
+    Target target = (dnn::Target)(int)GetParam();
+    bool isFP16 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD);
+
+    OpenVINOModelTestCaseInfo modelInfo = getOpenVINOTestModels().find("age-gender-recognition-retail-0013")->second;
+
+    std::string modelPath = isFP16 ? modelInfo.modelPathFP16 : modelInfo.modelPathFP32;
+
+    std::string xmlPath = findDataFile(modelPath + ".xml");
+    std::string binPath = findDataFile(modelPath + ".bin");
+
+    Model model(xmlPath, binPath);
+    Mat frame = imread(findDataFile("dnn/googlenet_1.png"));
+    std::vector<Mat> outs;
+    model.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    model.setPreferableTarget(target);
+    model.predict(frame, outs);
+
+    Net net = readNet(xmlPath, binPath);
+    Mat input = blobFromImage(frame, 1.0, Size(62, 62));
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net.setPreferableTarget(target);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+    std::vector<Mat> refs;
+    net.forward(refs, outNames);
+
+    CV_Assert(refs.size() == outs.size());
+    for (int i = 0; i < refs.size(); ++i)
+        normAssert(outs[i], refs[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    DNNTestHighLevelAPI, testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE))
 );
 
 }}

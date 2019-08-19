@@ -198,7 +198,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized && !_clip);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -918,10 +918,9 @@ public:
         }
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::DetectionOutputLayer ieLayer(name);
 
         ieLayer.setNumClasses(_numClasses);
@@ -937,30 +936,11 @@ public:
 
         InferenceEngine::Builder::Layer l = ieLayer;
         l.getParameters()["eta"] = std::string("1.0");
+        l.getParameters()["clip"] = _clip;
 
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "DetectionOutput";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        ieLayer->params["num_classes"] = format("%d", _numClasses);
-        ieLayer->params["share_location"] = _shareLocation ? "1" : "0";
-        ieLayer->params["background_label_id"] = format("%d", _backgroundLabelId);
-        ieLayer->params["nms_threshold"] = format("%f", _nmsThreshold);
-        ieLayer->params["top_k"] = format("%d", _topK);
-        ieLayer->params["keep_top_k"] = format("%d", _keepTopK);
-        ieLayer->params["eta"] = "1.0";
-        ieLayer->params["confidence_threshold"] = format("%f", _confidenceThreshold);
-        ieLayer->params["variance_encoded_in_target"] = _varianceEncodedInTarget ? "1" : "0";
-        ieLayer->params["code_type"] = "caffe.PriorBoxParameter." + _codeType;
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 };
 
 float util::caffe_box_overlap(const util::NormalizedBBox& a, const util::NormalizedBBox& b)

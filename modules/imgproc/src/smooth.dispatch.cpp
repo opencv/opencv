@@ -363,7 +363,7 @@ static bool openvx_gaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
 #endif
 
-#ifdef HAVE_IPP
+#if 0 //defined HAVE_IPP
 // IW 2017u2 has bug which doesn't allow use of partial inMem with tiling
 #if IPP_DISABLE_GAUSSIANBLUR_PARALLEL
 #define IPP_GAUSSIANBLUR_PARALLEL 0
@@ -533,7 +533,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CV_OVX_RUN(true,
                openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
-    CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
+    //CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 
     if(sdepth == CV_8U && ((borderType & BORDER_ISOLATED) || !_src.getMat().isSubmatrix()))
     {

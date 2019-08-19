@@ -185,6 +185,7 @@ macro(ocv_add_module _name)
     # add self to the world dependencies
     if((NOT DEFINED OPENCV_MODULE_IS_PART_OF_WORLD
         AND NOT OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS"
+        AND (NOT DEFINED OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD OR OPENCV_MODULE_${the_module}_IS_PART_OF_WORLD)
         AND (NOT OPENCV_PROCESSING_EXTRA_MODULES OR NOT OPENCV_WORLD_EXCLUDE_EXTRA_MODULES)
         AND (NOT BUILD_SHARED_LIBS OR NOT "x${OPENCV_MODULE_TYPE}" STREQUAL "xSTATIC"))
         OR OPENCV_MODULE_IS_PART_OF_WORLD
@@ -851,7 +852,7 @@ macro(ocv_create_module)
     set(the_module_target ${the_module})
   endif()
 
-  if(WINRT)
+  if(WINRT AND BUILD_TESTS)
     # removing APPCONTAINER from modules to run from console
     # in case of usual starting of WinRT test apps output is missing
     # so starting of console version w/o APPCONTAINER is required to get test results
@@ -1204,10 +1205,6 @@ endfunction()
 # ocv_add_accuracy_tests(<list of extra dependencies>)
 function(ocv_add_accuracy_tests)
   ocv_debug_message("ocv_add_accuracy_tests(" ${ARGN} ")")
-
-  if(WINRT)
-    set(OPENCV_DEBUG_POSTFIX "")
-  endif()
 
   set(test_path "${CMAKE_CURRENT_LIST_DIR}/test")
   if(BUILD_TESTS AND EXISTS "${test_path}")

@@ -70,7 +70,14 @@
 #  endif
 #endif
 
-#if defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__ && !defined(__CUDACC__)
+#if defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8 && !defined (__CUDACC__)
+#  include <altivec.h>
+#endif
+
+#if defined(CV_INLINE_ROUND_FLT)
+    // user-specified version
+    // CV_INLINE_ROUND_DBL should be defined too
+#elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__ && !defined(__CUDACC__)
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
         int res; \
@@ -80,12 +87,55 @@
         return res
     // 2. version for double
     #ifdef __clang__
-        #define ARM_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %[value] \n vmov %[res], %[temp]")
+        #define CV_INLINE_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %[value] \n vmov %[res], %[temp]")
     #else
-        #define ARM_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %P[value] \n vmov %[res], %[temp]")
+        #define CV_INLINE_ROUND_DBL(value) ARM_ROUND(value, "vcvtr.s32.f64 %[temp], %P[value] \n vmov %[res], %[temp]")
     #endif
     // 3. version for float
-    #define ARM_ROUND_FLT(value) ARM_ROUND(value, "vcvtr.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]")
+    #define CV_INLINE_ROUND_FLT(value) ARM_ROUND(value, "vcvtr.s32.f32 %[temp], %[value]\n vmov %[res], %[temp]")
+#elif defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8 && !defined (__CUDACC__)
+    // P8 and newer machines can convert fp32/64 to int quickly.
+    #define CV_INLINE_ROUND_DBL(value) \
+        int out; \
+        double temp; \
+        __asm__( "fctiw %[temp],%[in]\n\tmffprwz %[out],%[temp]\n\t" : [out] "=r" (out), [temp] "=d" (temp) : [in] "d" ((double)(value)) : ); \
+        return out;
+
+    // FP32 also works with FP64 routine above
+    #define CV_INLINE_ROUND_FLT(value) CV_INLINE_ROUND_DBL(value)
+
+    #ifdef _ARCH_PWR9
+        #define CV_INLINE_ISINF_DBL(value) return scalar_test_data_class(value, 0x30);
+        #define CV_INLINE_ISNAN_DBL(value) return scalar_test_data_class(value, 0x40);
+        #define CV_INLINE_ISINF_FLT(value) CV_INLINE_ISINF_DBL(value)
+        #define CV_INLINE_ISNAN_FLT(value) CV_INLINE_ISNAN_DBL(value)
+    #endif
+#elif defined CV_ICC || defined __GNUC__
+    #define CV_INLINE_ROUND_DBL(value) return (int)(lrint(value));
+    #define CV_INLINE_ROUND_FLT(value) return (int)(lrintf(value));
+#endif
+
+#if defined __PPC64__ && !defined OPENCV_USE_FASTMATH_GCC_BUILTINS
+    /* Let GCC inline C math functions when available. Dedicated hardware is available to
+       round and covert FP values. */
+    #define OPENCV_USE_FASTMATH_GCC_BUILTINS
+#endif
+
+/* Enable GCC builtin math functions if possible, desired, and available.
+   Note, not all math functions inline equally. E.g lrint will not inline
+   without the -fno-math-errno option. */
+#if defined OPENCV_USE_FASTMATH_GCC_BUILTINS && defined __GNUC__ && !defined __clang__ && !defined (__CUDACC__)
+    #define _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+#endif
+
+/* Allow overrides for some functions which may benefit from tuning. Likewise,
+   note that isinf is not used as the return value is signed. */
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS && !defined CV_INLINE_ISNAN_DBL
+    #define CV_INLINE_ISNAN_DBL(value) return __builtin_isnan(value);
+#endif
+
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS && !defined CV_INLINE_ISNAN_FLT
+    #define CV_INLINE_ISNAN_FLT(value) return __builtin_isnanf(value);
 #endif
 
 /** @brief Rounds floating-point number to the nearest integer
@@ -108,12 +158,10 @@ cvRound( double value )
         fistp t;
     }
     return t;
+#elif defined CV_INLINE_ROUND_DBL
+    CV_INLINE_ROUND_DBL(value);
 #elif defined CV_ICC || defined __GNUC__
-# if defined ARM_ROUND_DBL
-    ARM_ROUND_DBL(value);
-# else
     return (int)lrint(value);
-# endif
 #else
     /* it's ok if round does not comply with IEEE754 standard;
        the tests should allow +/-1 difference when the tested functions use round */
@@ -131,8 +179,12 @@ cvRound( double value )
  */
 CV_INLINE int cvFloor( double value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_floor(value);
+#else
     int i = (int)value;
     return i - (i > value);
+#endif
 }
 
 /** @brief Rounds floating-point number to the nearest integer not smaller than the original.
@@ -144,8 +196,12 @@ CV_INLINE int cvFloor( double value )
  */
 CV_INLINE int cvCeil( double value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_ceil(value);
+#else
     int i = (int)value;
     return i + (i < value);
+#endif
 }
 
 /** @brief Determines if the argument is Not A Number.
@@ -156,10 +212,14 @@ CV_INLINE int cvCeil( double value )
  otherwise. */
 CV_INLINE int cvIsNaN( double value )
 {
+#if defined CV_INLINE_ISNAN_DBL
+    CV_INLINE_ISNAN_DBL(value);
+#else
     Cv64suf ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) +
            ((unsigned)ieee754.u != 0) > 0x7ff00000;
+#endif
 }
 
 /** @brief Determines if the argument is Infinity.
@@ -170,10 +230,14 @@ CV_INLINE int cvIsNaN( double value )
  and 0 otherwise. */
 CV_INLINE int cvIsInf( double value )
 {
+#if defined CV_INLINE_ISINF_DBL
+    CV_INLINE_ISINF_DBL(value);
+#else
     Cv64suf ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&
             (unsigned)ieee754.u == 0;
+#endif
 }
 
 #ifdef __cplusplus
@@ -193,12 +257,10 @@ CV_INLINE int cvRound(float value)
         fistp t;
     }
     return t;
+#elif defined CV_INLINE_ROUND_FLT
+    CV_INLINE_ROUND_FLT(value);
 #elif defined CV_ICC || defined __GNUC__
-# if defined ARM_ROUND_FLT
-    ARM_ROUND_FLT(value);
-# else
     return (int)lrintf(value);
-# endif
 #else
     /* it's ok if round does not comply with IEEE754 standard;
      the tests should allow +/-1 difference when the tested functions use round */
@@ -215,8 +277,12 @@ CV_INLINE int cvRound( int value )
 /** @overload */
 CV_INLINE int cvFloor( float value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_floorf(value);
+#else
     int i = (int)value;
     return i - (i > value);
+#endif
 }
 
 /** @overload */
@@ -228,8 +294,12 @@ CV_INLINE int cvFloor( int value )
 /** @overload */
 CV_INLINE int cvCeil( float value )
 {
+#if defined _OPENCV_FASTMATH_ENABLE_GCC_MATH_BUILTINS
+    return __builtin_ceilf(value);
+#else
     int i = (int)value;
     return i + (i < value);
+#endif
 }
 
 /** @overload */
@@ -241,17 +311,25 @@ CV_INLINE int cvCeil( int value )
 /** @overload */
 CV_INLINE int cvIsNaN( float value )
 {
+#if defined CV_INLINE_ISNAN_FLT
+    CV_INLINE_ISNAN_FLT(value);
+#else
     Cv32suf ieee754;
     ieee754.f = value;
     return (ieee754.u & 0x7fffffff) > 0x7f800000;
+#endif
 }
 
 /** @overload */
 CV_INLINE int cvIsInf( float value )
 {
+#if defined CV_INLINE_ISINF_FLT
+    CV_INLINE_ISINF_FLT(value);
+#else
     Cv32suf ieee754;
     ieee754.f = value;
     return (ieee754.u & 0x7fffffff) == 0x7f800000;
+#endif
 }
 
 #endif // __cplusplus

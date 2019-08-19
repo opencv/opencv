@@ -47,10 +47,6 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
-#if CV_SIMD128
-#define CV_MALLOC_SIMD128 16
-#endif
-
 namespace cv
 {
 
@@ -296,18 +292,11 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
 
 #define CANNY_PUSH(map, stack) *map = 2, stack.push_back(map)
 
-#define CANNY_CHECK_SIMD(m, high, map, stack) \
-    if (m > high) \
-        CANNY_PUSH(map, stack); \
-    else \
-        *map = 0
-
 #define CANNY_CHECK(m, high, map, stack) \
     if (m > high) \
         CANNY_PUSH(map, stack); \
     else \
-        *map = 0; \
-    continue
+        *map = 0
 
 class parallelCanny : public ParallelLoopBody
 {
@@ -317,10 +306,14 @@ public:
         src(_src), src2(_src), map(_map), _borderPeaksParallel(borderPeaksParallel),
         low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient)
     {
-#if CV_SIMD128
-        haveSIMD = hasSIMD128();
-        if(haveSIMD)
-            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
+#if CV_SIMD
+        for(int i = 0; i < v_int8::nlanes; ++i)
+        {
+            smask[i] = 0;
+            smask[i + v_int8::nlanes] = (schar)-1;
+        }
+        if (true)
+            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
         else
 #endif
             _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
@@ -337,10 +330,14 @@ public:
         src(_dx), src2(_dy), map(_map), _borderPeaksParallel(borderPeaksParallel),
         low(_low), high(_high), aperture_size(0), L2gradient(_L2gradient)
     {
-#if CV_SIMD128
-        haveSIMD = hasSIMD128();
-        if(haveSIMD)
-            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_MALLOC_SIMD128 + 1), CV_MALLOC_SIMD128), CV_8UC1);
+#if CV_SIMD
+        for(int i = 0; i < v_int8::nlanes; ++i)
+        {
+            smask[i] = 0;
+            smask[i + v_int8::nlanes] = (schar)-1;
+        }
+        if (true)
+            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
         else
 #endif
             _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
@@ -399,11 +396,11 @@ public:
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
-#if CV_SIMD128
-        AutoBuffer<int> buffer(3 * (mapstep * cn + CV_MALLOC_SIMD128));
-        _mag_p = alignPtr(buffer.data() + 1, CV_MALLOC_SIMD128);
-        _mag_a = alignPtr(_mag_p + mapstep * cn, CV_MALLOC_SIMD128);
-        _mag_n = alignPtr(_mag_a + mapstep * cn, CV_MALLOC_SIMD128);
+#if CV_SIMD
+        AutoBuffer<int> buffer(3 * (mapstep * cn + CV_SIMD_WIDTH));
+        _mag_p = alignPtr(buffer.data() + 1, CV_SIMD_WIDTH);
+        _mag_a = alignPtr(_mag_p + mapstep * cn, CV_SIMD_WIDTH);
+        _mag_n = alignPtr(_mag_a + mapstep * cn, CV_SIMD_WIDTH);
 #else
         AutoBuffer<int> buffer(3 * (mapstep * cn));
         _mag_p = buffer.data() + 1;
@@ -439,22 +436,19 @@ public:
                 if (L2gradient)
                 {
                     int j = 0, width = src.cols * cn;
-#if CV_SIMD128
-                    if (haveSIMD)
+#if CV_SIMD
+                    for ( ; j <= width - v_int16::nlanes; j += v_int16::nlanes)
                     {
-                       for ( ; j <= width - 8; j += 8)
-                        {
-                            v_int16x8 v_dx = v_load((const short*)(_dx + j));
-                            v_int16x8 v_dy = v_load((const short*)(_dy + j));
+                        v_int16 v_dx = vx_load((const short*)(_dx + j));
+                        v_int16 v_dy = vx_load((const short*)(_dy + j));
 
-                            v_int32x4 v_dxp_low, v_dxp_high;
-                            v_int32x4 v_dyp_low, v_dyp_high;
-                            v_expand(v_dx, v_dxp_low, v_dxp_high);
-                            v_expand(v_dy, v_dyp_low, v_dyp_high);
+                        v_int32 v_dxp_low, v_dxp_high;
+                        v_int32 v_dyp_low, v_dyp_high;
+                        v_expand(v_dx, v_dxp_low, v_dxp_high);
+                        v_expand(v_dy, v_dyp_low, v_dyp_high);
 
-                            v_store_aligned((int *)(_mag_n + j), v_dxp_low*v_dxp_low+v_dyp_low*v_dyp_low);
-                            v_store_aligned((int *)(_mag_n + j + 4), v_dxp_high*v_dxp_high+v_dyp_high*v_dyp_high);
-                        }
+                        v_store_aligned((int *)(_mag_n + j), v_dxp_low*v_dxp_low+v_dyp_low*v_dyp_low);
+                        v_store_aligned((int *)(_mag_n + j + v_int32::nlanes), v_dxp_high*v_dxp_high+v_dyp_high*v_dyp_high);
                     }
 #endif
                     for ( ; j < width; ++j)
@@ -463,24 +457,21 @@ public:
                 else
                 {
                     int j = 0, width = src.cols * cn;
-#if CV_SIMD128
-                    if (haveSIMD)
+#if CV_SIMD
+                    for(; j <= width - v_int16::nlanes; j += v_int16::nlanes)
                     {
-                        for(; j <= width - 8; j += 8)
-                        {
-                            v_int16x8 v_dx = v_load((const short *)(_dx + j));
-                            v_int16x8 v_dy = v_load((const short *)(_dy + j));
+                        v_int16 v_dx = vx_load((const short *)(_dx + j));
+                        v_int16 v_dy = vx_load((const short *)(_dy + j));
 
-                            v_dx = v_reinterpret_as_s16(v_abs(v_dx));
-                            v_dy = v_reinterpret_as_s16(v_abs(v_dy));
+                        v_dx = v_reinterpret_as_s16(v_abs(v_dx));
+                        v_dy = v_reinterpret_as_s16(v_abs(v_dy));
 
-                            v_int32x4 v_dx_ml, v_dy_ml, v_dx_mh, v_dy_mh;
-                            v_expand(v_dx, v_dx_ml, v_dx_mh);
-                            v_expand(v_dy, v_dy_ml, v_dy_mh);
+                        v_int32 v_dx_ml, v_dy_ml, v_dx_mh, v_dy_mh;
+                        v_expand(v_dx, v_dx_ml, v_dx_mh);
+                        v_expand(v_dy, v_dy_ml, v_dy_mh);
 
-                            v_store_aligned((int *)(_mag_n + j), v_dx_ml + v_dy_ml);
-                            v_store_aligned((int *)(_mag_n + j + 4), v_dx_mh + v_dy_mh);
-                        }
+                        v_store_aligned((int *)(_mag_n + j), v_dx_ml + v_dy_ml);
+                        v_store_aligned((int *)(_mag_n + j + v_int32::nlanes), v_dx_mh + v_dy_mh);
                     }
 #endif
                     for ( ; j < width; ++j)
@@ -524,9 +515,9 @@ public:
 
             // From here actual src row is (i - 1)
             // Set left and right border to 1
-#if CV_SIMD128
-            if(haveSIMD)
-                _pmap = map.ptr<uchar>(i) + CV_MALLOC_SIMD128;
+#if CV_SIMD
+            if (true)
+                _pmap = map.ptr<uchar>(i) + CV_SIMD_WIDTH;
             else
 #endif
                 _pmap = map.ptr<uchar>(i) + 1;
@@ -546,167 +537,59 @@ public:
 
             const int TG22 = 13573;
             int j = 0;
-#if CV_SIMD128
-            if (haveSIMD)
+#if CV_SIMD
             {
-                const v_int32x4 v_low = v_setall_s32(low);
-                const v_int8x16 v_one = v_setall_s8(1);
+                const v_int32 v_low = vx_setall_s32(low);
+                const v_int8 v_one = vx_setall_s8(1);
 
-                for (; j <= src.cols - 32; j += 32)
+                for (; j <= src.cols - v_int8::nlanes; j += v_int8::nlanes)
                 {
-                    v_int32x4 v_m1 = v_load_aligned((const int*)(_mag_a + j));
-                    v_int32x4 v_m2 = v_load_aligned((const int*)(_mag_a + j + 4));
-                    v_int32x4 v_m3 = v_load_aligned((const int*)(_mag_a + j + 8));
-                    v_int32x4 v_m4 = v_load_aligned((const int*)(_mag_a + j + 12));
-
-                    v_int32x4 v_cmp1 = v_m1 > v_low;
-                    v_int32x4 v_cmp2 = v_m2 > v_low;
-                    v_int32x4 v_cmp3 = v_m3 > v_low;
-                    v_int32x4 v_cmp4 = v_m4 > v_low;
-
-                    v_m1 = v_load_aligned((const int*)(_mag_a + j + 16));
-                    v_m2 = v_load_aligned((const int*)(_mag_a + j + 20));
-                    v_m3 = v_load_aligned((const int*)(_mag_a + j + 24));
-                    v_m4 = v_load_aligned((const int*)(_mag_a + j + 28));
-
                     v_store_aligned((signed char*)(_pmap + j), v_one);
-                    v_store_aligned((signed char*)(_pmap + j + 16), v_one);
-
-                    v_int16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
-                    v_int16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
-
-                    v_cmp1 = v_m1 > v_low;
-                    v_cmp2 = v_m2 > v_low;
-                    v_cmp3 = v_m3 > v_low;
-                    v_cmp4 = v_m4 > v_low;
-
-                    v_int8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
-
-                    v_cmp80 = v_pack(v_cmp1, v_cmp2);
-                    v_cmp81 = v_pack(v_cmp3, v_cmp4);
-
-                    unsigned int mask = v_signmask(v_cmp);
-
-                    v_cmp = v_pack(v_cmp80, v_cmp81);
-                    mask |= v_signmask(v_cmp) << 16;
-
-                    if (mask)
+                    v_int8 v_cmp = v_pack(v_pack(vx_load_aligned((const int*)(_mag_a + j                    )) > v_low,
+                                                 vx_load_aligned((const int*)(_mag_a + j +   v_int32::nlanes)) > v_low),
+                                          v_pack(vx_load_aligned((const int*)(_mag_a + j + 2*v_int32::nlanes)) > v_low,
+                                                 vx_load_aligned((const int*)(_mag_a + j + 3*v_int32::nlanes)) > v_low));
+                    while (v_check_any(v_cmp))
                     {
-                        int k = j;
+                        int l = v_scan_forward(v_cmp);
+                        v_cmp &= vx_load(smask + v_int8::nlanes - 1 - l);
+                        int k = j + l;
 
-                        do
+                        int m = _mag_a[k];
+                        short xs = _dx[k];
+                        short ys = _dy[k];
+                        int x = (int)std::abs(xs);
+                        int y = (int)std::abs(ys) << 15;
+
+                        int tg22x = x * TG22;
+
+                        if (y < tg22x)
                         {
-                            int l = trailingZeros32(mask);
-                            k += l;
-                            mask >>= l;
-
-                            int m = _mag_a[k];
-                            short xs = _dx[k];
-                            short ys = _dy[k];
-                            int x = (int)std::abs(xs);
-                            int y = (int)std::abs(ys) << 15;
-
-                            int tg22x = x * TG22;
-
-                            if (y < tg22x)
+                            if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
                             {
-                                if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
+                                CANNY_CHECK(m, high, (_pmap+k), stack);
+                            }
+                        }
+                        else
+                        {
+                            int tg67x = tg22x + (x << 16);
+                            if (y > tg67x)
+                            {
+                                if (m > _mag_p[k] && m >= _mag_n[k])
                                 {
-                                    CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
+                                    CANNY_CHECK(m, high, (_pmap+k), stack);
                                 }
                             }
                             else
                             {
-                                int tg67x = tg22x + (x << 16);
-                                if (y > tg67x)
+                                int s = (xs ^ ys) < 0 ? -1 : 1;
+                                if(m > _mag_p[k - s] && m > _mag_n[k + s])
                                 {
-                                    if (m > _mag_p[k] && m >= _mag_n[k])
-                                    {
-                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
-                                    }
-                                }
-                                else
-                                {
-                                    int s = (xs ^ ys) < 0 ? -1 : 1;
-                                    if(m > _mag_p[k - s] && m > _mag_n[k + s])
-                                    {
-                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
-                                    }
+                                    CANNY_CHECK(m, high, (_pmap+k), stack);
                                 }
                             }
-                            ++k;
-                        } while((mask >>= 1));
+                        }
                     }
-                }
-
-                if (j <= src.cols - 16)
-                {
-                    v_int32x4 v_m1 = v_load_aligned((const int*)(_mag_a + j));
-                    v_int32x4 v_m2 = v_load_aligned((const int*)(_mag_a + j + 4));
-                    v_int32x4 v_m3 = v_load_aligned((const int*)(_mag_a + j + 8));
-                    v_int32x4 v_m4 = v_load_aligned((const int*)(_mag_a + j + 12));
-
-                    v_store_aligned((signed char*)(_pmap + j), v_one);
-
-                    v_int32x4 v_cmp1 = v_m1 > v_low;
-                    v_int32x4 v_cmp2 = v_m2 > v_low;
-                    v_int32x4 v_cmp3 = v_m3 > v_low;
-                    v_int32x4 v_cmp4 = v_m4 > v_low;
-
-                    v_int16x8 v_cmp80 = v_pack(v_cmp1, v_cmp2);
-                    v_int16x8 v_cmp81 = v_pack(v_cmp3, v_cmp4);
-
-                    v_int8x16 v_cmp = v_pack(v_cmp80, v_cmp81);
-                    unsigned int mask = v_signmask(v_cmp);
-
-                    if (mask)
-                    {
-                        int k = j;
-
-                        do
-                        {
-                            int l = trailingZeros32(mask);
-                            k += l;
-                            mask >>= l;
-
-                            int m = _mag_a[k];
-                            short xs = _dx[k];
-                            short ys = _dy[k];
-                            int x = (int)std::abs(xs);
-                            int y = (int)std::abs(ys) << 15;
-
-                            int tg22x = x * TG22;
-
-                            if (y < tg22x)
-                            {
-                                if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
-                                {
-                                    CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
-                                }
-                            }
-                            else
-                            {
-                                int tg67x = tg22x + (x << 16);
-                                if (y > tg67x)
-                                {
-                                    if (m > _mag_p[k] && m >= _mag_n[k])
-                                    {
-                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
-                                    }
-                                }
-                                else
-                                {
-                                    int s = (xs ^ ys) < 0 ? -1 : 1;
-                                    if(m > _mag_p[k - s] && m > _mag_n[k + s])
-                                    {
-                                        CANNY_CHECK_SIMD(m, high, (_pmap+k), stack);
-                                    }
-                                }
-                            }
-                            ++k;
-                        } while((mask >>= 1));
-                    }
-                    j += 16;
                 }
             }
 #endif
@@ -728,6 +611,7 @@ public:
                         if (m > _mag_a[j - 1] && m >= _mag_a[j + 1])
                         {
                             CANNY_CHECK(m, high, (_pmap+j), stack);
+                            continue;
                         }
                     }
                     else
@@ -738,6 +622,7 @@ public:
                             if (m > _mag_p[j] && m >= _mag_n[j])
                             {
                                 CANNY_CHECK(m, high, (_pmap+j), stack);
+                                continue;
                             }
                         }
                         else
@@ -746,6 +631,7 @@ public:
                             if(m > _mag_p[j - s] && m > _mag_n[j + s])
                             {
                                 CANNY_CHECK(m, high, (_pmap+j), stack);
+                                continue;
                             }
                         }
                     }
@@ -806,10 +692,10 @@ private:
     bool L2gradient, needGradient;
     ptrdiff_t mapstep;
     int cn;
-#if CV_SIMD128
-    bool haveSIMD;
-#endif
     mutable Mutex mutex;
+#if CV_SIMD
+    schar smask[2*v_int8::nlanes];
+#endif
 };
 
 class finalPass : public ParallelLoopBody
@@ -820,9 +706,6 @@ public:
         map(_map), dst(_dst)
     {
         dst = _dst;
-#if CV_SIMD128
-        haveSIMD = hasSIMD128();
-#endif
     }
 
     ~finalPass() {}
@@ -835,31 +718,31 @@ public:
             int j = 0;
             uchar *pdst = dst.ptr<uchar>(i);
             const uchar *pmap = map.ptr<uchar>(i + 1);
-#if CV_SIMD128
-            if(haveSIMD)
-                pmap += CV_MALLOC_SIMD128;
+#if CV_SIMD
+            if (true)
+                pmap += CV_SIMD_WIDTH;
             else
 #endif
                 pmap += 1;
-#if CV_SIMD128
-            if(haveSIMD) {
-                const v_uint8x16 v_zero = v_setzero_u8();
-                const v_uint8x16 v_ff = ~v_zero;
-                const v_uint8x16 v_two(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2);
+#if CV_SIMD
+            {
+                const v_uint8 v_zero = vx_setzero_u8();
+                const v_uint8 v_ff = ~v_zero;
+                const v_uint8 v_two = vx_setall_u8(2);
 
-                for (; j <= dst.cols - 16; j += 16)
+                for (; j <= dst.cols - v_uint8::nlanes; j += v_uint8::nlanes)
                 {
-                    v_uint8x16 v_pmap = v_load_aligned((const unsigned char*)(pmap + j));
+                    v_uint8 v_pmap = vx_load_aligned((const unsigned char*)(pmap + j));
                     v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
                     v_store((pdst + j), v_pmap);
                 }
 
-                if (j <= dst.cols - 8)
+                if (j <= dst.cols - v_uint8::nlanes/2)
                 {
-                    v_uint8x16 v_pmap = v_load_low((const unsigned char*)(pmap + j));
+                    v_uint8 v_pmap = vx_load_low((const unsigned char*)(pmap + j));
                     v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
                     v_store_low((pdst + j), v_pmap);
-                    j += 8;
+                    j += v_uint8::nlanes/2;
                 }
             }
 #endif
@@ -873,9 +756,6 @@ public:
 private:
     const Mat &map;
     Mat &dst;
-#if CV_SIMD128
-    bool haveSIMD;
-#endif
 
     finalPass(const finalPass&); // = delete
     finalPass& operator=(const finalPass&); // = delete

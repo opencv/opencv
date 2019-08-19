@@ -10,11 +10,11 @@
 
 #include <functional>
 
-#include "opencv2/gapi/util/util.hpp"
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gcompiled.hpp"
+#include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gcompiled.hpp>
 
 namespace cv {
 
@@ -83,7 +83,7 @@ namespace detail
  * In the above example, sobelEdge expects one Mat on input and
  * produces one Mat; while sobelEdgeSub expects two Mats on input and
  * produces one Mat. GComputation's protocol defines how other
- * computaion methods should be used -- cv::GComputation::compile() and
+ * computation methods should be used -- cv::GComputation::compile() and
  * cv::GComputation::apply(). For example, if a graph is defined on
  * two GMat inputs, two cv::Mat objects have to be passed to apply()
  * for execution. GComputation checks protocol correctness in runtime

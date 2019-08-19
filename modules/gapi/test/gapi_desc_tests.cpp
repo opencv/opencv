@@ -7,7 +7,7 @@
 
 #include "test_precomp.hpp"
 
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 namespace opencv_test
 {
@@ -31,6 +31,7 @@ TEST(GAPI_MetaDesc, MatDesc)
     EXPECT_EQ(1,     desc1.chan);
     EXPECT_EQ(320,   desc1.size.width);
     EXPECT_EQ(240,   desc1.size.height);
+    EXPECT_FALSE(desc1.isND());
 
     cv::Mat m2(480, 640, CV_8UC3);
     const auto desc2 = cv::descr_of(m2);
@@ -38,6 +39,21 @@ TEST(GAPI_MetaDesc, MatDesc)
     EXPECT_EQ(3,       desc2.chan);
     EXPECT_EQ(640,     desc2.size.width);
     EXPECT_EQ(480,     desc2.size.height);
+    EXPECT_FALSE(desc2.isND());
+}
+
+TEST(GAPI_MetaDesc, MatDescND)
+{
+    std::vector<int> dims = {1,3,299,299};
+    cv::Mat m(dims, CV_32F);
+    const auto desc = cv::descr_of(m);
+    EXPECT_EQ(CV_32F, desc.depth);
+    EXPECT_EQ(-1,     desc.chan);
+    EXPECT_EQ(1,      desc.dims[0]);
+    EXPECT_EQ(3,      desc.dims[1]);
+    EXPECT_EQ(299,    desc.dims[2]);
+    EXPECT_EQ(299,    desc.dims[3]);
+    EXPECT_TRUE(desc.isND());
 }
 
 TEST(GAPI_MetaDesc, VecMatDesc)
@@ -45,13 +61,13 @@ TEST(GAPI_MetaDesc, VecMatDesc)
     std::vector<cv::Mat> vec1 = {
     cv::Mat(240, 320, CV_8U)};
 
-    const auto desc1 = cv::descr_of(vec1);
+    const auto desc1 = cv::descrs_of(vec1);
     EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc1[0]));
 
     std::vector<cv::UMat> vec2 = {
     cv::UMat(480, 640, CV_8UC3)};
 
-    const auto desc2 = cv::descr_of(vec2);
+    const auto desc2 = cv::descrs_of(vec2);
     EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc2[0]));
 }
 
@@ -61,7 +77,7 @@ TEST(GAPI_MetaDesc, VecOwnMatDesc)
     cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
     cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
 
-    const auto desc = cv::gapi::own::descr_of(vec);
+    const auto desc = cv::gapi::own::descrs_of(vec);
     EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc[0]));
     EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc[1]));
 }
@@ -72,7 +88,7 @@ TEST(GAPI_MetaDesc, AdlVecOwnMatDesc)
     cv::gapi::own::Mat(240, 320, CV_8U, nullptr),
     cv::gapi::own::Mat(480, 640, CV_8UC3, nullptr)};
 
-    const auto desc = descr_of(vec);
+    const auto desc = descrs_of(vec);
     EXPECT_EQ((GMatDesc{CV_8U, 1, {320, 240}}), get<GMatDesc>(desc[0]));
     EXPECT_EQ((GMatDesc{CV_8U, 3, {640, 480}}), get<GMatDesc>(desc[1]));
 }
@@ -89,6 +105,38 @@ TEST(GAPI_MetaDesc, Compare_Not_Equal_MatDesc)
 {
     const auto desc1 = cv::GMatDesc{CV_8U,  1, {64, 64}};
     const auto desc2 = cv::GMatDesc{CV_32F, 1, {64, 64}};
+
+    EXPECT_TRUE(desc1 != desc2);
+}
+
+TEST(GAPI_MetaDesc, Compare_Equal_MatDesc_ND)
+{
+    const auto desc1 = cv::GMatDesc{CV_8U, {1,3,224,224}};
+    const auto desc2 = cv::GMatDesc{CV_8U, {1,3,224,224}};
+
+    EXPECT_TRUE(desc1 == desc2);
+}
+
+TEST(GAPI_MetaDesc, Compare_Not_Equal_MatDesc_ND_1)
+{
+    const auto desc1 = cv::GMatDesc{CV_8U,  {1,1000}};
+    const auto desc2 = cv::GMatDesc{CV_32F, {1,1000}};
+
+    EXPECT_TRUE(desc1 != desc2);
+}
+
+TEST(GAPI_MetaDesc, Compare_Not_Equal_MatDesc_ND_2)
+{
+    const auto desc1 = cv::GMatDesc{CV_8U, {1,1000}};
+    const auto desc2 = cv::GMatDesc{CV_8U, {1,1400}};
+
+    EXPECT_TRUE(desc1 != desc2);
+}
+
+TEST(GAPI_MetaDesc, Compare_Not_Equal_MatDesc_ND_3)
+{
+    const auto desc1 = cv::GMatDesc{CV_8U, {1,1000}};
+    const auto desc2 = cv::GMatDesc{CV_8U, 1, {32,32}};
 
     EXPECT_TRUE(desc1 != desc2);
 }

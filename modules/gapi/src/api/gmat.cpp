@@ -6,10 +6,14 @@
 
 
 #include "precomp.hpp"
+
+#include <ade/util/iota_range.hpp>
+#include <ade/util/algorithm.hpp>
+
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/mat.hpp> //gapi::own::Mat
+#include <opencv2/gapi/gmat.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
 #include "api/gorigin.hpp"
 
 // cv::GMat public implementation //////////////////////////////////////////////
@@ -49,20 +53,31 @@ namespace{
 #if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
-    return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
+    const auto mat_dims = mat.size.dims();
+
+    if (mat_dims == 2)
+        return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
+
+    std::vector<int> dims(mat_dims);
+    for (auto i : ade::util::iota(mat_dims)) {
+        // Note: cv::MatSize is not iterable
+        dims[i] = mat.size[i];
+    }
+    return GMatDesc{mat.depth(), std::move(dims)};
 }
 
 cv::GMatDesc cv::descr_of(const cv::UMat &mat)
 {
+    GAPI_Assert(mat.size.dims() == 2);
     return GMatDesc{ mat.depth(), mat.channels(),{ mat.cols, mat.rows } };
 }
 
-cv::GMetaArgs cv::descr_of(const std::vector<cv::Mat> &vec)
+cv::GMetaArgs cv::descrs_of(const std::vector<cv::Mat> &vec)
 {
     return vec_descr_of(vec);
 }
 
-cv::GMetaArgs cv::descr_of(const std::vector<cv::UMat> &vec)
+cv::GMetaArgs cv::descrs_of(const std::vector<cv::UMat> &vec)
 {
     return vec_descr_of(vec);
 }
@@ -70,10 +85,12 @@ cv::GMetaArgs cv::descr_of(const std::vector<cv::UMat> &vec)
 
 cv::GMatDesc cv::gapi::own::descr_of(const cv::gapi::own::Mat &mat)
 {
-    return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
+    return (mat.dims.empty())
+        ? GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}}
+        : GMatDesc{mat.depth(), mat.dims};
 }
 
-cv::GMetaArgs cv::gapi::own::descr_of(const std::vector<cv::gapi::own::Mat> &vec)
+cv::GMetaArgs cv::gapi::own::descrs_of(const std::vector<cv::gapi::own::Mat> &vec)
 {
     return vec_descr_of(vec);
 }

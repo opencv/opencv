@@ -10,10 +10,10 @@
 // FIXME? Actually gfluidbackend.hpp is not included anywhere
 // and can be placed in gfluidbackend.cpp
 
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/gfluidbuffer.hpp"
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
 // PRIVATE STUFF!
 #include "backends/common/gbackend.hpp"
@@ -50,6 +50,13 @@ struct FluidData
     bool internal        = false; // is node internal to any fluid island
     gapi::fluid::BorderOpt border;
 };
+
+struct agent_data_t {
+     GFluidKernel::Kind  kind;
+     ade::NodeHandle     nh;
+     std::vector<int>    in_buffer_ids;
+     std::vector<int>    out_buffer_ids;
+ };
 
 struct FluidAgent
 {
@@ -96,8 +103,23 @@ private:
     virtual std::pair<int,int> linesReadAndnextWindow(std::size_t inPort) const = 0;
 };
 
+//helper data structure for accumulating graph traversal/analysis data
+struct FluidGraphInputData {
+
+    std::vector<agent_data_t>               m_agents_data;
+    std::vector<std::size_t>                m_scratch_users;
+    std::unordered_map<int, std::size_t>    m_id_map;           // GMat id -> buffer idx map
+    std::map<std::size_t, ade::NodeHandle>  m_all_gmat_ids;
+
+    std::size_t                             m_mat_count;
+};
+//local helper function to traverse the graph once and pass the results to multiple instances of GFluidExecutable
+FluidGraphInputData fluidExtractInputDataFromGraph(const ade::Graph &m_g, const std::vector<ade::NodeHandle> &nodes);
+
 class GFluidExecutable final: public GIslandExecutable
 {
+    GFluidExecutable(const GFluidExecutable&) = delete;  // due std::unique_ptr in members list
+
     const ade::Graph &m_g;
     GModel::ConstGraph m_gm;
 
@@ -121,13 +143,38 @@ class GFluidExecutable final: public GIslandExecutable
 
     void initBufferRois(std::vector<int>& readStarts, std::vector<cv::gapi::own::Rect>& rois, const std::vector<gapi::own::Rect> &out_rois);
     void makeReshape(const std::vector<cv::gapi::own::Rect>& out_rois);
+    std::size_t total_buffers_size() const;
 
 public:
-    GFluidExecutable(const ade::Graph &g,
-                     const std::vector<ade::NodeHandle> &nodes,
-                     const std::vector<cv::gapi::own::Rect> &outputRois);
-
     virtual inline bool canReshape() const override { return true; }
+    virtual void reshape(ade::Graph& g, const GCompileArgs& args) override;
+
+    virtual void run(std::vector<InObj>  &&input_objs,
+                     std::vector<OutObj> &&output_objs) override;
+
+    void run(std::vector<InObj>  &input_objs,
+             std::vector<OutObj> &output_objs);
+
+
+     GFluidExecutable(const ade::Graph                          &g,
+                      const FluidGraphInputData                 &graph_data,
+                      const std::vector<cv::gapi::own::Rect>    &outputRois);
+};
+
+
+class GParallelFluidExecutable final: public GIslandExecutable {
+    GParallelFluidExecutable(const GParallelFluidExecutable&) = delete;  // due std::unique_ptr in members list
+
+    std::vector<std::unique_ptr<GFluidExecutable>> tiles;
+    decltype(GFluidParallelFor::parallel_for) parallel_for;
+public:
+    GParallelFluidExecutable(const ade::Graph                       &g,
+                             const FluidGraphInputData              &graph_data,
+                             const std::vector<GFluidOutputRois>    &parallelOutputRois,
+                             const decltype(parallel_for)           &pfor);
+
+
+    virtual inline bool canReshape() const override { return false; }
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) override;
 
     virtual void run(std::vector<InObj>  &&input_objs,

@@ -49,7 +49,8 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
 
             // Prepare operation's input metadata vector
             // Note that it's size is usually different from nh.inEdges.size(),
-            // and its element count is equal to operation's arguments count.
+            // and its element count is equal to operation's arguments count
+            // (which may contain graph-construction-time parameters like integers, etc)
             GMetaArgs input_meta_args(op.args.size());
 
             // Iterate through input edges, update input_meta_args's slots
@@ -66,16 +67,22 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
                 {
                     // No meta in an input argument - a fatal error
                     // (note graph is traversed here in topoligcal order)
-                  util::throw_error(std::logic_error("Fatal: input object's metadata "
-                                                 "not found!"));
+                    util::throw_error(std::logic_error("Fatal: input object's metadata "
+                                                       "not found!"));
                     // FIXME: Add more details!!!
                 }
                 input_meta_args.at(input_port) = input_meta;
             }
+
             // Now ask kernel for it's output meta.
             // Resulting out_args may have a larger size than op.outs, since some
             // outputs could stay unused (unconnected)
-            const auto& out_metas = op.k.outMeta(input_meta_args, op.args);
+            const auto out_metas = gr.metadata(nh).contains<CustomMetaFunction>()
+                ? gr.metadata(nh).get<CustomMetaFunction>().customOutMeta(ctx.graph,
+                                                                          nh,
+                                                                          input_meta_args,
+                                                                          op.args)
+                : op.k.outMeta(input_meta_args, op.args);
 
             // Walk through operation's outputs, update meta of output objects
             // appropriately
@@ -106,7 +113,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
     } // for(sorted)
 }
 
-// After all metadata in graph is infered, store a vector of inferred metas
+// After all metadata in graph is inferred, store a vector of inferred metas
 // for computation output values.
 void cv::gimpl::passes::storeResultingMeta(ade::passes::PassContext &ctx)
 {

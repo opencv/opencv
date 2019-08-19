@@ -73,7 +73,7 @@ public:
 protected:
 
     bool test_values(const cv::Mat& src);												// complex test for eigen without vectors
-    bool check_full(int type);													// compex test for symmetric matrix
+    bool check_full(int type);													// complex test for symmetric matrix
     virtual void run (int) = 0;													// main testing method
 
 protected:

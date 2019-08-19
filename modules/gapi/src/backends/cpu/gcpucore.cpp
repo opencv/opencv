@@ -7,9 +7,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/core.hpp"
-#include "opencv2/gapi/cpu/core.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/cpu/core.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 GAPI_OCV_KERNEL(GCPUAdd, cv::gapi::core::GAdd)
 {
@@ -413,7 +413,7 @@ GAPI_OCV_KERNEL(GCPUSplit3, cv::gapi::core::GSplit3)
         std::vector<cv::Mat> outMats = {m1, m2, m3};
         cv::split(in, outMats);
 
-        // Write back FIXME: Write a helper or avoid this nonsence completely!
+        // Write back FIXME: Write a helper or avoid this nonsense completely!
         m1 = outMats[0];
         m2 = outMats[1];
         m3 = outMats[2];
@@ -427,7 +427,7 @@ GAPI_OCV_KERNEL(GCPUSplit4, cv::gapi::core::GSplit4)
         std::vector<cv::Mat> outMats = {m1, m2, m3, m4};
         cv::split(in, outMats);
 
-        // Write back FIXME: Write a helper or avoid this nonsence completely!
+        // Write back FIXME: Write a helper or avoid this nonsense completely!
         m1 = outMats[0];
         m2 = outMats[1];
         m3 = outMats[2];
@@ -458,6 +458,22 @@ GAPI_OCV_KERNEL(GCPUResize, cv::gapi::core::GResize)
     static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp, cv::Mat &out)
     {
         cv::resize(in, out, sz, fx, fy, interp);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUResizeP, cv::gapi::core::GResizeP)
+{
+    static void run(const cv::Mat& in, cv::Size out_sz, int interp, cv::Mat& out)
+    {
+        int inH = in.rows / 3;
+        int inW = in.cols;
+        int outH = out.rows / 3;
+        int outW = out.cols;
+        for (int i = 0; i < 3; i++) {
+            auto in_plane = in(cv::Rect(0, i*inH, inW, inH));
+            auto out_plane = out(cv::Rect(0, i*outH, outW, outH));
+            cv::resize(in_plane, out_plane, out_sz, 0, 0, interp);
+        }
     }
 };
 
@@ -589,6 +605,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUSplit3
          , GCPUSplit4
          , GCPUResize
+         , GCPUResizeP
          , GCPUMerge3
          , GCPUMerge4
          , GCPURemap

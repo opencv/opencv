@@ -104,7 +104,7 @@ CV__DNN_INLINE_NS_BEGIN
         h_t &= o_t \odot tanh(c_t),               \\
         c_t &= f_t \odot c_{t-1} + i_t \odot g_t, \\
         @f}
-        where @f$\odot@f$ is per-element multiply operation and @f$i_t, f_t, o_t, g_t@f$ is internal gates that are computed using learned wights.
+        where @f$\odot@f$ is per-element multiply operation and @f$i_t, f_t, o_t, g_t@f$ is internal gates that are computed using learned weights.
 
         Gates are computed as follows:
         @f{eqnarray*}{
@@ -366,6 +366,7 @@ CV__DNN_INLINE_NS_BEGIN
          */
         std::vector<std::vector<Range> > sliceRanges;
         int axis;
+        int num_split;
 
         static Ptr<SliceLayer> create(const LayerParams &params);
     };
@@ -492,10 +493,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS CropLayer : public Layer
     {
     public:
-        int startAxis;
-        std::vector<int> offset;
-
-        static Ptr<CropLayer> create(const LayerParams &params);
+        static Ptr<Layer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS EltwiseLayer : public Layer

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCPUKERNEL_HPP
@@ -19,6 +19,7 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/own/convert.hpp> //to_ocv
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
+#include <opencv2/gapi/util/util.hpp>
 
 // FIXME: namespace scheme for backends?
 namespace cv {
@@ -91,7 +92,7 @@ protected:
 
     std::vector<GArg> m_args;
 
-    //FIXME: avoid conversion of arguments from internal representaion to OpenCV one on each call
+    //FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
     //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
     //once on enter for input and output arguments, and once before return for output arguments only
     std::unordered_map<std::size_t, GRunArgP> m_results;
@@ -228,7 +229,7 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
-            //cause compilation error, by tring to bind rvalue references to lvalue references
+            //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
             postprocess(outs...);
@@ -258,7 +259,8 @@ struct OCVCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 } // namespace detail
 
 template<class Impl, class K>
-class GCPUKernelImpl: public detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GCPUKernelImpl: public cv::detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                      public cv::detail::KernelTag
 {
     using P = detail::OCVCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 

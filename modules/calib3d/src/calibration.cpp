@@ -627,7 +627,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
     if( (CV_MAT_TYPE(A->type) != CV_64FC1 && CV_MAT_TYPE(A->type) != CV_32FC1) ||
         A->rows != 3 || A->cols != 3 )
-        CV_Error( CV_StsBadArg, "Instrinsic parameters must be 3x3 floating-point matrix" );
+        CV_Error( CV_StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
 
     cvConvert( A, &_a );
     fx = a[0]; fy = a[4];
@@ -2527,6 +2527,8 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     int idx = fabs(_t[0]) > fabs(_t[1]) ? 0 : 1;
     double c = _t[idx], nt = cvNorm(&t, 0, CV_L2);
     _uu[idx] = c > 0 ? 1 : -1;
+
+    CV_Assert(nt > 0.0);
 
     // calculate global Z rotation
     cvCrossProduct(&t,&uu,&ww);

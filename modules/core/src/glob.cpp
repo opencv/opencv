@@ -57,7 +57,7 @@ namespace
 
     struct DIR
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         WIN32_FIND_DATAW data;
 #else
         WIN32_FIND_DATAA data;
@@ -78,7 +78,7 @@ namespace
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         cv::String full_path = cv::String(path) + "\\*";
         wchar_t wfull_path[MAX_PATH];
         size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
@@ -100,7 +100,7 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         if (dir->ent.d_name != 0)
         {
             if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
@@ -139,7 +139,7 @@ const char dir_separators[] = "/";
 
 static bool isDir(const cv::String& path, DIR* dir)
 {
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32 || defined _WIN32_WCE
     DWORD attributes;
     BOOL status = TRUE;
     if (dir)
@@ -147,7 +147,7 @@ static bool isDir(const cv::String& path, DIR* dir)
     else
     {
         WIN32_FILE_ATTRIBUTE_DATA all_attrs;
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
         wchar_t wpath[MAX_PATH];
         size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));

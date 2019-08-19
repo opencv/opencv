@@ -173,6 +173,21 @@ INSTANTIATE_TEST_CASE_P(YUV2BGRPerfTestFluid, YUV2BGRPerfTest,
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(BayerGR2RGBPerfTestFluid, BayerGR2RGBPerfTest,
+        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(RGB2YUV422PerfTestFluid, RGB2YUV422PerfTest,
+        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(RGB2HSVPerfTestFluid, RGB2HSVPerfTest,
+        Combine(Values(ToleranceColor(1e-3).to_compare_f()),
+            Values(szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(BGR2LUVPerfTestFluid, BGR2LUVPerfTest,
     Combine(Values(AbsSimilarPoints(1, 0.05).to_compare_f()),
             Values(szVGA, sz720p, sz1080p),
