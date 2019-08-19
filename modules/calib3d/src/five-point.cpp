@@ -570,7 +570,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     // If _mask is given, then use it to filter outliers.
     if (!_mask.empty())
     {
-        Mat mask = _mask.getMat();
+        Mat mask = _mask.getMat().t();
         CV_Assert(mask.size() == mask1.size());
         bitwise_and(mask, mask1, mask1);
         bitwise_and(mask, mask2, mask2);
