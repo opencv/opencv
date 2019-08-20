@@ -2439,4 +2439,86 @@ TEST(Calib3d_Triangulate, accuracy)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CV_RecoverPoseTest : public cvtest::BaseTest
+{
+public:
+    CV_RecoverPoseTest();
+    ~CV_RecoverPoseTest();
+    void clear();
+protected:
+    virtual void run(int);
+};
+
+CV_RecoverPoseTest::CV_RecoverPoseTest()
+{
+}
+
+CV_RecoverPoseTest::~CV_RecoverPoseTest()
+{
+    clear();
+}
+
+void CV_RecoverPoseTest::clear()
+{
+    cvtest::BaseTest::clear();
+}
+
+void CV_RecoverPoseTest::run(int)
+{
+    int ntests = 1;
+    for (int testcase = 1; testcase <= ntests; ++testcase)
+    {
+        // Example. Estimation of fundamental matrix using the RANSAC algorithm
+        int point_count = 12;
+        vector<Point2f> points1(point_count);
+        vector<Point2f> points2(point_count);
+        vector<unsigned char> mask(point_count, 1);
+
+        points1[0] = Point2f(1537.7f, 166.8f);
+        points1[1] = Point2f(1599.1f, 179.6f);
+        points1[2] = Point2f(1288.0f, 207.5f);
+        points1[3] = Point2f(1507.1f, 193.17f);
+        points1[4] = Point2f(1742.7f, 210.0f);
+        points1[5] = Point2f(1041.6f, 271.7f);
+        points1[6] = Point2f(1591.8f, 247.2f);
+        points1[7] = Point2f(1524.0f, 261.3f);
+        points1[8] = Point2f(1330.3f, 285.0f);
+        points1[9] = Point2f(1403.1f, 284.0f);
+        points1[10] = Point2f(1506.6f, 342.9f);
+        points1[11] = Point2f(1502.8f, 347.3f);
+
+        points2[0] = Point2f(1533.4f, 532.9f);
+        points2[1] = Point2f(1596.6f, 552.4f);
+        points2[2] = Point2f(1277.0f, 556.4f);
+        points2[3] = Point2f(1502.1f, 557.6f);
+        points2[4] = Point2f(1744.4f, 601.3f);
+        points2[5] = Point2f(1023.0f, 612.6f);
+        points2[6] = Point2f(1589.17f, 621.6f);
+        points2[7] = Point2f(1519.4f, 629.0f);
+        points2[8] = Point2f(1320.3f, 637.3f);
+        points2[9] = Point2f(1395.2f, 642.2f);
+        points2[10] = Point2f(1501.5f, 710.3f);
+        points2[11] = Point2f(1497.6f, 714.2f);
+
+        // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
+        Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
+
+        Mat E, R, t;
+        E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+        int Inliers = recoverPose(E, points1, points2, cameraMatrix, R, t, mask);
+
+        if (Inliers < point_count)
+        {
+            ts->printf(cvtest::TS::LOG, "Only %d inliers in function, testcase %d\n",
+                Inliers, testcase);
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return;
+        }
+    }
+}
+
+TEST(CV_RecoverPoseTest, regression) { CV_RecoverPoseTest test; test.safe_run(); }
+
 }} // namespace
