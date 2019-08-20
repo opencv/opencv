@@ -50,6 +50,7 @@
 #ifndef OPENCV_IMGPROC_IMGWARP_HPP
 #define OPENCV_IMGPROC_IMGWARP_HPP
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -75,6 +76,20 @@ public:
     virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) = 0;
     virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) = 0;
     virtual ~WarpPerspectiveLine_SSE4() {};
+};
+#endif
+}
+
+namespace opt_CV_SIMD
+{
+#if CV_SIMD128
+class WarpPerspectiveLine_CV_SIMD
+{
+public:
+    static Ptr<WarpPerspectiveLine_CV_SIMD> getImpl(const double *M);
+    virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) = 0;
+    virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) = 0;
+    virtual ~WarpPerspectiveLine_CV_SIMD() {};
 };
 #endif
 }
