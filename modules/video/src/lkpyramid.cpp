@@ -239,7 +239,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         acctype iA11 = 0, iA12 = 0, iA22 = 0;
         float A11, A12, A22;
 
-#if CV_SSE2 || CV_VSX
+#if CV_SIMD128 && !CV_NEON
         v_int16x8 qw0((short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01));
         v_int16x8 qw1((short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11));
         v_int32x4 qdelta_d = v_setall_s32(1 << (W_BITS1-1));
@@ -274,8 +274,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
             x = 0;
 
-#if CV_SSE2 || CV_VSX
-            for( ; x <= winSize.width*cn - 4; x += 4, dsrc += 4*2, dIptr += 4*2 )
+#if CV_SIMD128 && !CV_NEON
+            for( ; x <= winSize.width*cn - 8; x += 8, dsrc += 8*2, dIptr += 8*2 )
             {
                 v_int32x4 t0, t1;
                 v_int16x8 v00, v01, v10, v11, t00, t01, t10, t11;
@@ -289,8 +289,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v10, v11, t10, t11);
 
                 t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
+                t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
                 t0 = t0 >> (W_BITS1-5);
-                v_store_low(Iptr + x, v_pack(t0, t0));
+                t1 = t1 >> (W_BITS1-5);
+                v_store(Iptr + x, v_pack(t0, t1));
 
                 v00 = v_reinterpret_as_s16(v_load(dsrc));
                 v01 = v_reinterpret_as_s16(v_load(dsrc + cn2));
@@ -301,8 +303,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v10, v11, t10, t11);
 
                 t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, v_reinterpret_as_s16(qw0), qdelta_d) +
-                     v_dotprod(t11, v_reinterpret_as_s16(qw1));
+                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
                 t0 = t0 >> W_BITS1;
                 t1 = t1 >> W_BITS1;
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
@@ -313,6 +314,31 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
                 v_float32x4 fy = v_cvt_f32(t0);
                 v_float32x4 fx = v_cvt_f32(t1);
+
+                qA22 = v_muladd(fy, fy, qA22);
+                qA12 = v_muladd(fx, fy, qA12);
+                qA11 = v_muladd(fx, fx, qA11);
+
+                v00 = v_reinterpret_as_s16(v_load(dsrc + 4*2));
+                v01 = v_reinterpret_as_s16(v_load(dsrc + 4*2 + cn2));
+                v10 = v_reinterpret_as_s16(v_load(dsrc + 4*2 + dstep));
+                v11 = v_reinterpret_as_s16(v_load(dsrc + 4*2 + dstep + cn2));
+
+                v_zip(v00, v01, t00, t01);
+                v_zip(v10, v11, t10, t11);
+
+                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
+                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
+                t0 = t0 >> W_BITS1;
+                t1 = t1 >> W_BITS1;
+                v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
+                v_store(dIptr + 4*2, v00);
+
+                v00 = v_reinterpret_as_s16(v_interleave_pairs(v_reinterpret_as_s32(v_interleave_pairs(v00))));
+                v_expand(v00, t1, t0);
+
+                fy = v_cvt_f32(t0);
+                fx = v_cvt_f32(t1);
 
                 qA22 = v_muladd(fy, fy, qA22);
                 qA12 = v_muladd(fx, fy, qA12);
@@ -423,7 +449,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             }
         }
 
-#if CV_SSE2 || CV_VSX
+#if CV_SIMD128 && !CV_NEON
         iA11 += v_reduce_sum(qA11);
         iA12 += v_reduce_sum(qA12);
         iA22 += v_reduce_sum(qA22);
@@ -479,7 +505,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
             acctype ib1 = 0, ib2 = 0;
             float b1, b2;
-#if CV_SSE2 || CV_VSX
+#if CV_SIMD128 && !CV_NEON
             qw0 = v_int16x8((short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01), (short)(iw00), (short)(iw01));
             qw1 = v_int16x8((short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11), (short)(iw10), (short)(iw11));
             v_float32x4 qb0 = v_setzero_f32(), qb1 = v_setzero_f32();
@@ -503,7 +529,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
                 x = 0;
 
-#if CV_SSE2 || CV_VSX
+#if CV_SIMD128 && !CV_NEON
                 for( ; x <= winSize.width*cn - 8; x += 8, dIptr += 8*2 )
                 {
                     v_int16x8 diff0 = v_reinterpret_as_s16(v_load(Iptr + x)), diff1, diff2;
@@ -614,7 +640,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 }
             }
 
-#if CV_SSE2 || CV_VSX
+#if CV_SIMD128 && !CV_NEON
             v_float32x4 qf0, qf1;
             v_recombine(v_interleave_pairs(qb0 + qb1), v_setzero_f32(), qf0, qf1);
             ib1 += v_reduce_sum(qf0);
