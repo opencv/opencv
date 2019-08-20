@@ -1,6 +1,6 @@
 if(NOT HAVE_XIMEA)
   if(WIN32)
-    get_filename_component(regpath "[HKEY_CURRENT_USER\\Software\\XIMEA\\CamSupport\\API;Path]" ABSOLUTE)
+    get_filename_component(regpath "[HKEY_LOCAL_MACHINE\\SOFTWARE\\XIMEA\\API_SoftwarePackage;Path]" ABSOLUTE)
   endif()
   if(X86_64)
     set(lib_dir "x64")
