@@ -18,10 +18,10 @@ class OSXBuilder(Builder):
     def getBuildCommand(self, archs, target):
         buildcmd = [
             "xcodebuild",
-            "MACOSX_DEPLOYMENT_TARGET=10.9",
+            "MACOSX_DEPLOYMENT_TARGET=10.12",
             "ARCHS=%s" % archs[0],
             "-sdk", target.lower(),
-            "-configuration", "Release",
+            "-configuration", "Debug" if self.debug else "Release",
             "-parallelizeTargets",
             "-jobs", str(multiprocessing.cpu_count())
         ]
@@ -39,10 +39,12 @@ if __name__ == "__main__":
     parser.add_argument('--contrib', metavar='DIR', default=None, help='folder with opencv_contrib repository (default is "None" - build only main framework)')
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
+    parser.add_argument('--debug', action="store_true", help="Build 'Debug' binaries (CMAKE_BUILD_TYPE=Debug)")
+
     args = parser.parse_args()
 
     b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.enablenonfree,
         [
             (["x86_64"], "MacOSX")
-        ])
+        ], args.debug)
     b.build(args.out)
