@@ -190,6 +190,33 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
     EXPECT_FALSE(ccomp.running());
 }
 
+TEST_P(GAPI_Streaming, Cucumber_Regression)
+{
+    // FIXME: Document what this test tests
+
+    cv::GMat in;
+    cv::GMat tmp = cv::gapi::copy(in);
+    for (int i = 0; i < 3; i++) {
+        tmp = tmp & cv::gapi::blur(in, cv::Size(3,3));
+    }
+    cv::GComputation c(cv::GIn(in), cv::GOut(tmp, tmp + 1));
+
+    auto ccomp = c.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{768,512}},
+                                        cv::compile_args(cv::gapi::use_only{GetParam()}));
+
+    cv::Mat in_mat = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
+    cv::Mat out_mat1, out_mat2;
+
+    // Fetch the result 15 times
+    ccomp.setSource(cv::gin(in_mat));
+    ccomp.start();
+    for (int i = 0; i < 15; i++) {
+        EXPECT_TRUE(ccomp.pull(cv::gout(out_mat1, out_mat2)));
+    }
+
+    ccomp.stop();
+}
+
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
                         Values(  OCV_KERNELS()
                              //, OCL_KERNELS()       -- known issues with OpenCL backend, commented out

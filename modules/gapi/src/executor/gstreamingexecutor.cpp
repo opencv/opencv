@@ -96,7 +96,9 @@ std::vector<cv::gimpl::stream::Q*> input_queues(      ade::Graph &g,
     std::vector<cv::gimpl::stream::Q*> result;
     for (auto &&in_eh : obj->inEdges())
     {
-        result.push_back(&qgr.metadata(in_eh).get<DataQueue>().q);
+        result.push_back(qgr.metadata(in_eh).contains<DataQueue>()
+                         ? &qgr.metadata(in_eh).get<DataQueue>().q
+                         : nullptr);
     }
     return result;
 }
@@ -152,7 +154,7 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
     Cmd cmd;
     in_queue.pop(cmd);
     GAPI_Assert(   cmd.index() == cmd.index_of<Start>()
-              || cmd.index() == cmd.index_of<Stop>());
+                || cmd.index() == cmd.index_of<Stop>());
     if (cmd.index() == cmd.index_of<Stop>()) {
         for (auto &&oq : out_queues) oq->push(cmd);
         return;
@@ -200,6 +202,7 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
                        cv::GMetaArgs out_metas,                              // ...
                        std::shared_ptr<cv::gimpl::GIslandExecutable> island, // FIXME: ...a copy of OpDesc{}.
                        std::vector<Q*> in_queues,
+                       std::vector<cv::GRunArg> in_constants,
                        std::vector< std::vector<Q*> > out_queues)
 {
     GAPI_Assert(in_queues.size() == in_rcs.size());
@@ -218,19 +221,29 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                // 
         {
             auto id = ade::util::index(it);
             auto &q = ade::util::value(it);
-            q->pop(cmd);
-            if (cmd.index() == cmd.index_of<Stop>()) {
-                // Broadcast STOP down to the pipeline.
-                for (auto &&out_qq : out_queues)
-                {
-                    for (auto &&out_q : out_qq) out_q->push(cmd);
-                }
-                return;
-            }
-            // FIXME: MOVE PROBLEM
-            const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd);
+
             isl_inputs[id].first  = in_rcs[id];
-            isl_inputs[id].second = in_arg;
+            if (q == nullptr)
+            {
+                // NULL queue means a graph-constant value
+                // (like a value-initialized scalar)
+                isl_inputs[id].second = const_cast<const cv::GRunArg&>(in_constants[id]);
+            }
+            else
+            {
+                q->pop(cmd);
+                if (cmd.index() == cmd.index_of<Stop>()) {
+                    // Broadcast STOP down to the pipeline.
+                    for (auto &&out_qq : out_queues)
+                    {
+                        for (auto &&out_q : out_qq) out_q->push(cmd);
+                    }
+                    return;
+                }
+                // FIXME: MOVE PROBLEM
+                const cv::GRunArg &in_arg = cv::util::get<cv::GRunArg>(cmd);
+                isl_inputs[id].second = in_arg;
+            }
         }
 
         // Once the vector is obtained, prepare data for island execution
@@ -372,10 +385,14 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             {
                 std::vector<RcDesc> input_rcs;
                 std::vector<RcDesc> output_rcs;
+                std::vector<GRunArg> in_constants;
                 cv::GMetaArgs output_metas;
                 input_rcs.reserve(nh->inNodes().size());
+                in_constants.reserve(nh->inNodes().size()); // FIXME: Ugly
                 output_rcs.reserve(nh->outNodes().size());
                 output_metas.reserve(nh->outNodes().size());
+
+                std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node> > const_ins;
 
                 // FIXME: THIS ORDER IS IRRELEVANT TO PROTOCOL OR ANY OTHER ORDER!
                 // FIXME: SAME APPLIES TO THE REGULAR GEEXECUTOR!!
@@ -384,6 +401,11 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                         = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
                     const auto &orig_data_info
                         = m_gm.metadata(orig_data_nh).get<Data>();
+                    if (orig_data_info.storage == Data::Storage::CONST_VAL) {
+                        const_ins.insert(slot_nh);
+                        // FIXME: Variant move issue
+                        in_constants.push_back(const_cast<const cv::GRunArg&>(m_gm.metadata(orig_data_nh).get<ConstValue>().arg));
+                    } else in_constants.push_back(cv::GRunArg{});
                     if (orig_data_info.shape == GShape::GARRAY) {
                         GAPI_Assert(orig_data_info.ctor.index() != orig_data_info.ctor.index_of<cv::util::monostate>());
                     }
@@ -412,13 +434,17 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                          , std::move(output_rcs)
                                          , std::move(output_metas)
                                          , nh
+                                         , in_constants
                                          , m_gim.metadata(nh).get<IslandExec>().object});
 
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue> qgr(*m_island_graph);
                 for (auto eh : nh->inEdges())
                 {
-                    qgr.metadata(eh).set(DataQueue(queue_capacity));
+                    // ...only if the data is not compile-const
+                    if (const_ins.count(eh->srcNode()) == 0) {
+                        qgr.metadata(eh).set(DataQueue(queue_capacity));
+                    }
                 }
             }
             break;
@@ -543,6 +569,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
                                op.out_metas,
                                island,
                                in_queues,
+                               op.in_constants,
                                out_queues);
     }
 
