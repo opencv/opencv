@@ -1970,11 +1970,12 @@ struct Net::Impl
             }
 #endif
         }
-        ld.internalBlobsWrappers.resize(ld.internals.size());
-        for (int i = 0; i < ld.internals.size(); ++i)
+        
+        /* CUDA backend has its own system for internal blobs; we don't need these */
+        ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA) ? 0 : ld.internals.size());
+        for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         {
             ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
-            /* we don't set stream for CUDA backend wrappers for internals as they are not used */
         }
 
         Ptr<Layer> layerPtr = ld.getLayerInstance();
