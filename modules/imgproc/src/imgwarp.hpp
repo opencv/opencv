@@ -82,7 +82,7 @@ public:
 
 namespace opt_CV_SIMD
 {
-#if CV_SIMD128
+#if CV_SIMD128_64F
 class WarpPerspectiveLine_CV_SIMD
 {
 public:

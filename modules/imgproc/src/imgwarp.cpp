@@ -2686,7 +2686,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 
 namespace cv
 {
-#if CV_SIMD128
+#if CV_SIMD128_64F
 namespace opt_CV_SIMD
 {
 
@@ -2984,7 +2984,7 @@ public:
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, width);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, height);
 
-        #if CV_SIMD128
+        #if CV_SIMD128_64F
         Ptr<opt_CV_SIMD::WarpPerspectiveLine_CV_SIMD> pwarp_impl_CV_SIMD;
         pwarp_impl_CV_SIMD = opt_CV_SIMD::WarpPerspectiveLine_CV_SIMD::getImpl(M);
         #endif
@@ -3010,7 +3010,7 @@ public:
                     {
                         x1 = 0;
 
-                        #if CV_SIMD128
+                        #if CV_SIMD128_64F
                         if (pwarp_impl_CV_SIMD)
                             pwarp_impl_CV_SIMD->processNN(M, xy, X0, Y0, W0, bw);
                         else
@@ -3033,7 +3033,7 @@ public:
                         short* alpha = A + y1*bw;
                         x1 = 0;
 
-                        #if CV_SIMD128
+                        #if CV_SIMD128_64F
                         if (pwarp_impl_CV_SIMD)
                             pwarp_impl_CV_SIMD->process(M, xy, alpha, X0, Y0, W0, bw);
                         else
