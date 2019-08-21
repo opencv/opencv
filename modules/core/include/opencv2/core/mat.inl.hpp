@@ -2103,7 +2103,7 @@ void Mat_<_Tp>::forEach(const Functor& operation) const {
 
 template<typename _Tp> inline
 Mat_<_Tp>::Mat_(Mat_&& m)
-    : Mat(m)
+    : Mat(std::move(m))
 {
 }
 
@@ -2119,7 +2119,7 @@ Mat_<_Tp>::Mat_(Mat&& m)
     : Mat()
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;
-    *this = m;
+    *this = std::move(m);
 }
 
 template<typename _Tp> inline
