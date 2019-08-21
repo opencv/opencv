@@ -38,7 +38,7 @@ best matches. There is also **cv.drawMatchesKnn** which draws all the k best mat
 will draw two match-lines for each keypoint. So we have to pass a mask if we want to selectively
 draw it.
 
-Let's see one example for each of SURF and ORB (Both use different distance measurements).
+Let's see one example for each of SIFT and ORB (Both use different distance measurements).
 
 ### Brute-Force Matching with ORB Descriptors
 
