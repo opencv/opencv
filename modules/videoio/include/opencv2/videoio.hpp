@@ -623,66 +623,18 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 
 class IVideoCapture;
 
-/** @brief Class for video capturing from video files, image sequences or cameras.
-
-The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
-
-Here is how the class can be used:
-@include samples/cpp/videocapture_basic.cpp
-
-@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
-@note
--   (C++) A basic sample on using the %VideoCapture interface can be found at
-    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
--   (Python) A basic sample on using the %VideoCapture interface can be found at
-    `OPENCV_SOURCE_CODE/samples/python/video.py`
--   (Python) A multi threaded video processing sample can be found at
-    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
--   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
-    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
- */
-class CV_EXPORTS_W VideoCapture
+class CV_EXPORTS_W VideoCaptureBase
 {
+protected:
+    CV_WRAP VideoCaptureBase();
+
+    CV_WRAP VideoCaptureBase(const String& filename, int apiPreference = CAP_ANY);
 public:
-    /** @brief Default constructor
-    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
-    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
-    destructor.
-     */
-    CV_WRAP VideoCapture();
-
-    /** @overload
-    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
-
-    @param filename it can be:
-    - name of video file (eg. `video.avi`)
-    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
-    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
-      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
-      documentation of source stream to know the right URL.
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
-    @sa The list of supported API backends cv::VideoCaptureAPIs
-    */
-    CV_WRAP VideoCapture(const String& filename, int apiPreference = CAP_ANY);
-
-    /** @overload
-    @brief  Opens a camera for video capturing
-
-    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
-    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
-
-    @sa The list of supported API backends cv::VideoCaptureAPIs
-    */
-    CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
-
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
-    virtual ~VideoCapture();
+    virtual ~VideoCaptureBase();
 
     /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
 
@@ -694,17 +646,6 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
     CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
-
-    /** @brief  Opens a camera for video capturing
-
-    @overload
-
-    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
-    @return `true` if the camera has been successfully opened.
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-    */
-    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
 
     /** @brief Returns true if video capturing has been initialized already.
 
@@ -764,12 +705,12 @@ public:
     /** @brief Stream operator to read the next video frame.
     @sa read()
     */
-    virtual VideoCapture& operator >> (CV_OUT Mat& image);
+    virtual VideoCaptureBase& operator >> (CV_OUT Mat& image);
 
     /** @overload
     @sa read()
     */
-    virtual VideoCapture& operator >> (CV_OUT UMat& image);
+    virtual VideoCaptureBase& operator >> (CV_OUT UMat& image);
 
     /** @brief Grabs, decodes and returns the next video frame.
 
@@ -837,17 +778,95 @@ protected:
     bool throwOnFail;
 };
 
+/** @brief Class for video capturing from video files, image sequences or cameras.
+
+The class provides C++ API for capturing video from video capturing devices, ip cameras or for reading video files and image sequences.
+
+Here is how the class can be used:
+@include samples/cpp/videocapture_basic.cpp
+
+@note In @ref videoio_c "C API" the black-box structure `CvCapture` is used instead of %VideoCapture.
+@note
+-   (C++) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
+-   (Python) A basic sample on using the %VideoCapture interface can be found at
+    `OPENCV_SOURCE_CODE/samples/python/video.py`
+-   (Python) A multi threaded video processing sample can be found at
+    `OPENCV_SOURCE_CODE/samples/python/video_threaded.py`
+-   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
+    `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
+ */
+class CV_EXPORTS_W VideoCapture : public VideoCaptureBase
+{
+public:
+    /** @brief Default constructor
+    @note In @ref videoio_c "C API", when you finished working with video, release CvCapture structure with
+    cvReleaseCapture(), or use Ptr\<CvCapture\> that calls cvReleaseCapture() automatically in the
+    destructor.
+     */
+    CV_WRAP VideoCapture();
+
+    /** @overload
+    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
+
+    @param filename it can be:
+    - name of video file (eg. `video.avi`)
+    - or image sequence (eg. `img_%02d.jpg`, which will read samples like `img_00.jpg, img_01.jpg, img_02.jpg, ...`)
+    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
+      documentation of source stream to know the right URL.
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    @sa The list of supported API backends cv::VideoCaptureAPIs
+    */
+    CV_WRAP VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+
+    /** @overload
+    @brief  Opens a camera for video capturing
+
+    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
+    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
+
+    @sa The list of supported API backends cv::VideoCaptureAPIs
+    */
+    CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
+
+    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference = CAP_ANY)
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    using VideoCaptureBase::open;
+
+    /** @brief  Opens a camera for video capturing
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
+    @return `true` if the camera has been successfully opened.
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
+    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+};
+
 /** @brief Class for raw video capturing from video files or ip cameras.
 
 The class provides C++ API for capturing raw encoded video bitstreams from ip cameras or video files.
 
  */
-class CV_EXPORTS_W VideoCaptureRaw : public VideoCapture
+class CV_EXPORTS_W VideoContainer : public VideoCaptureBase
 {
 public:
     /** @brief Default constructor
      */
-    CV_WRAP VideoCaptureRaw();
+    CV_WRAP VideoContainer();
 
     /** @overload
     @brief  Opens a video file or an IP video stream for raw video capturing with API Preference
@@ -858,19 +877,7 @@ public:
       Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
       documentation of source stream to know the right URL.
     */
-    CV_WRAP VideoCaptureRaw(const String& filename);
-
-    /** @overload
-    @brief  Opens a camera for video capturing
-
-    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
-    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
-    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
-
-    @sa This mode does not support raw video capture.
-    */
-    CV_WRAP VideoCaptureRaw(int index, int apiPreference = CAP_ANY);
+    CV_WRAP VideoContainer(const String& filename);
 
     /** @brief  Opens a video file or an IP video stream for raw video capturing.
 
@@ -882,19 +889,6 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
     CV_WRAP virtual bool open(const String& filename);
-
-    /** @brief  Opens a camera for video capturing
-
-    @overload
-
-    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
-    @return `true` if the camera has been successfully opened.
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-
-    @sa This mode does not support raw video capture.
-    */
-    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
 
     /** @brief Grabs the next frame from video file or capturing device without decoding.
 
