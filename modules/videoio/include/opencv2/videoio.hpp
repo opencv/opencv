@@ -207,6 +207,10 @@ enum RawCodec
 enum RawPixelFormat
 {
     VideoChromaFormat_Monochrome = 0,
+    VideoChromaFormat_YUV420P10LE,
+    VideoChromaFormat_YUV420P12LE,
+    VideoChromaFormat_YUV444P10LE,
+    VideoChromaFormat_YUV444P12LE,
     VideoChromaFormat_YUV420,
     VideoChromaFormat_YUVJ420,
     VideoChromaFormat_YUVJ422,
@@ -757,19 +761,6 @@ public:
      */
     CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 
-    /** @brief  Returns the encoded grabbed video frame.
-
-    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @return `false` if no frames has been grabbed
-
-    The method returns the raw bitstream for the next video frame. If no frames is present
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @sa retrieveRaw()
-     */
-    CV_WRAP virtual bool retrieveRaw(OutputArray image);
-
     /** @brief Stream operator to read the next video frame.
     @sa read()
     */
@@ -795,19 +786,6 @@ public:
     cvCloneImage and then do whatever you want with the copy.
      */
     CV_WRAP virtual bool read(OutputArray image);
-
-    /** @brief Grabs and returns the next encoded video frame.
-
-    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
-    @return `false` if no frames has been grabbed
-
-    The method returns the raw bitstream for the next video frame. If no frames is present
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @sa readRaw()
-     */
-    CV_WRAP virtual bool readRaw(OutputArray image);
 
     /** @brief Sets a property in the VideoCapture.
 
@@ -857,6 +835,104 @@ protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
     bool throwOnFail;
+};
+
+/** @brief Class for raw video capturing from video files or ip cameras.
+
+The class provides C++ API for capturing raw encoded video bitstreams from ip cameras or video files.
+
+ */
+class CV_EXPORTS_W VideoCaptureRaw : public VideoCapture
+{
+public:
+    /** @brief Default constructor
+     */
+    CV_WRAP VideoCaptureRaw();
+
+    /** @overload
+    @brief  Opens a video file or an IP video stream for raw video capturing with API Preference
+
+    @param filename it can be:
+    - name of video file (eg. `video.avi`)
+    - or URL of video stream (eg. `protocol://host:port/script_name?script_params|auth`).
+      Note that each video stream or IP camera feed has its own URL scheme. Please refer to the
+      documentation of source stream to know the right URL.
+    */
+    CV_WRAP VideoCaptureRaw(const String& filename);
+
+    /** @overload
+    @brief  Opens a camera for video capturing
+
+    @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
+    (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
+    @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
+
+    @sa This mode does not support raw video capture.
+    */
+    CV_WRAP VideoCaptureRaw(int index, int apiPreference = CAP_ANY);
+
+    /** @brief  Opens a video file or an IP video stream for raw video capturing.
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(const String& filename)
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(const String& filename);
+
+    /** @brief  Opens a camera for video capturing
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
+    @return `true` if the camera has been successfully opened.
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+
+    @sa This mode does not support raw video capture.
+    */
+    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+
+    /** @brief Grabs the next frame from video file or capturing device without decoding.
+
+    @return `true` (non-zero) in the case of success.
+
+    The method/function grabs the next frame from video file or camera and returns true (non-zero) in
+    the case of success.
+
+    The primary use of the function is to grab a frame so that it can then be retrieved by calling
+    retrieve.
+     */
+    CV_WRAP virtual bool grab();
+
+    /** @brief  Returns the encoded grabbed video frame.
+
+    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
+    @return `false` if no frames has been grabbed
+
+    The method returns the raw bitstream for the next video frame. If no frames is present
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa retrieve()
+     */
+    CV_WRAP virtual bool retrieve(OutputArray image);
+
+    /** @brief Grabs and returns the next encoded video frame.
+
+    @param [out] image containing the encoded video bitstream for the frame is returned here. If no frames has been grabbed the image will be empty.
+    @return `false` if no frames has been grabbed
+
+    The method returns the raw bitstream for the next video frame. If no frames is present
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa read()
+     */
+    CV_WRAP virtual bool read(OutputArray image);
 };
 
 class IVideoWriter;

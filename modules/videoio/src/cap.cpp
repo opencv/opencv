@@ -248,33 +248,12 @@ bool VideoCapture::retrieve(OutputArray image, int channel)
     return ret;
 }
 
-bool VideoCapture::retrieveRaw(OutputArray image)
-{
-    CV_INSTRUMENT_REGION();
-
-    bool ret = false;
-    if (!icap.empty())
-        ret = icap->retrieveEncodedFrame(image);
-    return ret;
-}
-
 bool VideoCapture::read(OutputArray image)
 {
     CV_INSTRUMENT_REGION();
 
     if(grab())
         retrieve(image);
-    else
-        image.release();
-    return !image.empty();
-}
-
-bool VideoCapture::readRaw(OutputArray image)
-{
-    CV_INSTRUMENT_REGION();
-
-    if (grab())
-        retrieveRaw(image);
     else
         image.release();
     return !image.empty();
@@ -342,7 +321,68 @@ double VideoCapture::get(int propId) const
 
 //=================================================================================================
 
+VideoCaptureRaw::VideoCaptureRaw() : VideoCapture()
+{}
 
+VideoCaptureRaw::VideoCaptureRaw(const String& filename) : VideoCapture(filename, CAP_FFMPEG)
+{
+}
+
+VideoCaptureRaw::VideoCaptureRaw(int index, int apiPreference)
+{
+    CV_Error(Error::StsNotImplemented, "Video capturing devices do not support raw video output");
+}
+
+bool VideoCaptureRaw::open(const String& filename)
+{
+    //if (apiPreference != CAP_FFMPEG) {
+    //    if (apiPreference == CAP_ANY)
+    //        apiPreference = CAP_FFMPEG;
+    //    else
+    //        CV_Error(Error::StsNotImplemented, "Raw video capture is only supported by FFMPEG backend");
+    //}
+    return VideoCapture::open(filename, CAP_FFMPEG);
+}
+
+bool VideoCaptureRaw::open(int index, int apiPreference)
+{
+    CV_Error(Error::StsNotImplemented, "Video capturing devices do not support raw video output");
+    return false;
+}
+
+bool VideoCaptureRaw::grab()
+{
+    CV_INSTRUMENT_REGION();
+    bool ret = !icap.empty() ? icap->grabEncodedFrame() : false;
+    if (!ret && throwOnFail)
+        CV_Error(Error::StsError, "");
+    return ret;
+}
+
+bool VideoCaptureRaw::retrieve(OutputArray image)
+{
+    CV_INSTRUMENT_REGION();
+
+    bool ret = false;
+    if (!icap.empty())
+        ret = icap->retrieveEncodedFrame(image);
+    return ret;
+}
+
+
+bool VideoCaptureRaw::read(OutputArray image)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (grab())
+        retrieve(image);
+    else
+        image.release();
+    return !image.empty();
+}
+
+
+//=================================================================================================
 
 VideoWriter::VideoWriter()
 {}

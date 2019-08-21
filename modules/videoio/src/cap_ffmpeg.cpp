@@ -81,7 +81,7 @@ public:
     }
     virtual bool grabFrame() CV_OVERRIDE
     {
-        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture)!=0 : false;
+        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, true)!=0 : false;
     }
     virtual bool retrieveFrame(int, cv::OutputArray frame) CV_OVERRIDE
     {
@@ -93,6 +93,10 @@ public:
             return false;
         cv::Mat(height, width, CV_MAKETYPE(CV_8U, cn), data, step).copyTo(frame);
         return true;
+    }
+    virtual bool grabEncodedFrame() CV_OVERRIDE
+    {
+        return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture, false) != 0 : false;
     }
     virtual bool retrieveEncodedFrame(cv::OutputArray frame) CV_OVERRIDE
     {
@@ -275,14 +279,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
-CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
+CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle, bool decode)
 {
     if (!handle)
         return CV_ERROR_FAIL;
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
+        return instance->grabFrame(decode) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
     catch(...)
     {

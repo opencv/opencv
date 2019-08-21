@@ -483,7 +483,7 @@ struct CvCapture_FFMPEG
 
     double getProperty(int) const;
     bool setProperty(int, double);
-    bool grabFrame();
+    bool grabFrame(const bool decode = true);
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveEncodedFrame(unsigned char** data, int* size);
 
@@ -506,15 +506,17 @@ struct CvCapture_FFMPEG
     AVCodec         * avcodec;
     int               video_stream;
     AVStream        * video_st;
+    AVBSFContext    * bsfc = 0;
     AVFrame         * picture;
     AVFrame           rgb_picture;
     int64_t           picture_pts;
 
-    AVPacket          packet;
+    AVPacket          packet, packet_filtered;
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
 
     int64_t frame_number, first_frame_number;
+    bool mp4_H264, mp4_Hevc, raw_init;
 
     double eps_zero;
 /*
@@ -539,6 +541,7 @@ void CvCapture_FFMPEG::init()
     ic = 0;
     video_stream = -1;
     video_st = 0;
+    bsfc = 0;
     picture = 0;
     picture_pts = AV_NOPTS_VALUE_;
     first_frame_number = -1;
@@ -547,11 +550,16 @@ void CvCapture_FFMPEG::init()
     filename = 0;
     memset(&packet, 0, sizeof(packet));
     av_init_packet(&packet);
+    memset(&packet_filtered, 0, sizeof(packet_filtered));
+    av_init_packet(&packet_filtered);
     img_convert_ctx = 0;
 
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
+    mp4_H264 = false;
+    mp4_Hevc = false;
+    raw_init = false;
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     dict = NULL;
@@ -618,11 +626,19 @@ void CvCapture_FFMPEG::close()
         _opencv_ffmpeg_av_packet_unref (&packet);
         packet.data = NULL;
     }
+    if (packet_filtered.data) {
+        _opencv_ffmpeg_av_packet_unref(&packet_filtered);
+        packet_filtered.data = NULL;
+    }
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
     if (dict != NULL)
        av_dict_free(&dict);
 #endif
+
+    if (bsfc) {
+        av_bsf_free(&bsfc);
+    }
 
     init();
 }
@@ -992,7 +1008,7 @@ exit_func:
 }
 
 
-bool CvCapture_FFMPEG::grabFrame()
+bool CvCapture_FFMPEG::grabFrame(const bool decode)
 {
     bool valid = false;
     int got_picture;
@@ -1042,46 +1058,53 @@ bool CvCapture_FFMPEG::grabFrame()
             continue;
         }
 
-        // Decode video frame
-        #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
+        if (decode) {
+            // Decode video frame
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
             avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
-        #elif LIBAVFORMAT_BUILD > 4628
-                avcodec_decode_video(video_st->codec,
-                                     picture, &got_picture,
-                                     packet.data, packet.size);
-        #else
-                avcodec_decode_video(&video_st->codec,
-                                     picture, &got_picture,
-                                     packet.data, packet.size);
-        #endif
+#elif LIBAVFORMAT_BUILD > 4628
+            avcodec_decode_video(video_st->codec,
+                picture, &got_picture,
+                packet.data, packet.size);
+#else
+            avcodec_decode_video(&video_st->codec,
+                picture, &got_picture,
+                packet.data, packet.size);
+#endif
 
-        // Did we get a video frame?
-        if(got_picture)
-        {
-            //picture_pts = picture->best_effort_timestamp;
-            if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
+            // Did we get a video frame?
+            if (got_picture)
+            {
+                //picture_pts = picture->best_effort_timestamp;
+                if (picture_pts == AV_NOPTS_VALUE_)
+                    picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
 
-            frame_number++;
-            valid = true;
+                frame_number++;
+                valid = true;
+            }
+            else
+            {
+                count_errs++;
+                if (count_errs > max_number_of_attempts)
+                    break;
+            }
+
+            if (valid && first_frame_number < 0)
+                first_frame_number = dts_to_frame_number(picture_pts);
         }
         else
         {
-            count_errs++;
-            if (count_errs > max_number_of_attempts)
-                break;
+            valid = packet.data;
+            break;
         }
     }
-
-    if( valid && first_frame_number < 0 )
-        first_frame_number = dts_to_frame_number(picture_pts);
 
 #if USE_AV_INTERRUPT_CALLBACK
     // deactivate interrupt callback
     interrupt_metadata.timeout_after_ms = 0;
 #endif
 
-    // return if we have a new picture or not
+    // return if we have a new frame or not
     return valid;
 }
 
@@ -1159,10 +1182,87 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
 bool CvCapture_FFMPEG::retrieveEncodedFrame(unsigned char** data, int* size)
 {
-    if (!video_st || !picture->data[0])
-        return false;
-    *data = packet.data;
-    *size = packet.size;
+    if (!ic || !video_st)  return false;
+
+    if (!raw_init) {
+        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+        mp4_H264 = eVideoCodec == AV_CODEC_ID_H264 && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+        mp4_Hevc = eVideoCodec == AV_CODEC_ID_HEVC && (
+            !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)")
+            || !strcmp(ic->iformat->long_name, "Matroska / WebM")
+            );
+        if (mp4_H264) {
+            const AVBitStreamFilter* bsf = av_bsf_get_by_name("h264_mp4toannexb");
+            if (!bsf) {
+                CV_WARN("No such bitstream filter h264_mp4toannexb");
+                return false;
+            }
+            int err = av_bsf_alloc(bsf, &bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error allocating context for bitstream buffer");
+                return false;
+            }
+            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
+            err = av_bsf_init(bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error initializing bitstream buffer");
+                return false;
+            }
+        }
+        if (mp4_Hevc) {
+            const AVBitStreamFilter* bsf = av_bsf_get_by_name("hevc_mp4toannexb");
+            if (!bsf) {
+                CV_WARN("No such bitstream filter hevc_mp4toannexb");
+                return false;
+            }
+            int err = av_bsf_alloc(bsf, &bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error allocating context for bitstream buffer");
+                return false;
+            }
+            avcodec_parameters_copy(bsfc->par_in, ic->streams[video_stream]->codecpar);
+            err = av_bsf_init(bsfc);
+            if (err < 0)
+            {
+                CV_WARN("Error initializing bitstream buffer");
+                return false;
+            }
+        }
+        raw_init = true;
+    }
+
+    if (mp4_H264 || mp4_Hevc) {
+        if (packet_filtered.data) {
+            av_packet_unref(&packet_filtered);
+        }
+        int err = av_bsf_send_packet(bsfc, &packet);
+        if (err < 0)
+        {
+            CV_WARN("Packet submission for filtering failed");
+            return false;
+        }
+        err = av_bsf_receive_packet(bsfc, &packet_filtered);
+        if (err < 0)
+        {
+            CV_WARN("Filtered packet retrieve failed");
+            return false;
+        }
+        *data = packet_filtered.data;
+        *size = packet_filtered.size;
+    }
+    else {
+        *data = packet.data;
+        *size = packet.size;
+    }
+
     return true;
 }
 
@@ -1255,6 +1355,14 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 
         switch (pix_fmt)
         {
+        case AV_PIX_FMT_YUV420P10LE:
+            return VideoChromaFormat_YUV420P10LE;
+        case AV_PIX_FMT_YUV420P12LE:
+            return VideoChromaFormat_YUV420P12LE;
+        case AV_PIX_FMT_YUV444P10LE:
+            return VideoChromaFormat_YUV444P10LE;
+        case AV_PIX_FMT_YUV444P12LE:
+            return VideoChromaFormat_YUV444P12LE;
         case AV_PIX_FMT_YUV420P:
             return VideoChromaFormat_YUV420;
         case AV_PIX_FMT_YUVJ420P:
@@ -2462,9 +2570,9 @@ double cvGetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id)
     return capture->getProperty(prop_id);
 }
 
-int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
+int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture, const bool decode)
 {
-    return capture->grabFrame();
+    return capture->grabFrame(decode);
 }
 
 int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
