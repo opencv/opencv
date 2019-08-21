@@ -416,7 +416,7 @@ bool QRDetect::localization()
    bool flag_for_next_set = true;
    bool flag_for_break = false;
    vector<vector<Point2f>> triangles;
-   int temp_num_points = 0;
+   size_t temp_num_points = 0;
    bin_barcode_temp = bin_barcode;
    for(size_t q = 0; q < num_qr; q++)
    {
@@ -497,9 +497,9 @@ bool QRDetect::localization()
                                     flag_for_out = CheckPoints(bin_barcode_fullsize, transformation_points[k]);
                                     if(flag_for_out)
                                     {
-                                        size_t b = 0;
-                                        size_t d = 0;
-                                        while ((b < tmp_localization_points.size()) || (d < 3))
+                                        int b = 0;
+                                        int d = 0;
+                                        while ((size_t(b) < tmp_localization_points.size()) || (d < 3))
                                         {
                                              if(b != ind_tmp_points[d])
                                              {
@@ -1389,7 +1389,6 @@ vector<std::string> QRCodeDetector::detectAndDecode(InputArray in,
 
     vector<Mat> points, tempPoints;
     bool ok = detect(inarr, points);
-    std::cout << "points size is" << points.size() << std::endl;
     for(size_t i = 0; i < points.size(); i++)
     {
       if(OutputArray(points[i]).needed())
