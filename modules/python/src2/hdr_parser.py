@@ -973,7 +973,7 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
-    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=False)
+    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)

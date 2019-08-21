@@ -44,6 +44,7 @@
 #include "layers_common.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
@@ -90,7 +91,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax) ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
 #ifdef HAVE_OPENCL
@@ -283,6 +285,18 @@ public:
             }
         }
     }
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        vkcom::Tensor in = VkComTensor(inputs[0]);
+        int cAxis = clamp(axisRaw, in.dimNum());
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpSoftmax(cAxis, logSoftMax));
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
+#endif  // HAVE_VULKAN
+        return Ptr<BackendNode>();
+    }
+
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

@@ -58,7 +58,7 @@ Code
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp)
 
 -   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
     @include samples/cpp/tutorial_code/ImgProc/BasicLinearTransforms.cpp
@@ -66,7 +66,7 @@ Code
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java)
 
 -   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
     @include samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/BasicLinearTransformsDemo.java
@@ -74,7 +74,7 @@ Code
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py)
 
 -   The following code performs the operation \f$g(i,j) = \alpha \cdot f(i,j) + \beta\f$ :
     @include samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/BasicLinearTransforms.py
@@ -284,15 +284,15 @@ and are not intended to be used as a replacement of a raster graphics editor!**
 ### Code
 
 @add_toggle_cpp
-Code for the tutorial is [here](https://github.com/opencv/opencv/blob/3.4/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/ImgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.cpp).
 @end_toggle
 
 @add_toggle_java
-Code for the tutorial is [here](https://github.com/opencv/opencv/blob/3.4/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/ChangingContrastBrightnessImageDemo.java).
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/java/tutorial_code/ImgProc/changing_contrast_brightness_image/ChangingContrastBrightnessImageDemo.java).
 @end_toggle
 
 @add_toggle_python
-Code for the tutorial is [here](https://github.com/opencv/opencv/blob/3.4/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.py).
+Code for the tutorial is [here](https://github.com/opencv/opencv/blob/master/samples/python/tutorial_code/imgProc/changing_contrast_brightness_image/changing_contrast_brightness_image.py).
 @end_toggle
 
 Code for the gamma correction:

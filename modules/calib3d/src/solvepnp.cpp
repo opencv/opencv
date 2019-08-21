@@ -47,7 +47,7 @@
 #include "p3p.h"
 #include "ap3p.h"
 #include "ippe.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "calib3d_c_api.h"
 
 namespace cv
 {
@@ -672,7 +672,7 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
             params.at<double>(i+3,0) = tvec.at<double>(i,0);
         }
 
-        createLMSolver(makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs), _criteria.maxCount, _criteria.epsilon)->run(params);
+        LMSolver::create(makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs), _criteria.maxCount, _criteria.epsilon)->run(params);
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
         params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());

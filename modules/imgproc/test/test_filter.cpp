@@ -50,7 +50,7 @@ public:
 
 protected:
     int prepare_test_case( int test_case_idx );
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     Size aperture_size;
@@ -76,13 +76,13 @@ CV_FilterBaseTest::CV_FilterBaseTest( bool _fp_kernel ) : fp_kernel(_fp_kernel)
 }
 
 
-int CV_FilterBaseTest::read_params( CvFileStorage* fs )
+int CV_FilterBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::ArrayTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;
@@ -1265,7 +1265,7 @@ public:
     CV_FeatureSelBaseTest( int width_factor );
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const FileStorage& fs );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     double get_success_error_level( int test_case_idx, int i, int j );
@@ -1289,15 +1289,15 @@ CV_FeatureSelBaseTest::CV_FeatureSelBaseTest( int _width_factor )
 }
 
 
-int CV_FeatureSelBaseTest::read_params( CvFileStorage* fs )
+int CV_FeatureSelBaseTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    max_aperture_size = cvReadInt( find_param( fs, "max_aperture_size" ), max_aperture_size );
+    read( find_param( fs, "max_aperture_size" ), max_aperture_size, max_aperture_size );
     max_aperture_size = cvtest::clipInt( max_aperture_size, 1, 9 );
-    max_block_size = cvReadInt( find_param( fs, "max_block_size" ), max_block_size );
+    read( find_param( fs, "max_block_size" ), max_block_size, max_block_size );
     max_block_size = cvtest::clipInt( max_aperture_size, 1, 100 );
 
     return code;

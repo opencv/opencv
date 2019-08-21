@@ -52,11 +52,7 @@
 namespace cv
 {
 
-#ifdef CV_CXX11
 struct greaterThanPtr
-#else
-struct greaterThanPtr : public std::binary_function<const float *, const float *, bool>
-#endif
 {
     bool operator () (const float * a, const float * b) const
     // Ensure a fully deterministic result of the sort
@@ -130,7 +126,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             return false;
 
         ocl::Kernel k2("maxEigenValTask", ocl::imgproc::gftt_oclsrc,
-                       format("-D OP_MAX_EIGEN_VAL -D WGS=%d -D WGS2_ALIGNED=%d -D groupnum=%d",
+                       format("-D OP_MAX_EIGEN_VAL -D WGS=%zu -D WGS2_ALIGNED=%d -D groupnum=%d",
                               wgs, wgs2_aligned, dbsize));
         if (k2.empty())
             return false;

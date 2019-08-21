@@ -201,11 +201,11 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 bool isMyriadX();
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 
 #endif  // HAVE_INF_ENGINE
 

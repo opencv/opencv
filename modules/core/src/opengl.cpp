@@ -86,7 +86,7 @@ inline static bool checkError(const char* file, const int line, const char* func
         default:
             msg = "Unknown error";
         };
-        cv::errorNoReturn(Error::OpenGlApiCallError, func, msg, file, line);
+        cv::error(Error::OpenGlApiCallError, func, msg, file, line);
     }
     return true;
 }
@@ -1804,8 +1804,8 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
 #endif
 }
 
-//void mapGLBuffer(const Buffer& buffer, UMat& dst, int accessFlags)
-UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
+//void mapGLBuffer(const Buffer& buffer, UMat& dst, AccessFlag accessFlags)
+UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
 {
     CV_UNUSED(buffer); CV_UNUSED(accessFlags);
 #if !defined(HAVE_OPENGL)
@@ -1824,7 +1824,7 @@ UMat mapGLBuffer(const Buffer& buffer, int accessFlags)
     switch (accessFlags & (ACCESS_READ|ACCESS_WRITE))
     {
     default:
-    case ACCESS_READ|ACCESS_WRITE:
+    case ACCESS_READ+ACCESS_WRITE:
         clAccessFlags = CL_MEM_READ_WRITE;
         break;
     case ACCESS_READ:

@@ -133,6 +133,8 @@ class Builder:
             "-DAPPLE_FRAMEWORK=ON",
             "-DCMAKE_INSTALL_PREFIX=install",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DOPENCV_INCLUDE_INSTALL_PATH=include",
+            "-DOPENCV_3P_LIB_INSTALL_PATH=lib/3rdparty"
         ] + ([
             "-DBUILD_SHARED_LIBS=ON",
             "-DCMAKE_MACOSX_BUNDLE=ON",
@@ -206,7 +208,7 @@ class Builder:
     def mergeLibs(self, builddir):
         res = os.path.join(builddir, "lib", "Release", "libopencv_merged.a")
         libs = glob.glob(os.path.join(builddir, "install", "lib", "*.a"))
-        libs3 = glob.glob(os.path.join(builddir, "install", "share", "OpenCV", "3rdparty", "lib", "*.a"))
+        libs3 = glob.glob(os.path.join(builddir, "install", "lib", "3rdparty", "*.a"))
         print("Merging libraries:\n\t%s" % "\n\t".join(libs + libs3), file=sys.stderr)
         execute(["libtool", "-static", "-o", res] + libs + libs3)
 

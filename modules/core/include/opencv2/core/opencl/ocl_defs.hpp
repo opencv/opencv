@@ -59,11 +59,18 @@ static inline bool isOpenCLActivated() { return false; }
     }
 #else
 #define CV_OCL_RUN_(condition, func, ...)                                   \
+try \
+{ \
     if (cv::ocl::isOpenCLActivated() && (condition) && func)                \
     {                                                                       \
         CV_IMPL_ADD(CV_IMPL_OCL);                                           \
         return __VA_ARGS__;                                                 \
-    }
+    } \
+} \
+catch (const cv::Exception& e) \
+{ \
+    CV_UNUSED(e); /* TODO: Add some logging here */ \
+}
 #endif
 
 #else

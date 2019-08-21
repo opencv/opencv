@@ -355,16 +355,16 @@ Ptr<LSTMLayer> LSTMLayer::create(const LayerParams& params)
 
 int LSTMLayer::inputNameToIndex(String inputName)
 {
-    if (inputName.toLowerCase() == "x")
+    if (toLowerCase(inputName) == "x")
         return 0;
     return -1;
 }
 
 int LSTMLayer::outputNameToIndex(const String& outputName)
 {
-    if (outputName.toLowerCase() == "h")
+    if (toLowerCase(outputName) == "h")
         return 0;
-    else if (outputName.toLowerCase() == "c")
+    else if (toLowerCase(outputName) == "c")
         return 1;
     return -1;
 }

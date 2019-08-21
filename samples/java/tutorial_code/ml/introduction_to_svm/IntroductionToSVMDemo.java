@@ -71,7 +71,7 @@ public class IntroductionToSVMDemo {
         // Show the training data
         //! [show_data]
         int thickness = -1;
-        int lineType = Core.LINE_8;
+        int lineType = Imgproc.LINE_8;
         Imgproc.circle(image, new Point(501, 10), 5, new Scalar(0, 0, 0), thickness, lineType, 0);
         Imgproc.circle(image, new Point(255, 10), 5, new Scalar(255, 255, 255), thickness, lineType, 0);
         Imgproc.circle(image, new Point(501, 255), 5, new Scalar(255, 255, 255), thickness, lineType, 0);

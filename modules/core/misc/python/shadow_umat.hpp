@@ -50,7 +50,7 @@ public:
     The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
     returned to the OpenCV buffer pool.
     */
-    CV_WRAP void* handle(int/*AccessFlag*/ accessFlags) const;
+    CV_WRAP void* handle(AccessFlag accessFlags) const;
 
     // offset of the submatrix (or 0)
     CV_PROP_RW size_t offset;

@@ -50,6 +50,7 @@
 //
 
 #include "precomp.hpp"
+#include "opencv2/imgcodecs.hpp"
 
 #include "opencv2/core/utils/filesystem.hpp"
 
@@ -59,51 +60,56 @@
 #define CV_WARN(message) CV_LOG_INFO(NULL, "CAP_IMAGES warning: %s (%s:%d)" << message)
 #endif
 
-using namespace cv;
 namespace cv {
 
-class CvCapture_Images : public CvCapture
+class CvCapture_Images: public IVideoCapture
 {
 public:
-    CvCapture_Images()
+    void init()
     {
+        filename_pattern.clear();
+        frame.release();
         currentframe = firstframe = 0;
         length = 0;
-        frame = NULL;
         grabbedInOpen = false;
+    }
+    CvCapture_Images()
+    {
+        init();
+    }
+    CvCapture_Images(const String& _filename)
+    {
+        init();
+        open(_filename);
     }
 
     virtual ~CvCapture_Images() CV_OVERRIDE
     {
         close();
     }
-
-    virtual bool open(const char* _filename);
-    virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE;
+    virtual int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_IMAGES; }
 
-    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_IMAGES; }
+    bool open(const String&);
+    void close();
 protected:
     std::string filename_pattern; // actually a printf-pattern
     unsigned currentframe;
     unsigned firstframe; // number of first frame
     unsigned length; // length of sequence
 
-    IplImage* frame;
+    Mat frame;
     bool grabbedInOpen;
 };
 
-
 void CvCapture_Images::close()
 {
-    currentframe = firstframe = 0;
-    length = 0;
-    cvReleaseImage(&frame);
+    init();
 }
-
 
 bool CvCapture_Images::grabFrame()
 {
@@ -115,21 +121,22 @@ bool CvCapture_Images::grabFrame()
         grabbedInOpen = false;
         ++currentframe;
 
-        return frame != NULL;
+        return !frame.empty();
     }
 
-    cvReleaseImage(&frame);
-    frame = cvLoadImage(filename.c_str(), CV_LOAD_IMAGE_UNCHANGED);
-    if (frame)
+    frame = imread(filename, IMREAD_UNCHANGED);
+    if( !frame.empty() )
         currentframe++;
 
-    return frame != NULL;
+    return !frame.empty();
 }
 
-IplImage* CvCapture_Images::retrieveFrame(int)
+bool CvCapture_Images::retrieveFrame(int, OutputArray out)
 {
-    return grabbedInOpen ? NULL : frame;
+    frame.copyTo(out);
+    return grabbedInOpen ? false : !frame.empty();
 }
+
 
 double CvCapture_Images::getProperty(int id) const
 {
@@ -145,9 +152,9 @@ double CvCapture_Images::getProperty(int id) const
     case CV_CAP_PROP_POS_AVI_RATIO:
         return (double)currentframe / (double)(length - 1);
     case CV_CAP_PROP_FRAME_WIDTH:
-        return frame ? frame->width : 0;
+        return frame.cols;
     case CV_CAP_PROP_FRAME_HEIGHT:
-        return frame ? frame->height : 0;
+        return frame.rows;
     case CV_CAP_PROP_FPS:
         CV_WARN("collections of images don't have framerates");
         return 1;
@@ -278,12 +285,12 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 }
 
 
-bool CvCapture_Images::open(const char * _filename)
+bool CvCapture_Images::open(const std::string& _filename)
 {
     unsigned offset = 0;
     close();
 
-    CV_Assert(_filename);
+    CV_Assert(!_filename.empty());
     filename_pattern = icvExtractPattern(_filename, &offset);
     CV_Assert(!filename_pattern.empty());
 
@@ -301,7 +308,7 @@ bool CvCapture_Images::open(const char * _filename)
             break;
         }
 
-        if (!cvHaveImageReader(filename.c_str()))
+        if(!haveImageReader(filename))
         {
             CV_LOG_INFO(NULL, "CAP_IMAGES: Stop scanning. Can't read image file: " << filename);
             break;
@@ -326,24 +333,14 @@ bool CvCapture_Images::open(const char * _filename)
     return grabRes;
 }
 
-
-CvCapture* cvCreateFileCapture_Images(const char * filename)
+bool CvCapture_Images::isOpened() const
 {
-    CvCapture_Images* capture = new CvCapture_Images;
+    return !filename_pattern.empty();
+}
 
-    try
-    {
-        if (capture->open(filename))
-            return capture;
-        delete capture;
-    }
-    catch (...)
-    {
-        delete capture;
-        throw;
-    }
-
-    return NULL;
+Ptr<IVideoCapture> create_Images_capture(const std::string &filename)
+{
+    return makePtr<CvCapture_Images>(filename);
 }
 
 //
@@ -356,6 +353,7 @@ class CvVideoWriter_Images CV_FINAL : public CvVideoWriter
 public:
     CvVideoWriter_Images()
     {
+        filename_pattern.clear();
         currentframe = 0;
     }
     virtual ~CvVideoWriter_Images() { close(); }
@@ -381,15 +379,18 @@ bool CvVideoWriter_Images::writeFrame( const IplImage* image )
     std::vector<int> image_params = params;
     image_params.push_back(0); // append parameters 'stop' mark
     image_params.push_back(0);
-    int ret = cvSaveImage(filename.c_str(), image, &image_params[0]);
+
+    cv::Mat img = cv::cvarrToMat(image);
+    bool ret = cv::imwrite(filename, img, image_params);
 
     currentframe++;
 
-    return ret > 0;
+    return ret;
 }
 
 void CvVideoWriter_Images::close()
 {
+    filename_pattern.clear();
     currentframe = 0;
     params.clear();
 }
@@ -405,7 +406,7 @@ bool CvVideoWriter_Images::open( const char* _filename )
     CV_Assert(!filename_pattern.empty());
 
     cv::String filename = cv::format(filename_pattern.c_str(), (int)currentframe);
-    if (!cvHaveImageWriter(filename.c_str()))
+    if (!cv::haveImageWriter(filename))
     {
         close();
         return false;
@@ -428,15 +429,14 @@ bool CvVideoWriter_Images::setProperty( int id, double value )
     return false; // not supported
 }
 
-
-CvVideoWriter* cvCreateVideoWriter_Images( const char* filename )
+Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int, double, const Size &, bool)
 {
     CvVideoWriter_Images *writer = new CvVideoWriter_Images;
 
     try
     {
-        if (writer->open(filename))
-            return writer;
+        if( writer->open( filename.c_str() ))
+            return makePtr<LegacyWriter>(writer);
         delete writer;
     }
     catch (...)
@@ -448,5 +448,4 @@ CvVideoWriter* cvCreateVideoWriter_Images( const char* filename )
     return 0;
 }
 
-
-} // namespace
+} // cv::

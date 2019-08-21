@@ -56,19 +56,19 @@ Code
 
 @add_toggle_cpp
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java)
+    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java)
     @include samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java
 @end_toggle
 
 @add_toggle_python
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py)
+    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py)
     @include samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py
 @end_toggle
 

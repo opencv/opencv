@@ -44,6 +44,7 @@
 //
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_ARAVIS_API
 
@@ -606,12 +607,12 @@ bool CvCaptureCAM_Aravis::startCapture()
     return false;
 }
 
-CvCapture* cvCreateCameraCapture_Aravis( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
 {
     CvCaptureCAM_Aravis* capture = new CvCaptureCAM_Aravis;
 
     if(capture->open(index)) {
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
     }
 
     delete capture;

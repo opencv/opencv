@@ -16,7 +16,7 @@
 #include <opencv2/core/utils/logger.hpp>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
@@ -24,6 +24,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
     case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
     case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
+    case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
     case DNN_BACKEND_OPENCV: *os << "OCV"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
@@ -36,6 +37,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
@@ -48,7 +50,7 @@ void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std::ostream* os)
     PrintTo(get<1>(v), os);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 
@@ -179,7 +181,8 @@ void readFileContent(const std::string& filename, CV_OUT std::vector<char>& cont
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
-        bool withCpuOCV /*= true*/
+        bool withCpuOCV /*= true*/,
+        bool withVkCom /*= true*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -208,6 +211,12 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #else
     CV_UNUSED(withInferenceEngine);
 #endif
+    if (withVkCom)
+    {
+        available = getAvailableTargets(DNN_BACKEND_VKCOM);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
+    }
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -323,6 +332,11 @@ void initDNNTests()
         // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
+#ifdef HAVE_VULKAN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
 }
 
 } // namespace

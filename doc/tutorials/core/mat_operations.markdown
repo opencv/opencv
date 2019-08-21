@@ -150,11 +150,12 @@ If we need to copy the data, this is done using, for example, cv::Mat::copyTo or
 @snippet samples/python/tutorial_code/core/mat_operations/mat_operations.py Reference counting 2
 @end_toggle
 
-To the contrary with C API where an output image had to be created by the developer, an empty output Mat
-can be supplied to each function. Each implementation calls Mat::create for a destination matrix.
-This method allocates data for a matrix if it is empty. If it is not empty and has the correct size
-and type, the method does nothing. If however, size or type are different from the input arguments, the
-data is deallocated (and lost) and a new data is allocated. For example:
+An empty output Mat can be supplied to each function.
+Each implementation calls Mat::create for a destination matrix.
+This method allocates data for a matrix if it is empty.
+If it is not empty and has the correct size and type, the method does nothing.
+If however, size or type are different from the input arguments, the data is deallocated (and lost) and a new data is allocated.
+For example:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/core/mat_operations/mat_operations.cpp Reference counting 3
@@ -198,12 +199,6 @@ Selecting a region of interest:
 @add_toggle_python
 @snippet samples/python/tutorial_code/core/mat_operations/mat_operations.py Select ROI
 @end_toggle
-
-A conversion from Mat to C API data structures (**C++ only**):
-
-@snippet samples/cpp/tutorial_code/core/mat_operations/mat_operations.cpp C-API conversion
-
-Note that there is no data copying here.
 
 Conversion from color to greyscale:
 

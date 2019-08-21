@@ -295,11 +295,19 @@ static bool between( Point2f a, Point2f b, Point2f c )
         ((a.y >= c.y) && (c.y >= b.y));
 }
 
-static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+enum LineSegmentIntersection
 {
-    char code = 'e';
+    LS_NO_INTERSECTION = 0,
+    LS_SINGLE_INTERSECTION = 1,
+    LS_OVERLAP = 2,
+    LS_ENDPOINT_INTERSECTION = 3
+};
+
+static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+{
+    LineSegmentIntersection code = LS_OVERLAP;
     if( areaSign(a, b, c) != 0 )
-        code = '0';
+        code = LS_NO_INTERSECTION;
     else if( between(a, b, c) && between(a, b, d))
         p = c, q = d;
     else if( between(c, d, a) && between(c, d, b))
@@ -313,60 +321,33 @@ static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p,
     else if( between(a, b, d) && between(c, d, a))
         p = d, q = a;
     else
-        code = '0';
+        code = LS_NO_INTERSECTION;
     return code;
 }
 
-//---------------------------------------------------------------------
-// segSegInt: Finds the point of intersection p between two closed
-// segments ab and cd.  Returns p and a char with the following meaning:
-// 'e': The segments collinearly overlap, sharing a point.
-// 'v': An endpoint (vertex) of one segment is on the other segment,
-// but 'e' doesn't hold.
-// '1': The segments intersect properly (i.e., they share a point and
-// neither 'v' nor 'e' holds).
-// '0': The segments do not intersect (i.e., they share no points).
-// Note that two collinear segments that share just one point, an endpoint
-// of each, returns 'e' rather than 'v' as one might expect.
-//---------------------------------------------------------------------
-static char segSegInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+// Finds intersection of two line segments: (a, b) and (c, d).
+static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
+                                                      Point2f d, Point2f& p, Point2f& q )
 {
-    double  s, t;       // The two parameters of the parametric eqns.
-    double num, denom;  // Numerator and denoninator of equations.
-    char code = '?';    // Return char characterizing intersection.
-
-    denom = a.x * (double)( d.y - c.y ) +
-    b.x * (double)( c.y - d.y ) +
-    d.x * (double)( b.y - a.y ) +
-    c.x * (double)( a.y - b.y );
+    double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
+                   d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
 
     // If denom is zero, then segments are parallel: handle separately.
-    if (denom == 0.0)
+    if( denom == 0. )
         return parallelInt(a, b, c, d, p, q);
 
-    num =    a.x * (double)( d.y - c.y ) +
-    c.x * (double)( a.y - d.y ) +
-    d.x * (double)( c.y - a.y );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    s = num / denom;
+    double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
+    double s = num / denom;
 
-    num = -( a.x * (double)( c.y - b.y ) +
-            b.x * (double)( a.y - c.y ) +
-            c.x * (double)( b.y - a.y ) );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    t = num / denom;
-
-    if      ( (0.0 < s) && (s < 1.0) &&
-             (0.0 < t) && (t < 1.0) )
-        code = '1';
-    else if ( (0.0 > s) || (s > 1.0) ||
-             (0.0 > t) || (t > 1.0) )
-        code = '0';
+    num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
+    double t = num / denom;
 
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
+    q = p;
 
-    return code;
+    return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
+           s == 0. || s == 1. || t == 0. || t == 1. ? LS_ENDPOINT_INTERSECTION : LS_SINGLE_INTERSECTION;
 }
 
 static tInFlag inOut( Point2f p, tInFlag inflag, int aHB, int bHA, Point2f*& result )
@@ -424,8 +405,8 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
 
         // If A & B intersect, update inflag.
         Point2f p, q;
-        int code = segSegInt( P[a1], P[a], Q[b1], Q[b], p, q );
-        if( code == '1' || code == 'v' )
+        LineSegmentIntersection code = intersectLineSegments( P[a1], P[a], Q[b1], Q[b], p, q );
+        if( code == LS_SINGLE_INTERSECTION || code == LS_ENDPOINT_INTERSECTION )
         {
             if( inflag == Unknown && FirstPoint )
             {
@@ -440,7 +421,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         //-----Advance rules-----
 
         // Special case: A & B overlap and oppositely oriented.
-        if( code == 'e' && A.ddot(B) < 0 )
+        if( code == LS_OVERLAP && A.ddot(B) < 0 )
         {
             addSharedSeg( p, q, result );
             return (int)(result - result0);

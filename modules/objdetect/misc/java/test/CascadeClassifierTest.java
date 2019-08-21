@@ -36,9 +36,9 @@ public class CascadeClassifierTest extends OpenCVTestCase {
 
         Mat greyLena = new Mat();
         Imgproc.cvtColor(rgbLena, greyLena, Imgproc.COLOR_RGB2GRAY);
+        Imgproc.equalizeHist(greyLena, greyLena);
 
-        // TODO: doesn't detect with 1.1 scale
-        cc.detectMultiScale(greyLena, faces, 1.09, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30), new Size());
+        cc.detectMultiScale(greyLena, faces, 1.1, 3, Objdetect.CASCADE_SCALE_IMAGE, new Size(30, 30), new Size());
         assertEquals(1, faces.total());
     }
 

@@ -101,19 +101,19 @@ Code
 
 @add_toggle_cpp
 The tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
+[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ImgProc/Threshold.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Threshold.cpp
 @end_toggle
 
 @add_toggle_java
 The tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/threshold/Threshold.java)
+[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/threshold/Threshold.java)
 @include samples/java/tutorial_code/ImgProc/threshold/Threshold.java
 @end_toggle
 
 @add_toggle_python
 The tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/threshold/threshold.py)
+[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/threshold/threshold.py)
 @include samples/python/tutorial_code/imgProc/threshold/threshold.py
 @end_toggle
 

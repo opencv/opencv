@@ -37,6 +37,16 @@ if(CUDA_FOUND)
     set(HAVE_CUBLAS 1)
   endif()
 
+  if(WITH_CUDNN)
+      set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+      find_host_package(CUDNN "${MIN_VER_CUDNN}")
+      list(REMOVE_AT CMAKE_MODULE_PATH 0)
+
+      if(CUDNN_FOUND)
+        set(HAVE_CUDNN 1)
+      endif()
+  endif()
+
   if(WITH_NVCUVID)
     find_cuda_helper_libs(nvcuvid)
     if(WIN32)
@@ -70,6 +80,12 @@ if(CUDA_FOUND)
     unset(CUDA_ARCH_PTX CACHE)
   endif()
 
+  SET(DETECT_ARCHS_COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run")
+  if(WIN32 AND CMAKE_LINKER) #Workaround for VS cl.exe not being in the env. path
+    get_filename_component(host_compiler_bindir ${CMAKE_LINKER} DIRECTORY)
+    SET(DETECT_ARCHS_COMMAND ${DETECT_ARCHS_COMMAND} "-ccbin" "${host_compiler_bindir}")
+  endif()
+
   set(__cuda_arch_ptx "")
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin "2.0")
@@ -84,10 +100,11 @@ if(CUDA_FOUND)
   elseif(CUDA_GENERATION STREQUAL "Turing")
     set(__cuda_arch_bin "7.5")
   elseif(CUDA_GENERATION STREQUAL "Auto")
-    execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+    execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                      RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                      ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
     if(NOT _nvcc_res EQUAL 0)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
@@ -101,10 +118,11 @@ if(CUDA_FOUND)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
     elseif(AARCH64)
-      execute_process( COMMAND "${CUDA_NVCC_EXECUTABLE}" ${CUDA_NVCC_FLAGS} "${OpenCV_SOURCE_DIR}/cmake/checks/OpenCVDetectCudaArch.cu" "--run"
+      execute_process( COMMAND ${DETECT_ARCHS_COMMAND}
                        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/"
                        RESULT_VARIABLE _nvcc_res OUTPUT_VARIABLE _nvcc_out
                        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE ".*\n" "" _nvcc_out "${_nvcc_out}") #Strip leading warning messages, if any
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
         set(__cuda_arch_bin "5.3 6.2 7.2")
@@ -244,7 +262,7 @@ if(CUDA_FOUND)
     endif()
 
     if(UNIX OR APPLE)
-      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC --std=c++11)
     endif()
     if(APPLE)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
@@ -285,6 +303,13 @@ if(HAVE_CUDA)
     endforeach()
   endif()
 
+  if(HAVE_CUDNN)
+    foreach(p ${CUDNN_LIBRARIES})
+      get_filename_component(_tmp ${p} PATH)
+      list(APPEND CUDA_LIBS_PATH ${_tmp})
+    endforeach()
+  endif()
+
   if(HAVE_CUFFT)
     foreach(p ${CUDA_cufft_LIBRARY})
       get_filename_component(_tmp ${p} PATH)
@@ -303,9 +328,61 @@ if(HAVE_CUDA)
     set(CUDA_cublas_LIBRARY_ABS ${CUDA_cublas_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cublas_LIBRARY ${CUDA_cublas_LIBRARY})
   endif()
-
+  if(HAVE_CUDNN)
+    set(CUDNN_LIBRARIES_ABS ${CUDNN_LIBRARIES})
+    ocv_convert_to_lib_name(CUDNN_LIBRARIES ${CUDNN_LIBRARIES})
+  endif()
   if(HAVE_CUFFT)
     set(CUDA_cufft_LIBRARY_ABS ${CUDA_cufft_LIBRARY})
     ocv_convert_to_lib_name(CUDA_cufft_LIBRARY ${CUDA_cufft_LIBRARY})
   endif()
+endif()
+
+
+# ----------------------------------------------------------------------------
+# Add CUDA libraries (needed for apps/tools, samples)
+# ----------------------------------------------------------------------------
+if(HAVE_CUDA)
+  # details: https://github.com/NVIDIA/nvidia-docker/issues/775
+  if(" ${CUDA_CUDA_LIBRARY}" MATCHES "/stubs/libcuda.so" AND NOT OPENCV_SKIP_CUDA_STUB_WORKAROUND)
+    set(CUDA_STUB_ENABLED_LINK_WORKAROUND 1)
+    if(EXISTS "${CUDA_CUDA_LIBRARY}" AND NOT OPENCV_SKIP_CUDA_STUB_WORKAROUND_RPATH_LINK)
+      set(CUDA_STUB_TARGET_PATH "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CUDA_CUDA_LIBRARY}" "${CUDA_STUB_TARGET_PATH}/libcuda.so.1"
+          RESULT_VARIABLE CUDA_STUB_SYMLINK_RESULT)
+      if(NOT CUDA_STUB_SYMLINK_RESULT EQUAL 0)
+        execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CUDA_CUDA_LIBRARY}" "${CUDA_STUB_TARGET_PATH}/libcuda.so.1"
+          RESULT_VARIABLE CUDA_STUB_COPY_RESULT)
+        if(NOT CUDA_STUB_COPY_RESULT EQUAL 0)
+          set(CUDA_STUB_ENABLED_LINK_WORKAROUND 0)
+        endif()
+      endif()
+      if(CUDA_STUB_ENABLED_LINK_WORKAROUND)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath-link,\"${CUDA_STUB_TARGET_PATH}\"")
+      endif()
+    else()
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-shlib-undefined")
+    endif()
+    if(NOT CUDA_STUB_ENABLED_LINK_WORKAROUND)
+      message(WARNING "CUDA: workaround for stubs/libcuda.so.1 is not applied")
+    endif()
+  endif()
+
+  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  if(HAVE_CUBLAS)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
+  endif()
+  if(HAVE_CUDNN)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDNN_LIBRARIES})
+  endif()
+  if(HAVE_CUFFT)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
+  endif()
+  foreach(p ${CUDA_LIBS_PATH})
+    if(MSVC AND CMAKE_GENERATOR MATCHES "Ninja|JOM")
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CMAKE_LIBRARY_PATH_FLAG}"${p}")
+    else()
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CMAKE_LIBRARY_PATH_FLAG}${p})
+    endif()
+  endforeach()
 endif()

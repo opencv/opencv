@@ -144,8 +144,8 @@ public:
     CV_WRAP virtual void save( const char* filename, const char* name=0 ) const;
     CV_WRAP virtual void load( const char* filename, const char* name=0 );
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
 
 protected:
     const char* default_model_name;
@@ -210,8 +210,8 @@ public:
                        bool update=false );
     CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0, CV_OUT cv::Mat* results_prob=0 ) const;
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
 
 protected:
     int     var_count, var_all;
@@ -521,8 +521,8 @@ public:
 
     static CvParamGrid get_default_grid( int param_id );
 
-    virtual void write( CvFileStorage* storage, const char* name ) const;
-    virtual void read( CvFileStorage* storage, CvFileNode* node );
+    virtual void write( cv::FileStorage& storage, const char* name ) const;
+    virtual void read( const cv::FileNode& node );
     CV_WRAP int get_var_count() const { return var_idx ? var_idx->cols : var_all; }
 
 protected:
@@ -538,8 +538,8 @@ protected:
 
     virtual float predict( const float* row_sample, int row_len, bool returnDFVal=false ) const;
 
-    virtual void write_params( CvFileStorage* fs ) const;
-    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+    virtual void write_params( cv::FileStorage& fs ) const;
+    virtual void read_params( const cv::FileNode& node );
 
     void optimize_linear_svm();
 
@@ -673,8 +673,8 @@ struct CvDTreeTrainData
 
     virtual CvDTreeNode* subsample_data( const CvMat* _subsample_idx );
 
-    virtual void write_params( CvFileStorage* fs ) const;
-    virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+    virtual void write_params( cv::FileStorage& fs ) const;
+    virtual void read_params( const cv::FileNode& node );
 
     // release all the data
     virtual void clear();
@@ -1738,7 +1738,7 @@ protected:
     // Read parameters of the gtb model and data.
     //
     // API
-    // virtual void read_params( CvFileStorage* fs );
+    // virtual void read_params( const cv::FileStorage& fs );
     //
     // INPUT
     // fs           - file storage to read parameters from.
@@ -2033,7 +2033,8 @@ typedef CvANN_MLP NeuralNet_MLP;
 typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
 
-template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const;
+template<> struct DefaultDeleter<CvDTreeSplit>{ void operator ()(CvDTreeSplit* obj) const; };
+
 }
 
 #endif // __cplusplus

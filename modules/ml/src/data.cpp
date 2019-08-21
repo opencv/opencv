@@ -52,13 +52,6 @@ static const int VAR_MISSED = VAR_ORDERED;
 
 TrainData::~TrainData() {}
 
-Mat TrainData::getTestSamples() const
-{
-    Mat idx = getTestSampleIdx();
-    Mat samples = getSamples();
-    return idx.empty() ? Mat() : getSubMatrix(samples, idx, getLayout());
-}
-
 Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 {
     if (!(vec.cols == 1 || vec.rows == 1))
@@ -117,6 +110,7 @@ Mat TrainData::getSubMatrix(const Mat& m, const Mat& idx, int layout)
     CV_Error(Error::StsInternal, "");
 }
 
+
 class TrainDataImpl CV_FINAL : public TrainData
 {
 public:
@@ -151,6 +145,12 @@ public:
     int getNAllVars() const CV_OVERRIDE
     {
         return layout == ROW_SAMPLE ? samples.cols : samples.rows;
+    }
+
+    Mat getTestSamples() const CV_OVERRIDE
+    {
+        Mat idx = getTestSampleIdx();
+        return idx.empty() ? Mat() : getSubMatrix(samples, idx, getLayout());
     }
 
     Mat getSamples() const CV_OVERRIDE { return samples; }
@@ -985,6 +985,27 @@ public:
         }
     }
 
+    void getNames(std::vector<String>& names) const CV_OVERRIDE
+    {
+        size_t n = nameMap.size();
+        TrainDataImpl::MapType::const_iterator it = nameMap.begin(),
+                                               it_end = nameMap.end();
+        names.resize(n+1);
+        names[0] = "?";
+        for( ; it != it_end; ++it )
+        {
+            String s = it->first;
+            int label = it->second;
+            CV_Assert( label > 0 && label <= (int)n );
+            names[label] = s;
+        }
+    }
+
+    Mat getVarSymbolFlags() const CV_OVERRIDE
+    {
+        return varSymbolFlags;
+    }
+
     FILE* file;
     int layout;
     Mat samples, missing, varType, varIdx, varSymbolFlags, responses, missingSubst;
@@ -994,30 +1015,6 @@ public:
     MapType nameMap;
 };
 
-void TrainData::getNames(std::vector<String>& names) const
-{
-    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
-    CV_Assert(impl != 0);
-    size_t n = impl->nameMap.size();
-    TrainDataImpl::MapType::const_iterator it = impl->nameMap.begin(),
-                                           it_end = impl->nameMap.end();
-    names.resize(n+1);
-    names[0] = "?";
-    for( ; it != it_end; ++it )
-    {
-        String s = it->first;
-        int label = it->second;
-        CV_Assert( label > 0 && label <= (int)n );
-        names[label] = s;
-    }
-}
-
-Mat TrainData::getVarSymbolFlags() const
-{
-    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
-    CV_Assert(impl != 0);
-    return impl->varSymbolFlags;
-}
 
 Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
                                       int headerLines,

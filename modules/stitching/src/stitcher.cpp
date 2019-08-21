@@ -44,67 +44,47 @@
 
 namespace cv {
 
-Stitcher Stitcher::createDefault(bool try_use_gpu)
-{
-    Stitcher stitcher;
-    stitcher.setRegistrationResol(0.6);
-    stitcher.setSeamEstimationResol(0.1);
-    stitcher.setCompositingResol(ORIG_RESOL);
-    stitcher.setPanoConfidenceThresh(1);
-    stitcher.setWaveCorrection(true);
-    stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
-    stitcher.setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-    if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
-    {
-#ifdef HAVE_OPENCV_XFEATURES2D
-        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinderGpu>());
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+// Stitcher::ORIG_RESOL is initialized in stitching.hpp.
 #else
-        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
+const double Stitcher::ORIG_RESOL = -1.0;
 #endif
-        stitcher.setWarper(makePtr<SphericalWarperGpu>());
-        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
-    }
-    else
-#endif
-    {
-#ifdef HAVE_OPENCV_XFEATURES2D
-        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
-#else
-        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
-#endif
-        stitcher.setWarper(makePtr<SphericalWarper>());
-        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
-    }
 
-    stitcher.setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
-    stitcher.setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
-
-    stitcher.work_scale_ = 1;
-    stitcher.seam_scale_ = 1;
-    stitcher.seam_work_aspect_ = 1;
-    stitcher.warped_image_scale_ = 1;
-
-    return stitcher;
-}
-
-
-Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
+Ptr<Stitcher> Stitcher::create(Mode mode)
 {
-    Stitcher stit = createDefault(try_use_gpu);
-    Ptr<Stitcher> stitcher = makePtr<Stitcher>(stit);
+    Ptr<Stitcher> stitcher = makePtr<Stitcher>();
+
+    stitcher->setRegistrationResol(0.6);
+    stitcher->setSeamEstimationResol(0.1);
+    stitcher->setCompositingResol(ORIG_RESOL);
+    stitcher->setPanoConfidenceThresh(1);
+    stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
+    stitcher->setBlender(makePtr<detail::MultiBandBlender>(false));
+    stitcher->setFeaturesFinder(ORB::create());
+    stitcher->setInterpolationFlags(INTER_LINEAR);
+
+    stitcher->work_scale_ = 1;
+    stitcher->seam_scale_ = 1;
+    stitcher->seam_work_aspect_ = 1;
+    stitcher->warped_image_scale_ = 1;
 
     switch (mode)
     {
     case PANORAMA: // PANORAMA is the default
-        // already setup
+        // mostly already setup
+        stitcher->setEstimator(makePtr<detail::HomographyBasedEstimator>());
+        stitcher->setWaveCorrection(true);
+        stitcher->setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
+        stitcher->setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(false));
+        stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
+        stitcher->setWarper(makePtr<SphericalWarper>());
+        stitcher->setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
     break;
 
     case SCANS:
+        stitcher->setEstimator(makePtr<detail::AffineBasedEstimator>());
         stitcher->setWaveCorrection(false);
-        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, try_use_gpu));
+        stitcher->setFeaturesMatcher(makePtr<detail::AffineBestOf2NearestMatcher>(false, false));
         stitcher->setBundleAdjuster(makePtr<detail::BundleAdjusterAffinePartial>());
         stitcher->setWarper(makePtr<AffineWarper>());
         stitcher->setExposureCompensator(makePtr<detail::NoExposureCompensator>());
@@ -119,20 +99,12 @@ Ptr<Stitcher> Stitcher::create(Mode mode, bool try_use_gpu)
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
-{
-    CV_INSTRUMENT_REGION();
-
-    return estimateTransform(images, std::vector<std::vector<Rect> >());
-}
-
-
-Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
+Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, InputArrayOfArrays masks)
 {
     CV_INSTRUMENT_REGION();
 
     images.getUMatVector(imgs_);
-    rois_ = rois;
+    masks.getUMatVector(masks_);
 
     Status status;
 
@@ -220,7 +192,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         K(1,1) *= (float)seam_work_aspect_;
         K(1,2) *= (float)seam_work_aspect_;
 
-        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, interp_flags_, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
@@ -332,7 +304,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         int64 pt = getTickCount();
 #endif
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+        w->warp(img, K, cameras_[img_idx].R, interp_flags_, BORDER_REFLECT, img_warped);
         LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -391,8 +363,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #if ENABLE_LOG
         int64 blend_t = getTickCount();
 #endif
-    UMat result, result_mask;
-    blender_->blend(result, result_mask);
+    UMat result;
+    blender_->blend(result, result_mask_);
     LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -407,20 +379,15 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
 Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
-    CV_INSTRUMENT_REGION();
-
-    Status status = estimateTransform(images);
-    if (status != OK)
-        return status;
-    return composePanorama(pano);
+    return stitch(images, noArray(), pano);
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, InputArrayOfArrays masks, OutputArray pano)
 {
     CV_INSTRUMENT_REGION();
 
-    Status status = estimateTransform(images, rois);
+    Status status = estimateTransform(images, masks);
     if (status != OK)
         return status;
     return composePanorama(pano);
@@ -440,7 +407,6 @@ Stitcher::Status Stitcher::matchImages()
     seam_scale_ = 1;
     bool is_work_scale_set = false;
     bool is_seam_scale_set = false;
-    UMat full_img, img;
     features_.resize(imgs_.size());
     seam_est_imgs_.resize(imgs_.size());
     full_img_sizes_.resize(imgs_.size());
@@ -451,16 +417,14 @@ Stitcher::Status Stitcher::matchImages()
 #endif
 
     std::vector<UMat> feature_find_imgs(imgs_.size());
-    std::vector<std::vector<Rect> > feature_find_rois(rois_.size());
+    std::vector<UMat> feature_find_masks(masks_.size());
 
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
-        full_img = imgs_[i];
-        full_img_sizes_[i] = full_img.size();
-
+        full_img_sizes_[i] = imgs_[i].size();
         if (registr_resol_ < 0)
         {
-            img = full_img;
+            feature_find_imgs[i] = imgs_[i];
             work_scale_ = 1;
             is_work_scale_set = true;
         }
@@ -468,50 +432,34 @@ Stitcher::Status Stitcher::matchImages()
         {
             if (!is_work_scale_set)
             {
-                work_scale_ = std::min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img.size().area()));
+                work_scale_ = std::min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img_sizes_[i].area()));
                 is_work_scale_set = true;
             }
-            resize(full_img, img, Size(), work_scale_, work_scale_, INTER_LINEAR_EXACT);
+            resize(imgs_[i], feature_find_imgs[i], Size(), work_scale_, work_scale_, INTER_LINEAR_EXACT);
         }
         if (!is_seam_scale_set)
         {
-            seam_scale_ = std::min(1.0, std::sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
+            seam_scale_ = std::min(1.0, std::sqrt(seam_est_resol_ * 1e6 / full_img_sizes_[i].area()));
             seam_work_aspect_ = seam_scale_ / work_scale_;
             is_seam_scale_set = true;
         }
 
-        if (rois_.empty())
-            feature_find_imgs[i] = img;
-        else
+        if (!masks_.empty())
         {
-            feature_find_rois[i].resize(rois_[i].size());
-            for (size_t j = 0; j < rois_[i].size(); ++j)
-            {
-                Point tl(cvRound(rois_[i][j].x * work_scale_), cvRound(rois_[i][j].y * work_scale_));
-                Point br(cvRound(rois_[i][j].br().x * work_scale_), cvRound(rois_[i][j].br().y * work_scale_));
-                feature_find_rois[i][j] = Rect(tl, br);
-            }
-            feature_find_imgs[i] = img;
+            resize(masks_[i], feature_find_masks[i], Size(), work_scale_, work_scale_, INTER_NEAREST);
         }
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
-        resize(full_img, img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
-        seam_est_imgs_[i] = img.clone();
+        resize(imgs_[i], seam_est_imgs_[i], Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
     }
 
     // find features possibly in parallel
-    if (rois_.empty())
-        (*features_finder_)(feature_find_imgs, features_);
-    else
-        (*features_finder_)(feature_find_imgs, features_, feature_find_rois);
+    detail::computeImageFeatures(features_finder_, feature_find_imgs, features_, feature_find_masks);
 
     // Do it to save memory
-    features_finder_->collectGarbage();
-    full_img.release();
-    img.release();
     feature_find_imgs.clear();
-    feature_find_rois.clear();
+    feature_find_masks.clear();
 
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
@@ -550,16 +498,8 @@ Stitcher::Status Stitcher::matchImages()
 
 Stitcher::Status Stitcher::estimateCameraParams()
 {
-    /* TODO OpenCV ABI 4.x
-    get rid of this dynamic_cast hack and use estimator_
-    */
-    Ptr<detail::Estimator> estimator;
-    if (dynamic_cast<detail::AffineBestOf2NearestMatcher*>(features_matcher_.get()))
-        estimator = makePtr<detail::AffineBasedEstimator>();
-    else
-        estimator = makePtr<detail::HomographyBasedEstimator>();
-
-    if (!(*estimator)(features_, pairwise_matches_, cameras_))
+    // estimate homography in global frame
+    if (!(*estimator_)(features_, pairwise_matches_, cameras_))
         return ERR_HOMOGRAPHY_EST_FAIL;
 
     for (size_t i = 0; i < cameras_.size(); ++i)
@@ -602,17 +542,17 @@ Stitcher::Status Stitcher::estimateCameraParams()
 }
 
 
-Ptr<Stitcher> createStitcher(bool try_use_gpu)
+CV_DEPRECATED Ptr<Stitcher> createStitcher(bool /*ignored*/)
 {
     CV_INSTRUMENT_REGION();
 
-    return Stitcher::create(Stitcher::PANORAMA, try_use_gpu);
+    return Stitcher::create(Stitcher::PANORAMA);
 }
 
-Ptr<Stitcher> createStitcherScans(bool try_use_gpu)
+CV_DEPRECATED Ptr<Stitcher> createStitcherScans(bool /*ignored*/)
 {
     CV_INSTRUMENT_REGION();
 
-    return Stitcher::create(Stitcher::SCANS, try_use_gpu);
+    return Stitcher::create(Stitcher::SCANS);
 }
 } // namespace cv

@@ -138,13 +138,8 @@ bool CV_Affine3D_EstTest::testNPoints()
     std::transform(fpts.ptr<Point3f>(), fpts.ptr<Point3f>() + n, tpts.ptr<Point3f>(), WrapAff(aff));
 
     /* adding noise*/
-#ifdef CV_CXX11
     std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m,
         [=] (const Point3f& pt) -> Point3f { return Noise(noise_level)(pt + shift_outl); });
-#else
-    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, std::bind2nd(std::plus<Point3f>(), shift_outl));
-    std::transform(tpts.ptr<Point3f>() + m, tpts.ptr<Point3f>() + n, tpts.ptr<Point3f>() + m, Noise(noise_level));
-#endif
 
     Mat aff_est;
     vector<uchar> outl;

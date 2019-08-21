@@ -20,14 +20,14 @@ python object_detection.py opencv_fd -h
 ```
 
 #### Face detection
-[An origin model](https://github.com/opencv/opencv/tree/3.4/samples/dnn/face_detector)
+[An origin model](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector)
 with single precision floating point weights has been quantized using [TensorFlow framework](https://www.tensorflow.org/).
 To achieve the best accuracy run the model on BGR images resized to `300x300` applying mean subtraction
 of values `(104, 177, 123)` for each blue, green and red channels correspondingly.
 
 The following are accuracy metrics obtained using [COCO object detection evaluation
 tool](http://cocodataset.org/#detections-eval) on [FDDB dataset](http://vis-www.cs.umass.edu/fddb/)
-(see [script](https://github.com/opencv/opencv/blob/3.4/modules/dnn/misc/face_detector_accuracy.py))
+(see [script](https://github.com/opencv/opencv/blob/master/modules/dnn/misc/face_detector_accuracy.py))
 applying resize to `300x300` and keeping an origin images' sizes.
 ```
 AP - Average Precision                            | FP32/FP16 | UINT8          | FP32/FP16 | UINT8          |
@@ -51,4 +51,4 @@ AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          |
 * [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
-* [Names of classes from different datasets](https://github.com/opencv/opencv/tree/3.4/samples/data/dnn)
+* [Names of classes from different datasets](https://github.com/opencv/opencv/tree/master/samples/data/dnn)

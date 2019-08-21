@@ -8,12 +8,17 @@ log.basicConfig(format='%(message)s', level=log.DEBUG)
 
 CMAKE_TEMPLATE='''\
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+# Enable C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 SET(PROJECT_NAME hello-android)
 PROJECT(${PROJECT_NAME})
+
 FIND_PACKAGE(OpenCV REQUIRED %(libset)s)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 FILE(GLOB srcs "*.cpp")
+
 ADD_EXECUTABLE(${PROJECT_NAME} ${srcs})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OpenCV_LIBS} dl z)
 '''
@@ -28,9 +33,9 @@ int main(int argc, char* argv[])
 {
   (void)argc; (void)argv;
   printf("%s\\n", message);
-  Size textsize = getTextSize(message, CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+  Size textsize = getTextSize(message, FONT_HERSHEY_COMPLEX, 3, 5, 0);
   Mat img(textsize.height + 20, textsize.width + 20, CV_32FC1, Scalar(230,230,230));
-  putText(img, message, Point(10, img.rows - 10), CV_FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
+  putText(img, message, Point(10, img.rows - 10), FONT_HERSHEY_COMPLEX, 3, Scalar(0, 0, 0), 5);
   imwrite("/mnt/sdcard/HelloAndroid.png", img);
   return 0;
 }
@@ -39,18 +44,29 @@ int main(int argc, char* argv[])
 #===================================================================================================
 
 class TestCmakeBuild(unittest.TestCase):
-    def __init__(self, libset, abi, toolchain, opencv_cmake_path, workdir, *args, **kwargs):
+    def __init__(self, libset, abi, cmake_vars, opencv_cmake_path, workdir, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
         self.libset = libset
         self.abi = abi
-        self.toolchain = toolchain
+        self.cmake_vars = cmake_vars
         self.opencv_cmake_path = opencv_cmake_path
         self.workdir = workdir
         self.srcdir = os.path.join(self.workdir, "src")
         self.bindir = os.path.join(self.workdir, "build")
 
     def shortDescription(self):
-        return "ABI: %s, TOOLCHAIN: %s, LIBSET: %s" % (self.abi, self.toolchain, self.libset)
+        return "ABI: %s, LIBSET: %s" % (self.abi, self.libset)
+
+    def getCMakeToolchain(self):
+        if True:
+            toolchain = os.path.join(os.environ['ANDROID_NDK'], 'build', 'cmake', 'android.toolchain.cmake')
+            if os.path.exists(toolchain):
+                return toolchain
+        toolchain = os.path.join(self.opencv_cmake_path, "android.toolchain.cmake")
+        if os.path.exists(toolchain):
+            return toolchain
+        else:
+            raise Exception("Can't find toolchain")
 
     def gen_cmakelists(self):
         return CMAKE_TEMPLATE % {"libset": self.libset}
@@ -73,43 +89,40 @@ class TestCmakeBuild(unittest.TestCase):
         os.chdir(self.bindir)
 
     def tearDown(self):
-        if os.path.exists(self.workdir):
-            shutil.rmtree(self.workdir)
+        pass
+        #if os.path.exists(self.workdir):
+        #    shutil.rmtree(self.workdir)
 
     def runTest(self):
         cmd = [
             "cmake",
             "-GNinja",
             "-DOpenCV_DIR=%s" % self.opencv_cmake_path,
-            "-DANDROID_ABI=%s" % self.abi,
-            "-DCMAKE_TOOLCHAIN_FILE=%s" % os.path.join(self.opencv_cmake_path, "android.toolchain.cmake"),
-            "-DANDROID_TOOLCHAIN_NAME=%s" % self.toolchain,
+            "-DCMAKE_TOOLCHAIN_FILE=%s" % self.getCMakeToolchain(),
             self.srcdir
-        ]
+        ] + [ "-D{}={}".format(key, value) for key, value in self.cmake_vars.items() ]
         log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "cmake failed")
 
-        cmd = ["ninja"]
+        cmd = ["ninja", "-v"]
         log.info("Executing: %s" % cmd)
         retcode = subprocess.call(cmd)
         self.assertEqual(retcode, 0, "make failed")
 
 def suite(workdir, opencv_cmake_path):
     abis = {
-        "armeabi":"arm-linux-androideabi-4.8",
-        "armeabi-v7a":"arm-linux-androideabi-4.8",
-        "arm64-v8a":"aarch64-linux-android-4.9",
-        "x86":"x86-4.8",
-        "x86_64":"x86_64-4.9",
-        "mips":"mipsel-linux-android-4.8",
-        "mips64":"mips64el-linux-android-4.9"
+        "armeabi-v7a": { "ANDROID_ABI": "armeabi-v7a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "arm64-v8a": { "ANDROID_ABI": "arm64-v8a", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "x86": { "ANDROID_ABI": "x86", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
+        "x86_64": { "ANDROID_ABI": "x86_64", "ANDROID_TOOLCHAIN": "clang", "ANDROID_STL": "c++_shared", 'ANDROID_NATIVE_API_LEVEL': "21" },
     }
 
     suite = unittest.TestSuite()
     for libset in ["", "opencv_java"]:
-        for abi, toolchain in abis.items():
-            suite.addTest(TestCmakeBuild(libset, abi, toolchain, opencv_cmake_path, workdir))
+        for abi, cmake_vars in abis.items():
+            suite.addTest(TestCmakeBuild(libset, abi, cmake_vars, opencv_cmake_path,
+                    os.path.join(workdir, "{}-{}".format(abi, "static" if libset == "" else "shared"))))
     return suite
 
 
@@ -127,9 +140,15 @@ if __name__ == '__main__':
     if args.ndk_path is not None:
         os.environ["ANDROID_NDK"] = os.path.abspath(args.ndk_path)
 
+    if not 'ANDROID_HOME' in os.environ and 'ANDROID_SDK' in os.environ:
+        os.environ['ANDROID_HOME'] = os.environ["ANDROID_SDK"]
+
     print("Using SDK: %s" % os.environ["ANDROID_SDK"])
     print("Using NDK: %s" % os.environ["ANDROID_NDK"])
 
-    res = unittest.TextTestRunner(verbosity=3).run(suite(os.path.abspath(args.workdir), os.path.abspath(args.opencv_cmake_path)))
+    workdir = os.path.abspath(args.workdir)
+    if not os.path.exists(workdir):
+        os.mkdir(workdir)
+    res = unittest.TextTestRunner(verbosity=3).run(suite(workdir, os.path.abspath(args.opencv_cmake_path)))
     if not res.wasSuccessful():
         sys.exit(res)

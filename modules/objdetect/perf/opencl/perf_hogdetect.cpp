@@ -53,11 +53,7 @@ namespace opencv_test {
 namespace ocl {
 ///////////// HOG////////////////////////
 
-#ifdef CV_CXX11
 struct RectLess
-#else
-struct RectLess : public std::binary_function<cv::Rect, cv::Rect, bool>
-#endif
 {
     bool operator()(const cv::Rect& a,
         const cv::Rect& b) const

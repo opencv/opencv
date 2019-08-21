@@ -68,14 +68,14 @@ void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<in
     }
 }
 
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
+int randomType(RNG& rng, _OutputArray::DepthMask typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL_16F) != 0);
     for(;;)
     {
-        depth = rng.uniform(CV_8U, CV_64F+1);
+        depth = rng.uniform(CV_8U, CV_16F+1);
         if( ((1 << depth) & typeMask) != 0 )
             break;
     }
@@ -1260,6 +1260,13 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
 double norm(InputArray _src, int normType, InputArray _mask)
 {
     Mat src = _src.getMat(), mask = _mask.getMat();
+    if( src.depth() == CV_16F )
+    {
+        Mat src32f;
+        src.convertTo(src32f, CV_32F);
+        return cvtest::norm(src32f, normType, _mask);
+    }
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
@@ -1340,6 +1347,14 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    if( src1.depth() == CV_16F )
+    {
+        Mat src1_32f, src2_32f;
+        src1.convertTo(src1_32f, CV_32F);
+        src2.convertTo(src2_32f, CV_32F);
+        return cvtest::norm(src1_32f, src2_32f, normType, _mask);
+    }
+
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
@@ -1982,11 +1997,20 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
 // success_err_level is maximum allowed difference, idx is the index of the first
 // element for which difference is >success_err_level
 // (or index of element with the maximum difference)
-int cmpEps( const Mat& arr, const Mat& refarr, double* _realmaxdiff,
+int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             double success_err_level, vector<int>* _idx,
             bool element_wise_relative_error )
 {
+    Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
+    if( arr.depth() == CV_16F )
+    {
+        Mat arr32f, refarr32f;
+        arr.convertTo(arr32f, CV_32F);
+        refarr.convertTo(refarr32f, CV_32F);
+        arr = arr32f;
+        refarr = refarr32f;
+    }
 
     int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
     int result = CMP_EPS_OK;
@@ -2786,29 +2810,57 @@ Mat calcLaplaceKernel2D( int aperture_size )
 }
 
 
-void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat& _mapy )
+void initUndistortMap( const Mat& _a0, const Mat& _k0, const Mat& _R0, const Mat& _new_cam0, Size sz, Mat& __mapx, Mat& __mapy, int map_type )
 {
-    _mapx.create(sz, CV_32F);
-    _mapy.create(sz, CV_32F);
+    Mat _mapx(sz, CV_32F), _mapy(sz, CV_32F);
 
-    double a[9], k[5]={0,0,0,0,0};
-    Mat _a(3, 3, CV_64F, a);
+    double a[9], k[5]={0,0,0,0,0}, iR[9]={1, 0, 0, 0, 1, 0, 0, 0, 1}, a1[9];
+    Mat _a(3, 3, CV_64F, a), _a1(3, 3, CV_64F, a1);
     Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
+    Mat _iR(3, 3, CV_64F, iR);
     double fx, fy, cx, cy, ifx, ify, cxn, cyn;
 
+    CV_Assert(_k0.empty() ||
+              _k0.size() == Size(5, 1) ||
+              _k0.size() == Size(1, 5) ||
+              _k0.size() == Size(4, 1) ||
+              _k0.size() == Size(1, 4));
+    CV_Assert(_a0.size() == Size(3, 3));
+
     _a0.convertTo(_a, CV_64F);
-    _k0.convertTo(_k, CV_64F);
+    if( !_k0.empty() )
+        _k0.convertTo(_k, CV_64F);
+    if( !_R0.empty() )
+    {
+        CV_Assert(_R0.size() == Size(3, 3));
+        Mat tmp;
+        _R0.convertTo(tmp, CV_64F);
+        invert(tmp, _iR, DECOMP_LU);
+    }
+    if( !_new_cam0.empty() )
+    {
+        CV_Assert(_new_cam0.size() == Size(3, 3));
+        _new_cam0.convertTo(_a1, CV_64F);
+    }
+    else
+        _a.copyTo(_a1);
+
     fx = a[0]; fy = a[4]; cx = a[2]; cy = a[5];
-    ifx = 1./fx; ify = 1./fy;
-    cxn = cx;
-    cyn = cy;
+    ifx = 1./a1[0]; ify = 1./a1[4];
+    cxn = a1[2];
+    cyn = a1[5];
 
     for( int v = 0; v < sz.height; v++ )
     {
         for( int u = 0; u < sz.width; u++ )
         {
-            double x = (u - cxn)*ifx;
-            double y = (v - cyn)*ify;
+            double x_ = (u - cxn)*ifx;
+            double y_ = (v - cyn)*ify;
+            double X = iR[0]*x_ + iR[1]*y_ + iR[2];
+            double Y = iR[3]*x_ + iR[4]*y_ + iR[5];
+            double Z = iR[6]*x_ + iR[7]*y_ + iR[8];
+            double x = X/Z;
+            double y = Y/Z;
             double x2 = x*x, y2 = y*y;
             double r2 = x2 + y2;
             double cdist = 1 + (k[0] + (k[1] + k[4]*r2)*r2)*r2;
@@ -2819,8 +2871,10 @@ void initUndistortMap( const Mat& _a0, const Mat& _k0, Size sz, Mat& _mapx, Mat&
             _mapx.at<float>(v, u) = (float)(x1*fx + cx);
         }
     }
-}
 
+    _mapx.convertTo(__mapx, map_type);
+    _mapy.convertTo(__mapy, map_type);
+}
 
 std::ostream& operator << (std::ostream& out, const MatInfo& m)
 {

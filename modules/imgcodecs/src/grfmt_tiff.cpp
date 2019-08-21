@@ -407,8 +407,8 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
 
 bool  TiffDecoder::readData( Mat& img )
 {
-    int type_ = img.type();
-    int depth = CV_MAT_DEPTH(type_);
+    int type = img.type();
+    int depth = CV_MAT_DEPTH(type);
 
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
@@ -423,7 +423,7 @@ bool  TiffDecoder::readData( Mat& img )
 
     bool color = img.channels() > 1;
 
-    CV_CheckType(type_, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
 
     if (m_width && m_height)
     {

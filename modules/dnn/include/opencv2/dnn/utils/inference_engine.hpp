@@ -11,7 +11,7 @@
 #include "../dnn.hpp"
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 
 /** @brief Release a Myriad device (binded by OpenCV).
@@ -37,7 +37,7 @@ CV_EXPORTS_W void resetMyriadDevice();
 CV_EXPORTS_W cv::String getInferenceEngineVPUType();
 
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 #endif // OPENCV_DNN_UTILS_INF_ENGINE_HPP

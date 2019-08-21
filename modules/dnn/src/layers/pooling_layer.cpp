@@ -45,6 +45,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_vkcom.hpp"
 #include <float.h>
 #include <algorithm>
 #include <numeric>
@@ -78,7 +79,7 @@ public:
         if (params.has("pool") || params.has("kernel_size") ||
             params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = params.get<String>("pool", "max").toLowerCase();
+            String pool = toLowerCase(params.get<String>("pool", "max"));
             if (pool == "max")
                 type = MAX;
             else if (pool == "ave")
@@ -180,10 +181,18 @@ public:
 #endif
         }
         else
-            return (kernel_size.size() == 3 && backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU) ||
-                   ((kernel_size.empty() || kernel_size.size() == 2) && (backendId == DNN_BACKEND_OPENCV ||
-                   (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
-                   (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r)))));
+        {
+            if (kernel_size.size() == 3)
+                return (backendId == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU);
+            if (kernel_size.empty() || kernel_size.size() == 2)
+                return backendId == DNN_BACKEND_OPENCV ||
+                       (backendId == DNN_BACKEND_HALIDE && haveHalide() &&
+                           (type == MAX || (type == AVE && !pad_t && !pad_l && !pad_b && !pad_r))) ||
+                       (backendId == DNN_BACKEND_VKCOM && haveVulkan() &&
+                           (type == MAX || type == AVE));
+            else
+                return false;
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -272,6 +281,41 @@ public:
         }
     }
 
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        int padding_mode;
+        vkcom::PoolType pool_type;
+        int filter_size[2] = {kernel.height, kernel.width};
+        int pad_size[2] = {pad.height, pad.width};
+        int stride_size[2] = {stride.height, stride.width};
+        pool_type = type == MAX ? vkcom::kPoolTypeMax:
+                   (type == AVE ? vkcom::kPoolTypeAvg:
+                            vkcom::kPoolTypeNum);
+
+        if (padMode.empty())
+        {
+            padding_mode = vkcom::kPaddingModeCaffe;
+        }
+        else if (padMode == "VALID")
+        {
+            padding_mode = vkcom::kPaddingModeValid;
+        }
+        else if (padMode == "SAME")
+        {
+            padding_mode = vkcom::kPaddingModeSame;
+        }
+        else
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPool(filter_size, pad_size,
+                                                            stride_size, padding_mode,
+                                                            pool_type, avePoolPaddedArea));
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
+#endif
+        return Ptr<BackendNode>();
+    }
+
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         if (type == MAX)
@@ -349,7 +393,8 @@ public:
         std::vector<size_t> kernel_size;
         std::vector<size_t> strides;
 
-        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), avePoolPaddedArea(false), nstripes(0),
+        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), pad_l(0), pad_t(0), pad_r(0), pad_b(0),
+                           avePoolPaddedArea(false), nstripes(0),
                            computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask,

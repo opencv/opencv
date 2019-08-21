@@ -1,7 +1,7 @@
 How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_}
 ==================================================================
 
-@prev_tutorial{tutorial_interoperability_with_OpenCV_1}
+@prev_tutorial{tutorial_file_input_output_with_xml_yml}
 
 Goal
 ----
@@ -9,7 +9,7 @@ Goal
 The goal of this tutorial is to show you how to use the OpenCV `parallel_for_` framework to easily
 parallelize your code. To illustrate the concept, we will write a program to draw a Mandelbrot set
 exploiting almost all the CPU load available.
-The full tutorial code is [here](https://github.com/opencv/opencv/blob/3.4/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp).
+The full tutorial code is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp).
 If you want more information about multithreading, you will have to refer to a reference book or course as this tutorial is intended
 to remain simple.
 
@@ -177,7 +177,7 @@ C++ 11 standard allows to simplify the parallel implementation by get rid of the
 Results
 -----------
 
-You can find the full tutorial code [here](https://github.com/opencv/opencv/blob/3.4/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp).
+You can find the full tutorial code [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_.cpp).
 The performance of the parallel implementation depends of the type of CPU you have. For instance, on 4 cores / 8 threads
 CPU, you can expect a speed-up of around 6.9X. There are many factors to explain why we do not achieve a speed-up of almost 8X.
 Main reasons should be mostly due to:
