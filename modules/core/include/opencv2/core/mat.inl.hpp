@@ -1809,7 +1809,7 @@ Mat_<_Tp> Mat_<_Tp>::cross(const Mat_& m) const
 template<typename _Tp> template<typename T2> inline
 Mat_<_Tp>::operator Mat_<T2>() const
 {
-    return Mat_<T2>(*this);
+    return Mat_<T2>(static_cast<const Mat&>(*this));
 }
 
 template<typename _Tp> inline
