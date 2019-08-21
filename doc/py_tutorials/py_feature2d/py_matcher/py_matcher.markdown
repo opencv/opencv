@@ -44,7 +44,7 @@ Let's see one example for each of SIFT and ORB (Both use different distance meas
 
 Here, we will see a simple example on how to match features between two images. In this case, I have
 a queryImage and a trainImage. We will try to find the queryImage in trainImage using feature
-matching. ( The images are /samples/c/box.png and /samples/c/box_in_scene.png)
+matching. ( The images are /samples/data/box.png and /samples/data/box_in_scene.png)
 
 We are using ORB descriptors to match features. So let's start with loading images, finding
 descriptors etc.
