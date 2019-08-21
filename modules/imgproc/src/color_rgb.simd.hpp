@@ -474,10 +474,11 @@ struct RGB5x52Gray
 {
     typedef uchar channel_type;
 
-    static const int BY = BY15;
-    static const int GY = GY15;
-    static const int RY = RY15;
-    static const int shift = gray_shift;
+    // can be changed to 15-shift coeffs
+    static const int BY = B2Y;
+    static const int GY = G2Y;
+    static const int RY = R2Y;
+    static const int shift = yuv_shift;
 
     RGB5x52Gray(int _greenBits) : greenBits(_greenBits)
     {
@@ -647,10 +648,11 @@ struct RGB2Gray<uchar>
 {
     typedef uchar channel_type;
 
-    static const int BY = BY15;
-    static const int GY = GY15;
-    static const int RY = RY15;
-    static const int shift = gray_shift;
+    // can be changed to 15-shift coeffs
+    static const int BY = B2Y;
+    static const int GY = G2Y;
+    static const int RY = R2Y;
+    static const int shift = yuv_shift;
 
     RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)
     {
@@ -739,10 +741,11 @@ struct RGB2Gray<ushort>
 {
     typedef ushort channel_type;
 
-    static const int BY = BY15;
-    static const int GY = GY15;
-    static const int RY = RY15;
-    static const int shift = gray_shift;
+    // can be changed to 15-shift coeffs
+    static const int BY = B2Y;
+    static const int GY = G2Y;
+    static const int RY = R2Y;
+    static const int shift = yuv_shift;
     static const int fix_shift = (int)(sizeof(short)*8 - shift);
 
     RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)

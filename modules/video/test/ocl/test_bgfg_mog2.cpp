@@ -2,6 +2,7 @@
 #include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
+#ifdef HAVE_VIDEO_INPUT
 
 namespace opencv_test {
 namespace ocl {
@@ -32,8 +33,7 @@ OCL_TEST_P(Mog2_Update, Accuracy)
 {
     string inputFile = string(TS::ptr()->get_data_path()) + "video/768x576.avi";
     VideoCapture cap(inputFile);
-    if (!cap.isOpened())
-        throw SkipTestException("Video file can not be opened");
+    ASSERT_TRUE(cap.isOpened());
 
     Ptr<BackgroundSubtractorMOG2> mog2_cpu = createBackgroundSubtractorMOG2();
     Ptr<BackgroundSubtractorMOG2> mog2_ocl = createBackgroundSubtractorMOG2();
@@ -90,8 +90,7 @@ OCL_TEST_P(Mog2_getBackgroundImage, Accuracy)
 {
     string inputFile = string(TS::ptr()->get_data_path()) + "video/768x576.avi";
     VideoCapture cap(inputFile);
-    if (!cap.isOpened())
-        throw SkipTestException("Video file can not be opened");
+    ASSERT_TRUE(cap.isOpened());
 
     Ptr<BackgroundSubtractorMOG2> mog2_cpu = createBackgroundSubtractorMOG2();
     Ptr<BackgroundSubtractorMOG2> mog2_ocl = createBackgroundSubtractorMOG2();
@@ -142,4 +141,5 @@ OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_getBackgroundImage, Combine(
 
 }}// namespace opencv_test::ocl
 
+#endif
 #endif

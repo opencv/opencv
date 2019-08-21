@@ -29,15 +29,12 @@
  *
  */
 
- #pragma clang diagnostic push
- #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
-#include "cap_interface.hpp"
 #include <iostream>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
+
 
 /********************** Declaration of class headers ************************/
 
@@ -176,7 +173,7 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
                 double fps, CvSize frame_size,
                 int is_color=1);
         ~CvVideoWriter_AVFoundation();
-        bool writeFrame(const IplImage* image) CV_OVERRIDE;
+        bool writeFrame(const IplImage* image);
         int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
     private:
         IplImage* argbimage;
@@ -198,30 +195,28 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
 /****************** Implementation of interface functions ********************/
 
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
-{
-    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
+CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
+    CvCaptureFile *retval = new CvCaptureFile(filename);
+
     if(retval->didStart())
-        return makePtr<LegacyCapture>(retval);
+        return retval;
     delete retval;
     return NULL;
+}
+
+CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
+
+    CvCapture* retval = new CvCaptureCAM(index);
+    if (!((CvCaptureCAM *)retval)->didStart())
+        cvReleaseCapture(&retval);
+    return retval;
 
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
-{
-    CvCaptureCAM* retval = new CvCaptureCAM(index);
-    if (retval->didStart())
-        return cv::makePtr<cv::LegacyCapture>(retval);
-    delete retval;
-    return 0;
-}
-
-cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
-{
-    CvSize sz = { frameSize.width, frameSize.height };
-    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
-    return cv::makePtr<cv::LegacyWriter>(wrt);
+CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
+        double fps, CvSize frame_size,
+        int is_color) {
+    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
 }
 
 /********************** Implementation of Classes ****************************/
@@ -1335,5 +1330,3 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
-
-#pragma clang diagnostic pop

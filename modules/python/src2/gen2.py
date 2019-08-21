@@ -948,7 +948,7 @@ class PythonWrapperGenerator(object):
 
         code = ""
         if re.sub(r"^cv\.", "", enum_name) != wname:
-            code += "typedef {0} {1};\n".format(cname, wname)
+            code += "typedef enum {0} {1};\n".format(cname, wname)
         code += "CV_PY_FROM_ENUM({0});\nCV_PY_TO_ENUM({0});\n\n".format(wname)
         self.code_enums.write(code)
 
@@ -963,7 +963,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=False)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:

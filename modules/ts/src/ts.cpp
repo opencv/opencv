@@ -249,14 +249,14 @@ void BaseTest::clear()
 }
 
 
-cv::FileNode BaseTest::find_param( const cv::FileStorage& fs, const char* param_name )
+const CvFileNode* BaseTest::find_param( CvFileStorage* fs, const char* param_name )
 {
-    cv::FileNode node = fs[get_name()];
-    return node[param_name];
+    CvFileNode* node = cvGetFileNodeByName(fs, 0, get_name().c_str());
+    return node ? cvGetFileNodeByName( fs, node, param_name ) : 0;
 }
 
 
-int BaseTest::read_params( const cv::FileStorage& )
+int BaseTest::read_params( CvFileStorage* )
 {
     return 0;
 }

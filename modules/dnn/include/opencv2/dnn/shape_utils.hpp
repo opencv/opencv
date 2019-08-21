@@ -50,7 +50,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 //Slicing
 
@@ -213,7 +213,7 @@ inline Range clamp(const Range& r, int axisSize)
     return clamped;
 }
 
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 #endif

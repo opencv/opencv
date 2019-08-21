@@ -14,12 +14,12 @@ public class BackgroundSubtractorMOGTest extends OpenCVTestCase {
         Scalar color = new Scalar(128);
         Mat mask = new Mat(rgbLena.size(), CvType.CV_16UC3, new Scalar(1));
 
-        Imgproc.rectangle(rgbLena, bottomRight, topLeft, color, Imgproc.FILLED);
+        Imgproc.rectangle(rgbLena, bottomRight, topLeft, color, Core.FILLED);
 
         backGroundSubtract.apply(rgbLena, mask);
 
         Mat truth = new Mat(rgbLena.size(), rgbLena.type(), new Scalar(0));
-        Imgproc.rectangle(truth, bottomRight, topLeft, color, Imgproc.FILLED);
+        Imgproc.rectangle(truth, bottomRight, topLeft, color, Core.FILLED);
         assertMatEqual(truth, rgbLena);
         */
     }

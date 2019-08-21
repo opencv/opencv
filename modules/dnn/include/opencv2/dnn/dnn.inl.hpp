@@ -46,7 +46,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 template<typename TypeIter>
 DictValue DictValue::arrayInt(TypeIter begin, int size)
@@ -199,16 +199,6 @@ inline void DictValue::release()
     case Param::REAL:
         delete pd;
         break;
-    case Param::BOOLEAN:
-    case Param::MAT:
-    case Param::MAT_VECTOR:
-    case Param::ALGORITHM:
-    case Param::FLOAT:
-    case Param::UNSIGNED_INT:
-    case Param::UINT64:
-    case Param::UCHAR:
-    case Param::SCALAR:
-        break; // unhandled
     }
 }
 
@@ -283,18 +273,12 @@ inline int DictValue::size() const
         return (int)ps->size();
     case Param::REAL:
         return (int)pd->size();
-    case Param::BOOLEAN:
-    case Param::MAT:
-    case Param::MAT_VECTOR:
-    case Param::ALGORITHM:
-    case Param::FLOAT:
-    case Param::UNSIGNED_INT:
-    case Param::UINT64:
-    case Param::UCHAR:
-    case Param::SCALAR:
-        break; // unhandled
     }
-    CV_Error_(Error::StsInternal, ("Unhandled type (%d)", static_cast<int>(type)));
+#ifdef __OPENCV_BUILD
+    CV_Error(Error::StsInternal, "");
+#else
+    CV_ErrorNoReturn(Error::StsInternal, "");
+#endif
 }
 
 inline std::ostream &operator<<(std::ostream &stream, const DictValue &dictv)
@@ -404,7 +388,7 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
     return dict.end();
 }
 
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 

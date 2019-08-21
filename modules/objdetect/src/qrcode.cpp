@@ -802,6 +802,15 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     return true;
 }
 
+bool detectQRCode(InputArray in, vector<Point> &points, double eps_x, double eps_y)
+{
+    QRCodeDetector qrdetector;
+    qrdetector.setEpsX(eps_x);
+    qrdetector.setEpsY(eps_y);
+
+    return qrdetector.detect(in, points);
+}
+
 class QRDecode
 {
 public:
@@ -1051,8 +1060,15 @@ bool QRDecode::fullDecodingProcess()
 #endif
 }
 
-std::string QRCodeDetector::decode(InputArray in, InputArray points,
-                                   OutputArray straight_qrcode)
+bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode)
+{
+    QRCodeDetector qrcode;
+    decoded_info = qrcode.decode(in, points, straight_qrcode);
+    return !decoded_info.empty();
+}
+
+cv::String QRCodeDetector::decode(InputArray in, InputArray points,
+                                  OutputArray straight_qrcode)
 {
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
@@ -1089,9 +1105,9 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
     return ok ? decoded_info : std::string();
 }
 
-std::string QRCodeDetector::detectAndDecode(InputArray in,
-                                            OutputArray points_,
-                                            OutputArray straight_qrcode)
+cv::String QRCodeDetector::detectAndDecode(InputArray in,
+                                           OutputArray points_,
+                                           OutputArray straight_qrcode)
 {
     Mat inarr = in.getMat();
     CV_Assert(!inarr.empty());
@@ -1121,5 +1137,6 @@ std::string QRCodeDetector::detectAndDecode(InputArray in,
         decoded_info = decode(inarr, points, straight_qrcode);
     return decoded_info;
 }
+
 
 }

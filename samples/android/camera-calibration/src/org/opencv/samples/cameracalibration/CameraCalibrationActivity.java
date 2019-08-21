@@ -14,7 +14,6 @@
 package org.opencv.samples.cameracalibration;
 
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -22,6 +21,7 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.res.Resources;
 import android.os.AsyncTask;
@@ -36,16 +36,12 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import java.util.Collections;
-import java.util.List;
-
-public class CameraCalibrationActivity extends CameraActivity implements CvCameraViewListener2, OnTouchListener {
+public class CameraCalibrationActivity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private CameraCalibrator mCalibrator;
     private OnCameraFrameRender mOnCameraFrameRender;
-    private Menu mMenu;
     private int mWidth;
     private int mHeight;
 
@@ -105,11 +101,6 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
         }
     }
 
-    @Override
-    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
-        return Collections.singletonList(mOpenCvCameraView);
-    }
-
     public void onDestroy() {
         super.onDestroy();
         if (mOpenCvCameraView != null)
@@ -120,7 +111,7 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.calibration, menu);
-        mMenu = menu;
+
         return true;
     }
 
@@ -128,9 +119,9 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
     public boolean onPrepareOptionsMenu (Menu menu) {
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.preview_mode).setEnabled(true);
-        if (mCalibrator != null && !mCalibrator.isCalibrated()) {
+        if (!mCalibrator.isCalibrated())
             menu.findItem(R.id.preview_mode).setEnabled(false);
-        }
+
         return true;
     }
 
@@ -208,10 +199,6 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
             mCalibrator = new CameraCalibrator(mWidth, mHeight);
             if (CalibrationResult.tryLoad(this, mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients())) {
                 mCalibrator.setCalibrated();
-            } else {
-                if (mMenu != null && !mCalibrator.isCalibrated()) {
-                    mMenu.findItem(R.id.preview_mode).setEnabled(false);
-                }
             }
 
             mOnCameraFrameRender = new OnCameraFrameRender(new CalibrationFrameRender(mCalibrator));

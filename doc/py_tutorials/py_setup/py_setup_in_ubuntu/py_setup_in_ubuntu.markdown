@@ -66,11 +66,12 @@ sudo apt-get install python-dev python-numpy
 sudo apt-get install gcc g++
 ```
 
-Next we need **GTK** support for GUI features, Camera support (v4l), Media Support
+Next we need **GTK** support for GUI features, Camera support (libv4l), Media Support
 (ffmpeg, gstreamer) etc.
 
 ```
 sudo apt-get install gtk2-devel
+sudo apt-get install libv4l-devel
 sudo apt-get install ffmpeg-devel
 sudo apt-get install gstreamer-plugins-base-devel
 ```

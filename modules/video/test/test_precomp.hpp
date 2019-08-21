@@ -6,10 +6,5 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/video.hpp"
-#include <opencv2/ts/ts_perf.hpp>
-
-namespace opencv_test {
-using namespace perf;
-}
 
 #endif

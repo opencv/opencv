@@ -40,9 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#ifdef HAVE_OPENCV_FLANN
-#include "opencv2/flann/miniflann.hpp"
-#endif
 #include <limits>
 #include "opencl_kernels_features2d.hpp"
 
@@ -1051,7 +1048,7 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatche
     return dm;
 }
 
-Ptr<DescriptorMatcher> DescriptorMatcher::create( const MatcherType& matcherType )
+Ptr<DescriptorMatcher> DescriptorMatcher::create(int matcherType)
 {
 
 
@@ -1170,8 +1167,6 @@ void FlannBasedMatcher::train()
     }
 }
 
-using namespace cv::flann;
-
 void FlannBasedMatcher::read( const FileNode& fn)
 {
      if (!indexParams)
@@ -1184,34 +1179,32 @@ void FlannBasedMatcher::read( const FileNode& fn)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
         String _name =  (String)ip[i]["name"];
-        FlannIndexType type = (FlannIndexType)(int)ip[i]["type"];
-        CV_CheckLE((int)type, (int)LAST_VALUE_FLANN_INDEX_TYPE, "");
+        int type =  (int)ip[i]["type"];
 
         switch(type)
         {
-        case FLANN_INDEX_TYPE_8U:
-        case FLANN_INDEX_TYPE_8S:
-        case FLANN_INDEX_TYPE_16U:
-        case FLANN_INDEX_TYPE_16S:
-        case FLANN_INDEX_TYPE_32S:
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
             indexParams->setInt(_name, (int) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_32F:
+        case CV_32F:
             indexParams->setFloat(_name, (float) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_64F:
+        case CV_64F:
             indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_STRING:
+        case CV_USRTYPE1:
             indexParams->setString(_name, (String) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_BOOL:
+        case CV_MAKETYPE(CV_USRTYPE1,2):
             indexParams->setBool(_name, (int) ip[i]["value"] != 0);
             break;
-        case FLANN_INDEX_TYPE_ALGORITHM:
+        case CV_MAKETYPE(CV_USRTYPE1,3):
             indexParams->setAlgorithm((int) ip[i]["value"]);
             break;
-        // don't default: - compiler warning is here
         };
      }
 
@@ -1225,34 +1218,32 @@ void FlannBasedMatcher::read( const FileNode& fn)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
         String _name =  (String)sp[i]["name"];
-        FlannIndexType type = (FlannIndexType)(int)sp[i]["type"];
-        CV_CheckLE((int)type, (int)LAST_VALUE_FLANN_INDEX_TYPE, "");
+        int type =  (int)sp[i]["type"];
 
         switch(type)
         {
-        case FLANN_INDEX_TYPE_8U:
-        case FLANN_INDEX_TYPE_8S:
-        case FLANN_INDEX_TYPE_16U:
-        case FLANN_INDEX_TYPE_16S:
-        case FLANN_INDEX_TYPE_32S:
+        case CV_8U:
+        case CV_8S:
+        case CV_16U:
+        case CV_16S:
+        case CV_32S:
             searchParams->setInt(_name, (int) sp[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_32F:
-            searchParams->setFloat(_name, (float) sp[i]["value"]);
+        case CV_32F:
+            searchParams->setFloat(_name, (float) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_64F:
-            searchParams->setDouble(_name, (double) sp[i]["value"]);
+        case CV_64F:
+            searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_STRING:
-            searchParams->setString(_name, (String) sp[i]["value"]);
+        case CV_USRTYPE1:
+            searchParams->setString(_name, (String) ip[i]["value"]);
             break;
-        case FLANN_INDEX_TYPE_BOOL:
-            searchParams->setBool(_name, (int) sp[i]["value"] != 0);
+        case CV_MAKETYPE(CV_USRTYPE1,2):
+            searchParams->setBool(_name, (int) ip[i]["value"] != 0);
             break;
-        case FLANN_INDEX_TYPE_ALGORITHM:
-            searchParams->setAlgorithm((int) sp[i]["value"]);
+        case CV_MAKETYPE(CV_USRTYPE1,3):
+            searchParams->setAlgorithm((int) ip[i]["value"]);
             break;
-        // don't default: - compiler warning is here
         };
      }
 
@@ -1267,7 +1258,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
      if (indexParams)
      {
          std::vector<String> names;
-         std::vector<FlannIndexType> types;
+         std::vector<int> types;
          std::vector<String> strValues;
          std::vector<double> numValues;
 
@@ -1276,43 +1267,38 @@ void FlannBasedMatcher::write( FileStorage& fs) const
          for(size_t i = 0; i < names.size(); ++i)
          {
              fs << "{" << "name" << names[i] << "type" << types[i] << "value";
-             FlannIndexType type = (FlannIndexType)types[i];
-             if ((int)type < 0 || type > LAST_VALUE_FLANN_INDEX_TYPE)
+             switch(types[i])
              {
-                 fs << (double)numValues[i];
-                 fs << "typename" << strValues[i];
-                 fs << "}";
-                 continue;
-             }
-             switch(type)
-             {
-             case FLANN_INDEX_TYPE_8U:
+             case CV_8U:
                  fs << (uchar)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_8S:
+             case CV_8S:
                  fs << (char)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_16U:
+             case CV_16U:
                  fs << (ushort)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_16S:
+             case CV_16S:
                  fs << (short)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_32S:
-             case FLANN_INDEX_TYPE_BOOL:
-             case FLANN_INDEX_TYPE_ALGORITHM:
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
                  fs << (int)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_32F:
+             case CV_32F:
                  fs << (float)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_64F:
+             case CV_64F:
                  fs << (double)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_STRING:
+             case CV_USRTYPE1:
                  fs << strValues[i];
                  break;
-             // don't default: - compiler warning is here
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
              }
              fs << "}";
          }
@@ -1323,7 +1309,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
      if (searchParams)
      {
          std::vector<String> names;
-         std::vector<FlannIndexType> types;
+         std::vector<int> types;
          std::vector<String> strValues;
          std::vector<double> numValues;
 
@@ -1332,31 +1318,23 @@ void FlannBasedMatcher::write( FileStorage& fs) const
          for(size_t i = 0; i < names.size(); ++i)
          {
              fs << "{" << "name" << names[i] << "type" << types[i] << "value";
-             FlannIndexType type = (FlannIndexType)types[i];
-             if ((int)type < 0 || type > LAST_VALUE_FLANN_INDEX_TYPE)
+             switch(types[i])
              {
-                 fs << (double)numValues[i];
-                 fs << "typename" << strValues[i];
-                 fs << "}";
-                 continue;
-             }
-             switch(type)
-             {
-             case FLANN_INDEX_TYPE_8U:
+             case CV_8U:
                  fs << (uchar)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_8S:
+             case CV_8S:
                  fs << (char)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_16U:
+             case CV_16U:
                  fs << (ushort)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_16S:
+             case CV_16S:
                  fs << (short)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_32S:
-             case FLANN_INDEX_TYPE_BOOL:
-             case FLANN_INDEX_TYPE_ALGORITHM:
+             case CV_32S:
+             case CV_MAKETYPE(CV_USRTYPE1,2):
+             case CV_MAKETYPE(CV_USRTYPE1,3):
                  fs << (int)numValues[i];
                  break;
              case CV_32F:
@@ -1365,10 +1343,13 @@ void FlannBasedMatcher::write( FileStorage& fs) const
              case CV_64F:
                  fs << (double)numValues[i];
                  break;
-             case FLANN_INDEX_TYPE_STRING:
+             case CV_USRTYPE1:
                  fs << strValues[i];
                  break;
-             // don't default: - compiler warning is here
+             default:
+                 fs << (double)numValues[i];
+                 fs << "typename" << strValues[i];
+                 break;
              }
              fs << "}";
          }

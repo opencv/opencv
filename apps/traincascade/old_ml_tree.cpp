@@ -1880,7 +1880,10 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
-void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const { fastFree(obj); }
+template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
+{
+    fastFree(obj);
+}
 
 DTreeBestSplitFinder::DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node)
 {

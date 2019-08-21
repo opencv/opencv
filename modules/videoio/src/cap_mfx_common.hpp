@@ -298,7 +298,7 @@ public:
 private:
     VAHandle(const VAHandle &);
     VAHandle &operator=(const VAHandle &);
-    bool initDeviceSession(MFXVideoSession &session) CV_OVERRIDE;
+    virtual bool initDeviceSession(MFXVideoSession &session);
 private:
     VADisplay display;
     int file;
@@ -319,7 +319,7 @@ public:
 private:
     DXHandle(const DXHandle &);
     DXHandle &operator=(const DXHandle &);
-    bool initDeviceSession(MFXVideoSession &) CV_OVERRIDE { return true; }
+    virtual bool initDeviceSession(MFXVideoSession &) { return true; }
 };
 
 #endif // _WIN32

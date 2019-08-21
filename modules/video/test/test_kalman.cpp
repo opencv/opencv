@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/video/tracking.hpp"
+#include "opencv2/video/tracking_c.h"
 
 namespace opencv_test { namespace {
 
@@ -67,41 +67,54 @@ void CV_KalmanTest::run( int )
 
     const double EPSILON = 1.000;
     RNG& rng = ts->get_rng();
+    CvKalman* Kalm;
     int i, j;
 
-    cv::Mat Sample(Dim,1,CV_32F);
-    cv::Mat Temp(Dim,1,CV_32F);
+    CvMat* Sample = cvCreateMat(Dim,1,CV_32F);
+    CvMat* Temp = cvCreateMat(Dim,1,CV_32F);
 
-    cv::KalmanFilter Kalm(Dim, Dim);
-    Kalm.transitionMatrix = cv::Mat::eye(Dim, Dim, CV_32F);
-    Kalm.measurementMatrix = cv::Mat::eye(Dim, Dim, CV_32F);
-    Kalm.processNoiseCov = cv::Mat::eye(Dim, Dim, CV_32F);
-    Kalm.errorCovPre = cv::Mat::eye(Dim, Dim, CV_32F);
-    Kalm.errorCovPost = cv::Mat::eye(Dim, Dim, CV_32F);
-    Kalm.measurementNoiseCov = cv::Mat::zeros(Dim, Dim, CV_32F);
-    Kalm.statePre = cv::Mat::zeros(Dim, 1, CV_32F);
-    Kalm.statePost = cv::Mat::zeros(Dim, 1, CV_32F);
-    cvtest::randUni(rng, Sample, Scalar::all(-max_init), Scalar::all(max_init));
-    Kalm.correct(Sample);
+    Kalm = cvCreateKalman(Dim, Dim);
+    CvMat Dyn = cvMat(Dim,Dim,CV_32F,Kalm->DynamMatr);
+    CvMat Mes = cvMat(Dim,Dim,CV_32F,Kalm->MeasurementMatr);
+    CvMat PNC = cvMat(Dim,Dim,CV_32F,Kalm->PNCovariance);
+    CvMat MNC = cvMat(Dim,Dim,CV_32F,Kalm->MNCovariance);
+    CvMat PriErr = cvMat(Dim,Dim,CV_32F,Kalm->PriorErrorCovariance);
+    CvMat PostErr = cvMat(Dim,Dim,CV_32F,Kalm->PosterErrorCovariance);
+    CvMat PriState = cvMat(Dim,1,CV_32F,Kalm->PriorState);
+    CvMat PostState = cvMat(Dim,1,CV_32F,Kalm->PosterState);
+    cvSetIdentity(&PNC);
+    cvSetIdentity(&PriErr);
+    cvSetIdentity(&PostErr);
+    cvSetZero(&MNC);
+    cvSetZero(&PriState);
+    cvSetZero(&PostState);
+    cvSetIdentity(&Mes);
+    cvSetIdentity(&Dyn);
+    Mat _Sample = cvarrToMat(Sample);
+    cvtest::randUni(rng, _Sample, cvScalarAll(-max_init), cvScalarAll(max_init));
+    cvKalmanCorrect(Kalm, Sample);
     for(i = 0; i<Steps; i++)
     {
-        Kalm.predict();
-        const Mat& Dyn = Kalm.transitionMatrix;
+        cvKalmanPredict(Kalm);
         for(j = 0; j<Dim; j++)
         {
             float t = 0;
             for(int k=0; k<Dim; k++)
             {
-                t += Dyn.at<float>(j,k)*Sample.at<float>(k);
+                t += Dyn.data.fl[j*Dim+k]*Sample->data.fl[k];
             }
-            Temp.at<float>(j) = (float)(t+(cvtest::randReal(rng)*2-1)*max_noise);
+            Temp->data.fl[j]= (float)(t+(cvtest::randReal(rng)*2-1)*max_noise);
         }
-        Temp.copyTo(Sample);
-        Kalm.correct(Temp);
+        cvCopy( Temp, Sample );
+        cvKalmanCorrect(Kalm,Temp);
     }
 
-    Mat _state_post = Kalm.statePost;
-    code = cvtest::cmpEps2( ts, Sample, _state_post, EPSILON, false, "The final estimated state" );
+    Mat _state_post = cvarrToMat(Kalm->state_post);
+    code = cvtest::cmpEps2( ts, _Sample, _state_post, EPSILON, false, "The final estimated state" );
+
+    cvReleaseMat(&Sample);
+    cvReleaseMat(&Temp);
+    cvReleaseKalman(&Kalm);
 
     if( code < 0 )
         ts->set_failed_test_info( code );

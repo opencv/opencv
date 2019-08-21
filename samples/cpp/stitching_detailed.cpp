@@ -17,10 +17,6 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
 
-#ifdef HAVE_OPENCV_XFEATURES2D
-#include "opencv2/xfeatures2d/nonfree.hpp"
-#endif
-
 #define ENABLE_LOG 1
 #define LOG(msg) std::cout << msg
 #define LOGLN(msg) std::cout << msg << std::endl
@@ -44,9 +40,8 @@ static void printUsage()
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
         "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb|sift|akaze)\n"
-        "      Type of features used for images matching.\n"
-        "      The default is surf if available, orb otherwise.\n"
+        "  --features (surf|orb|sift)\n"
+        "      Type of features used for images matching. The default is surf.\n"
         "  --matcher (homography|affine)\n"
         "      Matcher used for pairwise image matching.\n"
         "  --estimator (homography|affine)\n"
@@ -81,18 +76,8 @@ static void printUsage()
         "  --compose_megapix <float>\n"
         "      Resolution for compositing step. Use -1 for original resolution.\n"
         "      The default is -1.\n"
-        "  --expos_comp (no|gain|gain_blocks|channels|channels_blocks)\n"
+        "  --expos_comp (no|gain|gain_blocks)\n"
         "      Exposure compensation method. The default is 'gain_blocks'.\n"
-        "  --expos_comp_nr_feeds <int>\n"
-        "      Number of exposure compensation feed. The default is 1.\n"
-        "  --expos_comp_nr_filtering <int>\n"
-        "      Number of filtering iterations of the exposure compensation gains.\n"
-        "      Only used when using a block exposure compensation method.\n"
-        "      The default is 2.\n"
-        "  --expos_comp_block_size <int>\n"
-        "      BLock size in pixels used by the exposure compensator.\n"
-        "      Only used when using a block exposure compensation method.\n"
-        "      The default is 32.\n"
         "  --blend (no|feather|multiband)\n"
         "      Blending method. The default is 'multiband'.\n"
         "  --blend_strength <float>\n"
@@ -114,11 +99,7 @@ double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
 float conf_thresh = 1.f;
-#ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
-#else
-string features_type = "orb";
-#endif
 string matcher_type = "homography";
 string estimator_type = "homography";
 string ba_cost_func = "ray";
@@ -129,9 +110,6 @@ bool save_graph = false;
 std::string save_graph_to;
 string warp_type = "spherical";
 int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-int expos_comp_nr_feeds = 1;
-int expos_comp_nr_filtering = 2;
-int expos_comp_block_size = 32;
 float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
@@ -287,30 +265,11 @@ static int parseCmdArgs(int argc, char** argv)
                 expos_comp_type = ExposureCompensator::GAIN;
             else if (string(argv[i + 1]) == "gain_blocks")
                 expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-            else if (string(argv[i + 1]) == "channels")
-                expos_comp_type = ExposureCompensator::CHANNELS;
-            else if (string(argv[i + 1]) == "channels_blocks")
-                expos_comp_type = ExposureCompensator::CHANNELS_BLOCKS;
             else
             {
                 cout << "Bad exposure compensation method\n";
                 return -1;
             }
-            i++;
-        }
-        else if (string(argv[i]) == "--expos_comp_nr_feeds")
-        {
-            expos_comp_nr_feeds = atoi(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--expos_comp_nr_filtering")
-        {
-            expos_comp_nr_filtering = atoi(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--expos_comp_block_size")
-        {
-            expos_comp_block_size = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--seam")
@@ -415,24 +374,23 @@ int main(int argc, char* argv[])
     int64 t = getTickCount();
 #endif
 
-    Ptr<Feature2D> finder;
-    if (features_type == "orb")
+    Ptr<FeaturesFinder> finder;
+    if (features_type == "surf")
     {
-        finder = ORB::create();
-    }
-    else if (features_type == "akaze")
-    {
-        finder = AKAZE::create();
-    }
 #ifdef HAVE_OPENCV_XFEATURES2D
-    else if (features_type == "surf")
+        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
+            finder = makePtr<SurfFeaturesFinderGpu>();
+        else
+#endif
+            finder = makePtr<SurfFeaturesFinder>();
+    }
+    else if (features_type == "orb")
     {
-        finder = xfeatures2d::SURF::create();
+        finder = makePtr<OrbFeaturesFinder>();
     }
     else if (features_type == "sift") {
-        finder = xfeatures2d::SIFT::create();
+        finder = makePtr<SiftFeaturesFinder>();
     }
-#endif
     else
     {
         cout << "Unknown 2D features type: '" << features_type << "'.\n";
@@ -477,7 +435,7 @@ int main(int argc, char* argv[])
             is_seam_scale_set = true;
         }
 
-        computeImageFeatures(finder, img, features[i]);
+        (*finder)(img, features[i]);
         features[i].img_idx = i;
         LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
 
@@ -485,6 +443,7 @@ int main(int argc, char* argv[])
         images[i] = img.clone();
     }
 
+    finder->collectGarbage();
     full_img.release();
     img.release();
 
@@ -707,40 +666,8 @@ int main(int argc, char* argv[])
 
     LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    LOGLN("Compensating exposure...");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
-
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
-    if (dynamic_cast<GainCompensator*>(compensator.get()))
-    {
-        GainCompensator* gcompensator = dynamic_cast<GainCompensator*>(compensator.get());
-        gcompensator->setNrFeeds(expos_comp_nr_feeds);
-    }
-
-    if (dynamic_cast<ChannelsCompensator*>(compensator.get()))
-    {
-        ChannelsCompensator* ccompensator = dynamic_cast<ChannelsCompensator*>(compensator.get());
-        ccompensator->setNrFeeds(expos_comp_nr_feeds);
-    }
-
-    if (dynamic_cast<BlocksCompensator*>(compensator.get()))
-    {
-        BlocksCompensator* bcompensator = dynamic_cast<BlocksCompensator*>(compensator.get());
-        bcompensator->setNrFeeds(expos_comp_nr_feeds);
-        bcompensator->setNrGainsFilteringIterations(expos_comp_nr_filtering);
-        bcompensator->setBlockSize(expos_comp_block_size, expos_comp_block_size);
-    }
-
     compensator->feed(corners, images_warped, masks_warped);
-
-    LOGLN("Compensating exposure, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    LOGLN("Finding seams...");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
 
     Ptr<SeamFinder> seam_finder;
     if (seam_find_type == "no")
@@ -776,8 +703,6 @@ int main(int argc, char* argv[])
     }
 
     seam_finder->find(images_warped_f, corners, masks_warped);
-
-    LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     // Release unused memory
     images.clear();

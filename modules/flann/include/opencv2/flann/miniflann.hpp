@@ -52,20 +52,6 @@ namespace cv
 namespace flann
 {
 
-enum FlannIndexType {
-    FLANN_INDEX_TYPE_8U = CV_8U,
-    FLANN_INDEX_TYPE_8S = CV_8S,
-    FLANN_INDEX_TYPE_16U = CV_16U,
-    FLANN_INDEX_TYPE_16S = CV_16S,
-    FLANN_INDEX_TYPE_32S = CV_32S,
-    FLANN_INDEX_TYPE_32F = CV_32F,
-    FLANN_INDEX_TYPE_64F = CV_64F,
-    FLANN_INDEX_TYPE_STRING,
-    FLANN_INDEX_TYPE_BOOL,
-    FLANN_INDEX_TYPE_ALGORITHM,
-    LAST_VALUE_FLANN_INDEX_TYPE = FLANN_INDEX_TYPE_ALGORITHM
-};
-
 struct CV_EXPORTS IndexParams
 {
     IndexParams();
@@ -82,9 +68,8 @@ struct CV_EXPORTS IndexParams
     void setBool(const String& key, bool value);
     void setAlgorithm(int value);
 
-    // FIXIT: replace by void write(FileStorage& fs) const + read()
     void getAll(std::vector<String>& names,
-                std::vector<FlannIndexType>& types,
+                std::vector<int>& types,
                 std::vector<String>& strValues,
                 std::vector<double>& numValues) const;
 

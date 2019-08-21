@@ -425,6 +425,6 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #endif
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false));
 
 }} // namespace

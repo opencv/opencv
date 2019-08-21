@@ -195,8 +195,7 @@ public:
         return iter;
     }
 
-    void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
-    int getMaxIters() const CV_OVERRIDE { return maxIters; }
+    void setCallback(const Ptr<LMSolver::Callback>& _cb) CV_OVERRIDE { cb = _cb; }
 
     Ptr<LMSolver::Callback> cb;
 
@@ -207,12 +206,12 @@ public:
 };
 
 
-Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
+Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     return makePtr<LMSolverImpl>(cb, maxIters);
 }
 
-Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
+Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
 {
     return makePtr<LMSolverImpl>(cb, maxIters, eps);
 }

@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <iostream>
 
 using namespace cv;
 using namespace std;
@@ -63,7 +62,6 @@ static void help()
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
-        "     [-oo]                    # write refined 3D object points\n"
         "     [-zt]                    # assume zero tangential distortion\n"
         "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
         "     [-p]                     # fix the principal point at the center\n"
@@ -71,11 +69,6 @@ static void help()
         "     [-V]                     # use a video file, and not an image list, uses\n"
         "                              # [input_data] string for the video file name\n"
         "     [-su]                    # show undistorted images after calibration\n"
-        "     [-ws=<number_of_pixel>]  # Half of search window for cornerSubPix (11 by default)\n"
-        "     [-dt=<distance>]         # actual distance between top-left and top-right corners of\n"
-        "                              # the calibration grid. If this parameter is specified, a more\n"
-        "                              # accurate calibration method will be used which may be better\n"
-        "                              # with inaccurate, roughly planar target.\n"
         "     [input_data]             # input data, one of the following:\n"
         "                              #  - text file with a list of the images of the board\n"
         "                              #    the text file can be generated with imagelist_creator\n"
@@ -144,11 +137,9 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
 static bool runCalibration( vector<vector<Point2f> > imagePoints,
                     Size imageSize, Size boardSize, Pattern patternType,
                     float squareSize, float aspectRatio,
-                    float grid_width, bool release_object,
                     int flags, Mat& cameraMatrix, Mat& distCoeffs,
                     vector<Mat>& rvecs, vector<Mat>& tvecs,
                     vector<float>& reprojErrs,
-                    vector<Point3f>& newObjPoints,
                     double& totalAvgErr)
 {
     cameraMatrix = Mat::eye(3, 3, CV_64F);
@@ -159,32 +150,16 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0], patternType);
-    objectPoints[0][boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
-    newObjPoints = objectPoints[0];
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
-    double rms;
-    int iFixedPoint = -1;
-    if (release_object)
-        iFixedPoint = boardSize.width - 1;
-    rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
-                            cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
-                            flags | CALIB_FIX_K3 | CALIB_USE_LU);
+    double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
+                    distCoeffs, rvecs, tvecs, flags|CALIB_FIX_K4|CALIB_FIX_K5);
+                    ///*|CALIB_FIX_K3*/|CALIB_FIX_K4|CALIB_FIX_K5);
     printf("RMS error reported by calibrateCamera: %g\n", rms);
 
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
 
-    if (release_object) {
-        cout << "New board corners: " << endl;
-        cout << newObjPoints[0] << endl;
-        cout << newObjPoints[boardSize.width - 1] << endl;
-        cout << newObjPoints[boardSize.width * (boardSize.height - 1)] << endl;
-        cout << newObjPoints.back() << endl;
-    }
-
-    objectPoints.clear();
-    objectPoints.resize(imagePoints.size(), newObjPoints);
     totalAvgErr = computeReprojectionErrors(objectPoints, imagePoints,
                 rvecs, tvecs, cameraMatrix, distCoeffs, reprojErrs);
 
@@ -199,7 +174,6 @@ static void saveCameraParams( const string& filename,
                        const vector<Mat>& rvecs, const vector<Mat>& tvecs,
                        const vector<float>& reprojErrs,
                        const vector<vector<Point2f> >& imagePoints,
-                       const vector<Point3f>& newObjPoints,
                        double totalAvgErr )
 {
     FileStorage fs( filename, FileStorage::WRITE );
@@ -272,11 +246,6 @@ static void saveCameraParams( const string& filename,
         }
         fs << "image_points" << imagePtMat;
     }
-
-    if( !newObjPoints.empty() )
-    {
-        fs << "grid_points" << newObjPoints;
-    }
 }
 
 static bool readStringList( const string& filename, vector<string>& l )
@@ -317,19 +286,17 @@ static bool readStringList( const string& filename, vector<string>& l )
 static bool runAndSave(const string& outputFilename,
                 const vector<vector<Point2f> >& imagePoints,
                 Size imageSize, Size boardSize, Pattern patternType, float squareSize,
-                float grid_width, bool release_object,
                 float aspectRatio, int flags, Mat& cameraMatrix,
-                Mat& distCoeffs, bool writeExtrinsics, bool writePoints, bool writeGrid )
+                Mat& distCoeffs, bool writeExtrinsics, bool writePoints )
 {
     vector<Mat> rvecs, tvecs;
     vector<float> reprojErrs;
     double totalAvgErr = 0;
-    vector<Point3f> newObjPoints;
 
     bool ok = runCalibration(imagePoints, imageSize, boardSize, patternType, squareSize,
-                   aspectRatio, grid_width, release_object, flags, cameraMatrix, distCoeffs,
-                   rvecs, tvecs, reprojErrs, newObjPoints, totalAvgErr);
-    printf("%s. avg reprojection error = %.7f\n",
+                   aspectRatio, flags, cameraMatrix, distCoeffs,
+                   rvecs, tvecs, reprojErrs, totalAvgErr);
+    printf("%s. avg reprojection error = %.2f\n",
            ok ? "Calibration succeeded" : "Calibration failed",
            totalAvgErr);
 
@@ -341,7 +308,6 @@ static bool runAndSave(const string& outputFilename,
                          writeExtrinsics ? tvecs : vector<Mat>(),
                          writeExtrinsics ? reprojErrs : vector<float>(),
                          writePoints ? imagePoints : vector<vector<Point2f> >(),
-                         writeGrid ? newObjPoints : vector<Point3f>(),
                          totalAvgErr );
     return ok;
 }
@@ -350,7 +316,7 @@ static bool runAndSave(const string& outputFilename,
 int main( int argc, char** argv )
 {
     Size boardSize, imageSize;
-    float squareSize, aspectRatio = 1;
+    float squareSize, aspectRatio;
     Mat cameraMatrix, distCoeffs;
     string outputFilename;
     string inputFilename = "";
@@ -373,8 +339,7 @@ int main( int argc, char** argv )
 
     cv::CommandLineParser parser(argc, argv,
         "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{o|out_camera_data.yml|}"
-        "{op||}{oe||}{zt||}{a||}{p||}{v||}{V||}{su||}"
-        "{oo||}{ws|11|}{dt||}"
+        "{op||}{oe||}{zt||}{a|1|}{p||}{v||}{V||}{su||}"
         "{@input_data|0|}");
     if (parser.has("help"))
     {
@@ -397,14 +362,12 @@ int main( int argc, char** argv )
     }
     squareSize = parser.get<float>("s");
     nframes = parser.get<int>("n");
+    aspectRatio = parser.get<float>("a");
     delay = parser.get<int>("d");
     writePoints = parser.has("op");
     writeExtrinsics = parser.has("oe");
-    bool writeGrid = parser.has("oo");
-    if (parser.has("a")) {
+    if (parser.has("a"))
         flags |= CALIB_FIX_ASPECT_RATIO;
-        aspectRatio = parser.get<float>("a");
-    }
     if ( parser.has("zt") )
         flags |= CALIB_ZERO_TANGENT_DIST;
     if ( parser.has("p") )
@@ -418,13 +381,6 @@ int main( int argc, char** argv )
         cameraId = parser.get<int>("@input_data");
     else
         inputFilename = parser.get<string>("@input_data");
-    int winSize = parser.get<int>("ws");
-    float grid_width = squareSize * (boardSize.width - 1);
-    bool release_object = false;
-    if (parser.has("dt")) {
-        grid_width = parser.get<float>("dt");
-        release_object = true;
-    }
     if (!parser.check())
     {
         help();
@@ -483,9 +439,9 @@ int main( int argc, char** argv )
         {
             if( imagePoints.size() > 0 )
                 runAndSave(outputFilename, imagePoints, imageSize,
-                           boardSize, pattern, squareSize, grid_width, release_object, aspectRatio,
+                           boardSize, pattern, squareSize, aspectRatio,
                            flags, cameraMatrix, distCoeffs,
-                           writeExtrinsics, writePoints, writeGrid);
+                           writeExtrinsics, writePoints);
             break;
         }
 
@@ -515,8 +471,8 @@ int main( int argc, char** argv )
         }
 
        // improve the found corners' coordinate accuracy
-        if( pattern == CHESSBOARD && found) cornerSubPix( viewGray, pointbuf, Size(winSize,winSize),
-            Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.0001 ));
+        if( pattern == CHESSBOARD && found) cornerSubPix( viewGray, pointbuf, Size(11,11),
+            Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
 
         if( mode == CAPTURING && found &&
            (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
@@ -573,9 +529,9 @@ int main( int argc, char** argv )
         if( mode == CAPTURING && imagePoints.size() >= (unsigned)nframes )
         {
             if( runAndSave(outputFilename, imagePoints, imageSize,
-                       boardSize, pattern, squareSize, grid_width, release_object, aspectRatio,
+                       boardSize, pattern, squareSize, aspectRatio,
                        flags, cameraMatrix, distCoeffs,
-                       writeExtrinsics, writePoints, writeGrid))
+                       writeExtrinsics, writePoints))
                 mode = CALIBRATED;
             else
                 mode = DETECTION;

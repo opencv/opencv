@@ -1718,7 +1718,8 @@ static const vx_enum
     }
 
 #ifdef IVX_USE_OPENCV
-    /// Convert image format (fourcc) to cv::Mat type, throws WrapperError if not possible
+    /// Convert image format (fourcc) to cv::Mat type
+    /// \return CV_USRTYPE1 for unknown image formats
     static int formatToMatType(vx_df_image format, vx_uint32 planeIdx = 0)
     {
         switch (format)
@@ -1738,7 +1739,7 @@ static const vx_enum
         case VX_DF_IMAGE_YUYV: return CV_8UC2;
         case VX_DF_IMAGE_NV12:
         case VX_DF_IMAGE_NV21: return planeIdx == 0 ? CV_8UC1 : CV_8UC2;
-        default: throw WrapperError(std::string(__func__)+"(): unsupported image format");
+        default: return CV_USRTYPE1;
         }
     }
 

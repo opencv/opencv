@@ -9,7 +9,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 /** @brief Registers layer constructor in runtime.
 *   @param type string, containing type name of the layer.
@@ -72,7 +72,7 @@ public:
 };
 
 } // namespace
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace
 
 #endif

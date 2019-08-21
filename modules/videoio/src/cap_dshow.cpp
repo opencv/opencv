@@ -96,7 +96,6 @@ Thanks to:
 #ifdef __MINGW32__
 // MinGW does not understand COM interfaces
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-#define STRSAFE_NO_DEPRECATE
 #endif
 
 #include <tchar.h>
@@ -109,9 +108,9 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#include "dshow.h"
+#include "DShow.h"
 #include "strmif.h"
-#include "aviriff.h"
+#include "Aviriff.h"
 #include "dvdmedia.h"
 #include "bdaiface.h"
 
@@ -2169,12 +2168,6 @@ void videoInput::setPhyCon(int id, int conn){
         case 4:
             VDList[id]->connection = PhysConn_Video_1394;
             break;
-        case 5:
-            VDList[id]->connection = PhysConn_Video_YRYBY;
-            break;
-        case 6:
-            VDList[id]->connection = PhysConn_Video_SerialDigital;
-            break;
         default:
             return; //if it is not these types don't set crossbar
         break;
@@ -2585,9 +2578,6 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     //width and height
     HEADER(pVih)->biWidth  = attemptWidth;
     HEADER(pVih)->biHeight = attemptHeight;
-    pVih->rcSource.top = pVih->rcSource.left = pVih->rcTarget.top =pVih->rcTarget.left=0;
-    pVih->rcSource.right = pVih->rcTarget.right= attemptWidth;
-    pVih->rcSource.bottom = pVih->rcTarget.bottom = attemptHeight;
 
     VD->pAmMediaType->formattype = FORMAT_VideoInfo;
     VD->pAmMediaType->majortype  = MEDIATYPE_Video;
@@ -3427,14 +3417,6 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
         break;
 
-    case CAP_PROP_CHANNEL:
-
-        if (cvFloor(propVal) < 0)
-            break;
-        g_VI.stopDevice(m_index);
-        g_VI.setupDevice(m_index,  cvFloor(propVal));
-        break;
-
     case CV_CAP_PROP_FPS:
     {
         int fps = cvRound(propVal);
@@ -3586,12 +3568,6 @@ void VideoCapture_DShow::close()
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
-
-Ptr<IVideoCapture> create_DShow_capture(int index)
-{
-    return makePtr<VideoCapture_DShow>(index);
-}
-
 
 }
 

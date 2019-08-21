@@ -71,7 +71,7 @@ public:
         op = SUM;
         if (params.has("operation"))
         {
-            String operation = toLowerCase(params.get<String>("operation"));
+            String operation = params.get<String>("operation").toLowerCase();
             if (operation == "prod")
                 op = PROD;
             else if (operation == "sum")

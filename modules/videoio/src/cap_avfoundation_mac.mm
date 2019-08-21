@@ -39,19 +39,12 @@
 //
 //M*////////////////////////////////////////////////////////////////////////////////////////
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <stdio.h>
 #include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
-
-#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
-#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
-#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
-#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 /********************** Declaration of class headers ************************/
 
@@ -162,7 +155,7 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
-    uint32_t  mMode;
+    int       mMode;
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
@@ -212,32 +205,30 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
 
 /****************** Implementation of interface functions ********************/
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
-{
-    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
+
+CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
+    CvCaptureFile *retval = new CvCaptureFile(filename);
+
     if(retval->didStart())
-        return makePtr<LegacyCapture>(retval);
+        return retval;
     delete retval;
     return NULL;
-
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
-{
-    CvCaptureCAM* retval = new CvCaptureCAM(index);
-    if (retval->didStart())
-        return cv::makePtr<cv::LegacyCapture>(retval);
-    delete retval;
-    return 0;
+CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
+    CvCapture* retval = new CvCaptureCAM(index);
+    if (!((CvCaptureCAM *)retval)->didStart())
+        cvReleaseCapture(&retval);
+    return retval;
 }
 
-cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
-{
-    CvSize sz = { frameSize.width, frameSize.height };
-    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, sz, isColor);
+CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
+                                     double fps, CvSize frame_size,
+                                     int is_color) {
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size, is_color);
     if (wrt->isOpened())
     {
-        return cv::makePtr<cv::LegacyWriter>(wrt);
+        return wrt;
     }
     delete wrt;
     return NULL;
@@ -325,27 +316,24 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
 
 #if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
-    if (@available(macOS 10.14, *))
+    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    if (status == AVAuthorizationStatusDenied)
     {
-        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
-        if (status == AVAuthorizationStatusDenied)
-        {
-            fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
-                            "command in same terminal to reset application authorization status, "
-                            "either modify 'System Preferences -> Security & Privacy -> Camera' "
-                            "settings for your application.\n");
-            [localpool drain];
-            return 0;
-        }
-        else if (status != AVAuthorizationStatusAuthorized)
-        {
-            fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
-            // TODO: doesn't work via ssh
-            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
-            // we do not wait for completion
-            [localpool drain];
-            return 0;
-        }
+        fprintf(stderr, "OpenCV: camera access has been denied. Either run 'tccutil reset Camera' "
+                        "command in same terminal to reset application authorization status, "
+                        "either modify 'System Preferences -> Security & Privacy -> Camera' "
+                        "settings for your application.\n");
+        [localpool drain];
+        return 0;
+    }
+    else if (status != AVAuthorizationStatusAuthorized)
+    {
+        fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+        // TODO: doesn't work via ssh
+        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+        // we do not wait for completion
+        [localpool drain];
+        return 0;
     }
 #endif
 
@@ -1070,7 +1058,7 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
-        case CV_CAP_PROP_FOURCC:
+        case CV_CAP_PROP_MODE:
             return mMode;
         default:
             break;
@@ -1101,8 +1089,8 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             t.value = round(t.value * value);
             retval = setupReadingAt(t);
             break;
-        case CV_CAP_PROP_FOURCC:
-            uint32_t mode;
+        case CV_CAP_PROP_MODE:
+            int mode;
             mode = cvRound(value);
             if (mMode == mode) {
                 retval = true;
@@ -1350,5 +1338,3 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
-
-#pragma clang diagnostic pop

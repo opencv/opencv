@@ -39,7 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "calib3d_c_api.h"
+#include "opencv2/calib3d/calib3d_c.h"
 
 /* POSIT structure */
 struct CvPOSITObject

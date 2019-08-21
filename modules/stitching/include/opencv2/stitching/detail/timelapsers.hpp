@@ -54,7 +54,7 @@ namespace detail {
 
 //  Base Timelapser class, takes a sequence of images, applies appropriate shift, stores result in dst_.
 
-class CV_EXPORTS_W Timelapser
+class CV_EXPORTS Timelapser
 {
 public:
 
@@ -62,11 +62,11 @@ public:
 
     virtual ~Timelapser() {}
 
-    CV_WRAP static Ptr<Timelapser> createDefault(int type);
+    static Ptr<Timelapser> createDefault(int type);
 
-    CV_WRAP virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
-    CV_WRAP virtual void process(InputArray img, InputArray mask, Point tl);
-    CV_WRAP virtual const UMat& getDst() {return dst_;}
+    virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes);
+    virtual void process(InputArray img, InputArray mask, Point tl);
+    virtual const UMat& getDst() {return dst_;}
 
 protected:
 
@@ -77,7 +77,7 @@ protected:
 };
 
 
-class CV_EXPORTS_W TimelapserCrop : public Timelapser
+class CV_EXPORTS TimelapserCrop : public Timelapser
 {
 public:
     virtual void initialize(const std::vector<Point> &corners, const std::vector<Size> &sizes) CV_OVERRIDE;

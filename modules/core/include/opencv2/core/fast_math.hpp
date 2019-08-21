@@ -70,13 +70,18 @@
 #  endif
 #endif
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#  include "tegra_round.hpp"
+#endif
+
 #if defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8 && !defined (__CUDACC__)
 #  include <altivec.h>
 #endif
 
-#if defined(CV_INLINE_ROUND_FLT)
-    // user-specified version
-    // CV_INLINE_ROUND_DBL should be defined too
+#if ((defined _MSC_VER && defined _M_ARM) || defined CV_ICC || \
+        defined __GNUC__) && defined HAVE_TEGRA_OPTIMIZATION
+    #define CV_INLINE_ROUND_DBL(value) TEGRA_ROUND_DBL(value);
+    #define CV_INLINE_ROUND_FLT(value) TEGRA_ROUND_FLT(value);
 #elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__ && !defined(__CUDACC__)
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
@@ -160,8 +165,6 @@ cvRound( double value )
     return t;
 #elif defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif defined CV_ICC || defined __GNUC__
-    return (int)lrint(value);
 #else
     /* it's ok if round does not comply with IEEE754 standard;
        the tests should allow +/-1 difference when the tested functions use round */
@@ -259,8 +262,6 @@ CV_INLINE int cvRound(float value)
     return t;
 #elif defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif defined CV_ICC || defined __GNUC__
-    return (int)lrintf(value);
 #else
     /* it's ok if round does not comply with IEEE754 standard;
      the tests should allow +/-1 difference when the tested functions use round */

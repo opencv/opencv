@@ -1,1 +1,0 @@
-This directory contains implementation of G-API frontend (public API classes).

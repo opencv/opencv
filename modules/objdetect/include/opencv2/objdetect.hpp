@@ -91,7 +91,7 @@ compensate for the differences in the size of areas. The sums of pixel values ov
 regions are calculated rapidly using integral images (see below and the integral description).
 
 To see the object detector at work, have a look at the facedetect demo:
-<https://github.com/opencv/opencv/tree/master/samples/cpp/dbt_face_detection.cpp>
+<https://github.com/opencv/opencv/tree/3.4/samples/cpp/dbt_face_detection.cpp>
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -163,7 +163,7 @@ CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::ve
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
-template<> struct DefaultDeleter<CvHaarClassifierCascade>{ CV_EXPORTS void operator ()(CvHaarClassifierCascade* obj) const; };
+template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_SCALE_IMAGE         = 2,
@@ -372,15 +372,13 @@ http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:
-    enum HistogramNormType { L2Hys = 0 //!< Default histogramNormType
+    enum { L2Hys = 0 //!< Default histogramNormType
          };
     enum { DEFAULT_NLEVELS = 64 //!< Default nlevels value.
          };
-    enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
-
     /**@brief Creates the HOG descriptor and detector with default params.
 
-    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
+    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9, 1 )
     */
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
         cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
@@ -404,7 +402,7 @@ public:
     */
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  HOGDescriptor::HistogramNormType _histogramNormType=HOGDescriptor::L2Hys,
+                  int _histogramNormType=HOGDescriptor::L2Hys,
                   double _L2HysThreshold=0.2, bool _gammaCorrection=false,
                   int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
@@ -414,7 +412,7 @@ public:
     {}
 
     /** @overload
-    @param filename The file name containing HOGDescriptor properties and coefficients for the linear SVM classifier.
+    @param filename the file name containing  HOGDescriptor properties and coefficients of the trained classifier
     */
     CV_WRAP HOGDescriptor(const String& filename)
     {
@@ -448,28 +446,28 @@ public:
     /**@example samples/cpp/peopledetect.cpp
     */
     /**@brief Sets coefficients for the linear SVM classifier.
-    @param svmdetector coefficients for the linear SVM classifier.
+    @param _svmdetector coefficients for the linear SVM classifier.
     */
-    CV_WRAP virtual void setSVMDetector(InputArray svmdetector);
+    CV_WRAP virtual void setSVMDetector(InputArray _svmdetector);
 
-    /** @brief Reads HOGDescriptor parameters from a cv::FileNode.
+    /** @brief Reads HOGDescriptor parameters from a file node.
     @param fn File node
     */
     virtual bool read(FileNode& fn);
 
-    /** @brief Stores HOGDescriptor parameters in a cv::FileStorage.
+    /** @brief Stores HOGDescriptor parameters in a file storage.
     @param fs File storage
     @param objname Object name
     */
     virtual void write(FileStorage& fs, const String& objname) const;
 
-    /** @brief loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
-    @param filename Path of the file to read.
+    /** @brief loads coefficients for the linear SVM classifier from a file
+    @param filename Name of the file to read.
     @param objname The optional name of the node to read (if empty, the first top-level node will be used).
     */
     CV_WRAP virtual bool load(const String& filename, const String& objname = String());
 
-    /** @brief saves HOGDescriptor parameters and coefficients for the linear SVM classifier to a file
+    /** @brief saves coefficients for the linear SVM classifier to a file
     @param filename File name
     @param objname Object name
     */
@@ -505,7 +503,7 @@ public:
     @param padding Padding
     @param searchLocations Vector of Point includes set of requested locations to be evaluated.
     */
-    CV_WRAP virtual void detect(InputArray img, CV_OUT std::vector<Point>& foundLocations,
+    CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
@@ -521,7 +519,7 @@ public:
     @param padding Padding
     @param searchLocations Vector of Point includes locations to search.
     */
-    virtual void detect(InputArray img, CV_OUT std::vector<Point>& foundLocations,
+    virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
@@ -570,7 +568,7 @@ public:
     @param paddingTL Padding from top-left
     @param paddingBR Padding from bottom-right
     */
-    CV_WRAP virtual void computeGradient(InputArray img, InputOutputArray grad, InputOutputArray angleOfs,
+    CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL = Size(), Size paddingBR = Size()) const;
 
     /** @brief Returns coefficients of the classifier trained for people detection (for 64x128 windows).
@@ -605,7 +603,7 @@ public:
     CV_PROP double winSigma;
 
     //! histogramNormType
-    CV_PROP HOGDescriptor::HistogramNormType histogramNormType;
+    CV_PROP int histogramNormType;
 
     //! L2-Hys normalization method shrinkage.
     CV_PROP double L2HysThreshold;
@@ -639,7 +637,7 @@ public:
     @param winStride winStride
     @param padding padding
     */
-    virtual void detectROI(InputArray img, const std::vector<cv::Point> &locations,
+    virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                    CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                    double hitThreshold = 0, cv::Size winStride = Size(),
                                    cv::Size padding = Size()) const;
@@ -652,11 +650,16 @@ public:
     in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param groupThreshold Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.
     */
-    virtual void detectMultiScaleROI(InputArray img,
+    virtual void detectMultiScaleROI(const cv::Mat& img,
                                      CV_OUT std::vector<cv::Rect>& foundLocations,
                                      std::vector<DetectionROI>& locations,
                                      double hitThreshold = 0,
                                      int groupThreshold = 0) const;
+
+    /** @brief read/parse Dalal's alt model file
+    @param modelfile Path of Dalal's alt model file.
+    */
+    void readALTModel(String modelfile);
 
     /** @brief Groups the object candidate rectangles.
     @param rectList  Input/output vector of rectangles. Output vector includes retained and grouped rectangles. (The Python list is not modified in place.)
@@ -697,7 +700,7 @@ public:
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+    CV_WRAP cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code
 
@@ -705,16 +708,36 @@ public:
      @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
+    CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
                                         OutputArray straight_qrcode = noArray());
 protected:
     struct Impl;
     Ptr<Impl> p;
 };
 
+/** @brief Detect QR code in image and return minimum area of quadrangle that describes QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Output vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    */
+CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
+
+/** @brief Decode QR code in image and return text that is encrypted in QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param decoded_info String information that is encrypted in QR code.
+    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
+    */
+CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
+
 //! @} objdetect
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
+
+#ifndef DISABLE_OPENCV_24_COMPATIBILITY
+#include "opencv2/objdetect/objdetect_c.h"
+#endif
 
 #endif

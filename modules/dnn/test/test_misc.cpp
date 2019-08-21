@@ -179,8 +179,6 @@ TEST_P(setInput, normalization)
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
-        throw SkipTestException(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);

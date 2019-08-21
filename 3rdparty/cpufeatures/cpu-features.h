@@ -30,7 +30,6 @@
 
 #include <sys/cdefs.h>
 #include <stdint.h>
-#include <string.h>
 
 __BEGIN_DECLS
 

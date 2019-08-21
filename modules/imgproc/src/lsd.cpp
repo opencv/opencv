@@ -42,10 +42,6 @@
 #include "precomp.hpp"
 #include <vector>
 
-#if defined(_MSC_VER)
-#   pragma warning(disable:4702)  // unreachable code
-#endif
-
 namespace cv {
 
 class LineSegmentDetectorImpl CV_FINAL : public LineSegmentDetector

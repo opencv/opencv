@@ -42,7 +42,6 @@
 
 #include "test_precomp.hpp"
 
-#if 0
 namespace opencv_test { namespace {
 
 class CV_WatershedTest : public cvtest::BaseTest
@@ -126,5 +125,3 @@ void CV_WatershedTest::run( int /* start_from */)
 TEST(Imgproc_Watershed, regression) { CV_WatershedTest test; test.safe_run(); }
 
 }} // namespace
-
-#endif

@@ -1,7 +1,6 @@
 package org.opencv.samples.tutorial2;
 
 import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
@@ -11,16 +10,14 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-import java.util.Collections;
-import java.util.List;
-
-public class Tutorial2Activity extends CameraActivity implements CvCameraViewListener2 {
+public class Tutorial2Activity extends Activity implements CvCameraViewListener2 {
     private static final String    TAG = "OCVSample::Activity";
 
     private static final int       VIEW_MODE_RGBA     = 0;
@@ -108,11 +105,6 @@ public class Tutorial2Activity extends CameraActivity implements CvCameraViewLis
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
-    }
-
-    @Override
-    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
-        return Collections.singletonList(mOpenCvCameraView);
     }
 
     public void onDestroy() {

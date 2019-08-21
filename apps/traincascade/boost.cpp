@@ -30,6 +30,7 @@ using cv::ParallelLoopBody;
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
+#include "cxmisc.h"
 
 #include "cvconfig.h"
 

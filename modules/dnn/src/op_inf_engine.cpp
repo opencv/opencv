@@ -320,7 +320,6 @@ void InfEngineBackendWrapper::setHostDirty()
 
 }
 
-
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
 static std::map<std::string, InferenceEngine::InferenceEnginePluginPtr>& getSharedPlugins()
 {
@@ -761,7 +760,7 @@ void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
 #endif  // HAVE_INF_ENGINE
 }
 
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 void resetMyriadDevice()
 {
@@ -826,5 +825,5 @@ cv::String getInferenceEngineVPUType()
 #endif  // HAVE_INF_ENGINE
 
 
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }}  // namespace dnn, namespace cv

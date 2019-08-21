@@ -69,7 +69,6 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v1, const float v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v1, const double v2, const CheckContext& ctx);
-CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v1, const Size_<int> v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx);
@@ -78,7 +77,6 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const int v, const CheckContext& c
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v, const CheckContext& ctx);
-CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckContext& ctx);

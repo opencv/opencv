@@ -238,10 +238,6 @@ make & enjoy!
 #include <sys/videoio.h>
 #endif
 
-#ifdef __OpenBSD__
-typedef uint32_t __u32;
-#endif
-
 // https://github.com/opencv/opencv/issues/13335
 #ifndef V4L2_CID_ISO_SENSITIVITY
 #define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
@@ -819,7 +815,7 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
-    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", false);
+    normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", true);
     channelNumber = -1;
     bufferIndex = -1;
 
@@ -1967,28 +1963,28 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     return &frame;
 }
 
-Ptr<IVideoCapture> create_V4L_capture_cam(int index)
+} // end namespace cv
+
+CvCapture* cvCreateCameraCapture_V4L( int index )
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if (capture->open(index))
-        return makePtr<LegacyCapture>(capture);
+    if(capture->open(index))
+        return capture;
 
     delete capture;
     return NULL;
 }
 
-Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
+CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if (capture->open(filename.c_str()))
-        return makePtr<LegacyCapture>(capture);
+    if(capture->open( deviceName ))
+        return capture;
 
     delete capture;
     return NULL;
 }
-
-} // cv::
 
 #endif

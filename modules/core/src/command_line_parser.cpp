@@ -53,7 +53,7 @@ struct CommandLineParser::Impl
 };
 
 
-static const char* get_type_name(Param type)
+static const char* get_type_name(int type)
 {
     if( type == Param::INT )
         return "int";
@@ -72,16 +72,21 @@ static const char* get_type_name(Param type)
     return "unknown";
 }
 
+// std::tolower is int->int
+static char char_tolower(char ch)
+{
+    return (char)std::tolower((int)ch);
+}
 static bool parse_bool(std::string str)
 {
-    std::transform(str.begin(), str.end(), str.begin(), details::char_tolower);
+    std::transform(str.begin(), str.end(), str.begin(), char_tolower);
     std::istringstream is(str);
     bool b;
     is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;
     return b;
 }
 
-static void from_str(const String& str, Param type, void* dst)
+static void from_str(const String& str, int type, void* dst)
 {
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
@@ -117,7 +122,7 @@ static void from_str(const String& str, Param type, void* dst)
     }
 }
 
-void CommandLineParser::getByName(const String& name, bool space_delete, Param type, void* dst) const
+void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
 {
     try
     {
@@ -155,7 +160,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, Param t
 }
 
 
-void CommandLineParser::getByIndex(int index, bool space_delete, Param type, void* dst) const
+void CommandLineParser::getByIndex(int index, bool space_delete, int type, void* dst) const
 {
     try
     {

@@ -195,12 +195,6 @@ CV_EXPORTS void addWeighted32s( const int* src1, size_t step1, const int* src2, 
 CV_EXPORTS void addWeighted32f( const float* src1, size_t step1, const float* src2, size_t step2, float* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* src2, size_t step2, double* dst, size_t step, int width, int height, void* scalars );
 
-CV_EXPORTS void cvt16f32f( const float16_t* src, float* dst, int len );
-CV_EXPORTS void cvt32f16f( const float* src, float16_t* dst, int len );
-
-CV_EXPORTS void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len );
-CV_EXPORTS void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len );
-
 struct CV_EXPORTS DFT1D
 {
     static Ptr<DFT1D> create(int len, int count, int depth, int flags, bool * useBuffer = 0);

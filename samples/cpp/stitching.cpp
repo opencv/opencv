@@ -8,6 +8,7 @@
 using namespace std;
 using namespace cv;
 
+bool try_use_gpu = false;
 bool divide_images = false;
 Stitcher::Mode mode = Stitcher::PANORAMA;
 vector<Mat> imgs;
@@ -23,7 +24,7 @@ int main(int argc, char* argv[])
 
     //![stitching]
     Mat pano;
-    Ptr<Stitcher> stitcher = Stitcher::create(mode);
+    Ptr<Stitcher> stitcher = Stitcher::create(mode, try_use_gpu);
     Stitcher::Status status = stitcher->stitch(imgs, pano);
 
     if (status != Stitcher::OK)
@@ -46,6 +47,9 @@ void printUsage(char** argv)
          "Flags:\n"
          "  --d3\n"
          "      internally creates three chunks of each image to increase stitching success\n"
+         "  --try_use_gpu (yes|no)\n"
+         "      Try to use GPU. The default value is 'no'. All default values\n"
+         "      are for CPU mode.\n"
          "  --mode (panorama|scans)\n"
          "      Determines configuration of stitcher. The default is 'panorama',\n"
          "      mode suitable for creating photo panoramas. Option 'scans' is suitable\n"
@@ -70,6 +74,19 @@ int parseCmdArgs(int argc, char** argv)
         {
             printUsage(argv);
             return EXIT_FAILURE;
+        }
+        else if (string(argv[i]) == "--try_use_gpu")
+        {
+            if (string(argv[i + 1]) == "no")
+                try_use_gpu = false;
+            else if (string(argv[i + 1]) == "yes")
+                try_use_gpu = true;
+            else
+            {
+                cout << "Bad --try_use_gpu flag value\n";
+                return EXIT_FAILURE;
+            }
+            i++;
         }
         else if (string(argv[i]) == "--d3")
         {

@@ -86,9 +86,11 @@ if(WITH_OPENGL)
   endif()
 endif(WITH_OPENGL)
 
-# --- Cocoa ---
+# --- Carbon & Cocoa ---
 if(APPLE)
-  if(NOT IOS AND CV_CLANG)
+  if(WITH_CARBON)
+    set(HAVE_CARBON YES)
+  elseif(NOT IOS AND CV_CLANG)
     set(HAVE_COCOA YES)
   endif()
 endif()
