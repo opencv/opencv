@@ -5,7 +5,7 @@ import argparse
 
 parser = argparse.ArgumentParser(
         description='This script is used to run style transfer models from '
-                    'https://github.com/jcjohnson/fast-neural-style using OpenCV')
+                    'https://github.com/jcjohnson/fast-neural-style')
 parser.add_argument('--input', help='Path to image or video. Skip to capture frames from camera')
 parser.add_argument('--model', help='Path to .t7 model')
 parser.add_argument('--width', default=-1, type=int, help='Resize input to specific width.')
