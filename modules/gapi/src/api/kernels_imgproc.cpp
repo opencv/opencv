@@ -7,10 +7,10 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gcall.hpp"
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gcall.hpp>
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 namespace cv { namespace gapi {
 
@@ -80,6 +80,13 @@ GMat Sobel(const GMat& src, int ddepth, int dx, int dy, int ksize,
     return imgproc::GSobel::on(src, ddepth, dx, dy, ksize, scale, delta, borderType, bordVal);
 }
 
+std::tuple<GMat, GMat> SobelXY(const GMat& src, int ddepth, int order, int ksize,
+           double scale, double delta,
+           int borderType, const Scalar& bordVal)
+{
+    return imgproc::GSobelXY::on(src, ddepth, order, ksize, scale, delta, borderType, bordVal);
+}
+
 GMat equalizeHist(const GMat& src)
 {
     return imgproc::GEqHist::on(src);
@@ -135,9 +142,41 @@ GMat YUV2RGB(const GMat& src)
     return imgproc::GYUV2RGB::on(src);
 }
 
+GMat NV12toRGB(const GMat& src_y, const GMat& src_uv)
+{
+    return imgproc::GNV12toRGB::on(src_y, src_uv);
+}
+
+GMat NV12toBGR(const GMat& src_y, const GMat& src_uv)
+{
+    return imgproc::GNV12toBGR::on(src_y, src_uv);
+}
+
 GMat RGB2Lab(const GMat& src)
 {
     return imgproc::GRGB2Lab::on(src);
+}
+
+GMat BayerGR2RGB(const GMat& src_gr) {
+    return imgproc::GBayerGR2RGB::on(src_gr);
+}
+
+GMat RGB2HSV(const GMat& src) {
+    return imgproc::GRGB2HSV::on(src);
+}
+
+GMat RGB2YUV422(const GMat& src) {
+    return imgproc::GRGB2YUV422::on(src);
+}
+
+GMatP NV12toRGBp(const GMat &y, const GMat &uv)
+{
+    return imgproc::GNV12toRGBp::on(y, uv);
+}
+
+GMatP NV12toBGRp(const GMat &y, const GMat &uv)
+{
+    return imgproc::GNV12toBGRp::on(y, uv);
 }
 
 } //namespace gapi

@@ -8,13 +8,15 @@
 #ifndef OPENCV_GAPI_CORE_HPP
 #define OPENCV_GAPI_CORE_HPP
 
+#include <math.h>
+
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 /** \defgroup gapi_core G-API core (basic) functionality
 @{
@@ -392,9 +394,19 @@ namespace core {
             {
                 GAPI_Assert(fx != 0. && fy != 0.);
                 return in.withSize
-                    (Size(static_cast<int>(std::round(in.size.width  * fx)),
-                          static_cast<int>(std::round(in.size.height * fy))));
+                    (Size(static_cast<int>(round(in.size.width  * fx)),
+                          static_cast<int>(round(in.size.height * fy))));
             }
+        }
+    };
+
+    G_TYPED_KERNEL(GResizeP, <GMatP(GMatP,Size,int)>, "org.opencv.core.transform.resizeP") {
+        static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.planar);
+            GAPI_Assert(interp == cv::INTER_LINEAR);
+            return in.withSize(sz);
         }
     };
 
@@ -457,6 +469,13 @@ namespace core {
     G_TYPED_KERNEL(GSqrt, <GMat(GMat)>, "org.opencv.core.math.sqrt") {
         static GMatDesc outMeta(GMatDesc in) {
             return in;
+        }
+    };
+
+    G_TYPED_KERNEL(GNormalize, <GMat(GMat, double, double, int, int)>, "org.opencv.core.normalize") {
+        static GMatDesc outMeta(GMatDesc in, double, double, int, int ddepth) {
+            // unlike opencv doesn't have a mask as a parameter
+            return (ddepth < 0 ? in : in.withDepth(ddepth));
         }
     };
 }
@@ -682,7 +701,7 @@ GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, 
 /** @brief Applies a mask to a matrix.
 
 The function mask set value from given matrix if the corresponding pixel value in mask matrix set to true,
-and set the matrix value to 0 overwise.
+and set the matrix value to 0 otherwise.
 
 Supported src matrix data types are @ref CV_8UC1, @ref CV_16SC1, @ref CV_16UC1. Supported mask data type is @ref CV_8UC1.
 
@@ -1248,7 +1267,7 @@ GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, i
 /** @brief Applies a fixed-level threshold to each matrix element.
 
 The function applies fixed-level thresholding to a single- or multiple-channel matrix.
-The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp funtions could be also used for
+The function is typically used to get a bi-level (binary) image out of a grayscale image ( cmp functions could be also used for
 this purpose) or for removing a noise, that is, filtering out pixels with too small or too large
 values. There are several depths of thresholding supported by the function. They are determined by
 depth parameter.
@@ -1274,7 +1293,7 @@ depths.
  */
 GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int depth);
 /** @overload
-This function appicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
 GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int depth);
@@ -1335,9 +1354,27 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see cv::InterpolationFlags
 
-@sa  warpAffine, warpPerspective, remap
+@sa  warpAffine, warpPerspective, remap, resizeP
  */
 GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+
+/** @brief Resizes a planar image.
+
+The function resizes the image src down to or up to the specified size.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
+
+Output image size will have the size dsize, the depth of output is the same as of src.
+
+@note Function textual ID is "org.opencv.core.transform.resizeP"
+
+@param src input image, must be of @ref CV_8UC1 type;
+@param dsize output image size;
+@param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
+
+@sa  warpAffine, warpPerspective, remap, resize
+ */
+GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
 /** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
 
@@ -1557,25 +1594,6 @@ number of channels as in the input matrix.
 */
 GAPI_EXPORTS GMat LUT(const GMat& src, const Mat& lut);
 
-/** @brief Performs a 3D look-up table transform of a multi-channel matrix.
-
-The function LUT3D fills the output matrix with values from the look-up table. Indices of the entries
-are taken from the input matrix. Interpolation is applied for mapping 0-255 range values to 0-16 range of 3DLUT table.
-The function processes each element of src as follows:
-@code{.cpp}
-    dst[i][j][k] = lut3D[~src_r][~src_g][~src_b];
-@endcode
-where ~ means approximation.
-Output is a matrix of of @ref CV_8UC3.
-
-@note Function textual ID is "org.opencv.core.transform.LUT3D"
-
-@param src input matrix of @ref CV_8UC3.
-@param lut3D look-up table 17x17x17 3-channel elements.
-@param interpolation The depth of interpoolation to be used.
-*/
-GAPI_EXPORTS GMat LUT3D(const GMat& src, const GMat& lut3D, int interpolation = INTER_NEAREST);
-
 /** @brief Converts a matrix to another data depth with optional scaling.
 
 The method converts source pixel values to the target data depth. saturate_cast\<\> is applied at
@@ -1592,6 +1610,29 @@ same as the input has; if rdepth is negative, the output matrix will have the sa
 @param beta optional delta added to the scaled values.
  */
 GAPI_EXPORTS GMat convertTo(const GMat& src, int rdepth, double alpha=1, double beta=0);
+
+/** @brief Normalizes the norm or value range of an array.
+
+The function normalizes scale and shift the input array elements so that
+\f[\| \texttt{dst} \| _{L_p}= \texttt{alpha}\f]
+(where p=Inf, 1 or 2) when normType=NORM_INF, NORM_L1, or NORM_L2, respectively; or so that
+\f[\min _I  \texttt{dst} (I)= \texttt{alpha} , \, \, \max _I  \texttt{dst} (I)= \texttt{beta}\f]
+when normType=NORM_MINMAX (for dense arrays only).
+
+@note Function textual ID is "org.opencv.core.normalize"
+
+@param src input array.
+@param alpha norm value to normalize to or the lower range boundary in case of the range
+normalization.
+@param beta upper range boundary in case of the range normalization; it is not used for the norm
+normalization.
+@param norm_type normalization type (see cv::NormTypes).
+@param ddepth when negative, the output array has the same type as src; otherwise, it has the same
+number of channels as src and the depth =ddepth.
+@sa norm, Mat::convertTo
+*/
+GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
+                            int norm_type, int ddepth = -1);
 //! @} gapi_transform
 
 } //namespace gapi

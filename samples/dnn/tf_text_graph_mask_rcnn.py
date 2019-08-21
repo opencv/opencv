@@ -25,7 +25,8 @@ scopesToIgnore = ('FirstStageFeatureExtractor/Assert',
                   'FirstStageFeatureExtractor/Shape',
                   'FirstStageFeatureExtractor/strided_slice',
                   'FirstStageFeatureExtractor/GreaterEqual',
-                  'FirstStageFeatureExtractor/LogicalAnd')
+                  'FirstStageFeatureExtractor/LogicalAnd',
+                  'Conv/required_space_to_batch_paddings')
 
 # Load a config file.
 config = readTextMessage(args.config)
@@ -38,6 +39,8 @@ aspect_ratios = [float(ar) for ar in grid_anchor_generator['aspect_ratios']]
 width_stride = float(grid_anchor_generator['width_stride'][0])
 height_stride = float(grid_anchor_generator['height_stride'][0])
 features_stride = float(config['feature_extractor'][0]['first_stage_features_stride'][0])
+first_stage_nms_iou_threshold = float(config['first_stage_nms_iou_threshold'][0])
+first_stage_max_proposals = int(config['first_stage_max_proposals'][0])
 
 print('Number of classes: %d' % num_classes)
 print('Scales:            %s' % str(scales))
@@ -52,8 +55,29 @@ graph_def = parseTextGraph(args.output)
 
 removeIdentity(graph_def)
 
+nodesToKeep = []
 def to_remove(name, op):
-    return name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep)
+    if name in nodesToKeep:
+        return False
+    return op == 'Const' or name.startswith(scopesToIgnore) or not name.startswith(scopesToKeep) or \
+           (name.startswith('CropAndResize') and op != 'CropAndResize')
+
+# Fuse atrous convolutions (with dilations).
+nodesMap = {node.name: node for node in graph_def.node}
+for node in reversed(graph_def.node):
+    if node.op == 'BatchToSpaceND':
+        del node.input[2]
+        conv = nodesMap[node.input[0]]
+        spaceToBatchND = nodesMap[conv.input[0]]
+
+        paddingsNode = NodeDef()
+        paddingsNode.name = conv.name + '/paddings'
+        paddingsNode.op = 'Const'
+        paddingsNode.addAttr('value', [2, 2, 2, 2])
+        graph_def.node.insert(graph_def.node.index(spaceToBatchND), paddingsNode)
+        nodesToKeep.append(paddingsNode.name)
+
+        spaceToBatchND.input[2] = paddingsNode.name
 
 removeUnusedNodesAndAttrs(to_remove, graph_def)
 
@@ -103,8 +127,8 @@ heights = []
 for a in aspect_ratios:
     for s in scales:
         ar = np.sqrt(a)
-        heights.append((features_stride**2) * s / ar)
-        widths.append((features_stride**2) * s * ar)
+        heights.append((height_stride**2) * s / ar)
+        widths.append((width_stride**2) * s * ar)
 
 proposals.addAttr('width', widths)
 proposals.addAttr('height', heights)
@@ -123,20 +147,22 @@ detectionOut.input.append('proposals')
 detectionOut.addAttr('num_classes', 2)
 detectionOut.addAttr('share_location', True)
 detectionOut.addAttr('background_label_id', 0)
-detectionOut.addAttr('nms_threshold', 0.7)
+detectionOut.addAttr('nms_threshold', first_stage_nms_iou_threshold)
 detectionOut.addAttr('top_k', 6000)
 detectionOut.addAttr('code_type', "CENTER_SIZE")
-detectionOut.addAttr('keep_top_k', 100)
+detectionOut.addAttr('keep_top_k', first_stage_max_proposals)
 detectionOut.addAttr('clip', True)
 
 graph_def.node.extend([detectionOut])
 
 # Save as text.
+cropAndResizeNodesNames = []
 for node in reversed(topNodes):
     if node.op != 'CropAndResize':
         graph_def.node.extend([node])
         topNodes.pop()
     else:
+        cropAndResizeNodesNames.append(node.name)
         if numCropAndResize == 1:
             break
         else:
@@ -166,17 +192,27 @@ for i in reversed(range(len(graph_def.node))):
 
     if graph_def.node[i].name in ['SecondStageBoxPredictor/Flatten/flatten/Shape',
                                   'SecondStageBoxPredictor/Flatten/flatten/strided_slice',
-                                  'SecondStageBoxPredictor/Flatten/flatten/Reshape/shape']:
+                                  'SecondStageBoxPredictor/Flatten/flatten/Reshape/shape',
+                                  'SecondStageBoxPredictor/Flatten_1/flatten/Shape',
+                                  'SecondStageBoxPredictor/Flatten_1/flatten/strided_slice',
+                                  'SecondStageBoxPredictor/Flatten_1/flatten/Reshape/shape']:
         del graph_def.node[i]
 
 for node in graph_def.node:
-    if node.name == 'SecondStageBoxPredictor/Flatten/flatten/Reshape':
+    if node.name == 'SecondStageBoxPredictor/Flatten/flatten/Reshape' or \
+       node.name == 'SecondStageBoxPredictor/Flatten_1/flatten/Reshape':
         node.op = 'Flatten'
         node.input.pop()
 
     if node.name in ['FirstStageBoxPredictor/BoxEncodingPredictor/Conv2D',
                      'SecondStageBoxPredictor/BoxEncodingPredictor/MatMul']:
         node.addAttr('loc_pred_transposed', True)
+
+    if node.name.startswith('MaxPool2D'):
+        assert(node.op == 'MaxPool')
+        assert(len(cropAndResizeNodesNames) == 2)
+        node.input = [cropAndResizeNodesNames[0]]
+        del cropAndResizeNodesNames[0]
 
 ################################################################################
 ### Postprocessing
@@ -223,6 +259,11 @@ graph_def.node.extend([detectionOut])
 for node in reversed(topNodes):
     graph_def.node.extend([node])
 
+    if node.name.startswith('MaxPool2D'):
+        assert(node.op == 'MaxPool')
+        assert(len(cropAndResizeNodesNames) == 1)
+        node.input = [cropAndResizeNodesNames[0]]
+
 for i in reversed(range(len(graph_def.node))):
     if graph_def.node[i].op == 'CropAndResize':
         graph_def.node[i].input.insert(1, 'detection_out_final')
@@ -231,6 +272,26 @@ for i in reversed(range(len(graph_def.node))):
 graph_def.node[-1].name = 'detection_masks'
 graph_def.node[-1].op = 'Sigmoid'
 graph_def.node[-1].input.pop()
+
+def getUnconnectedNodes():
+    unconnected = [node.name for node in graph_def.node]
+    for node in graph_def.node:
+        for inp in node.input:
+            if inp in unconnected:
+                unconnected.remove(inp)
+    return unconnected
+
+while True:
+    unconnectedNodes = getUnconnectedNodes()
+    unconnectedNodes.remove(graph_def.node[-1].name)
+    if not unconnectedNodes:
+        break
+
+    for name in unconnectedNodes:
+        for i in range(len(graph_def.node)):
+            if graph_def.node[i].name == name:
+                del graph_def.node[i]
+                break
 
 # Save as text.
 graph_def.save(args.output)

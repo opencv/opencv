@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_DC1394_2
 
@@ -58,108 +59,6 @@
 #include <dc1394/dc1394.h>
 #include <stdlib.h>
 #include <string.h>
-
-static dc1394error_t adaptBufferStereoLocal(dc1394video_frame_t *in, dc1394video_frame_t *out)
-{
-    uint32_t bpp;
-
-    // buffer position is not changed. Size is boubled in Y
-    out->size[0] = in->size[0];
-    out->size[1] = in->size[1] * 2;
-    out->position[0] = in->position[0];
-    out->position[1] = in->position[1];
-
-    // color coding is set to mono8 or raw8.
-    switch (in->color_coding)
-    {
-    case DC1394_COLOR_CODING_RAW16:
-        out->color_coding = DC1394_COLOR_CODING_RAW8;
-        break;
-    case DC1394_COLOR_CODING_MONO16:
-    case DC1394_COLOR_CODING_YUV422:
-        out->color_coding = DC1394_COLOR_CODING_MONO8;
-        break;
-    default:
-        return DC1394_INVALID_COLOR_CODING;
-    }
-
-    // keep the color filter value in all cases. if the format is not raw it will not be further used anyway
-    out->color_filter = in->color_filter;
-
-    // the output YUV byte order must be already set if the buffer is YUV422 at the output
-    // if the output is not YUV we don't care about this field.
-    // Hence nothing to do.
-    // we always convert to 8bits (at this point) we can safely set this value to 8.
-    out->data_depth = 8;
-
-    // don't know what to do with stride... >>>> TODO: STRIDE SHOULD BE TAKEN INTO ACCOUNT... <<<<
-    // out->stride=??
-    // the video mode should not change. Color coding and other stuff can be accessed in specific fields of this struct
-    out->video_mode = in->video_mode;
-
-    // padding is kept:
-    out->padding_bytes = in->padding_bytes;
-
-    // image bytes changes:    >>>> TODO: STRIDE SHOULD BE TAKEN INTO ACCOUNT... <<<<
-    dc1394_get_color_coding_bit_size(out->color_coding, &bpp);
-    out->image_bytes = (out->size[0] * out->size[1] * bpp) / 8;
-
-    // total is image_bytes + padding_bytes
-    out->total_bytes = out->image_bytes + out->padding_bytes;
-
-    // bytes-per-packet and packets_per_frame are internal data that can be kept as is.
-    out->packet_size  = in->packet_size;
-    out->packets_per_frame = in->packets_per_frame;
-
-    // timestamp, frame_behind, id and camera are copied too:
-    out->timestamp = in->timestamp;
-    out->frames_behind = in->frames_behind;
-    out->camera = in->camera;
-    out->id = in->id;
-
-    // verify memory allocation:
-    if (out->total_bytes > out->allocated_image_bytes)
-    {
-        free(out->image);
-        out->image = (uint8_t*)malloc(out->total_bytes * sizeof(uint8_t));
-        out->allocated_image_bytes = out->total_bytes;
-    }
-
-    // Copy padding bytes:
-    memcpy(&(out->image[out->image_bytes]), &(in->image[in->image_bytes]), out->padding_bytes);
-    out->little_endian = DC1394_FALSE; // not used before 1.32 is out.
-    out->data_in_padding = DC1394_FALSE; // not used before 1.32 is out.
-    return DC1394_SUCCESS;
-}
-
-static dc1394error_t dc1394_deinterlace_stereo_frames_fixed(dc1394video_frame_t *in,
-    dc1394video_frame_t *out, dc1394stereo_method_t method)
-{
-    if((in->color_coding == DC1394_COLOR_CODING_RAW16) ||
-       (in->color_coding == DC1394_COLOR_CODING_MONO16) ||
-       (in->color_coding == DC1394_COLOR_CODING_YUV422))
-    {
-        switch (method)
-        {
-
-        case DC1394_STEREO_METHOD_INTERLACED:
-            adaptBufferStereoLocal(in, out);
-//FIXED by AB:
-//          dc1394_deinterlace_stereo(in->image, out->image, in->size[0], in->size[1]);
-            dc1394_deinterlace_stereo(in->image, out->image, out->size[0], out->size[1]);
-            break;
-
-        case DC1394_STEREO_METHOD_FIELD:
-            adaptBufferStereoLocal(in, out);
-            memcpy(out->image, in->image, out->image_bytes);
-            break;
-        }
-
-        return DC1394_INVALID_STEREO_METHOD;
-    }
-    else
-        return DC1394_FUNCTION_NOT_SUPPORTED;
-}
 
 struct CvDC1394
 {
@@ -183,7 +82,11 @@ CvDC1394::~CvDC1394()
     dc = 0;
 }
 
-static CvDC1394 dc1394;
+static CvDC1394& getDC1394()
+{
+    static CvDC1394 dc1394;
+    return dc1394;
+}
 
 class CvCaptureCAM_DC1394_v2_CPP : public CvCapture
 {
@@ -436,7 +339,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
     code = dc1394_capture_setup(dcCam, nDMABufs, DC1394_CAPTURE_FLAGS_DEFAULT);
     if (code >= 0)
     {
-        FD_SET(dc1394_capture_get_fileno(dcCam), &dc1394.camFds);
+        FD_SET(dc1394_capture_get_fileno(dcCam), &getDC1394().camFds);
         dc1394_video_set_transmission(dcCam, DC1394_ON);
         started = true;
     }
@@ -452,15 +355,15 @@ bool CvCaptureCAM_DC1394_v2_CPP::open(int index)
 
     close();
 
-    if (!dc1394.dc)
+    if (!getDC1394().dc)
         goto _exit_;
 
-    err = dc1394_camera_enumerate(dc1394.dc, &cameraList);
+    err = dc1394_camera_enumerate(getDC1394().dc, &cameraList);
     if (err < 0 || !cameraList || (unsigned)index >= (unsigned)cameraList->num)
         goto _exit_;
 
     guid = cameraList->ids[index].guid;
-    dcCam = dc1394_camera_new(dc1394.dc, guid);
+    dcCam = dc1394_camera_new(getDC1394().dc, guid);
     if (!dcCam)
         goto _exit_;
 
@@ -485,8 +388,8 @@ void CvCaptureCAM_DC1394_v2_CPP::close()
         // check for fileno valid before using
         int fileno=dc1394_capture_get_fileno(dcCam);
 
-        if (fileno>=0 && FD_ISSET(fileno, &dc1394.camFds))
-            FD_CLR(fileno, &dc1394.camFds);
+        if (fileno>=0 && FD_ISSET(fileno, &getDC1394().camFds))
+            FD_CLR(fileno, &getDC1394().camFds);
         dc1394_video_set_transmission(dcCam, DC1394_OFF);
         dc1394_capture_stop(dcCam);
         dc1394_camera_free(dcCam);
@@ -535,10 +438,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::grabFrame()
     if (nimages == 2)
     {
         fs = (dc1394video_frame_t*)calloc(1, sizeof(*fs));
-
-        //dc1394_deinterlace_stereo_frames(dcFrame, fs, DC1394_STEREO_METHOD_INTERLACED);
-        dc1394_deinterlace_stereo_frames_fixed(dcFrame, fs, DC1394_STEREO_METHOD_INTERLACED);
-
+        dc1394_deinterlace_stereo_frames(dcFrame, fs, DC1394_STEREO_METHOD_INTERLACED);
         dc1394_capture_enqueue(dcCam, dcFrame); // release the captured frame as soon as possible
         dcFrame = 0;
         if (!fs->image)
@@ -793,13 +693,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
 }
 
 
-CvCapture* cvCreateCameraCapture_DC1394_2(int index)
+cv::Ptr<cv::IVideoCapture> cv::create_DC1394_capture(int index)
 {
     CvCaptureCAM_DC1394_v2_CPP* capture = new CvCaptureCAM_DC1394_v2_CPP;
-
     if (capture->open(index))
-        return capture;
-
+        return cv::makePtr<cv::LegacyCapture>(capture);
     delete capture;
     return 0;
 }

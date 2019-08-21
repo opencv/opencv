@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
-#include "opencv2/gapi/util/optional.hpp"
+#include "../test_precomp.hpp"
+#include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 
 namespace opencv_test

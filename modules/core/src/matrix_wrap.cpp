@@ -1288,17 +1288,12 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
-        if( allowTransposed )
+        if (allowTransposed && !m.empty() &&
+            d == 2 && m.dims == 2 &&
+            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
+            m.isContinuous())
         {
-            if( !m.isContinuous() )
-            {
-                CV_Assert(!fixedType() && !fixedSize());
-                m.release();
-            }
-
-            if( d == 2 && m.dims == 2 && m.data &&
-                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
-                return;
+            return;
         }
 
         if(fixedType())
@@ -1306,13 +1301,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == d);
+            CV_CheckEQ(m.dims, d, "");
             for(int j = 0; j < d; ++j)
-                CV_Assert(m.size[j] == sizes[j]);
+                CV_CheckEQ(m.size[j], sizes[j], "");
         }
         m.create(d, sizes, mtype);
         return;
@@ -1322,17 +1317,12 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( i < 0 );
         UMat& m = *(UMat*)obj;
-        if( allowTransposed )
+        if (allowTransposed && !m.empty() &&
+            d == 2 && m.dims == 2 &&
+            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
+            m.isContinuous())
         {
-            if( !m.isContinuous() )
-            {
-                CV_Assert(!fixedType() && !fixedSize());
-                m.release();
-            }
-
-            if( d == 2 && m.dims == 2 && !m.empty() &&
-                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
-                return;
+            return;
         }
 
         if(fixedType())
@@ -1340,13 +1330,13 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+                CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "");
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == d);
+            CV_CheckEQ(m.dims, d, "");
             for(int j = 0; j < d; ++j)
-                CV_Assert(m.size[j] == sizes[j]);
+                CV_CheckEQ(m.size[j], sizes[j], "");
         }
         m.create(d, sizes, mtype);
         return;
@@ -1882,6 +1872,76 @@ void _OutputArray::assign(const Mat& m) const
     else if (k == MATX)
     {
         m.copyTo(getMat());
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::move(UMat& u) const
+{
+    if (fixedSize())
+    {
+        // TODO Performance warning
+        assign(u);
+        return;
+    }
+    int k = kind();
+    if (k == UMAT)
+    {
+#ifdef CV_CXX11
+        *(UMat*)obj = std::move(u);
+#else
+        *(UMat*)obj = u;
+        u.release();
+#endif
+    }
+    else if (k == MAT)
+    {
+        u.copyTo(*(Mat*)obj); // TODO check u.getMat()
+        u.release();
+    }
+    else if (k == MATX)
+    {
+        u.copyTo(getMat()); // TODO check u.getMat()
+        u.release();
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::move(Mat& m) const
+{
+    if (fixedSize())
+    {
+        // TODO Performance warning
+        assign(m);
+        return;
+    }
+    int k = kind();
+    if (k == UMAT)
+    {
+        m.copyTo(*(UMat*)obj); // TODO check m.getUMat()
+        m.release();
+    }
+    else if (k == MAT)
+    {
+#ifdef CV_CXX11
+        *(Mat*)obj = std::move(m);
+#else
+        *(Mat*)obj = m;
+        m.release();
+#endif
+    }
+    else if (k == MATX)
+    {
+        m.copyTo(getMat());
+        m.release();
     }
     else
     {

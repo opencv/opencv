@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 #include <cassert>
-#include "opencv2/gapi/gcall.hpp"
+#include <opencv2/gapi/gcall.hpp>
 #include "api/gcall_priv.hpp"
 
 // GCall private implementation ////////////////////////////////////////////////
@@ -28,9 +28,14 @@ cv::GCall::GCall(const cv::GKernel &k)
 
 cv::GCall::~GCall()
 {
+    // FIXME: current behavior of the destructor can cause troubles in a threaded environment. GCall
+    // is not supposed to be accessed for modification within multiple threads. There should be a
+    // way to ensure somehow that no problem occurs in future. For now, this is a reminder that
+    // GCall is not supposed to be copied inside a code block that is executed in parallel.
+
     // When a GCall object is destroyed (and GCall::Priv is likely still alive,
     // as there might be other references), reset m_node to break cycle.
-   m_priv->m_node = GNode();
+    m_priv->m_node = GNode();
 }
 
 void cv::GCall::setArgs(std::vector<GArg> &&args)
@@ -42,6 +47,11 @@ void cv::GCall::setArgs(std::vector<GArg> &&args)
 cv::GMat cv::GCall::yield(int output)
 {
     return cv::GMat(m_priv->m_node, output);
+}
+
+cv::GMatP cv::GCall::yieldP(int output)
+{
+    return cv::GMatP(m_priv->m_node, output);
 }
 
 cv::GScalar cv::GCall::yieldScalar(int output)

@@ -13,12 +13,11 @@
 #include <tuple>              // tuple
 #include <ade/util/algorithm.hpp> // type_list_index
 
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-
-#include "api/gapi_priv.hpp"
+#include "api/gorigin.hpp"
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
@@ -69,4 +68,4 @@ public:
 
 }}
 
-#endif // OPENCV_GAPI_GBACKEND_HPP
+#endif // OPENCV_GAPI_GCPUBACKEND_HPP

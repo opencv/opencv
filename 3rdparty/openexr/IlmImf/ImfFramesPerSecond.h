@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2006, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -65,9 +65,13 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfRational.h>
+#include "ImfRational.h"
+#include "ImfNamespace.h"
+#include "ImfExport.h"
 
-namespace Imf {
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
+
 
 inline Rational	fps_23_976 ()	{return Rational (24000, 1001);}
 inline Rational	fps_24 ()	{return Rational (24, 1);}
@@ -80,9 +84,11 @@ inline Rational	fps_50 ()	{return Rational (50, 1);}
 inline Rational	fps_59_94 ()	{return Rational (60000, 1001);}
 inline Rational	fps_60 ()	{return Rational (60, 1);}
 
-Rational	guessExactFps (double fps);
-Rational	guessExactFps (const Rational &fps);
+IMF_EXPORT Rational	guessExactFps (double fps);
+IMF_EXPORT Rational	guessExactFps (const Rational &fps);
 
-} // namespace Imf
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
+
 
 #endif

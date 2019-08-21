@@ -7,10 +7,10 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/gcall.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gkernel.hpp"
-#include "opencv2/gapi/core.hpp"
+#include <opencv2/gapi/gcall.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/core.hpp>
 
 #include <tuple>
 #include <numeric>
@@ -301,6 +301,11 @@ GMat resize(const GMat& src, const Size& dsize, double fx, double fy, int interp
     return core::GResize::on(src, dsize, fx, fy, interpolation);
 }
 
+GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation)
+{
+    return core::GResizeP::on(src, dsize, interpolation);
+}
+
 GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
            int interpolation, int borderMode,
            const Scalar& borderValue)
@@ -353,6 +358,12 @@ GMat convertTo(const GMat& m, int rtype, double alpha, double beta)
 GMat sqrt(const GMat& src)
 {
     return core::GSqrt::on(src);
+}
+
+GMat normalize(const GMat& _src, double a, double b,
+               int norm_type, int ddepth)
+{
+    return core::GNormalize::on(_src, a, b, norm_type, ddepth);
 }
 
 } //namespace gapi

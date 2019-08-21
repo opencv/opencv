@@ -1766,7 +1766,7 @@ cvSeqInsertSlice( CvSeq* seq, int index, const CvArr* from_arr )
             CV_Error( CV_StsBadArg, "Source is not a sequence nor matrix" );
 
         if( !CV_IS_MAT_CONT(mat->type) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg, "The source array must be 1d coninuous vector" );
+            CV_Error( CV_StsBadArg, "The source array must be 1d continuous vector" );
 
         from = cvMakeSeqHeaderForArray( CV_SEQ_KIND_GENERIC, sizeof(from_header),
                                                  CV_ELEM_SIZE(mat->type),
@@ -3368,7 +3368,7 @@ cvTreeToNodeSeq( const void* first, int header_size, CvMemStorage* storage )
 
 typedef struct CvTreeNode
 {
-    int       flags;         /* micsellaneous flags */
+    int       flags;         /* miscellaneous flags */
     int       header_size;   /* size of sequence header */
     struct    CvTreeNode* h_prev; /* previous sequence */
     struct    CvTreeNode* h_next; /* next sequence */

@@ -249,8 +249,8 @@ where src[i] and dst[i] are the i-th points in src and dst, respectively
 \f[\begin{bmatrix} a_{11} & a_{12} & b_1  \\ -a_{12} & a_{11} & b_2  \end{bmatrix}\f]
 when fullAffine=false.
 
-@deprecated Use cv::estimateAffine2D, cv::estimateAffinePartial2D instead. If you are using this fuction
-with images, extract points using cv::calcOpticalFlowPyrLK and then use the estimation fuctions.
+@deprecated Use cv::estimateAffine2D, cv::estimateAffinePartial2D instead. If you are using this function
+with images, extract points using cv::calcOpticalFlowPyrLK and then use the estimation functions.
 
 @sa
 estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTransform, findHomography
@@ -265,6 +265,19 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
+/** @brief Computes the Enhanced Correlation Coefficient value between two images @cite EP08 .
+
+@param templateImage single-channel template image; CV_8U or CV_32F array.
+@param inputImage single-channel input image to be warped to provide an image similar to
+ templateImage, same type as templateImage.
+@param inputMask An optional mask to indicate valid values of inputImage.
+
+@sa
+findTransformECC
+ */
+
+CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
+
 /** @example samples/cpp/image_alignment.cpp
 An example using the image alignment ECC algorithm
 */
@@ -273,7 +286,7 @@ An example using the image alignment ECC algorithm
 
 @param templateImage single-channel template image; CV_8U or CV_32F array.
 @param inputImage single-channel input image which should be warped with the final warpMatrix in
-order to provide an image similar to templateImage, same type as temlateImage.
+order to provide an image similar to templateImage, same type as templateImage.
 @param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
 @param motionType parameter, specifying the type of motion:
  -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
@@ -290,6 +303,7 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional mask to indicate valid values of inputImage.
+@param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
 (@cite EP08), that is
@@ -317,12 +331,19 @@ sample image_alignment.cpp that demonstrates the use of the function. Note that 
 an exception if algorithm does not converges.
 
 @sa
-estimateAffine2D, estimateAffinePartial2D, findHomography
+computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
  */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
-                                      InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
-                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-                                      InputArray inputMask = noArray());
+                                      InputOutputArray warpMatrix, int motionType,
+                                      TermCriteria criteria,
+                                      InputArray inputMask, int gaussFiltSize);
+
+/** @overload */
+CV_EXPORTS
+double findTransformECC(InputArray templateImage, InputArray inputImage,
+    InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
+    TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
+    InputArray inputMask = noArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

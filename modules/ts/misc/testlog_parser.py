@@ -51,6 +51,7 @@ class TestInfo(object):
         self.parseLongMetric(xmlnode, "stddev");
         self.parseFloatMetric(xmlnode, "gstddev");
         self.parseFloatMetric(xmlnode, "time");
+        self.parseLongMetric(xmlnode, "total_memory_usage");
 
     def parseLongMetric(self, xmlnode, name, default = 0):
         if name in self.properties:

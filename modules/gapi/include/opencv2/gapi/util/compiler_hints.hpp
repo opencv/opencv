@@ -16,6 +16,4 @@ namespace util
 } // namespace util
 } // namespace cv
 
-#define UNUSED(x) cv::util::suppress_unused_warning(x)
-
 #endif /* OPENCV_GAPI_UTIL_COMPILER_HINTS_HPP */

@@ -55,24 +55,38 @@ namespace detail {
 //! @{
 
 /** @brief Structure containing image keypoints and descriptors. */
-struct CV_EXPORTS ImageFeatures
+struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
-    int img_idx;
-    Size img_size;
+    CV_PROP_RW int img_idx;
+    CV_PROP_RW Size img_size;
     std::vector<KeyPoint> keypoints;
-    UMat descriptors;
+    CV_PROP_RW UMat descriptors;
+    CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; };
 };
+/** @brief
 
-CV_EXPORTS void computeImageFeatures(
+@param featuresFinder
+@param images
+@param features
+@param masks
+*/
+CV_EXPORTS_W void computeImageFeatures(
     const Ptr<Feature2D> &featuresFinder,
     InputArrayOfArrays  images,
-    std::vector<ImageFeatures> &features,
+    CV_OUT std::vector<ImageFeatures> &features,
     InputArrayOfArrays masks = noArray());
 
-CV_EXPORTS void computeImageFeatures(
+/** @brief
+
+@param featuresFinder
+@param image
+@param features
+@param mask
+*/
+CV_EXPORTS_AS(computeImageFeatures2) void computeImageFeatures(
     const Ptr<Feature2D> &featuresFinder,
     InputArray image,
-    ImageFeatures &features,
+    CV_OUT ImageFeatures &features,
     InputArray mask = noArray());
 
 /** @brief Structure containing information about matches between two images.
@@ -82,33 +96,36 @@ homography or affine transformation based on selected matcher.
 
 @sa detail::FeaturesMatcher
 */
-struct CV_EXPORTS MatchesInfo
+struct CV_EXPORTS_W_SIMPLE MatchesInfo
 {
     MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
     MatchesInfo& operator =(const MatchesInfo &other);
 
-    int src_img_idx, dst_img_idx;       //!< Images indices (optional)
+    CV_PROP_RW int src_img_idx;
+    CV_PROP_RW int dst_img_idx;       //!< Images indices (optional)
     std::vector<DMatch> matches;
     std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
-    int num_inliers;                    //!< Number of geometrically consistent matches
-    Mat H;                              //!< Estimated transformation
-    double confidence;                  //!< Confidence two images are from the same panorama
+    CV_PROP_RW int num_inliers;                    //!< Number of geometrically consistent matches
+    CV_PROP_RW Mat H;                              //!< Estimated transformation
+    CV_PROP_RW double confidence;                  //!< Confidence two images are from the same panorama
+    CV_WRAP std::vector<DMatch> getMatches() { return matches; };
+    CV_WRAP std::vector<uchar> getInliers() { return inliers_mask; };
 };
 
 /** @brief Feature matchers base class. */
-class CV_EXPORTS FeaturesMatcher
+class CV_EXPORTS_W FeaturesMatcher
 {
 public:
-    virtual ~FeaturesMatcher() {}
+    CV_WRAP virtual ~FeaturesMatcher() {}
 
     /** @overload
     @param features1 First image features
     @param features2 Second image features
     @param matches_info Found matches
     */
-    void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
-                     MatchesInfo& matches_info) { match(features1, features2, matches_info); }
+    CV_WRAP_AS(apply) void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
+                     CV_OUT MatchesInfo& matches_info) { match(features1, features2, matches_info); }
 
     /** @brief Performs images matching.
 
@@ -120,16 +137,16 @@ public:
 
     @sa detail::MatchesInfo
     */
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+    CV_WRAP_AS(apply2) void operator ()(const std::vector<ImageFeatures> &features, CV_OUT std::vector<MatchesInfo> &pairwise_matches,
                      const cv::UMat &mask = cv::UMat());
 
     /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
     */
-    bool isThreadSafe() const { return is_thread_safe_; }
+   CV_WRAP bool isThreadSafe() const { return is_thread_safe_; }
 
     /** @brief Frees unused memory allocated before if there is any.
     */
-    virtual void collectGarbage() {}
+   CV_WRAP virtual void collectGarbage() {}
 
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
@@ -152,7 +169,7 @@ ratio between descriptor distances is greater than the threshold match_conf
 
 @sa detail::FeaturesMatcher
  */
-class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
+class CV_EXPORTS_W BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
     /** @brief Constructs a "best of 2 nearest" matcher.
@@ -164,23 +181,25 @@ public:
     @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
     re-estimation on inliers
      */
-    BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
+    CV_WRAP BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
                           int num_matches_thresh2 = 6);
 
-    void collectGarbage() CV_OVERRIDE;
+    CV_WRAP void collectGarbage() CV_OVERRIDE;
+    CV_WRAP static Ptr<BestOf2NearestMatcher> create(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
+        int num_matches_thresh2 = 6);
 
 protected:
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
 
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
     int num_matches_thresh1_;
     int num_matches_thresh2_;
     Ptr<FeaturesMatcher> impl_;
 };
 
-class CV_EXPORTS BestOf2NearestRangeMatcher : public BestOf2NearestMatcher
+class CV_EXPORTS_W BestOf2NearestRangeMatcher : public BestOf2NearestMatcher
 {
 public:
-    BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
+    CV_WRAP BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
                             int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
     void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
@@ -200,7 +219,7 @@ transformation (affine trasformation estimate will be placed in matches_info).
 
 @sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
  */
-class CV_EXPORTS AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
+class CV_EXPORTS_W AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
 {
 public:
     /** @brief Constructs a "best of 2 nearest" matcher that expects affine trasformation
@@ -215,7 +234,7 @@ public:
 
     @sa cv::estimateAffine2D cv::estimateAffinePartial2D
      */
-    AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
+    CV_WRAP AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
                                 float match_conf = 0.3f, int num_matches_thresh1 = 6) :
         BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh1),
         full_affine_(full_affine) {}

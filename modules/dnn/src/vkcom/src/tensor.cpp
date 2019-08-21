@@ -15,15 +15,15 @@ namespace cv { namespace dnn { namespace vkcom {
 
 Tensor::Tensor(Format fmt) : size_in_byte_(0), format_(fmt)
 {
-    Context *ctx = getContext();
-    device_ = ctx->device;
+    createContext();
+    device_ = kDevice;
 }
 
 Tensor::Tensor(const char* data, std::vector<int>& shape, Format fmt)
                : size_in_byte_(0), format_(fmt)
 {
-    Context *ctx = getContext();
-    device_ = ctx->device;
+    createContext();
+    device_ = kDevice;
     reshape(data, shape);
 }
 

@@ -585,7 +585,7 @@ $(function(){
                $(tbl_row).remove()
          })
          if($("tbody tr", tbl).length == 0) {
-           $("<tr><td colspan='"+$("thead tr:first th", tbl).length+"'>No results mathing your search criteria</td></tr>")
+           $("<tr><td colspan='"+$("thead tr:first th", tbl).length+"'>No results matching your search criteria</td></tr>")
              .appendTo($("tbody", tbl))
          }
       }

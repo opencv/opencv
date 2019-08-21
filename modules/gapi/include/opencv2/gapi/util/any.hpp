@@ -13,7 +13,7 @@
 #include <typeinfo>
 #include <utility>
 
-#include "opencv2/gapi/util/throw.hpp"
+#include <opencv2/gapi/util/throw.hpp>
 
 #if defined(_MSC_VER)
    // disable MSVC warning on "multiple copy constructors specified"

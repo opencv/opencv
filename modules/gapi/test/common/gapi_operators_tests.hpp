@@ -61,7 +61,6 @@ struct g_api_ocv_pair_mat_mat {
 namespace
 {
 
-
 //declare test cases for matrix and scalar operators
 g_api_ocv_pair_mat_scalar opPlus =  {std::string{"operator+"},
                                     [](cv::GMat in,cv::GScalar c){return in+c;},
@@ -184,9 +183,12 @@ g_api_ocv_pair_mat_mat opXor = {std::string{"operator^"},
                                         [](const cv::Mat& in1, const cv::Mat& in2, cv::Mat& out){cv::bitwise_xor(in1, in2, out);}};
 
 } // anonymous namespace
-struct MathOperatorMatScalarTest : public TestParams<std::tuple<compare_f, g_api_ocv_pair_mat_scalar,int,cv::Size,int,bool,cv::GCompileArgs>>{};
-struct MathOperatorMatMatTest : public TestParams<std::tuple<compare_f, g_api_ocv_pair_mat_mat,int,cv::Size,int,bool,cv::GCompileArgs>>{};
-struct NotOperatorTest : public TestParams<std::tuple<int,cv::Size,bool,cv::GCompileArgs>> {};
+
+GAPI_TEST_FIXTURE(MathOperatorMatScalarTest, initMatsRandU,
+    FIXTURE_API(CompareMats, g_api_ocv_pair_mat_scalar), 2, cmpF, op)
+GAPI_TEST_FIXTURE(MathOperatorMatMatTest, initMatsRandU,
+    FIXTURE_API(CompareMats, g_api_ocv_pair_mat_mat), 2, cmpF, op)
+GAPI_TEST_FIXTURE(NotOperatorTest, initMatrixRandU, <>, 0)
 } // opencv_test
 
 #endif // OPENCV_GAPI_OPERATOR_TESTS_COMMON_HPP

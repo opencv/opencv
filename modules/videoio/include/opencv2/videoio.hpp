@@ -108,7 +108,8 @@ enum VideoCaptureAPIs {
        CAP_GIGANETIX    = 1300,         //!< Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput)
        CAP_WINRT        = 1410,         //!< Microsoft Windows Runtime using Media Foundation
-       CAP_INTELPERC    = 1500,         //!< Intel Perceptual Computing SDK
+       CAP_INTELPERC    = 1500,         //!< RealSense (former Intel Perceptual Computing SDK)
+       CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
        CAP_OPENNI2      = 1600,         //!< OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,         //!< OpenNI2 (for Asus Xtion and Occipital Structure sensors)
        CAP_GPHOTO2      = 1700,         //!< gPhoto2 connection
@@ -526,7 +527,8 @@ enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
 //! Intel Perceptual Streams
 enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
        CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
-       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
+       CAP_INTELPERC_IR_GENERATOR    = 1 << 27,
+       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR + CAP_INTELPERC_IR_GENERATOR
      };
 
 enum { CAP_INTELPERC_DEPTH_MAP              = 0, //!< Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
@@ -764,8 +766,8 @@ public:
 
     @note Reading / writing properties involves many layers. Some unexpected result might happens
     along this chain.
-    @code {.txt}
-    `VideoCapture -> API Backend -> Operating System -> Device Driver -> Device Hardware`
+    @code{.txt}
+    VideoCapture -> API Backend -> Operating System -> Device Driver -> Device Hardware
     @endcode
     The returned value might be different from what really used by the device or it could be encoded
     using device dependent rules (eg. steps or percentage). Effective behaviour depends from device
@@ -780,9 +782,18 @@ public:
      */
     CV_WRAP String getBackendName() const;
 
+    /** Switches exceptions mode
+     *
+     * methods raise exceptions if not successful instead of returning an error code
+     */
+    CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
+
+    /// query if exception mode is active
+    CV_WRAP bool getExceptionMode() { return throwOnFail; }
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
+    bool throwOnFail;
 };
 
 class IVideoWriter;

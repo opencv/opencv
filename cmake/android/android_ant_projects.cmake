@@ -49,7 +49,7 @@ macro(android_get_compatible_target VAR)
     list(GET ANDROID_SDK_TARGETS 0 __lvl)
     string(REGEX MATCH "[0-9]+$" __lvl "${__lvl}")
 
-    #find minimal level mathing to all provided levels
+    #find minimal level matching to all provided levels
     foreach(lvl ${ARGN})
       string(REGEX MATCH "[0-9]+$" __level "${lvl}")
       if(__level GREATER __lvl)
@@ -201,8 +201,8 @@ macro(add_android_project target path)
             LIBRARY_OUTPUT_DIRECTORY "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}"
             )
 
-        if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
-            add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${JNI_LIB_NAME}>")
+        if(NOT BUILD_WITH_DEBUG_INFO AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+          add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${JNI_LIB_NAME}>")
         endif()
       endif()
     endif()

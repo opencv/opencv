@@ -351,6 +351,7 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
             if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
                 near_pairs.push_back(std::make_pair(i, j));
 
+    pairwise_matches.clear(); // clear history values
     pairwise_matches.resize(num_images * num_images);
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
 
@@ -383,6 +384,12 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
     num_matches_thresh1_ = num_matches_thresh1;
     num_matches_thresh2_ = num_matches_thresh2;
 }
+
+Ptr<BestOf2NearestMatcher> BestOf2NearestMatcher::create(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+{
+    return makePtr<BestOf2NearestMatcher>(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh2);
+}
+
 
 
 void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2,

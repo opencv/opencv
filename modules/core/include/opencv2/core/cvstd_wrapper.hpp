@@ -49,7 +49,12 @@ private:
     typedef decltype(check<C>(0)) type;
 
 public:
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
     static CV_CONSTEXPR bool value = type::value;
+#else
+    // support MSVS 2013
+    static const int value = type::value;
+#endif
 };
 } // namespace sfinae
 
@@ -57,10 +62,12 @@ template <typename T, typename = void>
 struct has_custom_delete
         : public std::false_type {};
 
+// Force has_custom_delete to std::false_type when NVCC is compiling CUDA source files
+#ifndef __CUDACC__
 template <typename T>
 struct has_custom_delete<T, typename std::enable_if< sfinae::has_parenthesis_operator<DefaultDeleter<T>, void, T*>::value >::type >
         : public std::true_type {};
-
+#endif
 
 template<typename T>
 struct Ptr : public std::shared_ptr<T>
@@ -117,7 +124,7 @@ struct Ptr : public std::shared_ptr<T>
     T* operator->() const CV_NOEXCEPT { return std::shared_ptr<T>::get();}
     typename std::add_lvalue_reference<T>::type operator*() const CV_NOEXCEPT { return *std::shared_ptr<T>::get(); }
 
-    // OpenCV 3.x methods (not a part of standart C++ library)
+    // OpenCV 3.x methods (not a part of standard C++ library)
     inline void release() { std::shared_ptr<T>::reset(); }
     inline operator T* () const { return std::shared_ptr<T>::get(); }
     inline bool empty() const { return std::shared_ptr<T>::get() == nullptr; }

@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008,2019 Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-
+#include "sumpixels.hpp"
 
 namespace cv
 {
@@ -60,6 +60,37 @@ struct Integral_SIMD
     {
         return false;
     }
+};
+
+
+template <>
+struct Integral_SIMD<uchar, double, double> {
+    Integral_SIMD() {};
+
+
+    bool operator()(const uchar *src, size_t _srcstep,
+                    double *sum,      size_t _sumstep,
+                    double *sqsum,    size_t _sqsumstep,
+                    double *tilted,   size_t _tiltedstep,
+                    int width, int height, int cn) const
+    {
+#if CV_TRY_AVX512_SKX
+        CV_UNUSED(_tiltedstep);
+        // TODO:  Add support for 1 channel input (WIP)
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && (cn <= 4)){
+            opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
+                                                      sqsum, _sqsumstep, width, height, cn);
+            return true;
+        }
+#else
+        // Avoid warnings in some builds
+        CV_UNUSED(src); CV_UNUSED(_srcstep); CV_UNUSED(sum); CV_UNUSED(_sumstep);
+        CV_UNUSED(sqsum); CV_UNUSED(_sqsumstep); CV_UNUSED(tilted); CV_UNUSED(_tiltedstep);
+        CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(cn);
+#endif
+        return false;
+    }
+
 };
 
 #if CV_SIMD && CV_SIMD_WIDTH <= 64
@@ -96,7 +127,7 @@ struct Integral_SIMD<uchar, int, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_int32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -107,7 +138,7 @@ struct Integral_SIMD<uchar, int, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);
@@ -163,7 +194,7 @@ struct Integral_SIMD<uchar, float, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_float32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -174,7 +205,7 @@ struct Integral_SIMD<uchar, float, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);

@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include "libport.h"
 
 int _TIFF_vsnprintf_f(char* str, size_t size, const char* format, va_list ap)
 {
@@ -35,4 +36,3 @@ int _TIFF_snprintf_f(char* str, size_t size, const char* format, ...)
 }
 
 #endif // _MSC_VER
-

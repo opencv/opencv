@@ -226,6 +226,7 @@ make & enjoy!
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <limits>
 
 #ifdef HAVE_CAMV4L2
 #include <asm/types.h>          /* for videodev2.h */
@@ -235,6 +236,34 @@ make & enjoy!
 #ifdef HAVE_VIDEOIO
 // NetBSD compatibility layer with V4L2
 #include <sys/videoio.h>
+#endif
+
+#ifdef __OpenBSD__
+typedef uint32_t __u32;
+#endif
+
+// https://github.com/opencv/opencv/issues/13335
+#ifndef V4L2_CID_ISO_SENSITIVITY
+#define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
+#endif
+
+// https://github.com/opencv/opencv/issues/13929
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_HEIGHT (V4L2_CID_MPEG_BASE+364)
+#endif
+#ifndef V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH
+#define V4L2_CID_MPEG_VIDEO_H264_VUI_EXT_SAR_WIDTH (V4L2_CID_MPEG_BASE+365)
+#endif
+
+#ifndef V4L2_CID_ROTATE
+#define V4L2_CID_ROTATE (V4L2_CID_BASE+34)
+#endif
+#ifndef V4L2_CID_IRIS_ABSOLUTE
+#define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
+#endif
+
+#ifndef V4L2_PIX_FMT_Y10
+#define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
@@ -347,8 +376,17 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
 
 /***********************   Implementations  ***************************************/
 
-CvCaptureCAM_V4L::CvCaptureCAM_V4L() : deviceHandle(-1), bufferIndex(-1)
+CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
+    deviceHandle(-1), bufferIndex(-1),
+    FirstCapture(true),
+    palette(0),
+    width(0), height(0), width_set(0), height_set(0),
+    bufferSize(DEFAULT_V4L_BUFFERS),
+    fps(0), convert_rgb(0), frame_allocated(false), returnFrame(false),
+    channelNumber(-1), normalizePropRange(false),
+    type(V4L2_BUF_TYPE_VIDEO_CAPTURE)
 {
+    frame = cvIplImage();
     memset(&timestamp, 0, sizeof(timestamp));
 }
 
@@ -466,7 +504,8 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_JPEG,
 #endif
             V4L2_PIX_FMT_Y16,
-            V4L2_PIX_FMT_GREY
+            V4L2_PIX_FMT_Y10,
+            V4L2_PIX_FMT_GREY,
     };
 
     for (size_t i = 0; i < sizeof(try_order) / sizeof(__u32); i++) {
@@ -513,6 +552,7 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_SGBRG8:
     case V4L2_PIX_FMT_RGB24:
     case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Y10:
     case V4L2_PIX_FMT_GREY:
     case V4L2_PIX_FMT_BGR24:
         return true;
@@ -524,7 +564,9 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
 
 void CvCaptureCAM_V4L::v4l2_create_frame()
 {
-    CvSize size = {form.fmt.pix.width, form.fmt.pix.height};
+    CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+    CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+    CvSize size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
     int channels = 3;
     int depth = IPL_DEPTH_8U;
 
@@ -545,6 +587,7 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
             size.height = size.height * 3 / 2; // "1.5" channels
             break;
         case V4L2_PIX_FMT_Y16:
+        case V4L2_PIX_FMT_Y10:
             depth = IPL_DEPTH_16U;
             /* fallthru */
         case V4L2_PIX_FMT_GREY:
@@ -753,11 +796,10 @@ bool CvCaptureCAM_V4L::open(int _index)
         name = cv::format("/dev/video%d", _index);
     }
 
-    /* Print the CameraNumber at the end of the string with a width of one character */
     bool res = open(name.c_str());
     if (!res)
     {
-        fprintf(stderr, "VIDEOIO ERROR: V4L: can't open camera by index %d\n", _index);
+        CV_LOG_WARNING(NULL, cv::format("VIDEOIO ERROR: V4L: can't open camera by index %d", _index));
     }
     return res;
 }
@@ -1419,6 +1461,13 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
+    case V4L2_PIX_FMT_Y10:
+    {
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 4);
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
     case V4L2_PIX_FMT_GREY:
         cv::cvtColor(cv::Mat(imageSize, CV_8UC1, currentBuffer.start), destination, COLOR_GRAY2BGR);
         break;
@@ -1748,7 +1797,7 @@ bool CvCaptureCAM_V4L::icvSetFrameSize(int _width, int _height)
     if (_width > 0)
         width_set = _width;
 
-    if (height > 0)
+    if (_height > 0)
         height_set = _height;
 
     /* two subsequent calls setting WIDTH and HEIGHT will change
@@ -1778,9 +1827,11 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         if (bool(value)) {
             convert_rgb = convertableToRgb();
             return convert_rgb;
+        }else{
+            convert_rgb = false;
+            releaseFrame();
+            return true;
         }
-        convert_rgb = false;
-        return true;
     case cv::CAP_PROP_FOURCC:
     {
         if (palette == static_cast<__u32>(value))
@@ -1916,28 +1967,28 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     return &frame;
 }
 
-} // end namespace cv
-
-CvCapture* cvCreateCameraCapture_V4L( int index )
+Ptr<IVideoCapture> create_V4L_capture_cam(int index)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open(index))
-        return capture;
+    if (capture->open(index))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
 
-CvCapture* cvCreateCameraCapture_V4L( const char * deviceName )
+Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
 {
     cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
 
-    if(capture->open( deviceName ))
-        return capture;
+    if (capture->open(filename.c_str()))
+        return makePtr<LegacyCapture>(capture);
 
     delete capture;
     return NULL;
 }
+
+} // cv::
 
 #endif

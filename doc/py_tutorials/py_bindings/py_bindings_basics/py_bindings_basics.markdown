@@ -176,7 +176,7 @@ public:
     // You would need to provide the method body in the binder code
     CV_WRAP_PHANTOM(static void* context());
 
-    //! The wrapped method become equvalent to `get(int flags = ACCESS_RW)`
+    //! The wrapped method become equivalent to `get(int flags = ACCESS_RW)`
     CV_WRAP_AS(get) Mat getMat(int flags CV_WRAP_DEFAULT(ACCESS_RW)) const;
 };
 @endcode

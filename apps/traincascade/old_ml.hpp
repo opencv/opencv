@@ -88,7 +88,7 @@ struct CvVectors
 #if 0
 /* A structure, representing the lattice range of statmodel parameters.
    It is used for optimizing statmodel parameters by cross-validation method.
-   The lattice is logarithmic, so <step> must be greater then 1. */
+   The lattice is logarithmic, so <step> must be greater than 1. */
 typedef struct CvParamLattice
 {
     double min_val;
@@ -158,7 +158,7 @@ protected:
 /* The structure, representing the grid range of statmodel parameters.
    It is used for optimizing statmodel accuracy by varying model parameters,
    the accuracy estimate being computed by cross-validation.
-   The grid is logarithmic, so <step> must be greater then 1. */
+   The grid is logarithmic, so <step> must be greater than 1. */
 
 class CvMLData;
 

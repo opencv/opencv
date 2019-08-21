@@ -40,15 +40,6 @@
 /* Pointer difference type */
 #define TIFF_PTRDIFF_T @TIFF_PTRDIFF_T@
 
-/* Define to 1 if the system has the type `int16'. */
-#cmakedefine HAVE_INT16 1
-
-/* Define to 1 if the system has the type `int32'. */
-#cmakedefine HAVE_INT32 1
-
-/* Define to 1 if the system has the type `int8'. */
-#cmakedefine HAVE_INT8 1
-
 /* Compatibility stuff. */
 
 /* Define as 0 or 1 according to the floating point format suported by the

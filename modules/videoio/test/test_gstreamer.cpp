@@ -3,16 +3,18 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#ifdef HAVE_GSTREAMER
 
 namespace opencv_test
 {
 
 typedef tuple< string, Size, Size, int > Param;
-typedef testing::TestWithParam< Param > Videoio_Gstreamer_Test;
+typedef testing::TestWithParam< Param > videoio_gstreamer;
 
-TEST_P(Videoio_Gstreamer_Test, test_object_structure)
+TEST_P(videoio_gstreamer, read_write)
 {
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
     string format    = get<0>(GetParam());
     Size frame_size  = get<1>(GetParam());
     Size mat_size    = get<2>(GetParam());
@@ -69,8 +71,24 @@ Param test_data[] = {
     make_tuple("jpegenc ! image/jpeg"     , Size(640, 480), Size(640, 480), COLOR_BGR2RGB)
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Gstreamer_Test, testing::ValuesIn(test_data));
+INSTANTIATE_TEST_CASE_P(videoio, videoio_gstreamer, testing::ValuesIn(test_data));
+
+TEST(Videoio_GStreamer, unsupported_pipeline)
+{
+    VideoCaptureAPIs apiPref = CAP_GSTREAMER;
+    if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    // could not link videoconvert0 to matroskamux0, matroskamux0 can't handle caps video/x-raw, format=(string)RGBA
+    std::string pipeline = "appsrc ! videoconvert ! video/x-raw, format=(string)RGBA ! matroskamux ! filesink location=test.mkv";
+    Size frame_size(640, 480);
+
+    VideoWriter writer;
+    EXPECT_NO_THROW(writer.open(pipeline, apiPref, 0/*fourcc*/, 30/*fps*/, frame_size, true));
+    EXPECT_FALSE(writer.isOpened());
+    // no frames
+    EXPECT_NO_THROW(writer.release());
+
+}
 
 } // namespace
-
-#endif

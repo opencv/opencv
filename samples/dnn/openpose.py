@@ -1,5 +1,5 @@
 # To use Inference Engine backend, specify location of plugins:
-# export LD_LIBRARY_PATH=/opt/intel/deeplearning_deploymenttoolkit/deployment_tools/external/mklml_lnx/lib:$LD_LIBRARY_PATH
+# source /opt/intel/computer_vision_sdk/bin/setupvars.sh
 import cv2 as cv
 import numpy as np
 import argparse
@@ -12,10 +12,11 @@ parser.add_argument('--input', help='Path to image or video. Skip to capture fra
 parser.add_argument('--proto', help='Path to .prototxt')
 parser.add_argument('--model', help='Path to .caffemodel')
 parser.add_argument('--dataset', help='Specify what kind of model was trained. '
-                                      'It could be (COCO, MPI) depends on dataset.')
+                                      'It could be (COCO, MPI, HAND) depends on dataset.')
 parser.add_argument('--thr', default=0.1, type=float, help='Threshold value for pose parts heat map')
 parser.add_argument('--width', default=368, type=int, help='Resize input to specific width.')
 parser.add_argument('--height', default=368, type=int, help='Resize input to specific height.')
+parser.add_argument('--scale', default=0.003922, type=float, help='Scale for blob.')
 
 args = parser.parse_args()
 
@@ -30,8 +31,7 @@ if args.dataset == 'COCO':
                    ["Neck", "RHip"], ["RHip", "RKnee"], ["RKnee", "RAnkle"], ["Neck", "LHip"],
                    ["LHip", "LKnee"], ["LKnee", "LAnkle"], ["Neck", "Nose"], ["Nose", "REye"],
                    ["REye", "REar"], ["Nose", "LEye"], ["LEye", "LEar"] ]
-else:
-    assert(args.dataset == 'MPI')
+elif args.dataset == 'MPI':
     BODY_PARTS = { "Head": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
                    "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
                    "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "Chest": 14,
@@ -41,11 +41,33 @@ else:
                    ["RElbow", "RWrist"], ["Neck", "LShoulder"], ["LShoulder", "LElbow"],
                    ["LElbow", "LWrist"], ["Neck", "Chest"], ["Chest", "RHip"], ["RHip", "RKnee"],
                    ["RKnee", "RAnkle"], ["Chest", "LHip"], ["LHip", "LKnee"], ["LKnee", "LAnkle"] ]
+else:
+    assert(args.dataset == 'HAND')
+    BODY_PARTS = { "Wrist": 0,
+                   "ThumbMetacarpal": 1, "ThumbProximal": 2, "ThumbMiddle": 3, "ThumbDistal": 4,
+                   "IndexFingerMetacarpal": 5, "IndexFingerProximal": 6, "IndexFingerMiddle": 7, "IndexFingerDistal": 8,
+                   "MiddleFingerMetacarpal": 9, "MiddleFingerProximal": 10, "MiddleFingerMiddle": 11, "MiddleFingerDistal": 12,
+                   "RingFingerMetacarpal": 13, "RingFingerProximal": 14, "RingFingerMiddle": 15, "RingFingerDistal": 16,
+                   "LittleFingerMetacarpal": 17, "LittleFingerProximal": 18, "LittleFingerMiddle": 19, "LittleFingerDistal": 20,
+                 }
+
+    POSE_PAIRS = [ ["Wrist", "ThumbMetacarpal"], ["ThumbMetacarpal", "ThumbProximal"],
+                   ["ThumbProximal", "ThumbMiddle"], ["ThumbMiddle", "ThumbDistal"],
+                   ["Wrist", "IndexFingerMetacarpal"], ["IndexFingerMetacarpal", "IndexFingerProximal"],
+                   ["IndexFingerProximal", "IndexFingerMiddle"], ["IndexFingerMiddle", "IndexFingerDistal"],
+                   ["Wrist", "MiddleFingerMetacarpal"], ["MiddleFingerMetacarpal", "MiddleFingerProximal"],
+                   ["MiddleFingerProximal", "MiddleFingerMiddle"], ["MiddleFingerMiddle", "MiddleFingerDistal"],
+                   ["Wrist", "RingFingerMetacarpal"], ["RingFingerMetacarpal", "RingFingerProximal"],
+                   ["RingFingerProximal", "RingFingerMiddle"], ["RingFingerMiddle", "RingFingerDistal"],
+                   ["Wrist", "LittleFingerMetacarpal"], ["LittleFingerMetacarpal", "LittleFingerProximal"],
+                   ["LittleFingerProximal", "LittleFingerMiddle"], ["LittleFingerMiddle", "LittleFingerDistal"] ]
+
 
 inWidth = args.width
 inHeight = args.height
+inScale = args.scale
 
-net = cv.dnn.readNetFromCaffe(cv.samples.findFile(args.proto), cv.samples.findFile(args.model))
+net = cv.dnn.readNet(cv.samples.findFile(args.proto), cv.samples.findFile(args.model))
 
 cap = cv.VideoCapture(args.input if args.input else 0)
 
@@ -57,16 +79,16 @@ while cv.waitKey(1) < 0:
 
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
-    inp = cv.dnn.blobFromImage(frame, 1.0 / 255, (inWidth, inHeight),
+    inp = cv.dnn.blobFromImage(frame, inScale, (inWidth, inHeight),
                               (0, 0, 0), swapRB=False, crop=False)
     net.setInput(inp)
     out = net.forward()
 
-    assert(len(BODY_PARTS) == out.shape[1])
+    assert(len(BODY_PARTS) <= out.shape[1])
 
     points = []
     for i in range(len(BODY_PARTS)):
-        # Slice heatmap of corresponging body's part.
+        # Slice heatmap of corresponding body's part.
         heatMap = out[0, i, :, :]
 
         # Originally, we try to find all the local maximums. To simplify a sample

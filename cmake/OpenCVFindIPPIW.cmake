@@ -148,9 +148,13 @@ if(BUILD_IPP_IW)
 
   set(IPPIW_ROOT "${IPPROOT}/../iw")
   ocv_install_3rdparty_licenses(ippiw
-    "${IPPIW_ROOT}/../EULA.txt"
     "${IPPIW_ROOT}/../support.txt"
     "${IPPIW_ROOT}/../third-party-programs.txt")
+  if(WIN32)
+    ocv_install_3rdparty_licenses(ippiw "${IPPIW_ROOT}/../EULA.rtf")
+  else()
+    ocv_install_3rdparty_licenses(ippiw "${IPPIW_ROOT}/../EULA.txt")
+  endif()
 
   # Package sources
   get_filename_component(__PATH "${IPPROOT}/../iw/" ABSOLUTE)

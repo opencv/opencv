@@ -3,8 +3,6 @@
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_VIDEO_OUTPUT
-
 namespace opencv_test
 {
 using namespace perf;
@@ -38,11 +36,12 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
 #endif
 
   VideoWriter writer(outfile, fourcc, 25, cv::Size(image.cols, image.rows), isColor);
+  if (!writer.isOpened())
+      throw SkipTestException("Video file can not be opened");
+
   TEST_CYCLE_N(100) { writer << image; }
   SANITY_CHECK_NOTHING();
   remove(outfile.c_str());
 }
 
 } // namespace
-
-#endif // HAVE_VIDEO_OUTPUT

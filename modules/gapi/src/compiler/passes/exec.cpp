@@ -17,7 +17,7 @@
 #include <ade/util/algorithm.hpp>   // contains
 #include <ade/util/chain_range.hpp> // chain
 
-#include "opencv2/gapi/util/optional.hpp"  // util::optional
+#include <opencv2/gapi/util/optional.hpp>  // util::optional
 #include "logger.hpp"    // GAPI_LOG
 
 #include "compiler/gmodel.hpp"
@@ -454,7 +454,7 @@ namespace
             m_changes.enqueue<Change::DropLink>(m_g, m_cons, out_edge);
         }
 
-        // D: Process the intermediate slots (betweed Prod n Cons).
+        // D: Process the intermediate slots (between Prod n Cons).
         // D/1 - Those which are optimized out are just removed from the model
         for (auto opt_slot_nh : mo.opt_interim_slots)
         {
@@ -579,7 +579,7 @@ namespace
                         auto l_obj = gim.metadata(lhs_nh).get<FusedIsland>().object;
                         auto r_obj = gim.metadata(rhs_nh).get<FusedIsland>().object;
                         GAPI_LOG_INFO(NULL, r_obj->name() << " can be merged into " << l_obj->name());
-                        // Try to do a merge. If merge was succesfull, check if the
+                        // Try to do a merge. If merge was successful, check if the
                         // graph have cycles (cycles are prohibited at this point).
                         // If there are cycles, roll-back the merge and mark a pair of
                         // these Islands with a special tag - "cycle-causing".

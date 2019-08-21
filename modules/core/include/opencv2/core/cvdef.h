@@ -186,6 +186,16 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #  endif
 #endif
 
+#ifndef CV_ALWAYS_INLINE
+#if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
+#define CV_ALWAYS_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define CV_ALWAYS_INLINE __forceinline
+#else
+#define CV_ALWAYS_INLINE inline
+#endif
+#endif
+
 #if defined CV_DISABLE_OPTIMIZATION || (defined CV_ICC && !defined CV_ENABLE_UNROLLED)
 #  define CV_ENABLE_UNROLLED 0
 #else
@@ -225,13 +235,26 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX_512PF        19
 #define CV_CPU_AVX_512VBMI      20
 #define CV_CPU_AVX_512VL        21
+#define CV_CPU_AVX_512VBMI2     22
+#define CV_CPU_AVX_512VNNI      23
+#define CV_CPU_AVX_512BITALG    24
+#define CV_CPU_AVX_512VPOPCNTDQ 25
+#define CV_CPU_AVX_5124VNNIW    26
+#define CV_CPU_AVX_5124FMAPS    27
 
-#define CV_CPU_NEON   100
+#define CV_CPU_NEON             100
 
-#define CV_CPU_VSX 200
+#define CV_CPU_VSX              200
+#define CV_CPU_VSX3             201
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
+#define CV_CPU_AVX512_COMMON    257
+#define CV_CPU_AVX512_KNL       258
+#define CV_CPU_AVX512_KNM       259
+#define CV_CPU_AVX512_CNL       260
+#define CV_CPU_AVX512_CEL       261
+#define CV_CPU_AVX512_ICL       262
 
 // when adding to this list remember to update the following enum
 #define CV_HARDWARE_MAX_FEATURE 512
@@ -262,12 +285,25 @@ enum CpuFeatures {
     CPU_AVX_512PF       = 19,
     CPU_AVX_512VBMI     = 20,
     CPU_AVX_512VL       = 21,
+    CPU_AVX_512VBMI2    = 22,
+    CPU_AVX_512VNNI     = 23,
+    CPU_AVX_512BITALG   = 24,
+    CPU_AVX_512VPOPCNTDQ= 25,
+    CPU_AVX_5124VNNIW   = 26,
+    CPU_AVX_5124FMAPS   = 27,
 
     CPU_NEON            = 100,
 
     CPU_VSX             = 200,
+    CPU_VSX3            = 201,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
+    CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
+    CPU_AVX512_KNL      = 258, //!< Knights Landing with AVX-512F/CD/ER/PF
+    CPU_AVX512_KNM      = 259, //!< Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ
+    CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
+    CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
+    CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
 };
@@ -321,10 +357,10 @@ Cv64suf;
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
-#ifdef CVAPI_EXPORTS
-# if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#ifndef CV_EXPORTS
+# if (defined _WIN32 || defined WINCE || defined __CYGWIN__) && defined(CVAPI_EXPORTS)
 #   define CV_EXPORTS __declspec(dllexport)
-# elif defined __GNUC__ && __GNUC__ >= 4
+# elif defined __GNUC__ && __GNUC__ >= 4 && (defined(CVAPI_EXPORTS) || defined(__APPLE__))
 #   define CV_EXPORTS __attribute__ ((visibility ("default")))
 # endif
 #endif
@@ -583,7 +619,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #ifdef CV_XADD
   // allow to use user-defined macro
 #elif defined __GNUC__ || defined __clang__
-#  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)
+#  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)  && !defined __INTEL_COMPILER
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
 #    else
@@ -679,7 +715,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  endif
 #endif
 #ifndef CV_CONSTEXPR
-#  define CV_CONSTEXPR const
+#  define CV_CONSTEXPR
 #endif
 
 // Integer types portatibility

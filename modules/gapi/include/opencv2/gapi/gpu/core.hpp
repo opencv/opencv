@@ -7,17 +7,17 @@
 
 #ifndef OPENCV_GAPI_GPU_CORE_API_HPP
 #define OPENCV_GAPI_GPU_CORE_API_HPP
+/** @file
+* @deprecated Use <opencv2/gapi/ocl/core.hpp> instead.
+*/
 
-#include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
-#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include <opencv2/gapi/ocl/core.hpp>
 
 namespace cv {
 namespace gapi {
 namespace core {
 namespace gpu {
-
-GAPI_EXPORTS GKernelPackage kernels();
-
+    using namespace ocl;
 } // namespace gpu
 } // namespace core
 } // namespace gapi

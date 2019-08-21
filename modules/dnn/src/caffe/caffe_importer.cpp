@@ -260,14 +260,23 @@ public:
         }
         else
         {
-            // Half precision floats.
-            CV_Assert(pbBlob.raw_data_type() == caffe::FLOAT16);
-            std::string raw_data = pbBlob.raw_data();
+            CV_Assert(pbBlob.has_raw_data());
+            const std::string& raw_data = pbBlob.raw_data();
+            if (pbBlob.raw_data_type() == caffe::FLOAT16)
+            {
+                // Half precision floats.
+                CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-            CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
-
-            Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-            convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
+                convertFp16(halfs, dstBlob);
+            }
+            else if (pbBlob.raw_data_type() == caffe::FLOAT)
+            {
+                CV_Assert(raw_data.size() / 4 == (int)dstBlob.total());
+                Mat((int)shape.size(), &shape[0], CV_32FC1, (void*)raw_data.c_str()).copyTo(dstBlob);
+            }
+            else
+                CV_Error(Error::StsNotImplemented, "Unexpected blob data type");
         }
     }
 
@@ -379,6 +388,27 @@ public:
                     layerParams.blobs[1].setTo(1);  // std
                 }
             }
+            else if (type == "Axpy")
+            {
+                CV_Assert_N(layer.bottom_size() == 3, layer.top_size() == 1);
+
+                std::string scaleName = name + "/scale";
+                int repetitions = layerCounter[scaleName]++;
+                if (repetitions) {
+                    scaleName += String("_") + toString(repetitions);
+                }
+
+                LayerParams scaleParams;
+                scaleParams.set("axis", 1);
+                scaleParams.set("has_bias", false);
+                int scaleId = dstNet.addLayer(scaleName, "Scale", scaleParams);
+                addInput(layer.bottom(2), scaleId, 0, dstNet);
+                addInput(layer.bottom(0), scaleId, 1, dstNet);
+                addOutput(layer, scaleId, 0);
+                net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                net.mutable_layer(li)->mutable_bottom()->RemoveLast();
+                type = "Eltwise";
+            }
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";
@@ -393,6 +423,36 @@ public:
                 addOutput(layer, id, outNum);
         }
         dstNet.setInputsNames(netInputs);
+
+        std::vector<MatShape> inp_shapes;
+        if (net.input_shape_size() > 0 || (layersSize > 0 && net.layer(0).has_input_param() &&
+            net.layer(0).input_param().shape_size() > 0)) {
+
+            int size = (net.input_shape_size() > 0) ? net.input_shape_size() :
+                                                      net.layer(0).input_param().shape_size();
+            for (int inp_id = 0; inp_id < size; inp_id++)
+            {
+                const caffe::BlobShape &_input_shape = (net.input_shape_size() > 0) ?
+                                                        net.input_shape(inp_id) :
+                                                        net.layer(0).input_param().shape(inp_id);
+                MatShape shape;
+                for (int i = 0; i < _input_shape.dim_size(); i++) {
+                    shape.push_back((int)_input_shape.dim(i));
+                }
+                inp_shapes.push_back(shape);
+            }
+        }
+        else if (net.input_dim_size() > 0) {
+            MatShape shape;
+            for (int dim = 0; dim < net.input_dim_size(); dim++) {
+                shape.push_back(net.input_dim(dim));
+            }
+            inp_shapes.push_back(shape);
+        }
+
+        for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++) {
+            dstNet.setInput(Mat(inp_shapes[inp_id], CV_32F), netInputs[inp_id]);
+        }
 
         addedBlobs.clear();
     }

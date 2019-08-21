@@ -71,7 +71,7 @@ The structure of package contents looks as follows:
 
 -   `doc` folder contains various OpenCV documentation in PDF format. It's also available online at
     <http://docs.opencv.org>.
-    @note The most recent docs (nightly build) are at <http://docs.opencv.org/2.4>. Generally, it's more
+    @note The most recent docs (nightly build) are at <http://docs.opencv.org/master>. Generally, it's more
     up-to-date, but can refer to not-yet-released functionality.
     @todo I'm not sure that this is the best place to talk about OpenCV Manager
 
@@ -85,10 +85,6 @@ applications developers:
 -   Automatic updates and bug fixes;
 -   Trusted OpenCV library source. All packages with OpenCV are published on Google Play;
 
-For additional information on OpenCV Manager see the:
-
--   [Slides](https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p)
--   [Reference Manual](http://docs.opencv.org/android/refman.html)
 
 Manual OpenCV4Android SDK setup
 -------------------------------
@@ -96,8 +92,8 @@ Manual OpenCV4Android SDK setup
 ### Get the OpenCV4Android SDK
 
 -#  Go to the [OpenCV download page on
-    SourceForge](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/) and download
-    the latest available version. Currently it's [OpenCV-2.4.9-android-sdk.zip](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.9/OpenCV-2.4.9-android-sdk.zip/download).
+    SourceForge](http://sourceforge.net/projects/opencvlibrary/files/) and download
+    the latest available version. This tutorial is based on this package: [OpenCV-2.4.9-android-sdk.zip](http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.9/OpenCV-2.4.9-android-sdk.zip/download).
 -#  Create a new folder for Android with OpenCV development. For this tutorial we have unpacked
     OpenCV SDK to the `C:\Work\OpenCV4Android\` directory.
 

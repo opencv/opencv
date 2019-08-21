@@ -99,7 +99,7 @@ static void checkParamGrid(const ParamGrid& pg)
     if( pg.minVal < DBL_EPSILON )
         CV_Error( CV_StsBadArg, "Lower bound of the grid must be positive" );
     if( pg.logStep < 1. + FLT_EPSILON )
-        CV_Error( CV_StsBadArg, "Grid step must greater then 1" );
+        CV_Error( CV_StsBadArg, "Grid step must greater than 1" );
 }
 
 // SVM training parameters
@@ -200,19 +200,21 @@ public:
     {
         int j;
         calc_non_rbf_base( vcount, var_count, vecs, another, results,
-                          -2*params.gamma, -2*params.coef0 );
+                          2*params.gamma, 2*params.coef0 );
         // TODO: speedup this
         for( j = 0; j < vcount; j++ )
         {
             Qfloat t = results[j];
-            Qfloat e = std::exp(-std::abs(t));
-            if( t > 0 )
-                results[j] = (Qfloat)((1. - e)/(1. + e));
-            else
-                results[j] = (Qfloat)((e - 1.)/(e + 1.));
+            Qfloat e = std::exp(std::abs(t));          // Inf value is possible here
+            Qfloat r = (Qfloat)((e - 1.) / (e + 1.));  // NaN value is possible here (Inf/Inf or similar)
+            if (cvIsNaN(r))
+                r = std::numeric_limits<Qfloat>::infinity();
+            if (t < 0)
+                r = -r;
+            CV_DbgAssert(!cvIsNaN(r));
+            results[j] = r;
         }
     }
-
 
     void calc_rbf( int vcount, int var_count, const float* vecs,
                    const float* another, Qfloat* results )
@@ -328,7 +330,7 @@ public:
         const Qfloat max_val = (Qfloat)(FLT_MAX*1e-3);
         for( int j = 0; j < vcount; j++ )
         {
-            if( results[j] > max_val )
+            if (!(results[j] <= max_val))  // handle NaNs too
                 results[j] = max_val;
         }
     }
@@ -1310,8 +1312,6 @@ public:
 
             if( kernelType != SIGMOID && kernelType != POLY )
                 params.coef0 = 0;
-            else if( params.coef0 < 0 )
-                CV_Error( CV_StsOutOfRange, "The kernel parameter <coef0> must be positive or zero" );
 
             if( kernelType != POLY )
                 params.degree = 0;
@@ -1952,6 +1952,7 @@ public:
                             const DecisionFunc& df = svm->decision_func[dfi];
                             sum = -df.rho;
                             int sv_count = svm->getSVCount(dfi);
+                            CV_DbgAssert(sv_count > 0);
                             const double* alpha = &svm->df_alpha[df.ofs];
                             const int* sv_index = &svm->df_index[df.ofs];
                             for( k = 0; k < sv_count; k++ )

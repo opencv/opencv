@@ -26,9 +26,6 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #cmakedefine HAVE_FCNTL_H 1
 
-/* Define to 1 if you have the `floor' function. */
-#cmakedefine HAVE_FLOOR 1
-
 /* Define to 1 if you have the `getopt' function. */
 #cmakedefine HAVE_GETOPT 1
 
@@ -50,29 +47,11 @@
 /* Define to 1 if you have the <io.h> header file. */
 #cmakedefine HAVE_IO_H 1
 
-/* Define to 1 if you have the `isascii' function. */
-#cmakedefine HAVE_ISASCII 1
-
 /* Define to 1 if you have the `jbg_newlen' function. */
 #cmakedefine HAVE_JBG_NEWLEN 1
 
 /* Define to 1 if you have the `lfind' function. */
 #cmakedefine HAVE_LFIND 1
-
-/* Define to 1 if you have the <limits.h> header file. */
-#cmakedefine HAVE_LIMITS_H 1
-
-/* Define to 1 if you have the <malloc.h> header file. */
-#cmakedefine HAVE_MALLOC_H 1
-
-/* Define to 1 if you have the `memmove' function. */
-#cmakedefine HAVE_MEMMOVE 1
-
-/* Define to 1 if you have the <memory.h> header file. */
-#cmakedefine HAVE_MEMORY_H 1
-
-/* Define to 1 if you have the `memset' function. */
-#cmakedefine HAVE_MEMSET 1
 
 /* Define to 1 if you have the `mmap' function. */
 #cmakedefine HAVE_MMAP 1
@@ -83,9 +62,6 @@
 /* Define to 1 if you have the <OpenGL/gl.h> header file. */
 #cmakedefine HAVE_OPENGL_GL_H 1
 
-/* Define to 1 if you have the `pow' function. */
-#cmakedefine HAVE_POW 1
-
 /* Define to 1 if you have the <search.h> header file. */
 #cmakedefine HAVE_SEARCH_H 1
 
@@ -95,17 +71,11 @@
 /* Define to 1 if you have the `snprintf' function. */
 #cmakedefine HAVE_SNPRINTF 1
 
-/* Define to 1 if you have the `sqrt' function. */
-#cmakedefine HAVE_SQRT 1
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #cmakedefine HAVE_STDINT_H 1
 
 /* Define to 1 if you have the `strcasecmp' function. */
 #cmakedefine HAVE_STRCASECMP 1
-
-/* Define to 1 if you have the `strchr' function. */
-#cmakedefine HAVE_STRCHR 1
 
 /* Define to 1 if you have the <strings.h> header file. */
 #cmakedefine HAVE_STRINGS_H 1
@@ -113,14 +83,11 @@
 /* Define to 1 if you have the <string.h> header file. */
 #cmakedefine HAVE_STRING_H 1
 
-/* Define to 1 if you have the `strrchr' function. */
-#cmakedefine HAVE_STRRCHR 1
-
-/* Define to 1 if you have the `strstr' function. */
-#cmakedefine HAVE_STRSTR 1
-
 /* Define to 1 if you have the `strtol' function. */
 #cmakedefine HAVE_STRTOL 1
+
+/* Define to 1 if you have the `strtoll' function. */
+#cmakedefine HAVE_STRTOLL 1
 
 /* Define to 1 if you have the `strtoul' function. */
 #cmakedefine HAVE_STRTOUL 1
@@ -145,6 +112,12 @@
 
 /* Support LZMA2 compression */
 #cmakedefine LZMA_SUPPORT 1
+
+/* Support ZSTD compression */
+#cmakedefine ZSTD_SUPPORT 1
+
+/* Support WEBP compression */
+#cmakedefine WEBP_SUPPORT 1
 
 /* Name of package */
 #define PACKAGE "@PACKAGE_NAME@"
@@ -175,9 +148,6 @@
 
 /* The size of `signed long long', as computed by sizeof. */
 #define SIZEOF_SIGNED_LONG_LONG @SIZEOF_SIGNED_LONG_LONG@
-
-/* The size of `signed short', as computed by sizeof. */
-#define SIZEOF_SIGNED_SHORT @SIZEOF_SIGNED_SHORT@
 
 /* The size of `unsigned char *', as computed by sizeof. */
 #define SIZEOF_UNSIGNED_CHAR_P @SIZEOF_UNSIGNED_CHAR_P@
@@ -244,6 +214,9 @@
 #  undef WORDS_BIGENDIAN
 # endif
 #endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+//disabled for OpenCV CMakeLists.txt: #define _FILE_OFFSET_BITS @FILE_OFFSET_BITS@
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */

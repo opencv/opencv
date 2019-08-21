@@ -10,7 +10,7 @@
 
 #include <limits>
 #include <type_traits>
-#include <opencv2/gapi/util/compiler_hints.hpp> //UNUSED
+#include <opencv2/gapi/util/compiler_hints.hpp> //suppress_unused_warning
 #include <opencv2/gapi/own/saturate.hpp>
 
 namespace cv {

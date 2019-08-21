@@ -13,12 +13,11 @@ from __future__ import print_function
 
 import cv2 as cv
 import numpy as np
+
 import sys
 import math
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     try:
         fn = sys.argv[1]
     except IndexError:
@@ -52,3 +51,10 @@ if __name__ == '__main__':
 
     cv.imshow("source", src)
     cv.waitKey(0)
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

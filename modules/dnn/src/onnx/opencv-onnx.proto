@@ -119,7 +119,7 @@ message AttributeProto {
   // implementations needed to use has_field hueristics to determine
   // which value field was in use.  For IR_VERSION 0.0.2 or later, this
   // field MUST be set and match the f|i|s|t|... field in use.  This
-  // change was made to accomodate proto3 implementations.
+  // change was made to accommodate proto3 implementations.
   optional AttributeType type = 20;   // discriminator that indicates which field below is in use
 
   // Exactly ONE of the following fields must be present for this version of the IR
@@ -161,7 +161,7 @@ message NodeProto {
   repeated string output = 2;   // namespace Value
 
   // An optional identifier for this node in a graph.
-  // This field MAY be absent in ths version of the IR.
+  // This field MAY be absent in this version of the IR.
   optional string name = 3;     // namespace Node
 
   // The symbolic identifier of the Operator to execute.

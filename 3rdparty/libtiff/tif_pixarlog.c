@@ -1,5 +1,3 @@
-/* $Id: tif_pixarlog.c,v 1.54 2017-07-10 10:40:28 erouault Exp $ */
-
 /*
  * Copyright (c) 1996-1997 Sam Leffler
  * Copyright (c) 1996 Pixar

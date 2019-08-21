@@ -99,30 +99,27 @@ endif()
 
 if(NOT __IN_TRY_COMPILE)
   set(_xcodebuild_wrapper "${CMAKE_BINARY_DIR}/xcodebuild_wrapper")
-  if(NOT DEFINED CMAKE_MAKE_PROGRAM)  # empty since CMake 3.10
-    find_program(XCODEBUILD_PATH "xcodebuild")
-    if(NOT XCODEBUILD_PATH)
-      message(FATAL_ERROR "Specify CMAKE_MAKE_PROGRAM variable ('xcodebuild' absolute path)")
+  if(NOT EXISTS "${_xcodebuild_wrapper}")
+    set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
+    if(NOT DEFINED CMAKE_MAKE_PROGRAM)  # empty since CMake 3.10
+      find_program(XCODEBUILD_PATH "xcodebuild")
+      if(NOT XCODEBUILD_PATH)
+        message(FATAL_ERROR "Specify CMAKE_MAKE_PROGRAM variable ('xcodebuild' absolute path)")
+      endif()
+      set(CMAKE_MAKE_PROGRAM "${XCODEBUILD_PATH}")
     endif()
-    set(CMAKE_MAKE_PROGRAM "${XCODEBUILD_PATH}")
-  endif()
-  if(NOT CMAKE_MAKE_PROGRAM STREQUAL _xcodebuild_wrapper)
+    if(CMAKE_MAKE_PROGRAM STREQUAL _xcodebuild_wrapper)
+      message(FATAL_ERROR "Can't prepare xcodebuild_wrapper")
+    endif()
     if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
-      set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
-      file(WRITE "${_xcodebuild_wrapper_tmp}" "#!/bin/sh
-${CMAKE_MAKE_PROGRAM} IPHONEOS_DEPLOYMENT_TARGET=${IPHONEOS_DEPLOYMENT_TARGET} -sdk ${CMAKE_OSX_SYSROOT} \$*")
-      # Make executable
-      file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-      set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+      set(XCODEBUILD_EXTRA_ARGS "${XCODEBUILD_EXTRA_ARGS} IPHONEOS_DEPLOYMENT_TARGET=${IPHONEOS_DEPLOYMENT_TARGET} CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO -sdk ${CMAKE_OSX_SYSROOT}")
     else()
-      set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
-      file(WRITE "${_xcodebuild_wrapper_tmp}" "#!/bin/sh
-${CMAKE_MAKE_PROGRAM} IPHONEOS_DEPLOYMENT_TARGET=${IPHONEOS_DEPLOYMENT_TARGET} ARCHS=${IOS_ARCH} -sdk ${CMAKE_OSX_SYSROOT} \$*")
-      # Make executable
-      file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-      set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+      set(XCODEBUILD_EXTRA_ARGS "${XCODEBUILD_EXTRA_ARGS} IPHONEOS_DEPLOYMENT_TARGET=${IPHONEOS_DEPLOYMENT_TARGET} CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO ARCHS=${IOS_ARCH} -sdk ${CMAKE_OSX_SYSROOT}")
     endif()
+    configure_file("${CMAKE_CURRENT_LIST_DIR}/xcodebuild_wrapper.in" "${_xcodebuild_wrapper_tmp}" @ONLY)
+    file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   endif()
+  set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
 endif()
 
 # Standard settings
@@ -130,11 +127,11 @@ set(CMAKE_SYSTEM_NAME iOS)
 
 # Apple Framework settings
 if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
-  set(CMAKE_SYSTEM_VERSION 8.0)
+  set(CMAKE_SYSTEM_VERSION "${IPHONEOS_DEPLOYMENT_TARGET}")
   set(CMAKE_C_SIZEOF_DATA_PTR 4)
   set(CMAKE_CXX_SIZEOF_DATA_PTR 4)
 else()
-  set(CMAKE_SYSTEM_VERSION 6.0)
+  set(CMAKE_SYSTEM_VERSION "${IPHONEOS_DEPLOYMENT_TARGET}")
   set(CMAKE_SYSTEM_PROCESSOR "${IOS_ARCH}")
 
   if(AARCH64 OR X86_64)

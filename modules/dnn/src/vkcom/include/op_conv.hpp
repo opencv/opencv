@@ -18,7 +18,8 @@ namespace cv { namespace dnn { namespace vkcom {
 enum ConvShaderType
 {
     kConvShaderTypeBasic = 0,
-    kConvShaderTypeIDLF = 1,
+    kConvShaderType48,
+    kConvShaderTypeDepthWise,
     kConvShaderTypeNum
 };
 

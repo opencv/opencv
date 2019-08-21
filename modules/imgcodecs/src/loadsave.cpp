@@ -51,6 +51,8 @@
 #undef max
 #include <iostream>
 #include <fstream>
+#include <opencv2/core/utils/configuration.private.hpp>
+
 
 /****************************************************************************************\
 *                                      Image Codecs                                      *
@@ -58,18 +60,17 @@
 
 namespace cv {
 
-// TODO Add runtime configuration
-#define CV_IO_MAX_IMAGE_PARAMS (50)
-#define CV_IO_MAX_IMAGE_WIDTH (1<<20)
-#define CV_IO_MAX_IMAGE_HEIGHT (1<<20)
-#define CV_IO_MAX_IMAGE_PIXELS (1<<30) // 1 Gigapixel
+static const size_t CV_IO_MAX_IMAGE_PARAMS = cv::utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_PARAMS", 50);
+static const size_t CV_IO_MAX_IMAGE_WIDTH = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_WIDTH", 1 << 20);
+static const size_t CV_IO_MAX_IMAGE_HEIGHT = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_HEIGHT", 1 << 20);
+static const size_t CV_IO_MAX_IMAGE_PIXELS = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_PIXELS", 1 << 30);
 
 static Size validateInputImageSize(const Size& size)
 {
     CV_Assert(size.width > 0);
-    CV_Assert(size.width <= CV_IO_MAX_IMAGE_WIDTH);
+    CV_Assert(static_cast<size_t>(size.width) <= CV_IO_MAX_IMAGE_WIDTH);
     CV_Assert(size.height > 0);
-    CV_Assert(size.height <= CV_IO_MAX_IMAGE_HEIGHT);
+    CV_Assert(static_cast<size_t>(size.height) <= CV_IO_MAX_IMAGE_HEIGHT);
     uint64 pixels = (uint64)size.width * (uint64)size.height;
     CV_Assert(pixels <= CV_IO_MAX_IMAGE_PIXELS);
     return size;
@@ -722,21 +723,25 @@ bool imwrite( const String& filename, InputArray _img,
 static bool
 imdecode_( const Mat& buf, int flags, Mat& mat )
 {
-    CV_Assert(!buf.empty() && buf.isContinuous());
+    CV_Assert(!buf.empty());
+    CV_Assert(buf.isContinuous());
+    CV_Assert(buf.checkVector(1, CV_8U) > 0);
+    Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
+
     String filename;
 
-    ImageDecoder decoder = findDecoder(buf);
+    ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
         return 0;
 
-    if( !decoder->setSource(buf) )
+    if( !decoder->setSource(buf_row) )
     {
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
-        size_t bufSize = buf.cols*buf.rows*buf.elemSize();
-        if( fwrite( buf.ptr(), 1, bufSize, f ) != bufSize )
+        size_t bufSize = buf_row.total()*buf.elemSize();
+        if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
             fclose( f );
             CV_Error( Error::StsError, "failed to write image data to temporary file" );

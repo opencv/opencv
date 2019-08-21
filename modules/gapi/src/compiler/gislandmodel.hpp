@@ -15,8 +15,8 @@
 #include <ade/typed_graph.hpp>
 #include <ade/passes/topological_sort.hpp>
 
-#include "opencv2/gapi/util/optional.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/util/optional.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "compiler/gobjref.hpp"
 

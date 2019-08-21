@@ -10,31 +10,69 @@
 # Then you can import it with a binary frozen graph (.pb) using readNetFromTensorflow() function.
 # See details and examples on the following wiki page: https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
 import argparse
+import re
 from math import sqrt
 from tf_text_graph_common import *
 
+class SSDAnchorGenerator:
+    def __init__(self, min_scale, max_scale, num_layers, aspect_ratios,
+                 reduce_boxes_in_lowest_layer, image_width, image_height):
+        self.min_scale = min_scale
+        self.aspect_ratios = aspect_ratios
+        self.reduce_boxes_in_lowest_layer = reduce_boxes_in_lowest_layer
+        self.image_width = image_width
+        self.image_height = image_height
+        self.scales =  [min_scale + (max_scale - min_scale) * i / (num_layers - 1)
+                            for i in range(num_layers)] + [1.0]
+
+    def get(self, layer_id):
+        if layer_id == 0 and self.reduce_boxes_in_lowest_layer:
+            widths = [0.1, self.min_scale * sqrt(2.0), self.min_scale * sqrt(0.5)]
+            heights = [0.1, self.min_scale / sqrt(2.0), self.min_scale / sqrt(0.5)]
+        else:
+            widths = [self.scales[layer_id] * sqrt(ar) for ar in self.aspect_ratios]
+            heights = [self.scales[layer_id] / sqrt(ar) for ar in self.aspect_ratios]
+
+            widths += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
+            heights += [sqrt(self.scales[layer_id] * self.scales[layer_id + 1])]
+        min_size = min(self.image_width, self.image_height)
+        widths = [w * min_size for w in widths]
+        heights = [h * min_size for h in heights]
+        return widths, heights
+
+
+class MultiscaleAnchorGenerator:
+    def __init__(self, min_level, aspect_ratios, scales_per_octave, anchor_scale):
+        self.min_level = min_level
+        self.aspect_ratios = aspect_ratios
+        self.anchor_scale = anchor_scale
+        self.scales = [2**(float(s) / scales_per_octave) for s in range(scales_per_octave)]
+
+    def get(self, layer_id):
+        widths = []
+        heights = []
+        for a in self.aspect_ratios:
+            for s in self.scales:
+                base_anchor_size = 2**(self.min_level + layer_id) * self.anchor_scale
+                ar = sqrt(a)
+                heights.append(base_anchor_size * s / ar)
+                widths.append(base_anchor_size * s * ar)
+        return widths, heights
+
+
 def createSSDGraph(modelPath, configPath, outputPath):
     # Nodes that should be kept.
-    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu6', 'Placeholder', 'FusedBatchNorm',
+    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
                'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
-               'Sub']
+               'Sub', 'ResizeNearestNeighbor', 'Pad']
 
     # Node with which prefixes should be removed
-    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
+    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
 
     # Load a config file.
     config = readTextMessage(configPath)
     config = config['model'][0]['ssd'][0]
     num_classes = int(config['num_classes'][0])
-
-    ssd_anchor_generator = config['anchor_generator'][0]['ssd_anchor_generator'][0]
-    min_scale = float(ssd_anchor_generator['min_scale'][0])
-    max_scale = float(ssd_anchor_generator['max_scale'][0])
-    num_layers = int(ssd_anchor_generator['num_layers'][0])
-    aspect_ratios = [float(ar) for ar in ssd_anchor_generator['aspect_ratios']]
-    reduce_boxes_in_lowest_layer = True
-    if 'reduce_boxes_in_lowest_layer' in ssd_anchor_generator:
-        reduce_boxes_in_lowest_layer = ssd_anchor_generator['reduce_boxes_in_lowest_layer'][0] == 'true'
 
     fixed_shape_resizer = config['image_resizer'][0]['fixed_shape_resizer'][0]
     image_width = int(fixed_shape_resizer['width'][0])
@@ -42,11 +80,44 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     box_predictor = 'convolutional' if 'convolutional_box_predictor' in config['box_predictor'][0] else 'weight_shared_convolutional'
 
+    anchor_generator = config['anchor_generator'][0]
+    if 'ssd_anchor_generator' in anchor_generator:
+        ssd_anchor_generator = anchor_generator['ssd_anchor_generator'][0]
+        min_scale = float(ssd_anchor_generator['min_scale'][0])
+        max_scale = float(ssd_anchor_generator['max_scale'][0])
+        num_layers = int(ssd_anchor_generator['num_layers'][0])
+        aspect_ratios = [float(ar) for ar in ssd_anchor_generator['aspect_ratios']]
+        reduce_boxes_in_lowest_layer = True
+        if 'reduce_boxes_in_lowest_layer' in ssd_anchor_generator:
+            reduce_boxes_in_lowest_layer = ssd_anchor_generator['reduce_boxes_in_lowest_layer'][0] == 'true'
+        priors_generator = SSDAnchorGenerator(min_scale, max_scale, num_layers,
+                                              aspect_ratios, reduce_boxes_in_lowest_layer,
+                                              image_width, image_height)
+
+
+        print('Scale: [%f-%f]' % (min_scale, max_scale))
+        print('Aspect ratios: %s' % str(aspect_ratios))
+        print('Reduce boxes in the lowest layer: %s' % str(reduce_boxes_in_lowest_layer))
+    elif 'multiscale_anchor_generator' in anchor_generator:
+        multiscale_anchor_generator = anchor_generator['multiscale_anchor_generator'][0]
+        min_level = int(multiscale_anchor_generator['min_level'][0])
+        max_level = int(multiscale_anchor_generator['max_level'][0])
+        anchor_scale = float(multiscale_anchor_generator['anchor_scale'][0])
+        aspect_ratios = [float(ar) for ar in multiscale_anchor_generator['aspect_ratios']]
+        scales_per_octave = int(multiscale_anchor_generator['scales_per_octave'][0])
+        num_layers = max_level - min_level + 1
+        priors_generator = MultiscaleAnchorGenerator(min_level, aspect_ratios,
+                                                     scales_per_octave, anchor_scale)
+        print('Levels: [%d-%d]' % (min_level, max_level))
+        print('Anchor scale: %f' % anchor_scale)
+        print('Scales per octave: %d' % scales_per_octave)
+        print('Aspect ratios: %s' % str(aspect_ratios))
+    else:
+        print('Unknown anchor_generator')
+        exit(0)
+
     print('Number of classes: %d' % num_classes)
     print('Number of layers: %d' % num_layers)
-    print('Scale: [%f-%f]' % (min_scale, max_scale))
-    print('Aspect ratios: %s' % str(aspect_ratios))
-    print('Reduce boxes in the lowest layer: %s' % str(reduce_boxes_in_lowest_layer))
     print('box predictor: %s' % box_predictor)
     print('Input image size: %dx%d' % (image_width, image_height))
 
@@ -67,8 +138,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
         return unconnected
 
 
-    # Detect unfused batch normalization nodes and fuse them.
-    def fuse_batch_normalization():
+    def fuse_nodes(nodesToKeep):
+        # Detect unfused batch normalization nodes and fuse them.
         # Add_0 <-- moving_variance, add_y
         # Rsqrt <-- Add_0
         # Mul_0 <-- Rsqrt, gamma
@@ -77,9 +148,15 @@ def createSSDGraph(modelPath, configPath, outputPath):
         # Sub_0 <-- beta, Mul_2
         # Add_1 <-- Mul_1, Sub_0
         nodesMap = {node.name: node for node in graph_def.node}
-        subgraph = ['Add',
+        subgraphBatchNorm = ['Add',
             ['Mul', 'input', ['Mul', ['Rsqrt', ['Add', 'moving_variance', 'add_y']], 'gamma']],
             ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
+        # Detect unfused nearest neighbor resize.
+        subgraphResizeNN = ['Reshape',
+            ['Mul', ['Reshape', 'input', ['Pack', 'shape_1', 'shape_2', 'shape_3', 'shape_4', 'shape_5']],
+                    'ones'],
+            ['Pack', ['StridedSlice', ['Shape', 'input'], 'stack', 'stack_1', 'stack_2'],
+                     'out_height', 'out_width', 'out_channels']]
         def checkSubgraph(node, targetNode, inputs, fusedNodes):
             op = targetNode[0]
             if node.op == op and (len(node.input) >= len(targetNode) - 1):
@@ -100,7 +177,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         for node in graph_def.node:
             inputs = {}
             fusedNodes = []
-            if checkSubgraph(node, subgraph, inputs, fusedNodes):
+            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes):
                 name = node.name
                 node.Clear()
                 node.name = name
@@ -112,15 +189,41 @@ def createSSDGraph(modelPath, configPath, outputPath):
                 node.input.append(inputs['moving_variance'])
                 node.addAttr('epsilon', 0.001)
                 nodesToRemove += fusedNodes[1:]
+
+            inputs = {}
+            fusedNodes = []
+            if checkSubgraph(node, subgraphResizeNN, inputs, fusedNodes):
+                name = node.name
+                node.Clear()
+                node.name = name
+                node.op = 'ResizeNearestNeighbor'
+                node.input.append(inputs['input'])
+                node.input.append(name + '/output_shape')
+
+                out_height_node = nodesMap[inputs['out_height']]
+                out_width_node = nodesMap[inputs['out_width']]
+                out_height = int(out_height_node.attr['value']['tensor'][0]['int_val'][0])
+                out_width = int(out_width_node.attr['value']['tensor'][0]['int_val'][0])
+
+                shapeNode = NodeDef()
+                shapeNode.name = name + '/output_shape'
+                shapeNode.op = 'Const'
+                shapeNode.addAttr('value', [out_height, out_width])
+                graph_def.node.insert(graph_def.node.index(node), shapeNode)
+                nodesToKeep.append(shapeNode.name)
+
+                nodesToRemove += fusedNodes[1:]
         for node in nodesToRemove:
             graph_def.node.remove(node)
 
-    fuse_batch_normalization()
+    nodesToKeep = []
+    fuse_nodes(nodesToKeep)
 
     removeIdentity(graph_def)
 
     def to_remove(name, op):
-        return (not op in keepOps) or name.startswith(prefixesToRemove)
+        return (not name in nodesToKeep) and \
+               (op == 'Const' or (not op in keepOps) or name.startswith(prefixesToRemove))
 
     removeUnusedNodesAndAttrs(to_remove, graph_def)
 
@@ -169,19 +272,16 @@ def createSSDGraph(modelPath, configPath, outputPath):
             graph_def.node.extend([flatten])
         addConcatNode('%s/concat' % label, concatInputs, 'concat/axis_flatten')
 
-    idx = 0
+    num_matched_layers = 0
     for node in graph_def.node:
-        if node.name == ('BoxPredictor_%d/BoxEncodingPredictor/Conv2D' % idx) or \
-           node.name == ('WeightSharedConvolutionalBoxPredictor_%d/BoxPredictor/Conv2D' % idx) or \
-           node.name == 'WeightSharedConvolutionalBoxPredictor/BoxPredictor/Conv2D':
+        if re.match('BoxPredictor_\d/BoxEncodingPredictor/convolution', node.name) or \
+           re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
+           re.match('WeightSharedConvolutionalBoxPredictor(_\d)*/BoxPredictor/Conv2D', node.name):
             node.addAttr('loc_pred_transposed', True)
-            idx += 1
-    assert(idx == num_layers)
+            num_matched_layers += 1
+    assert(num_matched_layers == num_layers)
 
     # Add layers that generate anchors (bounding boxes proposals).
-    scales = [min_scale + (max_scale - min_scale) * i / (num_layers - 1)
-              for i in range(num_layers)] + [1.0]
-
     priorBoxes = []
     for i in range(num_layers):
         priorBox = NodeDef()
@@ -199,17 +299,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
         priorBox.addAttr('flip', False)
         priorBox.addAttr('clip', False)
 
-        if i == 0 and reduce_boxes_in_lowest_layer:
-            widths = [0.1, min_scale * sqrt(2.0), min_scale * sqrt(0.5)]
-            heights = [0.1, min_scale / sqrt(2.0), min_scale / sqrt(0.5)]
-        else:
-            widths = [scales[i] * sqrt(ar) for ar in aspect_ratios]
-            heights = [scales[i] / sqrt(ar) for ar in aspect_ratios]
+        widths, heights = priors_generator.get(i)
 
-            widths += [sqrt(scales[i] * scales[i + 1])]
-            heights += [sqrt(scales[i] * scales[i + 1])]
-        widths = [w * image_width for w in widths]
-        heights = [h * image_height for h in heights]
         priorBox.addAttr('width', widths)
         priorBox.addAttr('height', heights)
         priorBox.addAttr('variance', [0.1, 0.1, 0.2, 0.2])
@@ -217,14 +308,19 @@ def createSSDGraph(modelPath, configPath, outputPath):
         graph_def.node.extend([priorBox])
         priorBoxes.append(priorBox.name)
 
+    # Compare this layer's output with Postprocessor/Reshape
     addConcatNode('PriorBox/concat', priorBoxes, 'concat/axis_flatten')
 
     # Sigmoid for classes predictions and DetectionOutput layer
+    addReshape('ClassPredictor/concat', 'ClassPredictor/concat3d', [0, -1, num_classes + 1], graph_def)
+
     sigmoid = NodeDef()
     sigmoid.name = 'ClassPredictor/concat/sigmoid'
     sigmoid.op = 'Sigmoid'
-    sigmoid.input.append('ClassPredictor/concat')
+    sigmoid.input.append('ClassPredictor/concat3d')
     graph_def.node.extend([sigmoid])
+
+    addFlatten(sigmoid.name, sigmoid.name + '/Flatten', graph_def)
 
     detectionOut = NodeDef()
     detectionOut.name = 'detection_out'
@@ -234,7 +330,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         detectionOut.input.append('BoxEncodingPredictor/concat')
     else:
         detectionOut.input.append('BoxPredictor/concat')
-    detectionOut.input.append(sigmoid.name)
+    detectionOut.input.append(sigmoid.name + '/Flatten')
     detectionOut.input.append('PriorBox/concat')
 
     detectionOut.addAttr('num_classes', num_classes + 1)

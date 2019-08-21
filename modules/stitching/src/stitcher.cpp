@@ -44,6 +44,12 @@
 
 namespace cv {
 
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+// Stitcher::ORIG_RESOL is initialized in stitching.hpp.
+#else
+const double Stitcher::ORIG_RESOL = -1.0;
+#endif
+
 Ptr<Stitcher> Stitcher::create(Mode mode)
 {
     Ptr<Stitcher> stitcher = makePtr<Stitcher>();
@@ -55,6 +61,7 @@ Ptr<Stitcher> Stitcher::create(Mode mode)
     stitcher->setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
     stitcher->setBlender(makePtr<detail::MultiBandBlender>(false));
     stitcher->setFeaturesFinder(ORB::create());
+    stitcher->setInterpolationFlags(INTER_LINEAR);
 
     stitcher->work_scale_ = 1;
     stitcher->seam_scale_ = 1;
@@ -185,7 +192,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         K(1,1) *= (float)seam_work_aspect_;
         K(1,2) *= (float)seam_work_aspect_;
 
-        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
+        corners[i] = w->warp(seam_est_imgs_[i], K, cameras_[i].R, interp_flags_, BORDER_REFLECT, images_warped[i]);
         sizes[i] = images_warped[i].size();
 
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
@@ -297,7 +304,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         int64 pt = getTickCount();
 #endif
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+        w->warp(img, K, cameras_[img_idx].R, interp_flags_, BORDER_REFLECT, img_warped);
         LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -356,8 +363,8 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #if ENABLE_LOG
         int64 blend_t = getTickCount();
 #endif
-    UMat result, result_mask;
-    blender_->blend(result, result_mask);
+    UMat result;
+    blender_->blend(result, result_mask_);
     LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");

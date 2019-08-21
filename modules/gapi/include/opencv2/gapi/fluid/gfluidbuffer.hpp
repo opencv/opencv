@@ -17,9 +17,9 @@
 #include <opencv2/gapi/own/mat.hpp>
 #include <opencv2/gapi/gmat.hpp>
 
-#include "opencv2/gapi/util/optional.hpp"
-#include "opencv2/gapi/own/scalar.hpp"
-#include "opencv2/gapi/own/mat.hpp"
+#include <opencv2/gapi/util/optional.hpp>
+#include <opencv2/gapi/own/scalar.hpp>
+#include <opencv2/gapi/own/mat.hpp>
 
 namespace cv {
 namespace gapi {
@@ -53,6 +53,10 @@ public:
 
         inline const uint8_t* linePtr(int index) const
         {
+            // "out_of_window" check:
+            // user must not request the lines which are outside of specified kernel window
+            GAPI_DbgAssert(index >= -m_border_size
+                        && index <  -m_border_size + static_cast<int>(m_linePtrs.size()));
             return m_linePtrs[index + m_border_size];
         }
     };

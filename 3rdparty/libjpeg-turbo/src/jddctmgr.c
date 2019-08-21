@@ -94,9 +94,9 @@ typedef union {
  */
 
 METHODDEF(void)
-start_pass (j_decompress_ptr cinfo)
+start_pass(j_decompress_ptr cinfo)
 {
-  my_idct_ptr idct = (my_idct_ptr) cinfo->idct;
+  my_idct_ptr idct = (my_idct_ptr)cinfo->idct;
   int ci, i;
   jpeg_component_info *compptr;
   int method = 0;
@@ -233,7 +233,7 @@ start_pass (j_decompress_ptr cinfo)
      * multiplier table all-zero; we'll be reading zeroes from the
      * coefficient controller's buffer anyway.
      */
-    if (! compptr->component_needed || idct->cur_method[ci] == method)
+    if (!compptr->component_needed || idct->cur_method[ci] == method)
       continue;
     qtbl = compptr->quant_table;
     if (qtbl == NULL)           /* happens if no data yet for component */
@@ -246,9 +246,9 @@ start_pass (j_decompress_ptr cinfo)
         /* For LL&M IDCT method, multipliers are equal to raw quantization
          * coefficients, but are stored as ints to ensure access efficiency.
          */
-        ISLOW_MULT_TYPE *ismtbl = (ISLOW_MULT_TYPE *) compptr->dct_table;
+        ISLOW_MULT_TYPE *ismtbl = (ISLOW_MULT_TYPE *)compptr->dct_table;
         for (i = 0; i < DCTSIZE2; i++) {
-          ismtbl[i] = (ISLOW_MULT_TYPE) qtbl->quantval[i];
+          ismtbl[i] = (ISLOW_MULT_TYPE)qtbl->quantval[i];
         }
       }
       break;
@@ -263,8 +263,8 @@ start_pass (j_decompress_ptr cinfo)
          * For integer operation, the multiplier table is to be scaled by
          * IFAST_SCALE_BITS.
          */
-        IFAST_MULT_TYPE *ifmtbl = (IFAST_MULT_TYPE *) compptr->dct_table;
-#define CONST_BITS 14
+        IFAST_MULT_TYPE *ifmtbl = (IFAST_MULT_TYPE *)compptr->dct_table;
+#define CONST_BITS  14
         static const INT16 aanscales[DCTSIZE2] = {
           /* precomputed values scaled up by 14 bits */
           16384, 22725, 21407, 19266, 16384, 12873,  8867,  4520,
@@ -280,9 +280,9 @@ start_pass (j_decompress_ptr cinfo)
 
         for (i = 0; i < DCTSIZE2; i++) {
           ifmtbl[i] = (IFAST_MULT_TYPE)
-            DESCALE(MULTIPLY16V16((JLONG) qtbl->quantval[i],
-                                  (JLONG) aanscales[i]),
-                    CONST_BITS-IFAST_SCALE_BITS);
+            DESCALE(MULTIPLY16V16((JLONG)qtbl->quantval[i],
+                                  (JLONG)aanscales[i]),
+                    CONST_BITS - IFAST_SCALE_BITS);
         }
       }
       break;
@@ -295,7 +295,7 @@ start_pass (j_decompress_ptr cinfo)
          *   scalefactor[0] = 1
          *   scalefactor[k] = cos(k*PI/16) * sqrt(2)    for k=1..7
          */
-        FLOAT_MULT_TYPE *fmtbl = (FLOAT_MULT_TYPE *) compptr->dct_table;
+        FLOAT_MULT_TYPE *fmtbl = (FLOAT_MULT_TYPE *)compptr->dct_table;
         int row, col;
         static const double aanscalefactor[DCTSIZE] = {
           1.0, 1.387039845, 1.306562965, 1.175875602,
@@ -306,7 +306,7 @@ start_pass (j_decompress_ptr cinfo)
         for (row = 0; row < DCTSIZE; row++) {
           for (col = 0; col < DCTSIZE; col++) {
             fmtbl[i] = (FLOAT_MULT_TYPE)
-              ((double) qtbl->quantval[i] *
+              ((double)qtbl->quantval[i] *
                aanscalefactor[row] * aanscalefactor[col]);
             i++;
           }
@@ -327,23 +327,23 @@ start_pass (j_decompress_ptr cinfo)
  */
 
 GLOBAL(void)
-jinit_inverse_dct (j_decompress_ptr cinfo)
+jinit_inverse_dct(j_decompress_ptr cinfo)
 {
   my_idct_ptr idct;
   int ci;
   jpeg_component_info *compptr;
 
   idct = (my_idct_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+    (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
                                 sizeof(my_idct_controller));
-  cinfo->idct = (struct jpeg_inverse_dct *) idct;
+  cinfo->idct = (struct jpeg_inverse_dct *)idct;
   idct->pub.start_pass = start_pass;
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
     /* Allocate and pre-zero a multiplier table for each component */
     compptr->dct_table =
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+      (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
                                   sizeof(multiplier_table));
     MEMZERO(compptr->dct_table, sizeof(multiplier_table));
     /* Mark multiplier table not yet set up for any method */

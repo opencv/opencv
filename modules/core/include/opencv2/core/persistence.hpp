@@ -320,7 +320,7 @@ public:
         BASE64      = 64,     //!< flag, write rawdata in Base64 by default. (consider using WRITE_BASE64)
         WRITE_BASE64 = BASE64 | WRITE, //!< flag, enable both WRITE and BASE64
     };
-    enum
+    enum State
     {
         UNDEFINED      = 0,
         VALUE_EXPECTED = 1,
@@ -565,7 +565,7 @@ public:
     //! returns the node content as double
     operator double() const;
     //! returns the node content as text string
-    operator std::string() const;
+    inline operator std::string() const { return this->string(); }
 
     static bool isMap(int flags);
     static bool isSeq(int flags);
@@ -583,11 +583,11 @@ public:
 
     /** @brief Reads node elements to the buffer with the specified format.
 
-     Usually it is more convenient to use operator `>>` instead of this method.
-     @param fmt Specification of each array element. See @ref format_spec "format specification"
-     @param vec Pointer to the destination array.
-     @param len Number of elements to read. If it is greater than number of remaining elements then all
-     of them will be read.
+    Usually it is more convenient to use operator `>>` instead of this method.
+    @param fmt Specification of each array element. See @ref format_spec "format specification"
+    @param vec Pointer to the destination array.
+    @param len Number of bytes to read (buffer size limit). If it is greater than number of
+               remaining elements then all of them will be read.
      */
     void readRaw( const String& fmt, void* vec, size_t len ) const;
 
@@ -599,7 +599,7 @@ public:
     //! Simplified reading API to use with bindings.
     CV_WRAP double real() const;
     //! Simplified reading API to use with bindings.
-    CV_WRAP String string() const;
+    CV_WRAP std::string string() const;
     //! Simplified reading API to use with bindings.
     CV_WRAP Mat mat() const;
 
@@ -652,14 +652,14 @@ public:
 
     /** @brief Reads node elements to the buffer with the specified format.
 
-     Usually it is more convenient to use operator `>>` instead of this method.
-     @param fmt Specification of each array element. See @ref format_spec "format specification"
-     @param vec Pointer to the destination array.
-     @param maxCount Number of elements to read. If it is greater than number of remaining elements then
-     all of them will be read.
+    Usually it is more convenient to use operator `>>` instead of this method.
+    @param fmt Specification of each array element. See @ref format_spec "format specification"
+    @param vec Pointer to the destination array.
+    @param len Number of bytes to read (buffer size limit). If it is greater than number of
+               remaining elements then all of them will be read.
      */
     FileNodeIterator& readRaw( const String& fmt, void* vec,
-                               size_t maxCount=(size_t)INT_MAX );
+                               size_t len=(size_t)INT_MAX );
 
     //! returns the number of remaining (not read yet) elements
     size_t remaining() const;

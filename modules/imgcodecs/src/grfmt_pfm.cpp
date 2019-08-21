@@ -17,8 +17,8 @@ static_assert(sizeof(float) == 4, "float must be 32 bit.");
 bool is_byte_order_swapped(double scale)
 {
   // ".pfm" format file specifies that:
-  // positive scale means big endianess;
-  // negative scale means little endianess.
+  // positive scale means big endianness;
+  // negative scale means little endianness.
 
   #ifdef WORDS_BIGENDIAN
     return scale < 0.0;
@@ -47,7 +47,7 @@ template<> double atoT<double>(const std::string& s) { return std::atof(s.c_str(
 template<typename T>
 T read_number(cv::RLByteStream& strm)
 {
-  // should be enogh to take string representation of any number
+  // should be enough to take string representation of any number
   const size_t buffer_size = 2048;
 
   std::vector<char> buffer(buffer_size, 0);

@@ -44,6 +44,7 @@
 //
 
 #include "precomp.hpp"
+#include "cap_interface.hpp"
 
 #ifdef HAVE_ARAVIS_API
 
@@ -299,10 +300,10 @@ bool CvCaptureCAM_Aravis::grabFrame()
             size_t buffer_size;
             framebuffer = (void*)arv_buffer_get_data (arv_buffer, &buffer_size);
 
-            // retieve image size properites
+            // retrieve image size properites
             arv_buffer_get_image_region (arv_buffer, &xoffset, &yoffset, &width, &height);
 
-            // retieve image ID set by camera
+            // retrieve image ID set by camera
             frameID = arv_buffer_get_frame_id(arv_buffer);
 
             arv_stream_push_buffer(stream, arv_buffer);
@@ -606,12 +607,12 @@ bool CvCaptureCAM_Aravis::startCapture()
     return false;
 }
 
-CvCapture* cvCreateCameraCapture_Aravis( int index )
+cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
 {
     CvCaptureCAM_Aravis* capture = new CvCaptureCAM_Aravis;
 
     if(capture->open(index)) {
-        return capture;
+        return cv::makePtr<cv::LegacyCapture>(capture);
     }
 
     delete capture;

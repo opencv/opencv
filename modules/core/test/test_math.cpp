@@ -1020,7 +1020,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
     int i, j, cols;
     int cn, depth, mat_depth;
     CvMat astub, bstub, *a, *b;
-    double mat[16];
+    double mat[16] = {0.0};
 
     a = cvGetMat( _src, &astub, 0, 0 );
     b = cvGetMat( _dst, &bstub, 0, 0 );
@@ -3921,6 +3921,60 @@ TEST(Core_SoftFloat, CvRound)
         EXPECT_EQ(values[i].out32, saturate_cast<int32_t>(values[i].inVal));
         EXPECT_EQ((uint32_t)(values[i].out32), saturate_cast<uint32_t>(values[i].inVal));
     }
+}
+
+template<typename T>
+static void checkRounding(T in, int outCeil, int outFloor)
+{
+    EXPECT_EQ(outCeil,cvCeil(in));
+    EXPECT_EQ(outFloor,cvFloor(in));
+
+    /* cvRound is not expected to be IEEE compliant. The implementation
+       should round to one of the above. */
+    EXPECT_TRUE((cvRound(in) == outCeil) || (cvRound(in) == outFloor));
+}
+
+TEST(Core_FastMath, InlineRoundingOps)
+{
+    struct
+    {
+        double in;
+        int outCeil;
+        int outFloor;
+    } values[] =
+    {
+        // Values are chosen to convert to binary float 32/64 exactly
+        { 1.0, 1, 1 },
+        { 1.5, 2, 1 },
+        { -1.5, -1, -2}
+    };
+
+    for (int i = 0, maxi = sizeof(values) / sizeof(values[0]); i < maxi; i++)
+    {
+        checkRounding<double>(values[i].in, values[i].outCeil, values[i].outFloor);
+        checkRounding<float>((float)values[i].in, values[i].outCeil, values[i].outFloor);
+    }
+}
+
+TEST(Core_FastMath, InlineNaN)
+{
+    EXPECT_EQ( cvIsNaN((float) NAN), 1);
+    EXPECT_EQ( cvIsNaN((float) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0f), 0);
+    EXPECT_EQ( cvIsNaN((double) NAN), 1);
+    EXPECT_EQ( cvIsNaN((double) -NAN), 1);
+    EXPECT_EQ( cvIsNaN(0.0), 0);
+}
+
+TEST(Core_FastMath, InlineIsInf)
+{
+    // Assume HUGE_VAL is infinity. Strictly speaking, may not always be true.
+    EXPECT_EQ( cvIsInf((float) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((float) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0f), 0);
+    EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
+    EXPECT_EQ( cvIsInf(0.0), 0);
 }
 
 }} // namespace

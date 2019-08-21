@@ -163,7 +163,7 @@ public:
     template<int m1, int n1> Matx<_Tp, m1, n1> reshape() const;
 
     //! extract part of the matrix
-    template<int m1, int n1> Matx<_Tp, m1, n1> get_minor(int i, int j) const;
+    template<int m1, int n1> Matx<_Tp, m1, n1> get_minor(int base_row, int base_col) const;
 
     //! extract the matrix row
     Matx<_Tp, 1, n> row(int i) const;
@@ -191,8 +191,8 @@ public:
     Matx<_Tp, m, n> div(const Matx<_Tp, m, n>& a) const;
 
     //! element access
-    const _Tp& operator ()(int i, int j) const;
-    _Tp& operator ()(int i, int j);
+    const _Tp& operator ()(int row, int col) const;
+    _Tp& operator ()(int row, int col);
 
     //! 1D element access
     const _Tp& operator ()(int i) const;
@@ -384,6 +384,10 @@ public:
     _Tp& operator[](int i);
     const _Tp& operator ()(int i) const;
     _Tp& operator ()(int i);
+
+#ifdef CV_CXX11
+    Vec<_Tp, cn>& operator=(const Vec<_Tp, cn>& rhs) = default;
+#endif
 
     Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp);
     Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_SubOp);
@@ -742,13 +746,13 @@ Matx<_Tp, m1, n1> Matx<_Tp, m, n>::reshape() const
 
 template<typename _Tp, int m, int n>
 template<int m1, int n1> inline
-Matx<_Tp, m1, n1> Matx<_Tp, m, n>::get_minor(int i, int j) const
+Matx<_Tp, m1, n1> Matx<_Tp, m, n>::get_minor(int base_row, int base_col) const
 {
-    CV_DbgAssert(0 <= i && i+m1 <= m && 0 <= j && j+n1 <= n);
+    CV_DbgAssert(0 <= base_row && base_row+m1 <= m && 0 <= base_col && base_col+n1 <= n);
     Matx<_Tp, m1, n1> s;
     for( int di = 0; di < m1; di++ )
         for( int dj = 0; dj < n1; dj++ )
-            s(di, dj) = (*this)(i+di, j+dj);
+            s(di, dj) = (*this)(base_row+di, base_col+dj);
     return s;
 }
 
@@ -779,17 +783,17 @@ typename Matx<_Tp, m, n>::diag_type Matx<_Tp, m, n>::diag() const
 }
 
 template<typename _Tp, int m, int n> inline
-const _Tp& Matx<_Tp, m, n>::operator()(int i, int j) const
+const _Tp& Matx<_Tp, m, n>::operator()(int row_idx, int col_idx) const
 {
-    CV_DbgAssert( (unsigned)i < (unsigned)m && (unsigned)j < (unsigned)n );
-    return this->val[i*n + j];
+    CV_DbgAssert( (unsigned)row_idx < (unsigned)m && (unsigned)col_idx < (unsigned)n );
+    return this->val[row_idx*n + col_idx];
 }
 
 template<typename _Tp, int m, int n> inline
-_Tp& Matx<_Tp, m, n>::operator ()(int i, int j)
+_Tp& Matx<_Tp, m, n>::operator ()(int row_idx, int col_idx)
 {
-    CV_DbgAssert( (unsigned)i < (unsigned)m && (unsigned)j < (unsigned)n );
-    return val[i*n + j];
+    CV_DbgAssert( (unsigned)row_idx < (unsigned)m && (unsigned)col_idx < (unsigned)n );
+    return val[row_idx*n + col_idx];
 }
 
 template<typename _Tp, int m, int n> inline

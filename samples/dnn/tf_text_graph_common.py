@@ -289,7 +289,7 @@ def removeUnusedNodesAndAttrs(to_remove, graph_def):
         op = graph_def.node[i].op
         name = graph_def.node[i].name
 
-        if op == 'Const' or to_remove(name, op):
+        if to_remove(name, op):
             if op != 'Const':
                 removedNodes.append(name)
 
@@ -323,7 +323,7 @@ def writeTextGraph(modelPath, outputPath, outNodes):
 
             for node in graph_def.node:
                 if node.op == 'Const':
-                    if 'value' in node.attr:
-                        del node.attr['value']
+                    if 'value' in node.attr and node.attr['value'].tensor.tensor_content:
+                        node.attr['value'].tensor.tensor_content = b''
 
         tf.train.write_graph(graph_def, "", outputPath, as_text=True)

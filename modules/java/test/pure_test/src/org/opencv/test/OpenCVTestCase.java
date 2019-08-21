@@ -97,6 +97,8 @@ public class OpenCVTestCase extends TestCase {
     protected Mat rgbLena;
     protected Mat grayChess;
 
+    protected Mat gray255_32f_3d;
+
     protected Mat v1;
     protected Mat v2;
 
@@ -175,6 +177,8 @@ public class OpenCVTestCase extends TestCase {
         rgbLena = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH);
         grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, 0);
 
+        gray255_32f_3d = new Mat(new int[]{matSize, matSize, matSize}, CvType.CV_32F, new Scalar(255.0));
+
         v1 = new Mat(1, 3, CvType.CV_32F);
         v1.put(0, 0, 1.0, 3.0, 2.0);
         v2 = new Mat(1, 3, CvType.CV_32F);
@@ -210,6 +214,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128.release();
         rgbLena.release();
         grayChess.release();
+        gray255_32f_3d.release();
         v1.release();
         v2.release();
 
@@ -468,8 +473,24 @@ public class OpenCVTestCase extends TestCase {
         assertEquals(msg, expected.z, actual.z, eps);
     }
 
+    static private boolean dimensionsEqual(Mat expected, Mat actual) {
+        if (expected.dims() != actual.dims()) {
+            return false;
+        }
+        if (expected.dims() > 2) {
+            for (int i = 0; i < expected.dims(); i++) {
+                if (expected.size(i) != actual.size(i)) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return expected.cols() == actual.cols() && expected.rows() == actual.rows();
+        }
+    }
+
     static private void compareMats(Mat expected, Mat actual, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || !dimensionsEqual(expected, actual)) {
             throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
@@ -497,7 +518,7 @@ public class OpenCVTestCase extends TestCase {
     }
 
     static private void compareMats(Mat expected, Mat actual, double eps, boolean isEqualityMeasured) {
-        if (expected.type() != actual.type() || expected.cols() != actual.cols() || expected.rows() != actual.rows()) {
+        if (expected.type() != actual.type() || !dimensionsEqual(expected, actual)) {
             throw new UnsupportedOperationException("Can not compare " + expected + " and " + actual);
         }
 
@@ -506,10 +527,10 @@ public class OpenCVTestCase extends TestCase {
         double maxDiff = Core.norm(diff, Core.NORM_INF);
 
         if (isEqualityMeasured)
-            assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
+            assertTrue("Max difference between expected and actual Mats is "+ maxDiff + ", that bigger than " + eps,
                     maxDiff <= eps);
         else
-            assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
+            assertFalse("Max difference between expected and actual Mats is "+ maxDiff + ", that less than " + eps,
                     maxDiff <= eps);
     }
 
@@ -586,7 +607,7 @@ public class OpenCVTestCase extends TestCase {
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
-        assertTrue(message, instance!=null);
+        assertNotNull(message, instance);
 
         return instance;
     }

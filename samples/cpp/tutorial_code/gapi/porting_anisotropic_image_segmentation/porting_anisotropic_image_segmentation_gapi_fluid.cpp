@@ -50,8 +50,12 @@ int main()
     auto imgBin = imgCoherencyBin & imgOrientationBin;
     cv::GMat out = cv::gapi::addWeighted(in, 0.5, imgBin, 0.5, 0.0);
 
+    // Normalize extra outputs
+    cv::GMat imgCoherencyNorm = cv::gapi::normalize(imgCoherency, 0, 255, cv::NORM_MINMAX);
+    cv::GMat imgOrientationNorm = cv::gapi::normalize(imgOrientation, 0, 255, cv::NORM_MINMAX);
+
     // Capture the graph into object segm
-    cv::GComputation segm(cv::GIn(in), cv::GOut(out, imgCoherency, imgOrientation));
+    cv::GComputation segm(cv::GIn(in), cv::GOut(out, imgCoherencyNorm, imgOrientationNorm));
 
     // Define cv::Mats for output data
     cv::Mat imgOut, imgOutCoherency, imgOutOrientation;
@@ -61,8 +65,7 @@ int main()
     // Prepare the kernel package and run the graph
     cv::gapi::GKernelPackage fluid_kernels = cv::gapi::combine        // Define a custom kernel package:
         (cv::gapi::core::fluid::kernels(),                            // ...with Fluid Core kernels
-         cv::gapi::imgproc::fluid::kernels(),                         // ...and Fluid ImgProc kernels
-         cv::unite_policy::KEEP);
+         cv::gapi::imgproc::fluid::kernels());                        // ...and Fluid ImgProc kernels
     //! [kernel_pkg]
     //! [kernel_hotfix]
     fluid_kernels.remove<cv::gapi::imgproc::GBoxFilter>();            // Remove Fluid Box filter as unsuitable,
@@ -74,10 +77,6 @@ int main()
                cv::compile_args(fluid_kernels));                      // Kernel package to use
     //! [kernel_pkg_use]
     //! [kernel_pkg_proper]
-
-    // Normalize extra outputs (out of the graph)
-    cv::normalize(imgOutCoherency, imgOutCoherency, 0, 255, cv::NORM_MINMAX);
-    cv::normalize(imgOutOrientation, imgOutOrientation, 0, 255, cv::NORM_MINMAX);
 
     cv::imwrite("result.jpg", imgOut);
     cv::imwrite("Coherency.jpg", imgOutCoherency);

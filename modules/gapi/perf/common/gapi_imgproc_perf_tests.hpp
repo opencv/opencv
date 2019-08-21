@@ -11,7 +11,7 @@
 
 
 #include "../../test/common/gapi_tests_common.hpp"
-#include "opencv2/gapi/imgproc.hpp"
+#include <opencv2/gapi/imgproc.hpp>
 
 namespace opencv_test
 {
@@ -31,6 +31,7 @@ class Erode3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Siz
 class DilatePerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int, cv::GCompileArgs>> {};
 class Dilate3x3PerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,int, cv::GCompileArgs>> {};
 class SobelPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int,int, cv::GCompileArgs>> {};
+class SobelXYPerfTest : public TestPerfParams<tuple<compare_f, MatType,int,cv::Size,int,int, cv::GCompileArgs>> {};
 class CannyPerfTest : public TestPerfParams<tuple<compare_f, MatType,cv::Size,double,double,int,bool, cv::GCompileArgs>> {};
 class EqHistPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
 class RGB2GrayPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs >> {};
@@ -42,5 +43,8 @@ class BGR2LUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCo
 class LUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BGR2YUVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class YUV2BGRPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2HSVPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 }
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP

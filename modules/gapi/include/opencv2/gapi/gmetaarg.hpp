@@ -11,12 +11,12 @@
 #include <vector>
 #include <type_traits>
 
-#include "opencv2/gapi/util/util.hpp"
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/util/variant.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/garray.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/garray.hpp>
 
 namespace cv
 {
@@ -37,7 +37,7 @@ using GMetaArg = util::variant
     , GScalarDesc
     , GArrayDesc
     >;
-std::ostream& operator<<(std::ostream& os, const GMetaArg &);
+GAPI_EXPORTS std::ostream& operator<<(std::ostream& os, const GMetaArg &);
 
 using GMetaArgs = std::vector<GMetaArg>;
 
@@ -60,6 +60,17 @@ namespace detail
     using are_meta_descrs_but_last = all_satisfy<is_meta_descr, typename all_but_last<Ts...>::type>;
 
 } // namespace detail
+
+// Note: descr_of(std::vector<..>) returns a GArrayDesc, while
+//       descrs_of(std::vector<..>) returns an array of Meta args!
+class Mat;
+class UMat;
+GAPI_EXPORTS cv::GMetaArgs descrs_of(const std::vector<cv::Mat> &vec);
+GAPI_EXPORTS cv::GMetaArgs descrs_of(const std::vector<cv::UMat> &vec);
+namespace gapi { namespace own {
+    class Mat;
+    GAPI_EXPORTS cv::GMetaArgs descrs_of(const std::vector<Mat> &vec);
+}} // namespace gapi::own
 
 } // namespace cv
 

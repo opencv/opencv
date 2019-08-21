@@ -70,7 +70,7 @@ Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
     if (type == NO)
         return makePtr<Blender>();
     if (type == FEATHER)
-        return makePtr<FeatherBlender>();
+        return makePtr<FeatherBlender>(try_gpu);
     if (type == MULTI_BAND)
         return makePtr<MultiBandBlender>(try_gpu);
     CV_Error(Error::StsBadArg, "unsupported blending method");
@@ -132,7 +132,6 @@ void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     dst_.release();
     dst_mask_.release();
 }
-
 
 void FeatherBlender::prepare(Rect dst_roi)
 {
@@ -230,7 +229,6 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
     weight_type_ = weight_type;
 }
-
 
 void MultiBandBlender::prepare(Rect dst_roi)
 {

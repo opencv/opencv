@@ -12,8 +12,8 @@
 
 #include "logger.hpp" // GAPI_LOG
 
-#include "opencv2/gapi/gcomputation.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gcomputation.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 #include "api/gcomputation_priv.hpp"
 #include "api/gcall_priv.hpp"
@@ -159,16 +159,14 @@ void cv::GComputation::apply(cv::Mat in1, cv::Mat in2, cv::Scalar &out, GCompile
 }
 
 void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
-                             const std::vector<cv::Mat> &outs,
+                                   std::vector<cv::Mat> &outs,
                              GCompileArgs &&args)
 {
     GRunArgs call_ins;
     GRunArgsP call_outs;
 
-    // Make a temporary copy of vector outs - cv::Mats are copies anyway
-    auto tmp = outs;
-    for (const cv::Mat &m : ins) { call_ins.emplace_back(m);   }
-    for (      cv::Mat &m : tmp) { call_outs.emplace_back(&m); }
+    for (const cv::Mat &m : ins)  { call_ins.emplace_back(m);   }
+    for (      cv::Mat &m : outs) { call_outs.emplace_back(&m); }
 
     apply(std::move(call_ins), std::move(call_outs), std::move(args));
 }

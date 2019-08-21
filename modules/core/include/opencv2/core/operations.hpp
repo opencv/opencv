@@ -52,7 +52,11 @@
 #include <cstdio>
 
 #if defined(__GNUC__) || defined(__clang__) // at least GCC 3.1+, clang 3.5+
-#  define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (printf, string_idx, first_to_check)))
+#  if defined(__MINGW_PRINTF_FORMAT)  // https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/.
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (__MINGW_PRINTF_FORMAT, string_idx, first_to_check)))
+#  else
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (printf, string_idx, first_to_check)))
+#  endif
 #else
 #  define CV_FORMAT_PRINTF(A, B)
 #endif
@@ -258,48 +262,67 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     template<typename _Tp> CV_MAT_AUG_OPERATOR1(op, cvop, A, B) \
     template<typename _Tp> CV_MAT_AUG_OPERATOR1(op, cvop, const A, B)
 
+#define CV_MAT_AUG_OPERATOR_TN(op, cvop, A)                                \
+    template<typename _Tp, int m, int n> static inline A& operator op (A& a, const Matx<_Tp,m,n>& b) { cvop; return a; } \
+    template<typename _Tp, int m, int n> static inline const A& operator op (const A& a, const Matx<_Tp,m,n>& b) { cvop; return a; }
+
 CV_MAT_AUG_OPERATOR  (+=, cv::add(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (+=, cv::add(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(+=, cv::add(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
+CV_MAT_AUG_OPERATOR_TN(+=, cv::add(a,Mat(b),a), Mat)
+CV_MAT_AUG_OPERATOR_TN(+=, cv::add(a,Mat(b),a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (-=, cv::subtract(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (-=, cv::subtract(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(-=, cv::subtract(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(-=, cv::subtract(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(-=, cv::subtract(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
+CV_MAT_AUG_OPERATOR_TN(-=, cv::subtract(a,Mat(b),a), Mat)
+CV_MAT_AUG_OPERATOR_TN(-=, cv::subtract(a,Mat(b),a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (*=, cv::gemm(a, b, 1, Mat(), 0, a, 0), Mat, Mat)
 CV_MAT_AUG_OPERATOR_T(*=, cv::gemm(a, b, 1, Mat(), 0, a, 0), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(*=, cv::gemm(a, b, 1, Mat(), 0, a, 0), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR  (*=, a.convertTo(a, -1, b), Mat, double)
 CV_MAT_AUG_OPERATOR_T(*=, a.convertTo(a, -1, b), Mat_<_Tp>, double)
+CV_MAT_AUG_OPERATOR_TN(*=, cv::gemm(a, Mat(b), 1, Mat(), 0, a, 0), Mat)
+CV_MAT_AUG_OPERATOR_TN(*=, cv::gemm(a, Mat(b), 1, Mat(), 0, a, 0), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (/=, cv::divide(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR_T(/=, cv::divide(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(/=, cv::divide(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
 CV_MAT_AUG_OPERATOR  (/=, a.convertTo((Mat&)a, -1, 1./b), Mat, double)
 CV_MAT_AUG_OPERATOR_T(/=, a.convertTo((Mat&)a, -1, 1./b), Mat_<_Tp>, double)
+CV_MAT_AUG_OPERATOR_TN(/=, cv::divide(a, Mat(b), a), Mat)
+CV_MAT_AUG_OPERATOR_TN(/=, cv::divide(a, Mat(b), a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (&=, cv::bitwise_and(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (&=, cv::bitwise_and(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(&=, cv::bitwise_and(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(&=, cv::bitwise_and(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(&=, cv::bitwise_and(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
+CV_MAT_AUG_OPERATOR_TN(&=, cv::bitwise_and(a, Mat(b), a), Mat)
+CV_MAT_AUG_OPERATOR_TN(&=, cv::bitwise_and(a, Mat(b), a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (|=, cv::bitwise_or(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (|=, cv::bitwise_or(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(|=, cv::bitwise_or(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(|=, cv::bitwise_or(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(|=, cv::bitwise_or(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
+CV_MAT_AUG_OPERATOR_TN(|=, cv::bitwise_or(a, Mat(b), a), Mat)
+CV_MAT_AUG_OPERATOR_TN(|=, cv::bitwise_or(a, Mat(b), a), Mat_<_Tp>)
 
 CV_MAT_AUG_OPERATOR  (^=, cv::bitwise_xor(a,b,a), Mat, Mat)
 CV_MAT_AUG_OPERATOR  (^=, cv::bitwise_xor(a,b,a), Mat, Scalar)
 CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Mat)
 CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Scalar)
 CV_MAT_AUG_OPERATOR_T(^=, cv::bitwise_xor(a,b,a), Mat_<_Tp>, Mat_<_Tp>)
+CV_MAT_AUG_OPERATOR_TN(^=, cv::bitwise_xor(a, Mat(b), a), Mat)
+CV_MAT_AUG_OPERATOR_TN(^=, cv::bitwise_xor(a, Mat(b), a), Mat_<_Tp>)
 
+#undef CV_MAT_AUG_OPERATOR_TN
 #undef CV_MAT_AUG_OPERATOR_T
 #undef CV_MAT_AUG_OPERATOR
 #undef CV_MAT_AUG_OPERATOR1
@@ -379,7 +402,7 @@ inline unsigned RNG::next()
     return (unsigned)state;
 }
 
-//! returns the next unifomly-distributed random number of the specified type
+//! returns the next uniformly-distributed random number of the specified type
 template<typename _Tp> static inline _Tp randu()
 {
   return (_Tp)theRNG();

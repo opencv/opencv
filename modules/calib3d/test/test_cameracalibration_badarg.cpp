@@ -173,12 +173,12 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 
     caller.initArgs();
     caller.imgPts[0].clear();
-    errors += run_test_case( CV_StsUnsupportedFormat, "Bad imgpts[0]", caller );
+    errors += run_test_case( CV_StsBadSize, "Bad imgpts[0]", caller );
     caller.imgPts[0] = caller.imgPts[1];
 
     caller.initArgs();
     caller.objPts[1].clear();
-    errors += run_test_case( CV_StsUnsupportedFormat, "Bad objpts[1]", caller );
+    errors += run_test_case( CV_StsBadSize, "Bad objpts[1]", caller );
     caller.objPts[1] = caller.objPts[0];
 
     caller.initArgs();

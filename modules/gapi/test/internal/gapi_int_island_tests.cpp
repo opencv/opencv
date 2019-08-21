@@ -5,10 +5,11 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 
 #include "compiler/gmodel.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace opencv_test
 {
@@ -124,7 +125,7 @@ TEST_F(Islands, TwoIslands)
 }
 
 // FIXME: Disabled since currently merge procedure merges two into one
-// succesfully
+// successfully
 TEST_F(Islands, DISABLED_Two_Islands_With_Same_Name_Should_Fail)
 {
     // (in) -> Blur1 -> (tmp0) -> Blur2 -> (tmp1) -> Blur3 -> (tmp2) -> Blur4 -> (out)

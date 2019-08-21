@@ -142,7 +142,12 @@ public:
      * When setting a resolution for stitching, this values is a placeholder
      * for preserving the original resolution.
      */
-    static constexpr const double ORIG_RESOL = -1.0;
+#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
+    static constexpr double ORIG_RESOL = -1.0;
+#else
+    // support MSVS 2013
+    static const double ORIG_RESOL; // Initialized in stitcher.cpp
+#endif
 
     enum Status
     {
@@ -192,6 +197,9 @@ public:
 
     CV_WRAP bool waveCorrection() const { return do_wave_correct_; }
     CV_WRAP void setWaveCorrection(bool flag) { do_wave_correct_ = flag; }
+
+    CV_WRAP InterpolationFlags interpolationFlags() const { return interp_flags_; }
+    CV_WRAP void setInterpolationFlags(InterpolationFlags interp_flags) { interp_flags_ = interp_flags; }
 
     detail::WaveCorrectKind waveCorrectKind() const { return wave_correct_kind_; }
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
@@ -280,6 +288,7 @@ public:
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
     CV_WRAP double workScale() const { return work_scale_; }
+    UMat resultMask() const { return result_mask_; }
 
 private:
     Status matchImages();
@@ -289,6 +298,7 @@ private:
     double seam_est_resol_;
     double compose_resol_;
     double conf_thresh_;
+    InterpolationFlags interp_flags_;
     Ptr<Feature2D> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
     cv::UMat matching_mask_;
@@ -309,6 +319,7 @@ private:
     std::vector<cv::UMat> seam_est_imgs_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
+    UMat result_mask_;
     double work_scale_;
     double seam_scale_;
     double seam_work_aspect_;

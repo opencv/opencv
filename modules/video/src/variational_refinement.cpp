@@ -93,6 +93,7 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
         int red_even_len, red_odd_len;
         int black_even_len, black_odd_len;
 
+        RedBlackBuffer();
         void create(Size s);
         void release();
     };
@@ -132,20 +133,28 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
     };
     void gradHorizAndSplitOp(void *src, void *dst, void *dst_split)
     {
+        CV_INSTRUMENT_REGION();
+
         Sobel(*(Mat *)src, *(Mat *)dst, -1, 1, 0, 1, 1, 0.00, BORDER_REPLICATE);
         splitCheckerboard(*(RedBlackBuffer *)dst_split, *(Mat *)dst);
     }
     void gradVertAndSplitOp(void *src, void *dst, void *dst_split)
     {
+        CV_INSTRUMENT_REGION();
+
         Sobel(*(Mat *)src, *(Mat *)dst, -1, 0, 1, 1, 1, 0.00, BORDER_REPLICATE);
         splitCheckerboard(*(RedBlackBuffer *)dst_split, *(Mat *)dst);
     }
     void averageOp(void *src1, void *src2, void *dst)
     {
+        CV_INSTRUMENT_REGION();
+
         addWeighted(*(Mat *)src1, 0.5, *(Mat *)src2, 0.5, 0.0, *(Mat *)dst, CV_32F);
     }
     void subtractOp(void *src1, void *src2, void *dst)
     {
+        CV_INSTRUMENT_REGION();
+
         subtract(*(Mat *)src1, *(Mat *)src2, *(Mat *)dst, noArray(), CV_32F);
     }
 
@@ -205,6 +214,8 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
 
 VariationalRefinementImpl::VariationalRefinementImpl()
 {
+    CV_INSTRUMENT_REGION();
+
     fixedPointIterations = 5;
     sorIterations = 5;
     alpha = 20.0f;
@@ -221,6 +232,8 @@ VariationalRefinementImpl::VariationalRefinementImpl()
  */
 void VariationalRefinementImpl::splitCheckerboard(RedBlackBuffer &dst, Mat &src)
 {
+    CV_INSTRUMENT_REGION();
+
     int buf_j, j;
     int buf_w = (int)ceil(src.cols / 2.0) + 2; //!< max width of red/black buffers with borders
 
@@ -287,6 +300,8 @@ void VariationalRefinementImpl::splitCheckerboard(RedBlackBuffer &dst, Mat &src)
  */
 void VariationalRefinementImpl::mergeCheckerboard(Mat &dst, RedBlackBuffer &src)
 {
+    CV_INSTRUMENT_REGION();
+
     int buf_j, j;
     for (int i = 0; i < dst.rows; i++)
     {
@@ -325,6 +340,8 @@ void VariationalRefinementImpl::mergeCheckerboard(Mat &dst, RedBlackBuffer &src)
  */
 void VariationalRefinementImpl::updateRepeatedBorders(RedBlackBuffer &dst)
 {
+    CV_INSTRUMENT_REGION();
+
     int buf_w = dst.red.cols;
     for (int i = 0; i < dst.red.rows - 2; i++)
     {
@@ -366,8 +383,16 @@ void VariationalRefinementImpl::updateRepeatedBorders(RedBlackBuffer &dst)
     }
 }
 
+VariationalRefinementImpl::RedBlackBuffer::RedBlackBuffer()
+{
+    CV_INSTRUMENT_REGION();
+
+    release();
+}
 void VariationalRefinementImpl::RedBlackBuffer::create(Size s)
 {
+    CV_INSTRUMENT_REGION();
+
     /* Allocate enough memory to include borders */
     int w = (int)ceil(s.width / 2.0) + 2;
     red.create(s.height + 2, w);
@@ -384,8 +409,11 @@ void VariationalRefinementImpl::RedBlackBuffer::create(Size s)
 
 void VariationalRefinementImpl::RedBlackBuffer::release()
 {
+    CV_INSTRUMENT_REGION();
+
     red.release();
     black.release();
+    red_even_len = red_odd_len = black_even_len = black_odd_len = 0;
 }
 
 VariationalRefinementImpl::ParallelOp_ParBody::ParallelOp_ParBody(VariationalRefinementImpl &_var, vector<Op> _ops,
@@ -397,12 +425,16 @@ VariationalRefinementImpl::ParallelOp_ParBody::ParallelOp_ParBody(VariationalRef
 
 void VariationalRefinementImpl::ParallelOp_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     for (int i = range.start; i < range.end; i++)
         (var->*ops[i])(op1s[i], op2s[i], op3s[i]);
 }
 
 void VariationalRefinementImpl::warpImage(Mat &dst, Mat &src, Mat &flow_u, Mat &flow_v)
 {
+    CV_INSTRUMENT_REGION();
+
     for (int i = 0; i < flow_u.rows; i++)
     {
         float *pFlowU = flow_u.ptr<float>(i);
@@ -420,6 +452,8 @@ void VariationalRefinementImpl::warpImage(Mat &dst, Mat &src, Mat &flow_u, Mat &
 
 void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &W_v)
 {
+    CV_INSTRUMENT_REGION();
+
     Size s = I0.size();
     A11.create(s);
     A12.create(s);
@@ -544,6 +578,8 @@ VariationalRefinementImpl::ComputeDataTerm_ParBody::ComputeDataTerm_ParBody(Vari
  */
 void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     int start_i = min(range.start * stripe_sz, h);
     int end_i = min(range.end * stripe_sz, h);
 
@@ -703,6 +739,8 @@ VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::ComputeSmoothne
  */
 void VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     int start_i = min(range.start * stripe_sz, h);
     int end_i = min(range.end * stripe_sz, h);
 
@@ -867,6 +905,8 @@ VariationalRefinementImpl::ComputeSmoothnessTermVertPass_ParBody::ComputeSmoothn
 /* This function adds the last remaining terms to the linear system coefficients A11,A22,b1,b1. */
 void VariationalRefinementImpl::ComputeSmoothnessTermVertPass_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     int start_i = min(range.start * stripe_sz, h);
     int end_i = min(range.end * stripe_sz, h);
 
@@ -959,6 +999,8 @@ VariationalRefinementImpl::RedBlackSOR_ParBody::RedBlackSOR_ParBody(VariationalR
  */
 void VariationalRefinementImpl::RedBlackSOR_ParBody::operator()(const Range &range) const
 {
+    CV_INSTRUMENT_REGION();
+
     int start = min(range.start * stripe_sz, h);
     int end = min(range.end * stripe_sz, h);
 
@@ -1073,6 +1115,8 @@ void VariationalRefinementImpl::RedBlackSOR_ParBody::operator()(const Range &ran
 
 void VariationalRefinementImpl::calc(InputArray I0, InputArray I1, InputOutputArray flow)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(!I0.empty() && I0.channels() == 1);
     CV_Assert(!I1.empty() && I1.channels() == 1);
     CV_Assert(I0.sameSize(I1));
@@ -1089,6 +1133,8 @@ void VariationalRefinementImpl::calc(InputArray I0, InputArray I1, InputOutputAr
 
 void VariationalRefinementImpl::calcUV(InputArray I0, InputArray I1, InputOutputArray flow_u, InputOutputArray flow_v)
 {
+    CV_INSTRUMENT_REGION();
+
     CV_Assert(!I0.empty() && I0.channels() == 1);
     CV_Assert(!I1.empty() && I1.channels() == 1);
     CV_Assert(I0.sameSize(I1));
@@ -1118,6 +1164,8 @@ void VariationalRefinementImpl::calcUV(InputArray I0, InputArray I1, InputOutput
 
     for (int i = 0; i < fixedPointIterations; i++)
     {
+        CV_TRACE_REGION("fixedPoint_iteration");
+
         parallel_for_(Range(0, num_stripes), ComputeDataTerm_ParBody(*this, num_stripes, I0Mat.rows, dW_u, dW_v, true));
         parallel_for_(Range(0, num_stripes), ComputeDataTerm_ParBody(*this, num_stripes, I0Mat.rows, dW_u, dW_v, false));
 
@@ -1133,6 +1181,7 @@ void VariationalRefinementImpl::calcUV(InputArray I0, InputArray I1, InputOutput
 
         for (int j = 0; j < sorIterations; j++)
         {
+            CV_TRACE_REGION("SOR_iteration");
             parallel_for_(Range(0, num_stripes), RedBlackSOR_ParBody(*this, num_stripes, I0Mat.rows, dW_u, dW_v, true));
             parallel_for_(Range(0, num_stripes), RedBlackSOR_ParBody(*this, num_stripes, I0Mat.rows, dW_u, dW_v, false));
         }
@@ -1149,6 +1198,8 @@ void VariationalRefinementImpl::calcUV(InputArray I0, InputArray I1, InputOutput
 }
 void VariationalRefinementImpl::collectGarbage()
 {
+    CV_INSTRUMENT_REGION();
+
     Ix.release();
     Iy.release();
     Iz.release();

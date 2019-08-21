@@ -54,6 +54,9 @@
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
 #include <opencv2/core/utils/logger.hpp>
 
 #include "opencv2/core/ocl_genbase.hpp"
@@ -62,6 +65,10 @@
 #include "opencv2/core/utils/lock.private.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
+
+#define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "OpenCL allocator: " << __VA_ARGS__)
+#include "opencv2/core/utils/allocator_stats.impl.hpp"
+#undef CV__ALLOCATOR_STATS_LOG
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
 
@@ -131,6 +138,14 @@ namespace cv { namespace ocl {
     void addref() { CV_XADD(&refcount, 1); } \
     void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
     int refcount
+
+static cv::utils::AllocatorStatistics opencl_allocator_stats;
+
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics();
+cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics()
+{
+    return opencl_allocator_stats;
+}
 
 #ifndef HAVE_OPENCL
 #define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
@@ -1257,6 +1272,14 @@ struct Device::Impl
         else
             vendorID_ = UNKNOWN_VENDOR;
 
+        const size_t CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE", 0);
+        if (CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE > 0)
+        {
+            const size_t new_maxWorkGroupSize = std::min(maxWorkGroupSize_, CV_OPENCL_DEVICE_MAX_WORK_GROUP_SIZE);
+            if (new_maxWorkGroupSize != maxWorkGroupSize_)
+                CV_LOG_WARNING(NULL, "OpenCL: using workgroup size: " << new_maxWorkGroupSize << " (was " << maxWorkGroupSize_ << ")");
+            maxWorkGroupSize_ = new_maxWorkGroupSize;
+        }
 #if 0
         if (isExtensionSupported("cl_khr_spir"))
         {
@@ -1699,7 +1722,7 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
 static cl_device_id selectOpenCLDevice()
 {
     return NULL;
@@ -2772,6 +2795,7 @@ struct Kernel::Impl
         for( int i = 0; i < MAX_ARRS; i++ )
             u[i] = 0;
         haveTempDstUMats = false;
+        haveTempSrcUMats = false;
     }
 
     void cleanupUMats()
@@ -2788,6 +2812,7 @@ struct Kernel::Impl
             }
         nu = 0;
         haveTempDstUMats = false;
+        haveTempSrcUMats = false;
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -2798,6 +2823,8 @@ struct Kernel::Impl
         nu++;
         if(dst && m.u->tempUMat())
             haveTempDstUMats = true;
+        if(m.u->originalUMatData == NULL && m.u->tempUMat())
+            haveTempSrcUMats = true;  // UMat is created on RAW memory (without proper lifetime management, even from Mat)
     }
 
     void addImage(const Image2D& image)
@@ -2835,6 +2862,7 @@ struct Kernel::Impl
     int nu;
     std::list<Image2D> images;
     bool haveTempDstUMats;
+    bool haveTempSrcUMats;
 };
 
 }} // namespace cv::ocl
@@ -2980,7 +3008,11 @@ int Kernel::set(int i, const KernelArg& arg)
     if( !p || !p->handle )
         return -1;
     if (i < 0)
+    {
+        CV_LOG_ERROR(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): negative arg_index",
+                p->name.c_str(), (int)i));
         return i;
+    }
     if( i == 0 )
         p->cleanupUMats();
     cl_int status = 0;
@@ -2989,10 +3021,19 @@ int Kernel::set(int i, const KernelArg& arg)
         AccessFlag accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : static_cast<AccessFlag>(0)) |
                                  ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : static_cast<AccessFlag>(0));
         bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
+        if (ptronly && arg.m->empty())
+        {
+            cl_mem h_null = (cl_mem)NULL;
+            status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(h_null), &h_null);
+            CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=NULL)", p->name.c_str(), (int)i).c_str());
+            return i + 1;
+        }
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
         if (!h)
         {
+            CV_LOG_ERROR(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d, flags=%d): can't create cl_mem handle for passed UMat buffer (addr=%p)",
+                    p->name.c_str(), (int)i, (int)arg.flags, arg.m));
             p->release();
             p = 0;
             return -1;
@@ -3107,6 +3148,8 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)
+        sync = true;
+    if (haveTempSrcUMats)
         sync = true;
     if (timeNS)
         sync = true;
@@ -3546,6 +3589,7 @@ struct Program::Impl
         // We don't cache OpenCL binaries
         if (src_->kind_ == ProgramSource::Impl::PROGRAM_BINARIES)
         {
+            CV_LOG_VERBOSE(NULL, 0, "Load program binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
             bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
             return isLoaded;
         }
@@ -3587,6 +3631,7 @@ struct Program::Impl
                 if (res)
                 {
                     CV_Assert(!binaryBuf.empty());
+                    CV_LOG_VERBOSE(NULL, 0, "Load program binary from cache: " << src_->module_.c_str() << "/" << src_->name_.c_str());
                     bool isLoaded = createFromBinary(ctx, binaryBuf, errmsg);
                     if (isLoaded)
                         return true;
@@ -3618,6 +3663,7 @@ struct Program::Impl
             {
                 buildflags = joinBuildOptions(buildflags, " -spir-std=1.2");
             }
+            CV_LOG_VERBOSE(NULL, 0, "Load program SPIR binary... " << src_->module_.c_str() << "/" << src_->name_.c_str());
             bool isLoaded = createFromBinary(ctx, src_->sourceAddr_, src_->sourceSize_, errmsg);
             if (!isLoaded)
                 return false;
@@ -3788,7 +3834,7 @@ struct Program::Impl
     {
         CV_Assert(handle == NULL);
         CV_INSTRUMENT_REGION_OPENCL_COMPILE("Load OpenCL program");
-        CV_LOG_VERBOSE(NULL, 0, "Load from binary... " << src.getImpl()->module_.c_str() << "/" << src.getImpl()->name_.c_str());
+        CV_LOG_VERBOSE(NULL, 0, "Load from binary... (" << binarySize << " bytes)");
 
         CV_Assert(binarySize > 0);
 
@@ -4399,6 +4445,7 @@ public:
         : size_(size), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr);
         if (((size_t)ptr_ & (alignment - 1)) != 0)
         {
             allocatedPtr_ = new uchar[size_ + alignment - 1];
@@ -4452,6 +4499,7 @@ public:
         : size_(rows*step), originPtr_(ptr), alignment_(alignment), ptr_(ptr), allocatedPtr_(NULL), rows_(rows), cols_(cols), step_(step)
     {
         CV_DbgAssert((alignment & (alignment - 1)) == 0); // check for 2^n
+        CV_DbgAssert(!readAccess || ptr != NULL);
         if (ptr == 0 || ((size_t)ptr_ & (alignment - 1)) != 0)
         {
             allocatedPtr_ = new uchar[size_ + extrabytes + alignment - 1];
@@ -4501,15 +4549,17 @@ class OpenCLAllocator CV_FINAL : public MatAllocator
     mutable OpenCLSVMBufferPoolImpl bufferPoolSVM;
 #endif
 
+public:
     enum AllocatorFlags
     {
         ALLOCATOR_FLAGS_BUFFER_POOL_USED = 1 << 0,
-        ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED = 1 << 1
+        ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED = 1 << 1,
 #ifdef HAVE_OPENCL_SVM
-        ,ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2
+        ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2,
 #endif
+        ALLOCATOR_FLAGS_EXTERNAL_BUFFER = 1 << 3  // convertFromBuffer()
     };
-public:
+
     OpenCLAllocator()
         : bufferPool(0),
           bufferPoolHostPtr(CL_MEM_ALLOC_HOST_PTR)
@@ -4615,6 +4665,7 @@ public:
         u->allocatorFlags_ = allocatorFlags;
         CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
         u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return u;
     }
 
@@ -4724,6 +4775,7 @@ public:
         }
         if (!!(accessFlags & ACCESS_WRITE))
             u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return true;
     }
 
@@ -4776,6 +4828,13 @@ public:
 
     void deallocate_(UMatData* u) const
     {
+        CV_Assert(u);
+        CV_Assert(u->handle);
+        if ((u->allocatorFlags_ & ALLOCATOR_FLAGS_EXTERNAL_BUFFER) == 0)
+        {
+            opencl_allocator_stats.onFree(u->size);
+        }
+
 #ifdef _WIN32
         if (cv::__termination)  // process is not in consistent state (after ExitProcess call) and terminating
             return;             // avoid any OpenCL calls
@@ -5697,7 +5756,7 @@ public:
 
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
-    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
     g_isOpenCVActivated = true;
     return g_allocator;
 }
@@ -5757,7 +5816,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
     // attach clBuffer to UMatData
     dst.u = new UMatData(getOpenCLAllocator());
     dst.u->data            = 0;
-    dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
+    dst.u->allocatorFlags_ = OpenCLAllocator::ALLOCATOR_FLAGS_EXTERNAL_BUFFER;  // not allocated from any OpenCV buffer pool
     dst.u->flags           = static_cast<UMatData::MemoryFlag>(0);
     dst.u->handle          = cl_mem_buffer;
     dst.u->origdata        = 0;

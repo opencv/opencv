@@ -100,6 +100,72 @@ CV_ENUM(CvtMode,
     COLOR_YUV2BGR, COLOR_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
     )
 
+CV_ENUM(CvtMode16U,
+    COLOR_BGR2BGRA, COLOR_BGR2GRAY,
+    COLOR_BGR2RGB, COLOR_BGR2RGBA, COLOR_BGR2XYZ,
+    COLOR_BGR2YCrCb, COLOR_BGR2YUV,
+
+    COLOR_BGRA2BGR, COLOR_BGRA2GRAY, COLOR_BGRA2RGBA,
+    CX_BGRA2XYZ,
+    CX_BGRA2YCrCb, CX_BGRA2YUV,
+
+    COLOR_GRAY2BGR, COLOR_GRAY2BGRA,
+
+    COLOR_RGB2GRAY,
+    COLOR_RGB2XYZ, COLOR_RGB2YCrCb, COLOR_RGB2YUV,
+
+    COLOR_RGBA2BGR, COLOR_RGBA2GRAY,
+    CX_RGBA2XYZ,
+    CX_RGBA2YCrCb, CX_RGBA2YUV,
+
+    COLOR_XYZ2BGR, COLOR_XYZ2RGB, CX_XYZ2BGRA, CX_XYZ2RGBA,
+
+    COLOR_YCrCb2BGR, COLOR_YCrCb2RGB, CX_YCrCb2BGRA, CX_YCrCb2RGBA,
+    COLOR_YUV2BGR, COLOR_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
+    )
+
+CV_ENUM(CvtMode32F,
+    COLOR_BGR2BGRA, COLOR_BGR2GRAY,
+    COLOR_BGR2HLS, COLOR_BGR2HLS_FULL, COLOR_BGR2HSV, COLOR_BGR2HSV_FULL,
+    COLOR_BGR2Lab, COLOR_BGR2Luv, COLOR_BGR2RGB, COLOR_BGR2RGBA, COLOR_BGR2XYZ,
+    COLOR_BGR2YCrCb, COLOR_BGR2YUV,
+
+    COLOR_BGRA2BGR, COLOR_BGRA2GRAY, COLOR_BGRA2RGBA,
+    CX_BGRA2HLS, CX_BGRA2HLS_FULL, CX_BGRA2HSV, CX_BGRA2HSV_FULL,
+    CX_BGRA2Lab, CX_BGRA2Luv, CX_BGRA2XYZ,
+    CX_BGRA2YCrCb, CX_BGRA2YUV,
+
+    COLOR_GRAY2BGR, COLOR_GRAY2BGRA,
+
+    COLOR_HLS2BGR, COLOR_HLS2BGR_FULL, COLOR_HLS2RGB, COLOR_HLS2RGB_FULL,
+    CX_HLS2BGRA, CX_HLS2BGRA_FULL, CX_HLS2RGBA, CX_HLS2RGBA_FULL,
+
+    COLOR_HSV2BGR, COLOR_HSV2BGR_FULL, COLOR_HSV2RGB, COLOR_HSV2RGB_FULL,
+    CX_HSV2BGRA, CX_HSV2BGRA_FULL, CX_HSV2RGBA,    CX_HSV2RGBA_FULL,
+
+    COLOR_Lab2BGR, COLOR_Lab2LBGR, COLOR_Lab2LRGB, COLOR_Lab2RGB,
+    CX_Lab2BGRA, CX_Lab2LBGRA, CX_Lab2LRGBA, CX_Lab2RGBA,
+
+    COLOR_LBGR2Lab, COLOR_LBGR2Luv, COLOR_LRGB2Lab, COLOR_LRGB2Luv,
+    CX_LBGRA2Lab, CX_LBGRA2Luv, CX_LRGBA2Lab, CX_LRGBA2Luv,
+
+    COLOR_Luv2BGR, COLOR_Luv2LBGR, COLOR_Luv2LRGB, COLOR_Luv2RGB,
+    CX_Luv2BGRA, CX_Luv2LBGRA, CX_Luv2LRGBA, CX_Luv2RGBA,
+
+    COLOR_RGB2GRAY,
+    COLOR_RGB2HLS, COLOR_RGB2HLS_FULL, COLOR_RGB2HSV, COLOR_RGB2HSV_FULL,
+    COLOR_RGB2Lab, COLOR_RGB2Luv, COLOR_RGB2XYZ, COLOR_RGB2YCrCb, COLOR_RGB2YUV,
+
+    COLOR_RGBA2BGR, COLOR_RGBA2GRAY,
+    CX_RGBA2HLS, CX_RGBA2HLS_FULL, CX_RGBA2HSV, CX_RGBA2HSV_FULL,
+    CX_RGBA2Lab, CX_RGBA2Luv, CX_RGBA2XYZ,
+    CX_RGBA2YCrCb, CX_RGBA2YUV,
+
+    COLOR_XYZ2BGR, COLOR_XYZ2RGB, CX_XYZ2BGRA, CX_XYZ2RGBA,
+
+    COLOR_YCrCb2BGR, COLOR_YCrCb2RGB, CX_YCrCb2BGRA, CX_YCrCb2RGBA,
+    COLOR_YUV2BGR, COLOR_YUV2RGB, CX_YUV2BGRA, CX_YUV2RGBA
+    )
 
 CV_ENUM(CvtModeBayer,
     COLOR_BayerBG2BGR, COLOR_BayerBG2BGRA, COLOR_BayerBG2BGR_VNG, COLOR_BayerBG2GRAY,
@@ -274,6 +340,60 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
 #endif
 }
 
+
+typedef tuple<Size, CvtMode16U> Size_CvtMode16U_t;
+typedef perf::TestBaseWithParam<Size_CvtMode16U_t> Size_CvtMode16U;
+
+PERF_TEST_P(Size_CvtMode16U, DISABLED_cvtColor_16u,
+            testing::Combine(
+                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
+                CvtMode16U::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int _mode = get<1>(GetParam()), mode = _mode;
+    ChPair ch = getConversionInfo(mode);
+    mode %= COLOR_COLORCVT_MAX;
+    Mat src(sz, CV_16UC(ch.scn));
+    Mat dst(sz, CV_16UC(ch.scn));
+
+    declare.time(100);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    int runs = sz.width <= 320 ? 100 : 5;
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK(dst, 1);
+}
+
+
+typedef tuple<Size, CvtMode32F> Size_CvtMode32F_t;
+typedef perf::TestBaseWithParam<Size_CvtMode32F_t> Size_CvtMode32F;
+
+PERF_TEST_P(Size_CvtMode32F, DISABLED_cvtColor_32f,
+            testing::Combine(
+                testing::Values(::perf::szODD, ::perf::szVGA, ::perf::sz1080p),
+                CvtMode32F::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int _mode = get<1>(GetParam()), mode = _mode;
+    ChPair ch = getConversionInfo(mode);
+    mode %= COLOR_COLORCVT_MAX;
+    Mat src(sz, CV_32FC(ch.scn));
+    Mat dst(sz, CV_32FC(ch.scn));
+
+    declare.time(100);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    int runs = sz.width <= 320 ? 100 : 5;
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef tuple<Size, CvtModeBayer> Size_CvtMode_Bayer_t;
 typedef perf::TestBaseWithParam<Size_CvtMode_Bayer_t> Size_CvtMode_Bayer;
 
@@ -297,7 +417,7 @@ PERF_TEST_P(Size_CvtMode_Bayer, cvtColorBayer8u,
 
     TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 typedef tuple<Size, CvtMode2> Size_CvtMode2_t;

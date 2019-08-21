@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 import video
 from common import draw_str
 from video import presets
@@ -112,9 +113,11 @@ def main():
     except:
         video_src = 0
 
-    print(__doc__)
     App(video_src).run()
-    cv.destroyAllWindows()
+    print('Done')
+
 
 if __name__ == '__main__':
+    print(__doc__)
     main()
+    cv.destroyAllWindows()

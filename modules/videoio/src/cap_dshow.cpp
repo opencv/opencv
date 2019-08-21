@@ -96,6 +96,7 @@ Thanks to:
 #ifdef __MINGW32__
 // MinGW does not understand COM interfaces
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#define STRSAFE_NO_DEPRECATE
 #endif
 
 #include <tchar.h>
@@ -108,9 +109,9 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
-#include "DShow.h"
+#include "dshow.h"
 #include "strmif.h"
-#include "Aviriff.h"
+#include "aviriff.h"
 #include "dvdmedia.h"
 #include "bdaiface.h"
 
@@ -480,7 +481,7 @@ class videoInput{
         bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
         //These two are only for capture cards
-        //USB and Firewire cameras souldn't specify connection
+        //USB and Firewire cameras shouldn't specify connection
         bool setupDevice(int deviceID, int connection);
         bool setupDevice(int deviceID, int w, int h, int connection);
 
@@ -526,6 +527,8 @@ class videoInput{
         int  getSize(int deviceID) const;
         int  getFourcc(int deviceID) const;
         double getFPS(int deviceID) const;
+
+        int getChannel(int deviceID) const;
 
         // RGB conversion setting
         bool getConvertRGB(int deviceID);
@@ -962,6 +965,16 @@ videoDevice::~videoDevice(){
 
     HRESULT HR = NOERROR;
 
+    //Check to see if the graph is running, if so stop it.
+    if( (pControl) )
+    {
+        HR = pControl->Pause();
+        if (FAILED(HR)) DebugPrintOut("ERROR - Could not pause pControl\n");
+
+        HR = pControl->Stop();
+        if (FAILED(HR)) DebugPrintOut("ERROR - Could not stop pControl\n");
+    }
+
     //Stop the callback and free it
     if( (sgCallback) && (pGrabber) )
     {
@@ -976,16 +989,6 @@ videoDevice::~videoDevice(){
         }
 
         delete sgCallback;
-    }
-
-    //Check to see if the graph is running, if so stop it.
-     if( (pControl) )
-    {
-        HR = pControl->Pause();
-        if (FAILED(HR)) DebugPrintOut("ERROR - Could not pause pControl\n");
-
-        HR = pControl->Stop();
-        if (FAILED(HR)) DebugPrintOut("ERROR - Could not stop pControl\n");
     }
 
     //Disconnect filters from capture device
@@ -1479,6 +1482,12 @@ double videoInput::getFPS(int id) const
 
 }
 
+int videoInput::getChannel(int deviceID) const
+{
+    if (!isDeviceSetup(deviceID))
+        return 0;
+    return VDList[deviceID]->storeConn;
+}
 
 // ----------------------------------------------------------------------
 //
@@ -2177,7 +2186,7 @@ void videoInput::setPhyCon(int id, int conn){
 
 
 // ----------------------------------------------------------------------
-// Check that we are not trying to setup a non-existant device
+// Check that we are not trying to setup a non-existent device
 // Then start the graph building!
 // ----------------------------------------------------------------------
 
@@ -3341,11 +3350,15 @@ double VideoCapture_DShow::getProperty(int propIdx) const
         return g_VI.getFourcc(m_index);
     case CV_CAP_PROP_FPS:
         return g_VI.getFPS(m_index);
+    case CV_CAP_PROP_CONVERT_RGB:
+        return g_VI.getConvertRGB(m_index);
+    case CAP_PROP_CHANNEL:
+        return g_VI.getChannel(m_index);
     case CV_CAP_PROP_AUTOFOCUS:
       // Flags indicate whether or not autofocus is enabled
       if (g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, min_value, max_value, stepping_delta, current_value, flags, defaultValue))
         return (double)flags;
-      return -1;
+      break;
 
     // video filter properties
     case CV_CAP_PROP_BRIGHTNESS:
@@ -3360,7 +3373,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_GAIN:
         if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
-        return -1;
+        break;
 
     // camera properties
     case CV_CAP_PROP_PAN:
@@ -3372,14 +3385,12 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_FOCUS:
         if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
-        return -1;
-    }
-
-    if (propIdx == CV_CAP_PROP_SETTINGS )
-    {
+        break;
+    case CV_CAP_PROP_SETTINGS:
         return g_VI.property_window_count(m_index);
+    default:
+        break;
     }
-
     // unknown parameter or value not available
     return -1;
 }
@@ -3487,12 +3498,6 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
         return true;
     }
 
-    // show video/camera filter dialog
-    if (propIdx == CV_CAP_PROP_SETTINGS )
-    {
-        return g_VI.showSettingsWindow(m_index);
-    }
-
     //video Filter properties
     switch (propIdx)
     {
@@ -3520,6 +3525,9 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
     case CV_CAP_PROP_IRIS:
     case CV_CAP_PROP_FOCUS:
         return g_VI.setVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), (long)propVal);
+    // show video/camera filter dialog
+    case CV_CAP_PROP_SETTINGS:
+        return g_VI.showSettingsWindow(m_index);
     }
 
     return false;
@@ -3578,6 +3586,12 @@ void VideoCapture_DShow::close()
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
 }
+
+Ptr<IVideoCapture> create_DShow_capture(int index)
+{
+    return makePtr<VideoCapture_DShow>(index);
+}
+
 
 }
 

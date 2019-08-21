@@ -129,13 +129,15 @@ struct TorchImporter
     Module *rootModule;
     Module *curModule;
     int moduleCounter;
+    bool testPhase;
 
-    TorchImporter(String filename, bool isBinary)
+    TorchImporter(String filename, bool isBinary, bool evaluate)
     {
         CV_TRACE_FUNCTION();
 
         rootModule = curModule = NULL;
         moduleCounter = 0;
+        testPhase = evaluate;
 
         file = cv::Ptr<THFile>(THDiskFile_new(filename, "r", 0), THFile_free);
         CV_Assert(file && THFile_isOpened(file));
@@ -310,7 +312,7 @@ struct TorchImporter
             fpos = THFile_position(file);
             int ktype = readInt();
 
-            if (ktype != TYPE_STRING) //skip non-string fileds
+            if (ktype != TYPE_STRING) //skip non-string fields
             {
                 THFile_seek(file, fpos);
                 readObject(); //key
@@ -680,7 +682,8 @@ struct TorchImporter
                     layerParams.blobs.push_back(tensorParams["bias"].second);
                 }
 
-                if (nnName == "InstanceNormalization")
+                bool trainPhase = scalarParams.get<bool>("train", false);
+                if (nnName == "InstanceNormalization" || (trainPhase && !testPhase))
                 {
                     cv::Ptr<Module> mvnModule(new Module(nnName));
                     mvnModule->apiType = "MVN";
@@ -1243,18 +1246,18 @@ struct TorchImporter
 
 Mat readTorchBlob(const String &filename, bool isBinary)
 {
-    TorchImporter importer(filename, isBinary);
+    TorchImporter importer(filename, isBinary, true);
     importer.readObject();
     CV_Assert(importer.tensors.size() == 1);
 
     return importer.tensors.begin()->second;
 }
 
-Net readNetFromTorch(const String &model, bool isBinary)
+Net readNetFromTorch(const String &model, bool isBinary, bool evaluate)
 {
     CV_TRACE_FUNCTION();
 
-    TorchImporter importer(model, isBinary);
+    TorchImporter importer(model, isBinary, evaluate);
     Net net;
     importer.populateNet(net);
     return net;

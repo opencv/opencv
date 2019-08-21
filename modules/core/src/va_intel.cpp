@@ -340,8 +340,8 @@ static void copy_convert_yv12_to_bgr(const VAImage& image, const unsigned char* 
             1.5959997177f
         };
 
-    CV_CheckEQ(image.format.fourcc, VA_FOURCC_YV12, "Unexpected image format");
-    CV_CheckEQ(image.num_planes, 3, "");
+    CV_CheckEQ((size_t)image.format.fourcc, (size_t)VA_FOURCC_YV12, "Unexpected image format");
+    CV_CheckEQ((size_t)image.num_planes, (size_t)3, "");
 
     const size_t srcOffsetY = image.offsets[0];
     const size_t srcOffsetV = image.offsets[1];
@@ -417,8 +417,8 @@ static void copy_convert_bgr_to_yv12(const VAImage& image, const Mat& bgr, unsig
             -0.2909994125f, 0.438999176f, -0.3679990768f, -0.0709991455f
         };
 
-    CV_CheckEQ(image.format.fourcc, VA_FOURCC_YV12, "Unexpected image format");
-    CV_CheckEQ(image.num_planes, 3, "");
+    CV_CheckEQ((size_t)image.format.fourcc, (size_t)VA_FOURCC_YV12, "Unexpected image format");
+    CV_CheckEQ((size_t)image.num_planes, (size_t)3, "");
 
     const size_t dstOffsetY = image.offsets[0];
     const size_t dstOffsetV = image.offsets[1];

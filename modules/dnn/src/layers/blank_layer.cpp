@@ -107,25 +107,30 @@ public:
                 inputs[i].copyTo(outputs[i]);
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        CV_Assert(!input->dims.empty());
+        std::vector<size_t> dims = input->getDims();
+        CV_Assert(!dims.empty());
 
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Split";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::SplitLayer> ieLayer(new InferenceEngine::SplitLayer(lp));
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R3)
-        ieLayer->params["axis"] = format("%d", input->dims.size() - 1);
-        ieLayer->params["out_sizes"] = format("%d", input->dims[0]);
-#endif
+        InferenceEngine::Builder::Layer ieLayer(name);
+        ieLayer.setName(name);
+        if (preferableTarget == DNN_TARGET_MYRIAD)
+        {
+            ieLayer.setType("Copy");
+        }
+        else
+        {
+            ieLayer.setType("Split");
+            ieLayer.getParameters()["axis"] = dims.size() - 1;
+            ieLayer.getParameters()["out_sizes"] = dims[0];
+        }
+        ieLayer.setInputPorts({InferenceEngine::Port(dims)});
+        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 };
 
 Ptr<Layer> BlankLayer::create(const LayerParams& params)

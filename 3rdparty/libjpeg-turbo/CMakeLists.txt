@@ -2,11 +2,11 @@ project(${JPEG_LIBRARY} C)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
 
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 5)
-set(VERSION_REVISION 3)
+set(VERSION_MAJOR 2)
+set(VERSION_MINOR 0)
+set(VERSION_REVISION 2)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
-set(LIBJPEG_TURBO_VERSION_NUMBER 1005003)
+set(LIBJPEG_TURBO_VERSION_NUMBER 2000002)
 
 string(TIMESTAMP BUILD "opencv-${OPENCV_VERSION}-libjpeg-turbo")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -18,15 +18,37 @@ message(STATUS "libjpeg-turbo: VERSION = ${VERSION}, BUILD = ${BUILD}")
 option(WITH_ARITH_ENC "Include arithmetic encoding support when emulating the libjpeg v6b API/ABI" TRUE)
 option(WITH_ARITH_DEC "Include arithmetic decoding support when emulating the libjpeg v6b API/ABI" TRUE)
 
-if(NOT DEFINED SIZEOF_SIZE_T)
-  if(IOS)  # Workaround iOS issues
-    set(SIZEOF_SIZE_T "${CMAKE_SIZEOF_VOID_P}")
-    message(STATUS "SIZEOF_SIZE_T = ${SIZEOF_SIZE_T}")
-  else()
-    include(CheckTypeSize)
-    CHECK_TYPE_SIZE("size_t" SIZEOF_SIZE_T)
-  endif()
+include(CheckCSourceCompiles)
+include(CheckIncludeFiles)
+include(CheckTypeSize)
+
+check_type_size("size_t" SIZEOF_SIZE_T)
+check_type_size("unsigned long" SIZEOF_UNSIGNED_LONG)
+
+if(SIZEOF_SIZE_T EQUAL SIZEOF_UNSIGNED_LONG)
+  check_c_source_compiles("int main(int argc, char **argv) { unsigned long a = argc;  return __builtin_ctzl(a); }"
+    HAVE_BUILTIN_CTZL)
 endif()
+if(MSVC)
+  check_include_files("intrin.h" HAVE_INTRIN_H)
+endif()
+
+if(UNIX)
+  # Check for headers
+  check_include_files(locale.h HAVE_LOCALE_H)
+  check_include_files(stddef.h HAVE_STDDEF_H)
+  check_include_files(stdlib.h HAVE_STDLIB_H)
+  check_include_files(sys/types.h NEED_SYS_TYPES_H)
+
+  # Other predefines
+  # undef NEED_BSD_STRINGS
+  ocv_update(HAVE_UNSIGNED_CHAR 1)
+  ocv_update(HAVE_UNSIGNED_SHORT 1)
+  # undef INCOMPLETE_TYPES_BROKEN
+  ocv_update(RIGHT_SHIFT_IS_UNSIGNED 0)
+  ocv_update(__CHAR_UNSIGNED__ 0)
+endif()
+
 
 set(BITS_IN_JSAMPLE 8)
 
@@ -47,15 +69,20 @@ if(MSVC)
   add_definitions(-W3 -wd4996 -wd4018)
 endif()
 
-configure_file(jconfig.h.in jconfig.h)
+if(WIN32)
+  configure_file(jconfig.h.win.in jconfig.h)
+else()
+  configure_file(jconfig.h.in jconfig.h)
+endif()
 configure_file(jconfigint.h.in jconfigint.h)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(JPEG_SOURCES jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c
+set(JPEG_SOURCES
+  jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c jcicc.c
   jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c jcphuff.c
   jcprepct.c jcsample.c jctrans.c jdapimin.c jdapistd.c jdatadst.c jdatasrc.c
-  jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdinput.c jdmainct.c jdmarker.c
+  jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdicc.c jdinput.c jdmainct.c jdmarker.c
   jdmaster.c jdmerge.c jdphuff.c jdpostct.c jdsample.c jdtrans.c jerror.c
   jfdctflt.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c jidctint.c jidctred.c
   jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c)

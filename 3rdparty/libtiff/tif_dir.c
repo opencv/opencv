@@ -1,5 +1,3 @@
-/* $Id: tif_dir.c,v 1.131 2017-07-11 21:38:04 erouault Exp $ */
-
 /*
  * Copyright (c) 1988-1997 Sam Leffler
  * Copyright (c) 1991-1997 Silicon Graphics, Inc.
@@ -863,14 +861,24 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 	const TIFFField* fip = TIFFFindField(tif, tag, TIFF_ANY);
 	if( fip == NULL ) /* cannot happen since TIFFGetField() already checks it */
 	    return 0;
+
+	/*
+	 * We want to force the custom code to be used for custom
+	 * fields even if the tag happens to match a well known 
+	 * one - important for reinterpreted handling of standard
+	 * tag values in custom directories (i.e. EXIF) 
+	 */
+	if (fip->field_bit == FIELD_CUSTOM) {
+		standard_tag = 0;
+	}
 	
-        if( tag == TIFFTAG_NUMBEROFINKS )
+        if( standard_tag == TIFFTAG_NUMBEROFINKS )
         {
             int i;
             for (i = 0; i < td->td_customValueCount; i++) {
                 uint16 val;
                 TIFFTagValue *tv = td->td_customValues + i;
-                if (tv->info->field_tag != tag)
+                if (tv->info->field_tag != standard_tag)
                     continue;
                 if( tv->value == NULL )
                     return 0;
@@ -891,16 +899,6 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
             }
             return 0;
         }
-
-	/*
-	 * We want to force the custom code to be used for custom
-	 * fields even if the tag happens to match a well known 
-	 * one - important for reinterpreted handling of standard
-	 * tag values in custom directories (i.e. EXIF) 
-	 */
-	if (fip->field_bit == FIELD_CUSTOM) {
-		standard_tag = 0;
-	}
 
 	switch (standard_tag) {
 		case TIFFTAG_SUBFILETYPE:
@@ -1067,6 +1065,9 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 			if (td->td_samplesperpixel - td->td_extrasamples > 1) {
 				*va_arg(ap, uint16**) = td->td_transferfunction[1];
 				*va_arg(ap, uint16**) = td->td_transferfunction[2];
+			} else {
+				*va_arg(ap, uint16**) = NULL;
+				*va_arg(ap, uint16**) = NULL;
 			}
 			break;
 		case TIFFTAG_REFERENCEBLACKWHITE:

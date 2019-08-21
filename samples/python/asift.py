@@ -106,9 +106,8 @@ def affine_detect(detector, img, mask=None, pool=None):
     print()
     return keypoints, np.array(descrs)
 
-if __name__ == '__main__':
-    print(__doc__)
 
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -160,4 +159,10 @@ if __name__ == '__main__':
 
     match_and_draw('affine find_obj')
     cv.waitKey()
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

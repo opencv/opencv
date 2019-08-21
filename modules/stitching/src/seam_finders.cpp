@@ -47,6 +47,18 @@
 namespace cv {
 namespace detail {
 
+Ptr<SeamFinder> SeamFinder::createDefault(int type)
+{
+    if (type == NO)
+        return makePtr<NoSeamFinder>();
+    if (type == VORONOI_SEAM)
+        return makePtr<VoronoiSeamFinder>();
+    if (type == DP_SEAM)
+        return makePtr<DpSeamFinder>();
+    CV_Error(Error::StsBadArg, "unsupported seam finder method");
+}
+
+
 void PairwiseSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                               std::vector<UMat> &masks)
 {
@@ -165,6 +177,26 @@ void VoronoiSeamFinder::findInPair(size_t first, size_t second, Rect roi)
 
 DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc), ncomps_(0) {}
 
+DpSeamFinder::DpSeamFinder(String costFunc)
+{
+    ncomps_ = 0;
+    if (costFunc == "COLOR")
+        costFunc_ = COLOR;
+    else if (costFunc == "COLOR_GRAD")
+        costFunc_ = COLOR_GRAD;
+    else
+        CV_Error(-1, "Unknown cost function");
+}
+
+void DpSeamFinder::setCostFunction(String costFunc)
+{
+    if (costFunc == "COLOR")
+        costFunc_ = COLOR;
+    else if (costFunc == "COLOR_GRAD")
+        costFunc_ = COLOR_GRAD;
+    else
+        CV_Error(-1, "Unknown cost function");
+}
 
 void DpSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks)
 {
@@ -1323,6 +1355,19 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
         }
     }
 }
+
+GraphCutSeamFinder::GraphCutSeamFinder(String cost_type, float terminal_cost, float bad_region_penalty)
+{
+    CostType t;
+    if (cost_type == "COST_COLOR")
+        t = COST_COLOR;
+    else if (cost_type == "COST_COLOR_GRAD")
+        t = COST_COLOR_GRAD;
+    else
+        CV_Error(Error::StsBadFunc, "Unknown cost type function");
+    impl_ = new Impl(t, terminal_cost, bad_region_penalty);
+}
+
 
 
 GraphCutSeamFinder::GraphCutSeamFinder(int cost_type, float terminal_cost, float bad_region_penalty)
