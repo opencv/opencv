@@ -256,6 +256,12 @@ VideoCapture::VideoCapture(int index, int apiPreference) : VideoCaptureBase()
     open(index, apiPreference);
 }
 
+bool VideoCapture::VideoCapture::open(const String& filename, int apiPreference)
+{
+    CV_TRACE_FUNCTION();
+    return VideoCaptureBase::open(filename, apiPreference);
+}
+
 bool VideoCapture::open(int cameraNum, int apiPreference)
 {
     CV_TRACE_FUNCTION();

@@ -636,7 +636,7 @@ public:
     */
     virtual ~VideoCaptureBase();
 
-    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
+    /** @brief  Opens a video file or an IP video stream for video capturing.
 
     @overload
 
@@ -807,7 +807,7 @@ public:
     CV_WRAP VideoCapture();
 
     /** @overload
-    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
+    @brief  Opens a video file, capturing device or an IP video stream for video capturing with API Preference
 
     @param filename it can be:
     - name of video file (eg. `video.avi`)
@@ -833,7 +833,7 @@ public:
     */
     CV_WRAP VideoCapture(int index, int apiPreference = CAP_ANY);
 
-    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
+    /** @brief  Opens a video file, capturing device or an IP video stream for video capturing.
 
     @overload
 
@@ -842,7 +842,7 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    using VideoCaptureBase::open;
+    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
 
     /** @brief  Opens a camera for video capturing
 
