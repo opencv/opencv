@@ -49,7 +49,7 @@ def getXCodeMajor():
         raise Exception("Failed to parse Xcode version")
 
 class Builder:
-    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, enablenonfree, targets, debug):
+    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, enablenonfree, targets, debug, debug_info):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None
         if contrib:
@@ -64,6 +64,7 @@ class Builder:
         self.enablenonfree = enablenonfree
         self.targets = targets
         self.debug = debug
+        self.debug_info = debug_info
 
     def getBD(self, parent, t):
 
@@ -143,7 +144,9 @@ class Builder:
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO",
         ] if self.dynamic else []) + ([
             "-DOPENCV_ENABLE_NONFREE=ON"
-        ] if self.enablenonfree else [])
+        ] if self.enablenonfree else []) + ([
+            "-DBUILD_WITH_DEBUG_INFO=ON"
+        ] if self.debug_info else [])
 
         if len(self.exclude) > 0:
             args += ["-DBUILD_opencv_world=OFF"] if not self.dynamic else []
@@ -293,6 +296,7 @@ if __name__ == "__main__":
     parser.add_argument('--iphonesimulator_archs', default='i386,x86_64', help='select iPhoneSimulator target ARCHS')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
+    parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
     args = parser.parse_args()
 
     os.environ['IPHONEOS_DEPLOYMENT_TARGET'] = args.iphoneos_deployment_target
@@ -309,5 +313,5 @@ if __name__ == "__main__":
         [
             (iphoneos_archs, "iPhoneOS"),
             (iphonesimulator_archs, "iPhoneSimulator"),
-        ], args.debug)
+        ], args.debug, args.debug_info)
     b.build(args.out)

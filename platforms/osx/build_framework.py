@@ -42,7 +42,8 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--macosx_deployment_target', default=os.environ.get('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET), help='specify MACOSX_DEPLOYMENT_TARGET')
-    parser.add_argument('--debug', action="store_true", help="Build 'Debug' binaries (CMAKE_BUILD_TYPE=Debug)")
+    parser.add_argument('--debug', action='store_true', help='Build "Debug" binaries (CMAKE_BUILD_TYPE=Debug)')
+    parser.add_argument('--debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
 
     args = parser.parse_args()
 
@@ -52,5 +53,5 @@ if __name__ == "__main__":
     b = OSXBuilder(args.opencv, args.contrib, False, False, args.without, args.enablenonfree,
         [
             (["x86_64"], "MacOSX")
-        ], args.debug)
+        ], args.debug, args.debug_info)
     b.build(args.out)
