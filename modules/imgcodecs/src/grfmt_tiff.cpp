@@ -351,8 +351,8 @@ static void setRes(const String &name, const String &res, const String &unit, st
     if(contains(p, res) && contains(p, unit)) {
         const String &r_str = p[res];
         const String &u_str = p[unit];
-        double r = atof(r_str.c_str());
-        int u = atoi(u_str.c_str());
+        double r = BaseImageDecoder::fromString<double>(r_str);
+        int u = BaseImageDecoder::fromString<int>(u_str);
         switch(u) {
             case RESUNIT_NONE:
                 p[name] = BaseImageDecoder::toString(-r);

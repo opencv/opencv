@@ -121,6 +121,14 @@ public:
         return var ? var : "";
     }
 
+    /// utility for decoders
+    template<class T> static T fromString(const String &str) {
+      T var;
+      std::istringstream iss(str);
+      iss >> var;
+      return var;
+    }
+    
 protected:
     int  m_width;  // width  of the image ( filled by readHeader )
     int  m_height; // height of the image ( filled by readHeader )
