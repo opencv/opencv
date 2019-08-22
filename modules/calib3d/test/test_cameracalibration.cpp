@@ -2500,9 +2500,9 @@ void CV_RecoverPoseTest::run(int)
                                     Point2f(1000.0f, 1000.0f) }; // last point is initial invalid
 
     const int point_count = (int) _points1.size();
-    CV_Assert(point_count == (int) _points1.size());
+    CV_Assert(point_count == (int) _points2.size());
 
-    // cametra matrix with both focal lengths = 1, and principal point = (0, 0)
+    // camera matrix with both focal lengths = 1, and principal point = (0, 0)
     const Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
 
     int Inliers = 0;
