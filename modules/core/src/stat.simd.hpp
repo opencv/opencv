@@ -110,7 +110,7 @@ int normHamming(const uchar* a, const uchar* b, int n)
     {
         v_uint64x2 t = v_setzero_u64();
         for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i) ^ vx_load(b + i)));
+            t += v_popcount(v_reinterpret_as_u64(v_load(a + i) ^ v_load(b + i)));
         result += (int)v_reduce_sum(t);
     }
 #endif
