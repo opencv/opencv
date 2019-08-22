@@ -688,7 +688,7 @@ public:
      */
     CV_WRAP virtual void release();
 
-    /** @brief Returns vector of camera states, grabbed video frame, if camera is ready.
+    /** @brief Returns vector of camera states, grab video frame, if camera is ready.
 
     @param video_captures - vector for VideoCapture object of each camera.
     @param state - vector for camera states, size of vector is equal to the number of cameras,
