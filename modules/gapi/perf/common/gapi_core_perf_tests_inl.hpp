@@ -1440,6 +1440,40 @@ PERF_TEST_P_(CropPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(CopyPerfTest, TestPerformance)
+{
+    cv::Size sz_in = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+
+    initMatrixRandU(type, sz_in, type, false);
+    cv::Size sz_out = sz_in;
+
+    // OpenCV code ///////////////////////////////////////////////////////////
+    cv::Mat(in_mat1).copyTo(out_mat_ocv);
+
+    // G-API code ////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::copy(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+    EXPECT_EQ(out_mat_gapi.size(), sz_out);
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(ConcatHorPerfTest, TestPerformance)
 {
     cv::Size sz_out = get<0>(GetParam());

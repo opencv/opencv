@@ -501,6 +501,14 @@ GAPI_OCV_KERNEL(GCPUCrop, cv::gapi::core::GCrop)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        cv::Mat(in).copyTo(out);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUConcatHor, cv::gapi::core::GConcatHor)
 {
     static void run(const cv::Mat& in1, const cv::Mat& in2, cv::Mat& out)
@@ -611,6 +619,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPURemap
          , GCPUFlip
          , GCPUCrop
+         , GCPUCopy
          , GCPUConcatHor
          , GCPUConcatVert
          , GCPULUT
