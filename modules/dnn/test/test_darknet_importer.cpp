@@ -418,6 +418,7 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
     {
         netSync.setInput(inputs[i]);
         refs[i] = netSync.forward().clone();
+
     }
 
     Net netAsync = readNet(findDataFile("dnn/" + prefix + ".cfg"),
