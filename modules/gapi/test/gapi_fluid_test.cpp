@@ -244,23 +244,42 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 
-TEST(Fluid, Sum_Array_To_Mat)
+TEST(Fluid, EqualizeHist)
 {
-    cv::GArray<cv::Mat> arr;
+    cv::GMat mat;
+    cv::GArray<int> arr;
 
-    cv::GComputation c(cv::GIn(arr), cv::GOut(TSumArrayToMat::on(arr)));
-    cv::Mat in_mat1 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat2 = cv::Mat::eye(3, 3, CV_8UC1),
-            in_mat3 = cv::Mat::zeros(3, 3, CV_8UC1),
-            out_mat(3, 3, CV_8UC1),
-            ref_mat;
-    std::vector<cv::Mat> in_vec{in_mat1, in_mat2, in_mat3};
+    cv::GComputation c(cv::GIn(mat, arr), cv::GOut(TEqualizeHist::on(mat, arr)));
+    cv::Mat in_mat(320, 480, CV_8UC1),
+            out_mat(320, 480, CV_8UC1),
+            ref_mat(320, 480, CV_8UC1);
 
-    auto cc = c.compile(cv::descr_of(in_vec), cv::compile_args(fluidTestPackage));
+    cv::randu(in_mat, 200, 240);
+    std::vector<int> in_vec(256);
 
-    cc(cv::gin(in_vec), cv::gout(out_mat));
+    // Calculate normalized accumulated integral transformation array for gapi
+    for(int i = 0; i < in_mat.rows; ++i)
+        for(int j = 0; j < in_mat.cols; ++j)
+            ++in_vec[in_mat.at<uint8_t>(i, j)];
 
-    ref_mat = in_mat1 + in_mat2 + in_mat3;
+    for(unsigned int i = 1; i < in_vec.size(); ++i)
+        in_vec[i]+=in_vec[i-1];
+
+    int min = 320*480;
+    for(unsigned int i = 0; i < in_vec.size(); ++i)
+        if(in_vec[i] != 0 && in_vec[i] < min)
+            min = in_vec[i];
+
+    for(auto & el : in_vec)
+        el = cvRound(((float)(el - min) / (float)(320*480 - min))*255);
+
+
+    auto cc = c.compile(cv::descr_of(in_mat), cv::descr_of(in_vec), cv::compile_args(fluidTestPackage));
+
+    cc(cv::gin(in_mat, in_vec), cv::gout(out_mat));
+
+    cv::equalizeHist(in_mat, ref_mat);
+
     EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
 }
 

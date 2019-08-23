@@ -113,10 +113,10 @@ G_TYPED_KERNEL_M(TSplit3_4lpi, <GMat3(GMat)>, "test.fluid.split3_4lpi") {
     }
 };
 
-G_TYPED_KERNEL(TSumArrayToMat, <GMat(GArray<cv::Mat>)>, "test.fluid.sum_array_to_mat")
+G_TYPED_KERNEL(TEqualizeHist, <GMat(GMat, GArray<int>)>, "test.fluid.equalize_hist")
 {
-    static GMatDesc outMeta(const cv::GArrayDesc&) {
-        return GMatDesc(CV_8U, 1, cv::Size(3, 3));
+    static GMatDesc outMeta(GMatDesc in, const cv::GArrayDesc&) {
+        return in;
     }
 };
 

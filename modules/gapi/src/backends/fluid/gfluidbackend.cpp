@@ -961,15 +961,9 @@ namespace
             {
                 std::set<int> in_hs, out_ws, out_hs;
 
-                //DELETE ME
-                bool has_garray = false;
-
                 for (const auto& in : node->inNodes())
                 {
                     const auto& d = g.metadata(in).get<Data>();
-                    if(d.shape == cv::GShape::GARRAY){
-                        has_garray = true;
-                    }
                     if (d.shape == cv::GShape::GMAT)
                     {
                         const auto& meta = cv::util::get<cv::GMatDesc>(d.meta);
@@ -990,10 +984,9 @@ namespace
 
                 auto &fu = fg.metadata(node).get<FluidUnit>();
 
-                GAPI_Assert(((out_ws.size() == 1 && out_hs.size() == 1) &&
+                GAPI_Assert((out_ws.size() == 1 && out_hs.size() == 1) &&
                             ((in_hs.size() == 1) ||
-                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB))) ||
-                            has_garray);
+                            ((in_hs.size() == 2) && fu.k.m_kind == cv::GFluidKernel::Kind::NV12toRGB)));
 
                 const auto &op = g.metadata(node).get<Op>();
                 fu.line_consumption.resize(op.args.size(), 0);
@@ -1272,7 +1265,7 @@ void cv::gimpl::GFluidExecutable::packArg(cv::GArg &in_arg, const cv::GArg &op_a
         {
             in_arg = GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
         }
-        if (ref.shape == GShape::GARRAY)
+        else if (ref.shape == GShape::GARRAY)
         {
             in_arg = GArg(m_res.slot<cv::detail::VectorRef>()[ref.id]);
         }

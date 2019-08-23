@@ -449,39 +449,26 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
     }
 };
 
-GAPI_FLUID_KERNEL(FSumArrayToMat, TSumArrayToMat, false)
+GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
 {
     static const int Window = 1;
     static const int LPI    = 2;
 
-    static void run(const std::vector<cv::Mat>    &arr,
+    static void run(const cv::gapi::fluid::View   &mat,
+                    const std::vector<int>        &arr,
                           cv::gapi::fluid::Buffer &out)
     {
-        std::vector<const uint8_t*> vec(arr.size());
-        for(unsigned int j = 0; j < arr.size(); ++j)
-        {
-            vec[j] = arr[j].ptr<uint8_t>();
-        }
-
-        static int row = 0;
-        static int width = arr[0].size().width;
         for (int l = 0, lpi = out.lpi(); l < lpi; l++)
         {
-            uint8_t* out_row = out.OutLine<uint8_t>(l);
-
-            std::cout << "l=" << l << ": ";
-
-            for (int i = 0, w = out.length(); i < w; i++)
+            const uint8_t* in_row  = mat.InLine <uint8_t>(l);
+                  uint8_t* out_row = out.OutLine<uint8_t>(l);
+            //std::cout << "l=" << l << ": ";
+            for (int i = 0, w = mat.length(); i < w; i++)
             {
-                out_row[i] = 0;
-                for(unsigned int j = 0; j < arr.size(); ++j)
-                {
-                    out_row[i] += static_cast<uint8_t>(vec[j][width * row + i]);
-                }
-                std::cout << std::setw(4) << int(out_row[i]);
+                //std::cout << std::setw(4) << int(in_row[i]);
+                out_row[i] = static_cast<uint8_t>(arr[in_row[i]]);
             }
-            std::cout << std::endl;
-            ++row;
+            //std::cout << std::endl;
         }
     }
 };
@@ -607,7 +594,7 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FSum2MatsAndScalar
         ,FTestSplit3
         ,FTestSplit3_4lpi
-        ,FSumArrayToMat
+        ,FEqualizeHist
         >();
 } // namespace gapi_test_kernels
 } // namespace cv
