@@ -275,6 +275,14 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestFluid, ReInitOutTest,
                                 Values(cv::Size(640, 400),
                                        cv::Size(10, 480))));
 
+INSTANTIATE_TEST_CASE_P(CopyTestFluid, CopyTest,
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_FLUID)));
+
 //----------------------------------------------------------------------
 // FIXME: Clean-up test configurations which are enabled already
 #if 0
