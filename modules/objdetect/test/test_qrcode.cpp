@@ -13,12 +13,10 @@ std::string qrcode_images_name[] = {
   "version_4_down.jpg", "version_4_left.jpg", "version_4_right.jpg", "version_4_up.jpg", "version_4_top.jpg",
   "version_5_down.jpg", "version_5_left.jpg", "version_5_right.jpg", "version_5_up.jpg", "version_5_top.jpg",
   "russian.jpg", "kanji.jpg", "link_github_ocv.jpg", "link_ocv.jpg", "link_wiki_cv.jpg"
-
 };
 
 std::string mult_qrcode_images_name[] = {
   "2_close_qrcodes.jpg", "2_qrcode_rotation.jpg", "2_qrcodes.jpg", "3_qrcodes.jpg", "3_close_qrcodes.jpg"};
-
 // #define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
 
@@ -88,6 +86,7 @@ TEST_P(Objdetect_QRCode, regression)
         FileNode images_list = file_config["test_images"];
         size_t images_count = static_cast<size_t>(images_list.size());
         ASSERT_GT(images_count, 0u) << "Can't find validation data entries in 'test_images': " << dataset_config;
+
         std::vector<std::vector<Point>> points;
         std::vector<Point> tempPoints;
         points.push_back(tempPoints);
@@ -183,7 +182,7 @@ TEST_P(Objdetect_Multiple_QRCode, multiple_qrcode_detect)
             if (name_test_image == name_current_image)
             {
               for(size_t j = 0; j < points.size(); j++)
-                for (int i = 0; i < 4; i++)
+                for (size_t i = 0; i < 4; i++)
                 {
                     int x = config["x"][j][i];
                     int y = config["y"][j][i];

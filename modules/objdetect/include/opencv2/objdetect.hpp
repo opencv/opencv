@@ -693,7 +693,6 @@ public:
      */
      CV_WRAP bool detect(InputArray img, OutputArrayOfArrays points) const;
 
-
     /** @brief Decodes QR code in image once it's found by the detect() method.
      Returns UTF8-encoded output string or empty string if the code cannot be decoded.
 
@@ -709,9 +708,7 @@ public:
      @param points opiotnal output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-
      CV_WRAP std::vector<std::string> detectAndDecode(InputArray img, OutputArrayOfArrays points, OutputArrayOfArrays straight_qrcode);
-
 protected:
     struct Impl;
     Ptr<Impl> p;

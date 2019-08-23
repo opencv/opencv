@@ -5,6 +5,7 @@
 
 #include "opencv2/core/mat.hpp"
 #include "precomp.hpp"
+
 namespace cv {
 
 /*************************************************************************************************\
@@ -2005,7 +2006,6 @@ void _OutputArray::assign(const std::vector<Mat>& v) const
     }
     else if (k == STD_VECTOR_MAT)
     {
-
         std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
         CV_Assert(this_v.size() == v.size());
 

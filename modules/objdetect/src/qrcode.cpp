@@ -9,6 +9,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc/types_c.h"
+
 #ifdef HAVE_QUIRC
 #include "quirc.h"
 #endif
@@ -21,7 +22,6 @@
 namespace cv
 {
 using std::vector;
-inline Point computeOffset(const vector<Point>& v);
 class QRDetect
 {
 public:
@@ -44,6 +44,7 @@ protected:
     inline double getCosVectors(Point2f a, Point2f b, Point2f c);
     bool NextSet(int *set, int n, int m);
     bool CheckPoints(Mat scr, vector<Point2f> triangle_points);
+
     Mat barcode, bin_barcode, straight_barcode, bin_barcode_fullsize, bin_barcode_temp;
     vector<vector<Point2f>> localization_points, transformation_points;
     double eps_vertical, eps_horizontal, coeff_expansion;
@@ -167,7 +168,6 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
     eps_horizontal = eps_horizontal_;
     adaptiveThreshold(barcode, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
     adaptiveThreshold(src, bin_barcode_fullsize, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
-
 
 }
 
@@ -319,14 +319,14 @@ bool QRDetect::CheckPoints(Mat scr, vector<Point2f> triangle_points)
 {
       int count_b = 0;
       int count_w = 0;
-      int x0 = triangle_points[0].x;
-      int y0 = triangle_points[0].y;
-      int x1 = triangle_points[1].x;
-      int y1 = triangle_points[1].y;
-      int x2 = triangle_points[2].x;
-      int y2 = triangle_points[2].y;
-      int x3 = triangle_points[3].x;
-      int y3 = triangle_points[3].y;
+      float x0 = triangle_points[0].x;
+      float y0 = triangle_points[0].y;
+      float x1 = triangle_points[1].x;
+      float y1 = triangle_points[1].y;
+      float x2 = triangle_points[2].x;
+      float y2 = triangle_points[2].y;
+      float x3 = triangle_points[3].x;
+      float y3 = triangle_points[3].y;
       cv::Mat lineMask = cv::Mat::zeros(scr.size(), scr.type());
       Mat src_copy = scr.clone();
       cv::line( lineMask, cv::Point(x0, y0), cv::Point(x1, y1), 255,1, 8, 0);
@@ -418,13 +418,15 @@ bool QRDetect::localization()
    vector<vector<Point2f>> triangles;
    size_t temp_num_points = 0;
    bin_barcode_temp = bin_barcode;
+   struct {
+        bool operator()(Point2f a, Point2f b) const
+        {
+            return ((sqrt(a.x * a.x + a.y * a.y)) < (sqrt(b.x * b.x + b.y * b.y)));
+        }
+    } CompareDistance;
    for(size_t q = 0; q < num_qr; q++)
    {
-       std::sort (tmp_localization_points.begin(), tmp_localization_points.begin()+tmp_localization_points.size(),
-               [](Point2f& a,Point2f& b)
-               {
-                    return (sqrt(a.x * a.x + a.y * a.y)) < (sqrt(b.x * b.x + b.y * b.y));
-               });
+       std::sort (tmp_localization_points.begin(), tmp_localization_points.end(), CompareDistance);
        flag_for_out = false;
        flag_for_next_set = true;
        if(num_points < 3) flag_for_out = true;
@@ -603,7 +605,7 @@ bool QRDetect::computeTransformationPoints()
                     }
 
                 }
-             }
+            }
         }
 
              double pentagon_diag_norm = -1;
@@ -691,7 +693,7 @@ Point2f QRDetect::intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f 
                                (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
                               ((a1.x - a2.x) * (b1.y - b2.y) -
                                (a1.y - a2.y) * (b1.x - b2.x))
-                             );
+                              );
     return result_square_angle;
 }
 
@@ -979,11 +981,9 @@ bool QRDetect::NextSet(int *set, int n, int m)
   return false;
 }
 
-
 struct QRCodeDetector::Impl
 {
 public:
-
     Impl() { epsX = 0.2; epsY = 0.1; }
     ~Impl() {}
 
@@ -1303,7 +1303,6 @@ bool QRDecode::fullDecodingProcess()
 }
 
 
-
 vector<std::string> QRCodeDetector::decode(InputArray in, InputArrayOfArrays points,
                                    OutputArrayOfArrays straight_qrcode)
 {
@@ -1314,6 +1313,7 @@ vector<std::string> QRCodeDetector::decode(InputArray in, InputArrayOfArrays poi
     {
       vector<std::string> str;  // image data is not enough for providing reliable results
       return str;
+
     }
     int incn = inarr.channels();
     if( incn == 3 || incn == 4 )
@@ -1342,6 +1342,7 @@ vector<std::string> QRCodeDetector::decode(InputArray in, InputArrayOfArrays poi
     QRDecode qrdec;
     qrdec.init(inarr, src_points);
     bool ok = qrdec.fullDecodingProcess();
+
     vector<std::string> decoded_info = qrdec.getDecodeInformation();
     vector<Mat> straight_barcode = qrdec.getStraightBarcode();
     vector<Mat> tmp_straight_qrcodes;
@@ -1402,14 +1403,14 @@ vector<std::string> QRCodeDetector::detectAndDecode(InputArray in,
         else
           ((OutputArray)tempPoints[i]).release();
         }
-
     }
     points_.createSameSize(tempPoints, CV_32FC2);
     points_.assign(tempPoints);
     vector<std::string> decoded_info;
     if( ok )
-       decoded_info = decode(inarr, points, straight_qrcode);
+        decoded_info = decode(inarr, points, straight_qrcode);
     return decoded_info;
 }
+
 
 }
