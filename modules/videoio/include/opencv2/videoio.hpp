@@ -663,7 +663,7 @@ public:
      */
     CV_WRAP virtual void release();
 
-    /** @brief Grabs the next frame from video file or capturing device.
+    /** @brief Grabs and decodes the next frame from video file or capturing device.
 
     @return `true` (non-zero) in the case of success.
 
@@ -684,34 +684,6 @@ public:
      */
     CV_WRAP virtual bool grab();
 
-    /** @brief Decodes and returns the grabbed video frame.
-
-    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
-    @param flag it could be a frame index or a driver specific flag
-    @return `false` if no frames has been grabbed
-
-    The method decodes and returns the just grabbed frame. If no frames has been grabbed
-    (camera has been disconnected, or there are no more frames in video file), the method returns false
-    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
-
-    @sa read()
-
-    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
-    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
-    cvCloneImage and then do whatever you want with the copy.
-     */
-    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
-
-    /** @brief Stream operator to read the next video frame.
-    @sa read()
-    */
-    virtual VideoSourceBase& operator >> (CV_OUT Mat& image);
-
-    /** @overload
-    @sa read()
-    */
-    virtual VideoSourceBase& operator >> (CV_OUT UMat& image);
-
     /** @brief Grabs, decodes and returns the next video frame.
 
     @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
@@ -725,8 +697,18 @@ public:
     @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
     capturing structure. It is not allowed to modify or release the image! You can copy the frame using
     cvCloneImage and then do whatever you want with the copy.
-     */
-    CV_WRAP virtual bool read(OutputArray image);
+    */
+    CV_WRAP virtual bool read(OutputArray image) = 0;
+
+    /** @brief Stream operator to read the next video frame.
+    @sa read()
+    */
+    virtual VideoSourceBase& operator >> (CV_OUT Mat& image);
+
+    /** @overload
+    @sa read()
+    */
+    virtual VideoSourceBase& operator >> (CV_OUT UMat& image);
 
     /** @brief Sets a property in the VideoCapture.
 
@@ -842,7 +824,7 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY) CV_OVERRIDE;
 
     /** @brief  Opens a camera for video capturing
 
@@ -854,6 +836,40 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+
+    /** @brief Grabs, decodes and returns the next video frame.
+
+    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
+    @return `false` if no frames has been grabbed
+
+    The method/function combines VideoCapture::grab() and VideoCapture::retrieve() in one call. This is the
+    most convenient method for reading video files or capturing data from decode and returns the just
+    grabbed frame. If no frames has been grabbed (camera has been disconnected, or there are no more
+    frames in video file), the method returns false and the function returns empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
+    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
+    cvCloneImage and then do whatever you want with the copy.
+ */
+    CV_WRAP virtual bool read(OutputArray image);
+
+    /** @brief Returns the last grabbed video frame.
+
+    @param [out] image the video frame is returned here. If no frames has been grabbed the image will be empty.
+    @param flag it could be a frame index or a driver specific flag
+    @return `false` if no frames has been grabbed
+
+    The method decodes and returns the just grabbed frame. If no frames has been grabbed
+    (camera has been disconnected, or there are no more frames in video file), the method returns false
+    and the function returns an empty image (with %cv::Mat, test it with Mat::empty()).
+
+    @sa read()
+
+    @note In @ref videoio_c "C API", functions cvRetrieveFrame() and cv.RetrieveFrame() return image stored inside the video
+    capturing structure. It is not allowed to modify or release the image! You can copy the frame using
+    cvCloneImage and then do whatever you want with the copy.
+     */
+    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
 };
 
 /** @brief Class for raw video capturing from video files or ip cameras.
@@ -900,7 +916,7 @@ public:
     The primary use of the function is to grab a frame so that it can then be retrieved by calling
     retrieve.
      */
-    CV_WRAP virtual bool grab();
+    CV_WRAP virtual bool grab() CV_OVERRIDE;
 
     /** @brief  Returns the encoded grabbed video frame.
 

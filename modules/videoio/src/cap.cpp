@@ -159,29 +159,6 @@ bool VideoSourceBase::grab()
     return ret;
 }
 
-bool VideoSourceBase::retrieve(OutputArray image, int channel)
-{
-    CV_INSTRUMENT_REGION();
-
-    bool ret = false;
-    if (!icap.empty())
-        ret = icap->retrieveFrame(channel, image);
-    if (!ret && throwOnFail)
-        CV_Error_(Error::StsError, ("could not retrieve channel %d", channel));
-    return ret;
-}
-
-bool VideoSourceBase::read(OutputArray image)
-{
-    CV_INSTRUMENT_REGION();
-
-    if(grab())
-        retrieve(image);
-    else
-        image.release();
-    return !image.empty();
-}
-
 VideoSourceBase& VideoSourceBase::operator >> (Mat& image)
 {
 #ifdef WINRT_VIDEO
@@ -334,6 +311,29 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
         CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
 
     return false;
+}
+
+bool VideoCapture::retrieve(OutputArray image, int channel)
+{
+    CV_INSTRUMENT_REGION();
+
+    bool ret = false;
+    if (!icap.empty())
+        ret = icap->retrieveFrame(channel, image);
+    if (!ret && throwOnFail)
+        CV_Error_(Error::StsError, ("could not retrieve channel %d", channel));
+    return ret;
+}
+
+bool VideoCapture::read(OutputArray image)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (grab())
+        retrieve(image);
+    else
+        image.release();
+    return !image.empty();
 }
 
 
