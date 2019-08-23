@@ -805,6 +805,15 @@ pool = tf.layers.max_pooling2d(inp, pool_size=(2, 2), strides=(2, 2))
 conv = tf.layers.conv2d(inputs=pool, filters=3, kernel_size=[1, 1], padding='VALID')
 unpool = MaxUnPooling2D(pool.op, conv)
 save(inp, unpool, 'max_pool_grad')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1])
+flatten = tf.contrib.layers.flatten(conv)
+weights = tf.Variable(tf.random_normal([2*3*5, 4]), name='matmul_weights')
+mm = tf.matmul(flatten, weights)
+reshape = tf.reshape(mm, [-1, 1, 1, 4], 'reshaped')  # NHWC
+save(inp, reshape, 'matmul_layout')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
