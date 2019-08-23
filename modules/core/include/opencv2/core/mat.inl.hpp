@@ -1744,6 +1744,11 @@ Mat_<_Tp>::Mat_(const std::array<_Tp, _Nm>& arr, bool copyData)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (const Mat& m)
 {
+    if (m.empty())
+    {
+        release();
+        return *this;
+    }
     if( traits::Type<_Tp>::value == m.type() )
     {
         Mat::operator = (m);
@@ -2125,6 +2130,11 @@ Mat_<_Tp>::Mat_(Mat&& m)
 template<typename _Tp> inline
 Mat_<_Tp>& Mat_<_Tp>::operator = (Mat&& m)
 {
+    if (m.empty())
+    {
+        release();
+        return *this;
+    }
     if( traits::Type<_Tp>::value == m.type() )
     {
         Mat::operator = ((Mat&&)m);
