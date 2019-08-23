@@ -623,18 +623,18 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 
 class IVideoCapture;
 
-class CV_EXPORTS_W VideoCaptureBase
+class CV_EXPORTS_W VideoSourceBase
 {
 protected:
-    CV_WRAP VideoCaptureBase();
+    CV_WRAP VideoSourceBase();
 
-    CV_WRAP VideoCaptureBase(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP VideoSourceBase(const String& filename, int apiPreference = CAP_ANY);
 public:
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
-    virtual ~VideoCaptureBase();
+    virtual ~VideoSourceBase();
 
     /** @brief  Opens a video file or an IP video stream for video capturing.
 
@@ -705,12 +705,12 @@ public:
     /** @brief Stream operator to read the next video frame.
     @sa read()
     */
-    virtual VideoCaptureBase& operator >> (CV_OUT Mat& image);
+    virtual VideoSourceBase& operator >> (CV_OUT Mat& image);
 
     /** @overload
     @sa read()
     */
-    virtual VideoCaptureBase& operator >> (CV_OUT UMat& image);
+    virtual VideoSourceBase& operator >> (CV_OUT UMat& image);
 
     /** @brief Grabs, decodes and returns the next video frame.
 
@@ -796,7 +796,7 @@ Here is how the class can be used:
 -   (Python) %VideoCapture sample showcasing some features of the Video4Linux2 backend
     `OPENCV_SOURCE_CODE/samples/python/video_v4l2.py`
  */
-class CV_EXPORTS_W VideoCapture : public VideoCaptureBase
+class CV_EXPORTS_W VideoCapture : public VideoSourceBase
 {
 public:
     /** @brief Default constructor
@@ -861,7 +861,7 @@ public:
 The class provides C++ API for capturing raw encoded video bitstreams from ip cameras or video files.
 
  */
-class CV_EXPORTS_W VideoContainer : public VideoCaptureBase
+class CV_EXPORTS_W VideoContainer : public VideoSourceBase
 {
 public:
     /** @brief Default constructor

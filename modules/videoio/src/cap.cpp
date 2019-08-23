@@ -55,22 +55,22 @@ void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCap
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
 
-VideoCaptureBase::VideoCaptureBase() : throwOnFail(false)
+VideoSourceBase::VideoSourceBase() : throwOnFail(false)
 {}
 
-VideoCaptureBase::VideoCaptureBase(const String& filename, int apiPreference) : throwOnFail(false)
+VideoSourceBase::VideoSourceBase(const String& filename, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(filename, apiPreference);
 }
 
-VideoCaptureBase::~VideoCaptureBase()
+VideoSourceBase::~VideoSourceBase()
 {
     CV_TRACE_FUNCTION();
     icap.release();
 }
 
-bool VideoCaptureBase::open(const String& filename, int apiPreference)
+bool VideoSourceBase::open(const String& filename, int apiPreference)
 {
     CV_TRACE_FUNCTION();
 
@@ -130,12 +130,12 @@ bool VideoCaptureBase::open(const String& filename, int apiPreference)
     return false;
 }
 
-bool VideoCaptureBase::isOpened() const
+bool VideoSourceBase::isOpened() const
 {
     return !icap.empty() ? icap->isOpened() : false;
 }
 
-String VideoCaptureBase::getBackendName() const
+String VideoSourceBase::getBackendName() const
 {
     int api = 0;
     if (icap)
@@ -144,13 +144,13 @@ String VideoCaptureBase::getBackendName() const
     return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
 }
 
-void VideoCaptureBase::release()
+void VideoSourceBase::release()
 {
     CV_TRACE_FUNCTION();
     icap.release();
 }
 
-bool VideoCaptureBase::grab()
+bool VideoSourceBase::grab()
 {
     CV_INSTRUMENT_REGION();
     bool ret = !icap.empty() ? icap->grabFrame() : false;
@@ -159,7 +159,7 @@ bool VideoCaptureBase::grab()
     return ret;
 }
 
-bool VideoCaptureBase::retrieve(OutputArray image, int channel)
+bool VideoSourceBase::retrieve(OutputArray image, int channel)
 {
     CV_INSTRUMENT_REGION();
 
@@ -171,7 +171,7 @@ bool VideoCaptureBase::retrieve(OutputArray image, int channel)
     return ret;
 }
 
-bool VideoCaptureBase::read(OutputArray image)
+bool VideoSourceBase::read(OutputArray image)
 {
     CV_INSTRUMENT_REGION();
 
@@ -182,7 +182,7 @@ bool VideoCaptureBase::read(OutputArray image)
     return !image.empty();
 }
 
-VideoCaptureBase& VideoCaptureBase::operator >> (Mat& image)
+VideoSourceBase& VideoSourceBase::operator >> (Mat& image)
 {
 #ifdef WINRT_VIDEO
     // FIXIT grab/retrieve methods() should work too
@@ -210,7 +210,7 @@ VideoCaptureBase& VideoCaptureBase::operator >> (Mat& image)
     return *this;
 }
 
-VideoCaptureBase& VideoCaptureBase::operator >> (UMat& image)
+VideoSourceBase& VideoSourceBase::operator >> (UMat& image)
 {
     CV_INSTRUMENT_REGION();
 
@@ -218,7 +218,7 @@ VideoCaptureBase& VideoCaptureBase::operator >> (UMat& image)
     return *this;
 }
 
-bool VideoCaptureBase::set(int propId, double value)
+bool VideoSourceBase::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
     bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
@@ -227,7 +227,7 @@ bool VideoCaptureBase::set(int propId, double value)
     return ret;
 }
 
-double VideoCaptureBase::get(int propId) const
+double VideoSourceBase::get(int propId) const
 {
     if (propId == CAP_PROP_BACKEND)
     {
@@ -244,13 +244,13 @@ double VideoCaptureBase::get(int propId) const
 
 //=================================================================================================
 
-VideoCapture::VideoCapture() : VideoCaptureBase()
+VideoCapture::VideoCapture() : VideoSourceBase()
 {}
 
-VideoCapture::VideoCapture(const String& filename, int apiPreference) : VideoCaptureBase(filename, apiPreference)
+VideoCapture::VideoCapture(const String& filename, int apiPreference) : VideoSourceBase(filename, apiPreference)
 {}
 
-VideoCapture::VideoCapture(int index, int apiPreference) : VideoCaptureBase()
+VideoCapture::VideoCapture(int index, int apiPreference) : VideoSourceBase()
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference);
@@ -259,7 +259,7 @@ VideoCapture::VideoCapture(int index, int apiPreference) : VideoCaptureBase()
 bool VideoCapture::VideoCapture::open(const String& filename, int apiPreference)
 {
     CV_TRACE_FUNCTION();
-    return VideoCaptureBase::open(filename, apiPreference);
+    return VideoSourceBase::open(filename, apiPreference);
 }
 
 bool VideoCapture::open(int cameraNum, int apiPreference)
@@ -339,16 +339,16 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
 
 //=================================================================================================
 
-VideoContainer::VideoContainer() : VideoCaptureBase()
+VideoContainer::VideoContainer() : VideoSourceBase()
 {}
 
-VideoContainer::VideoContainer(const String& filename) : VideoCaptureBase(filename, CAP_FFMPEG)
+VideoContainer::VideoContainer(const String& filename) : VideoSourceBase(filename, CAP_FFMPEG)
 {
 }
 
 bool VideoContainer::open(const String& filename)
 {
-    return VideoCaptureBase::open(filename, CAP_FFMPEG);
+    return VideoSourceBase::open(filename, CAP_FFMPEG);
 }
 
 bool VideoContainer::grab()
