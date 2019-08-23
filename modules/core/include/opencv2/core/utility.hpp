@@ -702,21 +702,56 @@ typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
 #endif
 
+template <typename T>
+struct TLSDeleter {
+    static void delete_it(void*data) {
+        delete (T*)data;
+    }
+};
+
+struct TLSSlot {
+    void* data;
+    void (*deleter)(void*);
+    TLSSlot(): data(nullptr), deleter(nullptr) {
+    }
+    TLSSlot(void* data_, void (*deleter_)(void*)): data(data_), deleter(deleter_) {}
+    // TODO: C++11 move semantics(if C++11 is allowed?)
+    TLSSlot(const TLSSlot& other): data(other.data), deleter(other.deleter) {
+    }
+    ~TLSSlot() {
+        if (data) {
+          deleter(data);
+        }
+    }
+};
+
 // TLS interface
 class CV_EXPORTS TLSDataContainer
 {
+  static void* getData(int key);
+  static void setData(size_t slotIdx, void* pData, void(*deleter)(void*));
 protected:
     TLSDataContainer();
-    virtual ~TLSDataContainer();
+    ~TLSDataContainer();
 
     void  gatherData(std::vector<void*> &data) const;
-    void* getData() const;
+    template <typename T>
+    T* getData() const
+    {
+        CV_Assert(key_ != -1 && "Can't fetch data from terminated TLS container.");
+        void* pData = getData(key_); // Check if data was already allocated
+        if(!pData)
+        {
+            // Create new data instance and save it to TLS storage
+            pData = new T();
+            setData(key_, pData, TLSDeleter<T>::delete_it);
+        }
+        return (T*)pData;
+    }
+    
     void  release();
 
 private:
-    virtual void* createDataInstance() const = 0;
-    virtual void  deleteDataInstance(void* pData) const = 0;
-
     int key_;
 
 public:
@@ -730,8 +765,8 @@ class TLSData : protected TLSDataContainer
 public:
     inline TLSData()        {}
     inline ~TLSData()       { release();            } // Release key and delete associated data
-    inline T* get() const   { return (T*)getData(); } // Get data associated with key
-    inline T& getRef() const { T* ptr = (T*)getData(); CV_Assert(ptr); return *ptr; } // Get data associated with key
+    inline T* get() const   { return getData<T>(); } // Get data associated with key
+    inline T& getRef() const { T* ptr = getData<T>(); CV_Assert(ptr); return *ptr; } // Get data associated with key
 
     // Get data from all threads
     inline void gather(std::vector<T*> &data) const
@@ -743,9 +778,6 @@ public:
     inline void cleanup() { TLSDataContainer::cleanup(); }
 
 private:
-    virtual void* createDataInstance() const CV_OVERRIDE {return new T;}                // Wrapper to allocate data by template
-    virtual void  deleteDataInstance(void* pData) const CV_OVERRIDE {delete (T*)pData;} // Wrapper to release data by template
-
     // Disable TLS copy operations
     TLSData(TLSData &) {}
     TLSData& operator =(const TLSData &) {return *this;}

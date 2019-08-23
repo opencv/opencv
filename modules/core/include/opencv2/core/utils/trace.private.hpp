@@ -321,6 +321,20 @@ struct TraceManagerThreadLocal
     inline int getCurrentDepth() const { return (int)stack.size(); }
 };
 
+} // namespace utils
+} // namespace trace
+} // namespace details
+
+// TODO: this cause memory leakage when tracing
+template <>
+struct TLSDeleter<cv::utils::trace::details::TraceManagerThreadLocal> {
+    static void delete_it(void*) {}
+};
+
+namespace utils {
+namespace trace {
+namespace details {
+
 class CV_EXPORTS TraceManager
 {
 public:
