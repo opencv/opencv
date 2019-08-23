@@ -415,12 +415,34 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       else()
         set(__msg "")
       endif()
+      if(CMAKE_REQUIRED_LIBRARIES)
+        set(__link_libs LINK_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+      else()
+        set(__link_libs)
+      endif()
+      set(__cmake_flags "")
+      if(CMAKE_EXE_LINKER_FLAGS)  # CMP0056 do this on new CMake
+        list(APPEND __cmake_flags "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}")
+      endif()
+
+      # CMP0067 do this on new CMake
+      if(DEFINED CMAKE_CXX_STANDARD)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
+      endif()
+      if(DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}")
+      endif()
+      if(DEFINED CMAKE_CXX_EXTENSIONS)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
+      endif()
+
       MESSAGE(STATUS "Performing Test ${RESULT}${__msg}")
       TRY_COMPILE(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
-        CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"   # CMP0056 do this on new CMake
+        CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS "${FLAG}"
+        ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
       if(${RESULT})

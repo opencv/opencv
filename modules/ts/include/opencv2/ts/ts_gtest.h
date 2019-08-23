@@ -21691,7 +21691,9 @@ class WithParamInterface {
     return *GetParameterPtrRef_();
   }
 
+#ifndef __INTEL_COMPILER  // compilation workaround, templated friend is not handled properly by ICC (perhaps due using of anonymous namespaces)
  private:
+#endif
   // Sets parameter value. The caller is responsible for making sure the value
   // remains alive and unchanged throughout the current test.
   static void SetParam(const ParamType* parameter) {

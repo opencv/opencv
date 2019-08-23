@@ -64,6 +64,10 @@ if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
 endif()
 
+if(POLICY CMP0075)
+  cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
+endif()
+
 
 #
 # Configure OpenCV CMake hooks
@@ -1502,19 +1506,22 @@ endif()
 
 if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
   if(INF_ENGINE_TARGET)
+    list(GET INF_ENGINE_TARGET 0 ie_target)
     set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
-    get_target_property(_lib ${INF_ENGINE_TARGET} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${INF_ENGINE_TARGET} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${INF_ENGINE_TARGET} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${INF_ENGINE_TARGET} IMPORTED_LOCATION_DEBUG)
+    get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
+    get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
+    get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
+    get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
+    get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
     ocv_build_features_string(_lib
       IF _lib THEN "${_lib}"
       IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
       IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+      IF _lib_rel  THEN "${_lib_rel}"
+      IF _lib_dbg  THEN "${_lib_dbg}"
       ELSE "unknown"
     )
-    get_target_property(_inc ${INF_ENGINE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
     status("    Inference Engine:" "${__msg}")
     status("                libs:" "${_lib}")
     status("            includes:" "${_inc}")

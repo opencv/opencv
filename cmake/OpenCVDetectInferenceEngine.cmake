@@ -45,7 +45,7 @@ endfunction()
 
 find_package(InferenceEngine QUIET)
 if(InferenceEngine_FOUND)
-  set(INF_ENGINE_TARGET IE::inference_engine)
+  set(INF_ENGINE_TARGET ${InferenceEngine_LIBRARIES})
   set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}" CACHE STRING "")
   message(STATUS "Detected InferenceEngine: cmake package")
 endif()

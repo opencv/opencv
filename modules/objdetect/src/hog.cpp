@@ -66,6 +66,7 @@ namespace cv
 
 static int numPartsWithin(int size, int part_size, int stride)
 {
+    CV_Assert(stride != 0);
     return (size - part_size + stride) / stride;
 }
 
@@ -78,13 +79,17 @@ static Size numPartsWithin(cv::Size size, cv::Size part_size,
 
 static size_t getBlockHistogramSize(Size block_size, Size cell_size, int nbins)
 {
+    CV_Assert(!cell_size.empty());
     Size cells_per_block = Size(block_size.width / cell_size.width,
-        block_size.height / cell_size.height);
+                                block_size.height / cell_size.height);
     return (size_t)(nbins * cells_per_block.area());
 }
 
 size_t HOGDescriptor::getDescriptorSize() const
 {
+    CV_Assert(!cellSize.empty());
+    CV_Assert(!blockStride.empty());
+
     CV_Assert(blockSize.width % cellSize.width == 0 &&
         blockSize.height % cellSize.height == 0);
     CV_Assert((winSize.width - blockSize.width) % blockStride.width == 0 &&
@@ -142,20 +147,20 @@ bool HOGDescriptor::read(FileNode& obj)
     if( !obj.isMap() )
         return false;
     FileNodeIterator it = obj["winSize"].begin();
-    it >> winSize.width >> winSize.height;
+    it >> winSize.width >> winSize.height; CV_Assert(!winSize.empty());
     it = obj["blockSize"].begin();
-    it >> blockSize.width >> blockSize.height;
+    it >> blockSize.width >> blockSize.height; CV_Assert(!blockSize.empty());
     it = obj["blockStride"].begin();
-    it >> blockStride.width >> blockStride.height;
+    it >> blockStride.width >> blockStride.height; CV_Assert(!blockStride.empty());
     it = obj["cellSize"].begin();
-    it >> cellSize.width >> cellSize.height;
-    obj["nbins"] >> nbins;
+    it >> cellSize.width >> cellSize.height; CV_Assert(!cellSize.empty());
+    obj["nbins"] >> nbins; CV_Assert(nbins > 0);
     obj["derivAperture"] >> derivAperture;
     obj["winSigma"] >> winSigma;
     obj["histogramNormType"] >> histogramNormType;
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
-    obj["nlevels"] >> nlevels;
+    obj["nlevels"] >> nlevels; CV_Assert(nlevels > 0);
     if (obj["signedGradient"].empty())
         signedGradient = false;
     else
