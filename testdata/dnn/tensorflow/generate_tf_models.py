@@ -814,6 +814,27 @@ mm = tf.matmul(flatten, weights)
 reshape = tf.reshape(mm, [-1, 1, 1, 4], 'reshaped')  # NHWC
 save(inp, reshape, 'matmul_layout')
 ################################################################################
+# issue https://github.com/opencv/opencv/issues/15141
+inp_node = 'mobilenetv2_1.00_96_input'
+out_node = 'mobilenetv2_1.00_96/Conv1_relu/Relu6'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('normal_and_abnormal_mnet_v2_96_96_Flatten.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [inp_node], [out_node], tf.float32.as_datatype_enum)
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 5, 3], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'keras_learning_phase_in')
+    writeBlob(outputData, 'keras_learning_phase_out')
+
+    with tf.gfile.FastGFile('keras_learning_phase_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
