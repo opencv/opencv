@@ -729,6 +729,7 @@ TEST_P(Test_TensorFlow_layers, subpixel)
 TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
 {
     runTensorFlowNet("keras_mobilenet_head");
+    runTensorFlowNet("keras_learning_phase");
 }
 
 TEST_P(Test_TensorFlow_layers, resize_bilinear)
