@@ -754,11 +754,11 @@ namespace colormap
             colormap == COLORMAP_RAINBOW ? (colormap::ColorMap*)(new colormap::Rainbow) :
             colormap == COLORMAP_SPRING ? (colormap::ColorMap*)(new colormap::Spring) :
             colormap == COLORMAP_SUMMER ? (colormap::ColorMap*)(new colormap::Summer) :
+            colormap == COLORMAP_TURBO ? (colormap::ColorMap*)(new colormap::Turbo) :
             colormap == COLORMAP_TWILIGHT ? (colormap::ColorMap*)(new colormap::Twilight) :
             colormap == COLORMAP_TWILIGHT_SHIFTED ? (colormap::ColorMap*)(new colormap::TwilightShifted) :
             colormap == COLORMAP_VIRIDIS ? (colormap::ColorMap*)(new colormap::Viridis) :
-            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) :
-            colormap == COLORMAP_TURBO ? (colormap::ColorMap*)(new colormap::Turbo) : 0;
+            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) : 0;
 
         if( !cm )
             CV_Error( Error::StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
