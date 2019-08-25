@@ -47,6 +47,7 @@ struct AsyncArray::Impl
 
     mutable cv::Ptr<Mat> result_mat;
     mutable cv::Ptr<UMat> result_umat;
+    mutable cv::Ptr<std::vector<Mat> > result_mats;
 
 
     bool has_exception;
@@ -105,6 +106,13 @@ struct AsyncArray::Impl
             {
                 dst.move(*result_umat.get());
                 result_umat.release();
+                result_is_fetched = true;
+                return true;
+            }
+            if (!result_mats.empty())
+            {
+                dst.move(*result_mats.get());
+                result_mats.release();
                 result_is_fetched = true;
                 return true;
             }
@@ -186,10 +194,19 @@ struct AsyncArray::Impl
             result_umat = makePtr<UMat>();
             value.copyTo(*result_umat.get());
         }
-        else
+        else if (k == _InputArray::MAT)
         {
             result_mat = makePtr<Mat>();
             value.copyTo(*result_mat.get());
+        }
+        else if (k == _InputArray::STD_VECTOR_MAT)
+        {
+            std::vector<Mat> mv;
+            value.getMatVector(mv);
+            result_mats = makePtr<std::vector<Mat> >(mv.size());
+            std::vector<Mat>& dst = *result_mats.get();
+            for (size_t i = 0; i < mv.size(); ++i)
+                mv[i].copyTo(dst[i]);
         }
         has_result = true;
 #ifdef CV_CXX11

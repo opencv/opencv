@@ -3416,6 +3416,32 @@ AsyncArray Net::forwardAsync(const String& outputName)
 #endif  // CV_CXX11
 }
 
+AsyncArray Net::forwardAsync(const std::vector<String>& outBlobNames)
+{
+    CV_TRACE_FUNCTION();
+#ifdef CV_CXX11
+    std::vector<LayerPin> pins;
+    for (int i = 0; i < outBlobNames.size(); i++)
+    {
+        pins.push_back(impl->getPinByAlias(outBlobNames[i]));
+    }
+    impl->setUpNet(pins);
+
+    if (impl->preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        CV_Error(Error::StsNotImplemented, "Asynchronous forward for backend which is different from DNN_BACKEND_INFERENCE_ENGINE");
+
+    LayerPin out = impl->getLatestLayerPin(pins);
+
+    impl->isAsync = true;
+    impl->forwardToLayer(impl->getLayerData(out.lid));
+    impl->isAsync = false;
+
+    return impl->getBlobAsync(out);
+#else
+    CV_Error(Error::StsNotImplemented, "Asynchronous forward without C++11");
+#endif  // CV_CXX11
+}
+
 void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {
     CV_TRACE_FUNCTION();

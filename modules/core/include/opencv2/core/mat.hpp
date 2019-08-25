@@ -380,6 +380,7 @@ public:
 
     void move(UMat& u) const;
     void move(Mat& m) const;
+    void move(std::vector<Mat>& m) const;
 };
 
 

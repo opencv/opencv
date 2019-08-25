@@ -126,10 +126,11 @@ private:
     {
         InfEngineReqWrapper() : isReady(true) {}
 
-        void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
+        void makePromises(const std::vector<Ptr<BackendWrapper> >& outs,
+                          const std::vector<std::string>& outsNames);
 
         InferenceEngine::InferRequest req;
-        std::vector<cv::AsyncPromise> outProms;
+        cv::AsyncPromise outProm;
         std::vector<std::string> outsNames;
         bool isReady;
     };
@@ -143,6 +144,7 @@ private:
     std::vector<std::string> requestedOutputs;
 
     std::set<std::pair<int, int> > unconnectedPorts;
+    std::vector<std::string> outsNames;  // We have to store output names order similar to expected output promises order.
 };
 
 class InfEngineBackendNode : public BackendNode

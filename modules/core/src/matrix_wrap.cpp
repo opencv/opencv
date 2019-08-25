@@ -1949,6 +1949,29 @@ void _OutputArray::move(Mat& m) const
     }
 }
 
+void _OutputArray::move(std::vector<Mat>& m) const
+{
+    if (fixedSize())
+    {
+        // TODO Performance warning
+        assign(m);
+        return;
+    }
+    int k = kind();
+    if (k == STD_VECTOR_MAT)
+    {
+#ifdef CV_CXX11
+        *(std::vector<Mat>*)obj = std::move(m);
+#else
+        *(std::vector<Mat>*)obj = m;
+        m.release();
+#endif
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
 
 void _OutputArray::assign(const std::vector<UMat>& v) const
 {

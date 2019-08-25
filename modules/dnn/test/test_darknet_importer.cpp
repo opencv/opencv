@@ -413,12 +413,14 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
     netSync.setPreferableTarget(targetId);
 
     // Run synchronously.
-    std::vector<Mat> refs(numInputs);
+    std::vector<std::vector<Mat> > refs(numInputs);
+    std::vector<String> outsNames = netSync.getUnconnectedOutLayersNames();
     for (int i = 0; i < numInputs; ++i)
     {
         netSync.setInput(inputs[i]);
-        refs[i] = netSync.forward().clone();
-
+        netSync.forward(refs[i], outsNames);
+        for (int j = 0; j < refs[i].size(); ++j)
+            refs[i][j] = refs[i][j].clone();
     }
 
     Net netAsync = readNet(findDataFile("dnn/" + prefix + ".cfg"),
@@ -431,11 +433,13 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
     {
         netAsync.setInput(inputs[i]);
 
-        AsyncArray out = netAsync.forwardAsync();
+        AsyncArray out = netAsync.forwardAsync(outsNames);
         ASSERT_TRUE(out.valid());
-        Mat result;
-        EXPECT_TRUE(out.get(result, async_timeout));
-        normAssert(refs[i], result, format("Index: %d", i).c_str(), 0, 0);
+        std::vector<Mat> results;
+        EXPECT_TRUE(out.get(results, async_timeout));
+        EXPECT_EQ(results.size(), outsNames.size());
+        for (int j = 0; j < refs[i].size(); ++j)
+            normAssert(refs[i][j], results[j], format("Index: %d(%d)", i, j).c_str(), 0, 0);
     }
 }
 
