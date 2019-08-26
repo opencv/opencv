@@ -787,7 +787,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
         const tensorflow::NodeDef &layer = net.node(li);
         String type = layer.op();
 
-        if (type == "Identity" || type == "Dropout") {
+        if (type == "Identity" || type == "Dropout" || type == "PlaceholderWithDefault") {
             identity_ops_idx.push_back(li);
             identity_ops[layer.name()] = layer.input(0);
         }
@@ -1031,7 +1031,7 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
                 }
             }
             nodesToRemove.push_back(i);
-            if (node.op() == "Merge")
+            if (node.op() == "Merge" || node.op() == "Switch")
                 mergeOpSubgraphNodes.push(i);
         }
     }
