@@ -386,8 +386,8 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE && targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
