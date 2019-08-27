@@ -39,6 +39,7 @@ int normHamming(const uchar* a, int n)
         for (; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
             t += v_popcount(v_reinterpret_as_u64(vx_load(a + i)));
         result = (int)v_reduce_sum(t);
+        vx_cleanup();
     }
 #endif
 
