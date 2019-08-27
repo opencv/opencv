@@ -173,7 +173,6 @@
       <x>8</x>
       <y>0</y>
       <val>3.3780123901367188e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-png---3x9->
- <!-- resumed -->
 <PointsNum_SolvePnPRansac--SolvePnPRansac--4>
   <rvec>
     <kind>65536</kind>
@@ -237,7 +236,6 @@
       <data>
         1.6323631145448424e+01 -1.4986142900449511e+02
         4.0261972870888013e+02</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--91>
- <!-- resumed -->
 <OCL_StereoBMFixture_StereoBM--StereoBM---32--11->
   <disp>
     <kind>655360</kind>
@@ -346,16 +344,79 @@
       <x>58</x>
       <y>494</y>
       <val>-16.</val></rng2></disp></OCL_StereoBMFixture_StereoBM--StereoBM---128--21->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
- <!-- resumed -->
-<TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM->
+<TestStereoCorrespBM_BM--BM---1280x720--256->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>3793.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-16.</val></last>
+    <rng1>
+      <x>1105</x>
+      <y>50</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>910</x>
+      <y>442</y>
+      <val>-16.</val></rng2></dst></TestStereoCorrespBM_BM--BM---1280x720--256->
+<TestStereoCorrespBM_BM--BM---1280x720--128->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>2015.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-16.</val></last>
+    <rng1>
+      <x>386</x>
+      <y>156</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>132</x>
+      <y>714</y>
+      <val>-16.</val></rng2></dst></TestStereoCorrespBM_BM--BM---1280x720--128->
+<TestStereoCorrespBM_BM--BM---640x480--256->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>1544.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-16.</val></last>
+    <rng1>
+      <x>347</x>
+      <y>137</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>153</x>
+      <y>277</y>
+      <val>-16.</val></rng2></dst></TestStereoCorrespBM_BM--BM---640x480--256->
+<TestStereoCorrespBM_BM--BM---640x480--128->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-16.</min>
+    <max>1984.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-16.</val></last>
+    <rng1>
+      <x>109</x>
+      <y>106</y>
+      <val>-16.</val></rng1>
+    <rng2>
+      <x>438</x>
+      <y>119</y>
+      <val>-16.</val></rng2></dst></TestStereoCorrespBM_BM--BM---640x480--128->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -372,8 +433,8 @@
     <rng2>
       <x>36</x>
       <y>416</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM->
-<TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM_3WAY->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM_3WAY->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -390,8 +451,8 @@
     <rng2>
       <x>489</x>
       <y>268</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM_3WAY->
-<TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_SGBM_3WAY->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -408,8 +469,8 @@
     <rng2>
       <x>1007</x>
       <y>201</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM->
-<TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM_3WAY->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM_3WAY->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -426,8 +487,8 @@
     <rng2>
       <x>820</x>
       <y>629</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM_3WAY->
-<TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_SGBM_3WAY->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -444,8 +505,8 @@
     <rng2>
       <x>306</x>
       <y>146</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM->
-<TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM_3WAY->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM_3WAY->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -462,8 +523,8 @@
     <rng2>
       <x>157</x>
       <y>357</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM_3WAY->
-<TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_SGBM_3WAY->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -480,8 +541,8 @@
     <rng2>
       <x>539</x>
       <y>193</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM->
-<TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -498,10 +559,8 @@
     <rng2>
       <x>178</x>
       <y>209</y>
-      <val>415.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
- <!-- resumed -->
- <!-- resumed -->
-<TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
+      <val>415.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_SGBM_3WAY->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -518,8 +577,8 @@
     <rng2>
       <x>600</x>
       <y>336</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
-<TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--256--StereoSGBM--MODE_HH4->
+<TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -536,8 +595,8 @@
     <rng2>
       <x>887</x>
       <y>662</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
-<TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---1280x720--128--StereoSGBM--MODE_HH4->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -554,8 +613,8 @@
     <rng2>
       <x>636</x>
       <y>381</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
-<TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--256--StereoSGBM--MODE_HH4->
+<TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
   <dst>
     <kind>65536</kind>
     <type>3</type>
@@ -572,9 +631,7 @@
     <rng2>
       <x>598</x>
       <y>206</y>
-      <val>-16.</val></rng2></dst></TestStereoCorresp_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
- <!-- resumed -->
- <!-- resumed -->
+      <val>-16.</val></rng2></dst></TestStereoCorrespSGBM_SGBM--SGBM---640x480--128--StereoSGBM--MODE_HH4->
 <PointsNum_Algo_solvePnP--solvePnP---5--SOLVEPNP_EPNP->
   <rvec>
     <kind>65536</kind>
@@ -860,8 +917,6 @@
       <dt>f</dt>
       <data>
         3.53089551e+03 3.26227356e+02 -5.94261597e+02</data></val></tvec></PointsNum_Algo_solvePnPSmallPoints--solvePnPSmallPoints---5--SOLVEPNP_UPNP->
- <!-- resumed -->
-
 <PointsNum_Algo_solvePnP--solvePnP---6--SOLVEPNP_ITERATIVE->
   <rvec>
     <kind>65536</kind>
