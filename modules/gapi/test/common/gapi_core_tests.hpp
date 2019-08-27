@@ -62,8 +62,24 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
     return os;
 }
 
+// Create new value-parameterized test fixture:
+// MathOpTest - fixture name
+// initMatsRandU - function that is used to initialize input/output data
+// FIXTURE_API(mathOp,bool,double,bool) - test-specific parameters (types)
+// 4 - number of test-specific parameters
+// opType, testWithScalar, scale, doReverseOp - test-spcific parameters (names)
+//
+// We get:
+// 1. Default parameters: int type, cv::Size sz, int dtype, getCompileArgs() function
+//      - available in test body
+// 2. Input/output matrices will be initialized by initMatsRandU (in this fixture)
+// 3. Specific parameters: opType, testWithScalar, scale, doReverseOp of correponding types
+//      - created (and initialized) automatically
+//      - available in test body
+// Note: all parameter _values_ (e.g. type CV_8UC3) are set via INSTANTIATE_TEST_CASE_P macro
 GAPI_TEST_FIXTURE(MathOpTest, initMatsRandU, FIXTURE_API(mathOp,bool,double,bool), 4,
     opType, testWithScalar, scale, doReverseOp)
+// No specific parameters for MulDoubleTest, so "fixture API" is empty - <>
 GAPI_TEST_FIXTURE(MulDoubleTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(DivTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(DivCTest, initMatrixRandU, <>, 0)
