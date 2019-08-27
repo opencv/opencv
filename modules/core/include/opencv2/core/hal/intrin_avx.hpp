@@ -1231,18 +1231,15 @@ inline int v_signmask(const v_int16x16& a)
 inline int v_signmask(const v_uint16x16& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
 
-inline int v_signmask(const v_int32x8& a)
-{
-    v_int16x16 a16 = v_pack(a, a);
-    return v_signmask(v_pack(a16, a16)) & 0xFF;
-}
-inline int v_signmask(const v_uint32x8& a)
-{ return v_signmask(v_reinterpret_as_s32(a)); }
-
 inline int v_signmask(const v_float32x8& a)
 { return _mm256_movemask_ps(a.val); }
 inline int v_signmask(const v_float64x4& a)
 { return _mm256_movemask_pd(a.val); }
+
+inline int v_signmask(const v_int32x8& a)
+{ return v_signmask(v_reinterpret_as_f32(a)); }
+inline int v_signmask(const v_uint32x8& a)
+{ return v_signmask(v_reinterpret_as_f32(a)); }
 
 inline int v_scan_forward(const v_int8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
 inline int v_scan_forward(const v_uint8x32& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s8(a))); }
@@ -1270,10 +1267,10 @@ inline int v_scan_forward(const v_float64x4& a) { return trailingZeros32(v_signm
 
 OPENCV_HAL_IMPL_AVX_CHECK(v_uint8x32,  OPENCV_HAL_1ST, -1)
 OPENCV_HAL_IMPL_AVX_CHECK(v_int8x32,   OPENCV_HAL_1ST, -1)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint16x16, OPENCV_HAL_AND, (int)0xaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int16x16,  OPENCV_HAL_AND, (int)0xaaaa)
-OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8,  OPENCV_HAL_AND, (int)0x8888)
-OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8,   OPENCV_HAL_AND, (int)0x8888)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint16x16, OPENCV_HAL_AND, (int)0xaaaaaaaa)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int16x16,  OPENCV_HAL_AND, (int)0xaaaaaaaa)
+OPENCV_HAL_IMPL_AVX_CHECK(v_uint32x8,  OPENCV_HAL_AND, (int)0x88888888)
+OPENCV_HAL_IMPL_AVX_CHECK(v_int32x8,   OPENCV_HAL_AND, (int)0x88888888)
 
 #define OPENCV_HAL_IMPL_AVX_CHECK_FLT(_Tpvec, allmask) \
     inline bool v_check_all(const _Tpvec& a)           \
