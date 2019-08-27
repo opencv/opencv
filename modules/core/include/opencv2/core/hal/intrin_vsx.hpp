@@ -764,10 +764,10 @@ inline scalartype v_reduce_##suffix(const _Tpvec& a)                            
     rs = func(rs, vec_sld(rs, rs, 2));                                             \
     return vec_extract(func(rs, vec_sld(rs, rs, 1)), 0);                           \
 }
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, max, vec_max)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, min, vec_min)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, max, vec_max)
-OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_uint8x16, vec_uchar16, uchar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_uint8x16, vec_uchar16, uchar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_int8x16, vec_char16, schar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(v_int8x16, vec_char16, schar, min, vec_min)
 
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
