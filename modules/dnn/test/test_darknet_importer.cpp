@@ -334,14 +334,10 @@ static const std::chrono::milliseconds async_timeout(500);
 typedef testing::TestWithParam<tuple<std::string, Target> > Test_Darknet_nets_async;
 TEST_P(Test_Darknet_nets_async, Accuracy)
 {
-  // applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-  //
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
     std::string prefix = get<0>(GetParam());
     int target = get<1>(GetParam());
-
-    if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);  // need to update check function
-
 
     const int numInputs = 2;
     std::vector<Mat> inputs(numInputs);

@@ -481,7 +481,7 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN)
                                   "faster_rcnn_resnet50_coco_2018_01_28"};
 
     checkBackend();
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
