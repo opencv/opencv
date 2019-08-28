@@ -137,8 +137,8 @@ class InfEngineBackendNode : public BackendNode
 public:
     InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
 
-    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>* inputs,
-                         std::vector<Mat>* outputs, std::vector<Mat>* internals);
+    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>& inputs,
+                         std::vector<Mat>& outputs, std::vector<Mat>& internals);
 
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
@@ -146,6 +146,8 @@ public:
     // Inference Engine network object that allows to obtain the outputs of this layer.
     InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
+    // CPU fallback in case of unsupported Inference Engine layer.
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class InfEngineBackendWrapper : public BackendWrapper

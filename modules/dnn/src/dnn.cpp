@@ -1630,7 +1630,7 @@ struct Net::Impl
                 else
                 {
                     node = Ptr<BackendNode>(new InfEngineBackendNode(
-                        ld.layerInstance, &ld.inputBlobs, &ld.outputBlobs, &ld.internals));
+                        ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
                 }
             }
             else if (node.empty())

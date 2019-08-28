@@ -27,13 +27,32 @@ namespace cv { namespace dnn {
 static std::string kDefaultInpLayerName = "empty_inp_layer_name";
 static std::string kOpenCVLayersType = "OpenCVLayer";
 
-template <typename T>
-static T paramToPtr(const std::string& param)
+static std::string shapesToStr(const std::vector<Mat>& mats)
 {
-    std::istringstream iss(param);
-    size_t ptr;
-    iss >> ptr;
-    return (T)ptr;
+    std::ostringstream shapes;
+    shapes << mats.size() << " ";
+    for (const Mat& m : mats)
+    {
+        shapes << m.dims << " ";
+        for (int i = 0; i < m.dims; ++i)
+            shapes << m.size[i] << " ";
+    }
+    return shapes.str();
+}
+
+static void strToShapes(const std::string& str, std::vector<std::vector<size_t> >& shapes)
+{
+    std::istringstream ss(str);
+    int num, dims;
+    ss >> num;
+    shapes.resize(num);
+    for (int i = 0; i < num; ++i)
+    {
+        ss >> dims;
+        shapes[i].resize(dims);
+        for (int j = 0; j < dims; ++j)
+            ss >> shapes[i][j];
+    }
 }
 
 class InfEngineCustomLayer : public InferenceEngine::ILayerExecImpl
@@ -41,8 +60,16 @@ class InfEngineCustomLayer : public InferenceEngine::ILayerExecImpl
 public:
     explicit InfEngineCustomLayer(const InferenceEngine::CNNLayer& layer) : cnnLayer(layer)
     {
-        cvLayer = paramToPtr<Layer*>(layer.GetParamAsString("impl"));
-        internals = *paramToPtr<std::vector<Mat>*>(layer.GetParamAsString("internals"));
+        std::istringstream iss(layer.GetParamAsString("impl"));
+        size_t ptr;
+        iss >> ptr;
+        cvLayer = (Layer*)ptr;
+
+        std::vector<std::vector<size_t> > shapes;
+        strToShapes(layer.GetParamAsString("internals"), shapes);
+        internals.resize(shapes.size());
+        for (int i = 0; i < shapes.size(); ++i)
+            internals[i].create(std::vector<int>(shapes[i].begin(), shapes[i].end()), CV_32F);
     }
 
     virtual InferenceEngine::StatusCode execute(std::vector<InferenceEngine::Blob::Ptr>& inputs,
@@ -53,9 +80,15 @@ public:
         infEngineBlobsToMats(inputs, inpMats);
         infEngineBlobsToMats(outputs, outMats);
 
-        cvLayer->forward(inpMats, outMats, internals);
-
-        return InferenceEngine::StatusCode::OK;
+        try
+        {
+            cvLayer->forward(inpMats, outMats, internals);
+            return InferenceEngine::StatusCode::OK;
+        }
+        catch (...)
+        {
+            return InferenceEngine::StatusCode::GENERAL_ERROR;
+        }
     }
 
     virtual InferenceEngine::StatusCode
@@ -108,14 +141,7 @@ public:
                   std::vector<InferenceEngine::SizeVector>& outShapes,
                   InferenceEngine::ResponseDesc* desc) noexcept override
       {
-          std::vector<Mat>* outMats = paramToPtr<std::vector<Mat>*>(params.at("outputs"));
-
-          outShapes.resize(outMats->size());
-          for (int i = 0; i < outShapes.size(); ++i)
-          {
-              Mat& m = outMats->operator[](i);
-              outShapes[i] = std::vector<size_t>(&m.size[0], &m.size[0] + m.dims);
-          }
+          strToShapes(params.at("outputs"), outShapes);
           return InferenceEngine::StatusCode::OK;
       }
 };
@@ -138,13 +164,13 @@ private:
 class InfEngineExtension : public InferenceEngine::IExtension
 {
 public:
-    virtual void SetLogCallback(InferenceEngine::IErrorListener& listener) noexcept {}
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
     virtual void Unload() noexcept {}
     virtual void Release() noexcept {}
-    virtual void GetVersion(const InferenceEngine::Version*& versionInfo) const noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
 
-    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**& types, unsigned int& size,
-                                                          InferenceEngine::ResponseDesc* resp) noexcept
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
     {
         return InferenceEngine::StatusCode::OK;
     }
@@ -163,19 +189,20 @@ public:
 InfEngineBackendNode::InfEngineBackendNode(const InferenceEngine::Builder::Layer& _layer)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(_layer) {}
 
-    InfEngineBackendNode::InfEngineBackendNode(Ptr<Layer>& cvLayer, std::vector<Mat*>* inputs,
-                                               std::vector<Mat>* outputs,
-                                               std::vector<Mat>* internals)
-        : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(cvLayer->name)
+    InfEngineBackendNode::InfEngineBackendNode(Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
+                                               std::vector<Mat>& outputs,
+                                               std::vector<Mat>& internals)
+        : BackendNode(DNN_BACKEND_INFERENCE_ENGINE), layer(cvLayer_->name),
+          cvLayer(cvLayer_)
 {
     CV_Assert(!cvLayer->name.empty());
     layer.setName(cvLayer->name);
     layer.setType(kOpenCVLayersType);
     layer.getParameters()["impl"] = (size_t)cvLayer.get();
-    layer.getParameters()["outputs"] = (size_t)outputs;
-    layer.getParameters()["internals"] = (size_t)internals;
-    layer.setInputPorts(std::vector<InferenceEngine::Port>(inputs->size()));
-    layer.setOutputPorts(std::vector<InferenceEngine::Port>(outputs->size()));
+    layer.getParameters()["outputs"] = shapesToStr(outputs);
+    layer.getParameters()["internals"] = shapesToStr(internals);
+    layer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
+    layer.setOutputPorts(std::vector<InferenceEngine::Port>(outputs.size()));
 }
 
 static std::vector<Ptr<InfEngineBackendWrapper> >
