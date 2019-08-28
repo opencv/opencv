@@ -75,7 +75,7 @@ TEST_P(Objdetect_QRCode, regression)
     ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
 
-    const std::string dataset_config = findDataFile(root + "dataset_config.json", false);
+    const std::string dataset_config = findDataFile(root + "dataset_config.json");
     FileStorage file_config(dataset_config, FileStorage::READ);
     ASSERT_TRUE(file_config.isOpened()) << "Can't read validation data: " << dataset_config;
     {

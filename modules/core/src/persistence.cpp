@@ -603,7 +603,7 @@ public:
                 {
                     int xml_buf_size = 1 << 10;
                     char substr[] = "</opencv_storage>";
-                    int last_occurence = -1;
+                    int last_occurrence = -1;
                     xml_buf_size = MIN(xml_buf_size, int(file_size));
                     fseek( file, -xml_buf_size, SEEK_END );
                     std::vector<char> xml_buf_(xml_buf_size+2);
@@ -621,11 +621,11 @@ public:
                             ptr = strstr( ptr, substr );
                             if( !ptr )
                                 break;
-                            last_occurence = line_offset + (int)(ptr - ptr0);
+                            last_occurrence = line_offset + (int)(ptr - ptr0);
                             ptr += strlen(substr);
                         }
                     }
-                    if( last_occurence < 0 )
+                    if( last_occurrence < 0 )
                     {
                         release();
                         CV_Error( CV_StsError, "Could not find </opencv_storage> in the end of file.\n" );
@@ -633,7 +633,7 @@ public:
                     closeFile();
                     file = fopen( filename.c_str(), "r+t" );
                     CV_Assert(file != 0);
-                    fseek( file, last_occurence, SEEK_SET );
+                    fseek( file, last_occurrence, SEEK_SET );
                     // replace the last "</opencv_storage>" with " <!-- resumed -->", which has the same length
                     puts( " <!-- resumed -->" );
                     fseek( file, 0, SEEK_END );
@@ -716,7 +716,7 @@ public:
             else if(strncmp( bufPtr, xml_signature, strlen(xml_signature) ) == 0)
                 fmt = FileStorage::FORMAT_XML;
             else if(strbufsize  == bufOffset)
-                CV_Error(CV_BADARG_ERR, "Input file is empty");
+                CV_Error(CV_BADARG_ERR, "Input file is invalid");
             else
                 CV_Error(CV_BADARG_ERR, "Unsupported file storage format");
 

@@ -422,7 +422,7 @@ void log64f(const double *src, double *dst, int n)
 
 #define EXPPOLY_32F_A0 .9670371139572337719125840413672004409288e-2
 
-// the code below uses _mm_cast* intrinsics, which are not avialable on VS2005
+// the code below uses _mm_cast* intrinsics, which are not available on VS2005
 #if (defined _MSC_VER && _MSC_VER < 1500) || \
 (!defined __APPLE__ && defined __GNUC__ && __GNUC__*100 + __GNUC_MINOR__ < 402)
 #undef CV_SSE2

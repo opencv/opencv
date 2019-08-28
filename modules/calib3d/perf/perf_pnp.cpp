@@ -12,8 +12,8 @@ typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
 typedef perf::TestBaseWithParam<int> PointsNum;
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
-            testing::Combine(
-                testing::Values(5, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
+            testing::Combine( //When non planar, DLT needs at least 6 points for SOLVEPNP_ITERATIVE flag
+                testing::Values(6, 3*9, 7*13), //TODO: find why results on 4 points are too unstable
                 testing::Values((int)SOLVEPNP_ITERATIVE, (int)SOLVEPNP_EPNP, (int)SOLVEPNP_UPNP, (int)SOLVEPNP_DLS)
                 )
             )

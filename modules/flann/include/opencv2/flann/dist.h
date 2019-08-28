@@ -114,7 +114,7 @@ struct L2_Simple
         ResultType result = ResultType();
         ResultType diff;
         for(size_t i = 0; i < size; ++i ) {
-            diff = *a++ - *b++;
+            diff = (ResultType)(*a++ - *b++);
             result += diff*diff;
         }
         return result;
@@ -441,7 +441,7 @@ struct Hamming
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
         }
-#elif __GNUC__
+#elif defined(__GNUC__)
         {
             //for portability just use unsigned long -- and use the __builtin_popcountll (see docs for __builtin_popcountll)
             typedef unsigned long long pop_t;

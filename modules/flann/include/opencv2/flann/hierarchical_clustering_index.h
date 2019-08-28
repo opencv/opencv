@@ -578,7 +578,7 @@ public:
 private:
 
     /**
-     * Struture representing a node in the hierarchical k-means tree.
+     * Structure representing a node in the hierarchical k-means tree.
      */
     struct Node
     {

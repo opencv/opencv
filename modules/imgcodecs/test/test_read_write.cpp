@@ -105,7 +105,7 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
     "jp2",
 #endif
 #if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/

@@ -131,6 +131,9 @@ public:
         CV_Assert(layerInternals.empty());
         internals.push_back(layerOutputs[0]);
 
+        // Detections layer.
+        internals.push_back(shape(1, 1, keepTopAfterNMS, 7));
+
         outputs.resize(2);
         outputs[0] = shape(keepTopAfterNMS, 5);
         outputs[1] = shape(keepTopAfterNMS, 1);
@@ -176,13 +179,14 @@ public:
         internals_.getUMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
-        CV_Assert(internals.size() == 3);
+        CV_Assert(internals.size() == 4);
         const UMat& scores = inputs[0];
         const UMat& bboxDeltas = inputs[1];
         const UMat& imInfo = inputs[2];
         UMat& priorBoxes = internals[0];
         UMat& permuttedScores = internals[1];
         UMat& permuttedDeltas = internals[2];
+        UMat& detections = internals[3];
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
@@ -217,7 +221,7 @@ public:
         layerInputs[2] = priorBoxes;
         layerInputs[3] = umat_fakeImageBlob;
 
-        layerOutputs[0] = UMat();
+        layerOutputs[0] = detections;
         detectionOutputLayer->forward(layerInputs, layerOutputs, internals);
 
         // DetectionOutputLayer produces 1x1xNx7 output where N might be less or
@@ -236,10 +240,6 @@ public:
         // The scores.
         dst = outputs[1].rowRange(0, numDets);
         layerOutputs[0].col(2).copyTo(dst);
-
-        if (numDets < keepTopAfterNMS)
-            for (int i = 0; i < 2; ++i)
-                outputs[i].rowRange(numDets, keepTopAfterNMS).setTo(0);
 
         return true;
     }
@@ -266,13 +266,14 @@ public:
         internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
-        CV_Assert(internals.size() == 3);
+        CV_Assert(internals.size() == 4);
         const Mat& scores = inputs[0];
         const Mat& bboxDeltas = inputs[1];
         const Mat& imInfo = inputs[2];
         Mat& priorBoxes = internals[0];
         Mat& permuttedScores = internals[1];
         Mat& permuttedDeltas = internals[2];
+        Mat& detections = internals[3];
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
@@ -302,7 +303,7 @@ public:
         layerInputs[2] = priorBoxes;
         layerInputs[3] = fakeImageBlob;
 
-        layerOutputs[0] = Mat();
+        layerOutputs[0] = detections;
         detectionOutputLayer->forward(layerInputs, layerOutputs, internals);
 
         // DetectionOutputLayer produces 1x1xNx7 output where N might be less or
@@ -319,16 +320,11 @@ public:
         // The scores.
         dst = outputs[1].rowRange(0, numDets);
         layerOutputs[0].col(2).copyTo(dst);
-
-        if (numDets < keepTopAfterNMS)
-            for (int i = 0; i < 2; ++i)
-                outputs[i].rowRange(numDets, keepTopAfterNMS).setTo(0);
     }
 
+#ifdef HAVE_INF_ENGINE
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ProposalLayer ieLayer(name);
 
         ieLayer.setBaseSize(baseSize);
@@ -349,36 +345,8 @@ public:
         ieLayer.setRatio(ratiosVec);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Proposal";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        ieLayer->params["base_size"] = format("%d", baseSize);
-        ieLayer->params["feat_stride"] = format("%d", featStride);
-        ieLayer->params["min_size"] = "16";
-        ieLayer->params["nms_thresh"] = format("%f", nmsThreshold);
-        ieLayer->params["post_nms_topn"] = format("%d", keepTopAfterNMS);
-        ieLayer->params["pre_nms_topn"] = format("%d", keepTopBeforeNMS);
-        if (ratios.size())
-        {
-            ieLayer->params["ratio"] = format("%f", ratios.get<float>(0));
-            for (int i = 1; i < ratios.size(); ++i)
-                ieLayer->params["ratio"] += format(",%f", ratios.get<float>(i));
-        }
-        if (scales.size())
-        {
-            ieLayer->params["scale"] = format("%f", scales.get<float>(0));
-            for (int i = 1; i < scales.size(); ++i)
-                ieLayer->params["scale"] += format(",%f", scales.get<float>(i));
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_INF_ENGINE
 
 private:
     // A first half of channels are background scores. We need only a second one.

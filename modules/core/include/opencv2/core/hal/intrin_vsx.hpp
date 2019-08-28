@@ -11,11 +11,6 @@
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
 
-/**
- * todo: supporting half precision for power9
- * convert instractions xvcvhpsp, xvcvsphp
-**/
-
 namespace cv
 {
 
@@ -258,8 +253,16 @@ inline void v_store_low(_Tp* ptr, const _Tpvec& a)                          \
 inline void v_store_high(_Tp* ptr, const _Tpvec& a)                         \
 { vec_st_h8(a.val, ptr); }
 
-#define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
-OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+// working around gcc bug for aligned ld/st
+// if runtime check for vec_ld/st fail we failback to unaligned ld/st
+// https://github.com/opencv/opencv/issues/13211
+#ifdef CV_COMPILER_VSX_BROKEN_ALIGNED
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vsx_ld, vsx_st, vsx_st)
+#else
+    #define OPENCV_HAL_IMPL_VSX_LOADSTORE(_Tpvec, _Tp) \
+    OPENCV_HAL_IMPL_VSX_LOADSTORE_C(_Tpvec, _Tp, vsx_ld, vec_ld, vsx_st, vec_st)
+#endif
 
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_uint8x16,  uchar)
 OPENCV_HAL_IMPL_VSX_LOADSTORE(v_int8x16,   schar)
@@ -689,15 +692,27 @@ inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b)
 ////////// Reduce and mask /////////
 
 /** Reduce **/
-inline short v_reduce_sum(const v_int16x8& a)
+inline uint v_reduce_sum(const v_uint8x16& a)
+{
+    const vec_uint4 zero4 = vec_uint4_z;
+    vec_uint4 sum4 = vec_sum4s(a.val, zero4);
+    return (uint)vec_extract(vec_sums(vec_int4_c(sum4), vec_int4_c(zero4)), 3);
+}
+inline int v_reduce_sum(const v_int8x16& a)
+{
+    const vec_int4 zero4 = vec_int4_z;
+    vec_int4 sum4 = vec_sum4s(a.val, zero4);
+    return (int)vec_extract(vec_sums(sum4, zero4), 3);
+}
+inline int v_reduce_sum(const v_int16x8& a)
 {
     const vec_int4 zero = vec_int4_z;
-    return saturate_cast<short>(vec_extract(vec_sums(vec_sum4s(a.val, zero), zero), 3));
+    return saturate_cast<int>(vec_extract(vec_sums(vec_sum4s(a.val, zero), zero), 3));
 }
-inline ushort v_reduce_sum(const v_uint16x8& a)
+inline uint v_reduce_sum(const v_uint16x8& a)
 {
     const vec_int4 v4 = vec_int4_c(vec_unpackhu(vec_adds(a.val, vec_sld(a.val, a.val, 8))));
-    return saturate_cast<ushort>(vec_extract(vec_sums(v4, vec_int4_z), 3));
+    return saturate_cast<uint>(vec_extract(vec_sums(v4, vec_int4_z), 3));
 }
 
 #define OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(_Tpvec, _Tpvec2, scalartype, suffix, func) \
@@ -716,6 +731,14 @@ OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, sum, vec_add)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_4(v_float32x4, vec_float4, float, min, vec_min)
 
+inline uint64 v_reduce_sum(const v_uint64x2& a)
+{
+    return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
+}
+inline int64 v_reduce_sum(const v_int64x2& a)
+{
+    return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
+}
 inline double v_reduce_sum(const v_float64x2& a)
 {
     return vec_extract(vec_add(a.val, vec_permi(a.val, a.val, 3)), 0);
@@ -732,6 +755,19 @@ OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint16x8, vec_ushort8, ushort, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint16x8, vec_ushort8, ushort, min, vec_min)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int16x8, vec_short8, short, max, vec_max)
 OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int16x8, vec_short8, short, min, vec_min)
+
+#define OPENCV_HAL_IMPL_VSX_REDUCE_OP_16(_Tpvec, _Tpvec2, scalartype, suffix, func) \
+inline scalartype v_reduce_##suffix(const _Tpvec& a)                               \
+{                                                                                  \
+    _Tpvec2 rs = func(a.val, vec_sld(a.val, a.val, 8));                            \
+    rs = func(rs, vec_sld(rs, rs, 4));                                             \
+    rs = func(rs, vec_sld(rs, rs, 2));                                             \
+    return vec_extract(func(rs, vec_sld(rs, rs, 1)), 0);                           \
+}
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_uint8x16, vec_uchar16, uchar, min, vec_min)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, max, vec_max)
+OPENCV_HAL_IMPL_VSX_REDUCE_OP_8(v_int8x16, vec_char16, schar, min, vec_min)
 
 inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
                                  const v_float32x4& c, const v_float32x4& d)
@@ -760,7 +796,7 @@ inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
 inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
 {
     vec_ushort8 ad = vec_absd(a.val, b.val);
-    VSX_UNUSED(vec_int4) sum = vec_sums(vec_int4_c(vec_unpackhu(ad)), vec_int4_c(vec_unpacklu(ad)));
+    VSX_UNUSED(vec_int4) sum = vec_sums(vec_int4_c(vec_unpackhu(ad)) + vec_int4_c(vec_unpacklu(ad)), vec_int4_z);
     return (unsigned)vec_extract(sum, 3);
 }
 inline unsigned v_reduce_sad(const v_int16x8& a, const v_int16x8& b)
@@ -789,43 +825,44 @@ inline float v_reduce_sad(const v_float32x4& a, const v_float32x4& b)
 }
 
 /** Popcount **/
-template<typename _Tpvec>
-inline v_uint32x4 v_popcount(const _Tpvec& a)
-{ return v_uint32x4(vec_popcntu(vec_uint4_c(a.val))); }
+inline v_uint8x16 v_popcount(const v_uint8x16& a)
+{ return v_uint8x16(vec_popcntu(a.val)); }
+inline v_uint8x16 v_popcount(const v_int8x16& a)
+{ return v_uint8x16(vec_popcntu(a.val)); }
+inline v_uint16x8 v_popcount(const v_uint16x8& a)
+{ return v_uint16x8(vec_popcntu(a.val)); }
+inline v_uint16x8 v_popcount(const v_int16x8& a)
+{ return v_uint16x8(vec_popcntu(a.val)); }
+inline v_uint32x4 v_popcount(const v_uint32x4& a)
+{ return v_uint32x4(vec_popcntu(a.val)); }
+inline v_uint32x4 v_popcount(const v_int32x4& a)
+{ return v_uint32x4(vec_popcntu(a.val)); }
+inline v_uint64x2 v_popcount(const v_uint64x2& a)
+{ return v_uint64x2(vec_popcntu(a.val)); }
+inline v_uint64x2 v_popcount(const v_int64x2& a)
+{ return v_uint64x2(vec_popcntu(a.val)); }
 
 /** Mask **/
 inline int v_signmask(const v_uint8x16& a)
 {
-    vec_uchar16 sv  = vec_sr(a.val, vec_uchar16_sp(7));
-    static const vec_uchar16 slm = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
-    sv = vec_sl(sv, slm);
-    vec_uint4 sv4 = vec_sum4s(sv, vec_uint4_z);
-    static const vec_uint4 slm4 = {0, 0, 8, 8};
-    sv4 = vec_sl(sv4, slm4);
-    return vec_extract(vec_sums((vec_int4) sv4, vec_int4_z), 3);
+    static const vec_uchar16 qperm = {120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_int8x16& a)
 { return v_signmask(v_reinterpret_as_u8(a)); }
 
 inline int v_signmask(const v_int16x8& a)
 {
-    static const vec_ushort8 slm = {0, 1, 2, 3, 4, 5, 6, 7};
-    vec_short8 sv = vec_sr(a.val, vec_ushort8_sp(15));
-    sv = vec_sl(sv, slm);
-    vec_int4 svi = vec_int4_z;
-    svi = vec_sums(vec_sum4s(sv, svi), svi);
-    return vec_extract(svi, 3);
+    static const vec_uchar16 qperm = {112, 96, 80, 64, 48, 32, 16, 0, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint16x8& a)
 { return v_signmask(v_reinterpret_as_s16(a)); }
 
 inline int v_signmask(const v_int32x4& a)
 {
-    static const vec_uint4 slm = {0, 1, 2, 3};
-    vec_int4 sv = vec_sr(a.val, vec_uint4_sp(31));
-    sv = vec_sl(sv, slm);
-    sv = vec_sums(sv, vec_int4_z);
-    return vec_extract(sv, 3);
+    static const vec_uchar16 qperm = {96, 64, 32, 0, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128};
+    return vec_extract((vec_int4)vec_vbpermq(v_reinterpret_as_u8(a).val, qperm), 2);
 }
 inline int v_signmask(const v_uint32x4& a)
 { return v_signmask(v_reinterpret_as_s32(a)); }
@@ -841,6 +878,17 @@ inline int v_signmask(const v_uint64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
 inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_s64(a)); }
+
+inline int v_scan_forward(const v_int8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint8x16& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint16x8& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float32x4& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_int64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_uint64x2& a) { return trailingZeros32(v_signmask(a)); }
+inline int v_scan_forward(const v_float64x2& a) { return trailingZeros32(v_signmask(a)); }
 
 template<typename _Tpvec>
 inline bool v_check_all(const _Tpvec& a)
@@ -1069,117 +1117,188 @@ inline v_float64x2 v_lut_pairs(const double* tab, const int* idx) { return v_loa
 
 inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_int32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_uint32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[4] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1),
+        vec_extract(idxvec.val, 2),
+        vec_extract(idxvec.val, 3)
+    };
     return v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
 }
 
 inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
+    const int idx[2] = {
+        vec_extract(idxvec.val, 0),
+        vec_extract(idxvec.val, 1)
+    };
     return v_float64x2(tab[idx[0]], tab[idx[1]]);
 }
 
 inline void v_lut_deinterleave(const float* tab, const v_int32x4& idxvec, v_float32x4& x, v_float32x4& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float32x4(tab[idx[0]], tab[idx[1]], tab[idx[2]], tab[idx[3]]);
-    y = v_float32x4(tab[idx[0]+1], tab[idx[1]+1], tab[idx[2]+1], tab[idx[3]+1]);
+    vec_float4 xy0 = vec_ld_l8(tab + vec_extract(idxvec.val, 0));
+    vec_float4 xy1 = vec_ld_l8(tab + vec_extract(idxvec.val, 1));
+    vec_float4 xy2 = vec_ld_l8(tab + vec_extract(idxvec.val, 2));
+    vec_float4 xy3 = vec_ld_l8(tab + vec_extract(idxvec.val, 3));
+    vec_float4 xy02 = vec_mergeh(xy0, xy2); // x0, x2, y0, y2
+    vec_float4 xy13 = vec_mergeh(xy1, xy3); // x1, x3, y1, y3
+    x.val = vec_mergeh(xy02, xy13);
+    y.val = vec_mergel(xy02, xy13);
 }
-
 inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_float64x2& x, v_float64x2& y)
 {
-    int CV_DECL_ALIGNED(32) idx[4];
-    v_store_aligned(idx, idxvec);
-    x = v_float64x2(tab[idx[0]], tab[idx[1]]);
-    y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
+    vec_double2 xy0 = vsx_ld(vec_extract(idxvec.val, 0), tab);
+    vec_double2 xy1 = vsx_ld(vec_extract(idxvec.val, 1), tab);
+    x.val = vec_mergeh(xy0, xy1);
+    y.val = vec_mergel(xy0, xy1);
 }
 
 inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
 {
-    vec_short8 vec0 = vec_mergeh((vec_short8)vec.val, (vec_short8)vec_mergesql(vec.val, vec.val));
-    vec0 = vec_mergeh(vec0, vec_mergesql(vec0, vec0));
-    return v_int8x16(vec_mergeh((vec_char16)vec0, (vec_char16)vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 2, 1, 3, 4, 6, 5, 7, 8, 10, 9, 11, 12, 14, 13, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); }
+
 inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
 {
-    vec_char16 vec0 = (vec_char16)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int8x16(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0, 4, 1, 5, 2, 6, 3, 7, 8, 12, 9, 13, 10, 14, 11, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
 {
-    vec_short8 vec0 = (vec_short8)vec_mergeh((vec_int4)vec.val, (vec_int4)vec_mergesql(vec.val, vec.val));
-    return v_int16x8(vec_mergeh(vec0, vec_mergesql(vec0, vec0)));
+    static const vec_uchar16 perm = {0,1, 4,5, 2,3, 6,7, 8,9, 12,13, 10,11, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+
 inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
 {
-    return v_int16x8(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1, 8,9, 2,3, 10,11, 4,5, 12,13, 6,7, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
 
 inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
 {
-    return v_int32x4(vec_mergeh(vec.val, vec_mergesql(vec.val, vec.val)));
+    static const vec_uchar16 perm = {0,1,2,3, 8,9,10,11, 4,5,6,7, 12,13,14,15};
+    return v_int32x4(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
-inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec)
+{ return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec)
+{ return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
 
 inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
 {
-    schar CV_DECL_ALIGNED(32) val[16];
-    v_store_aligned(val, vec);
-    return v_int8x16(val[0], val[1], val[2], val[4], val[5], val[6], val[8], val[9], val[10], val[12], val[13], val[14], val[15], val[15], val[15], val[15]);
+    static const vec_uchar16 perm = {0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 15, 15, 15};
+    return v_int8x16(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
+{ return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
 
 inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 {
-    short CV_DECL_ALIGNED(32) val[8];
-    v_store_aligned(val, vec);
-    return v_int16x8(val[0], val[1], val[2], val[4], val[5], val[6], val[7], val[7]);
+    static const vec_uchar16 perm = {0,1, 2,3, 4,5, 8,9, 10,11, 12,13, 14,15, 14,15};
+    return v_int16x8(vec_perm(vec.val, vec.val, perm));
 }
-inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
+{ return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
 
-inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
-inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
-inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec)
+{ return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec)
+{ return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec)
+{ return vec; }
 
 /////// FP16 support ////////
 
-// [TODO] implement these 2 using VSX or universal intrinsics (copy from intrin_sse.cpp and adopt)
 inline v_float32x4 v_load_expand(const float16_t* ptr)
 {
-    return v_float32x4((float)ptr[0], (float)ptr[1], (float)ptr[2], (float)ptr[3]);
+    vec_ushort8 vf16 = vec_ld_l8((const ushort*)ptr);
+#if CV_VSX3 && defined(vec_extract_fp_from_shorth)
+    return v_float32x4(vec_extract_fp_from_shorth(vf16));
+#elif CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_float4 vf32;
+    __asm__ __volatile__ ("xvcvhpsp %x0,%x1" : "=wf" (vf32) : "wa" (vec_mergeh(vf16, vf16)));
+    return v_float32x4(vf32);
+#else
+    const vec_int4 z = vec_int4_z, delta = vec_int4_sp(0x38000000);
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 maxexp = vec_int4_sp(0x7c000000);
+    const vec_float4 deltaf = vec_float4_c(vec_int4_sp(0x38800000));
+
+    vec_int4 bits = vec_int4_c(vec_mergeh(vec_short8_c(z), vec_short8_c(vf16)));
+    vec_int4 e = vec_and(bits, maxexp), sign = vec_and(bits, signmask);
+    vec_int4 t = vec_add(vec_sr(vec_xor(bits, sign), vec_uint4_sp(3)), delta); // ((h & 0x7fff) << 13) + delta
+    vec_int4 zt = vec_int4_c(vec_sub(vec_float4_c(vec_add(t, vec_int4_sp(1 << 23))), deltaf));
+
+    t = vec_add(t, vec_and(delta, vec_cmpeq(maxexp, e)));
+    vec_bint4 zmask = vec_cmpeq(e, z);
+    vec_int4 ft = vec_sel(t, zt, zmask);
+    return v_float32x4(vec_float4_c(vec_or(ft, sign)));
+#endif
 }
 
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
-    float CV_DECL_ALIGNED(32) f[4];
-    v_store_aligned(f, v);
-    ptr[0] = float16_t(f[0]);
-    ptr[1] = float16_t(f[1]);
-    ptr[2] = float16_t(f[2]);
-    ptr[3] = float16_t(f[3]);
+// fixme: Is there any builtin op or intrinsic that cover "xvcvsphp"?
+#if CV_VSX3 && !defined(CV_COMPILER_VSX_BROKEN_ASM)
+    vec_ushort8 vf16;
+    __asm__ __volatile__ ("xvcvsphp %x0,%x1" : "=wa" (vf16) : "wf" (v.val));
+    vec_st_l8(vec_mergesqe(vf16, vf16), ptr);
+#else
+    const vec_int4 signmask = vec_int4_sp(0x80000000);
+    const vec_int4 rval = vec_int4_sp(0x3f000000);
+
+    vec_int4 t = vec_int4_c(v.val);
+    vec_int4 sign = vec_sra(vec_and(t, signmask), vec_uint4_sp(16));
+    t = vec_and(vec_nor(signmask, signmask), t);
+
+    vec_bint4 finitemask = vec_cmpgt(vec_int4_sp(0x47800000), t);
+    vec_bint4 isnan = vec_cmpgt(t, vec_int4_sp(0x7f800000));
+    vec_int4 naninf = vec_sel(vec_int4_sp(0x7c00), vec_int4_sp(0x7e00), isnan);
+    vec_bint4 tinymask = vec_cmpgt(vec_int4_sp(0x38800000), t);
+    vec_int4 tt = vec_int4_c(vec_add(vec_float4_c(t), vec_float4_c(rval)));
+    tt = vec_sub(tt, rval);
+    vec_int4 odd = vec_and(vec_sr(t, vec_uint4_sp(13)), vec_int4_sp(1));
+    vec_int4 nt = vec_add(t, vec_int4_sp(0xc8000fff));
+    nt = vec_sr(vec_add(nt, odd), vec_uint4_sp(13));
+    t = vec_sel(nt, tt, tinymask);
+    t = vec_sel(naninf, t, finitemask);
+    t = vec_or(t, sign);
+    vec_st_l8(vec_packs(t, t), ptr);
+#endif
 }
 
 inline void v_cleanup() {}
@@ -1234,16 +1353,6 @@ inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1,                  
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_uint32x4, vec_uint4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_int32x4, vec_int4)
 OPENCV_HAL_IMPL_VSX_TRANSPOSE4x4(v_float32x4, vec_float4)
-
-//! @name Check SIMD support
-//! @{
-//! @brief Check CPU capability of SIMD operation
-static inline bool hasSIMD128()
-{
-    return (CV_CPU_HAS_SUPPORT_VSX) ? true : false;
-}
-
-//! @}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

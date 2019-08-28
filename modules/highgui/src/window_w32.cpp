@@ -1231,7 +1231,7 @@ cvShowImage( const char* name, const CvArr* arr )
         cv::flip(dst, dst, 0);
     }
 
-    // ony resize window if needed
+    // only resize window if needed
     if (changed_size)
         icvUpdateWindowPos(window);
     InvalidateRect(window->hwnd, 0, 0);

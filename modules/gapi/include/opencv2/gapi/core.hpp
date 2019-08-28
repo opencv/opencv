@@ -8,13 +8,15 @@
 #ifndef OPENCV_GAPI_CORE_HPP
 #define OPENCV_GAPI_CORE_HPP
 
+#include <math.h>
+
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/gkernel.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/gkernel.hpp>
 
 /** \defgroup gapi_core G-API core (basic) functionality
 @{
@@ -392,9 +394,19 @@ namespace core {
             {
                 GAPI_Assert(fx != 0. && fy != 0.);
                 return in.withSize
-                    (Size(static_cast<int>(std::round(in.size.width  * fx)),
-                          static_cast<int>(std::round(in.size.height * fy))));
+                    (Size(static_cast<int>(round(in.size.width  * fx)),
+                          static_cast<int>(round(in.size.height * fy))));
             }
+        }
+    };
+
+    G_TYPED_KERNEL(GResizeP, <GMatP(GMatP,Size,int)>, "org.opencv.core.transform.resizeP") {
+        static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.planar);
+            GAPI_Assert(interp == cv::INTER_LINEAR);
+            return in.withSize(sz);
         }
     };
 
@@ -427,6 +439,12 @@ namespace core {
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
+        }
+    };
+
+    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
         }
     };
 
@@ -689,7 +707,7 @@ GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, 
 /** @brief Applies a mask to a matrix.
 
 The function mask set value from given matrix if the corresponding pixel value in mask matrix set to true,
-and set the matrix value to 0 overwise.
+and set the matrix value to 0 otherwise.
 
 Supported src matrix data types are @ref CV_8UC1, @ref CV_16SC1, @ref CV_16UC1. Supported mask data type is @ref CV_8UC1.
 
@@ -1281,7 +1299,7 @@ depths.
  */
 GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int depth);
 /** @overload
-This function appicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold depths except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
 GAPI_EXPORTS std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int depth);
@@ -1342,9 +1360,27 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 \f[\texttt{(double)dsize.height/src.rows}\f]
 @param interpolation interpolation method, see cv::InterpolationFlags
 
-@sa  warpAffine, warpPerspective, remap
+@sa  warpAffine, warpPerspective, remap, resizeP
  */
 GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+
+/** @brief Resizes a planar image.
+
+The function resizes the image src down to or up to the specified size.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
+
+Output image size will have the size dsize, the depth of output is the same as of src.
+
+@note Function textual ID is "org.opencv.core.transform.resizeP"
+
+@param src input image, must be of @ref CV_8UC1 type;
+@param dsize output image size;
+@param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
+
+@sa  warpAffine, warpPerspective, remap, resize
+ */
+GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
 /** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
 
@@ -1469,6 +1505,19 @@ Output matrix must be of the same depth as input one, size is specified by given
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
 
+/** @brief Copies a 2D matrix.
+
+The function copies the matrix.
+
+Output matrix must be of the same size and depth as input one.
+
+@note Function textual ID is "org.opencv.core.transform.copy"
+
+@param src input matrix.
+@sa crop
+*/
+GAPI_EXPORTS GMat copy(const GMat& src);
+
 /** @brief Applies horizontal concatenation to given matrices.
 
 The function horizontally concatenates two GMat matrices (with the same number of rows).
@@ -1563,25 +1612,6 @@ either have a single channel (in this case the same table is used for all channe
 number of channels as in the input matrix.
 */
 GAPI_EXPORTS GMat LUT(const GMat& src, const Mat& lut);
-
-/** @brief Performs a 3D look-up table transform of a multi-channel matrix.
-
-The function LUT3D fills the output matrix with values from the look-up table. Indices of the entries
-are taken from the input matrix. Interpolation is applied for mapping 0-255 range values to 0-16 range of 3DLUT table.
-The function processes each element of src as follows:
-@code{.cpp}
-    dst[i][j][k] = lut3D[~src_r][~src_g][~src_b];
-@endcode
-where ~ means approximation.
-Output is a matrix of of @ref CV_8UC3.
-
-@note Function textual ID is "org.opencv.core.transform.LUT3D"
-
-@param src input matrix of @ref CV_8UC3.
-@param lut3D look-up table 17x17x17 3-channel elements.
-@param interpolation The depth of interpoolation to be used.
-*/
-GAPI_EXPORTS GMat LUT3D(const GMat& src, const GMat& lut3D, int interpolation = INTER_NEAREST);
 
 /** @brief Converts a matrix to another data depth with optional scaling.
 

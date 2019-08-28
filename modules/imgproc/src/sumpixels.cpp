@@ -77,7 +77,7 @@ struct Integral_SIMD<uchar, double, double> {
 #if CV_TRY_AVX512_SKX
         CV_UNUSED(_tiltedstep);
         // TODO:  Add support for 1 channel input (WIP)
-        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && ((cn >= 2) && (cn <= 4))){
+        if (CV_CPU_HAS_SUPPORT_AVX512_SKX && !tilted && (cn <= 4)){
             opt_AVX512_SKX::calculate_integral_avx512(src, _srcstep, sum, _sumstep,
                                                       sqsum, _sqsumstep, width, height, cn);
             return true;
@@ -127,7 +127,7 @@ struct Integral_SIMD<uchar, int, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_int32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -138,7 +138,7 @@ struct Integral_SIMD<uchar, int, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);
@@ -194,7 +194,7 @@ struct Integral_SIMD<uchar, float, double>
             {
                 v_int16 el8 = v_reinterpret_as_s16(vx_load_expand(src_row + j));
                 v_float32 el4l, el4h;
-#if CV_AVX2
+#if CV_AVX2 && CV_SIMD_WIDTH == 32
                 __m256i vsum = _mm256_add_epi16(el8.val, _mm256_slli_si256(el8.val, 2));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 4));
                 vsum = _mm256_add_epi16(vsum, _mm256_slli_si256(vsum, 8));
@@ -205,7 +205,7 @@ struct Integral_SIMD<uchar, float, double>
 #else
                 el8 += v_rotate_left<1>(el8);
                 el8 += v_rotate_left<2>(el8);
-#if CV_SIMD_WIDTH == 32
+#if CV_SIMD_WIDTH >= 32
                 el8 += v_rotate_left<4>(el8);
 #if CV_SIMD_WIDTH == 64
                 el8 += v_rotate_left<8>(el8);

@@ -5,12 +5,12 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "api/gcomputation_priv.hpp"
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/core.hpp"
-#include "opencv2/gapi/fluid/imgproc.hpp"
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/core.hpp>
+#include <opencv2/gapi/fluid/imgproc.hpp>
 
 namespace opencv_test
 {
@@ -197,8 +197,7 @@ TEST(GComputationCompile, ReshapeRois)
     cv::randn(first_in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
     cv::Mat first_out_mat;
     auto fluidKernels = cv::gapi::combine(gapi::imgproc::fluid::kernels(),
-                                          gapi::core::fluid::kernels(),
-                                          cv::unite_policy::REPLACE);
+                                          gapi::core::fluid::kernels());
     cc.apply(first_in_mat, first_out_mat, cv::compile_args(fluidKernels));
     auto first_comp = cc.priv().m_lastCompiled;
 

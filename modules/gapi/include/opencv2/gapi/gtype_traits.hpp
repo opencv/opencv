@@ -26,9 +26,14 @@ namespace detail
     // a double dispatch
     enum class ArgKind: int
     {
-        OPAQUE,       // Unknown, generic, opaque-to-GAPI data type - STATIC
+        OPAQUE_VAL,   // Unknown, generic, opaque-to-GAPI data type - STATIC
+                      // Note: OPAQUE is sometimes defined in Win sys headers
+#if !defined(OPAQUE) && !defined(CV_DOXYGEN)
+        OPAQUE = OPAQUE_VAL,  // deprecated value used for compatibility, use OPAQUE_VAL instead
+#endif
         GOBJREF,      // <internal> reference to object
         GMAT,         // a cv::GMat
+        GMATP,        // a cv::GMatP
         GSCALAR,      // a cv::GScalar
         GARRAY,       // a cv::GArrayU (note - exactly GArrayU, not GArray<T>!)
     };
@@ -40,11 +45,16 @@ namespace detail
     template<typename T> struct GTypeTraits;
     template<typename T> struct GTypeTraits
     {
-        static constexpr const ArgKind kind = ArgKind::OPAQUE;
+        static constexpr const ArgKind kind = ArgKind::OPAQUE_VAL;
     };
     template<>           struct GTypeTraits<cv::GMat>
     {
         static constexpr const ArgKind kind = ArgKind::GMAT;
+        static constexpr const GShape shape = GShape::GMAT;
+    };
+    template<>           struct GTypeTraits<cv::GMatP>
+    {
+        static constexpr const ArgKind kind = ArgKind::GMATP;
         static constexpr const GShape shape = GShape::GMAT;
     };
     template<>           struct GTypeTraits<cv::GScalar>
@@ -76,9 +86,14 @@ namespace detail
 
     // Resolve a Host type back to its associated G-Type.
     // FIXME: Probably it can be avoided
+    // FIXME: GMatP is not present here.
+    // (Actually these traits is used only to check
+    // if associated G-type has custom wrap functions
+    // and GMat behavior is correct for GMatP)
     template<typename T> struct GTypeOf;
 #if !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::Mat>               { using type = cv::GMat;      };
+    template<>           struct GTypeOf<cv::UMat>              { using type = cv::GMat;      };
     template<>           struct GTypeOf<cv::Scalar>            { using type = cv::GScalar;   };
 #endif // !defined(GAPI_STANDALONE)
     template<>           struct GTypeOf<cv::gapi::own::Mat>    { using type = cv::GMat;      };

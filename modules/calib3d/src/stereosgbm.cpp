@@ -140,9 +140,6 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
     int width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
     PixType *prow1 = buffer + width2*2, *prow2 = prow1 + width*cn*2;
-#if CV_SIMD128
-    bool useSIMD = hasSIMD128();
-#endif
 
     tab += tabOfs;
 
@@ -224,7 +221,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
             int u1 = std::max(ul, ur); u1 = std::max(u1, u);
 
         #if CV_SIMD128
-            if( useSIMD )
+            if (true)
             {
                 v_uint8x16 _u  = v_setall_u8((uchar)u), _u0 = v_setall_u8((uchar)u0);
                 v_uint8x16 _u1 = v_setall_u8((uchar)u1);
@@ -304,8 +301,6 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
         5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0
     };
     static const v_uint16x8 v_LSB = v_uint16x8(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80);
-
-    bool useSIMD = hasSIMD128();
 #endif
 
     const int ALIGN = 16;
@@ -450,7 +445,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                                 const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
                             #if CV_SIMD128
-                                if( useSIMD )
+                                if (true)
                                 {
                                     for( d = 0; d < D; d += 8 )
                                     {
@@ -547,7 +542,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                 CostType* Sp = S + x*D;
 
             #if CV_SIMD128
-                if( useSIMD )
+                if (true)
                 {
                     v_int16x8 _P1 = v_setall_s16((short)P1);
 
@@ -681,7 +676,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         const CostType* Cp = C + x*D;
 
                     #if CV_SIMD128
-                        if( useSIMD )
+                        if (true)
                         {
                             v_int16x8 _P1 = v_setall_s16((short)P1);
                             v_int16x8 _delta0 = v_setall_s16((short)delta0);
@@ -753,7 +748,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     else
                     {
                     #if CV_SIMD128
-                        if( useSIMD )
+                        if (true)
                         {
                             v_int16x8 _minS = v_setall_s16(MAX_COST), _bestDisp = v_setall_s16(-1);
                             v_int16x8 _d8 = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7), _8 = v_setall_s16(8);
@@ -868,7 +863,6 @@ struct CalcVerticalSums: public ParallelLoopBody
         Cbuf = alignedBuf;
         Sbuf = Cbuf + CSBufSize;
         hsumBuf = Sbuf + CSBufSize;
-        useSIMD = hasSIMD128();
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -957,7 +951,7 @@ struct CalcVerticalSums: public ParallelLoopBody
                                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
                                 #if CV_SIMD128
-                                    if( useSIMD )
+                                    if (true)
                                     {
                                         for( d = 0; d < D; d += 8 )
                                         {
@@ -1034,7 +1028,7 @@ struct CalcVerticalSums: public ParallelLoopBody
                     CostType* Sp = S + x*D;
 
                 #if CV_SIMD128
-                    if( useSIMD )
+                    if (true)
                     {
                         v_int16x8 _P1 = v_setall_s16((short)P1);
 
@@ -1121,7 +1115,6 @@ struct CalcVerticalSums: public ParallelLoopBody
     size_t LrSize;
     size_t hsumBufNRows;
     int ftzero;
-    bool useSIMD;
 };
 
 struct CalcHorizontalSums: public ParallelLoopBody
@@ -1149,7 +1142,6 @@ struct CalcHorizontalSums: public ParallelLoopBody
         LrSize = 2 * D2;
         Cbuf = alignedBuf;
         Sbuf = Cbuf + CSBufSize;
-        useSIMD = hasSIMD128();
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -1204,7 +1196,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 CostType* Sp = S + x*D;
 
             #if CV_SIMD128
-                if( useSIMD )
+                if (true)
                 {
                     v_int16x8 _P1 = v_setall_s16((short)P1);
 
@@ -1277,7 +1269,7 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 minLr = MAX_COST;
 
             #if CV_SIMD128
-                if( useSIMD )
+                if (true)
                 {
                     v_int16x8 _P1 = v_setall_s16((short)P1);
 
@@ -1424,7 +1416,6 @@ struct CalcHorizontalSums: public ParallelLoopBody
     int INVALID_DISP_SCALED;
     int uniquenessRatio;
     int disp12MaxDiff;
-    bool useSIMD;
 };
 /*
  computes disparity for "roi" in img1 w.r.t. img2 and write it to disp1buf.
@@ -1536,10 +1527,6 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
     int costBufSize, hsumBufNRows;
     int TAB_OFS, ftzero;
 
-#if CV_SIMD128
-    bool useSIMD;
-#endif
-
     PixType* clipTab;
 
     SGBM3WayMainLoop(Mat *_buffers, const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, PixType* _clipTab, int _nstripes, int _stripe_overlap);
@@ -1569,10 +1556,6 @@ buffers(_buffers), img1(&_img1), img2(&_img2), dst_disp(_dst_disp), clipTab(_cli
     hsumBufNRows = SH2*2 + 2;
     TAB_OFS = 256*4;
     ftzero = std::max(params.preFilterCap, 15) | 1;
-
-#if CV_SIMD128
-    useSIMD = hasSIMD128();
-#endif
 }
 
 void getBufferPointers(Mat& buffer, int width, int width1, int D, int num_ch, int SH2, int P2,
@@ -1673,7 +1656,7 @@ void SGBM3WayMainLoop::getRawMatchingCost(CostType* C, // target cost-volume row
                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*D, 0);
 
 #if CV_SIMD128
-                    if(useSIMD)
+                    if (true)
                     {
                         v_int16x8 hv_reg;
                         for( d = 0; d < D; d+=8 )
@@ -1734,7 +1717,7 @@ inline void accumulateCostsLeftTop(CostType* leftBuf, CostType* leftBuf_prev, Co
                                    CostType& leftMinCost, CostType& topMinCost, int D, int P1, int P2)
 {
 #if CV_SIMD128
-    if(hasSIMD128())
+    if (true)
     {
         v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 
@@ -1846,7 +1829,7 @@ inline void accumulateCostsRight(CostType* rightBuf, CostType* topBuf, CostType*
                                  CostType& rightMinCost, int D, int P1, int P2, int& optimal_disp, CostType& min_cost)
 {
 #if CV_SIMD128
-    if(hasSIMD128())
+    if (true)
     {
         v_int16x8 P1_reg = v_setall_s16(cv::saturate_cast<CostType>(P1));
 
@@ -2012,7 +1995,7 @@ void SGBM3WayMainLoop::operator () (const Range& range) const
             if(uniquenessRatio>0)
             {
 #if CV_SIMD128
-                if(useSIMD)
+                if (true)
                 {
                     horPassCostVolume+=x;
                     int thresh = (100*min_cost)/(100-uniquenessRatio);
@@ -2030,14 +2013,14 @@ void SGBM3WayMainLoop::operator () (const Range& range) const
 
                         mask = cost1 < thresh_reg;
                         mask = mask & ( (cur_d<d1) | (cur_d>d2) );
-                        if( v_signmask(mask) )
+                        if( v_check_any(mask) )
                             break;
 
                         cur_d = cur_d+eight_reg;
 
                         mask = cost2 < thresh_reg;
                         mask = mask & ( (cur_d<d1) | (cur_d>d2) );
-                        if( v_signmask(mask) )
+                        if( v_check_any(mask) )
                             break;
 
                         cur_d = cur_d+eight_reg;

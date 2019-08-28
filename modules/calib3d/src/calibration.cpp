@@ -627,7 +627,7 @@ static void cvProjectPoints2Internal( const CvMat* objectPoints,
 
     if( (CV_MAT_TYPE(A->type) != CV_64FC1 && CV_MAT_TYPE(A->type) != CV_32FC1) ||
         A->rows != 3 || A->cols != 3 )
-        CV_Error( CV_StsBadArg, "Instrinsic parameters must be 3x3 floating-point matrix" );
+        CV_Error( CV_StsBadArg, "Intrinsic parameters must be 3x3 floating-point matrix" );
 
     cvConvert( A, &_a );
     fx = a[0]; fy = a[4];
@@ -1168,6 +1168,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         else
         {
             // non-planar structure. Use DLT method
+            CV_CheckGE(count, 6, "DLT algorithm needs at least 6 points for pose estimation from 3D-2D point correspondences.");
             double* L;
             double LL[12*12], LW[12], LV[12*12], sc;
             CvMat _LL = cvMat( 12, 12, CV_64F, LL );
@@ -2500,7 +2501,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
                       CvRect* roi1, CvRect* roi2 )
 {
     double _om[3], _t[3] = {0}, _uu[3]={0,0,0}, _r_r[3][3], _pp[3][4];
-    double _ww[3], _wr[3][3], _z[3] = {0,0,0}, _ri[3][3], _w3[3];
+    double _ww[3], _wr[3][3], _z[3] = {0,0,0}, _ri[3][3];
     cv::Rect_<float> inner1, inner2, outer1, outer2;
 
     CvMat om  = cvMat(3, 1, CV_64F, _om);
@@ -2509,13 +2510,11 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     CvMat r_r = cvMat(3, 3, CV_64F, _r_r);
     CvMat pp  = cvMat(3, 4, CV_64F, _pp);
     CvMat ww  = cvMat(3, 1, CV_64F, _ww); // temps
-    CvMat w3  = cvMat(3, 1, CV_64F, _w3); // temps
     CvMat wR  = cvMat(3, 3, CV_64F, _wr);
     CvMat Z   = cvMat(3, 1, CV_64F, _z);
     CvMat Ri  = cvMat(3, 3, CV_64F, _ri);
     double nx = imageSize.width, ny = imageSize.height;
     int i, k;
-    double nt, nw;
 
     if( matR->rows == 3 && matR->cols == 3 )
         cvRodrigues2(matR, &om);          // get vector rotation
@@ -2526,36 +2525,17 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     cvMatMul(&r_r, matT, &t);
 
     int idx = fabs(_t[0]) > fabs(_t[1]) ? 0 : 1;
+    double c = _t[idx], nt = cvNorm(&t, 0, CV_L2);
+    _uu[idx] = c > 0 ? 1 : -1;
 
-    // if idx == 0
-    //   e1 = T / ||T||
-    //   e2 = e1 x [0,0,1]
+    CV_Assert(nt > 0.0);
 
-    // if idx == 1
-    //   e2 = T / ||T||
-    //   e1 = e2 x [0,0,1]
-
-    // e3 = e1 x e2
-
-    _uu[2] = 1;
-    cvCrossProduct(&uu, &t, &ww);
-    nt = cvNorm(&t, 0, CV_L2);
-    CV_Assert(fabs(nt) > 0);
-    nw = cvNorm(&ww, 0, CV_L2);
-    CV_Assert(fabs(nw) > 0);
-    cvConvertScale(&ww, &ww, 1 / nw);
-    cvCrossProduct(&t, &ww, &w3);
-    nw = cvNorm(&w3, 0, CV_L2);
-    CV_Assert(fabs(nw) > 0);
-    cvConvertScale(&w3, &w3, 1 / nw);
-    _uu[2] = 0;
-
-    for (i = 0; i < 3; ++i)
-    {
-        _wr[idx][i] = -_t[i] / nt;
-        _wr[idx ^ 1][i] = -_ww[i];
-        _wr[2][i] = _w3[i] * (1 - 2 * idx); // if idx == 1 -> opposite direction
-    }
+    // calculate global Z rotation
+    cvCrossProduct(&t,&uu,&ww);
+    double nw = cvNorm(&ww, 0, CV_L2);
+    if (nw > 0.0)
+        cvConvertScale(&ww, &ww, acos(fabs(c)/nt)/nw);
+    cvRodrigues2(&ww, &wR);
 
     // apply to both views
     cvGEMM(&wR, &r_r, 1, 0, 0, &Ri, CV_GEMM_B_T);
@@ -3560,7 +3540,13 @@ void cv::projectPoints( InputArray _opoints,
 {
     Mat opoints = _opoints.getMat();
     int npoints = opoints.checkVector(3), depth = opoints.depth();
+    if (npoints < 0)
+        opoints = opoints.t();
+    npoints = opoints.checkVector(3);
     CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_64F));
+
+    if (opoints.cols == 3)
+        opoints = opoints.reshape(3);
 
     CvMat dpdrot, dpdt, dpdf, dpdc, dpddist;
     CvMat *pdpdrot=0, *pdpdt=0, *pdpdf=0, *pdpdc=0, *pdpddist=0;

@@ -1,6 +1,7 @@
 package org.opencv.samples.puzzle15;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraActivity;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
@@ -9,7 +10,6 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.android.JavaCameraView;
 
 import android.os.Bundle;
-import android.app.Activity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,7 +17,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 
-public class Puzzle15Activity extends Activity implements CvCameraViewListener, View.OnTouchListener {
+import java.util.Collections;
+import java.util.List;
+
+public class Puzzle15Activity extends CameraActivity implements CvCameraViewListener, View.OnTouchListener {
 
     private static final String  TAG = "Sample::Puzzle15::Activity";
 
@@ -84,6 +87,11 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
+    }
+
+    @Override
+    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
+        return Collections.singletonList(mOpenCvCameraView);
     }
 
     public void onDestroy() {

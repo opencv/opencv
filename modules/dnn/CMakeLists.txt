@@ -16,9 +16,15 @@ ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APP
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
-else()
-  ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 endif()
+
+ocv_option(OPENCV_DNN_CUDA "Build with CUDA support" HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  add_definitions(-DCV_CUDA4DNN=1)
+endif()
+
+ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
@@ -31,7 +37,9 @@ else()
                                        -Wunused-parameter -Wsign-compare
   )
 endif()
-
+if(HAVE_CUDA)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+endif()
 if(NOT HAVE_CXX11)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-undef)  # LANG_CXX11 from protobuf files
 endif()
@@ -73,10 +81,17 @@ endif()
 set(include_dirs ${fw_inc})
 set(sources_options "")
 set(libs libprotobuf ${LAPACK_LIBRARIES})
+
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   list(APPEND include_dirs ${OPENCL_INCLUDE_DIRS})
 else()
   set(sources_options EXCLUDE_OPENCL)
+endif()
+
+if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
+  list(APPEND include_dirs ${CUDA_TOOLKIT_INCLUDE} ${CUDNN_INCLUDE_DIRS})
+else()
+  set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
 
 ocv_module_include_directories(${include_dirs})
@@ -89,7 +104,15 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
 ocv_create_module(${libs} ${INF_ENGINE_TARGET})
 ocv_add_samples()
 ocv_add_accuracy_tests(${INF_ENGINE_TARGET})
-ocv_add_perf_tests(${INF_ENGINE_TARGET})
+
+set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
+file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
+file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
+ocv_add_perf_tests(${INF_ENGINE_TARGET}
+    FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.hpp" "${CMAKE_CURRENT_LIST_DIR}/test/test_common.impl.hpp"
+    FILES Src ${perf_srcs}
+    FILES Include ${perf_hdrs}
+)
 
 ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
 ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)

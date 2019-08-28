@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
-#include "opencv2/gapi/util/variant.hpp"
+#include "../test_precomp.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 #include <cstddef> //std::max_align_t
 
 namespace opencv_test

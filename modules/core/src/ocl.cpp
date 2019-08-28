@@ -54,6 +54,9 @@
 
 #include <opencv2/core/utils/configuration.private.hpp>
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
 #include <opencv2/core/utils/logger.hpp>
 
 #include "opencv2/core/ocl_genbase.hpp"
@@ -62,6 +65,10 @@
 #include "opencv2/core/utils/lock.private.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
+
+#define CV__ALLOCATOR_STATS_LOG(...) CV_LOG_VERBOSE(NULL, 0, "OpenCL allocator: " << __VA_ARGS__)
+#include "opencv2/core/utils/allocator_stats.impl.hpp"
+#undef CV__ALLOCATOR_STATS_LOG
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
 
@@ -132,6 +139,14 @@ namespace cv { namespace ocl {
     void release() { if( CV_XADD(&refcount, -1) == 1 && !cv::__termination) delete this; } \
     int refcount
 
+static cv::utils::AllocatorStatistics opencl_allocator_stats;
+
+CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics();
+cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics()
+{
+    return opencl_allocator_stats;
+}
+
 #ifndef HAVE_OPENCL
 #define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
 namespace {
@@ -190,7 +205,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -210,7 +225,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS && isRaiseError()) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_DBG_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -1707,7 +1722,7 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#ifdef WINRT
+#if defined WINRT || defined _WIN32_WCE
 static cl_device_id selectOpenCLDevice()
 {
     return NULL;
@@ -4534,15 +4549,17 @@ class OpenCLAllocator CV_FINAL : public MatAllocator
     mutable OpenCLSVMBufferPoolImpl bufferPoolSVM;
 #endif
 
+public:
     enum AllocatorFlags
     {
         ALLOCATOR_FLAGS_BUFFER_POOL_USED = 1 << 0,
-        ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED = 1 << 1
+        ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED = 1 << 1,
 #ifdef HAVE_OPENCL_SVM
-        ,ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2
+        ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED = 1 << 2,
 #endif
+        ALLOCATOR_FLAGS_EXTERNAL_BUFFER = 1 << 3  // convertFromBuffer()
     };
-public:
+
     OpenCLAllocator()
         : bufferPool(0),
           bufferPoolHostPtr(CL_MEM_ALLOC_HOST_PTR)
@@ -4648,6 +4665,7 @@ public:
         u->allocatorFlags_ = allocatorFlags;
         CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
         u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return u;
     }
 
@@ -4757,6 +4775,7 @@ public:
         }
         if (!!(accessFlags & ACCESS_WRITE))
             u->markHostCopyObsolete(true);
+        opencl_allocator_stats.onAllocate(u->size);
         return true;
     }
 
@@ -4809,6 +4828,13 @@ public:
 
     void deallocate_(UMatData* u) const
     {
+        CV_Assert(u);
+        CV_Assert(u->handle);
+        if ((u->allocatorFlags_ & ALLOCATOR_FLAGS_EXTERNAL_BUFFER) == 0)
+        {
+            opencl_allocator_stats.onFree(u->size);
+        }
+
 #ifdef _WIN32
         if (cv::__termination)  // process is not in consistent state (after ExitProcess call) and terminating
             return;             // avoid any OpenCL calls
@@ -5730,7 +5756,7 @@ public:
 
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
-    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
     g_isOpenCVActivated = true;
     return g_allocator;
 }
@@ -5790,7 +5816,7 @@ void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, int cols, int
     // attach clBuffer to UMatData
     dst.u = new UMatData(getOpenCLAllocator());
     dst.u->data            = 0;
-    dst.u->allocatorFlags_ = 0; // not allocated from any OpenCV buffer pool
+    dst.u->allocatorFlags_ = OpenCLAllocator::ALLOCATOR_FLAGS_EXTERNAL_BUFFER;  // not allocated from any OpenCV buffer pool
     dst.u->flags           = static_cast<UMatData::MemoryFlag>(0);
     dst.u->handle          = cl_mem_buffer;
     dst.u->origdata        = 0;

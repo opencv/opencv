@@ -527,10 +527,10 @@ public class OpenCVTestCase extends TestCase {
         double maxDiff = Core.norm(diff, Core.NORM_INF);
 
         if (isEqualityMeasured)
-            assertTrue("Max difference between expected and actiual Mats is "+ maxDiff + ", that bigger than " + eps,
+            assertTrue("Max difference between expected and actual Mats is "+ maxDiff + ", that bigger than " + eps,
                     maxDiff <= eps);
         else
-            assertFalse("Max difference between expected and actiual Mats is "+ maxDiff + ", that less than " + eps,
+            assertFalse("Max difference between expected and actual Mats is "+ maxDiff + ", that less than " + eps,
                     maxDiff <= eps);
     }
 
@@ -607,7 +607,7 @@ public class OpenCVTestCase extends TestCase {
             message = TAG + " :: " + "could not instantiate " + cname + "! Exception: " + ex.getMessage();
         }
 
-        assertTrue(message, instance!=null);
+        assertNotNull(message, instance);
 
         return instance;
     }

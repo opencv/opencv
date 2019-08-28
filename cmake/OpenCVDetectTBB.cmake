@@ -29,8 +29,10 @@ function(ocv_tbb_cmake_guess _found)
       message(STATUS "Found TBB (cmake): ${_lib}")
       get_target_property(_inc TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
       ocv_tbb_read_version("${_inc}")
-      add_library(tbb INTERFACE)
-      target_link_libraries(tbb INTERFACE TBB::tbb)
+      add_library(tbb INTERFACE IMPORTED)
+      set_target_properties(tbb PROPERTIES
+        INTERFACE_LINK_LIBRARIES TBB::tbb
+      )
       set(${_found} TRUE PARENT_SCOPE)
     endif()
 endfunction()
@@ -68,9 +70,13 @@ function(ocv_tbb_env_guess _found)
     add_library(tbb UNKNOWN IMPORTED)
     set_target_properties(tbb PROPERTIES
       IMPORTED_LOCATION "${TBB_ENV_LIB}"
-      IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
       INTERFACE_INCLUDE_DIRECTORIES "${TBB_ENV_INCLUDE}"
     )
+    if (TBB_ENV_LIB_DEBUG)
+      set_target_properties(tbb PROPERTIES
+        IMPORTED_LOCATION_DEBUG "${TBB_ENV_LIB_DEBUG}"
+      )
+    endif()
     # workaround: system TBB library is used for linking instead of provided
     if(CV_GCC)
       get_filename_component(_dir "${TBB_ENV_LIB}" DIRECTORY)

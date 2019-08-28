@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_FLUID_KERNEL_HPP
@@ -99,12 +99,33 @@ struct GFluidOutputRois
     std::vector<cv::gapi::own::Rect> rois;
 };
 
+struct GFluidParallelOutputRois
+{
+    std::vector<GFluidOutputRois> parallel_rois;
+};
+
+struct GFluidParallelFor
+{
+    std::function<void(std::size_t, std::function<void(std::size_t)>)> parallel_for;
+};
+
 namespace detail
 {
 template<> struct CompileArgTag<GFluidOutputRois>
 {
     static const char* tag() { return "gapi.fluid.outputRois"; }
 };
+
+template<> struct CompileArgTag<GFluidParallelFor>
+{
+    static const char* tag() { return "gapi.fluid.parallelFor"; }
+};
+
+template<> struct CompileArgTag<GFluidParallelOutputRois>
+{
+    static const char* tag() { return "gapi.fluid.parallelOutputRois"; }
+};
+
 } // namespace detail
 
 namespace detail
@@ -275,7 +296,7 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
 
 
 template<class Impl, class K, bool UseScratch>
-class GFluidKernelImpl
+class GFluidKernelImpl : public cv::detail::KernelTag
 {
     static const int LPI = 1;
     static const auto Kind = GFluidKernel::Kind::Filter;

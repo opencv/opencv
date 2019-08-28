@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2004-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,6 +46,7 @@
 #include "ImathExc.h"
 #include "ImathLimits.h"
 #include "ImathMath.h"
+#include "ImathNamespace.h"
 
 #include <iostream>
 
@@ -56,7 +57,7 @@
 #endif
 
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 template <class T> class Vec2;
 template <class T> class Vec3;
@@ -117,7 +118,7 @@ template <class T> class Vec2
     T *			getValue ();
     const T *		getValue () const;
 
-
+    
     //---------
     // Equality
     //---------
@@ -224,11 +225,11 @@ template <class T> class Vec2
     T			length2 () const;
 
     const Vec2 &	normalize ();           // modifies *this
-    const Vec2 &	normalizeExc () throw (Iex::MathExc);
+    const Vec2 &	normalizeExc ();
     const Vec2 &	normalizeNonNull ();
 
     Vec2<T>		normalized () const;	// does not modify *this
-    Vec2<T>		normalizedExc () const throw (Iex::MathExc);
+    Vec2<T>		normalizedExc () const;
     Vec2<T>		normalizedNonNull () const;
 
 
@@ -251,7 +252,7 @@ template <class T> class Vec2
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -436,11 +437,11 @@ template <class T> class Vec3
     T			length2 () const;
 
     const Vec3 &	normalize ();           // modifies *this
-    const Vec3 &	normalizeExc () throw (Iex::MathExc);
+    const Vec3 &	normalizeExc ();
     const Vec3 &	normalizeNonNull ();
 
     Vec3<T>		normalized () const;	// does not modify *this
-    Vec3<T>		normalizedExc () const throw (Iex::MathExc);
+    Vec3<T>		normalizedExc () const;
     Vec3<T>		normalizedNonNull () const;
 
 
@@ -463,7 +464,7 @@ template <class T> class Vec3
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -484,7 +485,7 @@ template <class T> class Vec4
     // Access to elements
     //-------------------
 
-    T               x, y, z, w;
+    T               x, y, z, w; 
 
     T &             operator [] (int i);
     const T &       operator [] (int i) const;
@@ -618,11 +619,11 @@ template <class T> class Vec4
     T               length2 () const;
 
     const Vec4 &    normalize ();           // modifies *this
-    const Vec4 &    normalizeExc () throw (Iex::MathExc);
+    const Vec4 &    normalizeExc ();
     const Vec4 &    normalizeNonNull ();
 
     Vec4<T>         normalized () const;	// does not modify *this
-    Vec4<T>         normalizedExc () const throw (Iex::MathExc);
+    Vec4<T>         normalizedExc () const;
     Vec4<T>         normalizedNonNull () const;
 
 
@@ -645,7 +646,7 @@ template <class T> class Vec4
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -710,7 +711,7 @@ template <> const Vec2<short> &
 Vec2<short>::normalize ();
 
 template <> const Vec2<short> &
-Vec2<short>::normalizeExc () throw (Iex::MathExc);
+Vec2<short>::normalizeExc ();
 
 template <> const Vec2<short> &
 Vec2<short>::normalizeNonNull ();
@@ -719,7 +720,7 @@ template <> Vec2<short>
 Vec2<short>::normalized () const;
 
 template <> Vec2<short>
-Vec2<short>::normalizedExc () const throw (Iex::MathExc);
+Vec2<short>::normalizedExc () const;
 
 template <> Vec2<short>
 Vec2<short>::normalizedNonNull () const;
@@ -734,7 +735,7 @@ template <> const Vec2<int> &
 Vec2<int>::normalize ();
 
 template <> const Vec2<int> &
-Vec2<int>::normalizeExc () throw (Iex::MathExc);
+Vec2<int>::normalizeExc ();
 
 template <> const Vec2<int> &
 Vec2<int>::normalizeNonNull ();
@@ -743,7 +744,7 @@ template <> Vec2<int>
 Vec2<int>::normalized () const;
 
 template <> Vec2<int>
-Vec2<int>::normalizedExc () const throw (Iex::MathExc);
+Vec2<int>::normalizedExc () const;
 
 template <> Vec2<int>
 Vec2<int>::normalizedNonNull () const;
@@ -758,7 +759,7 @@ template <> const Vec3<short> &
 Vec3<short>::normalize ();
 
 template <> const Vec3<short> &
-Vec3<short>::normalizeExc () throw (Iex::MathExc);
+Vec3<short>::normalizeExc ();
 
 template <> const Vec3<short> &
 Vec3<short>::normalizeNonNull ();
@@ -767,7 +768,7 @@ template <> Vec3<short>
 Vec3<short>::normalized () const;
 
 template <> Vec3<short>
-Vec3<short>::normalizedExc () const throw (Iex::MathExc);
+Vec3<short>::normalizedExc () const;
 
 template <> Vec3<short>
 Vec3<short>::normalizedNonNull () const;
@@ -782,7 +783,7 @@ template <> const Vec3<int> &
 Vec3<int>::normalize ();
 
 template <> const Vec3<int> &
-Vec3<int>::normalizeExc () throw (Iex::MathExc);
+Vec3<int>::normalizeExc ();
 
 template <> const Vec3<int> &
 Vec3<int>::normalizeNonNull ();
@@ -791,7 +792,7 @@ template <> Vec3<int>
 Vec3<int>::normalized () const;
 
 template <> Vec3<int>
-Vec3<int>::normalizedExc () const throw (Iex::MathExc);
+Vec3<int>::normalizedExc () const;
 
 template <> Vec3<int>
 Vec3<int>::normalizedNonNull () const;
@@ -805,7 +806,7 @@ template <> const Vec4<short> &
 Vec4<short>::normalize ();
 
 template <> const Vec4<short> &
-Vec4<short>::normalizeExc () throw (Iex::MathExc);
+Vec4<short>::normalizeExc ();
 
 template <> const Vec4<short> &
 Vec4<short>::normalizeNonNull ();
@@ -814,7 +815,7 @@ template <> Vec4<short>
 Vec4<short>::normalized () const;
 
 template <> Vec4<short>
-Vec4<short>::normalizedExc () const throw (Iex::MathExc);
+Vec4<short>::normalizedExc () const;
 
 template <> Vec4<short>
 Vec4<short>::normalizedNonNull () const;
@@ -829,7 +830,7 @@ template <> const Vec4<int> &
 Vec4<int>::normalize ();
 
 template <> const Vec4<int> &
-Vec4<int>::normalizeExc () throw (Iex::MathExc);
+Vec4<int>::normalizeExc ();
 
 template <> const Vec4<int> &
 Vec4<int>::normalizeNonNull ();
@@ -838,7 +839,7 @@ template <> Vec4<int>
 Vec4<int>::normalized () const;
 
 template <> Vec4<int>
-Vec4<int>::normalizedExc () const throw (Iex::MathExc);
+Vec4<int>::normalizedExc () const;
 
 template <> Vec4<int>
 Vec4<int>::normalizedNonNull () const;
@@ -981,8 +982,8 @@ bool
 Vec2<T>::equalWithAbsError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-    if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
+	    return false;
 
     return true;
 }
@@ -992,8 +993,8 @@ bool
 Vec2<T>::equalWithRelError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-    if (!Imath::equalWithRelError ((*this)[i], v[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
+	    return false;
 
     return true;
 }
@@ -1145,14 +1146,14 @@ Vec2<T>::lengthTiny () const
 {
     T absX = (x >= T (0))? x: -x;
     T absY = (y >= T (0))? y: -y;
-
+    
     T max = absX;
 
     if (max < absY)
-    max = absY;
+	max = absY;
 
     if (max == T (0))
-    return T (0);
+	return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1173,7 +1174,7 @@ Vec2<T>::length () const
     T length2 = dot (*this);
 
     if (length2 < T (2) * limits<T>::smallest())
-    return lengthTiny();
+	return lengthTiny();
 
     return Math<T>::sqrt (length2);
 }
@@ -1199,8 +1200,8 @@ Vec2<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-    x /= l;
-    y /= l;
+	x /= l;
+	y /= l;
     }
 
     return *this;
@@ -1208,12 +1209,12 @@ Vec2<T>::normalize ()
 
 template <class T>
 const Vec2<T> &
-Vec2<T>::normalizeExc () throw (Iex::MathExc)
+Vec2<T>::normalizeExc ()
 {
     T l = length();
 
     if (l == T (0))
-    throw NullVecExc ("Cannot normalize null vector.");
+	throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
@@ -1238,19 +1239,19 @@ Vec2<T>::normalized () const
     T l = length();
 
     if (l == T (0))
-    return Vec2 (T (0));
+	return Vec2 (T (0));
 
     return Vec2 (x / l, y / l);
 }
 
 template <class T>
 Vec2<T>
-Vec2<T>::normalizedExc () const throw (Iex::MathExc)
+Vec2<T>::normalizedExc () const
 {
     T l = length();
 
     if (l == T (0))
-    throw NullVecExc ("Cannot normalize null vector.");
+	throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec2 (x / l, y / l);
 }
@@ -1359,7 +1360,7 @@ Vec3<T>::Vec3 (const Vec4<S> &v, InfException)
     if (absW < 1)
     {
         T m = baseTypeMax() * absW;
-
+        
         if (vx <= -m || vx >= m || vy <= -m || vy >= m || vz <= -m || vz >= m)
             throw InfPointExc ("Cannot normalize point at infinity.");
     }
@@ -1444,8 +1445,8 @@ bool
 Vec3<T>::equalWithAbsError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-    if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
+	    return false;
 
     return true;
 }
@@ -1455,8 +1456,8 @@ bool
 Vec3<T>::equalWithRelError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-    if (!Imath::equalWithRelError ((*this)[i], v[i], e))
-        return false;
+	if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
+	    return false;
 
     return true;
 }
@@ -1480,8 +1481,8 @@ inline Vec3<T>
 Vec3<T>::cross (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-         z * v.x - x * v.z,
-         x * v.y - y * v.x);
+		 z * v.x - x * v.z,
+		 x * v.y - y * v.x);
 }
 
 template <class T>
@@ -1502,8 +1503,8 @@ inline Vec3<T>
 Vec3<T>::operator % (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-         z * v.x - x * v.z,
-         x * v.y - y * v.x);
+		 z * v.x - x * v.z,
+		 x * v.y - y * v.x);
 }
 
 template <class T>
@@ -1632,17 +1633,17 @@ Vec3<T>::lengthTiny () const
     T absX = (x >= T (0))? x: -x;
     T absY = (y >= T (0))? y: -y;
     T absZ = (z >= T (0))? z: -z;
-
+    
     T max = absX;
 
     if (max < absY)
-    max = absY;
+	max = absY;
 
     if (max < absZ)
-    max = absZ;
+	max = absZ;
 
     if (max == T (0))
-    return T (0);
+	return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1664,7 +1665,7 @@ Vec3<T>::length () const
     T length2 = dot (*this);
 
     if (length2 < T (2) * limits<T>::smallest())
-    return lengthTiny();
+	return lengthTiny();
 
     return Math<T>::sqrt (length2);
 }
@@ -1690,9 +1691,9 @@ Vec3<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-    x /= l;
-    y /= l;
-    z /= l;
+	x /= l;
+	y /= l;
+	z /= l;
     }
 
     return *this;
@@ -1700,12 +1701,12 @@ Vec3<T>::normalize ()
 
 template <class T>
 const Vec3<T> &
-Vec3<T>::normalizeExc () throw (Iex::MathExc)
+Vec3<T>::normalizeExc ()
 {
     T l = length();
 
     if (l == T (0))
-    throw NullVecExc ("Cannot normalize null vector.");
+	throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
@@ -1732,19 +1733,19 @@ Vec3<T>::normalized () const
     T l = length();
 
     if (l == T (0))
-    return Vec3 (T (0));
+	return Vec3 (T (0));
 
     return Vec3 (x / l, y / l, z / l);
 }
 
 template <class T>
 Vec3<T>
-Vec3<T>::normalizedExc () const throw (Iex::MathExc)
+Vec3<T>::normalizedExc () const
 {
     T l = length();
 
     if (l == T (0))
-    throw NullVecExc ("Cannot normalize null vector.");
+	throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec3 (x / l, y / l, z / l);
 }
@@ -1865,7 +1866,7 @@ bool
 Vec4<T>::equalWithAbsError (const Vec4<T> &v, T e) const
 {
     for (int i = 0; i < 4; i++)
-        if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
             return false;
 
     return true;
@@ -1876,7 +1877,7 @@ bool
 Vec4<T>::equalWithRelError (const Vec4<T> &v, T e) const
 {
     for (int i = 0; i < 4; i++)
-        if (!Imath::equalWithRelError ((*this)[i], v[i], e))
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
             return false;
 
     return true;
@@ -2031,7 +2032,7 @@ Vec4<T>::lengthTiny () const
     T absY = (y >= T (0))? y: -y;
     T absZ = (z >= T (0))? z: -z;
     T absW = (w >= T (0))? w: -w;
-
+    
     T max = absX;
 
     if (max < absY)
@@ -2105,7 +2106,7 @@ Vec4<T>::normalize ()
 
 template <class T>
 const Vec4<T> &
-Vec4<T>::normalizeExc () throw (Iex::MathExc)
+Vec4<T>::normalizeExc ()
 {
     T l = length();
 
@@ -2146,7 +2147,7 @@ Vec4<T>::normalized () const
 
 template <class T>
 Vec4<T>
-Vec4<T>::normalizedExc () const throw (Iex::MathExc)
+Vec4<T>::normalizedExc () const
 {
     T l = length();
 
@@ -2221,6 +2222,6 @@ operator * (T a, const Vec4<T> &v)
 #pragma warning(pop)
 #endif
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHVEC_H

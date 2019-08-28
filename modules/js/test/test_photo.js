@@ -41,7 +41,7 @@
 // Author : Rijubrata Bhaumik, Intel Corporation. rijubrata.bhaumik[at]intel[dot]com
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -102,5 +102,15 @@ QUnit.test('test_photo', function(assert) {
         // let ldr = new cv.Mat();
         // let retval = tonemap.process(hdr, ldr);
     }
-
+    // Inpaint
+    {
+        let src = new cv.Mat(100, 100, cv.CV_8UC3, new cv.Scalar(127, 127, 127, 255));
+        let mask = new cv.Mat(100, 100, cv.CV_8UC1, new cv.Scalar(0, 0, 0, 0));
+        let dst = new cv.Mat();
+        cv.line(mask, new cv.Point(10, 50), new cv.Point(90, 50), new cv.Scalar(255, 255, 255, 255),5);
+        cv.inpaint(src, mask, dst, 3, cv.INPAINT_TELEA);
+        assert.equal(dst.rows, 100);
+        assert.equal(dst.cols, 100);
+        assert.equal(dst.channels(), 3);
+    }
 });

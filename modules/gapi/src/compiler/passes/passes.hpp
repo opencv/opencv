@@ -25,6 +25,12 @@ namespace ade {
 
 namespace cv {
 
+// Forward declarations - internal
+namespace gapi {
+    class GKernelPackage;
+    struct GNetPackage;
+}  // namespace gapi
+
 namespace gimpl { namespace passes {
 
 void dumpDot(const ade::Graph &g, std::ostream& os);
@@ -44,9 +50,11 @@ void storeResultingMeta(ade::passes::PassContext &ctx);
 void expandKernels(ade::passes::PassContext &ctx,
                    const gapi::GKernelPackage& kernels);
 
-void resolveKernels(ade::passes::PassContext       &ctx,
-                    const gapi::GKernelPackage &kernels,
-                    const gapi::GLookupOrder   &order);
+void bindNetParams(ade::passes::PassContext   &ctx,
+                   const gapi::GNetPackage    &networks);
+
+void resolveKernels(ade::passes::PassContext   &ctx,
+                    const gapi::GKernelPackage &kernels);
 
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);

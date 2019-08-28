@@ -1,8 +1,8 @@
 // This sample is based on "Camera calibration With OpenCV" tutorial:
-// http://docs.opencv.org/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
+// https://docs.opencv.org/3.4/d4/d94/tutorial_camera_calibration.html
 //
 // It uses standard OpenCV asymmetric circles grid pattern 11x4:
-// https://github.com/opencv/opencv/blob/2.4/doc/acircles_pattern.png.
+// https://github.com/opencv/opencv/blob/3.4/doc/acircles_pattern.png
 // The results are the camera matrix and 5 distortion coefficients.
 //
 // Tap on highlighted pattern to capture pattern corners for calibration.
@@ -14,6 +14,7 @@
 package org.opencv.samples.cameracalibration;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -21,7 +22,6 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.res.Resources;
 import android.os.AsyncTask;
@@ -36,12 +36,16 @@ import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-public class CameraCalibrationActivity extends Activity implements CvCameraViewListener2, OnTouchListener {
+import java.util.Collections;
+import java.util.List;
+
+public class CameraCalibrationActivity extends CameraActivity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private CameraCalibrator mCalibrator;
     private OnCameraFrameRender mOnCameraFrameRender;
+    private Menu mMenu;
     private int mWidth;
     private int mHeight;
 
@@ -101,6 +105,11 @@ public class CameraCalibrationActivity extends Activity implements CvCameraViewL
         }
     }
 
+    @Override
+    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
+        return Collections.singletonList(mOpenCvCameraView);
+    }
+
     public void onDestroy() {
         super.onDestroy();
         if (mOpenCvCameraView != null)
@@ -111,7 +120,7 @@ public class CameraCalibrationActivity extends Activity implements CvCameraViewL
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.calibration, menu);
-
+        mMenu = menu;
         return true;
     }
 
@@ -119,9 +128,9 @@ public class CameraCalibrationActivity extends Activity implements CvCameraViewL
     public boolean onPrepareOptionsMenu (Menu menu) {
         super.onPrepareOptionsMenu(menu);
         menu.findItem(R.id.preview_mode).setEnabled(true);
-        if (!mCalibrator.isCalibrated())
+        if (mCalibrator != null && !mCalibrator.isCalibrated()) {
             menu.findItem(R.id.preview_mode).setEnabled(false);
-
+        }
         return true;
     }
 
@@ -199,6 +208,10 @@ public class CameraCalibrationActivity extends Activity implements CvCameraViewL
             mCalibrator = new CameraCalibrator(mWidth, mHeight);
             if (CalibrationResult.tryLoad(this, mCalibrator.getCameraMatrix(), mCalibrator.getDistortionCoefficients())) {
                 mCalibrator.setCalibrated();
+            } else {
+                if (mMenu != null && !mCalibrator.isCalibrated()) {
+                    mMenu.findItem(R.id.preview_mode).setEnabled(false);
+                }
             }
 
             mOnCameraFrameRender = new OnCameraFrameRender(new CalibrationFrameRender(mCalibrator));
