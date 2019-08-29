@@ -462,13 +462,39 @@ GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
         {
             const uint8_t* in_row  = mat.InLine <uint8_t>(l);
                   uint8_t* out_row = out.OutLine<uint8_t>(l);
-            //std::cout << "l=" << l << ": ";
+
             for (int i = 0, w = mat.length(); i < w; i++)
             {
-                //std::cout << std::setw(4) << int(in_row[i]);
                 out_row[i] = static_cast<uint8_t>(arr[in_row[i]]);
             }
-            //std::cout << std::endl;
+        }
+    }
+};
+
+GAPI_OCV_KERNEL(OCVCalcHist, TCalcHist)
+{
+    static void run(const cv::Mat& in, std::vector<int>& out)
+    {
+        out = std::vector<int>(256, 0);
+
+        // Calculate normalized accumulated integral transformation array for gapi
+        for(int i = 0; i < in.rows; ++i)
+            for(int j = 0; j < in.cols; ++j)
+                ++out[in.at<uint8_t>(i, j)];
+
+        for(unsigned int i = 1; i < out.size(); ++i)
+            out[i] += out[i-1];
+
+        int size = in.size().width * in.size().height;
+        int min = size;
+        for(unsigned int i = 0; i < out.size(); ++i)
+            if(out[i] != 0 && out[i] < min)
+                min = out[i];
+
+        for(auto & el : out)
+        {
+            // General histogram equalization formula
+            el = cvRound(((float)(el - min) / (float)(size - min))*255);
         }
     }
 };
@@ -595,6 +621,7 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FTestSplit3
         ,FTestSplit3_4lpi
         ,FEqualizeHist
+        ,OCVCalcHist
         >();
 } // namespace gapi_test_kernels
 } // namespace cv

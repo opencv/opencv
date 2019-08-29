@@ -246,37 +246,18 @@ TEST(Fluid, Sum_2_Mats_And_Scalar)
 
 TEST(Fluid, EqualizeHist)
 {
-    cv::GMat mat;
-    cv::GArray<int> arr;
+    cv::GMat in, out;
+    cv::GComputation c(cv::GIn(in), cv::GOut(TEqualizeHist::on(in, TCalcHist::on(in))));
 
-    cv::GComputation c(cv::GIn(mat, arr), cv::GOut(TEqualizeHist::on(mat, arr)));
     cv::Mat in_mat(320, 480, CV_8UC1),
             out_mat(320, 480, CV_8UC1),
             ref_mat(320, 480, CV_8UC1);
 
     cv::randu(in_mat, 200, 240);
-    std::vector<int> in_vec(256);
 
-    // Calculate normalized accumulated integral transformation array for gapi
-    for(int i = 0; i < in_mat.rows; ++i)
-        for(int j = 0; j < in_mat.cols; ++j)
-            ++in_vec[in_mat.at<uint8_t>(i, j)];
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage));
 
-    for(unsigned int i = 1; i < in_vec.size(); ++i)
-        in_vec[i]+=in_vec[i-1];
-
-    int min = 320*480;
-    for(unsigned int i = 0; i < in_vec.size(); ++i)
-        if(in_vec[i] != 0 && in_vec[i] < min)
-            min = in_vec[i];
-
-    for(auto & el : in_vec)
-        el = cvRound(((float)(el - min) / (float)(320*480 - min))*255);
-
-
-    auto cc = c.compile(cv::descr_of(in_mat), cv::descr_of(in_vec), cv::compile_args(fluidTestPackage));
-
-    cc(cv::gin(in_mat, in_vec), cv::gout(out_mat));
+    cc(cv::gin(in_mat), cv::gout(out_mat));
 
     cv::equalizeHist(in_mat, ref_mat);
 

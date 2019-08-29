@@ -120,6 +120,13 @@ G_TYPED_KERNEL(TEqualizeHist, <GMat(GMat, GArray<int>)>, "test.fluid.equalize_hi
     }
 };
 
+G_TYPED_KERNEL(TCalcHist, <GArray<int>(GMat)>, "test.ocv.calc_hist")
+{
+    static GArrayDesc outMeta(GMatDesc) {
+        return {};
+    }
+};
+
 GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3);
 std::tuple<GMat, GMat, GMat> split3_4lpi(const GMat& src);
 

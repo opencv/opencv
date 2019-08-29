@@ -259,6 +259,7 @@ template<typename Impl, typename... Ins, typename... Outs, bool UseScratch>
 struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch>
 {
     static_assert(all_satisfy<is_gmat_type, Outs...>::value, "return type must be GMat");
+    static_assert(contains<GMat, Ins...>::value, "input must contain at least one GMat");
 
     // Execution dispatcher ////////////////////////////////////////////////////
     template<int... IIs, int... OIs>
